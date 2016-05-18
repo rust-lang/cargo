@@ -280,7 +280,7 @@ prepare-image-$(1):
 		$$(IMGDIR_$(1))/share/zsh/site-functions \
 		$$(IMGDIR_$(1))/etc/bash_completion.d
 	cp $$(TARGET_$(1))/cargo$$(X) $$(IMGDIR_$(1))/bin
-	cp $(S)src/etc/*.1 $$(IMGDIR_$(1))/share/man/man1
+	cp $(S)src/etc/man/*.1 $$(IMGDIR_$(1))/share/man/man1
 	cp $(S)src/etc/_cargo $$(IMGDIR_$(1))/share/zsh/site-functions/_cargo
 	cp $(S)src/etc/cargo.bashcomp.sh $$(IMGDIR_$(1))/etc/bash_completion.d/cargo
 	cp $(S)README.md $(S)LICENSE-MIT $(S)LICENSE-APACHE \

@@ -1,0 +1,127 @@
+.TH "CARGO\-BUILD" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-build \- Compile the current project
+.SH SYNOPSIS
+.PP
+\f[I]cargo build\f[] [OPTIONS]
+.SH DESCRIPTION
+.PP
+Compile a local package and all of its dependencies.
+.PP
+If the \f[B]\-\-package\f[] argument is given, then \f[I]SPEC\f[] is a
+package id specification which indicates which package should be built.
+If it is not given, then the current package is built.
+For more information on \f[I]SPEC\f[] and its format, see the "cargo
+help pkgid" command.
+.PP
+Compilation can be configured via the use of profiles which are
+configured in the manifest.
+The default profile for this command is \f[I]dev\f[], but passing the
+\f[B]\-\-release\f[] flag will use the \f[I]release\f[] profile instead.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-p \f[I]SPEC\f[], \-\-package \f[I]SPEC ...\f[]
+Package to build.
+.RS
+.RE
+.TP
+.B \-j \f[I]IN\f[], \-\-jobs \f[I]IN\f[]
+The number of jobs to run in parallel.
+.RS
+.RE
+.TP
+.B \-\-lib
+Build only this package\[aq]s library.
+.RS
+.RE
+.TP
+.B \-\-bin \f[I]NAME\f[]
+Build only the specified binary.
+.RS
+.RE
+.TP
+.B \-\-example \f[I]NAME\f[]
+Build only the specified example.
+.RS
+.RE
+.TP
+.B \-\-test \f[I]NAME\f[]
+Build only the specified test target.
+.RS
+.RE
+.TP
+.B \-\-bench \f[I]NAME\f[]
+Build only the specified benchmark target.
+.RS
+.RE
+.TP
+.B \-\-release
+Build artifacts in release mode, with optimizations.
+.RS
+.RE
+.TP
+.B \-\-features \f[I]FEATURES\f[]
+Space\-separated list of features to also build.
+.RS
+.RE
+.TP
+.B \-\-no\-default\-features
+Do not build the \f[C]default\f[] feature.
+.RS
+.RE
+.TP
+.B \-\-target \f[I]TRIPLE\f[]
+Build for the target triple.
+.RS
+.RE
+.TP
+.B \-\-manifest\-path \f[I]PATH\f[]
+Path to the manifest to compile.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH EXAMPLES
+.PP
+Build a local package and all of its dependencies
+.IP
+.nf
+\f[C]
+$\ cargo\ build
+\f[]
+.fi
+.PP
+Build a package with optimizations
+.IP
+.nf
+\f[C]
+$\ cargo\ build\ \-\-release
+\f[]
+.fi
+.SH SEE ALSO
+.PP
+cargo(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.

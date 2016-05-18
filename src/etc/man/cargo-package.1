@@ -1,0 +1,59 @@
+.TH "CARGO\-PACKAGE" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-package \- Create a distributable tarball
+.SH SYNOPSIS
+.PP
+\f[I]cargo package\f[] [OPTIONS]
+.SH DESCRIPTION
+.PP
+Assemble the local package into a distributable tarball.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-l, \-\-list
+Print files included in a package without making one.
+.RS
+.RE
+.TP
+.B \-\-no\-verify
+Don\[aq]t verify the contents by building them.
+.RS
+.RE
+.TP
+.B \-\-no\-metadata
+Ignore warnings about a lack of human\-usable metadata.
+.RS
+.RE
+.TP
+.B \-\-manifest\-path \f[I]PATH\f[]
+Path to the manifest to compile.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-build(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.

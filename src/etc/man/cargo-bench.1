@@ -1,0 +1,138 @@
+.TH "CARGO\-BENCH" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-bench \- Execute benchmarks of a package
+.SH SYNOPSIS
+.PP
+\f[I]cargo bench\f[] [OPTIONS] [\-\-] [<ARGS>...]
+.SH DESCRIPTION
+.PP
+Execute all benchmarks of a local package.
+.PP
+All of the trailing arguments are passed to the benchmark binaries
+generated for filtering benchmarks and generally providing options
+configuring how they run.
+.PP
+If the \f[B]\-\-package\f[] argument is given, then \f[I]SPEC\f[] is a
+package id specification which indicates which package should be built.
+If it is not given, then the current package is built.
+For more information on \f[I]SPEC\f[] and its format, see the "cargo
+help pkgid" command.
+.PP
+The \f[B]\-\-jobs\f[] argument affects the building of the benchmark
+executable but does not affect how many jobs are used when running the
+benchmarks.
+.PP
+Compilation can be customized with the \[aq]bench\[aq] profile in the
+manifest.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-\-lib
+Benchmark only this package\[aq]s library.
+.RS
+.RE
+.TP
+.B \-\-bin \f[I]NAME\f[]
+Benchmark only the specified binary.
+.RS
+.RE
+.TP
+.B \-\-example \f[I]NAME\f[]
+Benchmark only the specified example.
+.RS
+.RE
+.TP
+.B \-\-test \f[I]NAME\f[]
+Benchmark only the specified test target.
+.RS
+.RE
+.TP
+.B \-\-bench \f[I]NAME\f[]
+Benchmark only the specified bench target.
+.RS
+.RE
+.TP
+.B \-\-no\-run
+Compile, but don\[aq]t run benchmarks.
+.RS
+.RE
+.TP
+.B \-p \f[I]SPEC\f[], \-\-package \f[I]SPEC ...\f[]
+Package to benchmarks for.
+.RS
+.RE
+.TP
+.B \-j \f[I]IN\f[], \-\-jobs \f[I]IN\f[]
+The number of jobs to run in parallel.
+.RS
+.RE
+.TP
+.B \-\-release
+Build artifacts in release mode, with optimizations.
+.RS
+.RE
+.TP
+.B \-\-features \f[I]FEATURES\f[]
+Space\-separated list of features to also build.
+.RS
+.RE
+.TP
+.B \-\-no\-default\-features
+Do not build the \f[C]default\f[] feature.
+.RS
+.RE
+.TP
+.B \-\-target \f[I]TRIPLE\f[]
+Build for the target triple.
+.RS
+.RE
+.TP
+.B \-\-manifest\-path \f[I]PATH\f[]
+Path to the manifest to compile.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH EXAMPLES
+.PP
+Execute all the benchmarks of the current package
+.IP
+.nf
+\f[C]
+$\ cargo\ bench
+\f[]
+.fi
+.PP
+Execute the BENCH benchmark
+.IP
+.nf
+\f[C]
+$\ cargo\ bench\ \-\-bench\ BENCH
+\f[]
+.fi
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-build(1), cargo\-test(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.

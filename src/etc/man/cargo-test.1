@@ -1,0 +1,162 @@
+.TH "CARGO\-TEST" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-test \- Execute unit and integration tests of a package
+.SH SYNOPSIS
+.PP
+\f[I]cargo test\f[] [OPTIONS] [\-\-] [<ARGS>...]
+.SH DESCRIPTION
+.PP
+Execute all unit and integration tests of a local package.
+.PP
+All of the trailing arguments are passed to the test binaries generated
+for filtering tests and generally providing options configuring how they
+run.
+For example, this will run all tests with the name \[aq]foo\[aq] in
+their name:
+.IP
+.nf
+\f[C]
+cargo\ test\ foo
+\f[]
+.fi
+.PP
+If the \f[B]\-\-package\f[] argument is given, then \[aq]SPEC\[aq] is a
+package id specification which indicates which package should be tested.
+If it is not given, then the current package is tested.
+For more information on \[aq]SPEC\[aq] and its format, see the "cargo
+help pkgid" command.
+.PP
+The \f[B]\-\-jobs\f[] argument affects the building of the test
+executable but does not affect how many jobs are used when running the
+tests.
+.PP
+Compilation can be configured via the \[aq]test\[aq] profile in the
+manifest.
+.PP
+By default the rust test harness hides output from test execution to
+keep results readable.
+Test output can be recovered (e.g.
+for debugging) by passing \f[B]\-\-nocapture\f[] to the test binaries:
+.IP
+.nf
+\f[C]
+cargo\ test\ \-\-\ \-\-nocapture
+\f[]
+.fi
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-\-lib
+Test only this package\[aq]s library.
+.RS
+.RE
+.TP
+.B \-\-bin \f[I]NAME\f[]
+Test only the specified binary.
+.RS
+.RE
+.TP
+.B \-\-example \f[I]NAME\f[]
+Test only the specified example.
+.RS
+.RE
+.TP
+.B \-\-test \f[I]NAME\f[]
+Test only the specified integration test target.
+.RS
+.RE
+.TP
+.B \-\-bench \f[I]NAME\f[]
+Test only the specified benchmark target.
+.RS
+.RE
+.TP
+.B \-\-no\-run
+Compile, but don\[aq]t run tests.
+.RS
+.RE
+.TP
+.B \-p \f[I]SPEC\f[], \-\-package \f[I]SPEC ...\f[]
+Package to run tests for.
+.RS
+.RE
+.TP
+.B \-j \f[I]IN\f[], \-\-jobs \f[I]IN\f[]
+The number of jobs to run in parallel.
+.RS
+.RE
+.TP
+.B \-\-release
+Build artifacts in release mode, with optimizations.
+.RS
+.RE
+.TP
+.B \-\-features \f[I]FEATURES\f[]
+Space\-separated list of features to also build.
+.RS
+.RE
+.TP
+.B \-\-no\-default\-features
+Do not build the \f[C]default\f[] feature.
+.RS
+.RE
+.TP
+.B \-\-target \f[I]TRIPLE\f[]
+Build for the target triple.
+.RS
+.RE
+.TP
+.B \-\-manifest\-path \f[I]PATH\f[]
+Path to the manifest to compile.
+.RS
+.RE
+.TP
+.B \-\-no\-fail\-fast
+Run all tests regardless of failure.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH EXAMPLES
+.PP
+Execute all the unit and integration tests of the current package
+.IP
+.nf
+\f[C]
+$\ cargo\ test
+\f[]
+.fi
+.PP
+Execute the BENCH benchmark
+.IP
+.nf
+\f[C]
+$\ cargo\ test\ \-\-bench\ BENCH
+\f[]
+.fi
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-build(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
