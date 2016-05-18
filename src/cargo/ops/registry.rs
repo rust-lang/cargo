@@ -32,8 +32,12 @@ pub fn publish(manifest_path: &Path,
                config: &Config,
                token: Option<String>,
                index: Option<String>,
-               verify: bool) -> CargoResult<()> {
+               verify: bool, allow_untracked: bool) -> CargoResult<()> {
     let pkg = try!(Package::for_path(&manifest_path, config));
+
+    if !allow_untracked {
+        try!(check_directory_cleanliness());
+    }
 
     if !pkg.publish() {
         bail!("some crates cannot be published.\n\
@@ -53,6 +57,42 @@ pub fn publish(manifest_path: &Path,
     try!(transmit(&pkg, tarball.file(), &mut registry));
 
     Ok(())
+}
+
+fn check_git_cleanliness(repo: &git2::Repository) -> CargoResult<()> {
+    let mut opts = git2::StatusOptions::new();
+    opts.include_untracked(true).recurse_untracked_dirs(true);
+    let status = try!(repo.statuses(Some(&mut opts)));
+    let files:Vec<String> = status.iter().map(|entry| {
+        let file = entry.index_to_workdir()
+                        .and_then(|dir| dir.old_file().path());
+        match file {
+            Some(file) => format!("{}", file.display()),
+            None => "file not displayable".to_string()
+        }
+    }).collect();
+
+    if !files.is_empty(){
+        bail!("{} uncommited or untacked files \
+        that need to be addressed before publishing. to force the \
+        publish command include --allow-untracked\nproblem files:\n{}",
+        files.len(), files.join("\n"));
+    }
+
+    Ok(())
+}
+
+fn open_git_repo() -> Result<git2::Repository, git2::Error> {
+    let current_path = Path::new(".");
+    git2::Repository::discover(current_path)
+}
+
+fn check_directory_cleanliness() -> CargoResult<()> {
+    if let Ok(repo) = open_git_repo() {
+        check_git_cleanliness(&repo)
+    } else {
+        Ok(())
+    }
 }
 
 fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
