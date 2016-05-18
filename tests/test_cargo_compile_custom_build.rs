@@ -1892,3 +1892,33 @@ test!(non_utf8_output {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
 });
+
+test!(custom_target_dir {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [build]
+            target-dir = 'test'
+        "#)
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("a/build.rs", "fn main() {}")
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+});
