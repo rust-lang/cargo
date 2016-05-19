@@ -271,7 +271,7 @@ test!(author_prefers_cargo {
         [cargo-new]
         name = "new-foo"
         email = "new-bar"
-        git = false
+        vcs = "none"
     "#).unwrap();
 
     assert_that(cargo_process("new").arg("foo").env("USER", "foo"),
