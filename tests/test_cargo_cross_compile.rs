@@ -460,23 +460,23 @@ test!(cross_tests {
     let target = alternate();
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
 [RUNNING] target[..]{triple}[..]bar-[..]
-
+[RUNNING] target[..]{triple}[..]foo-[..]", foo = p.url(), triple = target))
+                       .with_stdout("
 running 1 test
 test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]{triple}[..]foo-[..]
 
 running 1 test
 test test_foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", foo = p.url(), triple = target)));
+"));
 });
 
 test!(no_cross_doctests {
@@ -525,15 +525,15 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
     let target = alternate();
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
-[RUNNING] target[..]{triple}[..]foo-[..]
-
+[RUNNING] target[..]{triple}[..]foo-[..]", foo = p.url(), triple = target))
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", foo = p.url(), triple = target)));
+"));
 });
 
 test!(simple_cargo_run {
