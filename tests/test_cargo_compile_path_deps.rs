@@ -741,16 +741,16 @@ test!(dev_deps_no_rebuild_lib {
 
     assert_that(p.cargo("test"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] [..] v0.5.0 ({url}[..])
 [COMPILING] [..] v0.5.0 ({url}[..])
-[RUNNING] target[..]foo-[..]
-
+[RUNNING] target[..]foo-[..]", url = p.url()))
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", url = p.url())));
+"));
 });
 
 test!(custom_target_no_rebuild {

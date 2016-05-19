@@ -471,19 +471,19 @@ test!(testing_and_such {
     println!("test");
     assert_that(p.cargo("test").arg("-vj1"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..]`
 [RUNNING] `rustc [..] --crate-name foo [..]`
 [RUNNING] `[..]foo-[..][..]`
-
+[DOCTEST] foo
+[RUNNING] `rustdoc --test [..]`")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
-[RUNNING] `rustdoc --test [..]`
 
 running 0 tests
 
@@ -730,7 +730,7 @@ test!(build_cmd_with_a_build_cmd {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] b v0.5.0 (file://[..])
 [RUNNING] `rustc [..] --crate-name b [..]`
 [COMPILING] a v0.5.0 (file://[..])
@@ -888,9 +888,10 @@ test!(code_generation {
         "#);
     assert_that(p.cargo_process("run"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
-[RUNNING] `target[..]foo`
+[RUNNING] `target[..]foo`")
+                       .with_stdout("\
 Hello, World!
 "));
 
@@ -1310,7 +1311,7 @@ test!(cfg_test {
             fn test_bar() {}
         "#);
     assert_that(p.cargo_process("test").arg("-v"),
-                execs().with_stdout(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] [..] build.rs [..]
 [RUNNING] [..]build-script-build[..]
@@ -1318,28 +1319,28 @@ test!(cfg_test {
 [RUNNING] [..] --cfg foo[..]
 [RUNNING] [..] --cfg foo[..]
 [RUNNING] [..]foo-[..]
-
+[RUNNING] [..]test-[..]
+[DOCTEST] foo
+[RUNNING] [..] --cfg foo[..]", dir = p.url()))
+                       .with_stdout("
 running 1 test
 test test_foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] [..]test-[..]
 
 running 1 test
 test test_bar ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
-[RUNNING] [..] --cfg foo[..]
 
 running 1 test
 test foo_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", dir = p.url())));
+"));
 });
 
 test!(cfg_doc {
@@ -1426,34 +1427,34 @@ test!(cfg_override_test {
             fn test_bar() {}
         "#);
     assert_that(p.cargo_process("test").arg("-v"),
-                execs().with_stdout(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] `[..]`
 [RUNNING] `[..]`
 [RUNNING] `[..]`
 [RUNNING] [..]foo-[..]
-
+[RUNNING] [..]test-[..]
+[DOCTEST] foo
+[RUNNING] [..] --cfg foo[..]", dir = p.url()))
+                       .with_stdout("
 running 1 test
 test test_foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] [..]test-[..]
 
 running 1 test
 test test_bar ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
-[RUNNING] [..] --cfg foo[..]
 
 running 1 test
 test foo_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", dir = p.url())));
+"));
 });
 
 test!(cfg_override_doc {
@@ -1537,7 +1538,8 @@ test!(flags_go_into_tests {
         "#);
 
     assert_that(p.cargo_process("test").arg("-v").arg("--test=foo"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0)
+                       .with_stderr("\
 [COMPILING] a v0.5.0 ([..]
 [RUNNING] `rustc a[..]build.rs [..]`
 [RUNNING] `[..]build-script-build[..]`
@@ -1547,8 +1549,8 @@ test!(flags_go_into_tests {
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc src[..]lib.rs [..] -L test[..]`
 [RUNNING] `rustc tests[..]foo.rs [..] -L test[..]`
-[RUNNING] `[..]foo-[..]`
-
+[RUNNING] `[..]foo-[..]`")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
@@ -1556,12 +1558,13 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 "));
 
     assert_that(p.cargo("test").arg("-v").arg("-pb").arg("--lib"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0)
+                       .with_stderr("\
 [FRESH] a v0.5.0 ([..]
 [COMPILING] b v0.5.0 ([..]
 [RUNNING] `rustc b[..]src[..]lib.rs [..] -L test[..]`
-[RUNNING] `[..]b-[..]`
-
+[RUNNING] `[..]b-[..]`")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured

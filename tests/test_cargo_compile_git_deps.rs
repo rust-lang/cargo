@@ -615,7 +615,7 @@ test!(update_with_shared_deps {
 
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("build"),
-                execs().with_stdout(&format!("\
+                execs().with_stderr(&format!("\
 [UPDATING] git repository `{git}`
 [COMPILING] bar v0.5.0 ({git}#[..])
 [COMPILING] [..] v0.5.0 ([..])
@@ -670,7 +670,7 @@ To learn more, run the command again with --verbose.
     // Make sure we still only compile one version of the git repo
     println!("build");
     assert_that(p.cargo("build"),
-                execs().with_stdout(&format!("\
+                execs().with_stderr(&format!("\
 [COMPILING] bar v0.5.0 ({git}#[..])
 [COMPILING] [..] v0.5.0 ({dir}[..]dep[..])
 [COMPILING] [..] v0.5.0 ({dir}[..]dep[..])
@@ -998,11 +998,11 @@ test!(dev_deps_with_testing {
     // Make sure we use the previous resolution of `bar` instead of updating it
     // a second time.
     assert_that(p.cargo("test"),
-        execs().with_stdout("\
+                execs().with_stderr("\
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..]
-[RUNNING] target[..]foo-[..]
-
+[RUNNING] target[..]foo-[..]")
+                       .with_stdout("
 running 1 test
 test tests::foo ... ok
 

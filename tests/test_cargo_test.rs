@@ -186,7 +186,8 @@ test!(cargo_test_failing_test {
     assert_that(p.cargo("test"),
                 execs().with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({url})
-[RUNNING] target[..]foo-[..]", url = p.url()))
+[RUNNING] target[..]foo-[..]
+[ERROR] test failed", url = p.url()))
                        .with_stdout_contains("
 running 1 test
 test test_hello ... FAILED
@@ -2058,15 +2059,16 @@ test!(only_test_docs {
     p.build();
 
     assert_that(p.cargo("test").arg("--doc"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0)
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ([..])
-[DOCTEST] foo
-
+[DOCTEST] foo"))
+                       .with_stdout("
 running 1 test
 test bar_0 ... ok
 
 test result: ok.[..]
 
-")));
+"));
 });
 
