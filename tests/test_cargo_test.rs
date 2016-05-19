@@ -1855,27 +1855,28 @@ test!(no_fail_fast {
         "#);
     assert_that(p.cargo_process("test").arg("--no-fail-fast"),
                 execs().with_status(101)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] target[..]foo[..]
-
+[RUNNING] target[..]test_add_one[..]")
+                       .with_stdout_contains("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]test_add_one[..]
 ")
+                       .with_stderr_contains("\
+[RUNNING] target[..]test_sub_one[..]
+[DOCTEST] foo")
                        .with_stdout_contains("\
 test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]test_sub_one[..]
 
 running 1 test
 test sub_one_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 1 test
 test sub_one_0 ... ok
@@ -1929,16 +1930,16 @@ test!(test_multiple_packages {
 
     assert_that(p.cargo("test").arg("-p").arg("d1").arg("-p").arg("d2"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
-[RUNNING] target[..]debug[..]d1-[..]
-
+                       .with_stderr_contains("\
+[RUNNING] target[..]debug[..]d1-[..]")
+                       .with_stdout_contains("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ")
-                       .with_stdout_contains("\
-[RUNNING] target[..]debug[..]d2-[..]
-
+                       .with_stderr_contains("\
+[RUNNING] target[..]debug[..]d2-[..]")
+                       .with_stdout_contains("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured

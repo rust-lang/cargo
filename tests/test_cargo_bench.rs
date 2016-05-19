@@ -987,17 +987,17 @@ test!(test_bench_multiple_packages {
 
     assert_that(p.cargo_process("bench").arg("-p").arg("bar").arg("-p").arg("baz"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
-[RUNNING] target[..]release[..]bbaz-[..]
-
+                       .with_stderr_contains("\
+[RUNNING] target[..]release[..]bbaz-[..]")
+                       .with_stdout_contains("
 running 1 test
 test bench_baz ... bench:           0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 ")
-                       .with_stdout_contains("\
-[RUNNING] target[..]release[..]bbar-[..]
-
+                       .with_stderr_contains("\
+[RUNNING] target[..]release[..]bbar-[..]")
+                       .with_stdout_contains("
 running 1 test
 test bench_bar ... bench:           0 ns/iter (+/- 0)
 
