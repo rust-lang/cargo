@@ -26,6 +26,9 @@ extern crate toml;
 extern crate url;
 
 use std::env;
+use std::collections::BTreeSet;
+use std::fs;
+use std::path::{Path,PathBuf};
 use std::io::prelude::*;
 use std::io;
 use rustc_serialize::{Decodable, Encodable};
@@ -267,4 +270,98 @@ fn json_from_stdin<T: Decodable>() -> CliResult<T> {
     Decodable::decode(&mut decoder).map_err(|_| {
         CliError::new("Could not process standard in as input", 1)
     })
+}
+
+macro_rules! each_subcommand{
+    ($mac:ident) => {
+        $mac!(bench);
+        $mac!(build);
+        $mac!(clean);
+        $mac!(doc);
+        $mac!(fetch);
+        $mac!(generate_lockfile);
+        $mac!(git_checkout);
+        $mac!(help);
+        $mac!(init);
+        $mac!(install);
+        $mac!(list);
+        $mac!(locate_project);
+        $mac!(login);
+        $mac!(metadata);
+        $mac!(new);
+        $mac!(owner);
+        $mac!(package);
+        $mac!(pkgid);
+        $mac!(publish);
+        $mac!(read_manifest);
+        $mac!(run);
+        $mac!(rustc);
+        $mac!(rustdoc);
+        $mac!(search);
+        $mac!(test);
+        $mac!(uninstall);
+        $mac!(update);
+        $mac!(verify_project);
+        $mac!(version);
+        $mac!(yank);
+    }
+}
+
+macro_rules! declare_mod {
+    ($name:ident) => ( pub mod $name; )
+}
+
+/// List all runnable commands. find_command should always succeed
+/// if given one of returned command.
+pub fn list_commands(config: &Config) -> BTreeSet<String> {
+    let prefix = "cargo-";
+    let suffix = env::consts::EXE_SUFFIX;
+    let mut commands = BTreeSet::new();
+    for dir in search_directories(config) {
+        let entries = match fs::read_dir(dir) {
+            Ok(entries) => entries,
+            _ => continue
+        };
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            let filename = match path.file_name().and_then(|s| s.to_str()) {
+                Some(filename) => filename,
+                _ => continue
+            };
+            if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
+                continue
+            }
+            if is_executable(entry.path()) {
+                let end = filename.len() - suffix.len();
+                commands.insert(filename[prefix.len()..end].to_string());
+            }
+        }
+    }
+
+    macro_rules! add_cmd {
+        ($cmd:ident) => ({ commands.insert(stringify!($cmd).replace("_", "-")); })
+    }
+    each_subcommand!(add_cmd);
+    commands
+}
+
+
+pub fn search_directories(config: &Config) -> Vec<PathBuf> {
+    let mut dirs = vec![config.home().clone().into_path_unlocked().join("bin")];
+    if let Some(val) = env::var_os("PATH") {
+        dirs.extend(env::split_paths(&val));
+    }
+    dirs
+}
+
+#[cfg(unix)]
+pub fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+    use std::os::unix::prelude::*;
+    fs::metadata(path).map(|metadata| {
+        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+    }).unwrap_or(false)
+}
+#[cfg(windows)]
+pub fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+    fs::metadata(path).map(|metadata| metadata.is_file()).unwrap_or(false)
 }

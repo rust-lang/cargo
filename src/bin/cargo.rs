@@ -1,4 +1,4 @@
-extern crate cargo;
+#[macro_use] extern crate cargo;
 extern crate url;
 extern crate env_logger;
 extern crate git2_curl;
@@ -6,13 +6,10 @@ extern crate rustc_serialize;
 extern crate toml;
 #[macro_use] extern crate log;
 
-use std::collections::BTreeSet;
 use std::env;
-use std::fs;
-use std::path::{Path,PathBuf};
 
 use cargo::core::shell::Verbosity;
-use cargo::execute_main_without_stdin;
+use cargo::{execute_main_without_stdin, list_commands, search_directories, is_executable};
 use cargo::util::{self, CliResult, lev_distance, Config, human};
 use cargo::util::CliError;
 use cargo::util::process_builder::process;
@@ -55,6 +52,7 @@ Some common cargo commands are:
     test        Run the tests
     bench       Run the benchmarks
     update      Update dependencies listed in Cargo.lock
+    list        List installed commands
     search      Search registry for crates
     publish     Package and upload this project to the registry
     install     Install a Rust binary
@@ -67,6 +65,8 @@ fn main() {
     execute_main_without_stdin(execute, true, USAGE)
 }
 
+// Also update src/cargo/lib.rs with any new commands.
+// Details at https://github.com/rust-lang/cargo/pull/2683
 macro_rules! each_subcommand{
     ($mac:ident) => {
         $mac!(bench);
@@ -79,6 +79,7 @@ macro_rules! each_subcommand{
         $mac!(help);
         $mac!(init);
         $mac!(install);
+        $mac!(list);
         $mac!(locate_project);
         $mac!(login);
         $mac!(metadata);
@@ -104,6 +105,7 @@ macro_rules! each_subcommand{
 macro_rules! declare_mod {
     ($name:ident) => ( pub mod $name; )
 }
+
 each_subcommand!(declare_mod);
 
 /**
@@ -124,14 +126,6 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         return Ok(None)
     }
 
-    if flags.flag_list {
-        println!("Installed Commands:");
-        for command in list_commands(config) {
-            println!("    {}", command);
-        };
-        return Ok(None)
-    }
-
     if let Some(ref code) = flags.flag_explain {
         try!(process(config.rustc()).arg("--explain").arg(code).exec()
                                     .map_err(human));
@@ -139,6 +133,12 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     }
 
     let args = match &flags.arg_command[..] {
+
+        // For `cargo --list` to support old interface
+        "" if flags.flag_list => {
+            vec!["cargo".to_string(), "list".to_string()]
+        }
+
         // For the commands `cargo` and `cargo help`, re-execute ourselves as
         // `cargo -h` so we can go through the normal process of printing the
         // help message.
@@ -227,59 +227,6 @@ fn execute_subcommand(config: &Config,
     }
 }
 
-/// List all runnable commands. find_command should always succeed
-/// if given one of returned command.
-fn list_commands(config: &Config) -> BTreeSet<String> {
-    let prefix = "cargo-";
-    let suffix = env::consts::EXE_SUFFIX;
-    let mut commands = BTreeSet::new();
-    for dir in search_directories(config) {
-        let entries = match fs::read_dir(dir) {
-            Ok(entries) => entries,
-            _ => continue
-        };
-        for entry in entries.filter_map(|e| e.ok()) {
-            let path = entry.path();
-            let filename = match path.file_name().and_then(|s| s.to_str()) {
-                Some(filename) => filename,
-                _ => continue
-            };
-            if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
-                continue
-            }
-            if is_executable(entry.path()) {
-                let end = filename.len() - suffix.len();
-                commands.insert(filename[prefix.len()..end].to_string());
-            }
-        }
-    }
-
-    macro_rules! add_cmd {
-        ($cmd:ident) => ({ commands.insert(stringify!($cmd).replace("_", "-")); })
-    }
-    each_subcommand!(add_cmd);
-    commands
-}
-
-#[cfg(unix)]
-fn is_executable<P: AsRef<Path>>(path: P) -> bool {
-    use std::os::unix::prelude::*;
-    fs::metadata(path).map(|metadata| {
-        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
-    }).unwrap_or(false)
-}
-#[cfg(windows)]
-fn is_executable<P: AsRef<Path>>(path: P) -> bool {
-    fs::metadata(path).map(|metadata| metadata.is_file()).unwrap_or(false)
-}
-
-fn search_directories(config: &Config) -> Vec<PathBuf> {
-    let mut dirs = vec![config.home().clone().into_path_unlocked().join("bin")];
-    if let Some(val) = env::var_os("PATH") {
-        dirs.extend(env::split_paths(&val));
-    }
-    dirs
-}
 
 fn init_git_transports(config: &Config) {
     // Only use a custom transport if a proxy is configured, right now libgit2
