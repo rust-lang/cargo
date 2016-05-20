@@ -495,8 +495,7 @@ impl TomlManifest {
                                 &examples,
                                 &tests,
                                 &benches,
-                                &metadata,
-                                &mut warnings);
+                                &metadata);
 
         if targets.is_empty() {
             debug!("manifest has no build targets");
@@ -867,8 +866,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
              examples: &[TomlExampleTarget],
              tests: &[TomlTestTarget],
              benches: &[TomlBenchTarget],
-             metadata: &Metadata,
-             warnings: &mut Vec<String>) -> Vec<Target> {
+             metadata: &Metadata) -> Vec<Target> {
     fn configure(toml: &TomlTarget, target: &mut Target) {
         let t2 = target.clone();
         target.set_tested(toml.test.unwrap_or(t2.tested()))
@@ -881,23 +879,12 @@ fn normalize(lib: &Option<TomlLibTarget>,
 
     fn lib_target(dst: &mut Vec<Target>,
                   l: &TomlLibTarget,
-                  metadata: &Metadata,
-                  warnings: &mut Vec<String>) {
+                  metadata: &Metadata) {
         let path = l.path.clone().unwrap_or(
             PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name())))
         );
         let crate_types = match l.crate_type.clone() {
-            Some(kinds) => {
-                // For now, merely warn about invalid crate types.
-                // In the future, it might be nice to make them errors.
-                kinds.iter().filter_map(|s| {
-                    let kind = LibKind::from_str(s);
-                    if let Err(ref error) = kind {
-                        warnings.push(error.to_string());
-                    }
-                    kind.ok()
-                }).collect()
-            }
+            Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
             None => {
                 vec![ if l.plugin == Some(true) {LibKind::Dylib}
                       else {LibKind::Lib} ]
@@ -992,7 +979,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
     let mut ret = Vec::new();
 
     if let Some(ref lib) = *lib {
-        lib_target(&mut ret, lib, metadata, warnings);
+        lib_target(&mut ret, lib, metadata);
         bin_targets(&mut ret, bins,
                     &mut |bin| Path::new("src").join("bin")
                                    .join(&format!("{}.rs", bin.name())));

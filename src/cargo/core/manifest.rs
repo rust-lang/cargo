@@ -6,7 +6,6 @@ use rustc_serialize::{Encoder, Encodable};
 
 use core::{Dependency, PackageId, PackageIdSpec, Summary};
 use core::package_id::Metadata;
-use util::{CargoResult, human};
 
 /// Contains all the information about a package, as loaded from a Cargo.toml.
 #[derive(Clone, Debug)]
@@ -44,33 +43,40 @@ pub struct ManifestMetadata {
     pub documentation: Option<String>,  // url
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, RustcEncodable, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum LibKind {
     Lib,
     Rlib,
     Dylib,
-    StaticLib
+    Other(String),
 }
 
 impl LibKind {
-    pub fn from_str(string: &str) -> CargoResult<LibKind> {
+    pub fn from_str(string: &str) -> LibKind {
         match string {
-            "lib" => Ok(LibKind::Lib),
-            "rlib" => Ok(LibKind::Rlib),
-            "dylib" => Ok(LibKind::Dylib),
-            "staticlib" => Ok(LibKind::StaticLib),
-            _ => Err(human(format!("crate-type \"{}\" was not one of lib|rlib|dylib|staticlib",
-                                   string)))
+            "lib" => LibKind::Lib,
+            "rlib" => LibKind::Rlib,
+            "dylib" => LibKind::Dylib,
+            s => LibKind::Other(s.to_string()),
         }
     }
 
     /// Returns the argument suitable for `--crate-type` to pass to rustc.
-    pub fn crate_type(&self) -> &'static str {
+    pub fn crate_type(&self) -> &str {
         match *self {
             LibKind::Lib => "lib",
             LibKind::Rlib => "rlib",
             LibKind::Dylib => "dylib",
-            LibKind::StaticLib => "staticlib"
+            LibKind::Other(ref s) => s,
+        }
+    }
+
+    pub fn linkable(&self) -> bool {
+        match *self {
+            LibKind::Lib |
+            LibKind::Rlib |
+            LibKind::Dylib => true,
+            LibKind::Other(..) => false,
         }
     }
 }
@@ -335,12 +341,7 @@ impl Target {
     pub fn linkable(&self) -> bool {
         match self.kind {
             TargetKind::Lib(ref kinds) => {
-                kinds.iter().any(|k| {
-                    match *k {
-                        LibKind::Lib | LibKind::Rlib | LibKind::Dylib => true,
-                        LibKind::StaticLib => false,
-                    }
-                })
+                kinds.iter().any(|k| k.linkable())
             }
             _ => false
         }
@@ -353,7 +354,7 @@ impl Target {
     pub fn is_custom_build(&self) -> bool { self.kind == TargetKind::CustomBuild }
 
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.
-    pub fn rustc_crate_types(&self) -> Vec<&'static str> {
+    pub fn rustc_crate_types(&self) -> Vec<&str> {
         match self.kind {
             TargetKind::Lib(ref kinds) => {
                 kinds.iter().map(|kind| kind.crate_type()).collect()
@@ -368,7 +369,11 @@ impl Target {
 
     pub fn can_lto(&self) -> bool {
         match self.kind {
-            TargetKind::Lib(ref v) => *v == [LibKind::StaticLib],
+            TargetKind::Lib(ref v) => {
+                !v.contains(&LibKind::Rlib) &&
+                    !v.contains(&LibKind::Dylib) &&
+                    !v.contains(&LibKind::Lib)
+            }
             _ => true,
         }
     }

@@ -1,13 +1,12 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashSet, HashMap, BTreeSet};
 use std::env;
 use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 use std::sync::Arc;
 
-use regex::Regex;
 
 use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
-use core::{TargetKind, LibKind, Profiles, Metadata, Dependency};
+use core::{TargetKind, Profiles, Metadata, Dependency};
 use core::dependency::Kind as DepKind;
 use util::{self, CargoResult, ChainError, internal, Config, profile, Cfg, human};
 
@@ -49,11 +48,9 @@ pub struct Context<'a, 'cfg: 'a> {
     profiles: &'a Profiles,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 struct TargetInfo {
-    dylib: Option<(String, String)>,
-    staticlib: Option<(String, String)>,
-    exe: String,
+    crate_types: HashMap<String, Option<(String, String)>>,
     cfg: Option<Vec<Cfg>>,
 }
 
@@ -67,12 +64,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
         let target = build_config.requested_target.clone();
         let target = target.as_ref().map(|s| &s[..]);
-        let target_info = try!(Context::target_info(target, config, &build_config));
-        let host_info = if build_config.requested_target.is_none() {
-            target_info.clone()
-        } else {
-            try!(Context::target_info(None, config, &build_config))
-        };
         let target_triple = target.unwrap_or_else(|| {
             &config.rustc_info().host[..]
         }).to_string();
@@ -86,8 +77,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             resolve: resolve,
             packages: packages,
             config: config,
-            target_info: target_info,
-            host_info: host_info,
+            target_info: TargetInfo::default(),
+            host_info: TargetInfo::default(),
             compilation: Compilation::new(config),
             build_state: Arc::new(BuildState::new(&build_config)),
             build_config: build_config,
@@ -98,84 +89,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),
             links: Links::new(),
-        })
-    }
-
-    /// Run `rustc` to discover the dylib prefix/suffix for the target
-    /// specified as well as the exe suffix
-    fn target_info(target: Option<&str>,
-                   cfg: &Config,
-                   build_config: &BuildConfig)
-                   -> CargoResult<TargetInfo> {
-        let kind = if target.is_none() {Kind::Host} else {Kind::Target};
-        let mut process = util::process(cfg.rustc());
-        process.arg("-")
-               .arg("--crate-name").arg("_")
-               .arg("--crate-type").arg("dylib")
-               .arg("--crate-type").arg("staticlib")
-               .arg("--crate-type").arg("bin")
-               .arg("--print=file-names")
-               .args(&try!(rustflags_args(cfg, build_config, kind)))
-               .env_remove("RUST_LOG");
-        if let Some(s) = target {
-            process.arg("--target").arg(s);
-        };
-
-        let mut with_cfg = process.clone();
-        with_cfg.arg("--print=cfg");
-
-        let mut has_cfg = true;
-        let output = try!(with_cfg.exec_with_output().or_else(|_| {
-            has_cfg = false;
-            process.exec_with_output()
-        }).chain_error(|| {
-            human(format!("failed to run `rustc` to learn about \
-                           target-specific information"))
-        }));
-
-        let error = str::from_utf8(&output.stderr).unwrap();
-        let output = str::from_utf8(&output.stdout).unwrap();
-        let mut lines = output.lines();
-        let nodylib = Regex::new("unsupported crate type.*dylib").unwrap();
-        let nostaticlib = Regex::new("unsupported crate type.*staticlib").unwrap();
-        let nobin = Regex::new("unsupported crate type.*bin").unwrap();
-        let dylib = if nodylib.is_match(error) {
-            None
-        } else {
-            let dylib_parts: Vec<&str> = lines.next().unwrap().trim()
-                                              .split('_').collect();
-            assert!(dylib_parts.len() == 2,
-                    "rustc --print-file-name output has changed");
-            Some((dylib_parts[0].to_string(), dylib_parts[1].to_string()))
-        };
-        let staticlib = if nostaticlib.is_match(error) {
-            None
-        } else {
-            let staticlib_parts: Vec<&str> = lines.next().unwrap().trim()
-                                              .split('_').collect();
-            assert!(staticlib_parts.len() == 2,
-                    "rustc --print-file-name output has changed");
-            Some((staticlib_parts[0].to_string(), staticlib_parts[1].to_string()))
-        };
-
-        let exe = if nobin.is_match(error) {
-            String::new()
-        } else {
-            lines.next().unwrap().trim()
-                 .split('_').skip(1).next().unwrap().to_string()
-        };
-
-        let cfg = if has_cfg {
-            Some(try!(lines.map(Cfg::from_str).collect()))
-        } else {
-            None
-        };
-
-        Ok(TargetInfo {
-            dylib: dylib,
-            staticlib: staticlib,
-            exe: exe,
-            cfg: cfg,
         })
     }
 
@@ -200,7 +113,120 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 self.layout(root, Kind::Target).proxy().dest().to_path_buf();
         self.compilation.deps_output =
                 self.layout(root, Kind::Target).proxy().deps().to_path_buf();
+        Ok(())
+    }
 
+    /// Ensure that we've collected all target-specific information to compile
+    /// all the units mentioned in `units`.
+    pub fn probe_target_info(&mut self, units: &[Unit<'a>]) -> CargoResult<()> {
+        let mut crate_types = BTreeSet::new();
+        // pre-fill with `bin` for learning about tests (nothing may be
+        // explicitly `bin`) as well as `rlib` as it's the coalesced version of
+        // `lib` in the compiler and we're not sure which we'll see.
+        crate_types.insert("bin".to_string());
+        crate_types.insert("rlib".to_string());
+        for unit in units {
+            try!(self.visit_crate_type(unit, &mut crate_types));
+        }
+        try!(self.probe_target_info_kind(&crate_types, Kind::Target));
+        if self.build_config.requested_target.is_none() {
+            self.host_info = self.target_info.clone();
+        } else {
+            try!(self.probe_target_info_kind(&crate_types, Kind::Host));
+        }
+        Ok(())
+    }
+
+    fn visit_crate_type(&self,
+                        unit: &Unit<'a>,
+                        crate_types: &mut BTreeSet<String>)
+                        -> CargoResult<()> {
+        for target in unit.pkg.manifest().targets() {
+            crate_types.extend(target.rustc_crate_types().iter().map(|s| {
+                if *s == "lib" {
+                    "rlib".to_string()
+                } else {
+                    s.to_string()
+                }
+            }));
+        }
+        for dep in try!(self.dep_targets(&unit)) {
+            try!(self.visit_crate_type(&dep, crate_types));
+        }
+        Ok(())
+    }
+
+    fn probe_target_info_kind(&mut self,
+                              crate_types: &BTreeSet<String>,
+                              kind: Kind)
+                              -> CargoResult<()> {
+        let mut process = util::process(self.config.rustc());
+        process.arg("-")
+               .arg("--crate-name").arg("_")
+               .arg("--print=file-names")
+               .args(&try!(rustflags_args(self.config, &self.build_config, kind)))
+               .env_remove("RUST_LOG");
+
+        for crate_type in crate_types {
+            process.arg("--crate-type").arg(crate_type);
+        }
+        if kind == Kind::Target {
+            process.arg("--target").arg(&self.target_triple);
+        }
+
+        let mut with_cfg = process.clone();
+        with_cfg.arg("--print=cfg");
+
+        let mut has_cfg = true;
+        let output = try!(with_cfg.exec_with_output().or_else(|_| {
+            has_cfg = false;
+            process.exec_with_output()
+        }).chain_error(|| {
+            human(format!("failed to run `rustc` to learn about \
+                           target-specific information"))
+        }));
+
+        let error = str::from_utf8(&output.stderr).unwrap();
+        let output = str::from_utf8(&output.stdout).unwrap();
+        let mut lines = output.lines();
+        let mut map = HashMap::new();
+        for crate_type in crate_types {
+            let not_supported = error.lines().any(|line| {
+                line.contains("unsupported crate type") &&
+                    line.contains(crate_type)
+            });
+            if not_supported {
+                map.insert(crate_type.to_string(), None);
+                continue
+            }
+            let line = match lines.next() {
+                Some(line) => line,
+                None => bail!("malformed output when learning about \
+                               target-specific information from rustc"),
+            };
+            let mut parts = line.trim().split('_');
+            let prefix = parts.next().unwrap();
+            let suffix = match parts.next() {
+                Some(part) => part,
+                None => bail!("output of --print=file-names has changed in \
+                               the compiler, cannot parse"),
+            };
+            map.insert(crate_type.to_string(),
+                       Some((prefix.to_string(), suffix.to_string())));
+        }
+
+        let cfg = if has_cfg {
+            Some(try!(lines.map(Cfg::from_str).collect()))
+        } else {
+            None
+        };
+
+        let info = match kind {
+            Kind::Target => &mut self.target_info,
+            Kind::Host => &mut self.host_info,
+        };
+        info.crate_types = map;
+        info.cfg = cfg;
         Ok(())
     }
 
@@ -222,38 +248,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             self.layout(unit.pkg, unit.kind).doc_root()
         } else {
             self.layout(unit.pkg, unit.kind).out_dir(unit.pkg, unit.target)
-        }
-    }
-
-    /// Return the (prefix, suffix) pair for dynamic libraries.
-    ///
-    /// If `plugin` is true, the pair corresponds to the host platform,
-    /// otherwise it corresponds to the target platform.
-    fn dylib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
-        let (triple, pair) = if kind == Kind::Host {
-            (&self.config.rustc_info().host, &self.host_info.dylib)
-        } else {
-            (&self.target_triple, &self.target_info.dylib)
-        };
-        match *pair {
-            None => bail!("dylib outputs are not supported for {}", triple),
-            Some((ref s1, ref s2)) => Ok((s1, s2)),
-        }
-    }
-
-    /// Return the (prefix, suffix) pair for static libraries.
-    ///
-    /// If `plugin` is true, the pair corresponds to the host platform,
-    /// otherwise it corresponds to the target platform.
-    pub fn staticlib(&self, kind: Kind) -> CargoResult<(&str, &str)> {
-        let (triple, pair) = if kind == Kind::Host {
-            (&self.config.rustc_info().host, &self.host_info.staticlib)
-        } else {
-            (&self.target_triple, &self.target_info.staticlib)
-        };
-        match *pair {
-            None => bail!("staticlib outputs are not supported for {}", triple),
-            Some((ref s1, ref s2)) => Ok((s1, s2)),
         }
     }
 
@@ -304,55 +298,66 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Return the filenames that the given target for the given profile will
-    /// generate.
-    pub fn target_filenames(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+    /// generate, along with whether you can link against that file (e.g. it's a
+    /// library).
+    pub fn target_filenames(&self, unit: &Unit)
+                            -> CargoResult<Vec<(String, bool)>> {
         let stem = self.file_stem(unit);
-        let suffix = if unit.target.for_host() {
-            &self.host_info.exe
+        let info = if unit.target.for_host() {
+            &self.host_info
         } else {
-            &self.target_info.exe
+            &self.target_info
         };
 
         let mut ret = Vec::new();
-        match *unit.target.kind() {
-            TargetKind::Example |
-            TargetKind::Bin |
-            TargetKind::CustomBuild |
-            TargetKind::Bench |
-            TargetKind::Test => {
-                ret.push(format!("{}{}", stem, suffix));
-            }
-            TargetKind::Lib(..) if unit.profile.test => {
-                ret.push(format!("{}{}", stem, suffix));
-            }
-            TargetKind::Lib(ref libs) => {
-                for lib in libs {
-                    match *lib {
-                        LibKind::Dylib => {
-                            if let Ok((prefix, suffix)) = self.dylib(unit.kind) {
-                                ret.push(format!("{}{}{}", prefix, stem, suffix));
-                            }
-                        }
-                        LibKind::Lib |
-                        LibKind::Rlib => ret.push(format!("lib{}.rlib", stem)),
-                        LibKind::StaticLib => {
-                            if let Ok((prefix, suffix)) = self.staticlib(unit.kind) {
-                                ret.push(format!("{}{}{}", prefix, stem, suffix));
-                            }
-                        }
+        let mut unsupported = Vec::new();
+        {
+            let mut add = |crate_type: &str, linkable: bool| -> CargoResult<()> {
+                let crate_type = if crate_type == "lib" {"rlib"} else {crate_type};
+                match info.crate_types.get(crate_type) {
+                    Some(&Some((ref prefix, ref suffix))) => {
+                        ret.push((format!("{}{}{}", prefix, stem, suffix),
+                                  linkable));
+                        Ok(())
+                    }
+                    // not supported, don't worry about it
+                    Some(&None) => {
+                        unsupported.push(crate_type.to_string());
+                        Ok(())
+                    }
+                    None => {
+                        bail!("failed to learn about crate-type `{}` early on",
+                              crate_type)
                     }
                 }
-                if ret.is_empty() {
-                    if libs.contains(&LibKind::Dylib) {
-                        bail!("cannot produce dylib for `{}` as the target `{}` \
-                               does not support dynamic libraries",
-                              unit.pkg, self.target_triple)
+            };
+            match *unit.target.kind() {
+                TargetKind::Example |
+                TargetKind::Bin |
+                TargetKind::CustomBuild |
+                TargetKind::Bench |
+                TargetKind::Test => {
+                    try!(add("bin", false));
+                }
+                TargetKind::Lib(..) if unit.profile.test => {
+                    try!(add("bin", false));
+                }
+                TargetKind::Lib(ref libs) => {
+                    for lib in libs {
+                        try!(add(lib.crate_type(), lib.linkable()));
                     }
-                    bail!("cannot compile `{}` as the target `{}` does not \
-                           support any of the output crate types",
-                          unit.pkg, self.target_triple);
                 }
             }
+        }
+        if ret.is_empty() {
+            if unsupported.len() > 0 {
+                bail!("cannot produce {} for `{}` as the target `{}` \
+                       does not support these crate types",
+                      unsupported.join(", "), unit.pkg, self.target_triple)
+            }
+            bail!("cannot compile `{}` as the target `{}` does not \
+                   support any of the output crate types",
+                  unit.pkg, self.target_triple);
         }
         Ok(ret)
     }

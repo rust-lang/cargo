@@ -42,23 +42,20 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
         None => None,
     };
 
-    let cx = try!(Context::new(&resolve, &packages, opts.config,
-                               host_layout, target_layout,
-                               BuildConfig::default(),
-                               root.manifest().profiles()));
+    let mut cx = try!(Context::new(&resolve, &packages, opts.config,
+                                   host_layout, target_layout,
+                                   BuildConfig::default(),
+                                   root.manifest().profiles()));
+    let mut units = Vec::new();
 
-    // resolve package specs and remove the corresponding packages
     for spec in opts.spec {
         // Translate the spec to a Package
         let pkgid = try!(resolve.query(spec));
         let pkg = try!(packages.get(&pkgid));
 
-        // And finally, clean everything out!
+        // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {
             for kind in [Kind::Host, Kind::Target].iter() {
-                let layout = cx.layout(&pkg, *kind);
-                try!(rm_rf(&layout.proxy().fingerprint(&pkg)));
-                try!(rm_rf(&layout.build(&pkg)));
                 let Profiles {
                     ref release, ref dev, ref test, ref bench, ref doc,
                     ref custom_build, ref test_deps, ref bench_deps,
@@ -66,18 +63,27 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
                 let profiles = [release, dev, test, bench, doc, custom_build,
                                 test_deps, bench_deps];
                 for profile in profiles.iter() {
-                    let unit = Unit {
+                    units.push(Unit {
                         pkg: &pkg,
                         target: target,
                         profile: profile,
                         kind: *kind,
-                    };
-                    let root = cx.out_dir(&unit);
-                    for filename in try!(cx.target_filenames(&unit)).iter() {
-                        try!(rm_rf(&root.join(&filename)));
-                    }
+                    });
                 }
             }
+        }
+    }
+
+    try!(cx.probe_target_info(&units));
+
+    for unit in units.iter() {
+        let layout = cx.layout(&unit.pkg, unit.kind);
+        try!(rm_rf(&layout.proxy().fingerprint(&unit.pkg)));
+        try!(rm_rf(&layout.build(&unit.pkg)));
+
+        let root = cx.out_dir(&unit);
+        for (filename, _) in try!(cx.target_filenames(&unit)) {
+            try!(rm_rf(&root.join(&filename)));
         }
     }
 
