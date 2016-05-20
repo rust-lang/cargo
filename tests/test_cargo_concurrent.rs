@@ -409,10 +409,10 @@ test!(debug_release_ok {
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
 
-    assert_that(a, execs().with_status(0).with_stdout("\
+    assert_that(a, execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.0 [..]
 "));
-    assert_that(b, execs().with_status(0).with_stdout("\
+    assert_that(b, execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.0 [..]
 "));
 });

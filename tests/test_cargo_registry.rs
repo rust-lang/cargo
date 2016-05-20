@@ -27,7 +27,7 @@ test!(simple {
     Package::new("bar", "0.0.1").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
@@ -38,7 +38,7 @@ test!(simple {
 
     // Don't download a second time
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [..] bar v0.0.1 (registry file://[..])
 [..] foo v0.0.1 ({dir})
@@ -64,7 +64,7 @@ test!(deps {
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
@@ -93,6 +93,7 @@ test!(nonexistent {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
 [ERROR] no matching package named `nonexistent` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 0.0.0
@@ -116,7 +117,7 @@ test!(wrong_version {
     Package::new("foo", "0.0.2").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `foo` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 1.0.0
@@ -127,7 +128,7 @@ versions found: 0.0.2, 0.0.1
     Package::new("foo", "0.0.4").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `foo` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 1.0.0
@@ -154,6 +155,8 @@ test!(bad_cksum {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
+[DOWNLOADING] bad-cksum [..]
 [ERROR] unable to get packages from source
 
 Caused by:
@@ -180,7 +183,7 @@ test!(update_registry {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `notyet` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 0.0.0
@@ -189,7 +192,7 @@ version required: >= 0.0.0
     Package::new("notyet", "0.0.1").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] notyet v0.0.1 (registry file://[..])
 [COMPILING] notyet v0.0.1 (registry file://[..])
@@ -227,7 +230,7 @@ test!(package_with_path_deps {
     p.build();
 
     assert_that(p.cargo("package").arg("-v"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] failed to verify package tarball
 
 Caused by:
@@ -239,7 +242,7 @@ version required: ^0.0.1
     Package::new("notyet", "0.0.1").publish();
 
     assert_that(p.cargo("package"),
-                execs().with_status(0).with_stdout(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [UPDATING] registry `[..]`
@@ -266,7 +269,7 @@ test!(lockfile_locks {
     Package::new("bar", "0.0.1").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
@@ -299,7 +302,7 @@ test!(lockfile_locks_transitively {
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
@@ -337,7 +340,7 @@ test!(yanks_are_not_used {
     Package::new("bar", "0.0.2").dep("baz", "*").yanked(true).publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
@@ -367,7 +370,7 @@ test!(relying_on_a_yank_is_bad {
     Package::new("bar", "0.0.1").dep("baz", "=0.0.2").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `baz` found (required by `bar`)
 location searched: registry file://[..]
 version required: = 0.0.2
@@ -402,7 +405,7 @@ test!(yanks_in_lockfiles_are_ok {
                 execs().with_status(0).with_stdout(""));
 
     assert_that(p.cargo("update"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `bar` found (required by `foo`)
 location searched: registry file://[..]
 version required: *
@@ -430,7 +433,7 @@ test!(update_with_lockfile_if_packages_missing {
 
     paths::home().join(".cargo/registry").rm_rf().unwrap();
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 "));
@@ -461,14 +464,14 @@ test!(update_lockfile {
     println!("0.0.2 update");
     assert_that(p.cargo("update")
                  .arg("-p").arg("bar").arg("--precise").arg("0.0.2"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.1 (registry file://[..]) -> v0.0.2
 "));
 
     println!("0.0.2 build");
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [DOWNLOADING] [..] v0.0.2 (registry file://[..])
 [COMPILING] bar v0.0.2 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
@@ -478,14 +481,14 @@ test!(update_lockfile {
     println!("0.0.3 update");
     assert_that(p.cargo("update")
                  .arg("-p").arg("bar"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.2 (registry file://[..]) -> v0.0.3
 "));
 
     println!("0.0.3 build");
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [DOWNLOADING] [..] v0.0.3 (registry file://[..])
 [COMPILING] bar v0.0.3 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
@@ -497,7 +500,7 @@ test!(update_lockfile {
    Package::new("spam", "0.2.5").publish();
    assert_that(p.cargo("update")
                 .arg("-p").arg("bar"),
-               execs().with_status(0).with_stdout("\
+               execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.3 (registry file://[..]) -> v0.0.4
 [ADDING] spam v0.2.5 (registry file://[..])
@@ -507,7 +510,7 @@ test!(update_lockfile {
    Package::new("bar", "0.0.5").publish();
    assert_that(p.cargo("update")
                 .arg("-p").arg("bar"),
-               execs().with_status(0).with_stdout("\
+               execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] bar v0.0.4 (registry file://[..]) -> v0.0.5
 [REMOVING] spam v0.2.5 (registry file://[..])
@@ -532,7 +535,7 @@ test!(dev_dependency_not_used {
     Package::new("bar", "0.0.1").dev_dep("baz", "*").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
@@ -565,7 +568,7 @@ test!(bad_license_file {
         "#);
     assert_that(p.cargo_process("publish").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 [ERROR] the license file `foo` does not exist"));
 });
 
@@ -596,7 +599,7 @@ test!(updating_a_dep {
     Package::new("bar", "0.0.1").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
@@ -618,7 +621,7 @@ test!(updating_a_dep {
 
     println!("second");
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.1.0 (registry file://[..])
 [COMPILING] bar v0.1.0 (registry file://[..])
@@ -661,7 +664,7 @@ test!(git_and_registry_dep {
 
     p.root().move_into_the_past().unwrap();
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] [..]
 [UPDATING] [..]
 [DOWNLOADING] a v0.0.1 (registry file://[..])
@@ -707,7 +710,7 @@ test!(update_publish_then_update {
 
     fs::remove_dir_all(&p.root().join("target")).unwrap();
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] [..]
 [DOWNLOADING] a v0.1.1 (registry file://[..])
 [COMPILING] a v0.1.1 (registry [..])
@@ -735,7 +738,7 @@ test!(fetch_downloads {
 
     assert_that(p.cargo("fetch"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] a v0.1.0 (registry [..])
 "));
@@ -765,14 +768,14 @@ test!(update_transitive_dependency {
 
     assert_that(p.cargo("update").arg("-pb"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] b v0.1.0 (registry [..]) -> v0.1.1
 "));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [DOWNLOADING] b v0.1.1 (registry file://[..])
 [COMPILING] b v0.1.1 (registry [..])
 [COMPILING] a v0.1.0 (registry [..])
@@ -811,7 +814,7 @@ test!(update_backtracking_ok {
 
     assert_that(p.cargo("update").arg("-p").arg("hyper"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] registry `[..]`
 "));
 });
@@ -845,7 +848,7 @@ test!(update_multiple_packages {
 
     assert_that(p.cargo("update").arg("-pa").arg("-pb"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] a v0.1.0 (registry [..]) -> v0.1.1
 [UPDATING] b v0.1.0 (registry [..]) -> v0.1.1
@@ -853,26 +856,26 @@ test!(update_multiple_packages {
 
     assert_that(p.cargo("update").arg("-pb").arg("-pc"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [UPDATING] registry `[..]`
 [UPDATING] c v0.1.0 (registry [..]) -> v0.1.1
 "));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [DOWNLOADING] a v0.1.1 (registry file://[..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [DOWNLOADING] b v0.1.1 (registry file://[..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [DOWNLOADING] c v0.1.1 (registry file://[..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [COMPILING] a v0.1.1 (registry [..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [COMPILING] b v0.1.1 (registry [..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [COMPILING] c v0.1.1 (registry [..])")
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [COMPILING] foo v0.5.0 ([..])"));
 });
 
@@ -982,7 +985,7 @@ test!(only_download_relevant {
     Package::new("baz", "0.1.0").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] baz v0.1.0 ([..])
 [COMPILING] baz v0.1.0 ([..])

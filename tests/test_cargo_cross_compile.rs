@@ -347,7 +347,7 @@ test!(linker_and_ar {
     assert_that(p.cargo_process("build").arg("--target").arg(&target)
                                               .arg("-v"),
                 execs().with_status(101)
-                       .with_stdout(&format!("\
+                       .with_stderr_contains(&format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc src[..]foo.rs --crate-name foo --crate-type bin -g \
     --out-dir {dir}[..]target[..]{target}[..]debug \
@@ -460,23 +460,23 @@ test!(cross_tests {
     let target = alternate();
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
 [RUNNING] target[..]{triple}[..]bar-[..]
-
+[RUNNING] target[..]{triple}[..]foo-[..]", foo = p.url(), triple = target))
+                       .with_stdout("
 running 1 test
 test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]{triple}[..]foo-[..]
 
 running 1 test
 test test_foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", foo = p.url(), triple = target)));
+"));
 });
 
 test!(no_cross_doctests {
@@ -499,40 +499,27 @@ test!(no_cross_doctests {
     let host_output = format!("\
 [COMPILING] foo v0.0.0 ({foo})
 [RUNNING] target[..]foo-[..]
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 [DOCTEST] foo
-
-running 1 test
-test _0 ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
 ", foo = p.url());
 
+    println!("a");
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(&host_output));
+                       .with_stderr(&host_output));
 
+    println!("b");
     let target = host();
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
-                       .with_stdout(&host_output));
+                       .with_stderr(&host_output));
 
+    println!("c");
     let target = alternate();
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
 [RUNNING] target[..]{triple}[..]foo-[..]
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 ", foo = p.url(), triple = target)));
 });
 
@@ -594,7 +581,7 @@ test!(cross_with_a_build_script {
 
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 (file://[..])
 [RUNNING] `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..]`
 [RUNNING] `{dir}[..]target[..]build[..]foo-[..]build-script-build`
@@ -663,27 +650,27 @@ test!(build_script_needed_for_host_and_target {
 
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
-                       .with_stdout_contains(&format!("\
+                       .with_stderr_contains(&format!("\
 [COMPILING] d1 v0.0.0 ({url}/d1)", url = p.url()))
-                       .with_stdout_contains(&format!("\
+                       .with_stderr_contains(&format!("\
 [RUNNING] `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`",
     dir = p.root().display()))
-                       .with_stdout_contains(&format!("\
+                       .with_stderr_contains(&format!("\
 [RUNNING] `{dir}[..]target[..]build[..]d1-[..]build-script-build`",
     dir = p.root().display()))
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [RUNNING] `rustc d1[..]src[..]lib.rs [..]`")
-                       .with_stdout_contains(&format!("\
+                       .with_stderr_contains(&format!("\
 [COMPILING] d2 v0.0.0 ({url}/d2)", url = p.url()))
-                       .with_stdout_contains(&format!("\
+                       .with_stderr_contains(&format!("\
 [RUNNING] `rustc d2[..]src[..]lib.rs [..] \
            -L /path/to/{host}`", host = host))
-                       .with_stdout_contains(&format!("\
+                       .with_stderr_contains(&format!("\
 [COMPILING] foo v0.0.0 ({url})", url = p.url()))
-                       .with_stdout_contains(&format!("\
+                       .with_stderr_contains(&format!("\
 [RUNNING] `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..] \
            -L /path/to/{host}`", dir = p.root().display(), host = host))
-                       .with_stdout_contains(&format!("\
+                       .with_stderr_contains(&format!("\
 [RUNNING] `rustc src[..]main.rs [..] --target {target} [..] \
            -L /path/to/{target}`", target = target)));
 });
@@ -789,7 +776,7 @@ test!(plugin_build_script_right_arch {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(alternate()),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]build-script-build[..]`
@@ -835,7 +822,7 @@ test!(build_script_with_platform_specific_dependencies {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] d2 v0.0.0 ([..])
 [RUNNING] `rustc d2[..]src[..]lib.rs [..]`
 [COMPILING] d1 v0.0.0 ([..])
@@ -888,16 +875,8 @@ test!(platform_specific_dependencies_do_not_leak {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
-                       .with_stderr("\
-[..] error: can't find crate for `d2`[..]
-[..] extern crate d2;
-[..]
-error: aborting due to previous error
-[ERROR] Could not compile `d1`.
-
-Caused by:
-  [..]
-"));
+                       .with_stderr_contains("\
+[..] error: can't find crate for `d2`[..]"));
 });
 
 test!(platform_specific_variables_reflected_in_build_scripts {

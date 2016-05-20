@@ -73,7 +73,7 @@ impl MultiShell {
     {
         match self.verbosity {
             Quiet => Ok(()),
-            _ => self.out().say_status(status, message, GREEN, true)
+            _ => self.err().say_status(status, message, GREEN, true)
         }
     }
 
