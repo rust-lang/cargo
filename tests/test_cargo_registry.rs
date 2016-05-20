@@ -2,6 +2,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use support::{project, execs};
+use support::git::repo;
 use support::paths::{self, CargoPathExt};
 use support::registry::{self, Package};
 use support::git;
@@ -550,7 +551,8 @@ test!(login_with_no_cargo_dir {
 
 test!(bad_license_file {
     Package::new("foo", "1.0.0").publish();
-    let p = project("all")
+    let root = paths::root().join("bad_license_file");
+    let p = repo(&root)
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -563,7 +565,11 @@ test!(bad_license_file {
         .file("src/main.rs", r#"
             fn main() {}
         "#);
-    assert_that(p.cargo_process("publish").arg("-v"),
+    p.build();
+
+    let mut cargo = ::cargo_process();
+    cargo.cwd(p.root());
+    assert_that(cargo.arg("publish").arg("-v"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] the license file `foo` does not exist"));
