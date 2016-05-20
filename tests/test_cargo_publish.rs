@@ -51,6 +51,7 @@ test!(simple {
     assert_that(p.cargo_process("publish").arg("--no-verify"),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
+[WARNING] manifest has no documentation, [..]
 [PACKAGING] foo v0.0.1 ({dir})
 [UPLOADING] foo v0.0.1 ({dir})
 ",
@@ -100,6 +101,7 @@ test!(git_deps {
 
     assert_that(p.cargo_process("publish").arg("-v").arg("--no-verify"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
 [ERROR] all dependencies must come from the same source.
 dependency `foo` comes from git://path/to/nowhere instead
 "));
@@ -129,6 +131,7 @@ test!(path_dependency_no_version {
 
     assert_that(p.cargo_process("publish"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
 [ERROR] all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
 "));
