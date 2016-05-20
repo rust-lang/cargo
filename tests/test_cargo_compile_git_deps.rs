@@ -61,8 +61,7 @@ test!(cargo_compile_simple_git_dep {
                               [COMPILING] foo v0.5.0 ({})\n",
                              path2url(git_root.clone()),
                              path2url(git_root),
-                             path2url(root)))
-        .with_stderr(""));
+                             path2url(root))));
 
     assert_that(&project.bin("foo"), existing_file());
 
@@ -128,8 +127,7 @@ test!(cargo_compile_git_dep_branch {
                               [COMPILING] foo v0.5.0 ({})\n",
                              path2url(git_root.clone()),
                              path2url(git_root),
-                             path2url(root)))
-        .with_stderr(""));
+                             path2url(root))));
 
     assert_that(&project.bin("foo"), existing_file());
 
@@ -645,6 +643,7 @@ test!(update_with_shared_deps {
                  .arg("-p").arg("bar")
                  .arg("--precise").arg("0.1.2"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] git repository [..]
 [ERROR] Unable to update [..]
 
 To learn more, run the command again with --verbose.
@@ -721,7 +720,10 @@ test!(dep_with_submodule {
         ");
 
     assert_that(project.cargo_process("build"),
-                execs().with_stderr("").with_status(0));
+                execs().with_stderr("\
+[UPDATING] git repository [..]
+[COMPILING] dep1 [..]
+[COMPILING] foo [..]").with_status(0));
 });
 
 test!(two_deps_only_update_one {
@@ -769,8 +771,7 @@ test!(two_deps_only_update_one {
                               [COMPILING] [..] v0.5.0 ([..])\n\
                               [COMPILING] [..] v0.5.0 ([..])\n\
                               [COMPILING] foo v0.5.0 ({})\n",
-                             project.url()))
-        .with_stderr(""));
+                             project.url())));
 
     File::create(&git1.root().join("src/lib.rs")).unwrap().write_all(br#"
         pub fn foo() {}
@@ -784,8 +785,7 @@ test!(two_deps_only_update_one {
         execs()
         .with_stderr(&format!("[UPDATING] git repository `{}`\n\
                                [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
-                              ", git1.url()))
-        .with_stderr(""));
+                              ", git1.url())));
 });
 
 test!(stale_cached_version {
@@ -901,12 +901,11 @@ test!(dep_with_changed_submodule {
 
     println!("first run");
     assert_that(project.cargo_process("run"), execs()
-                .with_stdout("[UPDATING] git repository `[..]`\n\
+                .with_stderr("[UPDATING] git repository `[..]`\n\
                                       [COMPILING] dep1 v0.5.0 ([..])\n\
                                       [COMPILING] foo v0.5.0 ([..])\n\
-                                      [RUNNING] `target[..]foo[..]`\n\
-                                      project2")
-                .with_stderr("")
+                                      [RUNNING] `target[..]foo[..]`\n")
+                .with_stdout("project2\n")
                 .with_status(0));
 
     File::create(&git_project.root().join(".gitmodules")).unwrap()
@@ -943,12 +942,10 @@ test!(dep_with_changed_submodule {
 
     println!("last run");
     assert_that(project.cargo("run"), execs()
-                .with_stdout("[COMPILING] dep1 v0.5.0 ([..])\n\
+                .with_stderr("[COMPILING] dep1 v0.5.0 ([..])\n\
                                       [COMPILING] foo v0.5.0 ([..])\n\
-                                      [RUNNING] `target[..]foo[..]`\n\
-                                      project3\
-                                      ")
-                .with_stderr("")
+                                      [RUNNING] `target[..]foo[..]`\n")
+                .with_stdout("project3\n")
                 .with_status(0));
 });
 
@@ -1275,8 +1272,7 @@ test!(warnings_in_git_dep {
                               [COMPILING] foo v0.5.0 ({})\n",
                              bar.url(),
                              bar.url(),
-                             p.url()))
-        .with_stderr(""));
+                             p.url())));
 });
 
 test!(update_ambiguous {
@@ -1548,7 +1544,7 @@ test!(switch_sources {
             [dependencies.a]
             git = '{}'
         "#, a1.url()))
-        .file("b/src/lib.rs", "fn main() {}");
+        .file("b/src/lib.rs", "pub fn main() {}");
 
     p.build();
     assert_that(p.cargo("build"),
