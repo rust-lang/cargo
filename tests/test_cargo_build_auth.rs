@@ -99,12 +99,8 @@ test!(http_auth_offered {
         ");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stdout(&format!("\
+                execs().with_status(101).with_stderr(&format!("\
 [UPDATING] git repository `http://{addr}/foo/bar`
-",
-        addr = addr,
-        ))
-                      .with_stderr(&format!("\
 [ERROR] Unable to update http://{addr}/foo/bar
 
 Caused by:
@@ -146,7 +142,7 @@ test!(https_something_happens {
         ");
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stdout(&format!("\
+                execs().with_status(101).with_stderr_contains(&format!("\
 [UPDATING] git repository `https://{addr}/foo/bar`
 ",
         addr = addr,
@@ -190,7 +186,7 @@ test!(ssh_something_happens {
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stdout(&format!("\
+                execs().with_status(101).with_stderr_contains(&format!("\
 [UPDATING] git repository `ssh://{addr}/foo/bar`
 ",
         addr = addr,

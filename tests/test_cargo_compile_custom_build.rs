@@ -28,17 +28,14 @@ test!(custom_build_script_failed {
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc build.rs --crate-name build_script_build --crate-type bin [..]`
 [RUNNING] `[..]build-script-build[..]`
-",
-url = p.url()))
-                       .with_stderr(&format!("\
-[ERROR] failed to run custom build command for `foo v0.5.0 ({})`
+[ERROR] failed to run custom build command for `foo v0.5.0 ({url})`
 Process didn't exit successfully: `[..]build[..]build-script-build[..]` \
     (exit code: 101)",
-p.url())));
+url = p.url())));
 });
 
 test!(custom_build_env_vars {
@@ -133,7 +130,7 @@ test!(custom_build_script_wrong_rustc_flags {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr_contains(&format!("\
 [ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`: \
 `-aaa -bbb`",
 p.url())));
@@ -174,7 +171,7 @@ test!(custom_build_script_rustc_flags {
     // TODO: TEST FAILS BECAUSE OF WRONG STDOUT (but otherwise, the build works)
     assert_that(p.cargo_process("build").arg("--verbose"),
                 execs().with_status(101)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] bar v0.5.0 ({url})
 [RUNNING] `rustc {dir}{sep}src{sep}lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \
@@ -289,7 +286,7 @@ test!(overrides_and_links {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [..]
 [..]
 [..]
@@ -390,7 +387,7 @@ test!(only_rerun_build_script {
 
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..]`
@@ -475,19 +472,19 @@ test!(testing_and_such {
     println!("test");
     assert_that(p.cargo("test").arg("-vj1"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..]`
 [RUNNING] `rustc [..] --crate-name foo [..]`
 [RUNNING] `[..]foo-[..][..]`
-
+[DOCTEST] foo
+[RUNNING] `rustdoc --test [..]`")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
-[RUNNING] `rustdoc --test [..]`
 
 running 0 tests
 
@@ -498,7 +495,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     println!("doc");
     assert_that(p.cargo("doc").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [DOCUMENTING] foo v0.5.0 (file://[..])
 [RUNNING] `rustdoc [..]`
 "));
@@ -508,7 +505,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     println!("run");
     assert_that(p.cargo("run"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `target[..]foo[..]`
 "));
@@ -560,7 +557,7 @@ test!(propagation_of_l_flags {
 
     assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [RUNNING] `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc [..] --crate-name foo [..] -L bar -L foo`
@@ -613,7 +610,7 @@ test!(propagation_of_l_flags_new {
 
     assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [RUNNING] `rustc [..] --crate-name a [..]-L bar[..]-L foo[..]`
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc [..] --crate-name foo [..] -L bar -L foo`
@@ -646,7 +643,7 @@ test!(build_deps_simple {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] a v0.5.0 (file://[..])
 [RUNNING] `rustc [..] --crate-name a [..]`
 [COMPILING] foo v0.5.0 (file://[..])
@@ -683,7 +680,7 @@ test!(build_deps_not_for_normal {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 [..]lib.rs[..] error: can't find crate for `aaaaa`[..]
 [..]lib.rs[..] extern crate aaaaa;
 [..]           ^~~~~~~~~~~~~~~~~~~
@@ -734,7 +731,7 @@ test!(build_cmd_with_a_build_cmd {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] b v0.5.0 (file://[..])
 [RUNNING] `rustc [..] --crate-name b [..]`
 [COMPILING] a v0.5.0 (file://[..])
@@ -823,11 +820,13 @@ test!(output_separate_lines {
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stdout("\
+                       .with_stderr_contains("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]foo-[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..] -L foo -l static=foo`
+[ERROR] could not find native static library [..]
+[ERROR] Could not compile [..]
 "));
 });
 
@@ -849,11 +848,13 @@ test!(output_separate_lines_new {
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stdout("\
+                       .with_stderr_contains("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]foo-[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..] -L foo -l static=foo`
+[ERROR] could not find native static library [..]
+[ERROR] Could not compile [..]
 "));
 });
 
@@ -892,9 +893,10 @@ test!(code_generation {
         "#);
     assert_that(p.cargo_process("run"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
-[RUNNING] `target[..]foo`
+[RUNNING] `target[..]foo`")
+                       .with_stdout("\
 Hello, World!
 "));
 
@@ -1314,7 +1316,7 @@ test!(cfg_test {
             fn test_bar() {}
         "#);
     assert_that(p.cargo_process("test").arg("-v"),
-                execs().with_stdout(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] [..] build.rs [..]
 [RUNNING] [..]build-script-build[..]
@@ -1322,28 +1324,28 @@ test!(cfg_test {
 [RUNNING] [..] --cfg foo[..]
 [RUNNING] [..] --cfg foo[..]
 [RUNNING] [..]foo-[..]
-
+[RUNNING] [..]test-[..]
+[DOCTEST] foo
+[RUNNING] [..] --cfg foo[..]", dir = p.url()))
+                       .with_stdout("
 running 1 test
 test test_foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] [..]test-[..]
 
 running 1 test
 test test_bar ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
-[RUNNING] [..] --cfg foo[..]
 
 running 1 test
 test foo_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", dir = p.url())));
+"));
 });
 
 test!(cfg_doc {
@@ -1430,34 +1432,34 @@ test!(cfg_override_test {
             fn test_bar() {}
         "#);
     assert_that(p.cargo_process("test").arg("-v"),
-                execs().with_stdout(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] `[..]`
 [RUNNING] `[..]`
 [RUNNING] `[..]`
 [RUNNING] [..]foo-[..]
-
+[RUNNING] [..]test-[..]
+[DOCTEST] foo
+[RUNNING] [..] --cfg foo[..]", dir = p.url()))
+                       .with_stdout("
 running 1 test
 test test_foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] [..]test-[..]
 
 running 1 test
 test test_bar ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
-[RUNNING] [..] --cfg foo[..]
 
 running 1 test
 test foo_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", dir = p.url())));
+"));
 });
 
 test!(cfg_override_doc {
@@ -1541,7 +1543,8 @@ test!(flags_go_into_tests {
         "#);
 
     assert_that(p.cargo_process("test").arg("-v").arg("--test=foo"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0)
+                       .with_stderr("\
 [COMPILING] a v0.5.0 ([..]
 [RUNNING] `rustc a[..]build.rs [..]`
 [RUNNING] `[..]build-script-build[..]`
@@ -1551,8 +1554,8 @@ test!(flags_go_into_tests {
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc src[..]lib.rs [..] -L test[..]`
 [RUNNING] `rustc tests[..]foo.rs [..] -L test[..]`
-[RUNNING] `[..]foo-[..]`
-
+[RUNNING] `[..]foo-[..]`")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
@@ -1560,12 +1563,13 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 "));
 
     assert_that(p.cargo("test").arg("-v").arg("-pb").arg("--lib"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0)
+                       .with_stderr("\
 [FRESH] a v0.5.0 ([..]
 [COMPILING] b v0.5.0 ([..]
 [RUNNING] `rustc b[..]src[..]lib.rs [..] -L test[..]`
-[RUNNING] `[..]b-[..]`
-
+[RUNNING] `[..]b-[..]`")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
@@ -1621,7 +1625,7 @@ test!(diamond_passes_args_only_once {
         .file("c/src/lib.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] c v0.5.0 ([..]
 [RUNNING] `rustc [..]`
 [RUNNING] `[..]`
@@ -1655,7 +1659,7 @@ test!(adding_an_override_invalidates {
         "#);
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..]`
 [RUNNING] `[..]`
@@ -1668,7 +1672,7 @@ test!(adding_an_override_invalidates {
     ", target).as_bytes()).unwrap();
 
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=bar`
 "));
@@ -1693,7 +1697,7 @@ test!(changing_an_override_invalidates {
         .file("build.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=foo`
 "));
@@ -1704,7 +1708,7 @@ test!(changing_an_override_invalidates {
     ", target).as_bytes()).unwrap();
 
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=bar`
 "));
@@ -1734,7 +1738,7 @@ test!(rebuild_only_on_explicit_paths {
     // files don't exist, so should always rerun if they don't exist
     println!("run without");
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`
@@ -1747,7 +1751,7 @@ test!(rebuild_only_on_explicit_paths {
     // now the exist, so run once, catch the mtime, then shouldn't run again
     println!("run with");
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`
@@ -1755,7 +1759,7 @@ test!(rebuild_only_on_explicit_paths {
 
     println!("run with2");
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [FRESH] a v0.5.0 ([..])
 "));
 
@@ -1765,7 +1769,7 @@ test!(rebuild_only_on_explicit_paths {
     println!("run baz");
     File::create(p.root().join("baz")).unwrap();
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [FRESH] a v0.5.0 ([..])
 "));
 
@@ -1773,7 +1777,7 @@ test!(rebuild_only_on_explicit_paths {
     println!("run foo change");
     File::create(p.root().join("foo")).unwrap();
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`
@@ -1783,7 +1787,7 @@ test!(rebuild_only_on_explicit_paths {
     println!("run foo delete");
     fs::remove_file(p.root().join("bar")).unwrap();
     assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`
@@ -1819,7 +1823,7 @@ test!(doctest_recieves_build_link_args {
 
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [RUNNING] `rustdoc --test [..] --crate-name foo [..]-L native=bar[..]`
 "));
 });
@@ -1859,7 +1863,7 @@ test!(please_respect_the_dag {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [RUNNING] `rustc [..] -L native=foo -L native=bar[..]`
 "));
 });
