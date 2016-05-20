@@ -347,7 +347,7 @@ test!(linker_and_ar {
     assert_that(p.cargo_process("build").arg("--target").arg(&target)
                                               .arg("-v"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr_contains(&format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc src[..]foo.rs --crate-name foo --crate-type bin -g \
     --out-dir {dir}[..]target[..]{target}[..]debug \
@@ -499,41 +499,28 @@ test!(no_cross_doctests {
     let host_output = format!("\
 [COMPILING] foo v0.0.0 ({foo})
 [RUNNING] target[..]foo-[..]
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
 [DOCTEST] foo
-
-running 1 test
-test _0 ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
 ", foo = p.url());
 
+    println!("a");
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(&host_output));
+                       .with_stderr(&host_output));
 
+    println!("b");
     let target = host();
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
-                       .with_stdout(&host_output));
+                       .with_stderr(&host_output));
 
+    println!("c");
     let target = alternate();
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
-[RUNNING] target[..]{triple}[..]foo-[..]", foo = p.url(), triple = target))
-                       .with_stdout("
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+[RUNNING] target[..]{triple}[..]foo-[..]
+", foo = p.url(), triple = target)));
 });
 
 test!(simple_cargo_run {
@@ -888,16 +875,8 @@ test!(platform_specific_dependencies_do_not_leak {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
-                       .with_stderr("\
-[..] error: can't find crate for `d2`[..]
-[..] extern crate d2;
-[..]
-error: aborting due to previous error
-[ERROR] Could not compile `d1`.
-
-Caused by:
-  [..]
-"));
+                       .with_stderr_contains("\
+[..] error: can't find crate for `d2`[..]"));
 });
 
 test!(platform_specific_variables_reflected_in_build_scripts {

@@ -1769,15 +1769,8 @@ test!(transitive_dependencies_not_available {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 [..] can't find crate for `bbbbb`[..]
-[..] extern crate bbbbb; [..]
-[..]
-error: aborting due to previous error
-[ERROR] Could not compile `foo`.
-
-Caused by:
-  [..]
 "));
 });
 
