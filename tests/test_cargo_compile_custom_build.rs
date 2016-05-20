@@ -32,13 +32,10 @@ test!(custom_build_script_failed {
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc build.rs --crate-name build_script_build --crate-type bin [..]`
 [RUNNING] `[..]build-script-build[..]`
-",
-url = p.url()))
-                       .with_stderr(&format!("\
-[ERROR] failed to run custom build command for `foo v0.5.0 ({})`
+[ERROR] failed to run custom build command for `foo v0.5.0 ({url})`
 Process didn't exit successfully: `[..]build[..]build-script-build[..]` \
     (exit code: 101)",
-p.url())));
+url = p.url())));
 });
 
 test!(custom_build_env_vars {
@@ -133,7 +130,7 @@ test!(custom_build_script_wrong_rustc_flags {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr_contains(&format!("\
 [ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`: \
 `-aaa -bbb`",
 p.url())));
@@ -679,7 +676,7 @@ test!(build_deps_not_for_normal {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 [..]lib.rs[..] error: can't find crate for `aaaaa`[..]
 [..]lib.rs[..] extern crate aaaaa;
 [..]           ^~~~~~~~~~~~~~~~~~~
@@ -819,11 +816,13 @@ test!(output_separate_lines {
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]foo-[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..] -L foo -l static=foo`
+[ERROR] could not find native static library [..]
+[ERROR] Could not compile [..]
 "));
 });
 
@@ -845,11 +844,13 @@ test!(output_separate_lines_new {
         "#);
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]foo-[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..] -L foo -l static=foo`
+[ERROR] could not find native static library [..]
+[ERROR] Could not compile [..]
 "));
 });
 
