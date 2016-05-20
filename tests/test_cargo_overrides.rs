@@ -274,7 +274,7 @@ test!(use_a_spec_to_select {
             extern crate foo;
             extern crate bar;
 
-            fn local() {
+            pub fn local() {
                 foo::foo1();
                 bar::bar();
             }
@@ -422,6 +422,8 @@ test!(override_wrong_name {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
+[UPDATING] git repository [..]
 error: no matching package for override `foo:0.1.0` found
 location searched: file://[..]
 version required: = 0.1.0
@@ -452,6 +454,8 @@ test!(override_with_nothing {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
+[UPDATING] git repository [..]
 error: Unable to update file://[..]
 
 Caused by:
@@ -512,6 +516,8 @@ test!(multiple_specs {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
+[UPDATING] git repository [..]
 error: overlapping replacement specifications found:
 
   * [..]
