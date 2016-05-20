@@ -93,6 +93,7 @@ test!(nonexistent {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
 [ERROR] no matching package named `nonexistent` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 0.0.0
@@ -116,7 +117,7 @@ test!(wrong_version {
     Package::new("foo", "0.0.2").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `foo` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 1.0.0
@@ -127,7 +128,7 @@ versions found: 0.0.2, 0.0.1
     Package::new("foo", "0.0.4").publish();
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `foo` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 1.0.0
@@ -154,6 +155,8 @@ test!(bad_cksum {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
+[DOWNLOADING] bad-cksum [..]
 [ERROR] unable to get packages from source
 
 Caused by:
@@ -180,7 +183,7 @@ test!(update_registry {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `notyet` found (required by `foo`)
 location searched: registry file://[..]
 version required: >= 0.0.0
@@ -227,7 +230,7 @@ test!(package_with_path_deps {
     p.build();
 
     assert_that(p.cargo("package").arg("-v"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] failed to verify package tarball
 
 Caused by:
@@ -367,7 +370,7 @@ test!(relying_on_a_yank_is_bad {
     Package::new("bar", "0.0.1").dep("baz", "=0.0.2").publish();
 
     assert_that(p.cargo("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `baz` found (required by `bar`)
 location searched: registry file://[..]
 version required: = 0.0.2
@@ -402,7 +405,7 @@ test!(yanks_in_lockfiles_are_ok {
                 execs().with_status(0).with_stdout(""));
 
     assert_that(p.cargo("update"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `bar` found (required by `foo`)
 location searched: registry file://[..]
 version required: *
@@ -565,7 +568,7 @@ test!(bad_license_file {
         "#);
     assert_that(p.cargo_process("publish").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 [ERROR] the license file `foo` does not exist"));
 });
 
