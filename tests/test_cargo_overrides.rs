@@ -526,3 +526,41 @@ error: overlapping replacement specifications found:
 both specifications match: foo v0.1.0 ([..])
 "));
 });
+
+test!(test_override_dep {
+    Package::new("foo", "0.1.0").publish();
+
+    let foo = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "pub fn foo() {}");
+    foo.build();
+
+    let p = project("local")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+
+            [replace]
+            "foo:0.1.0" = {{ git = '{0}' }}
+        "#, foo.url()))
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("test").arg("-p").arg("foo"),
+                execs().with_status(101)
+                       .with_stderr_contains("\
+error: There are multiple `foo` packages in your project, and the [..]
+Please re-run this command with [..]
+  [..]#foo:0.1.0
+  [..]#foo:0.1.0
+"));
+});
