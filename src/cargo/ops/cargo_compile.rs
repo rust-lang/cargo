@@ -167,22 +167,14 @@ pub fn compile_pkg<'a>(root_package: &Package,
                                   no_default_features))
     };
 
-    let mut invalid_spec = vec![];
-    let pkgids = if spec.len() > 0 {
-        spec.iter().filter_map(|p| {
-            match resolve_with_overrides.query(&p) {
-                Ok(p) => Some(p),
-                Err(..) => { invalid_spec.push(p.to_string()); None }
-            }
-        }).collect::<Vec<_>>()
+    let mut pkgids = Vec::new();
+    if spec.len() > 0 {
+        for p in spec {
+            pkgids.push(try!(resolve_with_overrides.query(&p)));
+        }
     } else {
-        vec![root_package.package_id()]
+        pkgids.push(root_package.package_id());
     };
-
-    if !spec.is_empty() && !invalid_spec.is_empty() {
-        bail!("could not find package matching spec `{}`",
-              invalid_spec.join(", "))
-    }
 
     let to_builds = try!(pkgids.iter().map(|id| {
         packages.get(id)
