@@ -60,17 +60,18 @@ test!(simple {
     pkg("foo", "0.0.1");
 
     assert_that(cargo_process("install").arg("foo"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 (registry file://[..])
 [INSTALLING] {home}[..]bin[..]foo[..]
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         home = cargo_home().display())));
     assert_that(cargo_home(), has_installed_exe("foo"));
 
     assert_that(cargo_process("uninstall").arg("foo"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [REMOVING] {home}[..]bin[..]foo[..]
 ",
         home = cargo_home().display())));
@@ -82,11 +83,12 @@ test!(pick_max_version {
     pkg("foo", "0.0.2");
 
     assert_that(cargo_process("install").arg("foo"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.2 (registry file://[..])
 [COMPILING] foo v0.0.2 (registry file://[..])
 [INSTALLING] {home}[..]bin[..]foo[..]
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         home = cargo_home().display())));
     assert_that(cargo_home(), has_installed_exe("foo"));
@@ -96,6 +98,7 @@ test!(missing {
     pkg("foo", "0.0.1");
     assert_that(cargo_process("install").arg("bar"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
 [ERROR] could not find `bar` in `registry file://[..]`
 "));
 });
@@ -104,6 +107,7 @@ test!(bad_version {
     pkg("foo", "0.0.1");
     assert_that(cargo_process("install").arg("foo").arg("--vers=0.2.0"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
 [ERROR] could not find `foo` in `registry file://[..]` with version `0.2.0`
 "));
 });
@@ -210,6 +214,7 @@ test!(multiple_crates_error {
 
     assert_that(cargo_process("install").arg("--git").arg(p.url().to_string()),
                 execs().with_status(101).with_stderr("\
+[UPDATING] git repository [..]
 [ERROR] multiple packages with binaries found: bar, foo
 "));
 });
@@ -412,9 +417,10 @@ test!(install_force {
     p.build();
 
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.2.0 ([..])
 [REPLACING] {home}[..]bin[..]foo[..]
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         home = cargo_home().display())));
 
@@ -452,10 +458,11 @@ test!(install_force_partial_overlap {
     p.build();
 
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.2.0 ([..])
 [INSTALLING] {home}[..]bin[..]foo-bin3[..]
 [REPLACING] {home}[..]bin[..]foo-bin2[..]
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         home = cargo_home().display())));
 
@@ -500,9 +507,10 @@ test!(install_force_bin {
                     .arg("foo-bin2")
                     .arg("--path")
                     .arg(p.root()),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.2.0 ([..])
 [REPLACING] {home}[..]bin[..]foo-bin2[..]
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         home = cargo_home().display())));
 
@@ -528,6 +536,7 @@ test!(compile_failure {
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(101).with_stderr("\
+[COMPILING] foo v0.1.0 [..]
 error: main function not found
 error: aborting due to previous error
 [ERROR] failed to compile `foo v0.1.0 (file://[..])`, intermediate artifacts can be \
@@ -552,10 +561,11 @@ test!(git_repo {
     p.build();
 
     assert_that(cargo_process("install").arg("--git").arg(p.url().to_string()),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [UPDATING] git repository `[..]`
 [COMPILING] foo v0.1.0 ([..])
 [INSTALLING] {home}[..]bin[..]foo[..]
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         home = cargo_home().display())));
     assert_that(cargo_home(), has_installed_exe("foo"));
@@ -619,7 +629,7 @@ test!(uninstall_piecemeal {
     assert_that(cargo_home(), has_installed_exe("bar"));
 
     assert_that(cargo_process("uninstall").arg("foo").arg("--bin=bar"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [REMOVING] [..]bar[..]
 "));
 
@@ -627,7 +637,7 @@ test!(uninstall_piecemeal {
     assert_that(cargo_home(), is_not(has_installed_exe("bar")));
 
     assert_that(cargo_process("uninstall").arg("foo").arg("--bin=foo"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [REMOVING] [..]foo[..]
 "));
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
@@ -683,9 +693,8 @@ test!(do_not_rebuilds_on_local_install {
     assert_that(p.cargo_process("build").arg("--release"),
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [INSTALLING] [..]
-").with_stderr("\
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 "));
 

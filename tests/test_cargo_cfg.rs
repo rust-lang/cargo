@@ -184,7 +184,7 @@ test!(dont_include {
         "#)
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] a v0.0.1 ([..])
 "));
 });
@@ -211,7 +211,7 @@ test!(works_through_the_registry {
         .file("src/lib.rs", "extern crate bar;");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
 [DOWNLOADING] [..]

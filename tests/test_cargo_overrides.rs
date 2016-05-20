@@ -41,7 +41,7 @@ test!(override_simple {
         ");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [COMPILING] foo v0.1.0 (file://[..])
@@ -135,7 +135,7 @@ test!(transitive {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] bar v0.2.0 (registry [..])
@@ -181,7 +181,7 @@ test!(persists_across_rebuilds {
         ");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `file://[..]`
 [COMPILING] foo v0.1.0 (file://[..])
@@ -226,7 +226,7 @@ test!(replace_registry_with_path {
         ");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] local v0.0.1 (file://[..])
@@ -274,14 +274,14 @@ test!(use_a_spec_to_select {
             extern crate foo;
             extern crate bar;
 
-            fn local() {
+            pub fn local() {
                 foo::foo1();
                 bar::bar();
             }
         ");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] [..]
@@ -326,7 +326,7 @@ test!(override_adds_some_deps {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] foo v0.1.1 (registry [..])
@@ -339,11 +339,11 @@ test!(override_adds_some_deps {
 
     Package::new("foo", "0.1.2").publish();
     assert_that(p.cargo("update").arg("-p").arg(&format!("{}#bar", foo.url())),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] git repository `file://[..]`
 "));
     assert_that(p.cargo("update").arg("-p").arg(&format!("{}#bar", registry())),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 "));
 
@@ -422,6 +422,8 @@ test!(override_wrong_name {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
+[UPDATING] git repository [..]
 error: no matching package for override `foo:0.1.0` found
 location searched: file://[..]
 version required: = 0.1.0
@@ -452,6 +454,8 @@ test!(override_with_nothing {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
+[UPDATING] git repository [..]
 error: Unable to update file://[..]
 
 Caused by:
@@ -512,6 +516,8 @@ test!(multiple_specs {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
+[UPDATING] registry [..]
+[UPDATING] git repository [..]
 error: overlapping replacement specifications found:
 
   * [..]

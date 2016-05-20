@@ -33,16 +33,16 @@ test!(cargo_test_simple {
                 execs().with_stdout("hello\n"));
 
     assert_that(p.cargo("test"),
-                execs().with_stdout(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({})
-[RUNNING] target[..]foo-[..]
-
+[RUNNING] target[..]foo-[..]", p.url()))
+                       .with_stdout("
 running 1 test
 test test_hello ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", p.url())));
+"));
 });
 
 test!(cargo_test_release {
@@ -78,7 +78,7 @@ test!(cargo_test_release {
         .file("bar/src/lib.rs", "pub fn bar() {}");
 
     assert_that(p.cargo_process("test").arg("-v").arg("--release"),
-                execs().with_stdout(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [RUNNING] [..] -C opt-level=3 [..]
 [COMPILING] foo v0.1.0 ({dir})
@@ -86,27 +86,27 @@ test!(cargo_test_release {
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] `[..]target[..]foo-[..]`
-
-running 1 test
-test test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
 [RUNNING] `[..]target[..]test-[..]`
+[DOCTEST] foo
+[RUNNING] `rustdoc --test [..]lib.rs[..]`", dir = p.url()))
+                       .with_stdout("
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
 
 running 1 test
 test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
-[RUNNING] `rustdoc --test [..]lib.rs[..]`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", dir = p.url())));
+"));
 });
 
 test!(cargo_test_verbose {
@@ -118,17 +118,17 @@ test!(cargo_test_verbose {
         "#);
 
     assert_that(p.cargo_process("test").arg("-v").arg("hello"),
-        execs().with_stdout(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc src[..]foo.rs [..]`
-[RUNNING] `[..]target[..]foo-[..] hello`
-
+[RUNNING] `[..]target[..]foo-[..] hello`", url = p.url()))
+                       .with_stdout("
 running 1 test
 test test_hello ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", url = p.url())));
+"));
 });
 
 test!(many_similar_names {
@@ -184,10 +184,11 @@ test!(cargo_test_failing_test {
                 execs().with_stdout("hello\n"));
 
     assert_that(p.cargo("test"),
-                execs().with_stdout_contains(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] target[..]foo-[..]
-
+[ERROR] test failed", url = p.url()))
+                       .with_stdout_contains("
 running 1 test
 test test_hello ... FAILED
 
@@ -197,14 +198,14 @@ failures:
 <tab>thread 'test_hello' panicked at 'assertion failed: \
     `(left == right)` (left: \
     `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:12
-", url = p.url()))
-                    .with_stdout_contains("\
+")
+                       .with_stdout_contains("\
 failures:
     test_hello
 
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
 ")
-                    .with_status(101));
+                       .with_status(101));
 });
 
 test!(test_with_lib_dep {
@@ -241,31 +242,30 @@ test!(test_with_lib_dep {
         ");
 
     assert_that(p.cargo_process("test"),
-        execs().with_stdout(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [RUNNING] target[..]baz-[..]
-
+[RUNNING] target[..]foo[..]
+[DOCTEST] foo", p.url()))
+                       .with_stdout("
 running 1 test
 test bin_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]foo[..]
 
 running 1 test
 test lib_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 1 test
 test foo_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-",
-        p.url())))
+"))
 });
 
 test!(test_with_deep_lib_dep {
@@ -308,25 +308,24 @@ test!(test_with_deep_lib_dep {
     p2.build();
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ([..])
 [COMPILING] bar v0.0.1 ({dir})
 [RUNNING] target[..]
-
+[DOCTEST] bar", dir = p.url()))
+                       .with_stdout("
 running 1 test
 test bar_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] bar
 
 running 1 test
 test bar_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-",
-                       dir = p.url())));
+"));
 });
 
 test!(external_test_explicit {
@@ -355,30 +354,29 @@ test!(external_test_explicit {
         "#);
 
     assert_that(p.cargo_process("test"),
-        execs().with_stdout(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [RUNNING] target[..]foo-[..]
-
+[RUNNING] target[..]test-[..]
+[DOCTEST] foo", p.url()))
+                       .with_stdout("
 running 1 test
 test internal_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]test-[..]
 
 running 1 test
 test external_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-",
-        p.url())))
+"))
 });
 
 test!(external_test_implicit {
@@ -403,29 +401,29 @@ test!(external_test_implicit {
         "#);
 
     assert_that(p.cargo_process("test"),
-        execs().with_stdout(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [RUNNING] target[..]external-[..]
-
+[RUNNING] target[..]foo-[..]
+[DOCTEST] foo", p.url()))
+                       .with_stdout("
 running 1 test
 test external_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]foo-[..]
 
 running 1 test
 test internal_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", p.url())))
+"))
 });
 
 test!(dont_run_examples {
@@ -460,35 +458,34 @@ test!(pass_through_command_line {
 
     assert_that(p.cargo_process("test").arg("bar"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] target[..]foo-[..]
-
+[DOCTEST] foo", dir = p.url()))
+                       .with_stdout("
 running 1 test
 test bar ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-",
-                       dir = p.url())));
+"));
 
     assert_that(p.cargo("test").arg("foo"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [RUNNING] target[..]foo-[..]
-
+[DOCTEST] foo")
+                       .with_stdout("
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 0 tests
 
@@ -541,30 +538,29 @@ test!(lib_bin_same_name {
         ");
 
     assert_that(p.cargo_process("test"),
-        execs().with_stdout(format!("\
+                execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [RUNNING] target[..]foo-[..]
-
-running 1 test
-test [..] ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
 [RUNNING] target[..]foo-[..]
+[DOCTEST] foo", p.url()))
+                       .with_stdout("
+running 1 test
+test [..] ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
 
 running 1 test
 test [..] ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-",
-        p.url())))
+"))
 });
 
 test!(lib_with_standard_name {
@@ -593,30 +589,30 @@ test!(lib_with_standard_name {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
 [RUNNING] target[..]syntax-[..]
-
+[RUNNING] target[..]test-[..]
+[DOCTEST] syntax", dir = p.url()))
+                       .with_stdout("
 running 1 test
 test foo_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]test-[..]
 
 running 1 test
 test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] syntax
 
 running 1 test
 test foo_0 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", dir = p.url())));
+"));
 });
 
 test!(lib_with_standard_name2 {
@@ -646,17 +642,16 @@ test!(lib_with_standard_name2 {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
-[RUNNING] target[..]syntax-[..]
-
+[RUNNING] target[..]syntax-[..]", dir = p.url()))
+                       .with_stdout("
 running 1 test
 test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-",
-                       dir = p.url())));
+"));
 });
 
 test!(lib_without_name {
@@ -685,16 +680,16 @@ test!(lib_without_name {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
-[RUNNING] target[..]syntax-[..]
-
+[RUNNING] target[..]syntax-[..]", dir = p.url()))
+                       .with_stdout("
 running 1 test
 test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-", dir = p.url())));
+"));
 });
 
 test!(bin_without_name {
@@ -935,37 +930,36 @@ test!(test_dylib {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] target[..]foo-[..]
+[RUNNING] target[..]test-[..]", dir = p.url()))
+                       .with_stdout("
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
 
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]test-[..]
-
-running 1 test
-test foo ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-",
-                       dir = p.url())));
+"));
     p.root().move_into_the_past().unwrap();
     assert_that(p.cargo("test"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [RUNNING] target[..]foo-[..]
-
+[RUNNING] target[..]test-[..]")
+                       .with_stdout("
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]test-[..]
 
 running 1 test
 test foo ... ok
@@ -993,35 +987,34 @@ test!(test_twice_with_build_cmd {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] target[..]foo-[..]
-
+[DOCTEST] foo", dir = p.url()))
+                       .with_stdout("
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-",
-                       dir = p.url())));
+"));
 
     assert_that(p.cargo("test"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [RUNNING] target[..]foo-[..]
-
+[DOCTEST] foo")
+                       .with_stdout("
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 0 tests
 
@@ -1045,23 +1038,22 @@ test!(test_then_build {
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] target[..]foo-[..]
-
+[DOCTEST] foo", dir = p.url()))
+                       .with_stdout("
 running 1 test
 test foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-",
-                       dir = p.url())));
+"));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
@@ -1083,7 +1075,7 @@ test!(test_no_run {
 
     assert_that(p.cargo_process("test").arg("--no-run"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 ",
                        dir = p.url())));
@@ -1108,20 +1100,18 @@ test!(test_run_specific_bin_target {
         .file("src/bin1.rs", "#[test] fn test1() { }")
         .file("src/bin2.rs", "#[test] fn test2() { }");
 
-    let expected_stdout = format!("\
+    assert_that(prj.cargo_process("test").arg("--bin").arg("bin2"),
+                execs().with_status(0)
+                       .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[RUNNING] target[..]bin2-[..]
-
+[RUNNING] target[..]bin2-[..]", dir = prj.url()))
+                       .with_stdout("
 running 1 test
 test test2 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-",
-       dir = prj.url());
-
-    assert_that(prj.cargo_process("test").arg("--bin").arg("bin2"),
-        execs().with_status(0).with_stdout(&expected_stdout));
+"));
 });
 
 test!(test_run_specific_test_target {
@@ -1137,20 +1127,18 @@ test!(test_run_specific_test_target {
         .file("tests/a.rs", "#[test] fn test_a() { }")
         .file("tests/b.rs", "#[test] fn test_b() { }");
 
-    let expected_stdout = format!("\
+    assert_that(prj.cargo_process("test").arg("--test").arg("b"),
+                execs().with_status(0)
+                       .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[RUNNING] target[..]b-[..]
-
+[RUNNING] target[..]b-[..]", dir = prj.url()))
+                       .with_stdout("
 running 1 test
 test test_b ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-",
-       dir = prj.url());
-
-    assert_that(prj.cargo_process("test").arg("--test").arg("b"),
-        execs().with_status(0).with_stdout(&expected_stdout));
+"));
 });
 
 test!(test_no_harness {
@@ -1175,7 +1163,7 @@ test!(test_no_harness {
 
     assert_that(p.cargo_process("test").arg("--").arg("--nocapture"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] target[..]bar-[..]
 ",
@@ -1229,56 +1217,53 @@ test!(selective_testing {
     println!("d1");
     assert_that(p.cargo("test").arg("-p").arg("d1"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] d1 v0.0.1 ({dir}/d1)
 [RUNNING] target[..]d1-[..]
+[RUNNING] target[..]d1-[..]", dir = p.url()))
+                       .with_stdout("
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]d1-[..]
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-",
-   dir = p.url())));
+"));
 
     println!("d2");
     assert_that(p.cargo("test").arg("-p").arg("d2"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] d2 v0.0.1 ({dir}/d2)
 [RUNNING] target[..]d2-[..]
+[RUNNING] target[..]d2-[..]", dir = p.url()))
+                       .with_stdout("
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]d2-[..]
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-",
-   dir = p.url())));
+"));
 
     println!("whole");
     assert_that(p.cargo("test"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[RUNNING] target[..]foo-[..]
-
+[RUNNING] target[..]foo-[..]", dir = p.url()))
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-",
-   dir = p.url())));
+"));
 });
 
 test!(almost_cyclic_but_not_quite {
@@ -1427,21 +1412,21 @@ test!(selective_testing_with_docs {
 
     assert_that(p.cargo("test").arg("-p").arg("d1"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] d1 v0.0.1 ({dir}/d1)
 [RUNNING] target[..]deps[..]d1[..]
+[DOCTEST] d1", dir = p.url()))
+                       .with_stdout("
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] d1
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-", dir = p.url())));
+"));
 });
 
 test!(example_bin_same_name {
@@ -1457,7 +1442,7 @@ test!(example_bin_same_name {
 
     assert_that(p.cargo_process("test").arg("--no-run").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
@@ -1471,9 +1456,10 @@ test!(example_bin_same_name {
 
     assert_that(p.cargo("run"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] [..]
+[RUNNING] [..]")
+                       .with_stdout("\
 bin
 "));
     assert_that(&p.bin("foo"), existing_file());
@@ -1528,7 +1514,7 @@ test!(example_with_dev_dep {
 
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [..]
 [..]
 [..]
@@ -1597,15 +1583,16 @@ test!(doctest_feature {
         "#);
 
     assert_that(p.cargo_process("test").arg("--features").arg("bar"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0)
+                       .with_stderr("\
 [COMPILING] foo [..]
 [RUNNING] target[..]foo[..]
-
+[DOCTEST] foo")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 1 test
 test foo_0 ... ok
@@ -1680,10 +1667,10 @@ test!(filter_no_doc_tests {
         .file("tests/foo.rs", "");
 
     assert_that(p.cargo_process("test").arg("--test=foo"),
-                execs().with_stdout("\
+                execs().with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] target[..]debug[..]foo[..]
-
+[RUNNING] target[..]debug[..]foo[..]")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
@@ -1712,10 +1699,10 @@ test!(dylib_doctest {
         "#);
 
     assert_that(p.cargo_process("test"),
-                execs().with_stdout("\
+                execs().with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[DOCTEST] foo
-
+[DOCTEST] foo")
+                       .with_stdout("
 running 1 test
 test foo_0 ... ok
 
@@ -1778,16 +1765,16 @@ test!(cyclic_dev_dep_doc_test {
             extern crate foo;
         "#);
     assert_that(p.cargo_process("test"),
-                execs().with_stdout("\
+                execs().with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [COMPILING] bar v0.0.1 ([..])
 [RUNNING] target[..]foo[..]
-
+[DOCTEST] foo")
+                       .with_stdout("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 1 test
 test _0 ... ok
@@ -1869,27 +1856,28 @@ test!(no_fail_fast {
         "#);
     assert_that(p.cargo_process("test").arg("--no-fail-fast"),
                 execs().with_status(101)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] target[..]foo[..]
-
+[RUNNING] target[..]test_add_one[..]")
+                       .with_stdout_contains("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]test_add_one[..]
 ")
+                       .with_stderr_contains("\
+[RUNNING] target[..]test_sub_one[..]
+[DOCTEST] foo")
                        .with_stdout_contains("\
 test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured
 
-[RUNNING] target[..]test_sub_one[..]
 
 running 1 test
 test sub_one_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-[DOCTEST] foo
 
 running 1 test
 test sub_one_0 ... ok
@@ -1943,16 +1931,16 @@ test!(test_multiple_packages {
 
     assert_that(p.cargo("test").arg("-p").arg("d1").arg("-p").arg("d2"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
-[RUNNING] target[..]debug[..]d1-[..]
-
+                       .with_stderr_contains("\
+[RUNNING] target[..]debug[..]d1-[..]")
+                       .with_stdout_contains("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 ")
-                       .with_stdout_contains("\
-[RUNNING] target[..]debug[..]d2-[..]
-
+                       .with_stderr_contains("\
+[RUNNING] target[..]debug[..]d2-[..]")
+                       .with_stdout_contains("
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
@@ -1981,7 +1969,7 @@ test!(bin_does_not_rebuild_tests {
 
     assert_that(p.cargo("test").arg("-v").arg("--no-run"),
                 execs().with_status(0)
-                       .with_stdout("\
+                       .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc src[..]main.rs [..]`
 [RUNNING] `rustc src[..]main.rs [..]`
@@ -2040,7 +2028,7 @@ test!(selective_test_optional_dep {
 
     assert_that(p.cargo("test").arg("-v").arg("--no-run")
                  .arg("--features").arg("a").arg("-p").arg("a"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] a v0.0.1 ([..])
 [RUNNING] `rustc a[..]src[..]lib.rs [..]`
 [RUNNING] `rustc a[..]src[..]lib.rs [..]`
@@ -2071,15 +2059,16 @@ test!(only_test_docs {
     p.build();
 
     assert_that(p.cargo("test").arg("--doc"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0)
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ([..])
-[DOCTEST] foo
-
+[DOCTEST] foo"))
+                       .with_stdout("
 running 1 test
 test bar_0 ... ok
 
 test result: ok.[..]
 
-")));
+"));
 });
 

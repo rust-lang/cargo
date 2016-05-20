@@ -19,7 +19,7 @@ test!(rustdoc_simple {
     assert_that(p.cargo_process("rustdoc").arg("-v"),
                 execs()
                 .with_status(0)
-                .with_stdout(format!("\
+                .with_stderr(format!("\
 [DOCUMENTING] foo v0.0.1 ({url})
 [RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \
         -o {dir}{sep}target{sep}doc \
@@ -42,7 +42,7 @@ test!(rustdoc_args {
     assert_that(p.cargo_process("rustdoc").arg("-v").arg("--").arg("--no-defaults"),
                 execs()
                 .with_status(0)
-                .with_stdout(format!("\
+                .with_stderr(format!("\
 [DOCUMENTING] foo v0.0.1 ({url})
 [RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \
         -o {dir}{sep}target{sep}doc \
@@ -85,7 +85,7 @@ test!(rustdoc_foo_with_bar_dependency {
     assert_that(foo.cargo_process("rustdoc").arg("-v").arg("--").arg("--no-defaults"),
                 execs()
                 .with_status(0)
-                .with_stdout(format!("\
+                .with_stderr(format!("\
 [COMPILING] bar v0.0.1 ([..])
 [RUNNING] `rustc [..]bar{sep}src{sep}lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ({url})
@@ -132,7 +132,7 @@ test!(rustdoc_only_bar_dependency {
                                             .arg("--").arg("--no-defaults"),
                 execs()
                 .with_status(0)
-                .with_stdout(format!("\
+                .with_stderr(format!("\
 [DOCUMENTING] bar v0.0.1 ([..])
 [RUNNING] `rustdoc [..]bar{sep}src{sep}lib.rs --crate-name bar \
         -o {dir}{sep}target{sep}doc \
