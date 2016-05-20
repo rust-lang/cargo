@@ -267,6 +267,7 @@ test!(cargo_compile_with_warnings_in_the_root_package {
     assert_that(p.cargo_process("build"),
         execs()
         .with_stderr("\
+[COMPILING] foo [..]
 src[..]foo.rs:1:14: 1:26 warning: function is never used: `dead`, \
     #[warn(dead_code)] on by default
 src[..]foo.rs:1 fn main() {} fn dead() {}
@@ -314,16 +315,13 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
         "#);
 
     assert_that(p.cargo_process("build"),
-        execs()
-        .with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
-                              [COMPILING] foo v0.5.0 ({})\n",
-                             p.url(),
-                             p.url()))
-        .with_stderr("\
+        execs().with_stderr(&format!("\
+[COMPILING] bar v0.5.0 ({url}/bar)
 [..]warning: function is never used: `dead`[..]
-[..]fn dead() {}
+[..]fn dead() {{}}
 [..]^~~~~~~~~~~~
-"));
+[COMPILING] foo v0.5.0 ({url})
+", url = p.url())));
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -888,6 +886,7 @@ test!(unused_keys {
                 execs().with_status(0)
                        .with_stderr("\
 warning: unused manifest key: project.bulid
+[COMPILING] foo [..]
 "));
 
     let mut p = project("bar");
@@ -911,6 +910,7 @@ warning: unused manifest key: project.bulid
                 execs().with_status(0)
                        .with_stderr("\
 warning: unused manifest key: lib.build
+[COMPILING] foo [..]
 "));
 });
 
