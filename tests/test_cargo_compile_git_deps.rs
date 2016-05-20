@@ -56,7 +56,7 @@ test!(cargo_compile_simple_git_dep {
 
     assert_that(project.cargo_process("build"),
         execs()
-        .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+        .with_stderr(&format!("[UPDATING] git repository `{}`\n\
                               [COMPILING] dep1 v0.5.0 ({}#[..])\n\
                               [COMPILING] foo v0.5.0 ({})\n",
                              path2url(git_root.clone()),
@@ -123,7 +123,7 @@ test!(cargo_compile_git_dep_branch {
 
     assert_that(project.cargo_process("build"),
         execs()
-        .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+        .with_stderr(&format!("[UPDATING] git repository `{}`\n\
                               [COMPILING] dep1 v0.5.0 ({}?branch=branchy#[..])\n\
                               [COMPILING] foo v0.5.0 ({})\n",
                              path2url(git_root.clone()),
@@ -193,7 +193,7 @@ test!(cargo_compile_git_dep_tag {
 
     assert_that(project.cargo_process("build"),
         execs()
-        .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+        .with_stderr(&format!("[UPDATING] git repository `{}`\n\
                               [COMPILING] dep1 v0.5.0 ({}?tag=v0.1.0#[..])\n\
                               [COMPILING] foo v0.5.0 ({})\n",
                              path2url(git_root.clone()),
@@ -496,7 +496,7 @@ test!(recompilation {
 
     // First time around we should compile both foo and bar
     assert_that(p.cargo_process("build"),
-                execs().with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                execs().with_stderr(&format!("[UPDATING] git repository `{}`\n\
                                              [COMPILING] bar v0.5.0 ({}#[..])\n\
                                              [COMPILING] foo v0.5.0 ({})\n",
                                             git_project.url(),
@@ -516,7 +516,7 @@ test!(recompilation {
                 execs().with_stdout(""));
 
     assert_that(p.cargo("update"),
-                execs().with_stdout(&format!("[UPDATING] git repository `{}`",
+                execs().with_stderr(&format!("[UPDATING] git repository `{}`",
                                             git_project.url())));
 
     assert_that(p.cargo("build"),
@@ -535,13 +535,13 @@ test!(recompilation {
 
     // Update the dependency and carry on!
     assert_that(p.cargo("update"),
-                execs().with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                execs().with_stderr(&format!("[UPDATING] git repository `{}`\n\
                                               [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
                                              ",
                                             git_project.url())));
     println!("going for the last compile");
     assert_that(p.cargo("build"),
-                execs().with_stdout(&format!("[COMPILING] bar v0.5.0 ({}#[..])\n\
+                execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}#[..])\n\
                                              [COMPILING] foo v0.5.0 ({})\n",
                                             git_project.url(),
                                             p.url())));
@@ -551,7 +551,7 @@ test!(recompilation {
                  .arg("-p").arg("foo"),
                 execs().with_stdout(""));
     assert_that(p.cargo("build"),
-                execs().with_stdout(&format!("[COMPILING] foo v0.5.0 ({})\n",
+                execs().with_stderr(&format!("[COMPILING] foo v0.5.0 ({})\n",
                                             p.url())));
 });
 
@@ -663,7 +663,7 @@ To learn more, run the command again with --verbose.
     assert_that(p.cargo("update")
                  .arg("-p").arg("dep1")
                  .arg("--aggressive"),
-                execs().with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                execs().with_stderr(&format!("[UPDATING] git repository `{}`\n\
                                               [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
                                              ", git_project.url())));
 
@@ -679,7 +679,7 @@ To learn more, run the command again with --verbose.
 
     // We should be able to update transitive deps
     assert_that(p.cargo("update").arg("-p").arg("bar"),
-                execs().with_stdout(&format!("[UPDATING] git repository `{}`",
+                execs().with_stderr(&format!("[UPDATING] git repository `{}`",
                                             git_project.url())));
 });
 
@@ -764,7 +764,7 @@ test!(two_deps_only_update_one {
 
     assert_that(project.cargo_process("build"),
         execs()
-        .with_stdout(&format!("[UPDATING] git repository `[..]`\n\
+        .with_stderr(&format!("[UPDATING] git repository `[..]`\n\
                               [UPDATING] git repository `[..]`\n\
                               [COMPILING] [..] v0.5.0 ([..])\n\
                               [COMPILING] [..] v0.5.0 ([..])\n\
@@ -782,7 +782,7 @@ test!(two_deps_only_update_one {
     assert_that(project.cargo("update")
                        .arg("-p").arg("dep1"),
         execs()
-        .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+        .with_stderr(&format!("[UPDATING] git repository `{}`\n\
                                [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
                               ", git1.url()))
         .with_stderr(""));
@@ -937,7 +937,7 @@ test!(dep_with_changed_submodule {
     assert_that(project.cargo("update").arg("-v"),
                 execs()
                 .with_stderr("")
-                .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+                .with_stderr(&format!("[UPDATING] git repository `{}`\n\
                                        [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
                                       ", git_project.url())));
 
@@ -1270,7 +1270,7 @@ test!(warnings_in_git_dep {
 
     assert_that(p.cargo_process("build"),
         execs()
-        .with_stdout(&format!("[UPDATING] git repository `{}`\n\
+        .with_stderr(&format!("[UPDATING] git repository `{}`\n\
                               [COMPILING] bar v0.5.0 ({}#[..])\n\
                               [COMPILING] foo v0.5.0 ({})\n",
                              bar.url(),

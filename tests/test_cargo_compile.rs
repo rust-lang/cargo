@@ -315,7 +315,7 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
 
     assert_that(p.cargo_process("build"),
         execs()
-        .with_stdout(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
+        .with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
                               [COMPILING] foo v0.5.0 ({})\n",
                              p.url(),
                              p.url()))
