@@ -67,20 +67,19 @@ test!(bench_tarname {
             extern crate test;
             #[bench] fn run2(_ben: &mut test::Bencher) { }"#);
 
-    let expected_stdout = format!("\
+    assert_that(prj.cargo_process("bench").arg("--bench").arg("bin2"),
+        execs().with_status(0)
+               .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] target[..]release[..]bin2[..]
-
+", dir = prj.url()))
+               .with_stdout("
 running 1 test
 test run2 ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
-",
-       dir = prj.url());
-
-    assert_that(prj.cargo_process("bench").arg("--bench").arg("bin2"),
-        execs().with_status(0).with_stdout(expected_stdout));
+"));
 });
 
 test!(cargo_bench_verbose {
@@ -793,6 +792,7 @@ test!(bench_with_examples {
         .file("src/lib.rs", r#"
             #![feature(test)]
             extern crate test;
+            #[cfg(test)]
             use test::Bencher;
 
             pub fn f1() {
