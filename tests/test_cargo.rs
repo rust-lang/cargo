@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use std::str;
 
 use cargo_process;
-use support::paths;
-use support::{execs, project, mkdir_recursive, ProjectBuilder};
+use support::{execs, project, mkdir_recursive, ProjectBuilder, paths};
+use support::registry::Package;
 use hamcrest::{assert_that};
 
 fn setup() {
@@ -60,6 +60,21 @@ fn fake_file(proj: ProjectBuilder, dir: &Path, name: &str, kind: FakeKind) -> Pr
 fn path() -> Vec<PathBuf> {
     env::split_paths(&env::var_os("PATH").unwrap_or(OsString::new())).collect()
 }
+
+test!(help_list_command{
+    Package::new("cargo-foo", "1.0.0")
+        .file("src/main.rs", r#"
+            fn main() {
+                println!("bar");
+            }
+        "#)
+        .publish();
+    assert_that(cargo_process().arg("install").arg("cargo-foo"),
+                execs().with_status(0));
+    assert_that(cargo_process().arg("help").arg("--list"),
+                execs().with_status(0).with_stdout_contains("    foo\n"));
+});
+
 
 test!(list_command_looks_at_path {
     let proj = project("list-non-overlapping");

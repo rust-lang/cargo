@@ -9,9 +9,11 @@ Get some help with a cargo command.
 Usage:
     cargo help <command>
     cargo help -h | --help
+    cargo help --list
 
 Options:
     -h, --help          Print this message
+    --list              List all commands
 ";
 
 pub fn execute(_: Options, _: &Config) -> CliResult<Option<()>> {
