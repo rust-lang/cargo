@@ -30,6 +30,7 @@ test!(simple {
 
     assert_that(p.cargo_process("package"),
                 execs().with_status(0).with_stderr(&format!("\
+[WARNING] manifest has no documentation[..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
@@ -72,15 +73,14 @@ test!(metadata_warning {
         "#);
     assert_that(p.cargo_process("package"),
                 execs().with_status(0).with_stderr(&format!("\
+warning: manifest has no description, license, license-file, documentation, \
+homepage or repository. See \
+http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
 ",
-        dir = p.url()))
-                .with_stderr("\
-warning: manifest has no description, license, license-file, documentation, \
-homepage or repository. See \
-http://doc.crates.io/manifest.html#package-metadata for more info."));
+        dir = p.url())));
 
     let p = project("one")
         .file("Cargo.toml", r#"
@@ -95,14 +95,13 @@ http://doc.crates.io/manifest.html#package-metadata for more info."));
         "#);
     assert_that(p.cargo_process("package"),
                 execs().with_status(0).with_stderr(&format!("\
+warning: manifest has no description, documentation, homepage or repository. See \
+http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
 ",
-        dir = p.url()))
-                .with_stderr("\
-warning: manifest has no description, documentation, homepage or repository. See \
-http://doc.crates.io/manifest.html#package-metadata for more info."));
+        dir = p.url())));
 
     let p = project("all")
         .file("Cargo.toml", &format!(r#"
@@ -153,6 +152,7 @@ test!(package_verbose {
     println!("package main repo");
     assert_that(cargo.clone().arg("package").arg("-v").arg("--no-verify"),
                 execs().with_status(0).with_stderr("\
+[WARNING] manifest has no description[..]
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -162,6 +162,7 @@ test!(package_verbose {
     assert_that(cargo.arg("package").arg("-v").arg("--no-verify")
                      .cwd(p.root().join("a")),
                 execs().with_status(0).with_stderr("\
+[WARNING] manifest has no description[..]
 [PACKAGING] a v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -183,6 +184,7 @@ test!(package_verification {
                 execs().with_status(0));
     assert_that(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
+[WARNING] manifest has no description[..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
@@ -207,6 +209,7 @@ test!(exclude {
 
     assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stderr("\
+[WARNING] manifest has no description[..]
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -231,6 +234,7 @@ test!(include {
 
     assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stderr("\
+[WARNING] manifest has no description[..]
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -270,6 +274,7 @@ test!(package_new_git_repo {
     assert_that(::cargo_process().arg("package").cwd(p.root())
                  .arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stderr("\
+[WARNING] manifest has no description[..]
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -304,7 +309,7 @@ test!(package_git_submodule {
 
     assert_that(::cargo_process().arg("package").cwd(project.root())
                  .arg("--no-verify").arg("-v"),
-                execs().with_status(0).with_stdout_contains("[ARCHIVING] bar/Makefile"));
+                execs().with_status(0).with_stderr_contains("[ARCHIVING] bar/Makefile"));
 });
 
 test!(no_duplicates_from_modified_tracked_files {
@@ -355,6 +360,7 @@ test!(ignore_nested {
 
     assert_that(p.cargo_process("package"),
                 execs().with_status(0).with_stderr(&format!("\
+[WARNING] manifest has no documentation[..]
 [PACKAGING] nested v0.0.1 ({dir})
 [VERIFYING] nested v0.0.1 ({dir})
 [COMPILING] nested v0.0.1 ({dir}[..])
@@ -401,6 +407,7 @@ test!(package_weird_characters {
     assert_that(p.cargo_process("package"),
                 execs().with_status(101).with_stderr("\
 warning: [..]
+[PACKAGING] foo [..]
 [ERROR] failed to prepare local package for uploading
 
 Caused by:
