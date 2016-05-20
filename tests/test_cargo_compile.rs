@@ -2107,13 +2107,14 @@ test!(invalid_spec {
     p.build();
 
     assert_that(p.cargo_process("build").arg("-p").arg("notAValidDep"),
-                execs().with_status(101).with_stderr(&format!(
-                    "[ERROR] could not find package matching spec `notAValidDep`")));
+                execs().with_status(101).with_stderr("\
+[ERROR] package id specification `notAValidDep` matched no packages
+"));
 
     assert_that(p.cargo_process("build").arg("-p").arg("d1").arg("-p").arg("notAValidDep"),
-                execs().with_status(101).with_stderr(&format!(
-                    "[ERROR] could not find package matching spec `notAValidDep`")));
-
+                execs().with_status(101).with_stderr("\
+[ERROR] package id specification `notAValidDep` matched no packages
+"));
 });
 
 test!(manifest_with_bom_is_ok {
