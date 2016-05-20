@@ -468,7 +468,7 @@ test!(nested_deps_recompile {
 
             name = "bar"
         "#)
-        .file("src/bar/src/bar.rs", "pub fn gimme() {}");
+        .file("src/bar/src/bar.rs", "pub fn gimme() -> i32 { 92 }");
     let bar = p.url();
 
     assert_that(p.cargo_process("build"),
@@ -722,7 +722,7 @@ test!(dev_deps_no_rebuild_lib {
         "#)
         .file("src/lib.rs", r#"
             #[cfg(test)] extern crate bar;
-            #[cfg(not(test))] fn foo() { env!("FOO"); }
+            #[cfg(not(test))] pub fn foo() { env!("FOO"); }
         "#)
         .file("bar/Cargo.toml", r#"
             [package]
