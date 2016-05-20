@@ -267,6 +267,7 @@ test!(cargo_compile_with_warnings_in_the_root_package {
     assert_that(p.cargo_process("build"),
         execs()
         .with_stderr("\
+[COMPILING] foo [..]
 src[..]foo.rs:1:14: 1:26 warning: function is never used: `dead`, \
     #[warn(dead_code)] on by default
 src[..]foo.rs:1 fn main() {} fn dead() {}
@@ -314,16 +315,13 @@ test!(cargo_compile_with_warnings_in_a_dep_package {
         "#);
 
     assert_that(p.cargo_process("build"),
-        execs()
-        .with_stdout(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
-                              [COMPILING] foo v0.5.0 ({})\n",
-                             p.url(),
-                             p.url()))
-        .with_stderr("\
+        execs().with_stderr(&format!("\
+[COMPILING] bar v0.5.0 ({url}/bar)
 [..]warning: function is never used: `dead`[..]
-[..]fn dead() {}
+[..]fn dead() {{}}
 [..]^~~~~~~~~~~~
-"));
+[COMPILING] foo v0.5.0 ({url})
+", url = p.url())));
 
     assert_that(&p.bin("foo"), existing_file());
 
@@ -888,6 +886,7 @@ test!(unused_keys {
                 execs().with_status(0)
                        .with_stderr("\
 warning: unused manifest key: project.bulid
+[COMPILING] foo [..]
 "));
 
     let mut p = project("bar");
@@ -911,6 +910,7 @@ warning: unused manifest key: project.bulid
                 execs().with_status(0)
                        .with_stderr("\
 warning: unused manifest key: lib.build
+[COMPILING] foo [..]
 "));
 });
 
@@ -996,7 +996,7 @@ test!(lto_build {
         "#)
         .file("src/main.rs", "fn main() {}");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc src[..]main.rs --crate-name test --crate-type bin \
         -C opt-level=3 \
@@ -1023,7 +1023,7 @@ test!(verbose_build {
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib -g \
         --out-dir {dir}[..]target[..]debug \
@@ -1048,7 +1048,7 @@ test!(verbose_release_build {
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
@@ -1089,7 +1089,7 @@ test!(verbose_release_build_deps {
         "#)
         .file("foo/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
-                execs().with_status(0).with_stdout(&format!("\
+                execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url}/foo)
 [RUNNING] `rustc foo[..]src[..]lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
@@ -1312,7 +1312,7 @@ test!(lib_with_standard_name {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
 ",
                        dir = p.url())));
@@ -1408,7 +1408,7 @@ test!(freshness_ignores_excluded {
 
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
 ", url = foo.url())));
 
@@ -1455,14 +1455,14 @@ test!(rebuild_preserves_out_dir {
 
     assert_that(foo.cargo("build").env("FIRST", "1"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
 ", url = foo.url())));
 
     File::create(&foo.root().join("src/bar.rs")).unwrap();
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
-                       .with_stdout(&format!("\
+                       .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
 ", url = foo.url())));
 });
