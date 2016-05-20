@@ -476,7 +476,7 @@ test!(nested_deps_recompile {
                                              [COMPILING] foo v0.5.0 ({})\n",
                                             bar,
                                             p.url())));
-    p.root().move_into_the_past().unwrap();
+    ::sleep_ms(1000);
 
     File::create(&p.root().join("src/foo.rs")).unwrap().write_all(br#"
         fn main() {}

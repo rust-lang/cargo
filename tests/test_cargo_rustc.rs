@@ -38,7 +38,7 @@ test!(build_lib_for_foo {
             dir = p.root().display(), url = p.url())));
 });
 
-test!(build_lib_and_allow_unstable_options {
+test!(lib {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -52,13 +52,13 @@ test!(build_lib_and_allow_unstable_options {
         .file("src/lib.rs", r#" "#);
 
     assert_that(p.cargo_process("rustc").arg("--lib").arg("-v")
-                .arg("--").arg("-Z").arg("unstable-options"),
+                .arg("--").arg("-C").arg("debug-assertions=off"),
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
-        -Z unstable-options \
+        -C debug-assertions=off \
         --out-dir {dir}{sep}target{sep}debug \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
@@ -81,7 +81,7 @@ test!(build_main_and_allow_unstable_options {
         .file("src/lib.rs", r#" "#);
 
     assert_that(p.cargo_process("rustc").arg("-v").arg("--bin").arg("foo")
-                .arg("--").arg("-Z").arg("unstable-options"),
+                .arg("--").arg("-C").arg("debug-assertions"),
                 execs()
                 .with_status(0)
                 .with_stderr(&format!("\
@@ -92,7 +92,7 @@ test!(build_main_and_allow_unstable_options {
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 [RUNNING] `rustc src{sep}main.rs --crate-name {name} --crate-type bin -g \
-        -Z unstable-options \
+        -C debug-assertions \
         --out-dir {dir}{sep}target{sep}debug \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
@@ -117,7 +117,7 @@ test!(fails_when_trying_to_build_main_and_lib_with_args {
         .file("src/lib.rs", r#" "#);
 
     assert_that(p.cargo_process("rustc").arg("-v")
-                .arg("--").arg("-Z").arg("unstable-options"),
+                .arg("--").arg("-C").arg("debug-assertions"),
                 execs()
                 .with_status(101)
                 .with_stderr(CARGO_RUSTC_ERROR));
@@ -143,7 +143,7 @@ test!(build_with_args_to_one_of_multiple_binaries {
         .file("src/lib.rs", r#" "#);
 
     assert_that(p.cargo_process("rustc").arg("-v").arg("--bin").arg("bar")
-                .arg("--").arg("-Z").arg("unstable-options"),
+                .arg("--").arg("-C").arg("debug-assertions"),
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
@@ -151,7 +151,7 @@ test!(build_with_args_to_one_of_multiple_binaries {
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug [..]`
 [RUNNING] `rustc src{sep}bin{sep}bar.rs --crate-name bar --crate-type bin -g \
-        -Z unstable-options [..]`
+        -C debug-assertions [..]`
 ", sep = SEP,
                 dir = p.root().display(), url = p.url())));
 });
@@ -176,7 +176,7 @@ test!(fails_with_args_to_all_binaries {
         .file("src/lib.rs", r#" "#);
 
     assert_that(p.cargo_process("rustc").arg("-v")
-                .arg("--").arg("-Z").arg("unstable-options"),
+                .arg("--").arg("-C").arg("debug-assertions"),
                 execs()
                 .with_status(101)
                 .with_stderr(CARGO_RUSTC_ERROR));
@@ -196,7 +196,7 @@ test!(build_with_args_to_one_of_multiple_tests {
         .file("src/lib.rs", r#" "#);
 
     assert_that(p.cargo_process("rustc").arg("-v").arg("--test").arg("bar")
-                .arg("--").arg("-Z").arg("unstable-options"),
+                .arg("--").arg("-C").arg("debug-assertions"),
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
@@ -204,7 +204,7 @@ test!(build_with_args_to_one_of_multiple_tests {
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug [..]`
 [RUNNING] `rustc tests{sep}bar.rs --crate-name bar --crate-type bin -g \
-        -Z unstable-options [..]--test[..]`
+        -C debug-assertions [..]--test[..]`
 ", sep = SEP,
                 dir = p.root().display(), url = p.url())));
 });
@@ -238,14 +238,14 @@ test!(build_foo_with_bar_dependency {
         "#);
     bar.build();
 
-    assert_that(foo.cargo_process("rustc").arg("-v").arg("--").arg("-Z").arg("unstable-options"),
+    assert_that(foo.cargo_process("rustc").arg("-v").arg("--").arg("-C").arg("debug-assertions"),
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `[..] -g -C [..]`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `[..] -g -Z unstable-options [..]`
+[RUNNING] `[..] -g -C debug-assertions [..]`
 ",
                 url = foo.url())));
 });
@@ -280,12 +280,12 @@ test!(build_only_bar_dependency {
     bar.build();
 
     assert_that(foo.cargo_process("rustc").arg("-v").arg("-p").arg("bar")
-                .arg("--").arg("-Z").arg("unstable-options"),
+                .arg("--").arg("-C").arg("debug-assertions"),
                 execs()
                 .with_status(0)
                 .with_stderr("\
 [COMPILING] bar v0.1.0 ([..])
-[RUNNING] `[..]--crate-name bar --crate-type lib [..] -Z unstable-options [..]`
+[RUNNING] `[..]--crate-name bar --crate-type lib [..] -C debug-assertions [..]`
 "));
 });
 
