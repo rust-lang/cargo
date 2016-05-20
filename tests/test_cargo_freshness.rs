@@ -31,7 +31,7 @@ test!(modifying_and_moving {
     p.root().join("target").move_into_the_past().unwrap();
 
     File::create(&p.root().join("src/a.rs")).unwrap()
-         .write_all(b"fn main() {}").unwrap();
+         .write_all(b"#[allow(unused)]fn main() {}").unwrap();
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -73,12 +73,11 @@ test!(modify_only_some_files {
     let bin = p.root().join("src/b.rs");
 
     File::create(&lib).unwrap().write_all(b"invalid rust code").unwrap();
-    File::create(&bin).unwrap().write_all(b"fn foo() {}").unwrap();
+    File::create(&bin).unwrap().write_all(b"#[allow(unused)]fn foo() {}").unwrap();
     lib.move_into_the_past().unwrap();
 
     // Make sure the binary is rebuilt, not the lib
-    assert_that(p.cargo("build")
-                 .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = path2url(p.root()))));
