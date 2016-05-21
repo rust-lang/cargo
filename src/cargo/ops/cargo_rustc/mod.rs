@@ -40,6 +40,7 @@ pub struct BuildConfig {
     pub requested_target: Option<String>,
     pub exec_engine: Option<Arc<Box<ExecEngine>>>,
     pub release: bool,
+    pub test: bool,
     pub doc_all: bool,
 }
 
@@ -451,7 +452,7 @@ fn build_base_args(cx: &Context,
     let Profile {
         opt_level, lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, rpath, test, doc: _doc, run_custom_build,
-        rustdoc_args: _,
+        ref panic, rustdoc_args: _,
     } = *unit.profile;
     assert!(!run_custom_build);
 
@@ -476,6 +477,10 @@ fn build_base_args(cx: &Context,
 
     if opt_level != 0 {
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
+    }
+
+    if let Some(panic) = panic.as_ref() {
+        cmd.arg("-C").arg(format!("panic={}", panic));
     }
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually

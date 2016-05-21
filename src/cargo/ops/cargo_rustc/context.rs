@@ -620,10 +620,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn lib_profile(&self, _pkg: &PackageId) -> &'a Profile {
-        if self.build_config.release {
-            &self.profiles.release
+        let (normal, test) = if self.build_config.release {
+            (&self.profiles.release, &self.profiles.bench_deps)
         } else {
-            &self.profiles.dev
+            (&self.profiles.dev, &self.profiles.test_deps)
+        };
+        if self.build_config.test {
+            test
+        } else {
+            normal
         }
     }
 

@@ -2129,3 +2129,23 @@ test!(manifest_with_bom_is_ok {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
 });
+
+test!(panic_abort_compiles_with_panic_abort {
+    if !::is_nightly() {
+        return
+    }
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [profile.dev]
+            panic = 'abort'
+        "#)
+        .file("src/lib.rs", "");
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stderr_contains("[..] -C panic=abort [..]"));
+});

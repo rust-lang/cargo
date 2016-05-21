@@ -238,6 +238,7 @@ pub struct TomlProfile {
     debug: Option<bool>,
     debug_assertions: Option<bool>,
     rpath: Option<bool>,
+    panic: Option<String>,
 }
 
 #[derive(RustcDecodable)]
@@ -1030,23 +1031,31 @@ fn normalize(lib: &Option<TomlLibTarget>,
 
 fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
     let profiles = profiles.as_ref();
-    return Profiles {
+    let mut profiles = Profiles {
         release: merge(Profile::default_release(),
                        profiles.and_then(|p| p.release.as_ref())),
         dev: merge(Profile::default_dev(),
                    profiles.and_then(|p| p.dev.as_ref())),
         test: merge(Profile::default_test(),
                     profiles.and_then(|p| p.test.as_ref())),
+        test_deps: merge(Profile::default_dev(),
+                         profiles.and_then(|p| p.dev.as_ref())),
         bench: merge(Profile::default_bench(),
                      profiles.and_then(|p| p.bench.as_ref())),
+        bench_deps: merge(Profile::default_release(),
+                          profiles.and_then(|p| p.release.as_ref())),
         doc: merge(Profile::default_doc(),
                    profiles.and_then(|p| p.doc.as_ref())),
         custom_build: Profile::default_custom_build(),
     };
+    profiles.test_deps.panic = None;
+    profiles.bench_deps.panic = None;
+    return profiles;
 
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
         let &TomlProfile {
-            opt_level, lto, codegen_units, debug, debug_assertions, rpath
+            opt_level, lto, codegen_units, debug, debug_assertions, rpath,
+            ref panic
         } = match toml {
             Some(toml) => toml,
             None => return profile,
@@ -1063,6 +1072,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
             test: profile.test,
             doc: profile.doc,
             run_custom_build: profile.run_custom_build,
+            panic: panic.clone().or(profile.panic),
         }
     }
 }
