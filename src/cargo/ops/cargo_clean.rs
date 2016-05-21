@@ -58,9 +58,11 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
                 try!(rm_rf(&layout.build(&pkg)));
                 let Profiles {
                     ref release, ref dev, ref test, ref bench, ref doc,
-                    ref custom_build,
+                    ref custom_build, ref test_deps, ref bench_deps,
                 } = *root.manifest().profiles();
-                for profile in [release, dev, test, bench, doc, custom_build].iter() {
+                let profiles = [release, dev, test, bench, doc, custom_build,
+                                test_deps, bench_deps];
+                for profile in profiles.iter() {
                     let unit = Unit {
                         pkg: &pkg,
                         target: target,
