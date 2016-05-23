@@ -87,10 +87,10 @@ test!(no_term {
 
 fn colored_output(string: &str, color: color::Color) -> CargoResult<String> {
     let mut term = TerminfoTerminal::new(Vec::new()).unwrap();
-    try!(term.reset());
-    try!(term.fg(color));
-    try!(write!(&mut term, "{}", string));
-    try!(term.reset());
-    try!(term.flush());
+    term.reset()?;
+    term.fg(color)?;
+    write!(&mut term, "{}", string)?;
+    term.reset()?;
+    term.flush()?;
     Ok(String::from_utf8_lossy(term.get_ref()).to_string())
 }
