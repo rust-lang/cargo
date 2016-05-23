@@ -632,10 +632,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
     }
 
-    pub fn build_script_profile(&self, _pkg: &PackageId) -> &'a Profile {
-        // TODO: should build scripts always be built with a dev
+    pub fn build_script_profile(&self, pkg: &PackageId) -> &'a Profile {
+        // TODO: should build scripts always be built with the same library
         //       profile? How is this controlled at the CLI layer?
-        &self.profiles.dev
+        self.lib_profile(pkg)
     }
 
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
