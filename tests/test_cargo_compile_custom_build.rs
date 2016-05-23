@@ -1930,3 +1930,45 @@ test!(custom_target_dir {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
 });
+
+test!(panic_abort_with_build_scripts {
+    if !::is_nightly() {
+        return
+    }
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [profile.release]
+            panic = 'abort'
+
+            [dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/lib.rs", "extern crate a;")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+
+            [build-dependencies]
+            b = { path = "../b" }
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", "extern crate b; fn main() {}")
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("b/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v").arg("--release"),
+                execs().with_status(0));
+});
