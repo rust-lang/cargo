@@ -111,7 +111,7 @@ impl MultiShell {
     }
 
     pub fn set_color_config(&mut self, color: Option<&str>) -> CargoResult<()> {
-        self.out.set_color_config(match color {
+        let cfg = match color {
             Some("auto") => Auto,
             Some("always") => Always,
             Some("never") => Never,
@@ -120,7 +120,9 @@ impl MultiShell {
 
             Some(arg) => bail!("argument for --color must be auto, always, or \
                                 never, but found `{}`", arg),
-        });
+        };
+        self.out.set_color_config(cfg);
+        self.err.set_color_config(cfg);
         Ok(())
     }
 
