@@ -341,14 +341,17 @@ impl Ord for SourceIdInner {
     }
 }
 
+// The hash of SourceId is used in the name of some Cargo folders, so shouldn't
+// vary. `as_str` gives the serialisation of a url (which has a spec) and so
+// insulates against possible changes in how the url crate does hashing.
 impl hash::Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
         match *self.inner {
             SourceIdInner { kind: Kind::Git(..), ref canonical_url, .. } => {
-                canonical_url.hash(into)
+                canonical_url.as_str().hash(into)
             }
-            _ => self.inner.url.hash(into),
+            _ => self.inner.url.as_str().hash(into),
         }
     }
 }
