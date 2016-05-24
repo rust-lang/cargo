@@ -615,7 +615,7 @@ pub fn process(cmd: CommandType, pkg: &Package,
     Ok(cmd)
 }
 
-fn envify(s: &str) -> String {
+pub fn envify(s: &str) -> String {
     s.chars()
      .flat_map(|c| c.to_uppercase())
      .map(|c| if c == '-' {'_'} else {c})
