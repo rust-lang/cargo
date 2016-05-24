@@ -151,6 +151,16 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
             return Ok(None)
         }
 
+        // For `cargo help --list`, print out the list of commands
+        "help" if flags.arg_args[0] == "--list" => {
+            config.shell().set_verbosity(Verbosity::Verbose);
+            let args = &["cargo".to_string(), "--list".to_string()];
+            let r = cargo::call_main_without_stdin(execute, config, USAGE, args,
+                                                   false);
+            cargo::process_executed(r, &mut config.shell());
+            return Ok(None)
+        }
+
         // For `cargo help -h` and `cargo help --help`, print out the help
         // message for `cargo help`
         "help" if flags.arg_args[0] == "-h" ||
