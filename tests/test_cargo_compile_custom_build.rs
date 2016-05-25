@@ -5,10 +5,8 @@ use support::{project, execs};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file, existing_dir};
 
-fn setup() {
-}
-
-test!(custom_build_script_failed {
+#[test]
+fn custom_build_script_failed() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -36,9 +34,10 @@ test!(custom_build_script_failed {
 Process didn't exit successfully: `[..]build[..]build-script-build[..]` \
     (exit code: 101)",
 url = p.url())));
-});
+}
 
-test!(custom_build_env_vars {
+#[test]
+fn custom_build_env_vars() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -107,9 +106,10 @@ test!(custom_build_env_vars {
 
     assert_that(p.cargo_process("build").arg("--features").arg("bar_feat"),
                 execs().with_status(0));
-});
+}
 
-test!(custom_build_script_wrong_rustc_flags {
+#[test]
+fn custom_build_script_wrong_rustc_flags() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -134,10 +134,11 @@ test!(custom_build_script_wrong_rustc_flags {
 [ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`: \
 `-aaa -bbb`",
 p.url())));
-});
+}
 
 /*
-test!(custom_build_script_rustc_flags {
+#[test]
+fn custom_build_script_rustc_flags() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -184,10 +185,11 @@ test!(custom_build_script_rustc_flags {
 dir = p.root().display(),
 url = p.url(),
 )));
-});
+}
 */
 
-test!(links_no_build_cmd {
+#[test]
+fn links_no_build_cmd() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -204,9 +206,10 @@ test!(links_no_build_cmd {
 [ERROR] package `foo v0.5.0 (file://[..])` specifies that it links to `a` but does \
 not have a custom build script
 "));
-});
+}
 
-test!(links_duplicates {
+#[test]
+fn links_duplicates() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -241,9 +244,10 @@ linked to by one package
   [..] v0.5.0 (file://[..])
   [..] v0.5.0 (file://[..])
 "));
-});
+}
 
-test!(overrides_and_links {
+#[test]
+fn overrides_and_links() {
     let target = ::rustc_host();
 
     let p = project("foo")
@@ -294,9 +298,10 @@ test!(overrides_and_links {
 [..]
 [RUNNING] `rustc [..] --crate-name foo [..] -L foo -L bar[..]`
 "));
-});
+}
 
-test!(unused_overrides {
+#[test]
+fn unused_overrides() {
     let target = ::rustc_host();
 
     let p = project("foo")
@@ -318,9 +323,10 @@ test!(unused_overrides {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(links_passes_env_vars {
+#[test]
+fn links_passes_env_vars() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -362,9 +368,10 @@ test!(links_passes_env_vars {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(only_rerun_build_script {
+#[test]
+fn only_rerun_build_script() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -392,9 +399,10 @@ test!(only_rerun_build_script {
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..]`
 "));
-});
+}
 
-test!(rebuild_continues_to_pass_env_vars {
+#[test]
+fn rebuild_continues_to_pass_env_vars() {
     let a = project("a")
         .file("Cargo.toml", r#"
             [project]
@@ -445,9 +453,10 @@ test!(rebuild_continues_to_pass_env_vars {
 
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(testing_and_such {
+#[test]
+fn testing_and_such() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -509,9 +518,10 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `target[..]foo[..]`
 "));
-});
+}
 
-test!(propagation_of_l_flags {
+#[test]
+fn propagation_of_l_flags() {
     let target = ::rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -562,9 +572,10 @@ test!(propagation_of_l_flags {
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc [..] --crate-name foo [..] -L bar -L foo`
 "));
-});
+}
 
-test!(propagation_of_l_flags_new {
+#[test]
+fn propagation_of_l_flags_new() {
     let target = ::rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -615,9 +626,10 @@ test!(propagation_of_l_flags_new {
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc [..] --crate-name foo [..] -L bar -L foo`
 "));
-});
+}
 
-test!(build_deps_simple {
+#[test]
+fn build_deps_simple() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -651,9 +663,10 @@ test!(build_deps_simple {
 [RUNNING] `[..]foo-[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..]`
 "));
-});
+}
 
-test!(build_deps_not_for_normal {
+#[test]
+fn build_deps_not_for_normal() {
     let target = ::rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -690,9 +703,10 @@ error: aborting due to previous error
 Caused by:
   Process didn't exit successfully: [..]
 "));
-});
+}
 
-test!(build_cmd_with_a_build_cmd {
+#[test]
+fn build_cmd_with_a_build_cmd() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -752,9 +766,10 @@ test!(build_cmd_with_a_build_cmd {
     --out-dir [..]target[..]debug --emit=dep-info,link \
     -L [..]target[..]debug -L [..]target[..]deps`
 "));
-});
+}
 
-test!(out_dir_is_preserved {
+#[test]
+fn out_dir_is_preserved() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -800,9 +815,10 @@ test!(out_dir_is_preserved {
     File::create(&p.root().join("foo")).unwrap();
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(output_separate_lines {
+#[test]
+fn output_separate_lines() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -828,9 +844,10 @@ test!(output_separate_lines {
 [ERROR] could not find native static library [..]
 [ERROR] Could not compile [..]
 "));
-});
+}
 
-test!(output_separate_lines_new {
+#[test]
+fn output_separate_lines_new() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -856,10 +873,11 @@ test!(output_separate_lines_new {
 [ERROR] could not find native static library [..]
 [ERROR] Could not compile [..]
 "));
-});
+}
 
 #[cfg(not(windows))] // FIXME(#867)
-test!(code_generation {
+#[test]
+fn code_generation() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -902,9 +920,10 @@ Hello, World!
 
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
-});
+}
 
-test!(release_with_build_script {
+#[test]
+fn release_with_build_script() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -920,9 +939,10 @@ test!(release_with_build_script {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0));
-});
+}
 
-test!(build_script_only {
+#[test]
+fn build_script_only() {
     let p = project("foo")
         .file("Cargo.toml", r#"
               [project]
@@ -940,9 +960,10 @@ test!(build_script_only {
 Caused by:
   no targets specified in the manifest
   either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present"));
-});
+}
 
-test!(shared_dep_with_a_build_script {
+#[test]
+fn shared_dep_with_a_build_script() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -980,9 +1001,10 @@ test!(shared_dep_with_a_build_script {
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(transitive_dep_host {
+#[test]
+fn transitive_dep_host() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1022,9 +1044,10 @@ test!(transitive_dep_host {
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
-});
+}
 
-test!(test_a_lib_with_a_build_command {
+#[test]
+fn test_a_lib_with_a_build_command() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1058,9 +1081,10 @@ test!(test_a_lib_with_a_build_command {
         "#);
     assert_that(p.cargo_process("test"),
                 execs().with_status(0));
-});
+}
 
-test!(test_dev_dep_build_script {
+#[test]
+fn test_dev_dep_build_script() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1083,9 +1107,10 @@ test!(test_dev_dep_build_script {
         .file("a/src/lib.rs", "");
 
     assert_that(p.cargo_process("test"), execs().with_status(0));
-});
+}
 
-test!(build_script_with_dynamic_native_dependency {
+#[test]
+fn build_script_with_dynamic_native_dependency() {
     let build = project("builder")
         .file("Cargo.toml", r#"
             [package]
@@ -1149,9 +1174,10 @@ test!(build_script_with_dynamic_native_dependency {
 
     assert_that(foo.cargo_process("build").env("SRC", build.root()),
                 execs().with_status(0));
-});
+}
 
-test!(profile_and_opt_level_set_correctly {
+#[test]
+fn profile_and_opt_level_set_correctly() {
     let build = project("builder")
         .file("Cargo.toml", r#"
             [package]
@@ -1172,9 +1198,10 @@ test!(profile_and_opt_level_set_correctly {
         "#);
     assert_that(build.cargo_process("bench"),
                 execs().with_status(0));
-});
+}
 
-test!(build_script_with_lto {
+#[test]
+fn build_script_with_lto() {
     let build = project("builder")
         .file("Cargo.toml", r#"
             [package]
@@ -1193,9 +1220,10 @@ test!(build_script_with_lto {
         "#);
     assert_that(build.cargo_process("build"),
                 execs().with_status(0));
-});
+}
 
-test!(test_duplicate_deps {
+#[test]
+fn test_duplicate_deps() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1227,9 +1255,10 @@ test!(test_duplicate_deps {
         .file("bar/src/lib.rs", "pub fn do_nothing() {}");
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
-});
+}
 
-test!(cfg_feedback {
+#[test]
+fn cfg_feedback() {
     let build = project("builder")
         .file("Cargo.toml", r#"
             [package]
@@ -1249,9 +1278,10 @@ test!(cfg_feedback {
         "#);
     assert_that(build.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(cfg_override {
+#[test]
+fn cfg_override() {
     let target = ::rustc_host();
 
     let p = project("foo")
@@ -1275,9 +1305,10 @@ test!(cfg_override {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(cfg_test {
+#[test]
+fn cfg_test() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -1346,9 +1377,10 @@ test foo_0 ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 "));
-});
+}
 
-test!(cfg_doc {
+#[test]
+fn cfg_doc() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -1390,9 +1422,10 @@ test!(cfg_doc {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/fn.foo.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/fn.bar.html"), existing_file());
-});
+}
 
-test!(cfg_override_test {
+#[test]
+fn cfg_override_test() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -1460,9 +1493,10 @@ test foo_0 ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 "));
-});
+}
 
-test!(cfg_override_doc {
+#[test]
+fn cfg_override_doc() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -1504,9 +1538,10 @@ test!(cfg_override_doc {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/fn.foo.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/fn.bar.html"), existing_file());
-});
+}
 
-test!(flags_go_into_tests {
+#[test]
+fn flags_go_into_tests() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1575,9 +1610,10 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 "));
-});
+}
 
-test!(diamond_passes_args_only_once {
+#[test]
+fn diamond_passes_args_only_once() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1637,9 +1673,10 @@ test!(diamond_passes_args_only_once {
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `[..]rlib -L native=test`
 "));
-});
+}
 
-test!(adding_an_override_invalidates {
+#[test]
+fn adding_an_override_invalidates() {
     let target = ::rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -1676,9 +1713,10 @@ test!(adding_an_override_invalidates {
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=bar`
 "));
-});
+}
 
-test!(changing_an_override_invalidates {
+#[test]
+fn changing_an_override_invalidates() {
     let target = ::rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -1712,9 +1750,10 @@ test!(changing_an_override_invalidates {
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=bar`
 "));
-});
+}
 
-test!(rebuild_only_on_explicit_paths {
+#[test]
+fn rebuild_only_on_explicit_paths() {
     let p = project("a")
         .file("Cargo.toml", r#"
             [project]
@@ -1792,10 +1831,11 @@ test!(rebuild_only_on_explicit_paths {
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`
 "));
-});
+}
 
 
-test!(doctest_recieves_build_link_args {
+#[test]
+fn doctest_recieves_build_link_args() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1826,9 +1866,10 @@ test!(doctest_recieves_build_link_args {
                        .with_stderr_contains("\
 [RUNNING] `rustdoc --test [..] --crate-name foo [..]-L native=bar[..]`
 "));
-});
+}
 
-test!(please_respect_the_dag {
+#[test]
+fn please_respect_the_dag() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1866,9 +1907,10 @@ test!(please_respect_the_dag {
                        .with_stderr_contains("\
 [RUNNING] `rustc [..] -L native=foo -L native=bar[..]`
 "));
-});
+}
 
-test!(non_utf8_output {
+#[test]
+fn non_utf8_output() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1899,9 +1941,10 @@ test!(non_utf8_output {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(custom_target_dir {
+#[test]
+fn custom_target_dir() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1929,9 +1972,10 @@ test!(custom_target_dir {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(panic_abort_with_build_scripts {
+#[test]
+fn panic_abort_with_build_scripts() {
     if !::is_nightly() {
         return
     }
@@ -1971,4 +2015,4 @@ test!(panic_abort_with_build_scripts {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0));
-});
+}

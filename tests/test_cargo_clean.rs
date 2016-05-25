@@ -4,10 +4,8 @@ use support::{git, project, execs, main_file, basic_bin_manifest};
 use support::registry::Package;
 use hamcrest::{assert_that, existing_dir, existing_file, is_not};
 
-fn setup() {
-}
-
-test!(cargo_clean_simple {
+#[test]
+fn cargo_clean_simple() {
     let p = project("foo")
               .file("Cargo.toml", &basic_bin_manifest("foo"))
               .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -18,9 +16,10 @@ test!(cargo_clean_simple {
     assert_that(p.cargo("clean"),
                 execs().with_status(0));
     assert_that(&p.build_dir(), is_not(existing_dir()));
-});
+}
 
-test!(different_dir {
+#[test]
+fn different_dir() {
     let p = project("foo")
               .file("Cargo.toml", &basic_bin_manifest("foo"))
               .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
@@ -32,9 +31,10 @@ test!(different_dir {
     assert_that(p.cargo("clean").cwd(&p.root().join("src")),
                 execs().with_status(0).with_stdout(""));
     assert_that(&p.build_dir(), is_not(existing_dir()));
-});
+}
 
-test!(clean_multiple_packages {
+#[test]
+fn clean_multiple_packages() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -93,9 +93,10 @@ test!(clean_multiple_packages {
     assert_that(&p.bin("foo"), existing_file());
     assert_that(d1_path, is_not(existing_file()));
     assert_that(d2_path, is_not(existing_file()));
-});
+}
 
-test!(clean_release {
+#[test]
+fn clean_release() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -130,9 +131,10 @@ test!(clean_release {
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 "));
-});
+}
 
-test!(build_script {
+#[test]
+fn build_script() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -169,9 +171,10 @@ test!(build_script {
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]main.rs [..]`
 "));
-});
+}
 
-test!(clean_git {
+#[test]
+fn clean_git() {
     let git = git::new("dep", |project| {
         project.file("Cargo.toml", r#"
             [project]
@@ -201,9 +204,10 @@ test!(clean_git {
                 execs().with_status(0).with_stdout(""));
     assert_that(p.cargo("build"),
                 execs().with_status(0));
-});
+}
 
-test!(registry {
+#[test]
+fn registry() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -225,4 +229,4 @@ test!(registry {
                 execs().with_status(0).with_stdout(""));
     assert_that(p.cargo("build"),
                 execs().with_status(0));
-});
+}

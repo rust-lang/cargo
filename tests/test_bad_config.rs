@@ -2,9 +2,8 @@ use support::{project, execs};
 use support::registry::Package;
 use hamcrest::assert_that;
 
-fn setup() {}
-
-test!(bad1 {
+#[test]
+fn bad1() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -23,9 +22,10 @@ test!(bad1 {
 [ERROR] expected table for configuration key `target.nonexistent-target`, \
 but found string in [..]config
 "));
-});
+}
 
-test!(bad2 {
+#[test]
+fn bad2() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -54,9 +54,10 @@ Caused by:
 Caused by:
   found TOML configuration value of unknown type `float`
 "));
-});
+}
 
-test!(bad3 {
+#[test]
+fn bad3() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -75,9 +76,10 @@ test!(bad3 {
 [ERROR] invalid configuration for key `http.proxy`
 expected a string, but found a boolean in [..]config
 "));
-});
+}
 
-test!(bad4 {
+#[test]
+fn bad4() {
     let foo = project("foo")
         .file(".cargo/config", r#"
             [cargo-new]
@@ -91,9 +93,10 @@ Caused by:
   invalid configuration for key `cargo-new.name`
 expected a string, but found a boolean in [..]config
 "));
-});
+}
 
-test!(bad5 {
+#[test]
+fn bad5() {
     let foo = project("foo")
         .file(".cargo/config", r#"
             foo = ""
@@ -115,9 +118,10 @@ Caused by:
 Caused by:
   expected integer, but found string
 "));
-});
+}
 
-test!(bad_cargo_config_jobs {
+#[test]
+fn bad_cargo_config_jobs() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
         [package]
@@ -134,9 +138,10 @@ test!(bad_cargo_config_jobs {
                 execs().with_status(101).with_stderr("\
 [ERROR] build.jobs must be positive, but found -1 in [..]
 "));
-});
+}
 
-test!(default_cargo_config_jobs {
+#[test]
+fn default_cargo_config_jobs() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
         [package]
@@ -151,9 +156,10 @@ test!(default_cargo_config_jobs {
     "#);
     assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(good_cargo_config_jobs {
+#[test]
+fn good_cargo_config_jobs() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
         [package]
@@ -168,9 +174,10 @@ test!(good_cargo_config_jobs {
     "#);
     assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(invalid_global_config {
+#[test]
+fn invalid_global_config() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
         [package]
@@ -196,9 +203,10 @@ Caused by:
 [..]config:1:2 expected `=`, but found eof
 
 "));
-});
+}
 
-test!(bad_cargo_lock {
+#[test]
+fn bad_cargo_lock() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
         [package]
@@ -216,9 +224,10 @@ test!(bad_cargo_lock {
 Caused by:
   expected a section for the key `root`
 "));
-});
+}
 
-test!(bad_git_dependency {
+#[test]
+fn bad_git_dependency() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
         [package]
@@ -242,9 +251,10 @@ Caused by:
 Caused by:
   [[..]] 'file:///' is not a valid local file URI
 "));
-});
+}
 
-test!(bad_crate_type {
+#[test]
+fn bad_crate_type() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
         [package]
@@ -263,9 +273,10 @@ warning: crate-type \"bad_type\" was not one of lib|rlib|dylib|staticlib
 [COMPILING] foo v0.0.0 (file:///[..])
 [RUNNING] `rustc [..] --crate-type rlib [..]`
 "));
-});
+}
 
-test!(malformed_override {
+#[test]
+fn malformed_override() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
         [package]
@@ -289,9 +300,10 @@ Caused by:
 Cargo.toml:[..]
 
 "));
-});
+}
 
-test!(duplicate_binary_names {
+#[test]
+fn duplicate_binary_names() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
        [package]
@@ -317,9 +329,10 @@ test!(duplicate_binary_names {
 Caused by:
   found duplicate binary name e, but all binary targets must have a unique name
 "));
-});
+}
 
-test!(duplicate_example_names {
+#[test]
+fn duplicate_example_names() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
        [package]
@@ -345,9 +358,10 @@ test!(duplicate_example_names {
 Caused by:
   found duplicate example name ex, but all binary targets must have a unique name
 "));
-});
+}
 
-test!(duplicate_bench_names {
+#[test]
+fn duplicate_bench_names() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
        [package]
@@ -373,9 +387,10 @@ test!(duplicate_bench_names {
 Caused by:
   found duplicate bench name ex, but all binary targets must have a unique name
 "));
-});
+}
 
-test!(duplicate_deps {
+#[test]
+fn duplicate_deps() {
     let foo = project("foo")
     .file("shim-bar/Cargo.toml", r#"
        [package]
@@ -416,9 +431,10 @@ test!(duplicate_deps {
 Caused by:
   found duplicate dependency name bar, but all dependencies must have a unique name
 "));
-});
+}
 
-test!(unused_keys {
+#[test]
+fn unused_keys() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
            [package]
@@ -436,9 +452,10 @@ test!(unused_keys {
 warning: unused manifest key: target.foo.bar
 [COMPILING] foo v0.1.0 (file:///[..])
 "));
-});
+}
 
-test!(empty_dependencies {
+#[test]
+fn empty_dependencies() {
     let p = project("empty_deps")
     .file("Cargo.toml", r#"
         [package]
@@ -458,4 +475,4 @@ test!(empty_dependencies {
 warning: dependency (foo) specified without providing a local path, Git repository, or version \
 to use. This will be considered an error in future versions
 "));
-});
+}

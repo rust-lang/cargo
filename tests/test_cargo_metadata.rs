@@ -3,9 +3,8 @@ use support::registry::Package;
 use support::{project, execs, basic_bin_manifest, main_file};
 
 
-fn setup() {}
-
-test!(cargo_metadata_simple {
+#[test]
+fn cargo_metadata_simple() {
     let p = project("foo")
             .file("Cargo.toml", &basic_bin_manifest("foo"));
 
@@ -42,10 +41,11 @@ test!(cargo_metadata_simple {
         },
         "version": 1
     }"#));
-});
+}
 
 
-test!(cargo_metadata_with_deps_and_version {
+#[test]
+fn cargo_metadata_with_deps_and_version() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -170,9 +170,10 @@ test!(cargo_metadata_with_deps_and_version {
         },
         "version": 1
     }"#));
-});
+}
 
-test!(cargo_metadata_with_invalid_manifest {
+#[test]
+fn cargo_metadata_with_invalid_manifest() {
     let p = project("foo")
             .file("Cargo.toml", "");
 
@@ -182,7 +183,7 @@ test!(cargo_metadata_with_invalid_manifest {
 
 Caused by:
   no `package` or `project` section found."))
-});
+}
 
 const MANIFEST_OUTPUT: &'static str=
     r#"
@@ -205,7 +206,8 @@ const MANIFEST_OUTPUT: &'static str=
     "version": 1
 }"#;
 
-test!(cargo_metadata_no_deps_path_to_cargo_toml_relative {
+#[test]
+fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -215,9 +217,10 @@ test!(cargo_metadata_no_deps_path_to_cargo_toml_relative {
                      .cwd(p.root().parent().unwrap()),
                     execs().with_status(0)
                            .with_json(MANIFEST_OUTPUT));
-});
+}
 
-test!(cargo_metadata_no_deps_path_to_cargo_toml_absolute {
+#[test]
+fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -227,9 +230,10 @@ test!(cargo_metadata_no_deps_path_to_cargo_toml_absolute {
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(0)
                        .with_json(MANIFEST_OUTPUT));
-});
+}
 
-test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_relative {
+#[test]
+fn cargo_metadata_no_deps_path_to_cargo_toml_parent_relative() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -240,9 +244,10 @@ test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_relative {
                 execs().with_status(101)
                        .with_stderr("[ERROR] the manifest-path must be \
                                              a path to a Cargo.toml file"));
-});
+}
 
-test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute {
+#[test]
+fn cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -253,9 +258,10 @@ test!(cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute {
                 execs().with_status(101)
                        .with_stderr("[ERROR] the manifest-path must be \
                                              a path to a Cargo.toml file"));
-});
+}
 
-test!(cargo_metadata_no_deps_cwd {
+#[test]
+fn cargo_metadata_no_deps_cwd() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -264,9 +270,10 @@ test!(cargo_metadata_no_deps_cwd {
                  .cwd(p.root()),
                 execs().with_status(0)
                        .with_json(MANIFEST_OUTPUT));
-});
+}
 
-test!(carg_metadata_bad_version {
+#[test]
+fn carg_metadata_bad_version() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -276,4 +283,4 @@ test!(carg_metadata_bad_version {
                  .cwd(p.root()),
                 execs().with_status(101)
     .with_stderr("[ERROR] metadata version 2 not supported, only 1 is currently supported"));
-});
+}

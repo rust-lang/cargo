@@ -1,4 +1,5 @@
 use std::env;
+use std::cell::Cell;
 use std::fs;
 use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
@@ -9,9 +10,26 @@ use filetime::{self, FileTime};
 
 static CARGO_INTEGRATION_TEST_DIR : &'static str = "cit";
 static NEXT_ID: AtomicUsize = ATOMIC_USIZE_INIT;
+
 thread_local!(static TASK_ID: usize = NEXT_ID.fetch_add(1, Ordering::SeqCst));
 
-pub fn root() -> PathBuf {
+fn init() {
+    static GLOBAL_INIT: Once = ONCE_INIT;
+    thread_local!(static LOCAL_INIT: Cell<bool> = Cell::new(false));
+    GLOBAL_INIT.call_once(|| {
+        global_root().mkdir_p().unwrap();
+    });
+    LOCAL_INIT.with(|i| {
+        if i.get() {
+            return
+        }
+        i.set(true);
+        root().rm_rf().unwrap();
+        home().mkdir_p().unwrap();
+    })
+}
+
+fn global_root() -> PathBuf {
     let mut path = env::current_exe().unwrap();
     path.pop(); // chop off exe name
     path.pop(); // chop off 'debug'
@@ -26,7 +44,11 @@ pub fn root() -> PathBuf {
     }
 
     path.join(CARGO_INTEGRATION_TEST_DIR)
-        .join(&TASK_ID.with(|my_id| format!("t{}", my_id)))
+}
+
+pub fn root() -> PathBuf {
+    init();
+    global_root().join(&TASK_ID.with(|my_id| format!("t{}", my_id)))
 }
 
 pub fn home() -> PathBuf {
@@ -141,15 +163,4 @@ impl CargoPathExt for Path {
     fn c_metadata(&self) -> io::Result<fs::Metadata> {
         fs::metadata(self)
     }
-}
-
-/// Ensure required test directories exist and are empty
-pub fn setup() {
-    debug!("path setup; root={}; home={}", root().display(), home().display());
-    static INIT: Once = ONCE_INIT;
-    INIT.call_once(|| {
-        root().parent().unwrap().mkdir_p().unwrap();
-    });
-    root().rm_rf().unwrap();
-    home().mkdir_p().unwrap();
 }

@@ -13,15 +13,14 @@ use support::git;
 use support::registry::Package;
 use test_cargo_install::{cargo_home, has_installed_exe};
 
-fn setup() {}
-
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
         .file("src/main.rs", "fn main() {{}}")
         .publish();
 }
 
-test!(multiple_installs {
+#[test]
+fn multiple_installs() {
     let p = project("foo")
         .file("a/Cargo.toml", r#"
             [package]
@@ -56,9 +55,10 @@ test!(multiple_installs {
 
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_home(), has_installed_exe("bar"));
-});
+}
 
-test!(concurrent_installs {
+#[test]
+fn concurrent_installs() {
     const LOCKED_BUILD: &'static str = "waiting for file lock on build directory";
 
     pkg("foo", "0.0.1");
@@ -84,9 +84,10 @@ test!(concurrent_installs {
 
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_home(), has_installed_exe("bar"));
-});
+}
 
-test!(one_install_should_be_bad {
+#[test]
+fn one_install_should_be_bad() {
     let p = project("foo")
         .file("a/Cargo.toml", r#"
             [package]
@@ -125,9 +126,10 @@ warning: be sure to add `[..]` to your PATH [..]
 "));
 
     assert_that(cargo_home(), has_installed_exe("foo"));
-});
+}
 
-test!(multiple_registry_fetches {
+#[test]
+fn multiple_registry_fetches() {
     let mut pkg = Package::new("bar", "1.0.2");
     for i in 0..10 {
         let name = format!("foo{}", i);
@@ -179,9 +181,10 @@ test!(multiple_registry_fetches {
                 existing_file());
     assert_that(&p.root().join("b/target/debug").join(format!("bar{}", suffix)),
                 existing_file());
-});
+}
 
-test!(git_same_repo_different_tags {
+#[test]
+fn git_same_repo_different_tags() {
     let a = git::new("dep", |project| {
         project.file("Cargo.toml", r#"
             [project]
@@ -237,9 +240,10 @@ test!(git_same_repo_different_tags {
 
     assert_that(a, execs().with_status(0));
     assert_that(b, execs().with_status(0));
-});
+}
 
-test!(git_same_branch_different_revs {
+#[test]
+fn git_same_branch_different_revs() {
     let a = git::new("dep", |project| {
         project.file("Cargo.toml", r#"
             [project]
@@ -301,9 +305,10 @@ test!(git_same_branch_different_revs {
 
     assert_that(a, execs().with_status(0));
     assert_that(b, execs().with_status(0));
-});
+}
 
-test!(same_project {
+#[test]
+fn same_project() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -329,11 +334,12 @@ test!(same_project {
 
     assert_that(a, execs().with_status(0));
     assert_that(b, execs().with_status(0));
-});
+}
 
 // Make sure that if Cargo dies while holding a lock that it's released and the
 // next Cargo to come in will take over cleanly.
-test!(killing_cargo_releases_the_lock {
+#[test]
+fn killing_cargo_releases_the_lock() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -383,9 +389,10 @@ test!(killing_cargo_releases_the_lock {
     // We killed `a`, so it shouldn't succeed, but `b` should have succeeded.
     assert!(!a.status.success());
     assert_that(b, execs().with_status(0));
-});
+}
 
-test!(debug_release_ok {
+#[test]
+fn debug_release_ok() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -415,4 +422,4 @@ test!(debug_release_ok {
     assert_that(b, execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.0 [..]
 "));
-});
+}

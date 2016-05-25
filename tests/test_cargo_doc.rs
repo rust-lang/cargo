@@ -4,10 +4,8 @@ use std::fs;
 use support::{project, execs, path2url};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
-fn setup() {
-}
-
-test!(simple {
+#[test]
+fn simple() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -29,9 +27,10 @@ test!(simple {
         dir = path2url(p.root()))));
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
-});
+}
 
-test!(doc_no_libs {
+#[test]
+fn doc_no_libs() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -49,9 +48,10 @@ test!(doc_no_libs {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
-});
+}
 
-test!(doc_twice {
+#[test]
+fn doc_twice() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -71,9 +71,10 @@ test!(doc_twice {
 
     assert_that(p.cargo("doc"),
                 execs().with_status(0).with_stdout(""))
-});
+}
 
-test!(doc_deps {
+#[test]
+fn doc_deps() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -117,9 +118,10 @@ test!(doc_deps {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
-});
+}
 
-test!(doc_no_deps {
+#[test]
+fn doc_no_deps() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -154,9 +156,10 @@ test!(doc_no_deps {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/index.html"), is_not(existing_file()));
-});
+}
 
-test!(doc_only_bin {
+#[test]
+fn doc_only_bin() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -187,9 +190,10 @@ test!(doc_only_bin {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
-});
+}
 
-test!(doc_lib_bin_same_name {
+#[test]
+fn doc_lib_bin_same_name() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -206,9 +210,10 @@ test!(doc_lib_bin_same_name {
 [ERROR] cannot document a package where a library and a binary have the same name. \
 Consider renaming one or marking the target as `doc = false`
 "));
-});
+}
 
-test!(doc_dash_p {
+#[test]
+fn doc_dash_p() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -245,9 +250,10 @@ test!(doc_dash_p {
 [..] b v0.0.1 (file://[..])
 [DOCUMENTING] a v0.0.1 (file://[..])
 "));
-});
+}
 
-test!(doc_same_name {
+#[test]
+fn doc_same_name() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -262,9 +268,10 @@ test!(doc_same_name {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
-});
+}
 
-test!(doc_target {
+#[test]
+fn doc_target() {
     const TARGET: &'static str = "arm-unknown-linux-gnueabihf";
 
     if !::is_nightly() { return }
@@ -289,9 +296,10 @@ test!(doc_target {
                 execs().with_status(0));
     assert_that(&p.root().join(&format!("target/{}/doc", TARGET)), existing_dir());
     assert_that(&p.root().join(&format!("target/{}/doc/foo/index.html", TARGET)), existing_file());
-});
+}
 
-test!(target_specific_not_documented {
+#[test]
+fn target_specific_not_documented() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -313,9 +321,10 @@ test!(target_specific_not_documented {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
-});
+}
 
-test!(output_not_captured {
+#[test]
+fn output_not_captured() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -345,9 +354,10 @@ test!(output_not_captured {
     let stderr = str::from_utf8(&output.stderr).unwrap();
     assert!(stderr.contains("☃"), "no snowman\n{}", stderr);
     assert!(stderr.contains("unknown start of token"), "no message\n{}", stderr);
-});
+}
 
-test!(target_specific_documented {
+#[test]
+fn target_specific_documented() {
     let p = project("foo")
         .file("Cargo.toml", &format!(r#"
             [package]
@@ -379,9 +389,10 @@ test!(target_specific_documented {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
-});
+}
 
-test!(no_document_build_deps {
+#[test]
+fn no_document_build_deps() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -410,9 +421,10 @@ test!(no_document_build_deps {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
-});
+}
 
-test!(doc_release {
+#[test]
+fn doc_release() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -430,9 +442,10 @@ test!(doc_release {
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc src[..]lib.rs [..]`
 "));
-});
+}
 
-test!(doc_multiple_deps {
+#[test]
+fn doc_multiple_deps() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -478,9 +491,10 @@ test!(doc_multiple_deps {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/bar/index.html"), existing_file());
     assert_that(&p.root().join("target/doc/baz/index.html"), existing_file());
-});
+}
 
-test!(features {
+#[test]
+fn features() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -521,9 +535,10 @@ test!(features {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/fn.foo.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/fn.bar.html"), existing_file());
-});
+}
 
-test!(rerun_when_dir_removed {
+#[test]
+fn rerun_when_dir_removed() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -544,9 +559,10 @@ test!(rerun_when_dir_removed {
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0));
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
-});
+}
 
-test!(document_only_lib {
+#[test]
+fn document_only_lib() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -568,4 +584,4 @@ test!(document_only_lib {
     assert_that(p.cargo_process("doc").arg("--lib"),
                 execs().with_status(0));
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
-});
+}

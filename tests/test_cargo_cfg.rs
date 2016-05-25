@@ -132,9 +132,8 @@ fn cfg_matches() {
     assert!(!e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo)]));
 }
 
-fn setup() {}
-
-test!(cfg_easy {
+#[test]
+fn cfg_easy() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -159,9 +158,10 @@ test!(cfg_easy {
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(dont_include {
+#[test]
+fn dont_include() {
     if !::is_nightly() { return }
 
     let other_family = if cfg!(unix) {"windows"} else {"unix"};
@@ -187,9 +187,10 @@ test!(dont_include {
                 execs().with_status(0).with_stderr("\
 [COMPILING] a v0.0.1 ([..])
 "));
-});
+}
 
-test!(works_through_the_registry {
+#[test]
+fn works_through_the_registry() {
     if !::is_nightly() { return }
 
     Package::new("foo", "0.1.0").publish();
@@ -219,9 +220,10 @@ test!(works_through_the_registry {
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] a v0.0.1 ([..])
 "));
-});
+}
 
-test!(bad_target_spec {
+#[test]
+fn bad_target_spec() {
     let p = project("a")
         .file("Cargo.toml", &r#"
             [package]
@@ -244,9 +246,10 @@ Caused by:
 Caused by:
   unexpected character in cfg `4`, [..]
 "));
-});
+}
 
-test!(bad_target_spec2 {
+#[test]
+fn bad_target_spec2() {
     let p = project("a")
         .file("Cargo.toml", &r#"
             [package]
@@ -269,9 +272,10 @@ Caused by:
 Caused by:
   expected a string, found nothing
 "));
-});
+}
 
-test!(multiple_match_ok {
+#[test]
+fn multiple_match_ok() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -305,9 +309,10 @@ test!(multiple_match_ok {
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(any_ok {
+#[test]
+fn any_ok() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -330,4 +335,4 @@ test!(any_ok {
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-});
+}

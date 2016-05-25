@@ -10,9 +10,6 @@ use support::paths;
 use support::{execs, project, mkdir_recursive, ProjectBuilder};
 use hamcrest::{assert_that};
 
-fn setup() {
-}
-
 #[cfg_attr(windows,allow(dead_code))]
 enum FakeKind<'a> {
     Executable,
@@ -61,7 +58,8 @@ fn path() -> Vec<PathBuf> {
     env::split_paths(&env::var_os("PATH").unwrap_or(OsString::new())).collect()
 }
 
-test!(list_command_looks_at_path {
+#[test]
+fn list_command_looks_at_path() {
     let proj = project("list-non-overlapping");
     let proj = fake_file(proj, &Path::new("path-test"), "cargo-1", FakeKind::Executable);
     let mut pr = cargo_process();
@@ -74,11 +72,12 @@ test!(list_command_looks_at_path {
     let output = output.exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("\n    1\n"), "missing 1: {}", output);
-});
+}
 
 // windows and symlinks don't currently agree that well
 #[cfg(unix)]
-test!(list_command_resolves_symlinks {
+#[test]
+fn list_command_resolves_symlinks() {
     use support::cargo_dir;
 
     let proj = project("list-non-overlapping");
@@ -94,9 +93,10 @@ test!(list_command_resolves_symlinks {
     let output = output.exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("\n    2\n"), "missing 2: {}", output);
-});
+}
 
-test!(find_closest_biuld_to_build {
+#[test]
+fn find_closest_biuld_to_build() {
     let mut pr = cargo_process();
     pr.arg("biuld");
 
@@ -107,10 +107,11 @@ test!(find_closest_biuld_to_build {
 <tab>Did you mean `build`?
 
 "));
-});
+}
 
 // if a subcommand is more than 3 edit distance away, we don't make a suggestion
-test!(find_closest_dont_correct_nonsense {
+#[test]
+fn find_closest_dont_correct_nonsense() {
     let mut pr = cargo_process();
     pr.arg("there-is-no-way-that-there-is-a-command-close-to-this")
       .cwd(&paths::root());
@@ -119,9 +120,10 @@ test!(find_closest_dont_correct_nonsense {
                 execs().with_status(101)
                        .with_stderr("[ERROR] no such subcommand
 "));
-});
+}
 
-test!(override_cargo_home {
+#[test]
+fn override_cargo_home() {
     let root = paths::root();
     let my_home = root.join("my_home");
     fs::create_dir(&my_home).unwrap();
@@ -142,9 +144,10 @@ test!(override_cargo_home {
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["foo <bar>"]"#));
-});
+}
 
-test!(cargo_help {
+#[test]
+fn cargo_help() {
     assert_that(cargo_process(),
                 execs().with_status(0));
     assert_that(cargo_process().arg("help"),
@@ -159,9 +162,10 @@ test!(cargo_help {
                 execs().with_status(0));
     assert_that(cargo_process().arg("help").arg("help"),
                 execs().with_status(0));
-});
+}
 
-test!(explain {
+#[test]
+fn explain() {
     assert_that(cargo_process().arg("--explain").arg("E0001"),
                 execs().with_status(0));
-});
+}

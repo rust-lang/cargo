@@ -4,9 +4,6 @@ use support::{project, execs, basic_bin_manifest};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
-fn setup() {
-}
-
 fn disabled() -> bool {
     // First, disable if ./configure requested so
     match env::var("CFG_DISABLE_CROSS_TESTS") {
@@ -60,7 +57,8 @@ fn host() -> String {
     format!("{}-{}", arch, platform)
 }
 
-test!(simple_cross {
+#[test]
+fn simple_cross() {
     if disabled() { return }
 
     let p = project("foo")
@@ -90,9 +88,10 @@ test!(simple_cross {
 
     assert_that(process(&p.target_bin(&target, "foo")),
                 execs().with_status(0));
-});
+}
 
-test!(simple_cross_config {
+#[test]
+fn simple_cross_config() {
     if disabled() { return }
 
     let p = project("foo")
@@ -126,9 +125,10 @@ test!(simple_cross_config {
 
     assert_that(process(&p.target_bin(&target, "foo")),
                 execs().with_status(0));
-});
+}
 
-test!(simple_deps {
+#[test]
+fn simple_deps() {
     if disabled() { return }
 
     let p = project("foo")
@@ -162,9 +162,10 @@ test!(simple_deps {
 
     assert_that(process(&p.target_bin(&target, "foo")),
                 execs().with_status(0));
-});
+}
 
-test!(plugin_deps {
+#[test]
+fn plugin_deps() {
     if disabled() { return }
     if !::is_nightly() { return }
 
@@ -239,9 +240,10 @@ test!(plugin_deps {
 
     assert_that(process(&foo.target_bin(&target, "foo")),
                 execs().with_status(0));
-});
+}
 
-test!(plugin_to_the_max {
+#[test]
+fn plugin_to_the_max() {
     if disabled() { return }
     if !::is_nightly() { return }
 
@@ -324,9 +326,10 @@ test!(plugin_to_the_max {
 
     assert_that(process(&foo.target_bin(&target, "foo")),
                 execs().with_status(0));
-});
+}
 
-test!(linker_and_ar {
+#[test]
+fn linker_and_ar() {
     if disabled() { return }
 
     let target = alternate();
@@ -361,9 +364,10 @@ test!(linker_and_ar {
                             url = p.url(),
                             target = target,
                             )));
-});
+}
 
-test!(plugin_with_extra_dylib_dep {
+#[test]
+fn plugin_with_extra_dylib_dep() {
     if disabled() { return }
     if !::is_nightly() { return }
 
@@ -428,9 +432,10 @@ test!(plugin_with_extra_dylib_dep {
     let target = alternate();
     assert_that(foo.cargo_process("build").arg("--target").arg(&target),
                 execs().with_status(0));
-});
+}
 
-test!(cross_tests {
+#[test]
+fn cross_tests() {
     if disabled() { return }
 
     let p = project("foo")
@@ -477,9 +482,10 @@ test test_foo ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 "));
-});
+}
 
-test!(no_cross_doctests {
+#[test]
+fn no_cross_doctests() {
     if disabled() { return }
 
     let p = project("foo")
@@ -521,9 +527,10 @@ test!(no_cross_doctests {
 [COMPILING] foo v0.0.0 ({foo})
 [RUNNING] target[..]{triple}[..]foo-[..]
 ", foo = p.url(), triple = target)));
-});
+}
 
-test!(simple_cargo_run {
+#[test]
+fn simple_cargo_run() {
     if disabled() { return }
 
     let p = project("foo")
@@ -543,9 +550,10 @@ test!(simple_cargo_run {
     let target = alternate();
     assert_that(p.cargo_process("run").arg("--target").arg(&target),
                 execs().with_status(0));
-});
+}
 
-test!(cross_with_a_build_script {
+#[test]
+fn cross_with_a_build_script() {
     if disabled() { return }
 
     let target = alternate();
@@ -588,9 +596,10 @@ test!(cross_with_a_build_script {
 [RUNNING] `rustc src[..]main.rs [..] --target {target} [..]`
 ", target = target,
    dir = p.root().display())));
-});
+}
 
-test!(build_script_needed_for_host_and_target {
+#[test]
+fn build_script_needed_for_host_and_target() {
     if disabled() { return }
 
     let target = alternate();
@@ -673,9 +682,10 @@ test!(build_script_needed_for_host_and_target {
                        .with_stderr_contains(&format!("\
 [RUNNING] `rustc src[..]main.rs [..] --target {target} [..] \
            -L /path/to/{target}`", target = target)));
-});
+}
 
-test!(build_deps_for_the_right_arch {
+#[test]
+fn build_deps_for_the_right_arch() {
     if disabled() { return }
 
     let p = project("foo")
@@ -714,9 +724,10 @@ test!(build_deps_for_the_right_arch {
     let target = alternate();
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(build_script_only_host {
+#[test]
+fn build_script_only_host() {
     if disabled() { return }
 
     let p = project("foo")
@@ -755,9 +766,10 @@ test!(build_script_only_host {
     let target = alternate();
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(plugin_build_script_right_arch {
+#[test]
+fn plugin_build_script_right_arch() {
     if disabled() { return }
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -782,9 +794,10 @@ test!(plugin_build_script_right_arch {
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`
 "));
-});
+}
 
-test!(build_script_with_platform_specific_dependencies {
+#[test]
+fn build_script_with_platform_specific_dependencies() {
     if disabled() { return }
 
     let target = alternate();
@@ -832,9 +845,10 @@ test!(build_script_with_platform_specific_dependencies {
 [RUNNING] `{dir}[..]target[..]build[..]foo-[..]build-script-build`
 [RUNNING] `rustc src[..]lib.rs [..] --target {target} [..]`
 ", dir = p.root().display(), target = target)));
-});
+}
 
-test!(platform_specific_dependencies_do_not_leak {
+#[test]
+fn platform_specific_dependencies_do_not_leak() {
     if disabled() { return }
 
     let target = alternate();
@@ -877,9 +891,10 @@ test!(platform_specific_dependencies_do_not_leak {
                 execs().with_status(101)
                        .with_stderr_contains("\
 [..] error: can't find crate for `d2`[..]"));
-});
+}
 
-test!(platform_specific_variables_reflected_in_build_scripts {
+#[test]
+fn platform_specific_variables_reflected_in_build_scripts() {
     if disabled() { return }
 
     let target = alternate();
@@ -944,4 +959,4 @@ test!(platform_specific_variables_reflected_in_build_scripts {
     assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(0));
-});
+}

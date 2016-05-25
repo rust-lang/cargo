@@ -23,16 +23,6 @@ use std::ffi::OsStr;
 use std::time::Duration;
 
 mod support;
-macro_rules! test {
-    ($name:ident $expr:expr) => (
-        #[test]
-        fn $name() {
-            ::support::paths::setup();
-            setup();
-            $expr;
-        }
-    )
-}
 
 mod test_bad_config;
 mod test_bad_manifest_path;

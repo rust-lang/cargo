@@ -5,10 +5,8 @@ use support::{project, execs};
 use support::paths::CargoPathExt;
 use hamcrest::assert_that;
 
-fn setup() {
-}
-
-test!(invalid1 {
+#[test]
+fn invalid1() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -28,9 +26,10 @@ test!(invalid1 {
 Caused by:
   Feature `bar` includes `baz` which is neither a dependency nor another feature
 "));
-});
+}
 
-test!(invalid2 {
+#[test]
+fn invalid2() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -53,9 +52,10 @@ test!(invalid2 {
 Caused by:
   Features and dependencies cannot have the same name: `bar`
 "));
-});
+}
 
-test!(invalid3 {
+#[test]
+fn invalid3() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -79,9 +79,10 @@ Caused by:
   Feature `bar` depends on `baz` which is not an optional dependency.
 Consider adding `optional = true` to the dependency
 "));
-});
+}
 
-test!(invalid4 {
+#[test]
+fn invalid4() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -118,9 +119,10 @@ test!(invalid4 {
                 execs().with_status(101).with_stderr("\
 [ERROR] Package `foo v0.0.1 ([..])` does not have these features: `test`
 "));
-});
+}
 
-test!(invalid5 {
+#[test]
+fn invalid5() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -141,9 +143,10 @@ test!(invalid5 {
 Caused by:
   Dev-dependencies are not allowed to be optional: `bar`
 "));
-});
+}
 
-test!(invalid6 {
+#[test]
+fn invalid6() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -163,9 +166,10 @@ test!(invalid6 {
 Caused by:
   Feature `foo` requires `bar` which is not an optional dependency
 "));
-});
+}
 
-test!(invalid7 {
+#[test]
+fn invalid7() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -186,9 +190,10 @@ test!(invalid7 {
 Caused by:
   Feature `foo` requires `bar` which is not an optional dependency
 "));
-});
+}
 
-test!(invalid8 {
+#[test]
+fn invalid8() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -213,9 +218,10 @@ test!(invalid8 {
                 execs().with_status(101).with_stderr("\
 [ERROR] features in dependencies cannot enable features in other dependencies: `foo/bar`
 "));
-});
+}
 
-test!(no_feature_doesnt_build {
+#[test]
+fn no_feature_doesnt_build() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -257,9 +263,10 @@ test!(no_feature_doesnt_build {
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
-});
+}
 
-test!(default_feature_pulled_in {
+#[test]
+fn default_feature_pulled_in() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -304,9 +311,10 @@ test!(default_feature_pulled_in {
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(cyclic_feature {
+#[test]
+fn cyclic_feature() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -323,9 +331,10 @@ test!(cyclic_feature {
                 execs().with_status(101).with_stderr("\
 [ERROR] Cyclic feature dependency: feature `default` depends on itself
 "));
-});
+}
 
-test!(cyclic_feature2 {
+#[test]
+fn cyclic_feature2() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -343,9 +352,10 @@ test!(cyclic_feature2 {
                 execs().with_status(101).with_stderr("\
 [ERROR] Cyclic feature dependency: feature `[..]` depends on itself
 "));
-});
+}
 
-test!(groups_on_groups_on_groups {
+#[test]
+fn groups_on_groups_on_groups() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -397,9 +407,10 @@ test!(groups_on_groups_on_groups {
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = p.url())));
-});
+}
 
-test!(many_cli_features {
+#[test]
+fn many_cli_features() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -441,9 +452,10 @@ test!(many_cli_features {
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = p.url())));
-});
+}
 
-test!(union_features {
+#[test]
+fn union_features() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -502,9 +514,10 @@ test!(union_features {
 [COMPILING] d1 v0.0.1 ({dir}/d1)
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = p.url())));
-});
+}
 
-test!(many_features_no_rebuilds {
+#[test]
+fn many_features_no_rebuilds() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -542,10 +555,11 @@ test!(many_features_no_rebuilds {
 [FRESH] a v0.1.0 ([..]/a)
 [FRESH] b v0.1.0 ([..])
 "));
-});
+}
 
 // Tests that all cmd lines work with `--features ""`
-test!(empty_features {
+#[test]
+fn empty_features() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -557,10 +571,11 @@ test!(empty_features {
 
     assert_that(p.cargo_process("build").arg("--features").arg(""),
                 execs().with_status(0));
-});
+}
 
 // Tests that all cmd lines work with `--features ""`
-test!(transitive_features {
+#[test]
+fn transitive_features() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -594,9 +609,10 @@ test!(transitive_features {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(0));
-});
+}
 
-test!(everything_in_the_lockfile {
+#[test]
+fn everything_in_the_lockfile() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -653,9 +669,10 @@ test!(everything_in_the_lockfile {
     assert!(lockfile.contains(r#"name = "d1""#), "d1 not found\n{}", lockfile);
     assert!(lockfile.contains(r#"name = "d2""#), "d2 not found\n{}", lockfile);
     assert!(lockfile.contains(r#"name = "d3""#), "d3 not found\n{}", lockfile);
-});
+}
 
-test!(no_rebuild_when_frobbing_default_feature {
+#[test]
+fn no_rebuild_when_frobbing_default_feature() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -693,9 +710,10 @@ test!(no_rebuild_when_frobbing_default_feature {
     assert_that(p.cargo_process("build"), execs().with_status(0));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(unions_work_with_no_default_features {
+#[test]
+fn unions_work_with_no_default_features() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -739,9 +757,10 @@ test!(unions_work_with_no_default_features {
     assert_that(p.cargo_process("build"), execs().with_status(0));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(optional_and_dev_dep {
+#[test]
+fn optional_and_dev_dep() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -767,9 +786,10 @@ test!(optional_and_dev_dep {
                 execs().with_status(0).with_stderr("\
 [COMPILING] test v0.1.0 ([..])
 "));
-});
+}
 
-test!(activating_feature_activates_dep {
+#[test]
+fn activating_feature_activates_dep() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -805,4 +825,4 @@ test!(activating_feature_activates_dep {
 
     assert_that(p.cargo_process("build").arg("--features").arg("a").arg("-v"),
                 execs().with_status(0));
-});
+}

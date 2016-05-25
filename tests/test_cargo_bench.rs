@@ -5,9 +5,8 @@ use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
-fn setup() {}
-
-test!(cargo_bench_simple {
+#[test]
+fn cargo_bench_simple() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -46,9 +45,10 @@ test bench_hello ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "));
-});
+}
 
-test!(bench_tarname {
+#[test]
+fn bench_tarname() {
     if !::is_nightly() { return }
 
     let prj = project("foo")
@@ -80,9 +80,10 @@ test run2 ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "));
-});
+}
 
-test!(cargo_bench_verbose {
+#[test]
+fn cargo_bench_verbose() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -106,9 +107,10 @@ test bench_hello ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "));
-});
+}
 
-test!(many_similar_names {
+#[test]
+fn many_similar_names() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -143,9 +145,10 @@ test!(many_similar_names {
     assert!(output.contains("test bin_bench"), "bin_bench missing\n{}", output);
     assert!(output.contains("test lib_bench"), "lib_bench missing\n{}", output);
     assert!(output.contains("test bench_bench"), "bench_bench missing\n{}", output);
-});
+}
 
-test!(cargo_bench_failing_test {
+#[test]
+fn cargo_bench_failing_test() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -185,9 +188,10 @@ thread '<main>' panicked at 'assertion failed: \
 [..]
 ", p.url()))
                        .with_status(101));
-});
+}
 
-test!(bench_with_lib_dep {
+#[test]
+fn bench_with_lib_dep() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -244,9 +248,10 @@ test lib_bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "))
-});
+}
 
-test!(bench_with_deep_lib_dep {
+#[test]
+fn bench_with_deep_lib_dep() {
     if !::is_nightly() { return }
 
     let p = project("bar")
@@ -299,9 +304,10 @@ test bar_bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "));
-});
+}
 
-test!(external_bench_explicit {
+#[test]
+fn external_bench_explicit() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -350,9 +356,10 @@ test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "))
-});
+}
 
-test!(external_bench_implicit {
+#[test]
+fn external_bench_implicit() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -398,9 +405,10 @@ test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "))
-});
+}
 
-test!(dont_run_examples {
+#[test]
+fn dont_run_examples() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -417,9 +425,10 @@ test!(dont_run_examples {
         "#);
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0));
-});
+}
 
-test!(pass_through_command_line {
+#[test]
+fn pass_through_command_line() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -461,11 +470,12 @@ test foo ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "));
-});
+}
 
 // Regression test for running cargo-bench twice with
 // tests in an rlib
-test!(cargo_bench_twice {
+#[test]
+fn cargo_bench_twice() {
     if !::is_nightly() { return }
 
     let p = project("test_twice")
@@ -486,9 +496,10 @@ test!(cargo_bench_twice {
         assert_that(p.cargo("bench"),
                     execs().with_status(0));
     }
-});
+}
 
-test!(lib_bin_same_name {
+#[test]
+fn lib_bin_same_name() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -535,9 +546,10 @@ test [..] ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "))
-});
+}
 
-test!(lib_with_standard_name {
+#[test]
+fn lib_with_standard_name() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -587,9 +599,10 @@ test foo_bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "));
-});
+}
 
-test!(lib_with_standard_name2 {
+#[test]
+fn lib_with_standard_name2() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -630,9 +643,10 @@ test bench ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "));
-});
+}
 
-test!(bench_dylib {
+#[test]
+fn bench_dylib() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -726,9 +740,10 @@ test foo ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "));
-});
+}
 
-test!(bench_twice_with_build_cmd {
+#[test]
+fn bench_twice_with_build_cmd() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -771,9 +786,10 @@ test foo ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "));
-});
+}
 
-test!(bench_with_examples {
+#[test]
+fn bench_with_examples() {
     if !::is_nightly() { return }
 
     let p = project("testbench")
@@ -850,9 +866,10 @@ test bench_bench1 ... bench: [..] 0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 "));
-});
+}
 
-test!(test_a_bench {
+#[test]
+fn test_a_bench() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -889,9 +906,10 @@ test foo ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 "));
-});
+}
 
-test!(test_bench_no_run {
+#[test]
+fn test_bench_no_run() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -918,9 +936,10 @@ test!(test_bench_no_run {
                        .with_stderr("\
 [COMPILING] foo v0.1.0 ([..])
 "));
-});
+}
 
-test!(test_bench_multiple_packages {
+#[test]
+fn test_bench_multiple_packages() {
     if !::is_nightly() { return }
 
     let p = project("foo")
@@ -1003,4 +1022,4 @@ test bench_bar ... bench:           0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 "));
-});
+}

@@ -39,7 +39,10 @@ fn cargo_process(s: &str) -> ProcessBuilder {
     return b
 }
 
-test!(simple {
+#[test]
+fn simple() {
+    setup();
+
     let contents = r#"{
         "crates": [{
             "created_at": "2014-11-16T20:17:35Z",
@@ -85,9 +88,12 @@ test!(simple {
 [UPDATING] registry `[..]`")
                        .with_stdout("\
 hoare (0.1.1)    Design by contract style assertions for Rust"));
-});
+}
 
-test!(multiple_query_params {
+#[test]
+fn multiple_query_params() {
+    setup();
+
     let contents = r#"{
         "crates": [{
             "created_at": "2014-11-16T20:17:35Z",
@@ -133,11 +139,12 @@ test!(multiple_query_params {
 [UPDATING] registry `[..]`")
                        .with_stdout("\
 hoare (0.1.1)    Design by contract style assertions for Rust"));
-});
+}
 
-test!(help {
+#[test]
+fn help() {
     assert_that(cargo_process("search").arg("-h"),
                 execs().with_status(0));
     assert_that(cargo_process("help").arg("search"),
                 execs().with_status(0));
-});
+}

@@ -3,10 +3,8 @@ use std::fs::{self, File};
 use support::{project, execs, paths};
 use hamcrest::assert_that;
 
-fn setup() {
-}
-
-test!(env_rustflags_normal_source {
+#[test]
+fn env_rustflags_normal_source() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -37,9 +35,10 @@ test!(env_rustflags_normal_source {
                 execs().with_status(101));
     assert_that(p.cargo("bench").env("RUSTFLAGS", "-Z bogus"),
                 execs().with_status(101));
-});
+}
 
-test!(env_rustflags_build_script {
+#[test]
+fn env_rustflags_build_script() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
     // In this test if --cfg foo is passed the build will fail.
@@ -60,9 +59,10 @@ test!(env_rustflags_build_script {
 
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
-});
+}
 
-test!(env_rustflags_build_script_dep {
+#[test]
+fn env_rustflags_build_script_dep() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
@@ -96,9 +96,10 @@ test!(env_rustflags_build_script_dep {
 
     assert_that(foo.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
-});
+}
 
-test!(env_rustflags_plugin {
+#[test]
+fn env_rustflags_plugin() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
@@ -121,9 +122,10 @@ test!(env_rustflags_plugin {
 
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
-});
+}
 
-test!(env_rustflags_plugin_dep {
+#[test]
+fn env_rustflags_plugin_dep() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
@@ -162,9 +164,10 @@ test!(env_rustflags_plugin_dep {
 
     assert_that(foo.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
-});
+}
 
-test!(env_rustflags_normal_source_with_target {
+#[test]
+fn env_rustflags_normal_source_with_target() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -199,9 +202,10 @@ test!(env_rustflags_normal_source_with_target {
     assert_that(p.cargo("bench").env("RUSTFLAGS", "-Z bogus")
                 .arg("--target").arg(host),
                 execs().with_status(101));
-});
+}
 
-test!(env_rustflags_build_script_with_target {
+#[test]
+fn env_rustflags_build_script_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
@@ -224,9 +228,10 @@ test!(env_rustflags_build_script_with_target {
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo")
                 .arg("--target").arg(host),
                 execs().with_status(0));
-});
+}
 
-test!(env_rustflags_build_script_dep_with_target {
+#[test]
+fn env_rustflags_build_script_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
@@ -262,9 +267,10 @@ test!(env_rustflags_build_script_dep_with_target {
     assert_that(foo.cargo("build").env("RUSTFLAGS", "--cfg foo")
                 .arg("--target").arg(host),
                 execs().with_status(0));
-});
+}
 
-test!(env_rustflags_plugin_with_target {
+#[test]
+fn env_rustflags_plugin_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
@@ -289,9 +295,10 @@ test!(env_rustflags_plugin_with_target {
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo")
                 .arg("--target").arg(host),
                 execs().with_status(0));
-});
+}
 
-test!(env_rustflags_plugin_dep_with_target {
+#[test]
+fn env_rustflags_plugin_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
@@ -332,9 +339,10 @@ test!(env_rustflags_plugin_dep_with_target {
     assert_that(foo.cargo("build").env("RUSTFLAGS", "--cfg foo")
                 .arg("--target").arg(host),
                 execs().with_status(0));
-});
+}
 
-test!(env_rustflags_recompile {
+#[test]
+fn env_rustflags_recompile() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -349,9 +357,10 @@ test!(env_rustflags_recompile {
     // Setting RUSTFLAGS forces a recompile
     assert_that(p.cargo("build").env("RUSTFLAGS", "-Z bogus"),
                 execs().with_status(101));
-});
+}
 
-test!(env_rustflags_recompile2 {
+#[test]
+fn env_rustflags_recompile2() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -366,9 +375,10 @@ test!(env_rustflags_recompile2 {
     // Setting RUSTFLAGS forces a recompile
     assert_that(p.cargo("build").env("RUSTFLAGS", "-Z bogus"),
                 execs().with_status(101));
-});
+}
 
-test!(env_rustflags_no_recompile {
+#[test]
+fn env_rustflags_no_recompile() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -382,9 +392,10 @@ test!(env_rustflags_no_recompile {
                 execs().with_status(0));
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_stdout("").with_status(0));
-});
+}
 
-test!(build_rustflags_normal_source {
+#[test]
+fn build_rustflags_normal_source() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -418,9 +429,10 @@ test!(build_rustflags_normal_source {
                 execs().with_status(101));
     assert_that(p.cargo("bench"),
                 execs().with_status(101));
-});
+}
 
-test!(build_rustflags_build_script {
+#[test]
+fn build_rustflags_build_script() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
     // In this test if --cfg foo is passed the build will fail.
@@ -445,9 +457,10 @@ test!(build_rustflags_build_script {
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
-});
+}
 
-test!(build_rustflags_build_script_dep {
+#[test]
+fn build_rustflags_build_script_dep() {
     // RUSTFLAGS should be passed to rustc for build scripts
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
@@ -485,9 +498,10 @@ test!(build_rustflags_build_script_dep {
 
     assert_that(foo.cargo("build"),
                 execs().with_status(0));
-});
+}
 
-test!(build_rustflags_plugin {
+#[test]
+fn build_rustflags_plugin() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
@@ -514,9 +528,10 @@ test!(build_rustflags_plugin {
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
-});
+}
 
-test!(build_rustflags_plugin_dep {
+#[test]
+fn build_rustflags_plugin_dep() {
     // RUSTFLAGS should be passed to rustc for plugins
     // when --target is not specified.
     // In this test if --cfg foo is not passed the build will fail.
@@ -559,9 +574,10 @@ test!(build_rustflags_plugin_dep {
 
     assert_that(foo.cargo("build"),
                 execs().with_status(0));
-});
+}
 
-test!(build_rustflags_normal_source_with_target {
+#[test]
+fn build_rustflags_normal_source_with_target() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -600,9 +616,10 @@ test!(build_rustflags_normal_source_with_target {
     assert_that(p.cargo("bench")
                 .arg("--target").arg(host),
                 execs().with_status(101));
-});
+}
 
-test!(build_rustflags_build_script_with_target {
+#[test]
+fn build_rustflags_build_script_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
@@ -629,9 +646,10 @@ test!(build_rustflags_build_script_with_target {
     assert_that(p.cargo("build")
                 .arg("--target").arg(host),
                 execs().with_status(0));
-});
+}
 
-test!(build_rustflags_build_script_dep_with_target {
+#[test]
+fn build_rustflags_build_script_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for build scripts
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
@@ -671,9 +689,10 @@ test!(build_rustflags_build_script_dep_with_target {
     assert_that(foo.cargo("build")
                 .arg("--target").arg(host),
                 execs().with_status(0));
-});
+}
 
-test!(build_rustflags_plugin_with_target {
+#[test]
+fn build_rustflags_plugin_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
@@ -702,9 +721,10 @@ test!(build_rustflags_plugin_with_target {
     assert_that(p.cargo("build")
                 .arg("--target").arg(host),
                 execs().with_status(0));
-});
+}
 
-test!(build_rustflags_plugin_dep_with_target {
+#[test]
+fn build_rustflags_plugin_dep_with_target() {
     // RUSTFLAGS should not be passed to rustc for plugins
     // when --target is specified.
     // In this test if --cfg foo is passed the build will fail.
@@ -749,9 +769,10 @@ test!(build_rustflags_plugin_dep_with_target {
     assert_that(foo.cargo("build")
                 .arg("--target").arg(host),
                 execs().with_status(0));
-});
+}
 
-test!(build_rustflags_recompile {
+#[test]
+fn build_rustflags_recompile() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -776,9 +797,10 @@ test!(build_rustflags_recompile {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101));
-});
+}
 
-test!(build_rustflags_recompile2 {
+#[test]
+fn build_rustflags_recompile2() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -803,9 +825,10 @@ test!(build_rustflags_recompile2 {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101));
-});
+}
 
-test!(build_rustflags_no_recompile {
+#[test]
+fn build_rustflags_no_recompile() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -823,4 +846,4 @@ test!(build_rustflags_no_recompile {
                 execs().with_status(0));
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_stdout("").with_status(0));
-});
+}

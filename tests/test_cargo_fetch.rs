@@ -1,9 +1,8 @@
 use support::{project, execs};
 use hamcrest::assert_that;
 
-fn setup() {}
-
-test!(no_deps {
+#[test]
+fn no_deps() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -18,4 +17,4 @@ test!(no_deps {
 
     assert_that(p.cargo_process("fetch"),
                 execs().with_status(0).with_stdout(""));
-});
+}

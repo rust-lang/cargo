@@ -4,14 +4,12 @@ use support::{execs, project};
 
 use hamcrest::assert_that;
 
-fn setup() {
-}
-
 const CARGO_RUSTC_ERROR: &'static str =
 "[ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering
 the package by passing e.g. `--lib` or `--bin NAME` to specify a single target";
 
-test!(build_lib_for_foo {
+#[test]
+fn build_lib_for_foo() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -36,9 +34,10 @@ test!(build_lib_for_foo {
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 ", sep = SEP,
             dir = p.root().display(), url = p.url())));
-});
+}
 
-test!(lib {
+#[test]
+fn lib() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -65,9 +64,10 @@ test!(lib {
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 ", sep = SEP,
             dir = p.root().display(), url = p.url())))
-});
+}
 
-test!(build_main_and_allow_unstable_options {
+#[test]
+fn build_main_and_allow_unstable_options() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -101,9 +101,10 @@ test!(build_main_and_allow_unstable_options {
 ", sep = SEP,
             dir = p.root().display(), url = p.url(),
             name = "foo", version = "0.0.1")));
-});
+}
 
-test!(fails_when_trying_to_build_main_and_lib_with_args {
+#[test]
+fn fails_when_trying_to_build_main_and_lib_with_args() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -121,9 +122,10 @@ test!(fails_when_trying_to_build_main_and_lib_with_args {
                 execs()
                 .with_status(101)
                 .with_stderr(CARGO_RUSTC_ERROR));
-});
+}
 
-test!(build_with_args_to_one_of_multiple_binaries {
+#[test]
+fn build_with_args_to_one_of_multiple_binaries() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -154,9 +156,10 @@ test!(build_with_args_to_one_of_multiple_binaries {
         -C debug-assertions [..]`
 ", sep = SEP,
                 dir = p.root().display(), url = p.url())));
-});
+}
 
-test!(fails_with_args_to_all_binaries {
+#[test]
+fn fails_with_args_to_all_binaries() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -180,9 +183,10 @@ test!(fails_with_args_to_all_binaries {
                 execs()
                 .with_status(101)
                 .with_stderr(CARGO_RUSTC_ERROR));
-});
+}
 
-test!(build_with_args_to_one_of_multiple_tests {
+#[test]
+fn build_with_args_to_one_of_multiple_tests() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -207,9 +211,10 @@ test!(build_with_args_to_one_of_multiple_tests {
         -C debug-assertions [..]--test[..]`
 ", sep = SEP,
                 dir = p.root().display(), url = p.url())));
-});
+}
 
-test!(build_foo_with_bar_dependency {
+#[test]
+fn build_foo_with_bar_dependency() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -248,9 +253,10 @@ test!(build_foo_with_bar_dependency {
 [RUNNING] `[..] -g -C debug-assertions [..]`
 ",
                 url = foo.url())));
-});
+}
 
-test!(build_only_bar_dependency {
+#[test]
+fn build_only_bar_dependency() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -287,9 +293,10 @@ test!(build_only_bar_dependency {
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `[..]--crate-name bar --crate-type lib [..] -C debug-assertions [..]`
 "));
-});
+}
 
-test!(fail_with_multiple_packages {
+#[test]
+fn fail_with_multiple_packages() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -343,9 +350,10 @@ test!(fail_with_multiple_packages {
 
 Usage:
     cargo rustc [options] [--] [<opts>...]"));
-});
+}
 
-test!(rustc_with_other_profile {
+#[test]
+fn rustc_with_other_profile() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -373,4 +381,4 @@ test!(rustc_with_other_profile {
 
     assert_that(foo.cargo("rustc").arg("--profile").arg("test"),
                 execs().with_status(0));
-});
+}

@@ -8,10 +8,8 @@ use support::git;
 
 use hamcrest::assert_that;
 
-fn setup() {
-}
-
-test!(simple {
+#[test]
+fn simple() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -45,9 +43,10 @@ test!(simple {
 ",
         dir = p.url(),
         reg = registry::registry())));
-});
+}
 
-test!(deps {
+#[test]
+fn deps() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -74,9 +73,10 @@ test!(deps {
 ",
         dir = p.url(),
         reg = registry::registry())));
-});
+}
 
-test!(nonexistent {
+#[test]
+fn nonexistent() {
     Package::new("init", "0.0.1").publish();
 
     let p = project("foo")
@@ -98,9 +98,10 @@ test!(nonexistent {
 location searched: registry file://[..]
 version required: >= 0.0.0
 "));
-});
+}
 
-test!(wrong_version {
+#[test]
+fn wrong_version() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -134,9 +135,10 @@ location searched: registry file://[..]
 version required: >= 1.0.0
 versions found: 0.0.4, 0.0.3, 0.0.2, ...
 "));
-});
+}
 
-test!(bad_cksum {
+#[test]
+fn bad_cksum() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -165,9 +167,10 @@ Caused by:
 Caused by:
   failed to verify the checksum of `bad-cksum v0.0.1 (registry file://[..])`
 "));
-});
+}
 
-test!(update_registry {
+#[test]
+fn update_registry() {
     Package::new("init", "0.0.1").publish();
 
     let p = project("foo")
@@ -200,9 +203,10 @@ version required: >= 0.0.0
 ",
         dir = p.url(),
         reg = registry::registry())));
-});
+}
 
-test!(package_with_path_deps {
+#[test]
+fn package_with_path_deps() {
     Package::new("init", "0.0.1").publish();
 
     let p = project("foo")
@@ -250,9 +254,10 @@ version required: ^0.0.1
 [COMPILING] notyet v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir}[..])
 ", dir = p.url())));
-});
+}
 
-test!(lockfile_locks {
+#[test]
+fn lockfile_locks() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -282,9 +287,10 @@ test!(lockfile_locks {
 
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(lockfile_locks_transitively {
+#[test]
+fn lockfile_locks_transitively() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -318,9 +324,10 @@ test!(lockfile_locks_transitively {
 
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(yanks_are_not_used {
+#[test]
+fn yanks_are_not_used() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -349,9 +356,10 @@ test!(yanks_are_not_used {
 [COMPILING] foo v0.0.1 ({dir})
 ",
    dir = p.url())));
-});
+}
 
-test!(relying_on_a_yank_is_bad {
+#[test]
+fn relying_on_a_yank_is_bad() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -376,9 +384,10 @@ location searched: registry file://[..]
 version required: = 0.0.2
 versions found: 0.0.1
 "));
-});
+}
 
-test!(yanks_in_lockfiles_are_ok {
+#[test]
+fn yanks_in_lockfiles_are_ok() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -410,9 +419,10 @@ test!(yanks_in_lockfiles_are_ok {
 location searched: registry file://[..]
 version required: *
 "));
-});
+}
 
-test!(update_with_lockfile_if_packages_missing {
+#[test]
+fn update_with_lockfile_if_packages_missing() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -437,9 +447,10 @@ test!(update_with_lockfile_if_packages_missing {
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 "));
-});
+}
 
-test!(update_lockfile {
+#[test]
+fn update_lockfile() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -515,9 +526,10 @@ test!(update_lockfile {
 [UPDATING] bar v0.0.4 (registry file://[..]) -> v0.0.5
 [REMOVING] spam v0.2.5 (registry file://[..])
 "));
-});
+}
 
-test!(dev_dependency_not_used {
+#[test]
+fn dev_dependency_not_used() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -542,16 +554,18 @@ test!(dev_dependency_not_used {
 [COMPILING] foo v0.0.1 ({dir})
 ",
    dir = p.url())));
-});
+}
 
-test!(login_with_no_cargo_dir {
+#[test]
+fn login_with_no_cargo_dir() {
     let home = paths::home().join("new-home");
     fs::create_dir(&home).unwrap();
     assert_that(::cargo_process().arg("login").arg("foo").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(bad_license_file {
+#[test]
+fn bad_license_file() {
     Package::new("foo", "1.0.0").publish();
     let p = project("all")
         .file("Cargo.toml", r#"
@@ -570,9 +584,10 @@ test!(bad_license_file {
                 execs().with_status(101)
                        .with_stderr_contains("\
 [ERROR] the license file `foo` does not exist"));
-});
+}
 
-test!(updating_a_dep {
+#[test]
+fn updating_a_dep() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -629,9 +644,10 @@ test!(updating_a_dep {
 [COMPILING] foo v0.0.1 ({dir})
 ",
    dir = p.url())));
-});
+}
 
-test!(git_and_registry_dep {
+#[test]
+fn git_and_registry_dep() {
     let b = git::repo(&paths::root().join("b"))
         .file("Cargo.toml", r#"
             [project]
@@ -678,9 +694,10 @@ test!(git_and_registry_dep {
     println!("second");
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(update_publish_then_update {
+#[test]
+fn update_publish_then_update() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -718,9 +735,10 @@ test!(update_publish_then_update {
 ",
    dir = p.url())));
 
-});
+}
 
-test!(fetch_downloads {
+#[test]
+fn fetch_downloads() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -742,9 +760,10 @@ test!(fetch_downloads {
 [UPDATING] registry `[..]`
 [DOWNLOADING] a v0.1.0 (registry [..])
 "));
-});
+}
 
-test!(update_transitive_dependency {
+#[test]
+fn update_transitive_dependency() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -781,9 +800,10 @@ test!(update_transitive_dependency {
 [COMPILING] a v0.1.0 (registry [..])
 [COMPILING] foo v0.5.0 ([..])
 "));
-});
+}
 
-test!(update_backtracking_ok {
+#[test]
+fn update_backtracking_ok() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -817,9 +837,10 @@ test!(update_backtracking_ok {
                        .with_stderr("\
 [UPDATING] registry `[..]`
 "));
-});
+}
 
-test!(update_multiple_packages {
+#[test]
+fn update_multiple_packages() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -877,9 +898,10 @@ test!(update_multiple_packages {
 [COMPILING] c v0.1.1 (registry [..])")
                        .with_stderr_contains("\
 [COMPILING] foo v0.5.0 ([..])"));
-});
+}
 
-test!(bundled_crate_in_registry {
+#[test]
+fn bundled_crate_in_registry() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -917,9 +939,10 @@ test!(bundled_crate_in_registry {
         .publish();
 
     assert_that(p.cargo("run"), execs().with_status(0));
-});
+}
 
-test!(update_same_prefix_oh_my_how_was_this_a_bug {
+#[test]
+fn update_same_prefix_oh_my_how_was_this_a_bug() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -941,9 +964,10 @@ test!(update_same_prefix_oh_my_how_was_this_a_bug {
     assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
     assert_that(p.cargo("update").arg("-pfoobar").arg("--precise=0.2.0"),
                 execs().with_status(0));
-});
+}
 
-test!(use_semver {
+#[test]
+fn use_semver() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -960,9 +984,10 @@ test!(use_semver {
     Package::new("foo", "1.2.3-alpha.0").publish();
 
     assert_that(p.cargo("build"), execs().with_status(0));
-});
+}
 
-test!(only_download_relevant {
+#[test]
+fn only_download_relevant() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -991,9 +1016,10 @@ test!(only_download_relevant {
 [COMPILING] baz v0.1.0 ([..])
 [COMPILING] bar v0.5.0 ([..])
 "));
-});
+}
 
-test!(resolve_and_backtracking {
+#[test]
+fn resolve_and_backtracking() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1014,4 +1040,4 @@ test!(resolve_and_backtracking {
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
-});
+}

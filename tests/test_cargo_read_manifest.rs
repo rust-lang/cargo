@@ -1,8 +1,6 @@
 use support::{project, execs, main_file, basic_bin_manifest};
 use hamcrest::{assert_that};
 
-fn setup() {}
-
 fn remove_all_whitespace(s: &str) -> String {
     s.split_whitespace().collect()
 }
@@ -25,7 +23,8 @@ fn read_manifest_output() -> String {
 }"#)
 }
 
-test!(cargo_read_manifest_path_to_cargo_toml_relative {
+#[test]
+fn cargo_read_manifest_path_to_cargo_toml_relative() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -35,9 +34,10 @@ test!(cargo_read_manifest_path_to_cargo_toml_relative {
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(0)
                        .with_stdout(read_manifest_output()));
-});
+}
 
-test!(cargo_read_manifest_path_to_cargo_toml_absolute {
+#[test]
+fn cargo_read_manifest_path_to_cargo_toml_absolute() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -47,9 +47,10 @@ test!(cargo_read_manifest_path_to_cargo_toml_absolute {
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(0)
                        .with_stdout(read_manifest_output()));
-});
+}
 
-test!(cargo_read_manifest_path_to_cargo_toml_parent_relative {
+#[test]
+fn cargo_read_manifest_path_to_cargo_toml_parent_relative() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -60,9 +61,10 @@ test!(cargo_read_manifest_path_to_cargo_toml_parent_relative {
                 execs().with_status(101)
                        .with_stderr("[ERROR] the manifest-path must be \
                                              a path to a Cargo.toml file"));
-});
+}
 
-test!(cargo_read_manifest_path_to_cargo_toml_parent_absolute {
+#[test]
+fn cargo_read_manifest_path_to_cargo_toml_parent_absolute() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -73,9 +75,10 @@ test!(cargo_read_manifest_path_to_cargo_toml_parent_absolute {
                 execs().with_status(101)
                        .with_stderr("[ERROR] the manifest-path must be \
                                              a path to a Cargo.toml file"));
-});
+}
 
-test!(cargo_read_manifest_cwd {
+#[test]
+fn cargo_read_manifest_cwd() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
@@ -84,4 +87,4 @@ test!(cargo_read_manifest_cwd {
                  .cwd(p.root()),
                 execs().with_status(0)
                        .with_stdout(read_manifest_output()));
-});
+}

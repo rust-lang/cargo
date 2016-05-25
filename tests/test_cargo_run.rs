@@ -3,10 +3,8 @@ use std::path::MAIN_SEPARATOR as SEP;
 use support::{project, execs, path2url};
 use hamcrest::{assert_that, existing_file};
 
-fn setup() {
-}
-
-test!(simple {
+#[test]
+fn simple() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -27,9 +25,10 @@ test!(simple {
 hello
 "));
     assert_that(&p.bin("foo"), existing_file());
-});
+}
 
-test!(simple_quiet {
+#[test]
+fn simple_quiet() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -46,9 +45,10 @@ test!(simple_quiet {
 hello
 ")
     );
-});
+}
 
-test!(simple_quiet_and_verbose {
+#[test]
+fn simple_quiet_and_verbose() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -64,9 +64,10 @@ test!(simple_quiet_and_verbose {
                 execs().with_status(101).with_stderr("\
 [ERROR] cannot set both --verbose and --quiet
 "));
-});
+}
 
-test!(quiet_and_verbose_config {
+#[test]
+fn quiet_and_verbose_config() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -84,9 +85,10 @@ test!(quiet_and_verbose_config {
 
     assert_that(p.cargo_process("run").arg("-q"),
                 execs().with_status(0));
-});
+}
 
-test!(simple_with_args {
+#[test]
+fn simple_with_args() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -103,9 +105,10 @@ test!(simple_with_args {
 
     assert_that(p.cargo_process("run").arg("hello").arg("world"),
                 execs().with_status(0));
-});
+}
 
-test!(exit_code {
+#[test]
+fn exit_code() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -124,9 +127,10 @@ test!(exit_code {
 [RUNNING] `target[..]`
 [ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 "));
-});
+}
 
-test!(exit_code_verbose {
+#[test]
+fn exit_code_verbose() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -146,9 +150,10 @@ test!(exit_code_verbose {
 [RUNNING] `target[..]`
 [ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 "));
-});
+}
 
-test!(no_main_file {
+#[test]
+fn no_main_file() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -162,9 +167,10 @@ test!(no_main_file {
                 execs().with_status(101)
                        .with_stderr("[ERROR] a bin target must be available \
                                      for `cargo run`\n"));
-});
+}
 
-test!(too_many_bins {
+#[test]
+fn too_many_bins() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -181,9 +187,10 @@ test!(too_many_bins {
                        .with_stderr("[ERROR] `cargo run` requires that a project only \
                                      have one executable; use the `--bin` option \
                                      to specify which one to run\n"));
-});
+}
 
-test!(specify_name {
+#[test]
+fn specify_name() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -221,9 +228,10 @@ hello a.rs
                        .with_stdout("\
 hello b.rs
 "));
-});
+}
 
-test!(run_example {
+#[test]
+fn run_example() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -247,9 +255,10 @@ test!(run_example {
                        .with_stdout("\
 example
 "));
-});
+}
 
-test!(run_with_filename {
+#[test]
+fn run_with_filename() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -285,9 +294,10 @@ Did you mean `a`?"));
 [ERROR] no example target named `a.rs`
 
 Did you mean `a`?"));
-});
+}
 
-test!(either_name_or_example {
+#[test]
+fn either_name_or_example() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -307,9 +317,10 @@ test!(either_name_or_example {
                        .with_stderr("[ERROR] `cargo run` can run at most one \
                                      executable, but multiple were \
                                      specified"));
-});
+}
 
-test!(one_bin_multiple_examples {
+#[test]
+fn one_bin_multiple_examples() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -336,9 +347,10 @@ test!(one_bin_multiple_examples {
                        .with_stdout("\
 hello main.rs
 "));
-});
+}
 
-test!(example_with_release_flag {
+#[test]
+fn example_with_release_flag() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -438,9 +450,10 @@ fast2"));
                        .with_stdout("\
 slow1
 slow2"));
-});
+}
 
-test!(run_dylib_dep {
+#[test]
+fn run_dylib_dep() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -469,9 +482,10 @@ test!(run_dylib_dep {
 
     assert_that(p.cargo_process("run").arg("hello").arg("world"),
                 execs().with_status(0));
-});
+}
 
-test!(release_works {
+#[test]
+fn release_works() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -491,9 +505,10 @@ test!(release_works {
         dir = path2url(p.root()),
         sep = SEP)));
     assert_that(&p.release_bin("foo"), existing_file());
-});
+}
 
-test!(run_bin_different_name {
+#[test]
+fn run_bin_different_name() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -509,9 +524,10 @@ test!(run_bin_different_name {
         "#);
 
     assert_that(p.cargo_process("run"), execs().with_status(0));
-});
+}
 
-test!(dashes_are_forwarded {
+#[test]
+fn dashes_are_forwarded() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -533,9 +549,10 @@ test!(dashes_are_forwarded {
 
     assert_that(p.cargo_process("run").arg("--").arg("a").arg("--").arg("b"),
                 execs().with_status(0));
-});
+}
 
-test!(run_from_executable_folder {
+#[test]
+fn run_from_executable_folder() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -557,4 +574,4 @@ test!(run_from_executable_folder {
                        .with_stdout("\
 hello
 "));
-});
+}

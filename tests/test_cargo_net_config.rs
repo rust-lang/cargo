@@ -1,9 +1,8 @@
 use support::{project, execs};
 use hamcrest::assert_that;
 
-fn setup() {}
-
-test!(net_retry_loads_from_config {
+#[test]
+fn net_retry_loads_from_config() {
     let p = project("foo")
         .file("Cargo.toml", &format!(r#"
             [project]
@@ -25,9 +24,10 @@ test!(net_retry_loads_from_config {
                 execs().with_status(101)
                 .with_stderr_contains(&format!("[WARNING] spurious network error \
 (1 tries remaining): [2/-1] [..]")));
-});
+}
 
-test!(net_retry_git_outputs_warning{
+#[test]
+fn net_retry_git_outputs_warning() {
     let p = project("foo")
         .file("Cargo.toml", &format!(r#"
             [project]
@@ -50,4 +50,4 @@ test!(net_retry_git_outputs_warning{
 (2 tries remaining): [2/-1] [..]"))
                 .with_stderr_contains(&format!("\
 [WARNING] spurious network error (1 tries remaining): [2/-1] [..]")));
-});
+}

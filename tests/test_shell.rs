@@ -10,9 +10,6 @@ use cargo::util::CargoResult;
 
 use support::{Tap, execs, shell_writes};
 
-fn setup() {
-}
-
 struct Sink(Arc<Mutex<Vec<u8>>>);
 
 impl Write for Sink {
@@ -22,7 +19,8 @@ impl Write for Sink {
     fn flush(&mut self) -> io::Result<()> { Ok(()) }
 }
 
-test!(non_tty {
+#[test]
+fn non_tty() {
     let config = ShellConfig { color_config: Auto, tty: false };
     let a = Arc::new(Mutex::new(Vec::new()));
 
@@ -31,9 +29,10 @@ test!(non_tty {
     });
     let buf = a.lock().unwrap().clone();
     assert_that(&buf[..], shell_writes("Hey Alex\n"));
-});
+}
 
-test!(color_explicitly_disabled {
+#[test]
+fn color_explicitly_disabled() {
     let term = TerminfoTerminal::new(Vec::new());
     if term.is_none() { return }
 
@@ -45,9 +44,10 @@ test!(color_explicitly_disabled {
     });
     let buf = a.lock().unwrap().clone();
     assert_that(&buf[..], shell_writes("Hey Alex\n"));
-});
+}
 
-test!(colored_shell {
+#[test]
+fn colored_shell() {
     let term = TerminfoTerminal::new(Vec::new());
     if term.is_none() { return }
 
@@ -61,9 +61,10 @@ test!(colored_shell {
     assert_that(&buf[..],
                 shell_writes(colored_output("Hey Alex\n",
                                             color::RED).unwrap()));
-});
+}
 
-test!(color_explicitly_enabled {
+#[test]
+fn color_explicitly_enabled() {
     let term = TerminfoTerminal::new(Vec::new());
     if term.is_none() { return }
 
@@ -77,13 +78,14 @@ test!(color_explicitly_enabled {
     assert_that(&buf[..],
                 shell_writes(colored_output("Hey Alex\n",
                                             color::RED).unwrap()));
-});
+}
 
-test!(no_term {
+#[test]
+fn no_term() {
     // Verify that shell creation is successful when $TERM does not exist.
     assert_that(::cargo_process().env_remove("TERM"),
                 execs().with_stderr(""));
-});
+}
 
 fn colored_output(string: &str, color: color::Color) -> CargoResult<String> {
     let mut term = TerminfoTerminal::new(Vec::new()).unwrap();

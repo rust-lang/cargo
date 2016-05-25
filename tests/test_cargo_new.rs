@@ -9,16 +9,14 @@ use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 use cargo::util::ProcessBuilder;
 
-fn setup() {
-}
-
 fn cargo_process(s: &str) -> ProcessBuilder {
     let mut p = ::cargo_process();
     p.arg(s);
     return p;
 }
 
-test!(simple_lib {
+#[test]
+fn simple_lib() {
     assert_that(cargo_process("new").arg("foo").arg("--vcs").arg("none")
                                     .env("USER", "foo"),
                 execs().with_status(0));
@@ -30,9 +28,10 @@ test!(simple_lib {
 
     assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));
-});
+}
 
-test!(simple_bin {
+#[test]
+fn simple_bin() {
     assert_that(cargo_process("new").arg("foo").arg("--bin")
                                     .env("USER", "foo"),
                 execs().with_status(0));
@@ -46,9 +45,10 @@ test!(simple_bin {
     assert_that(&paths::root().join(&format!("foo/target/debug/foo{}",
                                              env::consts::EXE_SUFFIX)),
                 existing_file());
-});
+}
 
-test!(simple_git {
+#[test]
+fn simple_git() {
     let td = TempDir::new("cargo").unwrap();
     assert_that(cargo_process("new").arg("foo").cwd(td.path().clone())
                                     .env("USER", "foo"),
@@ -62,9 +62,10 @@ test!(simple_git {
 
     assert_that(cargo_process("build").cwd(&td.path().clone().join("foo")),
                 execs().with_status(0));
-});
+}
 
-test!(no_argument {
+#[test]
+fn no_argument() {
     assert_that(cargo_process("new"),
                 execs().with_status(1)
                        .with_stderr("\
@@ -74,42 +75,47 @@ Usage:
     cargo new [options] <path>
     cargo new -h | --help
 "));
-});
+}
 
-test!(existing {
+#[test]
+fn existing() {
     let dst = paths::root().join("foo");
     fs::create_dir(&dst).unwrap();
     assert_that(cargo_process("new").arg("foo"),
                 execs().with_status(101)
                        .with_stderr(format!("[ERROR] destination `{}` already exists\n",
                                             dst.display())));
-});
+}
 
-test!(invalid_characters {
+#[test]
+fn invalid_characters() {
     assert_that(cargo_process("new").arg("foo.rs"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] Invalid character `.` in crate name: `foo.rs`
 use --name to override crate name"));
-});
+}
 
-test!(reserved_name {
+#[test]
+fn reserved_name() {
     assert_that(cargo_process("new").arg("test"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] The name `test` cannot be used as a crate name\n\
 use --name to override crate name"));
-});
+}
 
-test!(keyword_name {
+#[test]
+fn keyword_name() {
     assert_that(cargo_process("new").arg("pub"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] The name `pub` cannot be used as a crate name\n\
 use --name to override crate name"));
-});
+}
 
-test!(rust_prefix_stripped {
+#[test]
+fn rust_prefix_stripped() {
     assert_that(cargo_process("new").arg("rust-foo").env("USER", "foo"),
                 execs().with_status(0)
                        .with_stdout("note: package will be named `foo`; use --name to override"));
@@ -117,27 +123,30 @@ test!(rust_prefix_stripped {
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"name = "foo""#));
-});
+}
 
-test!(bin_disables_stripping {
+#[test]
+fn bin_disables_stripping() {
     assert_that(cargo_process("new").arg("rust-foo").arg("--bin").env("USER", "foo"),
                 execs().with_status(0));
     let toml = paths::root().join("rust-foo/Cargo.toml");
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"name = "rust-foo""#));
-});
+}
 
-test!(explicit_name_not_stripped {
+#[test]
+fn explicit_name_not_stripped() {
     assert_that(cargo_process("new").arg("foo").arg("--name").arg("rust-bar").env("USER", "foo"),
                 execs().with_status(0));
     let toml = paths::root().join("foo/Cargo.toml");
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"name = "rust-bar""#));
-});
+}
 
-test!(finds_author_user {
+#[test]
+fn finds_author_user() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
@@ -149,9 +158,10 @@ test!(finds_author_user {
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["foo"]"#));
-});
+}
 
-test!(finds_author_user_escaped {
+#[test]
+fn finds_author_user_escaped() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
@@ -163,9 +173,10 @@ test!(finds_author_user_escaped {
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["foo \"bar\""]"#));
-});
+}
 
-test!(finds_author_username {
+#[test]
+fn finds_author_username() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
@@ -179,9 +190,10 @@ test!(finds_author_username {
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["foo"]"#));
-});
+}
 
-test!(finds_author_priority {
+#[test]
+fn finds_author_priority() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
@@ -197,9 +209,10 @@ test!(finds_author_priority {
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
-});
+}
 
-test!(finds_author_email {
+#[test]
+fn finds_author_email() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
@@ -213,9 +226,10 @@ test!(finds_author_email {
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
-});
+}
 
-test!(finds_author_git {
+#[test]
+fn finds_author_git() {
     ::process("git").args(&["config", "--global", "user.name", "bar"])
                     .exec().unwrap();
     ::process("git").args(&["config", "--global", "user.email", "baz"])
@@ -227,9 +241,10 @@ test!(finds_author_git {
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
-});
+}
 
-test!(finds_git_email{
+#[test]
+fn finds_git_email() {
     let td = TempDir::new("cargo").unwrap();
     assert_that(cargo_process("new").arg("foo")
                                     .env("GIT_AUTHOR_NAME", "foo")
@@ -241,10 +256,11 @@ test!(finds_git_email{
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["foo <gitfoo>"]"#), contents);
-});
+}
 
 
-test!(finds_git_author{
+#[test]
+fn finds_git_author() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
@@ -258,9 +274,10 @@ test!(finds_git_author{
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["gitfoo"]"#));
-});
+}
 
-test!(author_prefers_cargo {
+#[test]
+fn author_prefers_cargo() {
     ::process("git").args(&["config", "--global", "user.name", "foo"])
                     .exec().unwrap();
     ::process("git").args(&["config", "--global", "user.email", "bar"])
@@ -282,9 +299,10 @@ test!(author_prefers_cargo {
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["new-foo <new-bar>"]"#));
     assert!(!root.join("foo/.gitignore").c_exists());
-});
+}
 
-test!(git_prefers_command_line {
+#[test]
+fn git_prefers_command_line() {
     let root = paths::root();
     let td = TempDir::new("cargo").unwrap();
     fs::create_dir(&root.join(".cargo")).unwrap();
@@ -300,9 +318,10 @@ test!(git_prefers_command_line {
                                     .env("USER", "foo"),
                 execs().with_status(0));
     assert!(td.path().join("foo/.gitignore").c_exists());
-});
+}
 
-test!(subpackage_no_git {
+#[test]
+fn subpackage_no_git() {
     assert_that(cargo_process("new").arg("foo").env("USER", "foo"),
                 execs().with_status(0));
 
@@ -316,9 +335,10 @@ test!(subpackage_no_git {
                  is_not(existing_file()));
     assert_that(&paths::root().join("foo/components/subcomponent/.gitignore"),
                  is_not(existing_file()));
-});
+}
 
-test!(subpackage_git_with_vcs_arg {
+#[test]
+fn subpackage_git_with_vcs_arg() {
     assert_that(cargo_process("new").arg("foo").env("USER", "foo"),
                 execs().with_status(0));
 
@@ -333,9 +353,10 @@ test!(subpackage_git_with_vcs_arg {
                  existing_dir());
     assert_that(&paths::root().join("foo/components/subcomponent/.gitignore"),
                  existing_file());
-});
+}
 
-test!(unknown_flags {
+#[test]
+fn unknown_flags() {
     assert_that(cargo_process("new").arg("foo").arg("--flag"),
                 execs().with_status(1)
                        .with_stderr("\
@@ -345,4 +366,4 @@ Usage:
     cargo new [..]
     cargo new [..]
 "));
-});
+}

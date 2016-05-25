@@ -5,9 +5,8 @@ use support::{project, execs, path2url};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file};
 
-fn setup() {}
-
-test!(modifying_and_moving {
+#[test]
+fn modifying_and_moving() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -40,9 +39,10 @@ test!(modifying_and_moving {
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
     assert_that(p.cargo("build"),
                 execs().with_status(101));
-});
+}
 
-test!(modify_only_some_files {
+#[test]
+fn modify_only_some_files() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -82,9 +82,10 @@ test!(modify_only_some_files {
 [COMPILING] foo v0.0.1 ({dir})
 ", dir = path2url(p.root()))));
     assert_that(&p.bin("foo"), existing_file());
-});
+}
 
-test!(rebuild_sub_package_then_while_package {
+#[test]
+fn rebuild_sub_package_then_while_package() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -133,9 +134,10 @@ test!(rebuild_sub_package_then_while_package {
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
-});
+}
 
-test!(changing_features_is_ok {
+#[test]
+fn changing_features_is_ok() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -169,9 +171,10 @@ test!(changing_features_is_ok {
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(""));
-});
+}
 
-test!(rebuild_tests_if_lib_changes {
+#[test]
+fn rebuild_tests_if_lib_changes() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -199,9 +202,10 @@ test!(rebuild_tests_if_lib_changes {
                 execs().with_status(0));
     assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(101));
-});
+}
 
-test!(no_rebuild_transitive_target_deps {
+#[test]
+fn no_rebuild_transitive_target_deps() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -253,9 +257,10 @@ test!(no_rebuild_transitive_target_deps {
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 "));
-});
+}
 
-test!(rerun_if_changed_in_dep {
+#[test]
+fn rerun_if_changed_in_dep() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -285,9 +290,10 @@ test!(rerun_if_changed_in_dep {
                 execs().with_status(0));
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(same_build_dir_cached_packages {
+#[test]
+fn same_build_dir_cached_packages() {
     let p = project("foo")
         .file("a1/Cargo.toml", r#"
             [package]
@@ -349,4 +355,4 @@ test!(same_build_dir_cached_packages {
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] a2 v0.0.1 ({dir}/a2)
 ", dir = p.url())));
-});
+}

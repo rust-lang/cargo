@@ -36,7 +36,10 @@ fn setup() {
         .build();
 }
 
-test!(simple {
+#[test]
+fn simple() {
+    setup();
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -82,9 +85,12 @@ test!(simple {
                 fname == b"foo-0.0.1/src/main.rs",
                 "unexpected filename: {:?}", file.header().path());
     }
-});
+}
 
-test!(git_deps {
+#[test]
+fn git_deps() {
+    setup();
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -105,9 +111,12 @@ test!(git_deps {
 [ERROR] all dependencies must come from the same source.
 dependency `foo` comes from git://path/to/nowhere instead
 "));
-});
+}
 
-test!(path_dependency_no_version {
+#[test]
+fn path_dependency_no_version() {
+    setup();
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -135,9 +144,12 @@ test!(path_dependency_no_version {
 [ERROR] all path dependencies must have a version specified when publishing.
 dependency `bar` does not specify a version
 "));
-});
+}
 
-test!(unpublishable_crate {
+#[test]
+fn unpublishable_crate() {
+    setup();
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -155,4 +167,4 @@ test!(unpublishable_crate {
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 "));
-});
+}

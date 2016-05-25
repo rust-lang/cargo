@@ -6,10 +6,8 @@ use support::paths::{self, CargoPathExt};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
-fn setup() {
-}
-
-test!(cargo_compile_with_nested_deps_shorthand {
+#[test]
+fn cargo_compile_with_nested_deps_shorthand() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -99,9 +97,10 @@ test!(cargo_compile_with_nested_deps_shorthand {
                                              [COMPILING] foo v0.5.0 ({})\n",
                                             p.url(),
                                             p.url())));
-});
+}
 
-test!(cargo_compile_with_root_dev_deps {
+#[test]
+fn cargo_compile_with_root_dev_deps() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -137,9 +136,10 @@ test!(cargo_compile_with_root_dev_deps {
     p2.build();
     assert_that(p.cargo_process("build"),
                 execs().with_status(101))
-});
+}
 
-test!(cargo_compile_with_root_dev_deps_with_testing {
+#[test]
+fn cargo_compile_with_root_dev_deps_with_testing() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -184,9 +184,10 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 "));
-});
+}
 
-test!(cargo_compile_with_transitive_dev_deps {
+#[test]
+fn cargo_compile_with_transitive_dev_deps() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -237,9 +238,10 @@ test!(cargo_compile_with_transitive_dev_deps {
 
     assert_that(process(&p.bin("foo")),
                 execs().with_stdout("zoidberg\n"));
-});
+}
 
-test!(no_rebuild_dependency {
+#[test]
+fn no_rebuild_dependency() {
     let mut p = project("foo");
     p = p
         .file("Cargo.toml", r#"
@@ -285,9 +287,10 @@ test!(no_rebuild_dependency {
                                              [COMPILING] foo v0.5.0 ({})\n",
                                             p.url(),
                                             p.url())));
-});
+}
 
-test!(deep_dependencies_trigger_rebuild {
+#[test]
+fn deep_dependencies_trigger_rebuild() {
     let mut p = project("foo");
     p = p
         .file("Cargo.toml", r#"
@@ -373,9 +376,10 @@ test!(deep_dependencies_trigger_rebuild {
                                             p.url(),
                                             p.url())));
 
-});
+}
 
-test!(no_rebuild_two_deps {
+#[test]
+fn no_rebuild_two_deps() {
     let mut p = project("foo");
     p = p
         .file("Cargo.toml", r#"
@@ -435,9 +439,10 @@ test!(no_rebuild_two_deps {
     assert_that(p.cargo("build"),
                 execs().with_stdout(""));
     assert_that(&p.bin("foo"), existing_file());
-});
+}
 
-test!(nested_deps_recompile {
+#[test]
+fn nested_deps_recompile() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -486,9 +491,10 @@ test!(nested_deps_recompile {
     assert_that(p.cargo("build"),
                 execs().with_stderr(&format!("[COMPILING] foo v0.5.0 ({})\n",
                                             p.url())));
-});
+}
 
-test!(error_message_for_missing_manifest {
+#[test]
+fn error_message_for_missing_manifest() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -519,9 +525,10 @@ Caused by:
   [..] (os error [..])
 "));
 
-});
+}
 
-test!(override_relative {
+#[test]
+fn override_relative() {
     let bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
@@ -551,9 +558,10 @@ test!(override_relative {
     bar.build();
     assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
 
-});
+}
 
-test!(override_self {
+#[test]
+fn override_self() {
     let bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
@@ -587,9 +595,10 @@ test!(override_self {
     bar.build();
     assert_that(p.cargo_process("build"), execs().with_status(0));
 
-});
+}
 
-test!(override_path_dep {
+#[test]
+fn override_path_dep() {
     let bar = project("bar")
        .file("p1/Cargo.toml", r#"
             [package]
@@ -631,9 +640,10 @@ test!(override_path_dep {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
 
-});
+}
 
-test!(path_dep_build_cmd {
+#[test]
+fn path_dep_build_cmd() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -703,9 +713,10 @@ test!(path_dep_build_cmd {
 
     assert_that(process(&p.bin("foo")),
                 execs().with_stdout("1\n"));
-});
+}
 
-test!(dev_deps_no_rebuild_lib {
+#[test]
+fn dev_deps_no_rebuild_lib() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -751,9 +762,10 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 "));
-});
+}
 
-test!(custom_target_no_rebuild {
+#[test]
+fn custom_target_no_rebuild() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -795,9 +807,10 @@ test!(custom_target_no_rebuild {
                        .with_stderr("\
 [COMPILING] b v0.5.0 ([..])
 "));
-});
+}
 
-test!(override_and_depend {
+#[test]
+fn override_and_depend() {
     let p = project("foo")
         .file("a/a1/Cargo.toml", r#"
             [project]
@@ -836,9 +849,10 @@ test!(override_and_depend {
 [COMPILING] a1 v0.5.0 ([..])
 [COMPILING] b v0.5.0 ([..])
 "));
-});
+}
 
-test!(missing_path_dependency {
+#[test]
+fn missing_path_dependency() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -863,4 +877,4 @@ Caused by:
 Caused by:
   [..] (os error [..])
 "));
-});
+}
