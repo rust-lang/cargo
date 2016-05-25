@@ -2,9 +2,8 @@ use support::{project, execs};
 use hamcrest::assert_that;
 use cargo;
 
-fn setup() {}
-
-test!(simple {
+#[test]
+fn simple() {
     let p = project("foo");
 
     assert_that(p.cargo_process("version"),
@@ -15,7 +14,7 @@ test!(simple {
                 execs().with_status(0).with_stdout(&format!("{}\n",
                                                             cargo::version())));
 
-});
+}
 
 #[derive(RustcDecodable)]
 struct FooFlags {
@@ -31,7 +30,8 @@ fn real_main(flags: FooFlags, _config: &cargo::Config) ->
     }
 }
 
-test!(subcommand_with_version_using_exec_main_without_stdin {
+#[test]
+fn subcommand_with_version_using_exec_main_without_stdin() {
     let usage = "
 Usage: cargo foo [--version]
 
@@ -44,4 +44,4 @@ Options:
                 real_main, &cargo::Config::default().unwrap(),
                 usage, &args, false);
     assert_eq!(result.unwrap(), Some("foo <version>".to_string()));
-});
+}

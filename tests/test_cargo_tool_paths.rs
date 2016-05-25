@@ -1,10 +1,8 @@
 use support::{path2url, project, execs};
 use hamcrest::assert_that;
 
-fn setup() {
-}
-
-test!(pathless_tools {
+#[test]
+fn pathless_tools() {
     let target = ::rustc_host();
 
     let foo = project("foo")
@@ -29,9 +27,10 @@ test!(pathless_tools {
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 ", url = foo.url())))
-});
+}
 
-test!(absolute_tools {
+#[test]
+fn absolute_tools() {
     let target = ::rustc_host();
 
     // Escaped as they appear within a TOML config file
@@ -69,9 +68,10 @@ test!(absolute_tools {
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
 ", url = foo.url(), ar = output.0, linker = output.1)))
-});
+}
 
-test!(relative_tools {
+#[test]
+fn relative_tools() {
     let target = ::rustc_host();
 
     // Escaped as they appear within a TOML config file
@@ -116,4 +116,4 @@ test!(relative_tools {
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
 ", url = foo_url, ar = output.0, linker = output.1)))
-});
+}

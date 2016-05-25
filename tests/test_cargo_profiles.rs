@@ -4,10 +4,8 @@ use std::path::MAIN_SEPARATOR as SEP;
 use support::{project, execs};
 use hamcrest::assert_that;
 
-fn setup() {
-}
-
-test!(profile_overrides {
+#[test]
+fn profile_overrides() {
     let mut p = project("foo");
     p = p
         .file("Cargo.toml", r#"
@@ -38,9 +36,10 @@ test!(profile_overrides {
 dir = p.root().display(),
 url = p.url(),
 )));
-});
+}
 
-test!(top_level_overrides_deps {
+#[test]
+fn top_level_overrides_deps() {
     let mut p = project("foo");
     p = p
         .file("Cargo.toml", r#"
@@ -104,4 +103,4 @@ test!(top_level_overrides_deps {
                     sep = SEP,
                     prefix = env::consts::DLL_PREFIX,
                     suffix = env::consts::DLL_SUFFIX)));
-});
+}

@@ -9,10 +9,8 @@ use tar::Archive;
 use support::{project, execs, paths, git, path2url};
 use hamcrest::{assert_that, existing_file};
 
-fn setup() {
-}
-
-test!(simple {
+#[test]
+fn simple() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -58,9 +56,10 @@ src[..]main.rs
                 fname == b"foo-0.0.1/src/main.rs",
                 "unexpected filename: {:?}", f.header().path())
     }
-});
+}
 
-test!(metadata_warning {
+#[test]
+fn metadata_warning() {
     let p = project("all")
         .file("Cargo.toml", r#"
             [project]
@@ -123,9 +122,10 @@ http://doc.crates.io/manifest.html#package-metadata for more info.
 [COMPILING] foo v0.0.1 ({dir}[..])
 ",
         dir = p.url())));
-});
+}
 
-test!(package_verbose {
+#[test]
+fn package_verbose() {
     let root = paths::root().join("all");
     let p = git::repo(&root)
         .file("Cargo.toml", r#"
@@ -167,9 +167,10 @@ test!(package_verbose {
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 "));
-});
+}
 
-test!(package_verification {
+#[test]
+fn package_verification() {
     let p = project("all")
         .file("Cargo.toml", r#"
             [project]
@@ -190,9 +191,10 @@ test!(package_verification {
 [COMPILING] foo v0.0.1 ({dir}[..])
 ",
         dir = p.url())));
-});
+}
 
-test!(exclude {
+#[test]
+fn exclude() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -214,9 +216,10 @@ test!(exclude {
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 "));
-});
+}
 
-test!(include {
+#[test]
+fn include() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -240,9 +243,10 @@ test!(include {
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 "));
-});
+}
 
-test!(package_lib_with_bin {
+#[test]
+fn package_lib_with_bin() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -258,9 +262,10 @@ test!(package_lib_with_bin {
 
     assert_that(p.cargo_process("package").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(package_new_git_repo {
+#[test]
+fn package_new_git_repo() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -279,9 +284,10 @@ test!(package_new_git_repo {
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 "));
-});
+}
 
-test!(package_git_submodule {
+#[test]
+fn package_git_submodule() {
     let project = git::new("foo", |project| {
         project.file("Cargo.toml", r#"
                     [project]
@@ -310,9 +316,10 @@ test!(package_git_submodule {
     assert_that(::cargo_process().arg("package").cwd(project.root())
                  .arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stderr_contains("[ARCHIVING] bar/Makefile"));
-});
+}
 
-test!(no_duplicates_from_modified_tracked_files {
+#[test]
+fn no_duplicates_from_modified_tracked_files() {
     let root = paths::root().join("all");
     let p = git::repo(&root)
         .file("Cargo.toml", r#"
@@ -336,9 +343,10 @@ test!(no_duplicates_from_modified_tracked_files {
 Cargo.toml
 src/main.rs
 "));
-});
+}
 
-test!(ignore_nested {
+#[test]
+fn ignore_nested() {
     let cargo_toml = r#"
             [project]
             name = "nested"
@@ -388,10 +396,11 @@ src[..]main.rs
                 fname == b"nested-0.0.1/src/main.rs",
                 "unexpected filename: {:?}", f.header().path())
     }
-});
+}
 
 #[cfg(unix)] // windows doesn't allow these characters in filenames
-test!(package_weird_characters {
+#[test]
+fn package_weird_characters() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -413,4 +422,4 @@ warning: [..]
 Caused by:
   cannot package a filename with a special character `:`: src/:foo
 "));
-});
+}

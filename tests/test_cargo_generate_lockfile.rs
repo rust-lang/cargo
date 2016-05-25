@@ -4,9 +4,8 @@ use std::io::prelude::*;
 use support::{project, execs};
 use hamcrest::{assert_that, existing_file, is_not};
 
-fn setup() {}
-
-test!(adding_and_removing_packages {
+#[test]
+fn adding_and_removing_packages() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -74,9 +73,10 @@ test!(adding_and_removing_packages {
     let mut lock4 = String::new();
     File::open(&lockfile).unwrap().read_to_string(&mut lock4).unwrap();
     assert_eq!(lock1, lock4);
-});
+}
 
-test!(preserve_metadata {
+#[test]
+fn preserve_metadata() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -122,9 +122,10 @@ foo = "bar"
     let mut lock = String::new();
     File::open(&lockfile).unwrap().read_to_string(&mut lock).unwrap();
     assert!(lock.contains(metadata.trim()), "{}", lock);
-});
+}
 
-test!(preserve_line_endings_issue_2076 {
+#[test]
+fn preserve_line_endings_issue_2076() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -171,9 +172,10 @@ test!(preserve_line_endings_issue_2076 {
 
     assert!(lock2.starts_with("[root]\r\n"));
     assert_eq!(lock1, lock2);
-});
+}
 
-test!(cargo_update_generate_lockfile {
+#[test]
+fn cargo_update_generate_lockfile() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -194,4 +196,4 @@ test!(cargo_update_generate_lockfile {
     assert_that(p.cargo("update"), execs().with_status(0).with_stdout(""));
     assert_that(&lockfile, existing_file());
 
-});
+}

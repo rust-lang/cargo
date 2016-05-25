@@ -2,11 +2,8 @@ use std::path::MAIN_SEPARATOR as SEP;
 use support::{execs, project};
 use hamcrest::{assert_that};
 
-fn setup() {
-}
-
-
-test!(rustdoc_simple {
+#[test]
+fn rustdoc_simple() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -27,9 +24,10 @@ test!(rustdoc_simple {
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 ", sep = SEP,
             dir = p.root().display(), url = p.url())));
-});
+}
 
-test!(rustdoc_args {
+#[test]
+fn rustdoc_args() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -51,11 +49,12 @@ test!(rustdoc_args {
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 ", sep = SEP,
             dir = p.root().display(), url = p.url())));
-});
+}
 
 
 
-test!(rustdoc_foo_with_bar_dependency {
+#[test]
+fn rustdoc_foo_with_bar_dependency() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -97,9 +96,10 @@ test!(rustdoc_foo_with_bar_dependency {
         --extern [..]`
 ", sep = SEP,
             dir = foo.root().display(), url = foo.url())));
-});
+}
 
-test!(rustdoc_only_bar_dependency {
+#[test]
+fn rustdoc_only_bar_dependency() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -141,10 +141,11 @@ test!(rustdoc_only_bar_dependency {
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 ", sep = SEP,
             dir = foo.root().display())));
-});
+}
 
 
-test!(rustdoc_same_name_err {
+#[test]
+fn rustdoc_same_name_err() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -164,4 +165,4 @@ test!(rustdoc_same_name_err {
                 .with_stderr("[ERROR] cannot document a package where a library and a \
                               binary have the same name. Consider renaming one \
                               or marking the target as `doc = false`"));
-});
+}

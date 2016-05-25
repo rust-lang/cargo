@@ -8,10 +8,8 @@ use support::paths::{self, CargoPathExt};
 use hamcrest::{assert_that,existing_file};
 use cargo::util::process;
 
-fn setup() {
-}
-
-test!(cargo_compile_simple_git_dep {
+#[test]
+fn cargo_compile_simple_git_dep() {
     let project = project("foo");
     let git_project = git::new("dep1", |project| {
         project
@@ -68,9 +66,10 @@ test!(cargo_compile_simple_git_dep {
     assert_that(
       process(&project.bin("foo")),
       execs().with_stdout("hello world\n"));
-});
+}
 
-test!(cargo_compile_git_dep_branch {
+#[test]
+fn cargo_compile_git_dep_branch() {
     let project = project("foo");
     let git_project = git::new("dep1", |project| {
         project
@@ -134,9 +133,10 @@ test!(cargo_compile_git_dep_branch {
     assert_that(
       process(&project.bin("foo")),
       execs().with_stdout("hello world\n"));
-});
+}
 
-test!(cargo_compile_git_dep_tag {
+#[test]
+fn cargo_compile_git_dep_tag() {
     let project = project("foo");
     let git_project = git::new("dep1", |project| {
         project
@@ -205,9 +205,10 @@ test!(cargo_compile_git_dep_tag {
 
     assert_that(project.cargo("build"),
                 execs().with_status(0));
-});
+}
 
-test!(cargo_compile_with_nested_paths {
+#[test]
+fn cargo_compile_with_nested_paths() {
     let git_project = git::new("dep1", |project| {
         project
             .file("Cargo.toml", r#"
@@ -279,9 +280,10 @@ test!(cargo_compile_with_nested_paths {
 
     assert_that(process(&p.bin("parent")),
                 execs().with_stdout("hello world\n"));
-});
+}
 
-test!(cargo_compile_with_meta_package {
+#[test]
+fn cargo_compile_with_meta_package() {
     let git_project = git::new("meta-dep", |project| {
         project
             .file("dep1/Cargo.toml", r#"
@@ -351,9 +353,10 @@ test!(cargo_compile_with_meta_package {
 
     assert_that(process(&p.bin("parent")),
                 execs().with_stdout("this is dep1 this is dep2\n"));
-});
+}
 
-test!(cargo_compile_with_short_ssh_git {
+#[test]
+fn cargo_compile_with_short_ssh_git() {
     let url = "git@github.com:a/dep";
 
     let project = project("project")
@@ -383,9 +386,10 @@ test!(cargo_compile_with_short_ssh_git {
 Caused by:
   invalid url `{}`: relative URL without a base
 ", url)));
-});
+}
 
-test!(two_revs_same_deps {
+#[test]
+fn two_revs_same_deps() {
     let bar = git::new("meta-dep", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -452,9 +456,10 @@ test!(two_revs_same_deps {
                 execs().with_status(0));
     assert_that(&foo.bin("foo"), existing_file());
     assert_that(foo.process(&foo.bin("foo")), execs().with_status(0));
-});
+}
 
-test!(recompilation {
+#[test]
+fn recompilation() {
     let git_project = git::new("bar", |project| {
         project
             .file("Cargo.toml", r#"
@@ -551,9 +556,10 @@ test!(recompilation {
     assert_that(p.cargo("build"),
                 execs().with_stderr(&format!("[COMPILING] foo v0.5.0 ({})\n",
                                             p.url())));
-});
+}
 
-test!(update_with_shared_deps {
+#[test]
+fn update_with_shared_deps() {
     let git_project = git::new("bar", |project| {
         project
             .file("Cargo.toml", r#"
@@ -680,9 +686,10 @@ To learn more, run the command again with --verbose.
     assert_that(p.cargo("update").arg("-p").arg("bar"),
                 execs().with_stderr(&format!("[UPDATING] git repository `{}`",
                                             git_project.url())));
-});
+}
 
-test!(dep_with_submodule {
+#[test]
+fn dep_with_submodule() {
     let project = project("foo");
     let git_project = git::new("dep1", |project| {
         project
@@ -724,9 +731,10 @@ test!(dep_with_submodule {
 [UPDATING] git repository [..]
 [COMPILING] dep1 [..]
 [COMPILING] foo [..]").with_status(0));
-});
+}
 
-test!(two_deps_only_update_one {
+#[test]
+fn two_deps_only_update_one() {
     let project = project("foo");
     let git1 = git::new("dep1", |project| {
         project
@@ -786,9 +794,10 @@ test!(two_deps_only_update_one {
         .with_stderr(&format!("[UPDATING] git repository `{}`\n\
                                [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
                               ", git1.url())));
-});
+}
 
-test!(stale_cached_version {
+#[test]
+fn stale_cached_version() {
     let bar = git::new("meta-dep", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -856,9 +865,10 @@ test!(stale_cached_version {
 [COMPILING] foo v0.0.0 ({foo})
 ", bar = bar.url(), foo = foo.url())));
     assert_that(foo.process(&foo.bin("foo")), execs().with_status(0));
-});
+}
 
-test!(dep_with_changed_submodule {
+#[test]
+fn dep_with_changed_submodule() {
     let project = project("foo");
     let git_project = git::new("dep1", |project| {
         project
@@ -947,9 +957,10 @@ test!(dep_with_changed_submodule {
                                       [RUNNING] `target[..]foo[..]`\n")
                 .with_stdout("project3\n")
                 .with_status(0));
-});
+}
 
-test!(dev_deps_with_testing {
+#[test]
+fn dev_deps_with_testing() {
     let p2 = git::new("bar", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1006,9 +1017,10 @@ test tests::foo ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 "));
-});
+}
 
-test!(git_build_cmd_freshness {
+#[test]
+fn git_build_cmd_freshness() {
     let foo = git::new("foo", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1045,9 +1057,10 @@ test!(git_build_cmd_freshness {
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(""));
-});
+}
 
-test!(git_name_not_always_needed {
+#[test]
+fn git_name_not_always_needed() {
     let p2 = git::new("bar", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1084,9 +1097,10 @@ test!(git_name_not_always_needed {
 [UPDATING] git repository `{bar}`
 [COMPILING] foo v0.5.0 ({url})
 ", url = p.url(), bar = p2.url())));
-});
+}
 
-test!(git_repo_changing_no_rebuild {
+#[test]
+fn git_repo_changing_no_rebuild() {
     let bar = git::new("bar", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1149,9 +1163,10 @@ test!(git_repo_changing_no_rebuild {
     // even though the git repo has changed.
     assert_that(p1.cargo("build"),
                 execs().with_stdout(""));
-});
+}
 
-test!(git_dep_build_cmd {
+#[test]
+fn git_dep_build_cmd() {
     let p = git::new("foo", |project| {
         project.file("Cargo.toml", r#"
             [project]
@@ -1211,9 +1226,10 @@ test!(git_dep_build_cmd {
 
     assert_that(process(&p.bin("foo")),
                 execs().with_stdout("1\n"));
-});
+}
 
-test!(fetch_downloads {
+#[test]
+fn fetch_downloads() {
     let bar = git::new("bar", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1241,9 +1257,10 @@ test!(fetch_downloads {
 
     assert_that(p.cargo("fetch"),
                 execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(warnings_in_git_dep {
+#[test]
+fn warnings_in_git_dep() {
     let bar = git::new("bar", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1273,9 +1290,10 @@ test!(warnings_in_git_dep {
                              bar.url(),
                              bar.url(),
                              p.url())));
-});
+}
 
-test!(update_ambiguous {
+#[test]
+fn update_ambiguous() {
     let foo1 = git::new("foo1", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1332,9 +1350,10 @@ following:
   foo:0.[..].0
   foo:0.[..].0
 "));
-});
+}
 
-test!(update_one_dep_in_repo_with_many_deps {
+#[test]
+fn update_one_dep_in_repo_with_many_deps() {
     let foo = git::new("foo", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1372,9 +1391,10 @@ test!(update_one_dep_in_repo_with_many_deps {
                        .with_stderr(&format!("\
 [UPDATING] git repository `{}`
 ", foo.url())));
-});
+}
 
-test!(switch_deps_does_not_update_transitive {
+#[test]
+fn switch_deps_does_not_update_transitive() {
     let transitive = git::new("transitive", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1449,9 +1469,10 @@ test!(switch_deps_does_not_update_transitive {
 [COMPILING] dep [..]
 [COMPILING] project [..]
 ", dep2.url())));
-});
+}
 
-test!(update_one_source_updates_all_packages_in_that_git_source {
+#[test]
+fn update_one_source_updates_all_packages_in_that_git_source() {
     let dep = git::new("dep", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1504,9 +1525,10 @@ test!(update_one_source_updates_all_packages_in_that_git_source {
          .read_to_string(&mut lockfile).unwrap();
     assert!(!lockfile.contains(&rev1.to_string()),
             "{} in {}", rev1, lockfile);
-});
+}
 
-test!(switch_sources {
+#[test]
+fn switch_sources() {
     let a1 = git::new("a1", |project| {
         project.file("Cargo.toml", r#"
             [package]
@@ -1573,9 +1595,10 @@ test!(switch_sources {
 [COMPILING] b v0.5.0 ([..])
 [COMPILING] project v0.5.0 ([..])
 "));
-});
+}
 
-test!(dont_require_submodules_are_checked_out {
+#[test]
+fn dont_require_submodules_are_checked_out() {
     let project = project("foo");
     let git1 = git::new("dep1", |p| {
         p.file("Cargo.toml", r#"
@@ -1603,9 +1626,10 @@ test!(dont_require_submodules_are_checked_out {
 
     assert_that(git1.cargo("build").arg("-v").cwd(&dst),
                 execs().with_status(0));
-});
+}
 
-test!(doctest_same_name {
+#[test]
+fn doctest_same_name() {
     let a2 = git::new("a2", |p| {
         p.file("Cargo.toml", r#"
             [project]
@@ -1645,9 +1669,10 @@ test!(doctest_same_name {
 
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(lints_are_suppressed {
+#[test]
+fn lints_are_suppressed() {
     let a = git::new("a", |p| {
         p.file("Cargo.toml", r#"
             [project]
@@ -1678,9 +1703,10 @@ test!(lints_are_suppressed {
 [COMPILING] a v0.5.0 ([..])
 [COMPILING] foo v0.0.1 ([..])
 "));
-});
+}
 
-test!(denied_lints_are_allowed {
+#[test]
+fn denied_lints_are_allowed() {
     let enabled = super::RUSTC.with(|r| r.cap_lints);
     if !enabled { return }
 
@@ -1715,9 +1741,10 @@ test!(denied_lints_are_allowed {
 [COMPILING] a v0.5.0 ([..])
 [COMPILING] foo v0.0.1 ([..])
 "));
-});
+}
 
-test!(add_a_git_dep {
+#[test]
+fn add_a_git_dep() {
     let git = git::new("git", |p| {
         p.file("Cargo.toml", r#"
             [project]
@@ -1761,4 +1788,4 @@ test!(add_a_git_dep {
     "#, git.url()).as_bytes()).unwrap();
 
     assert_that(p.cargo("build"), execs().with_status(0));
-});
+}

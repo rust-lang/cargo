@@ -7,16 +7,14 @@ use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 use cargo::util::{process, ProcessBuilder};
 
-fn setup() {
-}
-
 fn cargo_process(s: &str) -> ProcessBuilder {
     let mut p = process(&cargo_dir().join("cargo"));
     p.arg(s).cwd(&paths::root()).env("HOME", &paths::home());
     return p;
 }
 
-test!(simple_lib {
+#[test]
+fn simple_lib() {
     assert_that(cargo_process("init").arg("--vcs").arg("none")
                                     .env("USER", "foo"),
                 execs().with_status(0));
@@ -27,9 +25,10 @@ test!(simple_lib {
 
     assert_that(cargo_process("build"),
                 execs().with_status(0));
-});
+}
 
-test!(simple_bin {
+#[test]
+fn simple_bin() {
     let path = paths::root().join("foo");
     fs::create_dir(&path).unwrap();
     assert_that(cargo_process("init").arg("--bin").arg("--vcs").arg("none")
@@ -44,7 +43,7 @@ test!(simple_bin {
     assert_that(&paths::root().join(&format!("foo/target/debug/foo{}",
                                              env::consts::EXE_SUFFIX)),
                 existing_file());
-});
+}
 
 fn bin_already_exists(explicit: bool, rellocation: &str) {
     let path = paths::root().join("foo");
@@ -79,31 +78,38 @@ fn bin_already_exists(explicit: bool, rellocation: &str) {
     assert_eq!(Vec::from(content as &[u8]), new_content);
 }
 
-test!(bin_already_exists_explicit {
+#[test]
+fn bin_already_exists_explicit() {
     bin_already_exists(true, "src/main.rs")
-});
+}
 
-test!(bin_already_exists_implicit {
+#[test]
+fn bin_already_exists_implicit() {
     bin_already_exists(false, "src/main.rs")
-});
+}
 
-test!(bin_already_exists_explicit_nosrc {
+#[test]
+fn bin_already_exists_explicit_nosrc() {
     bin_already_exists(true, "main.rs")
-});
+}
 
-test!(bin_already_exists_implicit_nosrc {
+#[test]
+fn bin_already_exists_implicit_nosrc() {
     bin_already_exists(false, "main.rs")
-});
+}
 
-test!(bin_already_exists_implicit_namenosrc {
+#[test]
+fn bin_already_exists_implicit_namenosrc() {
     bin_already_exists(false, "foo.rs")
-});
+}
 
-test!(bin_already_exists_implicit_namesrc {
+#[test]
+fn bin_already_exists_implicit_namesrc() {
     bin_already_exists(false, "src/foo.rs")
-});
+}
 
-test!(confused_by_multiple_lib_files {
+#[test]
+fn confused_by_multiple_lib_files() {
     let path = paths::root().join("foo");
     fs::create_dir_all(&path.join("src")).unwrap();
 
@@ -130,10 +136,11 @@ test!(confused_by_multiple_lib_files {
 "));
 
     assert_that(&paths::root().join("foo/Cargo.toml"), is_not(existing_file()));
-});
+}
 
 
-test!(multibin_project_name_clash {
+#[test]
+fn multibin_project_name_clash() {
     let path = paths::root().join("foo");
     fs::create_dir(&path).unwrap();
 
@@ -163,7 +170,7 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous
 "));
 
     assert_that(&paths::root().join("foo/Cargo.toml"), is_not(existing_file()));
-});
+}
 
 fn lib_already_exists(rellocation: &str) {
     let path = paths::root().join("foo");
@@ -190,15 +197,18 @@ fn lib_already_exists(rellocation: &str) {
     assert_eq!(Vec::from(content as &[u8]), new_content);
 }
 
-test!(lib_already_exists_src {
+#[test]
+fn lib_already_exists_src() {
     lib_already_exists("src/lib.rs")
-});
+}
 
-test!(lib_already_exists_nosrc {
+#[test]
+fn lib_already_exists_nosrc() {
     lib_already_exists("lib.rs")
-});
+}
 
-test!(simple_git {
+#[test]
+fn simple_git() {
     assert_that(cargo_process("init").arg("--vcs").arg("git")
                                     .env("USER", "foo"),
                 execs().with_status(0));
@@ -207,9 +217,10 @@ test!(simple_git {
     assert_that(&paths::root().join("src/lib.rs"), existing_file());
     assert_that(&paths::root().join(".git"), existing_dir());
     assert_that(&paths::root().join(".gitignore"), existing_file());
-});
+}
 
-test!(auto_git {
+#[test]
+fn auto_git() {
     let td = TempDir::new("cargo").unwrap();
     let foo = &td.path().join("foo");
     fs::create_dir_all(&foo).unwrap();
@@ -221,9 +232,10 @@ test!(auto_git {
     assert_that(&foo.join("src/lib.rs"), existing_file());
     assert_that(&foo.join(".git"), existing_dir());
     assert_that(&foo.join(".gitignore"), existing_file());
-});
+}
 
-test!(invalid_dir_name {
+#[test]
+fn invalid_dir_name() {
     let foo = &paths::root().join("foo.bar");
     fs::create_dir_all(&foo).unwrap();
     assert_that(cargo_process("init").cwd(foo.clone())
@@ -234,9 +246,10 @@ use --name to override crate name
 "));
 
     assert_that(&foo.join("Cargo.toml"), is_not(existing_file()));
-});
+}
 
-test!(reserved_name {
+#[test]
+fn reserved_name() {
     let test = &paths::root().join("test");
     fs::create_dir_all(&test).unwrap();
     assert_that(cargo_process("init").cwd(test.clone())
@@ -247,9 +260,10 @@ use --name to override crate name
 "));
 
     assert_that(&test.join("Cargo.toml"), is_not(existing_file()));
-});
+}
 
-test!(git_autodetect {
+#[test]
+fn git_autodetect() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
     assert_that(cargo_process("init")
@@ -261,10 +275,11 @@ test!(git_autodetect {
     assert_that(&paths::root().join("src/lib.rs"), existing_file());
     assert_that(&paths::root().join(".git"), existing_dir());
     assert_that(&paths::root().join(".gitignore"), existing_file());
-});
+}
 
 
-test!(mercurial_autodetect {
+#[test]
+fn mercurial_autodetect() {
     fs::create_dir(&paths::root().join(".hg")).unwrap();
 
     assert_that(cargo_process("init")
@@ -276,9 +291,10 @@ test!(mercurial_autodetect {
     assert_that(&paths::root().join("src/lib.rs"), existing_file());
     assert_that(&paths::root().join(".git"), is_not(existing_dir()));
     assert_that(&paths::root().join(".hgignore"), existing_file());
-});
+}
 
-test!(gitignore_appended_not_replaced {
+#[test]
+fn gitignore_appended_not_replaced() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
     File::create(&paths::root().join(".gitignore")).unwrap().write_all(b"qqqqqq\n").unwrap();
@@ -296,9 +312,10 @@ test!(gitignore_appended_not_replaced {
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore")).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"qqqqqq"#));
-});
+}
 
-test!(cargo_lock_gitignored_if_lib1 {
+#[test]
+fn cargo_lock_gitignored_if_lib1() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
     assert_that(cargo_process("init").arg("--vcs").arg("git")
@@ -310,9 +327,10 @@ test!(cargo_lock_gitignored_if_lib1 {
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore")).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"Cargo.lock"#));
-});
+}
 
-test!(cargo_lock_gitignored_if_lib2 {
+#[test]
+fn cargo_lock_gitignored_if_lib2() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
     File::create(&paths::root().join("lib.rs")).unwrap().write_all(br#""#).unwrap();
@@ -326,9 +344,10 @@ test!(cargo_lock_gitignored_if_lib2 {
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore")).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"Cargo.lock"#));
-});
+}
 
-test!(cargo_lock_not_gitignored_if_bin1 {
+#[test]
+fn cargo_lock_not_gitignored_if_bin1() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
     assert_that(cargo_process("init").arg("--vcs").arg("git")
@@ -341,9 +360,10 @@ test!(cargo_lock_not_gitignored_if_bin1 {
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore")).unwrap().read_to_string(&mut contents).unwrap();
     assert!(!contents.contains(r#"Cargo.lock"#));
-});
+}
 
-test!(cargo_lock_not_gitignored_if_bin2 {
+#[test]
+fn cargo_lock_not_gitignored_if_bin2() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
     File::create(&paths::root().join("main.rs")).unwrap().write_all(br#""#).unwrap();
@@ -357,17 +377,19 @@ test!(cargo_lock_not_gitignored_if_bin2 {
     let mut contents = String::new();
     File::open(&paths::root().join(".gitignore")).unwrap().read_to_string(&mut contents).unwrap();
     assert!(!contents.contains(r#"Cargo.lock"#));
-});
+}
 
-test!(with_argument {
+#[test]
+fn with_argument() {
     assert_that(cargo_process("init").arg("foo").arg("--vcs").arg("none")
                                      .env("USER", "foo"),
                 execs().with_status(0));
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-});
+}
 
 
-test!(unknown_flags {
+#[test]
+fn unknown_flags() {
     assert_that(cargo_process("init").arg("foo").arg("--flag"),
                 execs().with_status(1)
                        .with_stderr("\
@@ -377,13 +399,14 @@ Usage:
     cargo init [options] [<path>]
     cargo init -h | --help
 "));
-});
+}
 
 #[cfg(not(windows))]
-test!(no_filename {
+#[test]
+fn no_filename() {
     assert_that(cargo_process("init").arg("/"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
 [ERROR] cannot auto-detect project name from path \"/\" ; use --name to override
 ")));
-});
+}

@@ -4,10 +4,8 @@ use std::env;
 use support::{project, execs};
 use hamcrest::assert_that;
 
-fn setup() {
-}
-
-test!(plugin_to_the_max {
+#[test]
+fn plugin_to_the_max() {
     if !::is_nightly() { return }
 
     let foo = project("foo")
@@ -82,9 +80,10 @@ test!(plugin_to_the_max {
                 execs().with_status(0));
     assert_that(foo.cargo("doc"),
                 execs().with_status(0));
-});
+}
 
-test!(plugin_with_dynamic_native_dependency {
+#[test]
+fn plugin_with_dynamic_native_dependency() {
     if !::is_nightly() { return }
 
     let build = project("builder")
@@ -166,9 +165,10 @@ test!(plugin_with_dynamic_native_dependency {
 
     assert_that(foo.cargo_process("build").env("SRC", &lib).arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(plugin_integration {
+#[test]
+fn plugin_integration() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -188,9 +188,10 @@ test!(plugin_integration {
 
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0));
-});
+}
 
-test!(doctest_a_plugin {
+#[test]
+fn doctest_a_plugin() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -221,10 +222,11 @@ test!(doctest_a_plugin {
 
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0));
-});
+}
 
 // See #1515
-test!(native_plugin_dependency_with_custom_ar_linker {
+#[test]
+fn native_plugin_dependency_with_custom_ar_linker() {
     let target = ::rustc_host();
 
     let foo = project("foo")
@@ -267,4 +269,4 @@ test!(native_plugin_dependency_with_custom_ar_linker {
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 [ERROR] could not exec the linker [..]
 "));
-});
+}

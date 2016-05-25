@@ -4,8 +4,6 @@ use std::process::{Stdio, Child};
 
 use support::project;
 
-fn setup() {}
-
 #[cfg(unix)]
 fn enabled() -> bool {
     true
@@ -46,7 +44,8 @@ fn enabled() -> bool {
     }
 }
 
-test!(ctrl_c_kills_everyone {
+#[test]
+fn ctrl_c_kills_everyone() {
     if !enabled() {
         return
     }
@@ -90,7 +89,7 @@ test!(ctrl_c_kills_everyone {
         Ok(n) => assert_eq!(n, 0),
         Err(e) => assert_eq!(e.kind(), io::ErrorKind::ConnectionReset),
     }
-});
+}
 
 #[cfg(unix)]
 fn ctrl_c(child: &mut Child) {

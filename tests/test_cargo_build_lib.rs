@@ -2,9 +2,6 @@ use std::path::MAIN_SEPARATOR as SEP;
 use support::{basic_bin_manifest, execs, project, ProjectBuilder};
 use hamcrest::{assert_that};
 
-fn setup() {
-}
-
 fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
     format!("\
 [COMPILING] {name} v{version} ({url})
@@ -18,7 +15,8 @@ fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
             name = "foo", version = "0.0.1")
 }
 
-test!(build_lib_only {
+#[test]
+fn build_lib_only() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -36,10 +34,11 @@ test!(build_lib_only {
                 execs()
                 .with_status(0)
                 .with_stderr(verbose_output_for_lib(&p)));
-});
+}
 
 
-test!(build_with_no_lib {
+#[test]
+fn build_with_no_lib() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", r#"
@@ -49,9 +48,10 @@ test!(build_with_no_lib {
     assert_that(p.cargo_process("build").arg("--lib"),
                 execs().with_status(101)
                        .with_stderr("[ERROR] no library targets found"));
-});
+}
 
-test!(build_with_relative_cargo_home_path {
+#[test]
+fn build_with_relative_cargo_home_path() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -79,4 +79,4 @@ test!(build_with_relative_cargo_home_path {
     assert_that(p.cargo_process("build").env("CARGO_HOME", "./cargo_home/"),
                 execs()
                 .with_status(0));
-});
+}

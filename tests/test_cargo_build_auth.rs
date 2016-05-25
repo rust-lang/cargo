@@ -10,11 +10,9 @@ use support::{project, execs};
 use support::paths;
 use hamcrest::assert_that;
 
-fn setup() {
-}
-
 // Test that HTTP auth is offered from `credential.helper`
-test!(http_auth_offered {
+#[test]
+fn http_auth_offered() {
     let a = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = a.local_addr().unwrap();
 
@@ -115,10 +113,11 @@ To learn more, run the command again with --verbose.
         addr = addr)));
 
     t.join().ok().unwrap();
-});
+}
 
 // Boy, sure would be nice to have a TLS implementation in rust!
-test!(https_something_happens {
+#[test]
+fn https_something_happens() {
     let a = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = a.local_addr().unwrap();
     let t = thread::spawn(move|| {
@@ -163,10 +162,11 @@ Caused by:
         })));
 
     t.join().ok().unwrap();
-});
+}
 
 // Boy, sure would be nice to have an SSH implementation in rust!
-test!(ssh_something_happens {
+#[test]
+fn ssh_something_happens() {
     let a = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = a.local_addr().unwrap();
     let t = thread::spawn(move|| {
@@ -196,4 +196,4 @@ Caused by:
   [[..]] Failed to start SSH session: Failed getting banner
 "));
     t.join().ok().unwrap();
-});
+}

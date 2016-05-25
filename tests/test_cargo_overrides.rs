@@ -5,9 +5,8 @@ use support::{execs, project};
 use support::git;
 use support::paths;
 
-fn setup() {}
-
-test!(override_simple {
+#[test]
+fn override_simple() {
     Package::new("foo", "0.1.0").publish();
 
     let foo = git::repo(&paths::root().join("override"))
@@ -47,9 +46,10 @@ test!(override_simple {
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] local v0.0.1 (file://[..])
 "));
-});
+}
 
-test!(missing_version {
+#[test]
+fn missing_version() {
     let p = project("local")
         .file("Cargo.toml", r#"
             [package]
@@ -72,9 +72,10 @@ error: failed to parse manifest at `[..]`
 Caused by:
   replacements must specify a version to replace, but `foo` does not
 "));
-});
+}
 
-test!(different_version {
+#[test]
+fn different_version() {
     Package::new("foo", "0.2.0").publish();
     Package::new("foo", "0.1.0").publish();
 
@@ -100,9 +101,10 @@ error: failed to parse manifest at `[..]`
 Caused by:
   replacements cannot specify a version requirement, but found one for [..]
 "));
-});
+}
 
-test!(transitive {
+#[test]
+fn transitive() {
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.2.0")
             .dep("foo", "0.1.0")
@@ -145,9 +147,10 @@ test!(transitive {
 "));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(persists_across_rebuilds {
+#[test]
+fn persists_across_rebuilds() {
     Package::new("foo", "0.1.0").publish();
 
     let foo = git::repo(&paths::root().join("override"))
@@ -190,9 +193,10 @@ test!(persists_across_rebuilds {
 
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(replace_registry_with_path {
+#[test]
+fn replace_registry_with_path() {
     Package::new("foo", "0.1.0").publish();
 
     project("foo")
@@ -231,9 +235,10 @@ test!(replace_registry_with_path {
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] local v0.0.1 (file://[..])
 "));
-});
+}
 
-test!(use_a_spec_to_select {
+#[test]
+fn use_a_spec_to_select() {
     Package::new("foo", "0.1.1")
             .file("src/lib.rs", "pub fn foo1() {}")
             .publish();
@@ -291,9 +296,10 @@ test!(use_a_spec_to_select {
 [COMPILING] [..]
 [COMPILING] local v0.0.1 (file://[..])
 "));
-});
+}
 
-test!(override_adds_some_deps {
+#[test]
+fn override_adds_some_deps() {
     Package::new("foo", "0.1.1").publish();
     Package::new("bar", "0.1.0").publish();
 
@@ -348,9 +354,10 @@ test!(override_adds_some_deps {
 "));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(locked_means_locked_yes_no_seriously_i_mean_locked {
+#[test]
+fn locked_means_locked_yes_no_seriously_i_mean_locked() {
     // this in theory exercises #2041
     Package::new("foo", "0.1.0").publish();
     Package::new("foo", "0.2.0").publish();
@@ -390,9 +397,10 @@ test!(locked_means_locked_yes_no_seriously_i_mean_locked {
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
-});
+}
 
-test!(override_wrong_name {
+#[test]
+fn override_wrong_name() {
     Package::new("foo", "0.1.0").publish();
 
     let foo = git::repo(&paths::root().join("override"))
@@ -428,9 +436,10 @@ error: no matching package for override `foo:0.1.0` found
 location searched: file://[..]
 version required: = 0.1.0
 "));
-});
+}
 
-test!(override_with_nothing {
+#[test]
+fn override_with_nothing() {
     Package::new("foo", "0.1.0").publish();
 
     let foo = git::repo(&paths::root().join("override"))
@@ -461,9 +470,10 @@ error: Unable to update file://[..]
 Caused by:
   Could not find Cargo.toml in `[..]`
 "));
-});
+}
 
-test!(override_wrong_version {
+#[test]
+fn override_wrong_version() {
     let p = project("local")
         .file("Cargo.toml", r#"
             [package]
@@ -483,9 +493,10 @@ error: failed to parse manifest at `[..]`
 Caused by:
   replacements cannot specify a version requirement, but found one for `foo:0.1.0`
 "));
-});
+}
 
-test!(multiple_specs {
+#[test]
+fn multiple_specs() {
     Package::new("foo", "0.1.0").publish();
 
     let foo = git::repo(&paths::root().join("override"))
@@ -525,9 +536,10 @@ error: overlapping replacement specifications found:
 
 both specifications match: foo v0.1.0 ([..])
 "));
-});
+}
 
-test!(test_override_dep {
+#[test]
+fn test_override_dep() {
     Package::new("foo", "0.1.0").publish();
 
     let foo = git::repo(&paths::root().join("override"))
@@ -563,4 +575,4 @@ Please re-run this command with [..]
   [..]#foo:0.1.0
   [..]#foo:0.1.0
 "));
-});
+}
