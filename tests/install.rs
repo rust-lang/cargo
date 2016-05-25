@@ -527,10 +527,7 @@ fn compile_failure() {
     p.build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
-                execs().with_status(101).with_stderr("\
-[COMPILING] foo v0.1.0 [..]
-error: main function not found
-error: aborting due to previous error
+                execs().with_status(101).with_stderr_contains("\
 [ERROR] failed to compile `foo v0.1.0 (file://[..])`, intermediate artifacts can be \
     found at `[..]target`
 
