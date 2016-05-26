@@ -1,11 +1,11 @@
 [root]
 name = "cargo"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "advapi32-sys 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "bufstream 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cargotest 0.1.0",
- "crates-io 0.2.0",
+ "crates-io 0.4.0",
  "crossbeam 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "curl 0.2.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "curl-sys 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -66,7 +66,7 @@ name = "cargotest"
 version = "0.1.0"
 dependencies = [
  "bufstream 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "cargo 0.11.0",
+ "cargo 0.12.0",
  "filetime 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "git2 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -92,7 +92,7 @@ dependencies = [
 
 [[package]]
 name = "crates-io"
-version = "0.2.0"
+version = "0.4.0"
 dependencies = [
  "curl 0.2.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)",

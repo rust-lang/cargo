@@ -1,6 +1,6 @@
 [project]
 name = "cargo"
-version = "0.11.0"
+version = "0.12.0"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
            "Alex Crichton <alex@alexcrichton.com>"]
@@ -18,7 +18,7 @@ path = "src/cargo/lib.rs"
 
 [dependencies]
 advapi32-sys = "0.1"
-crates-io = { path = "src/crates-io", version = "0.2" }
+crates-io = { path = "src/crates-io", version = "0.4" }
 crossbeam = "0.2"
 curl = "0.2"
 curl-sys = "0.1"
