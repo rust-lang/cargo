@@ -49,14 +49,9 @@ winapi = "0.2"
 hamcrest = "0.1"
 bufstream = "0.1"
 filetime = "0.1"
+cargotest = { path = "tests/cargotest" }
 
 [[bin]]
 name = "cargo"
 test = false
 doc = false
-
-[[test]]
-name = "tests"
-
-[[test]]
-name = "resolve"
