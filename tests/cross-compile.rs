@@ -895,7 +895,7 @@ fn platform_specific_dependencies_do_not_leak() {
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
                        .with_stderr_contains("\
-[..] error: can't find crate for `d2`[..]"));
+[..] can't find crate for `d2`[..]"));
 }
 
 #[test]

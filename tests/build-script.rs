@@ -698,10 +698,9 @@ fn build_deps_not_for_normal() {
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
                        .with_stderr_contains("\
-[..]lib.rs[..] error: can't find crate for `aaaaa`[..]
-[..]lib.rs[..] extern crate aaaaa;
-[..]           ^~~~~~~~~~~~~~~~~~~
-error: aborting due to previous error
+[..]can't find crate for `aaaaa`[..]
+")
+                       .with_stderr_contains("\
 [ERROR] Could not compile `foo`.
 
 Caused by:
