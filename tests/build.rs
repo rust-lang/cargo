@@ -238,11 +238,6 @@ fn cargo_compile_with_invalid_code() {
         execs()
         .with_status(101)
         .with_stderr_contains("\
-src[..]foo.rs:1:1: 1:8 error: expected item[..]found `invalid`
-src[..]foo.rs:1 invalid rust code!
-             ^~~~~~~
-")
-        .with_stderr_contains("\
 [ERROR] Could not compile `foo`.
 
 To learn more, run the command again with --verbose.\n"));
@@ -282,13 +277,8 @@ fn cargo_compile_with_warnings_in_the_root_package() {
         .file("src/foo.rs", "fn main() {} fn dead() {}");
 
     assert_that(p.cargo_process("build"),
-        execs()
-        .with_stderr("\
-[COMPILING] foo [..]
-src[..]foo.rs:1:14: 1:26 warning: function is never used: `dead`, \
-    #[warn(dead_code)] on by default
-src[..]foo.rs:1 fn main() {} fn dead() {}
-[..]                         ^~~~~~~~~~~~
+                execs().with_stderr_contains("\
+[..]function is never used: `dead`[..]
 "));
 }
 
@@ -333,13 +323,9 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
         "#);
 
     assert_that(p.cargo_process("build"),
-        execs().with_stderr(&format!("\
-[COMPILING] bar v0.5.0 ({url}/bar)
-[..]warning: function is never used: `dead`[..]
-[..]fn dead() {{}}
-[..]^~~~~~~~~~~~
-[COMPILING] foo v0.5.0 ({url})
-", url = p.url())));
+        execs().with_stderr_contains("\
+[..]function is never used: `dead`[..]
+"));
 
     assert_that(&p.bin("foo"), existing_file());
 
