@@ -11,6 +11,7 @@ use cargo::util::process;
 use cargotest::{is_nightly, rustc_host, sleep_ms};
 use cargotest::support::paths::{CargoPathExt,root};
 use cargotest::support::{ProjectBuilder};
+use cargotest::support::registry::Package;
 use cargotest::support::{project, execs, main_file, basic_bin_manifest};
 use hamcrest::{assert_that, existing_file, is_not};
 use tempdir::TempDir;
@@ -2262,4 +2263,31 @@ fn no_warn_about_package_metadata() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
                        .with_stderr("[..] foo v0.0.1 ([..])\n"));
+}
+
+#[test]
+fn warn_about_multiple_versions() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "0.0.1"
+            baz = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    Package::new("bar", "0.0.1").publish();
+    Package::new("bar", "0.0.2").publish();
+    Package::new("baz", "0.0.1").dep("bar", "0.0.2").publish();
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0)
+                       .with_stderr_contains("\
+warning: using multiple versions of crate \"bar\"
+versions: v0.0.1, v0.0.2
+"));
 }

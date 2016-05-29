@@ -1,10 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
+use semver;
+
 use core::{PackageId, SourceId, Workspace};
 use core::registry::PackageRegistry;
 use core::resolver::{self, Resolve, Method};
 use ops;
 use util::CargoResult;
+use util::config::Config;
 
 /// Resolve all dependencies for the specified `package` using the previous
 /// lockfile as a guide if present.
@@ -166,4 +169,39 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             None => true,
         }
     }
+}
+
+pub fn warn_if_multiple_versions(resolved: &Resolve, config: &Config) -> CargoResult<()> {
+    let mut package_version_map : HashMap<(&str, &SourceId), Vec<&semver::Version>> =
+        HashMap::new();
+
+    for package_id in resolved.iter() {
+        let key = (package_id.name(), package_id.source_id());
+
+        if let Some(found_versions) = package_version_map.get_mut(&key) {
+            found_versions.push(package_id.version());
+        }
+
+        if !package_version_map.contains_key(&key) {
+            package_version_map.insert(key, vec![package_id.version()]);
+        }
+    }
+
+    for ((package_name, _), versions) in package_version_map {
+        if versions.len() > 1 {
+            let mut copied_versions = versions.clone();
+            // Sort the versions so that test results are deterministic
+            copied_versions.sort();
+
+            try!(config.shell().warn(format!(
+                "using multiple versions of crate \"{}\"\nversions: {}",
+                package_name,
+                copied_versions.into_iter()
+                               .map(|v| format!("v{}", v))
+                               .collect::<Vec<String>>()
+                               .join(", "))));
+        }
+    }
+
+    Ok(())
 }

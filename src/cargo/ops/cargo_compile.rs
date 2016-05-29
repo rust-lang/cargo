@@ -125,6 +125,8 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
             try!(ops::resolve_with_previous(&mut registry, ws,
                                             method, Some(&resolve), None));
 
+    try!(ops::warn_if_multiple_versions(&resolved_with_overrides, &ws.config()));
+
     let packages = ops::get_resolved_packages(&resolved_with_overrides,
                                               registry);
 
