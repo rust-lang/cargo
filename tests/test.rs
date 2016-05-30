@@ -2115,9 +2115,9 @@ fn only_test_docs() {
 
     assert_that(p.cargo("test").arg("--doc"),
                 execs().with_status(0)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[DOCTEST] foo"))
+[DOCTEST] foo")
                        .with_stdout("
 running 1 test
 test bar_0 ... ok
