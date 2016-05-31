@@ -187,7 +187,7 @@ test bench_hello ... ")
                        .with_stderr_contains(format!("\
 [COMPILING] foo v0.5.0 ({})
 [RUNNING] target[..]release[..]foo-[..]
-thread 'main' panicked at 'assertion failed: \
+thread '[..]' panicked at 'assertion failed: \
     `(left == right)` (left: \
     `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:14
 [..]

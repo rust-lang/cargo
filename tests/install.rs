@@ -715,7 +715,7 @@ fn reports_unsuccessful_subcommand_result() {
                 execs().with_status(0).with_stdout_contains("    fail\n"));
     assert_that(cargo_process("fail"),
                 execs().with_status(101).with_stderr_contains("\
-thread 'main' panicked at 'explicit panic', [..]
+thread '[..]' panicked at 'explicit panic', [..]
 "));
 }
 
