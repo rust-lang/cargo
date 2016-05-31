@@ -154,6 +154,7 @@ lto = false        # controls `-C lto` for binaries and staticlibs
 debug-assertions = true # controls whether debug assertions are enabled
 codegen-units = 1  # controls whether the compiler passes `-C codegen-units`
                    # `codegen-units` is ignored when `lto = true`
+panic = 'unwind'   # panic strategy (`-C panic=...`), can also be 'abort'
 
 # The release profile, used for `cargo build --release`.
 [profile.release]
@@ -163,6 +164,7 @@ rpath = false
 lto = false
 debug-assertions = false
 codegen-units = 1
+panic = 'unwind'
 
 # The testing profile, used for `cargo test`.
 [profile.test]
@@ -172,6 +174,7 @@ rpath = false
 lto = false
 debug-assertions = true
 codegen-units = 1
+panic = 'unwind'
 
 # The benchmarking profile, used for `cargo bench`.
 [profile.bench]
@@ -181,6 +184,7 @@ rpath = false
 lto = false
 debug-assertions = false
 codegen-units = 1
+panic = 'unwind'
 
 # The documentation profile, used for `cargo doc`.
 [profile.doc]
@@ -190,6 +194,7 @@ rpath = false
 lto = false
 debug-assertions = true
 codegen-units = 1
+panic = 'unwind'
 ```
 
 # The `[features]` Section
