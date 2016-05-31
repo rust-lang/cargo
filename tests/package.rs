@@ -108,7 +108,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info.
         dir = p.url())));
 
     let p = project("all")
-        .file("Cargo.toml", &format!(r#"
+        .file("Cargo.toml", r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -116,7 +116,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info.
             license = "MIT"
             description = "foo"
             repository = "bar"
-        "#))
+        "#)
         .file("src/main.rs", r#"
             fn main() {}
         "#);
