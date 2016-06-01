@@ -134,22 +134,26 @@ pub fn to_manifest(contents: &[u8],
     return Ok((manifest, paths));
 
     fn add_unused_keys(m: &mut Manifest, toml: &toml::Value, key: String) {
-        match *toml {
-            toml::Value::Table(ref table) => {
-                for (k, v) in table.iter() {
-                    add_unused_keys(m, v, if key.is_empty() {
-                        k.clone()
-                    } else {
-                        key.clone() + "." + k
-                    })
+        if !key.starts_with("cargo-") {
+            match *toml {
+                toml::Value::Table(ref table) => {
+                    for (k, v) in table.iter() {
+                        add_unused_keys(m,
+                                        v,
+                                        if key.is_empty() {
+                                            k.clone()
+                                        } else {
+                                            key.clone() + "." + k
+                                        })
+                    }
                 }
-            }
-            toml::Value::Array(ref arr) => {
-                for v in arr.iter() {
-                    add_unused_keys(m, v, key.clone());
+                toml::Value::Array(ref arr) => {
+                    for v in arr.iter() {
+                        add_unused_keys(m, v, key.clone());
+                    }
                 }
+                _ => m.add_warning(format!("unused manifest key: {}", key)),
             }
-            _ => m.add_warning(format!("unused manifest key: {}", key)),
         }
     }
 }
