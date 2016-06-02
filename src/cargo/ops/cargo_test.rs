@@ -140,7 +140,7 @@ fn run_doc_tests(options: &TestOptions,
                 arg.push(rust_dep);
                 p.arg("-L").arg(arg);
             }
-            for native_dep in compilation.native_dirs.values() {
+            for native_dep in compilation.native_dirs.iter() {
                 p.arg("-L").arg(native_dep);
             }
 

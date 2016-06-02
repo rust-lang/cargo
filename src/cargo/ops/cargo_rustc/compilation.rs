@@ -27,7 +27,7 @@ pub struct Compilation<'cfg> {
     /// This is currently used to drive some entries which are added to the
     /// LD_LIBRARY_PATH as appropriate.
     // TODO: deprecated, remove
-    pub native_dirs: HashMap<PackageId, PathBuf>,
+    pub native_dirs: HashSet<PathBuf>,
 
     /// Root output directory (for the local package's artifacts)
     pub root_output: PathBuf,
@@ -51,7 +51,7 @@ impl<'cfg> Compilation<'cfg> {
     pub fn new(config: &'cfg Config) -> Compilation<'cfg> {
         Compilation {
             libraries: HashMap::new(),
-            native_dirs: HashMap::new(),  // TODO: deprecated, remove
+            native_dirs: HashSet::new(),  // TODO: deprecated, remove
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
             tests: Vec::new(),
@@ -94,7 +94,7 @@ impl<'cfg> Compilation<'cfg> {
     pub fn process(&self, cmd: CommandType, pkg: &Package)
                    -> CargoResult<CommandPrototype> {
         let mut search_path = util::dylib_path();
-        for dir in self.native_dirs.values() {
+        for dir in self.native_dirs.iter() {
             search_path.push(dir.clone());
         }
         search_path.push(self.root_output.clone());
