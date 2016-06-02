@@ -94,8 +94,24 @@ impl<'cfg> Compilation<'cfg> {
     pub fn process(&self, cmd: CommandType, pkg: &Package)
                    -> CargoResult<CommandPrototype> {
         let mut search_path = util::dylib_path();
+
+        // Add -L arguments, after stripping off prefixes like "native=" or "framework=".
         for dir in self.native_dirs.iter() {
-            search_path.push(dir.clone());
+            let dir = match dir.to_str() {
+                Some(s) => {
+                    let mut parts = s.splitn(2, '=');
+                    match (parts.next(), parts.next()) {
+                        (Some("native"), Some(path)) |
+                        (Some("crate"), Some(path)) |
+                        (Some("dependency"), Some(path)) |
+                        (Some("framework"), Some(path)) |
+                        (Some("all"), Some(path)) => path.into(),
+                        _ => dir.clone(),
+                    }
+                }
+                None => dir.clone(),
+            };
+            search_path.push(dir);
         }
         search_path.push(self.root_output.clone());
         search_path.push(self.deps_output.clone());
@@ -109,7 +125,7 @@ impl<'cfg> Compilation<'cfg> {
             }
         }
 
-	 let metadata = pkg.manifest().metadata();
+        let metadata = pkg.manifest().metadata();
 
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
            .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
