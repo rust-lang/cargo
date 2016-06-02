@@ -177,14 +177,7 @@ pub fn warn_if_multiple_versions(resolved: &Resolve, config: &Config) -> CargoRe
 
     for package_id in resolved.iter() {
         let key = (package_id.name(), package_id.source_id());
-
-        if let Some(found_versions) = package_version_map.get_mut(&key) {
-            found_versions.push(package_id.version());
-        }
-
-        if !package_version_map.contains_key(&key) {
-            package_version_map.insert(key, vec![package_id.version()]);
-        }
+        package_version_map.entry(key).or_insert(Vec::new()).push(package_id.version());
     }
 
     for ((package_name, _), versions) in package_version_map {
