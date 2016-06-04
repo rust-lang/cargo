@@ -748,11 +748,10 @@ impl TomlDependency {
                      kind: Option<Kind>)
                      -> CargoResult<Dependency> {
         let details = match *self {
-            TomlDependency::Simple(ref version) => {
-                let mut d: DetailedTomlDependency = Default::default();
-                d.version = Some(version.clone());
-                d
-            }
+            TomlDependency::Simple(ref version) => DetailedTomlDependency {
+                version: Some(version.clone()),
+                .. Default::default()
+            },
             TomlDependency::Detailed(ref details) => details.clone(),
         };
 
