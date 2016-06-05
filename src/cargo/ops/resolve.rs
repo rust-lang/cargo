@@ -105,7 +105,9 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             let replace = package.manifest().replace();
             let replace = replace.iter().map(|&(ref spec, ref dep)| {
                 for (key, val) in r.replacements().iter() {
-                    if spec.matches(key) && dep.matches_id(val) {
+                    if spec.matches(key) &&
+                       dep.matches_id(val) &&
+                       keep(&val, to_avoid, &to_avoid_sources) {
                         return (spec.clone(), dep.clone().lock_to(val))
                     }
                 }
