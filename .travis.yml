@@ -21,6 +21,10 @@ after_success: |
   git push -qf https://${TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
 env:
   global:
+    # apparently we use too much memory and if there's more than one rustc then
+    # when compiling Cargo's unit tests some compilers will be randomly kill
+    # -9'd
+    - CARGOFLAGS=-j1
     - secure: scGpeetUfba5RWyuS4yt10bPoFAI9wpHEReIFqEx7eH5vr2Anajk6+70jW6GdrWVdUvdINiArlQ3An2DeB9vEUWcBjw8WvuPtOH0tDMoSsuVloPlFD8yn1Ac0Bx9getAO5ofxqtoNg+OV4MDVuGabEesqAOWqURNrBC7XK+ntC8=
 
 os:

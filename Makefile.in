@@ -95,11 +95,11 @@ cargo-$(1): $$(CARGO) target/openssl/$(1).stamp
 	$$(CARGO) --version
 	$$(CARGO) build --target $(1) \
 		--manifest-path $(S)Cargo.toml \
-		$$(OPT_FLAG) $$(VERBOSE_FLAG) $$(ARGS)
+		$$(OPT_FLAG) $$(CARGOFLAGS) $$(VERBOSE_FLAG) $$(ARGS)
 
 test-unit-$(1): $$(CARGO)
 	@mkdir -p target/$(1)/cit
-	$$(CARGO) test --target $(1) $$(VERBOSE_FLAG) $$(only)
+	$$(CARGO) test --target $(1) $$(CARGOFLAGS) $$(VERBOSE_FLAG) $$(only)
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call CARGO_TARGET,$(target))))
 
