@@ -40,7 +40,7 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
                     "${command_scope_spec[@]}" \
-                    '--manifest-path=[path to manifest]: :files -/' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '--no-default-features[do not build the default features]' \
                     '(-p,--package)'{-p=,--package=}'[package to build]:packages:_get_package_names' \
                     '--release=[build in release mode]' \
@@ -53,7 +53,7 @@ case $state in
             clean)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '(-p,--package)'{-p=,--package=}'[package to clean]:packages:_get_package_names' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '--release[whether or not to clean release artifacts]' \
@@ -67,7 +67,7 @@ case $state in
                     '--features=[space separated feature list]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '--no-deps[do not build docs for dependencies]' \
                     '--no-default-features[do not build the default features]' \
                     '--open[open docs in browser after the build]' \
@@ -82,7 +82,7 @@ case $state in
             fetch)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=:colorization option:(auto always never)' \
@@ -91,7 +91,7 @@ case $state in
             generate-lockfile)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=:colorization option:(auto always never)' \
@@ -148,7 +148,7 @@ case $state in
             locate-project)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     ;;
 
             login)
@@ -188,7 +188,7 @@ case $state in
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-l, --list)'{-l,--list}'[print files included in a package without making one]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '--no-metadata[ignore warnings about a lack of human-usable metadata]' \
                     '--no-verify[do not build to verify contents]' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
@@ -199,7 +199,7 @@ case $state in
             pkgid)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=:colorization option:(auto always never)' \
@@ -209,7 +209,7 @@ case $state in
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--host=[Host to set the token for]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '--no-verify[Do not verify tarball until before publish]' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '--token[token to use when uploading]' \
@@ -220,7 +220,7 @@ case $state in
             read-manifest)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=:colorization option:(auto always never)' \
                     ;;
@@ -231,7 +231,7 @@ case $state in
                     '--features=[space separated feature list]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '--bin=[name of the bin target]' \
                     '--no-default-features[do not build the default features]' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
@@ -291,7 +291,7 @@ case $state in
                     '--features=[space separated feature list]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of jobs to run in parallel]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '--test=[test name]: :_test_names' \
                     '--no-default-features[do not build the default features]' \
                     '--no-fail-fast[run all tests regardless of failure]' \
@@ -319,7 +319,7 @@ case $state in
                 _arguments \
                     '--aggressive=[force dependency update]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '(-p,--package)'{-p=,--package=}'[package to update]:packages:__get_package_names' \
                     '--precise=[update single dependency to PRECISE]: :' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
@@ -330,7 +330,7 @@ case $state in
             verify-project)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '--manifest-path=[path to manifest]' \
+                    '--manifest-path=[path to manifest]: :_files -/' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=:colorization option:(auto always never)' \
