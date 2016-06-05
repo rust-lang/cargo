@@ -578,3 +578,42 @@ Please re-run this command with [..]
   [..]#foo:0.1.0
 "));
 }
+
+#[test]
+fn update() {
+    Package::new("foo", "0.1.0").publish();
+
+    let foo = git::repo(&paths::root().join("override"))
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "pub fn foo() {}");
+    foo.build();
+
+    let p = project("local")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+
+            [replace]
+            "foo:0.1.0" = {{ git = '{0}' }}
+        "#, foo.url()))
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("generate-lockfile"),
+                execs().with_status(0));
+    assert_that(p.cargo("update"),
+                execs().with_status(0)
+                       .with_stderr("\
+[UPDATING] registry `[..]`
+[UPDATING] git repository `[..]`
+"));
+}
