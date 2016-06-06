@@ -44,10 +44,7 @@ the source directory of the build script’s package.
 
 ## Outputs of the Build Script
 
-All the lines printed to stdout by a build script that start with `cargo:`
-are interpreted by Cargo and must be of the form `key=value`.
-
-Example output:
+All the lines printed to stdout by a build script are written to a file like `target/debug/build/<pkg>/output` (the precise location may depend on your configuration). Any line that starts with `cargo:` is interpreted directly by Cargo. This line must be of the form `cargo:key=value`, like the examples below:
 
 ```notrust
 cargo:rustc-link-lib=static=foo
