@@ -6,7 +6,6 @@
 extern crate crates_io as registry;
 extern crate crossbeam;
 extern crate curl;
-extern crate curl_sys;
 extern crate docopt;
 extern crate filetime;
 extern crate flate2;

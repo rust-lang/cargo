@@ -164,7 +164,7 @@ use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::{PathBuf, Path};
 
-use curl::http;
+use curl::easy::Easy;
 use flate2::read::GzDecoder;
 use git2;
 use rustc_serialize::hex::ToHex;
@@ -188,7 +188,7 @@ pub struct RegistrySource<'cfg> {
     cache_path: Filesystem,
     src_path: Filesystem,
     config: &'cfg Config,
-    handle: Option<http::Handle>,
+    handle: Option<Easy>,
     hashes: HashMap<(String, String), String>, // (name, vers) => cksum
     cache: HashMap<String, Vec<(Summary, bool)>>,
     updated: bool,
@@ -300,24 +300,34 @@ impl<'cfg> RegistrySource<'cfg> {
                 self.handle.as_mut().unwrap()
             }
         };
-        // TODO: don't download into memory (curl-rust doesn't expose it)
-        let resp = try!(handle.get(url.to_string()).follow_redirects(true).exec());
-        if resp.get_code() != 200 && resp.get_code() != 0 {
-            return Err(internal(format!("failed to get 200 response from {}\n{}",
-                                        url, resp)))
+        // TODO: don't download into memory, but ensure that if we ctrl-c a
+        //       download we should resume either from the start or the middle
+        //       on the next time
+        try!(handle.get(true));
+        try!(handle.url(&url.to_string()));
+        try!(handle.follow_location(true));
+        let mut state = Sha256::new();
+        let mut body = Vec::new();
+        {
+            let mut handle = handle.transfer();
+            try!(handle.write_function(|buf| {
+                state.update(buf);
+                body.extend_from_slice(buf);
+                Ok(buf.len())
+            }));
+            try!(handle.perform());
+        }
+        let code = try!(handle.response_code());
+        if code != 200 && code != 0 {
+            bail!("failed to get 200 response from `{}`, got {}", url, code)
         }
 
         // Verify what we just downloaded
-        let actual = {
-            let mut state = Sha256::new();
-            state.update(resp.get_body());
-            state.finish()
-        };
-        if actual.to_hex() != expected_hash {
+        if state.finish().to_hex() != expected_hash {
             bail!("failed to verify the checksum of `{}`", pkg)
         }
 
-        try!(dst.write_all(resp.get_body()));
+        try!(dst.write_all(&body));
         try!(dst.seek(SeekFrom::Start(0)));
         Ok(dst)
     }

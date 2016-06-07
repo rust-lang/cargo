@@ -3,8 +3,9 @@ use std::env;
 use std::fs::{self, File};
 use std::iter::repeat;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
-use curl::http;
+use curl::easy::Easy;
 use git2;
 use registry::{Registry, NewCrate, NewCrateDependency};
 use term::color::BLACK;
@@ -156,24 +157,22 @@ pub fn registry(config: &Config,
 }
 
 /// Create a new HTTP handle with appropriate global configuration for cargo.
-pub fn http_handle(config: &Config) -> CargoResult<http::Handle> {
+pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     // The timeout option for libcurl by default times out the entire transfer,
     // but we probably don't want this. Instead we only set timeouts for the
     // connect phase as well as a "low speed" timeout so if we don't receive
     // many bytes in a large-ish period of time then we time out.
-    let handle = http::handle().timeout(0)
-                               .connect_timeout(30_000 /* milliseconds */)
-                               .low_speed_limit(10 /* bytes per second */)
-                               .low_speed_timeout(30 /* seconds */);
-    let handle = match try!(http_proxy(config)) {
-        Some(proxy) => handle.proxy(proxy),
-        None => handle,
-    };
-    let handle = match try!(http_timeout(config)) {
-        Some(timeout) => handle.connect_timeout(timeout as usize)
-                               .low_speed_timeout((timeout as usize) / 1000),
-        None => handle,
-    };
+    let mut handle = Easy::new();
+    try!(handle.connect_timeout(Duration::new(30, 0)));
+    try!(handle.low_speed_limit(10 /* bytes per second */));
+    try!(handle.low_speed_time(Duration::new(30, 0)));
+    if let Some(proxy) = try!(http_proxy(config)) {
+        try!(handle.proxy(&proxy));
+    }
+    if let Some(timeout) = try!(http_timeout(config)) {
+        try!(handle.connect_timeout(Duration::new(timeout as u64, 0)));
+        try!(handle.low_speed_time(Duration::new(timeout as u64, 0)));
+    }
     Ok(handle)
 }
 

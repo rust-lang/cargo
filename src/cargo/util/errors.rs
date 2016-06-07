@@ -8,7 +8,6 @@ use std::str;
 use std::string;
 
 use curl;
-use curl_sys;
 use git2;
 use rustc_serialize::json;
 use semver;
@@ -302,17 +301,13 @@ impl NetworkError for git2::Error {
         }
     }
 }
-impl NetworkError for curl::ErrCode {
+impl NetworkError for curl::Error {
     fn maybe_spurious(&self) -> bool {
-        match self.code()  {
-            curl_sys::CURLcode::CURLE_COULDNT_CONNECT |
-            curl_sys::CURLcode::CURLE_COULDNT_RESOLVE_PROXY |
-            curl_sys::CURLcode::CURLE_COULDNT_RESOLVE_HOST |
-            curl_sys::CURLcode::CURLE_OPERATION_TIMEDOUT |
-            curl_sys::CURLcode::CURLE_RECV_ERROR
-            => true,
-            _ => false
-        }
+        self.is_couldnt_connect() ||
+            self.is_couldnt_resolve_proxy() ||
+            self.is_couldnt_resolve_host() ||
+            self.is_operation_timedout() ||
+            self.is_recv_error()
     }
 }
 
@@ -334,7 +329,7 @@ from_error! {
     git2::Error,
     json::DecoderError,
     json::EncoderError,
-    curl::ErrCode,
+    curl::Error,
     CliError,
     toml::Error,
     url::ParseError,
@@ -360,7 +355,7 @@ impl CargoError for io::Error {}
 impl CargoError for git2::Error {}
 impl CargoError for json::DecoderError {}
 impl CargoError for json::EncoderError {}
-impl CargoError for curl::ErrCode {}
+impl CargoError for curl::Error {}
 impl CargoError for ProcessError {}
 impl CargoError for CargoTestError {}
 impl CargoError for CliError {}
