@@ -27,7 +27,7 @@ pub struct Compilation<'cfg> {
     /// This is currently used to drive some entries which are added to the
     /// LD_LIBRARY_PATH as appropriate.
     // TODO: deprecated, remove
-    pub native_dirs: HashMap<PackageId, PathBuf>,
+    pub native_dirs: HashSet<PathBuf>,
 
     /// Root output directory (for the local package's artifacts)
     pub root_output: PathBuf,
@@ -51,7 +51,7 @@ impl<'cfg> Compilation<'cfg> {
     pub fn new(config: &'cfg Config) -> Compilation<'cfg> {
         Compilation {
             libraries: HashMap::new(),
-            native_dirs: HashMap::new(),  // TODO: deprecated, remove
+            native_dirs: HashSet::new(),  // TODO: deprecated, remove
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
             tests: Vec::new(),
@@ -94,8 +94,24 @@ impl<'cfg> Compilation<'cfg> {
     pub fn process(&self, cmd: CommandType, pkg: &Package)
                    -> CargoResult<CommandPrototype> {
         let mut search_path = util::dylib_path();
-        for dir in self.native_dirs.values() {
-            search_path.push(dir.clone());
+
+        // Add -L arguments, after stripping off prefixes like "native=" or "framework=".
+        for dir in self.native_dirs.iter() {
+            let dir = match dir.to_str() {
+                Some(s) => {
+                    let mut parts = s.splitn(2, '=');
+                    match (parts.next(), parts.next()) {
+                        (Some("native"), Some(path)) |
+                        (Some("crate"), Some(path)) |
+                        (Some("dependency"), Some(path)) |
+                        (Some("framework"), Some(path)) |
+                        (Some("all"), Some(path)) => path.into(),
+                        _ => dir.clone(),
+                    }
+                }
+                None => dir.clone(),
+            };
+            search_path.push(dir);
         }
         search_path.push(self.root_output.clone());
         search_path.push(self.deps_output.clone());
@@ -109,7 +125,7 @@ impl<'cfg> Compilation<'cfg> {
             }
         }
 
-	 let metadata = pkg.manifest().metadata();
+        let metadata = pkg.manifest().metadata();
 
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
            .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())

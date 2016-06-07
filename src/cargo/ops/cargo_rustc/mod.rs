@@ -161,7 +161,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
             cx.compilation.cfgs.extend(output.cfgs.iter().cloned());
         }
         for dir in output.library_paths.iter() {
-            cx.compilation.native_dirs.insert(pkg.clone(), dir.clone());
+            cx.compilation.native_dirs.insert(dir.clone());
         }
     }
     Ok(cx.compilation)
