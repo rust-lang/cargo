@@ -1,8 +1,10 @@
+extern crate cargo;
 extern crate cargotest;
 extern crate hamcrest;
 
 use std::path::MAIN_SEPARATOR as SEP;
 
+use cargo::util::paths::dylib_path_envvar;
 use cargotest::support::{project, execs, path2url};
 use hamcrest::{assert_that, existing_file};
 
@@ -577,4 +579,34 @@ fn run_from_executable_folder() {
                        .with_stdout("\
 hello
 "));
+}
+
+#[test]
+fn run_with_library_paths() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-link-search=native=foo");
+                println!("cargo:rustc-link-search=bar");
+                println!("cargo:rustc-link-search=/path=containing=equal=signs");
+            }
+        "#)
+        .file("src/main.rs", &format!(r#"
+            fn main() {{
+                let search_path = std::env::var_os("{}").unwrap();
+                let paths = std::env::split_paths(&search_path).collect::<Vec<_>>();
+                assert!(paths.contains(&"foo".into()));
+                assert!(paths.contains(&"bar".into()));
+                assert!(paths.contains(&"/path=containing=equal=signs".into()));
+            }}
+        "#, dylib_path_envvar()));
+
+    assert_that(p.cargo_process("run"), execs().with_status(0));
 }
