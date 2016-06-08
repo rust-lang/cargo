@@ -73,6 +73,10 @@ keep results readable. Test output can be recovered (e.g. for debugging)
 by passing `--nocapture` to the test binaries:
 
   cargo test -- --nocapture
+
+To get the list of all options available for the test binaries use this:
+
+  cargo test -- --help
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
