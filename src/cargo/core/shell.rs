@@ -25,6 +25,16 @@ pub enum ColorConfig {
     Never
 }
 
+impl fmt::Display for ColorConfig {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            ColorConfig::Auto => "auto",
+            ColorConfig::Always => "always",
+            ColorConfig::Never => "never",
+        }.fmt(f)
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct ShellConfig {
     pub color_config: ColorConfig,
@@ -128,6 +138,11 @@ impl MultiShell {
 
     pub fn get_verbose(&self) -> Verbosity {
         self.verbosity
+    }
+
+    pub fn color_config(&self) -> ColorConfig {
+        assert!(self.out.config.color_config == self.err.config.color_config);
+        self.out.config.color_config
     }
 }
 
