@@ -610,3 +610,24 @@ fn run_with_library_paths() {
 
     assert_that(p.cargo_process("run"), execs().with_status(0));
 }
+
+#[test]
+fn fail_no_extra_verbose() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {
+                std::process::exit(1);
+            }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("-q"),
+                execs().with_status(1)
+                       .with_stdout("")
+                       .with_stderr(""));
+}

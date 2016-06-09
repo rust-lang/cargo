@@ -221,9 +221,9 @@ fn execute_subcommand(config: &Config,
     };
 
     if let Some(code) = err.exit.as_ref().and_then(|c| c.code()) {
-        Err(CliError::new("", code))
+        Err(CliError::code(code))
     } else {
-        Err(CliError::from_error(err, 101))
+        Err(CliError::new(Box::new(err), 101))
     }
 }
 
