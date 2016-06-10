@@ -246,42 +246,46 @@ pub type CliResult<T> = Result<T, CliError>;
 
 #[derive(Debug)]
 pub struct CliError {
-    pub error: Box<CargoError>,
+    pub error: Option<Box<CargoError>>,
     pub unknown: bool,
     pub exit_code: i32
 }
 
 impl Error for CliError {
-    fn description(&self) -> &str { self.error.description() }
-    fn cause(&self) -> Option<&Error> { self.error.cause() }
+    fn description(&self) -> &str {
+        self.error.as_ref().map(|e| e.description())
+            .unwrap_or("unknown cli error")
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        self.error.as_ref().and_then(|e| e.cause())
+    }
 }
 
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.error, f)
+        if let Some(ref error) = self.error {
+            error.fmt(f)
+        } else {
+            self.description().fmt(f)
+        }
     }
 }
 
 impl CliError {
-    pub fn new(error: &str, code: i32) -> CliError {
-        let error = human(error.to_string());
-        CliError::from_boxed(error, code)
-    }
-
-    pub fn from_error<E: CargoError>(error: E, code: i32) -> CliError {
-        let error = Box::new(error);
-        CliError::from_boxed(error, code)
-    }
-
-    pub fn from_boxed(error: Box<CargoError>, code: i32) -> CliError {
+    pub fn new(error: Box<CargoError>, code: i32) -> CliError {
         let human = error.is_human();
-        CliError { error: error, exit_code: code, unknown: !human }
+        CliError { error: Some(error), exit_code: code, unknown: !human }
+    }
+
+    pub fn code(code: i32) -> CliError {
+        CliError { error: None, exit_code: code, unknown: false }
     }
 }
 
 impl From<Box<CargoError>> for CliError {
     fn from(err: Box<CargoError>) -> CliError {
-        CliError::from_boxed(err, 101)
+        CliError::new(err, 101)
     }
 }
 

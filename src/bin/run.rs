@@ -88,9 +88,21 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     match try!(ops::run(&root, &compile_opts, &options.arg_args)) {
         None => Ok(None),
         Some(err) => {
-            Err(match err.exit.as_ref().and_then(|e| e.code()) {
-                Some(code) => CliError::from_error(Human(err), code),
-                None => CliError::from_error(err, 101),
+            // If we never actually spawned the process then that sounds pretty
+            // bad and we always want to forward that up.
+            let exit = match err.exit.clone() {
+                Some(exit) => exit,
+                None => return Err(CliError::new(Box::new(Human(err)), 101)),
+            };
+
+            // If `-q` was passed then we suppress extra error information about
+            // a failed process, we assume the process itself printed out enough
+            // information about why it failed so we don't do so as well
+            let exit_code = exit.code().unwrap_or(101);
+            Err(if options.flag_quiet == Some(true) {
+                CliError::code(exit_code)
+            } else {
+                CliError::new(Box::new(Human(err)), exit_code)
             })
         }
     }

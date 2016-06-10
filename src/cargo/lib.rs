@@ -186,17 +186,19 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
 
     let hide = unknown && shell.get_verbose() != Verbose;
 
-    let _ignored_result = if hide {
-        shell.error("An unknown error occurred")
-    } else if fatal {
-        shell.error(&error)
-    } else {
-        shell.say(&error, BLACK)
-    };
+    if let Some(error) = error {
+        let _ignored_result = if hide {
+            shell.error("An unknown error occurred")
+        } else if fatal {
+            shell.error(&error)
+        } else {
+            shell.say(&error, BLACK)
+        };
 
-    if !handle_cause(&error, shell) || hide {
-        let _ = shell.err().say("\nTo learn more, run the command again \
-                                 with --verbose.".to_string(), BLACK);
+        if !handle_cause(&error, shell) || hide {
+            let _ = shell.err().say("\nTo learn more, run the command again \
+                                     with --verbose.".to_string(), BLACK);
+        }
     }
 
     std::process::exit(exit_code);
@@ -247,7 +249,7 @@ fn flags_from_args<T>(usage: &str, args: &[String],
                                    .help(true);
     docopt.decode().map_err(|e| {
         let code = if e.fatal() {1} else {0};
-        CliError::from_error(human(e.to_string()), code)
+        CliError::new(human(e.to_string()), code)
     })
 }
 
@@ -255,15 +257,15 @@ fn json_from_stdin<T: Decodable>() -> CliResult<T> {
     let mut reader = io::stdin();
     let mut input = String::new();
     try!(reader.read_to_string(&mut input).map_err(|_| {
-        CliError::new("Standard in did not exist or was not UTF-8", 1)
+        CliError::new(human("Standard in did not exist or was not UTF-8"), 1)
     }));
 
     let json = try!(Json::from_str(&input).map_err(|_| {
-        CliError::new("Could not parse standard in as JSON", 1)
+        CliError::new(human("Could not parse standard in as JSON"), 1)
     }));
     let mut decoder = json::Decoder::new(json);
 
     Decodable::decode(&mut decoder).map_err(|_| {
-        CliError::new("Could not process standard in as input", 1)
+        CliError::new(human("Could not process standard in as input"), 1)
     })
 }
