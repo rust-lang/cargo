@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles};
+use core::shell::ColorConfig;
 use util::{self, CargoResult, human};
 use util::{Config, internal, ChainError, profile, join_paths};
 
@@ -460,6 +461,11 @@ fn build_base_args(cx: &Context,
     cmd.cwd(cx.config.cwd());
 
     cmd.arg(&root_path(cx, unit));
+
+    let color_config = cx.config.shell().color_config();
+    if color_config != ColorConfig::Auto {
+        cmd.arg("--color").arg(&color_config.to_string());
+    }
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
