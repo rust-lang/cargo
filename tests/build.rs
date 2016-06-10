@@ -2212,3 +2212,31 @@ fn panic_abort_compiles_with_panic_abort() {
                 execs().with_status(0)
                        .with_stderr_contains("[..] -C panic=abort [..]"));
 }
+
+#[test]
+fn explicit_color_config_is_propagated_to_rustc() {
+    let mut p = project("foo");
+    p = p
+    .file("Cargo.toml", r#"
+            [package]
+
+            name = "test"
+            version = "0.0.0"
+            authors = []
+        "#)
+    .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v").arg("--color").arg("always"),
+                execs().with_status(0).with_stderr_contains(
+                    "[..]rustc src[..]lib.rs --color always[..]"));
+
+    assert_that(p.cargo_process("build").arg("-v").arg("--color").arg("never"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] test v0.0.0 ([..])
+[RUNNING] `rustc src[..]lib.rs --color never --crate-name test --crate-type lib -g \
+        --out-dir [..]target[..]debug \
+        --emit=dep-info,link \
+        -L dependency=[..]target[..]debug \
+        -L dependency=[..]target[..]debug[..]deps`
+"));
+}
