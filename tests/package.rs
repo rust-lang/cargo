@@ -270,28 +270,6 @@ fn package_lib_with_bin() {
 }
 
 #[test]
-fn package_new_git_repo() {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-        "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
-    git2::Repository::init(&p.root()).unwrap();
-
-    assert_that(cargo_process().arg("package").cwd(p.root())
-                 .arg("--no-verify").arg("-v"),
-                execs().with_status(0).with_stderr("\
-[WARNING] manifest has no description[..]
-[PACKAGING] foo v0.0.1 ([..])
-[ARCHIVING] [..]
-[ARCHIVING] [..]
-"));
-}
-
-#[test]
 fn package_git_submodule() {
     let project = git::new("foo", |project| {
         project.file("Cargo.toml", r#"

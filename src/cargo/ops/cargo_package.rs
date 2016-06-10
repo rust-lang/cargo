@@ -3,30 +3,37 @@ use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::{self, Path};
 
-use tar::{Archive, Builder, Header};
-use flate2::{GzBuilder, Compression};
 use flate2::read::GzDecoder;
+use flate2::{GzBuilder, Compression};
+use git2;
+use tar::{Archive, Builder, Header};
 
 use core::{SourceId, Package, PackageId};
 use sources::PathSource;
 use util::{self, CargoResult, human, internal, ChainError, Config, FileLock};
 use ops;
 
+pub struct PackageOpts<'cfg> {
+    pub config: &'cfg Config,
+    pub list: bool,
+    pub check_metadata: bool,
+    pub allow_dirty: bool,
+    pub verify: bool,
+}
+
 pub fn package(manifest_path: &Path,
-               config: &Config,
-               verify: bool,
-               list: bool,
-               metadata: bool) -> CargoResult<Option<FileLock>> {
+               opts: &PackageOpts) -> CargoResult<Option<FileLock>> {
+    let config = opts.config;
     let path = manifest_path.parent().unwrap();
     let id = try!(SourceId::for_path(path));
     let mut src = PathSource::new(path, &id, config);
     let pkg = try!(src.root_package());
 
-    if metadata {
+    if opts.check_metadata {
         try!(check_metadata(&pkg, config));
     }
 
-    if list {
+    if opts.list {
         let root = pkg.root();
         let mut list: Vec<_> = try!(src.list_files(&pkg)).iter().map(|file| {
             util::without_prefix(&file, &root).unwrap().to_path_buf()
@@ -36,6 +43,10 @@ pub fn package(manifest_path: &Path,
             println!("{}", file.display());
         }
         return Ok(None)
+    }
+
+    if !opts.allow_dirty {
+        try!(check_not_dirty(&pkg, &src));
     }
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
@@ -57,7 +68,7 @@ pub fn package(manifest_path: &Path,
     try!(tar(&pkg, &src, config, dst.file(), &filename).chain_error(|| {
         human("failed to prepare local package for uploading")
     }));
-    if verify {
+    if opts.verify {
         try!(dst.seek(SeekFrom::Start(0)));
         try!(run_verify(config, &pkg, dst.file()).chain_error(|| {
             human("failed to verify package tarball")
@@ -107,6 +118,51 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
                     things = things)))
     }
     Ok(())
+}
+
+fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
+    if let Ok(repo) = git2::Repository::discover(p.root()) {
+        if let Some(workdir) = repo.workdir() {
+            debug!("found a git repo at {:?}, checking if index present",
+                   workdir);
+            let path = p.manifest_path();
+            let path = path.strip_prefix(workdir).unwrap_or(path);
+            if let Ok(status) = repo.status_file(path) {
+                if (status & git2::STATUS_IGNORED).is_empty() {
+                    debug!("Cargo.toml found in repo, checking if dirty");
+                    return git(p, src, &repo)
+                }
+            }
+        }
+    }
+
+    // No VCS recognized, we don't know if the directory is dirty or not, so we
+    // have to assume that it's clean.
+    return Ok(());
+
+    fn git(p: &Package,
+           src: &PathSource,
+           repo: &git2::Repository) -> CargoResult<()> {
+        let workdir = repo.workdir().unwrap();
+        let dirty = try!(src.list_files(p)).iter().filter(|file| {
+            let relative = file.strip_prefix(workdir).unwrap();
+            if let Ok(status) = repo.status_file(relative) {
+                status != git2::STATUS_CURRENT
+            } else {
+                false
+            }
+        }).map(|path| {
+            path.strip_prefix(p.root()).unwrap_or(path).display().to_string()
+        }).collect::<Vec<_>>();
+        if dirty.is_empty() {
+            Ok(())
+        } else {
+            bail!("{} dirty files found in the working directory:\n\n{}\n\n\
+                   to publish despite this, pass `--allow-dirty` to \
+                   `cargo publish`",
+                  dirty.len(), dirty.join("\n"))
+        }
+    }
 }
 
 fn tar(pkg: &Package,

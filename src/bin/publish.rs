@@ -11,6 +11,7 @@ pub struct Options {
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_no_verify: bool,
+    flag_allow_dirty: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -24,6 +25,7 @@ Options:
     --host HOST              Host to upload the package to
     --token TOKEN            Token to use when uploading
     --no-verify              Don't verify package tarball before publish
+    --allow-dirty            Allow publishing with a dirty source directory
     --manifest-path PATH     Path to the manifest of the package to publish
     -v, --verbose            Use verbose output
     -q, --quiet              No output printed to stdout
@@ -40,10 +42,17 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         flag_host: host,
         flag_manifest_path,
         flag_no_verify: no_verify,
+        flag_allow_dirty: allow_dirty,
         ..
     } = options;
 
     let root = try!(find_root_manifest_for_wd(flag_manifest_path.clone(), config.cwd()));
-    try!(ops::publish(&root, config, token, host, !no_verify));
+    try!(ops::publish(&root, &ops::PublishOpts {
+        config: config,
+        token: token,
+        index: host,
+        verify: !no_verify,
+        allow_dirty: allow_dirty,
+    }));
     Ok(None)
 }
