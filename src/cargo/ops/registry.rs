@@ -29,28 +29,39 @@ pub struct RegistryConfig {
     pub token: Option<String>,
 }
 
-pub fn publish(manifest_path: &Path,
-               config: &Config,
-               token: Option<String>,
-               index: Option<String>,
-               verify: bool) -> CargoResult<()> {
-    let pkg = try!(Package::for_path(&manifest_path, config));
+pub struct PublishOpts<'cfg> {
+    pub config: &'cfg Config,
+    pub token: Option<String>,
+    pub index: Option<String>,
+    pub verify: bool,
+    pub allow_dirty: bool,
+}
+
+pub fn publish(manifest_path: &Path, opts: &PublishOpts) -> CargoResult<()> {
+    let pkg = try!(Package::for_path(&manifest_path, opts.config));
 
     if !pkg.publish() {
         bail!("some crates cannot be published.\n\
                `{}` is marked as unpublishable", pkg.name());
     }
 
-    let (mut registry, reg_id) = try!(registry(config, token, index));
+    let (mut registry, reg_id) = try!(registry(opts.config,
+                                               opts.token.clone(),
+                                               opts.index.clone()));
     try!(verify_dependencies(&pkg, &reg_id));
 
     // Prepare a tarball, with a non-surpressable warning if metadata
     // is missing since this is being put online.
-    let tarball = try!(ops::package(manifest_path, config, verify,
-                                    false, true)).unwrap();
+    let tarball = try!(ops::package(manifest_path, &ops::PackageOpts {
+        config: opts.config,
+        verify: opts.verify,
+        list: false,
+        check_metadata: true,
+        allow_dirty: opts.allow_dirty,
+    })).unwrap();
 
     // Upload said tarball to the specified destination
-    try!(config.shell().status("Uploading", pkg.package_id().to_string()));
+    try!(opts.config.shell().status("Uploading", pkg.package_id().to_string()));
     try!(transmit(&pkg, tarball.file(), &mut registry));
 
     Ok(())
