@@ -30,7 +30,7 @@ pub fn execute(flags: LocateProjectFlags,
                       .chain_error(|| human("Your project path contains \
                                              characters not representable in \
                                              Unicode"))
-                      .map_err(|e| CliError::from_boxed(e, 1)));
+                      .map_err(|e| CliError::new(e, 1)));
 
     Ok(Some(ProjectLocation { root: string.to_string() }))
 }
