@@ -11,6 +11,7 @@ pub struct Options {
     flag_no_verify: bool,
     flag_no_metadata: bool,
     flag_list: bool,
+    flag_allow_dirty: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -24,6 +25,7 @@ Options:
     -l, --list              Print files included in a package without making one
     --no-verify             Don't verify the contents by building them
     --no-metadata           Ignore warnings about a lack of human-usable metadata
+    --allow-dirty           Allow dirty working directories to be packaged
     --manifest-path PATH    Path to the manifest to compile
     -v, --verbose           Use verbose output
     -q, --quiet             No output printed to stdout
@@ -36,9 +38,12 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                 options.flag_quiet,
                                 &options.flag_color));
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
-    try!(ops::package(&root, config,
-                      !options.flag_no_verify,
-                      options.flag_list,
-                      !options.flag_no_metadata));
+    try!(ops::package(&root, &ops::PackageOpts {
+        config: config,
+        verify: !options.flag_no_verify,
+        list: options.flag_list,
+        check_metadata: !options.flag_no_metadata,
+        allow_dirty: options.flag_allow_dirty,
+    }));
     Ok(None)
 }
