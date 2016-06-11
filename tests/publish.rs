@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate cargotest;
 extern crate flate2;
 extern crate hamcrest;
@@ -171,4 +172,158 @@ fn unpublishable_crate() {
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 "));
+}
+
+#[test]
+fn dont_publish_dirty() {
+    setup();
+
+    repo(&paths::root().join("foo"))
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let p = project("foo");
+    t!(File::create(p.root().join("bar")));
+    assert_that(p.cargo("publish"),
+                execs().with_status(101).with_stderr("\
+[UPDATING] registry `[..]`
+error: 1 dirty files found in the working directory:
+
+bar
+
+to publish despite this, pass `--allow-dirty` to `cargo publish`
+"));
+}
+
+#[test]
+fn publish_clean() {
+    setup();
+
+    repo(&paths::root().join("foo"))
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let p = project("foo");
+    assert_that(p.cargo("publish"),
+                execs().with_status(0));
+}
+
+#[test]
+fn publish_in_sub_repo() {
+    setup();
+
+    repo(&paths::root().join("foo"))
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+        "#)
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    let p = project("foo");
+    t!(File::create(p.root().join("baz")));
+    assert_that(p.cargo("publish").cwd(p.root().join("bar")),
+                execs().with_status(0));
+}
+
+#[test]
+fn publish_when_ignored() {
+    setup();
+
+    repo(&paths::root().join("foo"))
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file(".gitignore", "baz")
+        .build();
+
+    let p = project("foo");
+    t!(File::create(p.root().join("baz")));
+    assert_that(p.cargo("publish"),
+                execs().with_status(0));
+}
+
+#[test]
+fn ignore_when_crate_ignored() {
+    setup();
+
+    repo(&paths::root().join("foo"))
+        .file(".gitignore", "bar")
+        .nocommit_file("bar/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+        "#)
+        .nocommit_file("bar/src/main.rs", "fn main() {}");
+    let p = project("foo");
+    t!(File::create(p.root().join("bar/baz")));
+    assert_that(p.cargo("publish").cwd(p.root().join("bar")),
+                execs().with_status(0));
+}
+
+#[test]
+fn new_crate_rejected() {
+    setup();
+
+    repo(&paths::root().join("foo"))
+        .nocommit_file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+        "#)
+        .nocommit_file("src/main.rs", "fn main() {}");
+    let p = project("foo");
+    t!(File::create(p.root().join("baz")));
+    assert_that(p.cargo("publish"),
+                execs().with_status(101));
 }
