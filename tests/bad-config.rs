@@ -271,10 +271,8 @@ fn bad_crate_type() {
     .file("src/lib.rs", "");
 
     assert_that(foo.cargo_process("build").arg("-v"),
-                execs().with_status(0).with_stderr("\
-warning: crate-type \"bad_type\" was not one of lib|rlib|dylib|staticlib
-[COMPILING] foo v0.0.0 (file:///[..])
-[RUNNING] `rustc [..] --crate-type rlib [..]`
+                execs().with_status(101).with_stderr_contains("\
+error: failed to run `rustc` to learn about target-specific information
 "));
 }
 

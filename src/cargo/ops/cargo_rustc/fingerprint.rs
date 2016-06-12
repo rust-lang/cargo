@@ -63,7 +63,7 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         missing_outputs = !root.join(unit.target.crate_name())
                                .join("index.html").exists();
     } else {
-        for filename in try!(cx.target_filenames(unit)).iter() {
+        for (filename, _) in try!(cx.target_filenames(unit)) {
             missing_outputs |= fs::metadata(root.join(filename)).is_err();
         }
     }
