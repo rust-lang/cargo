@@ -479,3 +479,30 @@ warning: dependency (foo) specified without providing a local path, Git reposito
 to use. This will be considered an error in future versions
 "));
 }
+
+#[test]
+fn invalid_toml_historically_allowed_is_warned() {
+    let p = project("empty_deps")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "empty_deps"
+        version = "0.0.0"
+        authors = []
+    "#)
+    .file(".cargo/config", r#"
+        [foo] bar = 2
+    "#)
+    .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0).with_stderr("\
+warning: TOML file found which contains invalid syntax and will soon not parse
+at `[..]config`.
+
+The TOML spec requires newlines after table definitions (e.g. `[a] b = 1` is
+invalid), but this file has a table header which does not have a newline after
+it. A newline needs to be added and this warning will soon become a hard error
+in the future.
+[COMPILING] empty_deps v0.0.0 ([..])
+"));
+}
