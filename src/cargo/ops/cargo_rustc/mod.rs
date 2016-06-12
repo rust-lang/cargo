@@ -96,6 +96,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
     let mut queue = JobQueue::new(&cx);
 
     try!(cx.prepare(root));
+    try!(cx.probe_target_info(&units));
     try!(custom_build::build_map(&mut cx, &units));
 
     for unit in units.iter() {
@@ -117,7 +118,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
           .or_insert(Vec::new())
           .push(("OUT_DIR".to_string(), out_dir));
 
-        for filename in try!(cx.target_filenames(unit)).iter() {
+        for (filename, _linkable) in try!(cx.target_filenames(unit)) {
             let dst = cx.out_dir(unit).join(filename);
             if unit.profile.test {
                 cx.compilation.tests.push((unit.pkg.clone(),
@@ -142,7 +143,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
                 }
 
                 let v = try!(cx.target_filenames(unit));
-                let v = v.into_iter().map(|f| {
+                let v = v.into_iter().map(|(f, _)| {
                     (unit.target.clone(), cx.out_dir(unit).join(f))
                 }).collect::<Vec<_>>();
                 cx.compilation.libraries.insert(pkgid.clone(), v);
@@ -264,7 +265,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
 
         // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
         //                              this manually
-        for filename in filenames.iter() {
+        for &(ref filename, _linkable) in filenames.iter() {
             let dst = root.join(filename);
             if fs::metadata(&dst).is_ok() {
                 try!(fs::remove_file(&dst));
@@ -280,7 +281,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         }));
 
         if do_rename && real_name != crate_name {
-            let dst = root.join(&filenames[0]);
+            let dst = root.join(&filenames[0].0);
             let src = dst.with_file_name(dst.file_name().unwrap()
                                             .to_str().unwrap()
                                             .replace(&real_name, &crate_name));
@@ -587,11 +588,9 @@ fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
                -> CargoResult<()> {
         let layout = cx.layout(unit.pkg, unit.kind);
 
-        for filename in try!(cx.target_filenames(unit)) {
-            if let Ok((prefix, suffix)) = cx.staticlib(unit.kind) {
-                if filename.starts_with(prefix) && filename.ends_with(suffix) {
-                    continue
-                }
+        for (filename, linkable) in try!(cx.target_filenames(unit)) {
+            if !linkable {
+                continue
             }
             let mut v = OsString::new();
             v.push(&unit.target.crate_name());
