@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf, Display};
 
 use term::color::CYAN;
 use fs2::{FileExt, lock_contended_error};
+#[allow(unused_imports)]
+use libc;
 
 use util::{CargoResult, ChainError, Config, human};
 
@@ -267,6 +269,13 @@ fn acquire(config: &Config,
 
     match try() {
         Ok(()) => return Ok(()),
+
+        // Like above, where we ignore file locking on NFS mounts on Linux, we
+        // do the same on OSX here. Note that ENOTSUP is an OSX_specific
+        // constant.
+        #[cfg(target_os = "macos")]
+        Err(ref e) if e.raw_os_error() == Some(libc::ENOTSUP) => return Ok(()),
+
         Err(e) => {
             if e.raw_os_error() != lock_contended_error().raw_os_error() {
                 return Err(human(e)).chain_error(|| {
@@ -287,7 +296,6 @@ fn acquire(config: &Config,
         use std::ffi::CString;
         use std::mem;
         use std::os::unix::prelude::*;
-        use libc;
 
         let path = match CString::new(path.as_os_str().as_bytes()) {
             Ok(path) => path,
