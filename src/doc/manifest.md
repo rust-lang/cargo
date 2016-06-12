@@ -126,6 +126,25 @@ provide useful information to users of the registry and also influence the
 search ranking of a crate. It is highly discouraged to omit everything in a
 published crate.
 
+## The `metadata` Table (optional)
+
+Cargo by default will warn about unused keys in `Cargo.toml` to assist in
+detecting typos and such. The `package.metadata` table, however, is completely
+ignored by Cargo and will not be warned about. This section can be used for
+tools which would like to store project configuration in `Cargo.toml`. For
+example:
+
+```toml
+[package]
+name = "..."
+# ...
+
+# Metadata used when generating an Android APK, for example.
+[package.metadata.android]
+package-name = "my-awesome-android-app"
+assets = "path/to/static"
+```
+
 # Dependency Sections
 
 See the [specifying dependencies page](specifying-dependencies.html) for
