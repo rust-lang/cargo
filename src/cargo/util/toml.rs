@@ -114,7 +114,7 @@ pub fn to_manifest(contents: &[u8],
     let contents = try!(str::from_utf8(contents).map_err(|_| {
         human(format!("{} is not valid UTF-8", manifest.display()))
     }));
-    let root = try!(parse(contents, &manifest));
+    let root = try!(parse(contents, &manifest, config));
     let mut d = toml::Decoder::new(toml::Value::Table(root));
     let manifest: TomlManifest = try!(Decodable::decode(&mut d).map_err(|e| {
         human(e.to_string())
@@ -157,15 +157,33 @@ pub fn to_manifest(contents: &[u8],
     }
 }
 
-pub fn parse(toml: &str, file: &Path) -> CargoResult<toml::Table> {
-    let mut parser = toml::Parser::new(&toml);
-    if let Some(toml) = parser.parse() {
+pub fn parse(toml: &str,
+             file: &Path,
+             config: &Config) -> CargoResult<toml::Table> {
+    let mut first_parser = toml::Parser::new(&toml);
+    if let Some(toml) = first_parser.parse() {
         return Ok(toml);
     }
+
+    let mut second_parser = toml::Parser::new(toml);
+    second_parser.set_require_newline_after_table(false);
+    if let Some(toml) = second_parser.parse() {
+        let msg = format!("\
+TOML file found which contains invalid syntax and will soon not parse
+at `{}`.
+
+The TOML spec requires newlines after table definitions (e.g. `[a] b = 1` is
+invalid), but this file has a table header which does not have a newline after
+it. A newline needs to be added and this warning will soon become a hard error
+in the future.", file.display());
+        try!(config.shell().warn(&msg));
+        return Ok(toml)
+    }
+
     let mut error_str = format!("could not parse input as TOML\n");
-    for error in parser.errors.iter() {
-        let (loline, locol) = parser.to_linecol(error.lo);
-        let (hiline, hicol) = parser.to_linecol(error.hi);
+    for error in first_parser.errors.iter() {
+        let (loline, locol) = first_parser.to_linecol(error.lo);
+        let (hiline, hicol) = first_parser.to_linecol(error.hi);
         error_str.push_str(&format!("{}:{}:{}{} {}\n",
                                     file.display(),
                                     loline + 1, locol + 1,

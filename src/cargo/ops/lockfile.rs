@@ -22,7 +22,7 @@ pub fn load_pkg_lockfile(pkg: &Package, config: &Config)
     }));
 
     (|| {
-        let table = toml::Value::Table(try!(cargo_toml::parse(&s, f.path())));
+        let table = toml::Value::Table(try!(cargo_toml::parse(&s, f.path(), config)));
         let mut d = toml::Decoder::new(table);
         let v: resolver::EncodableResolve = try!(Decodable::decode(&mut d));
         Ok(Some(try!(v.to_resolve(pkg, config))))
