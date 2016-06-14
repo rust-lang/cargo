@@ -5,7 +5,7 @@ use cargo::util::{CliResult, Config};
 
 #[derive(RustcDecodable)]
 pub struct Options {
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_bin: bool,
@@ -28,7 +28,7 @@ Options:
                         control at all (none) overriding a global configuration.
     --bin               Use a binary instead of a library template
     --name NAME         Set the resulting package name
-    -v, --verbose       Use verbose output
+    -v, --verbose ...   Use verbose output
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
 ";

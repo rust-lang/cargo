@@ -10,7 +10,7 @@ pub struct Options {
     flag_aggressive: bool,
     flag_precise: Option<String>,
     flag_manifest_path: Option<String>,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
 }
@@ -27,7 +27,7 @@ Options:
     --aggressive                 Force updating all dependencies of <name> as well
     --precise PRECISE            Update a single dependency to exactly PRECISE
     --manifest-path PATH         Path to the crate's manifest
-    -v, --verbose                Use verbose output
+    -v, --verbose ...            Use verbose output
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
 

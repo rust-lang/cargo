@@ -6,7 +6,7 @@ use std::cmp;
 #[derive(RustcDecodable)]
 pub struct Options {
     flag_host: Option<String>,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_limit: Option<u32>,
@@ -23,7 +23,7 @@ Usage:
 Options:
     -h, --help               Print this message
     --host HOST              Host of a registry to search in
-    -v, --verbose            Use verbose output
+    -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
     --limit LIMIT            Limit the number of results (default: 10, max: 100)

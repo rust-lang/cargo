@@ -646,6 +646,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
         rustflags_args(self.config, &self.build_config, unit.kind)
     }
+
+    pub fn show_warnings(&self, pkg: &PackageId) -> bool {
+        pkg == self.resolve.root() || pkg.source_id().is_path() ||
+            self.config.extra_verbose()
+    }
 }
 
 // Acquire extra flags to pass to the compiler from the

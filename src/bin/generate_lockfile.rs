@@ -7,7 +7,7 @@ use cargo::util::important_paths::find_root_manifest_for_wd;
 #[derive(RustcDecodable)]
 pub struct Options {
     flag_manifest_path: Option<String>,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
 }
@@ -21,7 +21,7 @@ Usage:
 Options:
     -h, --help               Print this message
     --manifest-path PATH     Path to the manifest to generate a lockfile for
-    -v, --verbose            Use verbose output
+    -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
 ";

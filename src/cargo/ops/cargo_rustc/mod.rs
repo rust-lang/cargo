@@ -109,7 +109,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
     }
 
     // Now that we've figured out everything that we're going to do, do it!
-    try!(queue.execute(cx.config));
+    try!(queue.execute(&mut cx));
 
     for unit in units.iter() {
         let out_dir = cx.layout(unit.pkg, unit.kind).build_out(unit.pkg)
@@ -211,10 +211,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let mut rustc = try!(prepare_rustc(cx, crate_types, unit));
 
     let name = unit.pkg.name().to_string();
-    let is_path_source = unit.pkg.package_id().source_id().is_path();
-    let allow_warnings = unit.pkg.package_id() == cx.resolve.root() ||
-                         is_path_source;
-    if !allow_warnings {
+    if !cx.show_warnings(unit.pkg.package_id()) {
         if cx.config.rustc_info().cap_lints {
             rustc.arg("--cap-lints").arg("allow");
         } else {
@@ -250,7 +247,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
 
     let rustflags = try!(cx.rustflags_args(unit));
 
-    return Ok(Work::new(move |desc_tx| {
+    return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
         // also need to be sure to add any -L paths for our plugins to the
@@ -275,7 +272,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         // Add the arguments from RUSTFLAGS
         rustc.args(&rustflags);
 
-        desc_tx.send(rustc.to_string()).ok();
+        state.running(&rustc);
         try!(exec_engine.exec(rustc).chain_error(|| {
             human(format!("Could not compile `{}`.", name))
         }));
@@ -413,13 +410,13 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let key = (unit.pkg.package_id().clone(), unit.kind);
     let exec_engine = cx.exec_engine.clone();
 
-    Ok(Work::new(move |desc_tx| {
+    Ok(Work::new(move |state| {
         if let Some(output) = build_state.outputs.lock().unwrap().get(&key) {
             for cfg in output.cfgs.iter() {
                 rustdoc.arg("--cfg").arg(cfg);
             }
         }
-        desc_tx.send(rustdoc.to_string()).unwrap();
+        state.running(&rustdoc);
         exec_engine.exec(rustdoc).chain_error(|| {
             human(format!("Could not document `{}`.", name))
         })

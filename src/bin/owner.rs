@@ -8,7 +8,7 @@ pub struct Options {
     flag_add: Option<Vec<String>>,
     flag_remove: Option<Vec<String>>,
     flag_index: Option<String>,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_list: bool,
@@ -27,7 +27,7 @@ Options:
     -l, --list               List owners of a crate
     --index INDEX            Registry index to modify owners for
     --token TOKEN            API token to use when authenticating
-    -v, --verbose            Use verbose output
+    -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
 
