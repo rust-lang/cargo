@@ -7,6 +7,7 @@ use std::io::prelude::*;
 use cargotest::{rustc_host, is_nightly, sleep_ms};
 use cargotest::support::{project, execs};
 use cargotest::support::paths::CargoPathExt;
+use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file, existing_dir};
 
 #[test]
@@ -35,8 +36,7 @@ fn custom_build_script_failed() {
 [RUNNING] `rustc build.rs --crate-name build_script_build --crate-type bin [..]`
 [RUNNING] `[..]build-script-build[..]`
 [ERROR] failed to run custom build command for `foo v0.5.0 ({url})`
-Process didn't exit successfully: `[..]build[..]build-script-build[..]` \
-    (exit code: 101)",
+process didn't exit successfully: `[..]build-script-build[..]` (exit code: 101)",
 url = p.url())));
 }
 
@@ -2018,4 +2018,160 @@ fn panic_abort_with_build_scripts() {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0));
+}
+
+#[test]
+fn warnings_emitted() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:warning=foo");
+                println!("cargo:warning=bar");
+            }
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stderr("\
+[COMPILING] foo v0.5.0 ([..])
+[RUNNING] `rustc [..]`
+[RUNNING] `[..]`
+warning: foo
+warning: bar
+[RUNNING] `rustc [..]`
+"));
+}
+
+#[test]
+fn warnings_hidden_for_upstream() {
+    Package::new("bar", "0.1.0")
+            .file("build.rs", r#"
+                fn main() {
+                    println!("cargo:warning=foo");
+                    println!("cargo:warning=bar");
+                }
+            "#)
+            .file("Cargo.toml", r#"
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                build = "build.rs"
+            "#)
+            .file("src/lib.rs", "")
+            .publish();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stderr("\
+[UPDATING] registry `[..]`
+[DOWNLOADING] bar v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[RUNNING] `rustc [..]`
+[RUNNING] `[..]`
+[RUNNING] `rustc [..]`
+[COMPILING] foo v0.5.0 ([..])
+[RUNNING] `rustc [..]`
+"));
+}
+
+#[test]
+fn warnings_printed_on_vv() {
+    Package::new("bar", "0.1.0")
+            .file("build.rs", r#"
+                fn main() {
+                    println!("cargo:warning=foo");
+                    println!("cargo:warning=bar");
+                }
+            "#)
+            .file("Cargo.toml", r#"
+                [project]
+                name = "bar"
+                version = "0.1.0"
+                authors = []
+                build = "build.rs"
+            "#)
+            .file("src/lib.rs", "")
+            .publish();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-vv"),
+                execs().with_status(0)
+                       .with_stderr("\
+[UPDATING] registry `[..]`
+[DOWNLOADING] bar v0.1.0 ([..])
+[COMPILING] bar v0.1.0 ([..])
+[RUNNING] `rustc [..]`
+[RUNNING] `[..]`
+warning: foo
+warning: bar
+[RUNNING] `rustc [..]`
+[COMPILING] foo v0.5.0 ([..])
+[RUNNING] `rustc [..]`
+"));
+}
+
+#[test]
+fn output_shows_on_vv() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            use std::io::prelude::*;
+
+            fn main() {
+                std::io::stderr().write_all(b"stderr\n").unwrap();
+                std::io::stdout().write_all(b"stdout\n").unwrap();
+            }
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-vv"),
+                execs().with_status(0)
+                       .with_stdout("\
+stdout
+")
+                       .with_stderr("\
+[COMPILING] foo v0.5.0 ([..])
+[RUNNING] `rustc [..]`
+[RUNNING] `[..]`
+stderr
+[RUNNING] `rustc [..]`
+"));
 }

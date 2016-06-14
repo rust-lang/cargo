@@ -1,14 +1,14 @@
-use std::sync::mpsc::Sender;
 use std::fmt;
 
 use util::{CargoResult, Fresh, Dirty, Freshness};
+use super::job_queue::JobState;
 
 pub struct Job { dirty: Work, fresh: Work }
 
 /// Each proc should send its description before starting.
 /// It should send either once or close immediately.
 pub struct Work {
-    inner: Box<FnBox<Sender<String>, CargoResult<()>> + Send>,
+    inner: Box<for <'a, 'b> FnBox<&'a JobState<'b>, CargoResult<()>> + Send>,
 }
 
 trait FnBox<A, R> {
@@ -23,7 +23,7 @@ impl<A, R, F: FnOnce(A) -> R> FnBox<A, R> for F {
 
 impl Work {
     pub fn new<F>(f: F) -> Work
-        where F: FnOnce(Sender<String>) -> CargoResult<()> + Send + 'static
+        where F: FnOnce(&JobState) -> CargoResult<()> + Send + 'static
     {
         Work { inner: Box::new(f) }
     }
@@ -32,14 +32,14 @@ impl Work {
         Work::new(|_| Ok(()))
     }
 
-    pub fn call(self, tx: Sender<String>) -> CargoResult<()> {
+    pub fn call(self, tx: &JobState) -> CargoResult<()> {
         self.inner.call_box(tx)
     }
 
     pub fn then(self, next: Work) -> Work {
-        Work::new(move |tx| {
-            try!(self.call(tx.clone()));
-            next.call(tx)
+        Work::new(move |state| {
+            try!(self.call(state));
+            next.call(state)
         })
     }
 }
@@ -52,10 +52,10 @@ impl Job {
 
     /// Consumes this job by running it, returning the result of the
     /// computation.
-    pub fn run(self, fresh: Freshness, tx: Sender<String>) -> CargoResult<()> {
+    pub fn run(self, fresh: Freshness, state: &JobState) -> CargoResult<()> {
         match fresh {
-            Fresh => self.fresh.call(tx),
-            Dirty => self.dirty.call(tx),
+            Fresh => self.fresh.call(state),
+            Dirty => self.dirty.call(state),
         }
     }
 }

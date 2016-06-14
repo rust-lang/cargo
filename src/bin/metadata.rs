@@ -16,7 +16,7 @@ pub struct Options {
     flag_no_default_features: bool,
     flag_no_deps: bool,
     flag_quiet: Option<bool>,
-    flag_verbose: Option<bool>,
+    flag_verbose: u32,
 }
 
 pub const USAGE: &'static str = "
@@ -35,7 +35,7 @@ Options:
     --manifest-path PATH       Path to the manifest
     --format-version VERSION   Format version [default: 1]
                                Valid values: 1
-    -v, --verbose              Use verbose output
+    -v, --verbose ...          Use verbose output
     -q, --quiet                No output printed to stdout
     --color WHEN               Coloring: auto, always, never
 ";
