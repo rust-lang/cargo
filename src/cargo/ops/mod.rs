@@ -21,7 +21,7 @@ pub use self::registry::{registry_login, search, http_proxy_exists, http_handle}
 pub use self::registry::{modify_owners, yank, OwnersOptions, PublishOpts};
 pub use self::cargo_fetch::{fetch, get_resolved_packages};
 pub use self::cargo_pkgid::pkgid;
-pub use self::resolve::{resolve_ws, resolve_with_previous, warn_if_multiple_versions};
+pub use self::resolve::{resolve_ws, resolve_with_previous};
 pub use self::cargo_output_metadata::{output_metadata, OutputMetadataOptions, ExportInfo};
 
 mod cargo_clean;

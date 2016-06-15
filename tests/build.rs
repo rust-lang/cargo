@@ -2287,7 +2287,11 @@ fn warn_about_multiple_versions() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
                        .with_stderr_contains("\
-warning: using multiple versions of crate \"bar\"
+[WARNING] using multiple versions of crate \"bar\"
 versions: v0.0.1, v0.0.2
 "));
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stderr(""));
 }

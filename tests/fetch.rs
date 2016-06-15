@@ -45,7 +45,12 @@ fn warn_about_multiple_versions() {
     assert_that(p.cargo_process("fetch"),
                 execs().with_status(0)
                        .with_stderr_contains("\
-warning: using multiple versions of crate \"bar\"
+[WARNING] using multiple versions of crate \"bar\"
 versions: v0.0.1, v0.0.2
 "));
+
+    // Warning should be generated only once
+    assert_that(p.cargo("fetch"),
+                execs().with_status(0)
+                       .with_stderr(""));
 }

@@ -20,7 +20,6 @@ pub fn generate_lockfile(ws: &Workspace) -> CargoResult<()> {
     let resolve = try!(ops::resolve_with_previous(&mut registry, ws,
                                                   Method::Everything,
                                                   None, None));
-    try!(ops::warn_if_multiple_versions(&resolve, ws.config()));
     try!(ops::write_pkg_lockfile(ws, &resolve));
     Ok(())
 }
@@ -100,7 +99,6 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
         }
     }
 
-    try!(ops::warn_if_multiple_versions(&resolve, ws.config()));
     try!(ops::write_pkg_lockfile(&ws, &resolve));
     return Ok(());
 

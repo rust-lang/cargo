@@ -5,7 +5,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargotest::support::{project, execs};
-use cargotest::support::registry::Package;
+use cargotest::support::registry::{self, Package};
 use hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
@@ -223,7 +223,7 @@ fn warn_about_multiple_versions_on_generate() {
     assert_that(p.cargo_process("generate-lockfile"),
                 execs().with_status(0)
                        .with_stderr_contains("\
-warning: using multiple versions of crate \"bar\"
+[WARNING] using multiple versions of crate \"bar\"
 versions: v0.0.1, v0.0.2
 "));
 }
@@ -250,7 +250,11 @@ fn warn_about_multiple_versions_on_update() {
     assert_that(p.cargo_process("update"),
                 execs().with_status(0)
                        .with_stderr_contains("\
-warning: using multiple versions of crate \"bar\"
+[WARNING] using multiple versions of crate \"bar\"
 versions: v0.0.1, v0.0.2
 "));
+
+    assert_that(p.cargo("update"),
+                execs().with_status(0)
+                       .with_stderr(&format!("[UPDATING] registry `{reg}`", reg = registry::registry())));
 }

@@ -158,6 +158,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     if let Some(previous) = previous {
         resolved.copy_metadata(previous);
     }
+    try!(warn_if_multiple_versions(&resolved, previous, ws.config()));
     return Ok(resolved);
 
     fn keep<'a>(p: &&'a PackageId,
@@ -171,17 +172,18 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     }
 }
 
-pub fn warn_if_multiple_versions(resolved: &Resolve, config: &Config) -> CargoResult<()> {
-    let mut package_version_map : HashMap<(&str, &SourceId), Vec<&semver::Version>> =
-        HashMap::new();
+fn warn_if_multiple_versions(resolved: &Resolve,
+                             previous: Option<&Resolve>,
+                             config: &Config)
+                             -> CargoResult<()> {
+    let package_version_map = build_version_map(resolved);
+    let previous_version_map = previous.map(build_version_map).unwrap_or(HashMap::new());
 
-    for package_id in resolved.iter() {
-        let key = (package_id.name(), package_id.source_id());
-        package_version_map.entry(key).or_insert(Vec::new()).push(package_id.version());
-    }
+    for ((package_name, package_source), versions) in package_version_map {
+        let old_version_count = previous_version_map.get(&(package_name, package_source))
+                                                    .unwrap_or(&vec![]).len();
 
-    for ((package_name, _), versions) in package_version_map {
-        if versions.len() > 1 {
+        if versions.len() > 1 && old_version_count <= 1 {
             let mut copied_versions = versions.clone();
             // Sort the versions so that test results are deterministic
             copied_versions.sort();
@@ -197,4 +199,23 @@ pub fn warn_if_multiple_versions(resolved: &Resolve, config: &Config) -> CargoRe
     }
 
     Ok(())
+}
+
+fn build_version_map(resolved: &Resolve) -> HashMap<(&str, &SourceId), Vec<&semver::Version>> {
+    let mut package_version_map : HashMap<(&str, &SourceId), Vec<&semver::Version>> =
+        HashMap::new();
+
+    for package_id in resolved.iter() {
+        let key = (package_id.name(), package_id.source_id());
+
+        if let Some(found_versions) = package_version_map.get_mut(&key) {
+            found_versions.push(package_id.version());
+        }
+
+        if !package_version_map.contains_key(&key) {
+            package_version_map.insert(key, vec![package_id.version()]);
+        }
+    }
+
+    package_version_map
 }

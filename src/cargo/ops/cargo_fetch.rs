@@ -7,7 +7,6 @@ use util::CargoResult;
 pub fn fetch<'a>(ws: &Workspace<'a>) -> CargoResult<(Resolve, PackageSet<'a>)> {
     let mut registry = PackageRegistry::new(ws.config());
     let resolve = try!(ops::resolve_ws(&mut registry, ws));
-    try!(ops::warn_if_multiple_versions(&resolve, ws.config()));
     let packages = get_resolved_packages(&resolve, registry);
     for id in resolve.iter() {
         try!(packages.get(id));
