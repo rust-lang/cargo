@@ -256,5 +256,6 @@ versions: v0.0.1, v0.0.2
 
     assert_that(p.cargo("update"),
                 execs().with_status(0)
-                       .with_stderr(&format!("[UPDATING] registry `{reg}`", reg = registry::registry())));
+                .with_stderr(&format!("\
+[UPDATING] registry `{}`", registry::registry())));
 }
