@@ -475,7 +475,7 @@ fn scrape_target_config(config: &Config, triple: &str)
         Some(table) => table.val,
         None => return Ok(ret),
     };
-    for (lib_name, _) in table.into_iter() {
+    for (lib_name, value) in table {
         if lib_name == "ar" || lib_name == "linker" || lib_name == "rustflags" {
             continue
         }
@@ -488,39 +488,37 @@ fn scrape_target_config(config: &Config, triple: &str)
             rerun_if_changed: Vec::new(),
             warnings: Vec::new(),
         };
-        let key = format!("{}.{}", key, lib_name);
-        let table = try!(config.get_table(&key)).unwrap().val;
-        for (k, _) in table.into_iter() {
+        for (k, value) in try!(value.table()).0 {
             let key = format!("{}.{}", key, k);
             match &k[..] {
                 "rustc-flags" => {
-                    let flags = try!(config.get_string(&key)).unwrap();
+                    let (flags, definition) = try!(value.string());
                     let whence = format!("in `{}` (in {})", key,
-                                         flags.definition);
+                                         definition.display());
                     let (paths, links) = try!(
-                        BuildOutput::parse_rustc_flags(&flags.val, &whence)
+                        BuildOutput::parse_rustc_flags(&flags, &whence)
                     );
-                    output.library_paths.extend(paths.into_iter());
-                    output.library_links.extend(links.into_iter());
+                    output.library_paths.extend(paths);
+                    output.library_links.extend(links);
                 }
                 "rustc-link-lib" => {
-                    let list = try!(config.get_list(&key)).unwrap();
-                    output.library_links.extend(list.val.into_iter()
-                                                        .map(|v| v.0));
+                    let list = try!(value.list());
+                    output.library_links.extend(list.iter()
+                                                    .map(|v| v.0.clone()));
                 }
                 "rustc-link-search" => {
-                    let list = try!(config.get_list(&key)).unwrap();
-                    output.library_paths.extend(list.val.into_iter().map(|v| {
+                    let list = try!(value.list());
+                    output.library_paths.extend(list.iter().map(|v| {
                         PathBuf::from(&v.0)
                     }));
                 }
                 "rustc-cfg" => {
-                    let list = try!(config.get_list(&key)).unwrap();
-                    output.cfgs.extend(list.val.into_iter().map(|v| v.0));
+                    let list = try!(value.list());
+                    output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 _ => {
-                    let val = try!(config.get_string(&key)).unwrap();
-                    output.metadata.push((k, val.val));
+                    let val = try!(value.string()).0;
+                    output.metadata.push((k.clone(), val.to_string()));
                 }
             }
         }
