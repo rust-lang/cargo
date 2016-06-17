@@ -2175,3 +2175,34 @@ stderr
 [RUNNING] `rustc [..]`
 "));
 }
+
+#[test]
+fn links_with_dots() {
+    let target = rustc_host();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            build = "build.rs"
+            links = "a.b"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-link-search=bar")
+            }
+        "#)
+        .file(".cargo/config", &format!(r#"
+            [target.{}.'a.b']
+            rustc-link-search = ["foo"]
+        "#, target));
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                       .with_stderr_contains("\
+[RUNNING] `rustc [..] --crate-name foo [..] -L foo[..]`
+"));
+}
