@@ -45,7 +45,7 @@ Options:
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
 
-Some common cargo commands are:
+Some common cargo commands are (see all commands with --list):
     build       Compile the current project
     clean       Remove the target directory
     doc         Build this project's and its dependencies' documentation
