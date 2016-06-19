@@ -41,7 +41,7 @@ given. Relative paths are resolved relative to the parent directory of the
 
 ```toml
 # An array of paths to local repositories which are to be used as overrides for
-# dependencies. For more information see the Cargo Guide.
+# dependencies. For more information see the Specifying Dependencies guide.
 paths = ["/path/to/override"]
 
 [cargo-new]
