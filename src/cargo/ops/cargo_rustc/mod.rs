@@ -467,8 +467,10 @@ fn build_base_args(cx: &Context,
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
-    for crate_type in crate_types.iter() {
-        cmd.arg("--crate-type").arg(crate_type);
+    if !test {
+        for crate_type in crate_types.iter() {
+            cmd.arg("--crate-type").arg(crate_type);
+        }
     }
 
     let prefer_dynamic = (unit.target.for_host() &&
@@ -515,6 +517,8 @@ fn build_base_args(cx: &Context,
 
     if test && unit.target.harness() {
         cmd.arg("--test");
+    } else if test {
+        cmd.arg("--cfg").arg("test");
     }
 
     if let Some(features) = cx.resolve.features(unit.pkg.package_id()) {
