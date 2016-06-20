@@ -209,7 +209,7 @@ fn build_with_args_to_one_of_multiple_tests() {
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug [..]`
-[RUNNING] `rustc tests{sep}bar.rs --crate-name bar --crate-type bin -g \
+[RUNNING] `rustc tests{sep}bar.rs --crate-name bar -g \
         -C debug-assertions [..]--test[..]`
 ", sep = SEP,
                 dir = p.root().display(), url = p.url())));

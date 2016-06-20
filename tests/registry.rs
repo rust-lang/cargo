@@ -1067,6 +1067,6 @@ fn upstream_warnings_on_extra_verbose() {
 
     assert_that(p.cargo("build").arg("-vv"),
                 execs().with_status(0).with_stderr_contains("\
-[..] warning: function is never used[..]
+[..]warning: function is never used[..]
 "));
 }
