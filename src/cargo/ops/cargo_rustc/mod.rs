@@ -245,7 +245,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
     let cwd = cx.config.cwd().to_path_buf();
 
-    let rustflags = try!(cx.rustflags_args(unit));
+    rustc.args(&try!(cx.rustflags_args(unit)));
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -268,9 +268,6 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                 try!(fs::remove_file(&dst));
             }
         }
-
-        // Add the arguments from RUSTFLAGS
-        rustc.args(&rustflags);
 
         state.running(&rustc);
         try!(exec_engine.exec(rustc).chain_error(|| {
@@ -404,6 +401,8 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         rustdoc.env("OUT_DIR", &cx.layout(unit.pkg, unit.kind)
                                   .build_out(unit.pkg));
     }
+
+    rustdoc.args(&try!(cx.rustdocflags_args(unit)));
 
     let name = unit.pkg.name().to_string();
     let build_state = cx.build_state.clone();

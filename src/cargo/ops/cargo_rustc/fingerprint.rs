@@ -346,6 +346,11 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     };
     let mut deps = deps;
     deps.sort_by(|&(ref a, _), &(ref b, _)| a.cmp(b));
+    let extra_flags = if unit.profile.doc {
+        try!(cx.rustdocflags_args(unit))
+    } else {
+        try!(cx.rustflags_args(unit))
+    };
     let fingerprint = Arc::new(Fingerprint {
         rustc: util::hash_u64(&cx.config.rustc_info().verbose_version),
         target: util::hash_u64(&unit.target),
@@ -354,7 +359,7 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         deps: deps,
         local: local,
         memoized_hash: Mutex::new(None),
-        rustflags: try!(cx.rustflags_args(unit)),
+        rustflags: extra_flags,
     });
     cx.fingerprints.insert(*unit, fingerprint.clone());
     Ok(fingerprint)
