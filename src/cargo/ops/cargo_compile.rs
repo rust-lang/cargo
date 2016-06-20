@@ -26,6 +26,7 @@ use std::collections::HashMap;
 use std::default::Default;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::env::set_var;
 
 use core::registry::PackageRegistry;
 use core::{Source, SourceId, PackageSet, Package, Target};
@@ -471,6 +472,10 @@ fn scrape_target_config(config: &Config, triple: &str)
         linker: try!(config.get_path(&format!("{}.linker", key))).map(|v| v.val),
         overrides: HashMap::new(),
     };
+    match ret.linker {
+        Some(ref path) => set_var("CC", path.clone().into_os_string()),
+        _ => {},
+    }
     let table = match try!(config.get_table(&key)) {
         Some(table) => table.val,
         None => return Ok(ret),
