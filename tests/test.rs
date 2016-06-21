@@ -2161,3 +2161,35 @@ fn test_panic_abort_with_dep() {
     assert_that(p.cargo_process("test").arg("-v"),
                 execs().with_status(0));
 }
+
+#[test]
+fn cfg_test_even_with_no_harness() {
+    if !is_nightly() {
+        return
+    }
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            harness = false
+            doctest = false
+        "#)
+        .file("src/lib.rs", r#"
+            #[cfg(test)]
+            fn main() {
+                println!("hello!");
+            }
+        "#);
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_status(0)
+                       .with_stdout("hello!\n")
+                       .with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..]`
+[RUNNING] `[..]`
+"));
+}
