@@ -291,6 +291,8 @@ fn use_a_spec_to_select() {
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
+[WARNING] [..]
+[..]
 [DOWNLOADING] [..]
 [DOWNLOADING] [..]
 [COMPILING] [..]
