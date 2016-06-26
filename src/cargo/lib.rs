@@ -36,7 +36,7 @@ use core::shell::Verbosity::{Verbose};
 use core::shell::ColorConfig::{Auto};
 use term::color::{BLACK};
 
-pub use util::{CargoError, CliError, CliResult, human, Config, ChainError};
+pub use util::{CargoError, CargoResult, CliError, CliResult, human, Config, ChainError};
 
 macro_rules! bail {
     ($($fmt:tt)*) => (
@@ -137,16 +137,14 @@ pub fn shell(verbosity: Verbosity, color_config: ColorConfig) -> MultiShell {
     }
 
     let tty = isatty(Output::Stderr);
-    let stderr = Box::new(io::stderr());
 
     let config = ShellConfig { color_config: color_config, tty: tty };
-    let err = Shell::create(stderr, config);
+    let err = Shell::create(|| Box::new(io::stderr()), config);
 
     let tty = isatty(Output::Stdout);
-    let stdout = Box::new(io::stdout());
 
     let config = ShellConfig { color_config: color_config, tty: tty };
-    let out = Shell::create(stdout, config);
+    let out = Shell::create(|| Box::new(io::stdout()), config);
 
     return MultiShell::new(out, err, verbosity);
 

@@ -28,7 +28,7 @@ fn non_tty() {
     let config = ShellConfig { color_config: Auto, tty: false };
     let a = Arc::new(Mutex::new(Vec::new()));
 
-    Shell::create(Box::new(Sink(a.clone())), config).tap(|shell| {
+    Shell::create(|| Box::new(Sink(a.clone())), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).unwrap();
     });
     let buf = a.lock().unwrap().clone();
@@ -43,7 +43,7 @@ fn color_explicitly_disabled() {
     let config = ShellConfig { color_config: Never, tty: true };
     let a = Arc::new(Mutex::new(Vec::new()));
 
-    Shell::create(Box::new(Sink(a.clone())), config).tap(|shell| {
+    Shell::create(|| Box::new(Sink(a.clone())), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).unwrap();
     });
     let buf = a.lock().unwrap().clone();
@@ -58,7 +58,7 @@ fn colored_shell() {
     let config = ShellConfig { color_config: Auto, tty: true };
     let a = Arc::new(Mutex::new(Vec::new()));
 
-    Shell::create(Box::new(Sink(a.clone())), config).tap(|shell| {
+    Shell::create(|| Box::new(Sink(a.clone())), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).unwrap();
     });
     let buf = a.lock().unwrap().clone();
@@ -75,7 +75,7 @@ fn color_explicitly_enabled() {
     let config = ShellConfig { color_config: Always, tty: false };
     let a = Arc::new(Mutex::new(Vec::new()));
 
-    Shell::create(Box::new(Sink(a.clone())), config).tap(|shell| {
+    Shell::create(|| Box::new(Sink(a.clone())), config).tap(|shell| {
         shell.say("Hey Alex", color::RED).unwrap();
     });
     let buf = a.lock().unwrap().clone();

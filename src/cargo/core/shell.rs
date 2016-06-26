@@ -147,27 +147,57 @@ impl MultiShell {
 }
 
 impl Shell {
-    pub fn create(out: Box<Write + Send>, config: ShellConfig) -> Shell {
+    pub fn create<T: FnMut() -> Box<Write + Send>>(mut out_fn: T, config: ShellConfig) -> Shell {
+        let term = match Shell::get_term(out_fn()) {
+            Ok(t) => t,
+            Err(_) => NoColor(out_fn())
+        };
+
+        Shell {
+            terminal: term,
+            config: config,
+        }
+    }
+
+    #[cfg(any(windows))]
+    fn get_term(out: Box<Write + Send>) -> CargoResult<AdequateTerminal> {
+        // Check if the creation of a console will succeed
+        if ::term::WinConsole::new(vec![0u8; 0]).is_ok() {
+            let t = try!(::term::WinConsole::new(out));
+            if !t.supports_color() {
+                Ok(NoColor(Box::new(t)))
+            } else {
+                Ok(Colored(Box::new(t)))
+            }
+        } else {
+            // If we fail to get a windows console, we try to get a `TermInfo` one
+            Ok(Shell::get_terminfo_term(out))
+        }
+    }
+
+    #[cfg(any(unix))]
+    fn get_term(out: Box<Write + Send>) -> CargoResult<AdequateTerminal> {
+        Ok(Shell::get_terminfo_term(out))
+    }
+
+    fn get_terminfo_term(out: Box<Write + Send>) -> AdequateTerminal {
         // Use `TermInfo::from_env()` and `TerminfoTerminal::supports_color()`
         // to determine if creation of a TerminfoTerminal is possible regardless
         // of the tty status. --color options are parsed after Shell creation so
         // always try to create a terminal that supports color output. Fall back
         // to a no-color terminal regardless of whether or not a tty is present
         // and if color output is not possible.
-        Shell {
-            terminal: match ::term::terminfo::TermInfo::from_env() {
-                Ok(ti) => {
-                    let term = TerminfoTerminal::new_with_terminfo(out, ti);
-                    if !term.supports_color() {
-                        NoColor(term.into_inner())
-                    } else {
-                        // Color output is possible.
-                        Colored(Box::new(term))
-                    }
-                },
-                Err(_) => NoColor(out),
+        match ::term::terminfo::TermInfo::from_env() {
+            Ok(ti) => {
+                let term = TerminfoTerminal::new_with_terminfo(out, ti);
+                if !term.supports_color() {
+                    NoColor(term.into_inner())
+                } else {
+                    // Color output is possible.
+                    Colored(Box::new(term))
+                }
             },
-            config: config,
+            Err(_) => NoColor(out),
         }
     }
 
