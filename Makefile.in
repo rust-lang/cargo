@@ -274,18 +274,18 @@ prepare-image-$(1):
 	@[ -f $$(TARGET_$(1))/cargo$$(X) ] || echo 'Please run `make` first'
 	@[ -f $$(TARGET_$(1))/cargo$$(X) ]
 	rm -rf $$(IMGDIR_$(1))
-	mkdir -p $$(IMGDIR_$(1))/bin $$(IMGDIR_$(1))/lib/cargo \
-		$$(IMGDIR_$(1))/share/man/man1 \
-		$$(IMGDIR_$(1))/share/doc/cargo \
-		$$(IMGDIR_$(1))/share/zsh/site-functions \
-		$$(IMGDIR_$(1))/etc/bash_completion.d
+	mkdir -p $$(IMGDIR_$(1))/bin $$(IMGDIR_$(1))/$(CFG_LIBDIR)/cargo \
+		$$(IMGDIR_$(1))$(CFG_MANDIR)/man1 \
+		$$(IMGDIR_$(1))$(CFG_DATADIR)/doc/cargo \
+		$$(IMGDIR_$(1))$(CFG_DATADIR)/zsh/site-functions \
+		$$(IMGDIR_$(1))$(CFG_SYSCONFDIR)/bash_completion.d
 	cp $$(TARGET_$(1))/cargo$$(X) $$(IMGDIR_$(1))/bin
-	cp $(S)src/etc/man/*.1 $$(IMGDIR_$(1))/share/man/man1
-	cp $(S)src/etc/_cargo $$(IMGDIR_$(1))/share/zsh/site-functions/_cargo
-	cp $(S)src/etc/cargo.bashcomp.sh $$(IMGDIR_$(1))/etc/bash_completion.d/cargo
+	cp $(S)src/etc/man/*.1 $$(IMGDIR_$(1))$(CFG_MANDIR)/man1
+	cp $(S)src/etc/_cargo $$(IMGDIR_$(1))$(CFG_DATADIR)/zsh/site-functions/_cargo
+	cp $(S)src/etc/cargo.bashcomp.sh $$(IMGDIR_$(1))$(CFG_SYSCONFDIR)/bash_completion.d/cargo
 	cp $(S)README.md $(S)LICENSE-MIT $(S)LICENSE-APACHE \
 		$(S)LICENSE-THIRD-PARTY \
-		$$(IMGDIR_$(1))/share/doc/cargo
+		$$(IMGDIR_$(1))$(CFG_DATADIR)/doc/cargo
 
 prepare-overlay-$(1):
 	rm -Rf $$(OVERLAYDIR_$(1))
