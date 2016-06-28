@@ -13,6 +13,8 @@ pub struct Options {
     flag_no_deps: bool,
     flag_quiet: Option<bool>,
     flag_verbose: u32,
+    flag_frozen: bool,
+    flag_locked: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -34,12 +36,16 @@ Options:
     -v, --verbose ...          Use verbose output
     -q, --quiet                No output printed to stdout
     --color WHEN               Coloring: auto, always, never
+    --frozen                   Require Cargo.lock and cache are up to date
+    --locked                   Require Cargo.lock is up to date
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<ExportInfo>> {
-    try!(config.configure_shell(options.flag_verbose,
-                                options.flag_quiet,
-                                &options.flag_color));
+    try!(config.configure(options.flag_verbose,
+                          options.flag_quiet,
+                          &options.flag_color,
+                          options.flag_frozen,
+                          options.flag_locked));
     let manifest = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
 
     let options = OutputMetadataOptions {

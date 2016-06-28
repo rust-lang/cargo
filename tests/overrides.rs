@@ -467,7 +467,10 @@ fn override_with_nothing() {
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [UPDATING] git repository [..]
-error: Unable to update file://[..]
+[ERROR] failed to load source for a dependency on `foo`
+
+Caused by:
+  Unable to update file://[..]
 
 Caused by:
   Could not find Cargo.toml in `[..]`

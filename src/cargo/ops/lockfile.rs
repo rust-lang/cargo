@@ -86,6 +86,12 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
         }
     }
 
+    if !ws.config().lock_update_allowed() {
+        let flag = if ws.config().network_allowed() {"--frozen"} else {"--locked"};
+        bail!("the lock file needs to be updated but {} was passed to \
+               prevent this", flag);
+    }
+
     // Ok, if that didn't work just write it out
     root.open_rw("Cargo.lock", ws.config(), "Cargo.lock file").and_then(|mut f| {
         try!(f.file().set_len(0));
