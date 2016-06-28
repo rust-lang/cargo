@@ -353,7 +353,10 @@ fi
 
 # a little post-processing of various config values
 CFG_PREFIX=${CFG_PREFIX%/}
+CFG_DATADIR=${CFG_DATADIR%/}
+CFG_INFODIR=${CFG_INFODIR%/}
 CFG_MANDIR=${CFG_MANDIR%/}
+CFG_LIBDIR=${CFG_LIBDIR%/}
 CFG_HOST="$(echo $CFG_HOST | tr ',' ' ')"
 CFG_TARGET="$(echo $CFG_TARGET | tr ',' ' ')"
 
@@ -408,8 +411,10 @@ putvar CFG_PREFIX
 putvar CFG_BUILD
 putvar CFG_HOST
 putvar CFG_TARGET
-putvar CFG_LIBDIR
+putvar CFG_DATADIR
+putvar CFG_INFODIR
 putvar CFG_MANDIR
+putvar CFG_LIBDIR
 putvar CFG_RUSTC
 putvar CFG_RUSTDOC
 
