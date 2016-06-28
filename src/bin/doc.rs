@@ -31,7 +31,7 @@ Options:
     --open                       Opens the docs in a browser after the operation
     -p SPEC, --package SPEC ...  Package to document
     --no-deps                    Don't build documentation for dependencies
-    -j N, --jobs N               The number of jobs to run in parallel
+    -j N, --jobs N               The number of jobs to run in parallel (defaults to # of CPUs)
     --lib                        Document only this package's library
     --bin NAME                   Document only the specified binary
     --release                    Build artifacts in release mode, with optimizations

@@ -35,7 +35,7 @@ Usage:
 Options:
     -h, --help               Print this message
     -p SPEC, --package SPEC  The profile to compile for
-    -j N, --jobs N           The number of jobs to run in parallel
+    -j N, --jobs N           The number of jobs to run in parallel (defaults to # of CPUs)
     --lib                    Build only this package's library
     --bin NAME               Build only the specified binary
     --example NAME           Build only the specified example

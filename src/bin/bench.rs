@@ -37,7 +37,7 @@ Options:
     --bench NAME                 Benchmark only the specified bench target
     --no-run                     Compile, but don't run benchmarks
     -p SPEC, --package SPEC ...  Package to run benchmarks for
-    -j N, --jobs N               The number of jobs to run in parallel
+    -j N, --jobs N               The number of jobs to run in parallel (defaults to # of CPUs)
     --features FEATURES          Space-separated list of features to also build
     --no-default-features        Do not build the `default` feature
     --target TRIPLE              Build for the target triple

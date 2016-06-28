@@ -79,7 +79,7 @@ proxy = "..."     # HTTP proxy to use for HTTP requests (defaults to none)
 timeout = 60000   # Timeout for each HTTP request, in milliseconds
 
 [build]
-jobs = 1                  # number of jobs to run by default (default to # cpus)
+jobs = 1                  # number of jobs to run by default (defaults to # of CPUs)
 rustc = "rustc"           # the rust compiler tool
 rustdoc = "rustdoc"       # the doc generator tool
 target = "triple"         # build for the target triple
