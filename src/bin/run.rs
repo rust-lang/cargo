@@ -28,7 +28,7 @@ Options:
     -h, --help              Print this message
     --bin NAME              Name of the bin target to run
     --example NAME          Name of the example target to run
-    -j N, --jobs N          The number of jobs to run in parallel (defaults to # of CPUs)
+    -j N, --jobs N          Number of parallel jobs, defaults to # of CPUs
     --release               Build artifacts in release mode, with optimizations
     --features FEATURES     Space-separated list of features to also build
     --no-default-features   Do not build the `default` feature
