@@ -102,7 +102,10 @@ fn http_auth_offered() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr(&format!("\
 [UPDATING] git repository `http://{addr}/foo/bar`
-[ERROR] Unable to update http://{addr}/foo/bar
+[ERROR] failed to load source for a dependency on `bar`
+
+Caused by:
+  Unable to update http://{addr}/foo/bar
 
 Caused by:
   failed to clone into: [..]

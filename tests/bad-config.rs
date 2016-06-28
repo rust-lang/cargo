@@ -73,9 +73,10 @@ fn bad3() {
             [http]
               proxy = true
         "#);
+    Package::new("foo", "1.0.0").publish();
     assert_that(foo.cargo_process("publish").arg("-v"),
                 execs().with_status(101).with_stderr("\
-[UPDATING] registry `https://[..]`
+[UPDATING] registry `[..]`
 [ERROR] invalid configuration for key `http.proxy`
 expected a string, but found a boolean in [..]config
 "));
@@ -246,7 +247,10 @@ fn bad_git_dependency() {
     assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] git repository `file:///`
-[ERROR] Unable to update file:///
+[ERROR] failed to load source for a dependency on `foo`
+
+Caused by:
+  Unable to update file:///
 
 Caused by:
   failed to clone into: [..]

@@ -155,3 +155,37 @@ many possible names has historically led to confusion where one case was handled
 but others were accidentally forgotten.
 
 [crates.io]: https://crates.io/
+
+# How can Cargo work offline?
+
+Cargo is often used in situations with limited or no network access such as
+airplanes, CI environments, or embedded in large production deployments. Users
+are often surprised when Cargo attempts to fetch resources from the network, and
+hence the request for Cargo to work offline comes up frequently.
+
+Cargo, at its heart, will not attempt to access the network unless told to do
+so. That is, if no crates comes from crates.io, a git repository, or some other
+network location, Cargo will never attempt to make a network connection. As a
+result, if Cargo attempts to touch the network, then it's because it needs to
+fetch a required resource.
+
+Cargo is also quite aggressive about caching information to minimize the amount
+of network activity. It will guarantee, for example, that if `cargo build` (or
+an equivalent) is run to completion then the next `cargo build` is guaranteed to
+not touch the network so long as `Cargo.toml` has not been modified in the
+meantime. This avoidance of the network boils down to a `Cargo.lock` existing
+and a populated cache of the crates reflected in the lock file. If either of
+these components are missing, then they're required for the build to succeed and
+must be fetched remotely.
+
+As of Rust 1.11.0 (to be released 2016-09-29) Cargo understands a new flag,
+`--frozen`, which is an assertion that it shouldn't touch the network. When
+passed, Cargo will immediately return an error if it would otherwise attempt a
+network request. The error should include contextual information about why the
+network request is being made in the first place to help debug as well. Note
+that this flag *does not change the behavior of Cargo*, it simply asserts that
+Cargo shouldn't touch the network as a previous command has been run to ensure
+that network activity shouldn't be necessary.
+
+Note that Cargo does not yet support vendoring in a first-class fashion, but
+this is a hotly desired feature and coming soon!

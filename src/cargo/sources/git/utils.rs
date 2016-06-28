@@ -560,19 +560,26 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
     })
 }
 
-pub fn fetch(repo: &git2::Repository, url: &str,
-             refspec: &str, cargo_config: &Config) -> CargoResult<()> {
-    // Create a local anonymous remote in the repository to fetch the url
+pub fn fetch(repo: &git2::Repository,
+             url: &str,
+             refspec: &str,
+             config: &Config) -> CargoResult<()> {
+    if !config.network_allowed() {
+        bail!("attempting to update a git repository, but --frozen \
+               was specified")
+    }
 
     with_authentication(url, &try!(repo.config()), |f| {
         let mut cb = git2::RemoteCallbacks::new();
         cb.credentials(f);
+
+        // Create a local anonymous remote in the repository to fetch the url
         let mut remote = try!(repo.remote_anonymous(&url));
         let mut opts = git2::FetchOptions::new();
         opts.remote_callbacks(cb)
             .download_tags(git2::AutotagOption::All);
 
-        try!(network::with_retry(cargo_config, ||{
+        try!(network::with_retry(config, ||{
             remote.fetch(&[refspec], Some(&mut opts), None)
         }));
         Ok(())
