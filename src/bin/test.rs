@@ -41,7 +41,7 @@ Options:
     --bench NAME                 Test only the specified benchmark target
     --no-run                     Compile, but don't run tests
     -p SPEC, --package SPEC ...  Package to run tests for
-    -j N, --jobs N               The number of jobs to run in parallel
+    -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --release                    Build artifacts in release mode, with optimizations
     --features FEATURES          Space-separated list of features to also build
     --no-default-features        Do not build the `default` feature
