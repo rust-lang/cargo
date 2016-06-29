@@ -379,6 +379,12 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         rustdoc.arg("--target").arg(target);
     }
 
+    if let Some(css_extension) = unit.pkg.manifest().css_extension() {
+        // We need to activate nightly option to make this option available
+        rustdoc.arg("-Z").arg("unstable-options");
+        rustdoc.arg("--extend-css").arg(css_extension);
+    }
+
     let doc_dir = cx.out_dir(unit);
 
     // Create the documentation directory ahead of time as rustdoc currently has
