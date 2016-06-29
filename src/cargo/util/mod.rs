@@ -20,6 +20,7 @@ pub use self::to_url::ToUrl;
 pub use self::vcs::{GitRepo, HgRepo};
 pub use self::read2::read2;
 
+pub mod cfg;
 pub mod config;
 pub mod errors;
 pub mod graph;
@@ -34,7 +35,6 @@ pub mod toml;
 pub mod lev_distance;
 pub mod job;
 pub mod network;
-mod cfg;
 mod dependency_queue;
 mod rustc;
 mod sha256;
