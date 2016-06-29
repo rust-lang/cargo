@@ -1,4 +1,4 @@
-[project]
+[package]
 name = "cargo"
 version = "0.12.0"
 authors = ["Yehuda Katz <wycats@gmail.com>",
