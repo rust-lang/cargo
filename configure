@@ -325,6 +325,7 @@ valopt localstatedir "/var/lib" "local state directory"
 valopt sysconfdir "/etc" "install system configuration files"
 valopt datadir "${CFG_PREFIX}/share" "install data"
 valopt infodir "${CFG_PREFIX}/share/info" "install additional info"
+valopt docdir "${CFG_PREFIX}/share/doc/cargo" "install extra docs"
 valopt mandir "${CFG_PREFIX}/share/man" "install man pages in PATH"
 valopt libdir "${CFG_PREFIX}/lib" "install libraries"
 valopt local-cargo "" "local cargo to bootstrap from"
@@ -353,9 +354,21 @@ fi
 
 # a little post-processing of various config values
 CFG_PREFIX=${CFG_PREFIX%/}
+CFG_DATADIR=${CFG_DATADIR%/}
+CFG_INFODIR=${CFG_INFODIR%/}
+CFG_DOCDIR=${CFG_DOCDIR%/}
 CFG_MANDIR=${CFG_MANDIR%/}
+CFG_LIBDIR=${CFG_LIBDIR%/}
 CFG_HOST="$(echo $CFG_HOST | tr ',' ' ')"
 CFG_TARGET="$(echo $CFG_TARGET | tr ',' ' ')"
+
+# strip CFG_PREFIX from variables used for installation so that
+# install.sh's --prefix value can be used instead
+CFG_DATADIR=${CFG_DATADIR#${CFG_PREFIX}}
+CFG_INFODIR=${CFG_INFODIR#${CFG_PREFIX}}
+CFG_DOCDIR=${CFG_DOCDIR#${CFG_PREFIX}}
+CFG_MANDIR=${CFG_MANDIR#${CFG_PREFIX}}
+CFG_LIBDIR=${CFG_LIBDIR#${CFG_PREFIX}}
 
 # copy host-triples to target-triples so that hosts are a subset of targets
 V_TEMP=""
@@ -401,8 +414,11 @@ putvar CFG_PREFIX
 putvar CFG_BUILD
 putvar CFG_HOST
 putvar CFG_TARGET
-putvar CFG_LIBDIR
+putvar CFG_DATADIR
+putvar CFG_DOCDIR
+putvar CFG_INFODIR
 putvar CFG_MANDIR
+putvar CFG_LIBDIR
 putvar CFG_RUSTC
 putvar CFG_RUSTDOC
 
