@@ -220,7 +220,58 @@ fn invalid8() {
 
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr("\
-[ERROR] features in dependencies cannot enable features in other dependencies: `foo/bar`
+[ERROR] feature names may not contain slashes: `foo/bar`
+"));
+}
+
+#[test]
+fn no_transitive_dep_feature_requirement() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.derived]
+            path = "derived"
+
+            [features]
+            default = ["derived/bar/qux"]
+        "#)
+        .file("src/main.rs", r#"
+            extern crate derived;
+            fn main() { derived::test(); }
+        "#)
+        .file("derived/Cargo.toml", r#"
+            [package]
+            name = "derived"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "../bar"
+        "#)
+        .file("derived/src/lib.rs", r#"
+            extern crate bar;
+            pub use bar::test;
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            qux = []
+        "#)
+        .file("bar/src/lib.rs", r#"
+            #[cfg(feature = "qux")]
+            pub fn test() { print!("test"); }
+        "#);
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+[ERROR] feature names may not contain slashes: `bar/qux`
 "));
 }
 
