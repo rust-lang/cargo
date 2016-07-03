@@ -1,0 +1,88 @@
+.TH "CARGO\-OWNER" "1" "July 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-owner \- Manage the owners of a crate of the registry
+.SH SYNOPSIS
+.PP
+\f[I]cargo owner\f[] [OPTIONS] [<CRATE>]
+.SH DESCRIPTION
+.PP
+This command will modify the owners for a package on the specified
+registry (or default). Note that owners of a package can upload new
+versions, and yank old versions. Explicitly named owners can also modify
+the set of owners, so take caution!
+.PP
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-a, \-\-add \f[I]LOGIN\f[]
+Name of a user or team to add as an owner.
+.RS
+.RE
+.TP
+.B \-r, \-\-remove \f[I]LOGIN\f[]
+Name of a user or team to remove as an owner.
+.RS
+.RE
+.TP
+.B \-l, \-\-list
+List owners of a crate.
+.RS
+.RE
+.TP
+.B \-\-index \f[I]INDEX\f[]
+Registry index to modify owners for.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH EXAMPLES
+.PP
+Add user as an owner of the current package
+.IP
+.nf
+\f[C]
+$\ cargo\ owner\ \-\-add\ user
+\f[]
+.fi
+.PP
+Remove user as an owner of the current package
+.IP
+.nf
+\f[C]
+$\ cargo\ owner\ \-\-remove\ user
+\f[]
+.fi
+.PP
+Use a certain API token to authenticate with
+.IP
+.nf
+\f[C]
+$\ cargo\ owner\ \-\-token\ U6WHXacP3Qqwd5kze1fohr4JEOmGCuRK2
+\f[]
+.fi
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-publish(1), cargo\-login(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
