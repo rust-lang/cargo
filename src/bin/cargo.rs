@@ -209,8 +209,8 @@ fn execute_subcommand(config: &Config,
         Some(command) => command,
         None => {
             return Err(human(match find_closest(config, cmd) {
-                Some(closest) => format!("no such subcommand\n\n\t\
-                                          Did you mean `{}`?\n", closest),
+                Some(closest) => format!("no such subcommand: `{}`\n\n\t\
+                                          Did you mean `{}`?\n", cmd, closest),
                 None => "no such subcommand".to_string()
             }).into())
         }
