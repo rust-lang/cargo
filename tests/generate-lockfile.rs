@@ -224,7 +224,8 @@ fn warn_about_multiple_versions_on_generate() {
                 execs().with_status(0)
                        .with_stderr_contains("\
 [WARNING] using multiple versions of crate \"bar\"
-versions: v0.0.1, v0.0.2
+foo v0.0.1 -> bar v0.0.1
+foo v0.0.1 -> baz v0.0.1 -> bar v0.0.2
 "));
 }
 
@@ -251,7 +252,8 @@ fn warn_about_multiple_versions_on_update() {
                 execs().with_status(0)
                        .with_stderr_contains("\
 [WARNING] using multiple versions of crate \"bar\"
-versions: v0.0.1, v0.0.2
+foo v0.0.1 -> bar v0.0.1
+foo v0.0.1 -> baz v0.0.1 -> bar v0.0.2
 "));
 
     assert_that(p.cargo("update"),

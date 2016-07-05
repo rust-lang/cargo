@@ -293,6 +293,7 @@ fn use_a_spec_to_select() {
 [UPDATING] git repository `[..]`
 [WARNING] [..]
 [..]
+[..]
 [DOWNLOADING] [..]
 [DOWNLOADING] [..]
 [COMPILING] [..]
