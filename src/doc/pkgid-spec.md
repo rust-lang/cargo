@@ -1,6 +1,6 @@
 % Package ID Specifications
 
-# Package ID Specifications
+# Package ID specifications
 
 Subcommands of Cargo frequently need to refer to a particular package within a
 dependency graph for various operations like updating, cleaning, building, etc.
@@ -22,7 +22,7 @@ proto := "http" | "git" | ...
 
 Here, brackets indicate that the contents are optional.
 
-## Example Specifications
+## Example specifications
 
 These could all be references to a package `foo` version `1.2.3` from the
 registry at `crates.io`
@@ -36,7 +36,7 @@ registry at `crates.io`
 | `crates.io/bar#foo:1.2.3`      | foo    | 1.2.3     | *://crates.io/bar    |
 | `http://crates.io/foo#1.2.3`   | foo    | 1.2.3     | http://crates.io/foo |
 
-## Brevity of Specifications
+## Brevity of specifications
 
 The goal of this is to enable both succinct and exhaustive syntaxes for
 referring to packages in a dependency graph. Ambiguous references may refer to
