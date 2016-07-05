@@ -26,7 +26,7 @@ fn pkg(name: &str, vers: &str) {
             extern crate {};
             fn main() {{}}
         ", name))
-        .publish()
+        .publish();
 }
 
 #[test]
@@ -61,8 +61,6 @@ fn pick_max_version() {
     assert_that(cargo_process("install").arg("foo"),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
-[DOWNLOADING] foo v0.0.2 (registry file://[..])
-[COMPILING] foo v0.0.2 (registry file://[..])
 [DOWNLOADING] foo v0.0.2 (registry [..])
 [COMPILING] foo v0.0.2
 [FINISHED] release [optimized] target(s) in [..]

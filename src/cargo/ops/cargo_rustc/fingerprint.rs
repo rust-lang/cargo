@@ -57,6 +57,15 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let compare = compare_old_fingerprint(&loc, &*fingerprint);
     log_compare(unit, &compare);
 
+    if compare.is_err() {
+        let source_id = unit.pkg.package_id().source_id();
+        let sources = cx.packages.sources();
+        let source = try!(sources.get(source_id).chain_error(|| {
+            internal("missing package source")
+        }));
+        try!(source.verify(unit.pkg.package_id()));
+    }
+
     let root = cx.out_dir(unit);
     let mut missing_outputs = false;
     if unit.profile.doc {

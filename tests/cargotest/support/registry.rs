@@ -132,7 +132,7 @@ impl Package {
         self
     }
 
-    pub fn publish(&self) {
+    pub fn publish(&self) -> String {
         self.make_archive();
 
         // Figure out what we're going to write into the index
@@ -197,6 +197,8 @@ impl Package {
                            "Another commit", &tree,
                            &[&parent]));
         }
+
+        return cksum
     }
 
     fn make_archive(&self) {
@@ -255,7 +257,7 @@ impl Package {
     }
 }
 
-fn cksum(s: &[u8]) -> String {
+pub fn cksum(s: &[u8]) -> String {
     let mut sha = Sha256::new();
     sha.update(s);
     sha.finish().to_hex()
