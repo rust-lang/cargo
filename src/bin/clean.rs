@@ -1,5 +1,6 @@
 use std::env;
 
+use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
@@ -50,6 +51,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target: options.flag_target.as_ref().map(|s| &s[..]),
         release: options.flag_release,
     };
-    try!(ops::clean(&root, &opts));
+    let ws = try!(Workspace::new(&root, config));
+    try!(ops::clean(&ws, &opts));
     Ok(None)
 }

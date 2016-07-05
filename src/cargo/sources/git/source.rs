@@ -79,7 +79,9 @@ pub fn canonicalize_url(url: &Url) -> Url {
     let mut url = url.clone();
 
     // Strip a trailing slash
-    url.path_segments_mut().unwrap().pop_if_empty();
+    if url.path().ends_with("/") {
+        url.path_segments_mut().unwrap().pop_if_empty();
+    }
 
     // HACKHACK: For github URL's specifically just lowercase
     // everything.  GitHub treats both the same, but they hash

@@ -1,18 +1,14 @@
-use std::path::Path;
-
 use rustc_serialize::{Encodable, Encoder};
 
 use core::resolver::Resolve;
-use core::{Package, PackageId, PackageSet};
+use core::{Package, PackageId, Workspace};
 use ops;
-use util::config::Config;
 use util::CargoResult;
 
 const VERSION: u32 = 1;
 
-pub struct OutputMetadataOptions<'a> {
+pub struct OutputMetadataOptions {
     pub features: Vec<String>,
-    pub manifest_path: &'a Path,
     pub no_default_features: bool,
     pub no_deps: bool,
     pub version: u32,
@@ -21,32 +17,34 @@ pub struct OutputMetadataOptions<'a> {
 /// Loads the manifest, resolves the dependencies of the project to the concrete
 /// used versions - considering overrides - and writes all dependencies in a JSON
 /// format to stdout.
-pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResult<ExportInfo> {
+pub fn output_metadata(ws: &Workspace,
+                       opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     if opt.version != VERSION {
         bail!("metadata version {} not supported, only {} is currently supported",
               opt.version, VERSION);
     }
     if opt.no_deps {
-        metadata_no_deps(opt, config)
+        metadata_no_deps(ws, opt)
     } else {
-        metadata_full(opt, config)
+        metadata_full(ws, opt)
     }
 }
 
-fn metadata_no_deps(opt: OutputMetadataOptions, config: &Config) -> CargoResult<ExportInfo> {
-    let root = try!(Package::for_path(opt.manifest_path, config));
+fn metadata_no_deps(ws: &Workspace,
+                    _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     Ok(ExportInfo {
-        packages: vec![root],
+        packages: vec![try!(ws.current()).clone()],
         resolve: None,
         version: VERSION,
     })
 }
 
-fn metadata_full(opt: OutputMetadataOptions, config: &Config) -> CargoResult<ExportInfo> {
-    let deps = try!(resolve_dependencies(opt.manifest_path,
-                                         config,
-                                         opt.features,
-                                         opt.no_default_features));
+fn metadata_full(ws: &Workspace,
+                 opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+    let deps = try!(ops::resolve_dependencies(ws,
+                                              None,
+                                              opt.features.clone(),
+                                              opt.no_default_features));
     let (packages, resolve) = deps;
 
     let packages = try!(packages.package_ids()
@@ -99,19 +97,4 @@ impl Encodable for MetadataResolve {
 
         encodable.encode(s)
     }
-}
-
-/// Loads the manifest and resolves the dependencies of the project to the
-/// concrete used versions. Afterwards available overrides of dependencies are applied.
-fn resolve_dependencies<'a>(manifest: &Path,
-                            config: &'a Config,
-                            features: Vec<String>,
-                            no_default_features: bool)
-                            -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let package = try!(Package::for_path(manifest, config));
-    ops::resolve_dependencies(&package,
-                              config,
-                              None,
-                              features,
-                              no_default_features)
 }
