@@ -52,12 +52,9 @@ pub fn package(ws: &Workspace,
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
     let dir = config.target_dir(ws).join("package");
-    let mut dst = match dir.open_ro(&filename, config, "packaged crate") {
-        Ok(f) => return Ok(Some(f)),
-        Err(..) => {
-            let tmp = format!(".{}", filename);
-            try!(dir.open_rw(&tmp, config, "package scratch space"))
-        }
+    let mut dst = {
+        let tmp = format!(".{}", filename);
+        try!(dir.open_rw(&tmp, config, "package scratch space"))
     };
 
     // Package up and test a temporary tarball and only move it to the final
