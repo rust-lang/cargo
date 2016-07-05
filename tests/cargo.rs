@@ -121,7 +121,8 @@ fn find_closest_dont_correct_nonsense() {
 
     assert_that(pr,
                 execs().with_status(101)
-                       .with_stderr("[ERROR] no such subcommand: `there-is-no-way-that-there-is-a-command-close-to-this`
+                       .with_stderr("[ERROR] no such subcommand: \
+                        `there-is-no-way-that-there-is-a-command-close-to-this`
 "));
 }
 
