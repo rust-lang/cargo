@@ -211,7 +211,7 @@ fn execute_subcommand(config: &Config,
             return Err(human(match find_closest(config, cmd) {
                 Some(closest) => format!("no such subcommand: `{}`\n\n\t\
                                           Did you mean `{}`?\n", cmd, closest),
-                None => "no such subcommand".to_string()
+                None => format!("no such subcommand: `{}`", cmd)
             }).into())
         }
     };
