@@ -21,7 +21,7 @@ With this structure you can specify local configuration per-project, and even
 possibly check it into version control. You can also specify personal default
 with a configuration file in your home directory.
 
-# Configuration Format
+# Configuration format
 
 All configuration is currently in the [TOML format][toml] (like the manifest),
 with simple key-value pairs inside of sections (tables) which all get merged
@@ -95,7 +95,7 @@ color = 'auto'         # whether cargo colorizes output
 retry = 2 # number of times a network call will automatically retried
 ```
 
-# Environment Variables
+# Environment variables
 
 Cargo can also be configured through environment variables in addition to the
 TOML syntax above. For each configuration key above of the form `foo.bar` the
