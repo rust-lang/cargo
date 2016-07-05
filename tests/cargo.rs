@@ -105,7 +105,7 @@ fn find_closest_biuld_to_build() {
 
     assert_that(pr,
                 execs().with_status(101)
-                       .with_stderr("[ERROR] no such subcommand
+                       .with_stderr("[ERROR] no such subcommand: `biuld`
 
 <tab>Did you mean `build`?
 
@@ -121,7 +121,19 @@ fn find_closest_dont_correct_nonsense() {
 
     assert_that(pr,
                 execs().with_status(101)
-                       .with_stderr("[ERROR] no such subcommand
+                       .with_stderr("[ERROR] no such subcommand: \
+                        `there-is-no-way-that-there-is-a-command-close-to-this`
+"));
+}
+
+#[test]
+fn displays_subcommand_on_error() {
+    let mut pr = cargo_process();
+    pr.arg("invalid-command");
+
+    assert_that(pr,
+                execs().with_status(101)
+                       .with_stderr("[ERROR] no such subcommand: `invalid-command`
 "));
 }
 
