@@ -213,7 +213,7 @@ fn plugin_deps() {
             extern crate syntax;
 
             use rustc_plugin::Registry;
-            use syntax::ast::TokenTree;
+            use syntax::tokenstream::TokenTree;
             use syntax::codemap::Span;
             use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
 
@@ -295,7 +295,7 @@ fn plugin_to_the_max() {
             extern crate baz;
 
             use rustc_plugin::Registry;
-            use syntax::ast::TokenTree;
+            use syntax::tokenstream::TokenTree;
             use syntax::codemap::Span;
             use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
 

@@ -49,7 +49,7 @@ use std::fs;
 use std::io;
 use std::path::{PathBuf, Path};
 
-use core::{Package, Target};
+use core::{Package, Target, Workspace};
 use util::{Config, FileLock, CargoResult, Filesystem};
 use util::hex::short_hash;
 
@@ -69,11 +69,10 @@ pub struct LayoutProxy<'a> {
 }
 
 impl Layout {
-    pub fn new(config: &Config,
-               pkg: &Package,
+    pub fn new(ws: &Workspace,
                triple: Option<&str>,
                dest: &str) -> CargoResult<Layout> {
-        let mut path = config.target_dir(pkg);
+        let mut path = ws.config().target_dir(ws);
         // Flexible target specifications often point at filenames, so interpret
         // the target triple as a Path and then just use the file stem as the
         // component for the directory name.
@@ -81,7 +80,7 @@ impl Layout {
             path.push(Path::new(triple).file_stem().unwrap());
         }
         path.push(dest);
-        Layout::at(config, path)
+        Layout::at(ws.config(), path)
     }
 
     pub fn at(config: &Config, root: Filesystem) -> CargoResult<Layout> {

@@ -2,7 +2,7 @@ use std::default::Default;
 use std::fs;
 use std::path::Path;
 
-use core::{Package, Profiles};
+use core::{Profiles, Workspace};
 use core::registry::PackageRegistry;
 use util::{CargoResult, human, ChainError, Config};
 use ops::{self, Layout, Context, BuildConfig, Kind, Unit};
@@ -15,9 +15,8 @@ pub struct CleanOptions<'a> {
 }
 
 /// Cleans the project from build artifacts.
-pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
-    let root = try!(Package::for_path(manifest_path, opts.config));
-    let target_dir = opts.config.target_dir(&root);
+pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
+    let target_dir = opts.config.target_dir(&ws);
 
     // If we have a spec, then we need to delete some packages, otherwise, just
     // remove the whole target directory and be done with it!
@@ -30,22 +29,21 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
     }
 
     let mut registry = PackageRegistry::new(opts.config);
-    let resolve = try!(ops::resolve_pkg(&mut registry, &root, opts.config));
+    let resolve = try!(ops::resolve_ws(&mut registry, ws));
     let packages = ops::get_resolved_packages(&resolve, registry);
 
     let dest = if opts.release {"release"} else {"debug"};
-    let host_layout = try!(Layout::new(opts.config, &root, None, dest));
+    let host_layout = try!(Layout::new(ws, None, dest));
     let target_layout = match opts.target {
-        Some(target) => {
-            Some(try!(Layout::new(opts.config, &root, Some(target), dest)))
-        }
+        Some(target) => Some(try!(Layout::new(ws, Some(target), dest))),
         None => None,
     };
 
+    let profiles = try!(ws.current()).manifest().profiles();
     let mut cx = try!(Context::new(&resolve, &packages, opts.config,
                                    host_layout, target_layout,
                                    BuildConfig::default(),
-                                   root.manifest().profiles()));
+                                   profiles));
     let mut units = Vec::new();
 
     for spec in opts.spec {
@@ -59,7 +57,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
                 let Profiles {
                     ref release, ref dev, ref test, ref bench, ref doc,
                     ref custom_build, ref test_deps, ref bench_deps,
-                } = *root.manifest().profiles();
+                } = *profiles;
                 let profiles = [release, dev, test, bench, doc, custom_build,
                                 test_deps, bench_deps];
                 for profile in profiles.iter() {

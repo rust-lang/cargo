@@ -3,18 +3,17 @@ use std::io::prelude::*;
 use rustc_serialize::{Encodable, Decodable};
 use toml::{self, Encoder, Value};
 
-use core::{Resolve, resolver, Package};
-use util::{CargoResult, ChainError, human, Config, Filesystem};
+use core::{Resolve, resolver, Workspace};
+use util::{CargoResult, ChainError, human, Filesystem};
 use util::toml as cargo_toml;
 
-pub fn load_pkg_lockfile(pkg: &Package, config: &Config)
-                         -> CargoResult<Option<Resolve>> {
-    if !pkg.root().join("Cargo.lock").exists() {
+pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
+    if !ws.root().join("Cargo.lock").exists() {
         return Ok(None)
     }
 
-    let root = Filesystem::new(pkg.root().to_path_buf());
-    let mut f = try!(root.open_ro("Cargo.lock", config, "Cargo.lock file"));
+    let root = Filesystem::new(ws.root().to_path_buf());
+    let mut f = try!(root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file"));
 
     let mut s = String::new();
     try!(f.read_to_string(&mut s).chain_error(|| {
@@ -22,18 +21,17 @@ pub fn load_pkg_lockfile(pkg: &Package, config: &Config)
     }));
 
     (|| {
-        let table = toml::Value::Table(try!(cargo_toml::parse(&s, f.path(), config)));
+        let table = try!(cargo_toml::parse(&s, f.path(), ws.config()));
+        let table = toml::Value::Table(table);
         let mut d = toml::Decoder::new(table);
         let v: resolver::EncodableResolve = try!(Decodable::decode(&mut d));
-        Ok(Some(try!(v.to_resolve(pkg, config))))
+        Ok(Some(try!(v.to_resolve(ws))))
     }).chain_error(|| {
         human(format!("failed to parse lock file at: {}", f.path().display()))
     })
 }
 
-pub fn write_pkg_lockfile(pkg: &Package,
-                          resolve: &Resolve,
-                          config: &Config) -> CargoResult<()> {
+pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> {
     let mut e = Encoder::new();
     resolve.encode(&mut e).unwrap();
 
@@ -63,13 +61,13 @@ pub fn write_pkg_lockfile(pkg: &Package,
         None => {}
     }
 
-    let root = Filesystem::new(pkg.root().to_path_buf());
+    let root = Filesystem::new(ws.root().to_path_buf());
 
     // Load the original lockfile if it exists.
     //
     // If the lockfile contents haven't changed so don't rewrite it. This is
     // helpful on read-only filesystems.
-    let orig = root.open_ro("Cargo.lock", config, "Cargo.lock file");
+    let orig = root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file");
     let orig = orig.and_then(|mut f| {
         let mut s = String::new();
         try!(f.read_to_string(&mut s));
@@ -85,13 +83,13 @@ pub fn write_pkg_lockfile(pkg: &Package,
     }
 
     // Ok, if that didn't work just write it out
-    root.open_rw("Cargo.lock", config, "Cargo.lock file").and_then(|mut f| {
+    root.open_rw("Cargo.lock", ws.config(), "Cargo.lock file").and_then(|mut f| {
         try!(f.file().set_len(0));
         try!(f.write_all(out.as_bytes()));
         Ok(())
     }).chain_error(|| {
         human(format!("failed to write {}",
-                      pkg.root().join("Cargo.lock").display()))
+                      ws.root().join("Cargo.lock").display()))
     })
 }
 

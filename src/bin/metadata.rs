@@ -1,8 +1,4 @@
-extern crate cargo;
-extern crate docopt;
-extern crate rustc_serialize;
-extern crate toml;
-
+use cargo::core::Workspace;
 use cargo::ops::{output_metadata, OutputMetadataOptions, ExportInfo};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::util::{CliResult, Config};
@@ -48,12 +44,12 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<ExportInfo
 
     let options = OutputMetadataOptions {
         features: options.flag_features,
-        manifest_path: &manifest,
         no_default_features: options.flag_no_default_features,
         no_deps: options.flag_no_deps,
         version: options.flag_format_version,
     };
 
-    let result = try!(output_metadata(options, config));
+    let ws = try!(Workspace::new(&manifest, config));
+    let result = try!(output_metadata(&ws, &options));
     Ok(Some(result))
 }

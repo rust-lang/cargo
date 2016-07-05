@@ -1,17 +1,12 @@
-use std::path::Path;
-
 use core::registry::PackageRegistry;
-use core::{Package, PackageId, Resolve, PackageSet};
+use core::{PackageId, Resolve, PackageSet, Workspace};
 use ops;
-use util::{CargoResult, Config};
+use util::CargoResult;
 
 /// Executes `cargo fetch`.
-pub fn fetch<'a>(manifest_path: &Path,
-                 config: &'a Config)
-                 -> CargoResult<(Resolve, PackageSet<'a>)> {
-    let package = try!(Package::for_path(manifest_path, config));
-    let mut registry = PackageRegistry::new(config);
-    let resolve = try!(ops::resolve_pkg(&mut registry, &package, config));
+pub fn fetch<'a>(ws: &Workspace<'a>) -> CargoResult<(Resolve, PackageSet<'a>)> {
+    let mut registry = PackageRegistry::new(ws.config());
+    let resolve = try!(ops::resolve_ws(&mut registry, ws));
     let packages = get_resolved_packages(&resolve, registry);
     for id in resolve.iter() {
         try!(packages.get(id));

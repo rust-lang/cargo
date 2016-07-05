@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use core::{Package, PackageIdSpec};
+use core::{PackageIdSpec, Workspace};
 use ops;
 use util::CargoResult;
 
@@ -12,9 +12,9 @@ pub struct DocOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
 }
 
-pub fn doc(manifest_path: &Path,
+pub fn doc(ws: &Workspace,
            options: &DocOptions) -> CargoResult<()> {
-    let package = try!(Package::for_path(manifest_path, options.compile_opts.config));
+    let package = try!(ws.current());
 
     let mut lib_names = HashSet::new();
     let mut bin_names = HashSet::new();
@@ -35,7 +35,7 @@ pub fn doc(manifest_path: &Path,
         }
     }
 
-    try!(ops::compile(manifest_path, &options.compile_opts));
+    try!(ops::compile(ws, &options.compile_opts));
 
     if options.open_result {
         let name = if options.compile_opts.spec.len() > 1 {
@@ -53,7 +53,7 @@ pub fn doc(manifest_path: &Path,
         // Don't bother locking here as if this is getting deleted there's
         // nothing we can do about it and otherwise if it's getting overwritten
         // then that's also ok!
-        let target_dir = options.compile_opts.config.target_dir(&package);
+        let target_dir = options.compile_opts.config.target_dir(ws);
         let path = target_dir.join("doc").join(&name).join("index.html");
         let path = path.into_path_unlocked();
         if fs::metadata(&path).is_ok() {

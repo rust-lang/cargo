@@ -82,6 +82,20 @@ repository by mistake.
 publish = false
 ```
 
+## The `workspace`  Field (optional)
+
+The `workspace` field can be used to configure the workspace that this package
+will be a member of. If not specified this will be inferred as the first
+Cargo.toml with `[workspace]` upwards in the filesystem.
+
+```toml
+[package]
+# ...
+workspace = "path/to/root"
+```
+
+For more information, see the documentation for the workspace table below.
+
 ## Package Metadata
 
 There are a number of optional metadata fields also accepted under the
@@ -340,6 +354,53 @@ dependencies:
 In almost all cases, it is an antipattern to use these features outside of
 high-level packages that are designed for curation. If a feature is optional, it
 can almost certainly be expressed as a separate package.
+
+# The `[workspace]` Section
+
+Projects can define a workspace which is a set of crates that will all share the
+same `Cargo.lock` and output directory. The `[workspace]` table can be defined
+as:
+
+```toml
+[workspace]
+
+# Optional key, inferred if not present
+members = ["path/to/member1", "path/to/member2"]
+```
+
+Workspaces were added to Cargo as part [RFC 1525] and have a number of
+properties:
+
+* A workspace can contain multiple crates where one of them is the root crate.
+* The root crate's `Cargo.toml` contains the `[workspace]` table, but is not
+  required to have other configuration.
+* Whenever any crate in the workspace is compiled, output is placed next to the
+  root crate's `Cargo.toml`.
+* The lock file for all crates in the workspace resides next to the root crate's
+  `Cargo.toml`.
+* The `[replace]` section in `Cargo.toml` is only recognized at the workspace
+  root crate, it's ignored in member crates' manifests.
+
+[RFC 1525]: https://github.com/rust-lang/rfcs/blob/master/text/1525-cargo-workspace.md
+
+The root crate of a workspace, indicated by the presence of `[workspace]` in
+its manifest, is responsible for defining the entire workspace (listing all
+members). This can be done through the `members` key, and if it is omitted then
+members are implicitly included through all `path` dependencies. Note that
+members of the workspaces listed explicitly will also have their path
+dependencies included in the workspace.
+
+The `package.workspace` manifest key (described above) is used in member crates
+to point at a workspace's root crate. If this key is omitted then it is inferred
+to be the first crate whose manifest contains `[workspace]` upwards in the
+filesystem.
+
+A crate may either specify `package.workspace` or specify `[workspace]`. That
+is, a crate cannot both be a root crate in a workspace (contain `[workspace]`)
+and also be a member crate of another workspace (contain `package.workspace`).
+
+Most of the time workspaces will not need to be dealt with as `cargo new` and
+`cargo init` will handle workspace configuration automatically.
 
 # The Project Layout
 

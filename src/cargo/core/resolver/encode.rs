@@ -3,7 +3,7 @@ use std::collections::{HashMap, BTreeMap};
 use regex::Regex;
 use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
-use core::{Package, PackageId, SourceId};
+use core::{Package, PackageId, SourceId, Workspace};
 use util::{CargoResult, Graph, Config};
 
 use super::Resolve;
@@ -18,11 +18,9 @@ pub struct EncodableResolve {
 pub type Metadata = BTreeMap<String, String>;
 
 impl EncodableResolve {
-    pub fn to_resolve(&self, root: &Package, config: &Config)
-                      -> CargoResult<Resolve> {
-        let mut path_deps = HashMap::new();
-        try!(build_path_deps(root, &mut path_deps, config));
-        let default = root.package_id().source_id();
+    pub fn to_resolve(&self, ws: &Workspace) -> CargoResult<Resolve> {
+        let path_deps = build_path_deps(ws);
+        let default = try!(ws.current()).package_id().source_id();
 
         let mut g = Graph::new();
         let mut tmp = HashMap::new();
@@ -103,33 +101,44 @@ impl EncodableResolve {
     }
 }
 
-fn build_path_deps(root: &Package,
-                   map: &mut HashMap<String, SourceId>,
-                   config: &Config)
-                   -> CargoResult<()> {
-    // If the root crate is *not* a path source, then we're probably in a
-    // situation such as `cargo install` with a lock file from a remote
-    // dependency. In that case we don't need to fixup any path dependencies (as
-    // they're not actually path dependencies any more), so we ignore them.
-    if !root.package_id().source_id().is_path() {
-        return Ok(())
+fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
+    // If a crate is *not* a path source, then we're probably in a situation
+    // such as `cargo install` with a lock file from a remote dependency. In
+    // that case we don't need to fixup any path dependencies (as they're not
+    // actually path dependencies any more), so we ignore them.
+    let members = ws.members().filter(|p| {
+        p.package_id().source_id().is_path()
+    }).collect::<Vec<_>>();
+
+    let mut ret = HashMap::new();
+    for member in members.iter() {
+        ret.insert(member.package_id().name().to_string(),
+                   member.package_id().source_id().clone());
+    }
+    for member in members.iter() {
+        build(member, ws.config(), &mut ret);
     }
 
-    let deps = root.dependencies()
-                   .iter()
-                   .map(|d| d.source_id())
-                   .filter(|id| id.is_path())
-                   .filter_map(|id| id.url().to_file_path().ok())
-                   .map(|path| path.join("Cargo.toml"))
-                   .filter_map(|path| Package::for_path(&path, config).ok());
-    for pkg in deps {
-        let source_id = pkg.package_id().source_id();
-        if map.insert(pkg.name().to_string(), source_id.clone()).is_none() {
-            try!(build_path_deps(&pkg, map, config));
+    return ret;
+
+    fn build(pkg: &Package,
+             config: &Config,
+             ret: &mut HashMap<String, SourceId>) {
+        let deps = pkg.dependencies()
+                      .iter()
+                      .filter(|d| !ret.contains_key(d.name()))
+                      .map(|d| d.source_id())
+                      .filter(|id| id.is_path())
+                      .filter_map(|id| id.url().to_file_path().ok())
+                      .map(|path| path.join("Cargo.toml"))
+                      .filter_map(|path| Package::for_path(&path, config).ok())
+                      .collect::<Vec<_>>();
+        for pkg in deps {
+            ret.insert(pkg.name().to_string(),
+                       pkg.package_id().source_id().clone());
+            build(&pkg, config, ret);
         }
     }
-
-    Ok(())
 }
 
 fn to_package_id(name: &str,

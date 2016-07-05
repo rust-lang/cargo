@@ -6,7 +6,7 @@ use std::path::{self, PathBuf};
 use std::sync::Arc;
 
 use core::{Package, PackageId, PackageSet, Target, Resolve};
-use core::{Profile, Profiles};
+use core::{Profile, Profiles, Workspace};
 use core::shell::ColorConfig;
 use util::{self, CargoResult, human};
 use util::{Config, internal, ChainError, profile, join_paths};
@@ -56,7 +56,8 @@ pub type PackagesToBuild<'a> = [(&'a Package, Vec<(&'a Target,&'a Profile)>)];
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
-pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
+pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
+                                     pkg_targets: &'a PackagesToBuild<'a>,
                                      packages: &'a PackageSet<'cfg>,
                                      resolve: &'a Resolve,
                                      config: &'cfg Config,
@@ -81,10 +82,10 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
 
     let dest = if build_config.release {"release"} else {"debug"};
     let root = try!(packages.get(resolve.root()));
-    let host_layout = try!(Layout::new(config, root, None, &dest));
+    let host_layout = try!(Layout::new(ws, None, &dest));
     let target_layout = match build_config.requested_target.as_ref() {
         Some(target) => {
-            Some(try!(layout::Layout::new(config, root, Some(&target), &dest)))
+            Some(try!(layout::Layout::new(ws, Some(&target), &dest)))
         }
         None => None,
     };

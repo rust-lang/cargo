@@ -1,3 +1,4 @@
+use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, CliError, Human, human, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
@@ -119,7 +120,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         },
     };
 
-    let err = try!(ops::run_tests(&root, &ops, &options.arg_args));
+    let ws = try!(Workspace::new(&root, config));
+    let err = try!(ops::run_tests(&ws, &ops, &options.arg_args));
     match err {
         None => Ok(None),
         Some(err) => {

@@ -1,3 +1,4 @@
+use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, CliError, Config, Human};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
@@ -85,7 +86,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target_rustc_args: None,
     };
 
-    match try!(ops::run(&root, &compile_opts, &options.arg_args)) {
+    let ws = try!(Workspace::new(&root, config));
+    match try!(ops::run(&ws, &compile_opts, &options.arg_args)) {
         None => Ok(None),
         Some(err) => {
             // If we never actually spawned the process then that sounds pretty

@@ -9,6 +9,7 @@ use git2::Config as GitConfig;
 
 use term::color::BLACK;
 
+use core::Workspace;
 use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
 use util::{Config, paths};
 
@@ -442,8 +443,14 @@ mod tests {
         };
 
         if !fs::metadata(&path_of_source_file).map(|x| x.is_file()).unwrap_or(false) {
-            return paths::write(&path_of_source_file, default_file_content)
+            try!(paths::write(&path_of_source_file, default_file_content));
         }
+    }
+
+    if let Err(e) = Workspace::new(&path.join("Cargo.toml"), config) {
+        let msg = format!("compiling this new crate may not work due to invalid \
+                           workspace configuration\n\n{}", e);
+        try!(config.shell().warn(msg));
     }
 
     Ok(())

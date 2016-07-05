@@ -3,16 +3,19 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use core::{Package, Manifest, SourceId, PackageId};
+use core::{Package, SourceId, PackageId, EitherManifest};
 use util::{self, paths, CargoResult, human, Config, ChainError};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::Layout;
 
-pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId,
-                     config: &Config)
-                     -> CargoResult<(Manifest, Vec<PathBuf>)> {
+pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
+                     -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
+    trace!("read_package; path={}; source-id={}", path.display(), source_id);
+    let contents = try!(paths::read(path));
+
+    let layout = Layout::from_project_path(path.parent().unwrap());
     let root = layout.root.clone();
-    util::toml::to_manifest(contents, source_id, layout, config).chain_error(|| {
+    util::toml::to_manifest(&contents, source_id, layout, config).chain_error(|| {
         human(format!("failed to parse manifest at `{}`",
                       root.join("Cargo.toml").display()))
     })
@@ -21,11 +24,14 @@ pub fn read_manifest(contents: &[u8], layout: Layout, source_id: &SourceId,
 pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
                     -> CargoResult<(Package, Vec<PathBuf>)> {
     trace!("read_package; path={}; source-id={}", path.display(), source_id);
-    let data = try!(paths::read(path));
-
-    let layout = Layout::from_project_path(path.parent().unwrap());
-    let (manifest, nested) =
-        try!(read_manifest(data.as_bytes(), layout, source_id, config));
+    let (manifest, nested) = try!(read_manifest(path, source_id, config));
+    let manifest = match manifest {
+        EitherManifest::Real(manifest) => manifest,
+        EitherManifest::Virtual(..) => {
+            bail!("found a virtual manifest at `{}` instead of a package \
+                   manifest", path.display())
+        }
+    };
 
     Ok((Package::new(manifest, path), nested))
 }

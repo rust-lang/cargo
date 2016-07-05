@@ -525,6 +525,7 @@ impl ham::Matcher<ProcessBuilder> for Execs {
 
 impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
     fn matches(&self, process: &'a mut ProcessBuilder) -> ham::MatchResult {
+        println!("running {}", process);
         let res = process.exec_with_output();
 
         match res {
