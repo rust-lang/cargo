@@ -137,6 +137,15 @@ a lock file compatible with `{orig}` cannot be generated in this situation
             path.push(s);
             srcs.push(try!(SourceId::for_local_registry(&path)));
         }
+        if let Some(val) = table.get("directory") {
+            let (s, path) = try!(val.string(&format!("source.{}.directory",
+                                                     name)));
+            let mut path = path.to_path_buf();
+            path.pop();
+            path.pop();
+            path.push(s);
+            srcs.push(try!(SourceId::for_directory(&path)));
+        }
 
         let mut srcs = srcs.into_iter();
         let src = try!(srcs.next().chain_error(|| {

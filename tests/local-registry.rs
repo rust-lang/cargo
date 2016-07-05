@@ -53,9 +53,12 @@ fn simple() {
 [UNPACKING] foo v0.0.1 ([..])
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.0.1 ({dir})
+[FINISHED] [..]
 ",
         dir = p.url())));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stderr(""));
+    assert_that(p.cargo("build"), execs().with_status(0).with_stderr("\
+[FINISHED] [..]
+"));
     assert_that(p.cargo("test"), execs().with_status(0));
 }
 
@@ -90,6 +93,7 @@ fn multiple_versions() {
 [UNPACKING] foo v0.1.0 ([..])
 [COMPILING] foo v0.1.0
 [COMPILING] bar v0.0.1 ({dir})
+[FINISHED] [..]
 ",
         dir = p.url())));
 
@@ -143,6 +147,7 @@ fn multiple_names() {
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] local v0.0.1 ({dir})
+[FINISHED] [..]
 ",
         dir = p.url())));
 }
@@ -187,6 +192,7 @@ fn interdependent() {
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
 [COMPILING] local v0.0.1 ({dir})
+[FINISHED] [..]
 ",
         dir = p.url())));
 }
@@ -247,6 +253,7 @@ fn path_dep_rewritten() {
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
 [COMPILING] local v0.0.1 ({dir})
+[FINISHED] [..]
 ",
         dir = p.url())));
 }

@@ -355,7 +355,7 @@ fn dry_run() {
     assert_that(p.cargo_process("publish").arg("--dry-run")
                  .arg("--host").arg(registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
-[UPDATING] registry `{reg}`
+[UPDATING] registry `[..]`
 [WARNING] manifest has no documentation, [..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
@@ -364,8 +364,7 @@ fn dry_run() {
 [UPLOADING] foo v0.0.1 ({dir})
 [WARNING] aborting upload due to dry run
 ",
-        dir = p.url(),
-        reg = registry())));
+        dir = p.url())));
 
     // Ensure the API request wasn't actually made
     assert!(!upload_path().join("api/v1/crates/new").exists());

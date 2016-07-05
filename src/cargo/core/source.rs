@@ -14,6 +14,7 @@ use core::{Package, PackageId, Registry};
 use ops;
 use sources::git;
 use sources::{PathSource, GitSource, RegistrySource, CRATES_IO};
+use sources::DirectorySource;
 use util::{human, Config, CargoResult, ToUrl};
 
 /// A Source finds and downloads remote packages based on names and
@@ -38,6 +39,17 @@ pub trait Source: Registry {
     /// The `pkg` argument is the package which this fingerprint should only be
     /// interested in for when this source may contain multiple packages.
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String>;
+
+    /// If this source supports it, verifies the source of the package
+    /// specified.
+    ///
+    /// Note that the source may also have performed other checksum-based
+    /// verification during the `download` step, but this is intended to be run
+    /// just before a crate is compiled so it may perform more expensive checks
+    /// which may not be cacheable.
+    fn verify(&self, _pkg: &PackageId) -> CargoResult<()> {
+        Ok(())
+    }
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
@@ -52,6 +64,10 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
         (**self).fingerprint(pkg)
     }
+
+    fn verify(&self, pkg: &PackageId) -> CargoResult<()> {
+        (**self).verify(pkg)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -64,6 +80,8 @@ enum Kind {
     Registry,
     /// represents a local filesystem-based registry
     LocalRegistry,
+    /// represents a directory-based registry
+    Directory,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -172,6 +190,9 @@ impl SourceId {
             SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
                 format!("local-registry+{}", url)
             }
+            SourceIdInner { kind: Kind::Directory, ref url, .. } => {
+                format!("directory+{}", url)
+            }
         }
     }
 
@@ -192,6 +213,11 @@ impl SourceId {
     pub fn for_local_registry(path: &Path) -> CargoResult<SourceId> {
         let url = try!(path.to_url());
         Ok(SourceId::new(Kind::LocalRegistry, url))
+    }
+
+    pub fn for_directory(path: &Path) -> CargoResult<SourceId> {
+        let url = try!(path.to_url());
+        Ok(SourceId::new(Kind::Directory, url))
     }
 
     /// Returns the `SourceId` corresponding to the main repository.
@@ -252,6 +278,13 @@ impl SourceId {
                     Err(()) => panic!("path sources cannot be remote"),
                 };
                 Box::new(RegistrySource::local(self, &path, config))
+            }
+            Kind::Directory => {
+                let path = match self.inner.url.to_file_path() {
+                    Ok(p) => p,
+                    Err(()) => panic!("path sources cannot be remote"),
+                };
+                Box::new(DirectorySource::new(&path, self, config))
             }
         }
     }
@@ -341,6 +374,9 @@ impl fmt::Display for SourceId {
             SourceIdInner { kind: Kind::Registry, ref url, .. } |
             SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
                 write!(f, "registry {}", url)
+            }
+            SourceIdInner { kind: Kind::Directory, ref url, .. } => {
+                write!(f, "dir {}", url)
             }
         }
     }
