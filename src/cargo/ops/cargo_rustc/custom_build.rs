@@ -113,7 +113,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
      .env("OPT_LEVEL", &profile.opt_level.to_string())
      .env("PROFILE", if cx.build_config.release {"release"} else {"debug"})
      .env("HOST", &cx.config.rustc_info().host)
-     .env("RUSTC", &cx.config.rustc());
+     .env("RUSTC", &cx.config.rustc())
+     .env("RUSTDOC", &cx.config.rustdoc());
 
      if let Some(links) = unit.pkg.manifest().links(){
         p.env("CARGO_MANIFEST_LINKS", links);
