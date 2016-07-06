@@ -160,11 +160,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                               crate_types: &BTreeSet<String>,
                               kind: Kind)
                               -> CargoResult<()> {
+        let rustflags = try!(env_args(self.config,
+                                      &self.build_config,
+                                      kind,
+                                      "RUSTFLAGS"));
         let mut process = util::process(self.config.rustc());
         process.arg("-")
                .arg("--crate-name").arg("_")
                .arg("--print=file-names")
-               .args(&try!(rustflags_args(self.config, &self.build_config, kind)))
+               .args(&rustflags)
                .env_remove("RUST_LOG");
 
         for crate_type in crate_types {
@@ -644,7 +648,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        rustflags_args(self.config, &self.build_config, unit.kind)
+        env_args(self.config, &self.build_config, unit.kind, "RUSTFLAGS")
+    }
+
+    pub fn rustdocflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+        env_args(self.config, &self.build_config, unit.kind, "RUSTDOCFLAGS")
     }
 
     pub fn show_warnings(&self, pkg: &PackageId) -> bool {
@@ -655,9 +663,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
 // Acquire extra flags to pass to the compiler from the
 // RUSTFLAGS environment variable and similar config values
-fn rustflags_args(config: &Config,
-                  build_config: &BuildConfig,
-                  kind: Kind) -> CargoResult<Vec<String>> {
+fn env_args(config: &Config,
+            build_config: &BuildConfig,
+            kind: Kind,
+            name: &str) -> CargoResult<Vec<String>> {
     // We *want* to apply RUSTFLAGS only to builds for the
     // requested target architecture, and not to things like build
     // scripts and plugins, which may be for an entirely different
@@ -688,7 +697,7 @@ fn rustflags_args(config: &Config,
     }
 
     // First try RUSTFLAGS from the environment
-    if let Some(a) = env::var("RUSTFLAGS").ok() {
+    if let Some(a) = env::var(name).ok() {
         let args = a.split(" ")
             .map(str::trim)
             .filter(|s| !s.is_empty())
@@ -697,7 +706,9 @@ fn rustflags_args(config: &Config,
     }
 
     // Then the build.rustflags value
-    if let Some(args) = try!(config.get_list("build.rustflags")) {
+    let name = name.chars().flat_map(|c| c.to_lowercase()).collect::<String>();
+    let key = format!("build.{}", name);
+    if let Some(args) = try!(config.get_list(&key)) {
         let args = args.val.into_iter().map(|a| a.0);
         return Ok(args.collect());
     }
