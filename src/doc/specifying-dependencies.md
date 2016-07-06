@@ -7,7 +7,7 @@ dependency that you are working on locally. You can have different
 dependencies for different platforms, and dependencies that are only used during
 development. Let's take a look at how to do each of these.
 
-# Specifying Dependencies from crates.io
+# Specifying dependencies from crates.io
 
 Cargo is configured to look for dependencies on [crates.io] by default. Only
 the name and a version string are required in this case. In [the cargo
@@ -162,7 +162,7 @@ repository location) and specify its version in the dependencies line as well:
 hello_utils = { path = "hello_utils", version = "0.1.0" }
 ```
 
-# Overriding Dependencies
+# Overriding dependencies
 
 Sometimes you may want to override one of Cargo’s dependencies. For example,
 let’s say you’re working on a project,
