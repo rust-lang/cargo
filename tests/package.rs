@@ -3,15 +3,17 @@ extern crate flate2;
 extern crate git2;
 extern crate hamcrest;
 extern crate tar;
+extern crate cargo;
 
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+use cargo::util::process;
 use cargotest::cargo_process;
-use cargotest::support::{project, execs, paths, git, path2url};
+use cargotest::support::{project, execs, paths, git, path2url, cargo_dir};
 use flate2::read::GzDecoder;
-use hamcrest::{assert_that, existing_file};
+use hamcrest::{assert_that, existing_file, contains};
 use tar::Archive;
 
 #[test]
@@ -405,4 +407,55 @@ warning: [..]
 Caused by:
   cannot package a filename with a special character `:`: src/:foo
 "));
+}
+
+#[test]
+fn repackage_on_source_change() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#);
+
+    assert_that(p.cargo_process("package"),
+                execs().with_status(0));
+
+    // Add another source file
+    let mut file = File::create(p.root().join("src").join("foo.rs")).unwrap_or_else(|e| {
+        panic!("could not create file {}: {}", p.root().join("src/foo.rs").display(), e)
+    });
+
+    file.write_all(r#"
+        fn main() { println!("foo"); }
+    "#.as_bytes()).unwrap();
+    std::mem::drop(file);
+
+    let mut pro = process(&cargo_dir().join("cargo"));
+    pro.arg("package").cwd(p.root());
+
+    // Check that cargo rebuilds the tarball
+    assert_that(pro, execs().with_status(0).with_stderr(&format!("\
+[WARNING] [..]
+[PACKAGING] foo v0.0.1 ({dir})
+[VERIFYING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 ({dir}[..])
+",
+        dir = p.url())));
+
+    // Check that the tarball contains the added file
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let mut rdr = GzDecoder::new(f).unwrap();
+    let mut contents = Vec::new();
+    rdr.read_to_end(&mut contents).unwrap();
+    let mut ar = Archive::new(&contents[..]);
+    let entries = ar.entries().unwrap();
+    let entry_paths = entries.map(|entry| {
+        entry.unwrap().path().unwrap().into_owned()
+    }).collect::<Vec<PathBuf>>();
+    assert_that(&entry_paths, contains(vec![PathBuf::from("foo-0.0.1/src/foo.rs")]));
 }
