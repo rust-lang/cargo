@@ -163,7 +163,7 @@ The syntax for teams is currently `github:org:team` (see examples above).
 In order to add a team as an owner one must be a member of that team. No
 such restriction applies to removing a team as an owner.
 
-## GitHub Permissions
+## GitHub permissions
 
 Team membership is not something GitHub provides simple public access to, and it
 is likely for you to encounter the following message when working with them:

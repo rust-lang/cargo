@@ -15,7 +15,7 @@ To accomplish this goal, Cargo does four things:
 * Invokes `rustc` or another build tool with the correct parameters to build your project.
 * Introduces conventions to make working with Rust projects easier.
 
-# Creating A New Project
+# Creating a new project
 
 To start a new project with Cargo, use `cargo new`:
 
@@ -123,7 +123,7 @@ To build, use `cargo build`:
 This will fetch all of the dependencies and then build them, along with the
 project.
 
-# Adding Dependencies from crates.io
+# Adding dependencies from crates.io
 
 [crates.io] is the Rust community's central repository that serves
 as a location to discover and download packages. `cargo` is configured to use
@@ -210,7 +210,7 @@ Running it will show:
 <span style="font-weight: bold" class="s1">     Running</span> `target/hello_world`
 Did our date match? true</code></pre>
 
-# Project Layout
+# Project layout
 
 Cargo uses conventions for file placement to make it easy to dive into a new
 Cargo project:

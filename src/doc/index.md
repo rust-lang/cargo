@@ -17,7 +17,7 @@ and [Cargo](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-window
 
 Alternatively, you can build Cargo from source.
 
-# Let’s Get Started
+# Let’s get started
 
 To start a new project with Cargo, use `cargo new`:
 
@@ -83,6 +83,6 @@ class="s1">     Fresh</span> hello_world v0.1.0 (file:///path/to/project/hello_w
 class="s1">   Running</span> `target/hello_world`
 Hello, world!</code></pre>
 
-# Going Further
+# Going further
 
 For more details on using Cargo, check out the [Cargo Guide](guide.html)
