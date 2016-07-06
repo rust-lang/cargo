@@ -524,3 +524,26 @@ crate-type = ["dylib"] # could be `staticlib` as well
 The available options are `dylib`, `rlib`, and `staticlib`. You should only use
 this option in a project. Cargo will always compile packages (dependencies)
 based on the requirements of the project that includes them.
+
+# The `[replace]` Section
+
+This section of Cargo.toml can be used to [override dependencies][replace] with
+other copies. The syntax is similar to the `[dependencies]` section:
+
+```toml
+[replace]
+"foo:0.1.0" = { git = 'https://github.com/example/foo' }
+"bar:1.0.2" = { path = 'my/local/bar' }
+```
+
+Each key in the `[replace]` table is a [package id
+specification](pkgid-spec.html) which allows arbitrarily choosing a node in the
+dependency graph to override. The value of each key is the same as the
+`[dependencies]` syntax for specifying dependencies. Note that when a crate is
+overridden the copy it's overridden with must have both the same name and
+version, but it can come from a different source (e.g. git or a local path).
+
+More information about overriding dependencies can be found in the [overriding
+dependencies][replace] section of the documentation.
+
+[replace]: specifying-dependencies.html#overriding-dependencies
