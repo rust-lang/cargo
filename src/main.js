@@ -1,12 +1,9 @@
-/// Just a prototype, the final thing should be in Rust
+//! Read rustc JSON output and parse out the lints' suggestions to automatically
+//! apply them.
+//!
+//! Just a prototype, the final thing should be in Rust
 
 const fs = require('fs');
-const args = process.argv.slice(2);
-
-if (!args[0]) {
-    console.log("Usage: node src/main.js json-file");
-    process.exit(1);
-}
 
 /// Strips the indent of the first line form all other lines
 function normalizeIndent(lines) {
@@ -18,6 +15,7 @@ function normalizeIndent(lines) {
         .map(line => line.replace(new RegExp("^" + leadingWhitespace), ""));
 }
 
+/// Map a span to a suggestion.
 function collectSpan(acc, message, span) {
     if (!span.suggested_replacement) { return; }
     acc.push({
@@ -27,11 +25,13 @@ function collectSpan(acc, message, span) {
             [span.line_start, span.column_start],
             [span.line_end, span.column_end],
         ],
+        byte_range: [span.byte_start, span.byte_end],
         text: normalizeIndent((span.text || []).map(x => x.text)),
         replacement: span.suggested_replacement,
-    })
+    });
 }
 
+/// Collect suggestions from diagnostic messages, and their spans and children.
 function collectSuggestions(acc, diagnostic, parent_message) {
     const message = typeof parent_message === 'string' ?
         parent_message :
@@ -46,6 +46,14 @@ function collectSuggestions(acc, diagnostic, parent_message) {
     return acc;
 }
 
+// Read some JSON file and parse its suggestions
+
+const args = process.argv.slice(2);
+
+if (!args[0]) {
+    console.log("Usage: node src/main.js json-file");
+    process.exit(1);
+}
 
 const file = fs.readFileSync(args[0]).toString('utf8');
 const lines = file.split('\n');
