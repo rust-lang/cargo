@@ -13,7 +13,7 @@ fn clippy() {
     file.read_to_string(&mut buffer).unwrap();
 
     for line in buffer.lines().filter(not_empty) {
-        let deserialized: ::diagnostics::Diagnostic = serde_json::from_str(&line).unwrap();
-        println!("{:?}", deserialized.message);
+        let deserialized: super::diagnostics::Diagnostic = serde_json::from_str(&line).unwrap();
+        println!("{:?}", super::collect_suggestions(&deserialized, None));
     }
 }

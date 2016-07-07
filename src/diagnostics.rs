@@ -21,8 +21,8 @@ pub struct Diagnostic {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DiagnosticSpan {
     pub file_name: String,
-    pub byte_start: u32,
-    pub byte_end: u32,
+    pub byte_start: usize,
+    pub byte_end: usize,
     /// 1-based.
     pub line_start: usize,
     pub line_end: usize,

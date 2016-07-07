@@ -4,6 +4,69 @@
 extern crate serde_json;
 
 pub mod diagnostics;
+use diagnostics::{Diagnostic, DiagnosticSpan};
+
+#[derive(Debug)]
+struct LinePosition(usize, usize);
+
+#[derive(Debug)]
+pub struct Suggestion {
+    message: String,
+    file_name: String,
+    line_range: (LinePosition, LinePosition),
+    byte_range: (usize, usize),
+    text: String,
+    replacement: String,
+}
+
+// fn normalize_indent<'a, T: Iterator<Item = &'a DiagnosticSpanLine>>(lines: &T)
+//     -> Option<String>
+// {
+//     if let Some(first_line) = lines.clone().next() {
+//         let leading_whitespace =
+//             first_line.text.chars()
+//             .take_while(|&c| char::is_whitespace(c))
+//             .count();
+        
+//         Some(lines.clone()
+//             .map(|line| String::from(&line.text[leading_whitespace..]))
+//             .collect::<Vec<_>>()
+//             .join("\n"))
+//     } else {
+//         None
+//     }
+// }
+
+fn collect_span(message: &str, span: &DiagnosticSpan) -> Option<Suggestion> {
+    if let Some(replacement) = span.suggested_replacement.clone() {
+        Some(Suggestion {
+            message: message.into(),
+            file_name: span.file_name.clone(),
+            line_range: (LinePosition(span.line_start, span.column_start),
+                         LinePosition(span.line_end, span.column_end)),
+            byte_range: (span.byte_start, span.byte_end),
+            text: span.text.iter().map(|ref x| x.text.clone()).collect::<Vec<_>>().join("\n"),
+            replacement: replacement,
+        })
+    } else {
+        None
+    }
+}
+
+pub fn collect_suggestions(diagnostic: &Diagnostic, parent_message: Option<String>)
+    -> Vec<Suggestion>
+{
+    let message = parent_message.unwrap_or(diagnostic.message.clone());
+    let mut suggestions = vec![];
+
+    suggestions.extend(diagnostic.spans.iter()
+        .flat_map(|span| collect_span(&message, span)));
+    
+    suggestions.extend(diagnostic.children.iter()
+        .flat_map(|children| collect_suggestions(children, Some(message.clone()))));
+    
+    suggestions
+}
 
 #[cfg(test)]
 mod tests;
