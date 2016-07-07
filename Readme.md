@@ -2,17 +2,21 @@
 
 **HIGHLY EXPERIMENTAL: CURRENTLY, IT REPLACES THE WRONG LINES!**
 
-The goal of this tool is to read and apply the suggestions made by rustc (and third-party lints, like those offered by Clippy).
+The goal of this tool is to read and apply the suggestions made by rustc (and third-party lints, like those offered by [Clippy](https://github.com/Manishearth/rust-clippy)).
 
 ## Current state
 
 This tool can
 
 - read a file of diagnostics (one JSON object per line)
+- interactively step through the suggestions and ask the user what to do
+- apply suggestions (currently overwrites the wrong lines!)
+
+![rustfix demo](http://i.imgur.com/E9YkK76.png)
 
 ## Get the example running
 
-My current example output for diagnostics is based on libui-rs. You can find the example JSON in `tests/fixtures/libui-rs/clippy.json`.
+My current example output for diagnostics is based on [libui-rs](https://github.com/pcwalton/libui-rs). You can find the example JSON in `tests/fixtures/libui-rs/clippy.json`.
 
 Run `rustfix`:
 
