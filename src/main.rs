@@ -9,6 +9,8 @@ use std::fs::File;
 use std::io::{Read, Write};
 use colored::Colorize;
 
+const USER_OPTIONS: &'static str = "What do you want to do? [r]eplace/[s]kip/[q]uit";
+
 fn main() {
     if let Err(error) = try_main() {
         writeln!(std::io::stderr(), "An error occured: {}", error).unwrap();
@@ -20,9 +22,9 @@ fn try_main() -> Result<(), ProgramError> {
     let file_name = try!(std::env::args().skip(1).next().ok_or(ProgramError::NoFile));
     let file = try!(read_file_to_string(&file_name));
 
-    for line in file.lines().filter(not_empty) {
+    'diagnostics: for line in file.lines().filter(not_empty) {
         let deserialized: rustfix::diagnostics::Diagnostic = try!(serde_json::from_str(&line));
-        for suggestion in &rustfix::collect_suggestions(&deserialized, None) {
+        'suggestions: for suggestion in &rustfix::collect_suggestions(&deserialized, None) {
             println!(
                 "\n{info}: {message}\n\
                 {arrow} {file}:{range}\n\
@@ -39,6 +41,33 @@ fn try_main() -> Result<(), ProgramError> {
                 with="with:".yellow().bold(),
                 replacement=indent(&suggestion.replacement)
             );
+
+            'userinput: loop {
+                println!("{prompt} {user_options}",
+                    prompt="==>".green().bold(), user_options=USER_OPTIONS.green());
+
+                let mut input = String::new();
+                try!(std::io::stdin().read_line(&mut input));
+
+                match input.trim() {
+                    "q" => {
+                        println!("Thanks for playing.");
+                        break 'diagnostics;
+                    }
+                    "s" => {
+                        println!("Skipped.");
+                        continue 'suggestions;
+                    }
+                    "r" => {
+                        unimplemented!();
+                    },
+                    _ => {
+                        println!("{error}: I didn't get that. {user_options}",
+                            error="Error".red().bold(), user_options=USER_OPTIONS);
+                        continue 'userinput;
+                    }
+                }
+            }
         }
     }
 
