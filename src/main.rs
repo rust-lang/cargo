@@ -65,7 +65,7 @@ fn try_main() -> Result<(), ProgramError> {
 
                         let mut new_content = vec![];
                         new_content.extend_from_slice(&file_content[..suggestion.byte_range.0]);
-                        new_content.extend_from_slice(&suggestion.replacement.as_bytes());
+                        new_content.extend_from_slice(suggestion.replacement.as_bytes());
                         new_content.extend_from_slice(&file_content[suggestion.byte_range.1..]);
 
                         let mut file = try!(File::create(&suggestion.file_name));
@@ -121,7 +121,7 @@ fn read_file_to_string(file_name: &str) -> Result<String, std::io::Error> {
 }
 
 fn not_empty(s: &&str) -> bool {
-    s.trim().len() > 0
+    !s.trim().is_empty()
 }
 
 fn split_at_lint_name(s: &str) -> String {
