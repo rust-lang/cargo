@@ -34,24 +34,6 @@ pub struct Suggestion {
     pub replacement: String,
 }
 
-// fn normalize_indent<'a, T: Iterator<Item = &'a DiagnosticSpanLine>>(lines: &T)
-//     -> Option<String>
-// {
-//     if let Some(first_line) = lines.clone().next() {
-//         let leading_whitespace =
-//             first_line.text.chars()
-//             .take_while(|&c| char::is_whitespace(c))
-//             .count();
-        
-//         Some(lines.clone()
-//             .map(|line| String::from(&line.text[leading_whitespace..]))
-//             .collect::<Vec<_>>()
-//             .join("\n"))
-//     } else {
-//         None
-//     }
-// }
-
 fn collect_span(message: &str, span: &DiagnosticSpan) -> Option<Suggestion> {
     if let Some(replacement) = span.suggested_replacement.clone() {
         Some(Suggestion {
@@ -82,6 +64,3 @@ pub fn collect_suggestions(diagnostic: &Diagnostic, parent_message: Option<Strin
     
     suggestions
 }
-
-#[cfg(test)]
-mod tests;
