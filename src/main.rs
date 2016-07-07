@@ -13,7 +13,7 @@ const USER_OPTIONS: &'static str = "What do you want to do? [r]eplace/[s]kip/[q]
 
 fn main() {
     if let Err(error) = try_main() {
-        writeln!(std::io::stderr(), "An error occured: {}", error).unwrap();
+        writeln!(std::io::stderr(), "An error occured: {:#?}", error).unwrap();
         std::process::exit(1);
     }
 }
@@ -59,7 +59,20 @@ fn try_main() -> Result<(), ProgramError> {
                         continue 'suggestions;
                     }
                     "r" => {
-                        unimplemented!();
+                        let mut file = try!(File::open(&suggestion.file_name));
+                        let mut file_content = vec![];
+                        try!(file.read_to_end(&mut file_content));
+
+                        let mut new_content = vec![];
+                        new_content.extend_from_slice(&file_content[..suggestion.byte_range.0]);
+                        new_content.extend_from_slice(&suggestion.replacement.as_bytes());
+                        new_content.extend_from_slice(&file_content[suggestion.byte_range.1..]);
+
+                        let mut file = try!(File::create(&suggestion.file_name));
+
+                        try!(file.set_len(new_content.len() as u64));
+                        try!(file.write_all(&new_content));
+                        println!("Replaced.");
                     },
                     _ => {
                         println!("{error}: I didn't get that. {user_options}",
