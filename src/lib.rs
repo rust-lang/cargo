@@ -7,16 +7,31 @@ pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
 
 #[derive(Debug)]
-struct LinePosition(usize, usize);
+pub struct LinePosition(pub usize, pub usize);
+
+impl std::fmt::Display for LinePosition {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}:{}", self.0, self.1)
+    }
+}
+
+#[derive(Debug)]
+pub struct LineRange(pub LinePosition, pub LinePosition);
+
+impl std::fmt::Display for LineRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}-{}", self.0, self.1)
+    }
+}
 
 #[derive(Debug)]
 pub struct Suggestion {
-    message: String,
-    file_name: String,
-    line_range: (LinePosition, LinePosition),
-    byte_range: (usize, usize),
-    text: String,
-    replacement: String,
+    pub message: String,
+    pub file_name: String,
+    pub line_range: LineRange,
+    pub byte_range: (usize, usize),
+    pub text: String,
+    pub replacement: String,
 }
 
 // fn normalize_indent<'a, T: Iterator<Item = &'a DiagnosticSpanLine>>(lines: &T)
@@ -42,8 +57,8 @@ fn collect_span(message: &str, span: &DiagnosticSpan) -> Option<Suggestion> {
         Some(Suggestion {
             message: message.into(),
             file_name: span.file_name.clone(),
-            line_range: (LinePosition(span.line_start, span.column_start),
-                         LinePosition(span.line_end, span.column_end)),
+            line_range: LineRange(LinePosition(span.line_start, span.column_start),
+                LinePosition(span.line_end, span.column_end)),
             byte_range: (span.byte_start, span.byte_end),
             text: span.text.iter().map(|ref x| x.text.clone()).collect::<Vec<_>>().join("\n"),
             replacement: replacement,

@@ -4,6 +4,7 @@ name = "rustfix"
 version = "0.1.0"
 
 [dependencies]
+colored = "1.2.0"
 quick-error = "1.1.0"
 serde = "0.7.13"
 serde_json = "0.7.4"
