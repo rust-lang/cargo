@@ -4,12 +4,13 @@ extern crate env_logger;
 extern crate git2_curl;
 extern crate rustc_serialize;
 extern crate toml;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
-use std::path::{Path,PathBuf};
+use std::path::{Path, PathBuf};
 
 use cargo::core::shell::Verbosity;
 use cargo::execute_main_without_stdin;
@@ -47,6 +48,7 @@ Options:
 
 Some common cargo commands are (see all commands with --list):
     build       Compile the current project
+    check       Fast compilation to report errors without creating artifacts
     clean       Remove the target directory
     doc         Build this project's and its dependencies' documentation
     new         Create a new cargo project
@@ -71,6 +73,7 @@ macro_rules! each_subcommand{
     ($mac:ident) => {
         $mac!(bench);
         $mac!(build);
+        $mac!(check);
         $mac!(clean);
         $mac!(doc);
         $mac!(fetch);
@@ -112,30 +115,31 @@ each_subcommand!(declare_mod);
   on this top-level information.
 */
 fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure_shell(flags.flag_verbose,
-                                flags.flag_quiet,
-                                &flags.flag_color));
+    try!(config.configure_shell(flags.flag_verbose, flags.flag_quiet, &flags.flag_color));
 
     init_git_transports(config);
     cargo::util::job::setup();
 
     if flags.flag_version {
         println!("{}", cargo::version());
-        return Ok(None)
+        return Ok(None);
     }
 
     if flags.flag_list {
         println!("Installed Commands:");
         for command in list_commands(config) {
             println!("    {}", command);
-        };
-        return Ok(None)
+        }
+        return Ok(None);
     }
 
     if let Some(ref code) = flags.flag_explain {
-        try!(process(config.rustc()).arg("--explain").arg(code).exec()
-                                    .map_err(human));
-        return Ok(None)
+        try!(process(config.rustc())
+            .arg("--explain")
+            .arg(code)
+            .exec()
+            .map_err(human));
+        return Ok(None);
     }
 
     let args = match &flags.arg_command[..] {
@@ -145,23 +149,20 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         "" | "help" if flags.arg_args.is_empty() => {
             config.shell().set_verbosity(Verbosity::Verbose);
             let args = &["cargo".to_string(), "-h".to_string()];
-            let r = cargo::call_main_without_stdin(execute, config, USAGE, args,
-                                                   false);
+            let r = cargo::call_main_without_stdin(execute, config, USAGE, args, false);
             cargo::process_executed(r, &mut config.shell());
-            return Ok(None)
+            return Ok(None);
         }
 
         // For `cargo help -h` and `cargo help --help`, print out the help
         // message for `cargo help`
-        "help" if flags.arg_args[0] == "-h" ||
-                  flags.arg_args[0] == "--help" => {
+        "help" if flags.arg_args[0] == "-h" || flags.arg_args[0] == "--help" => {
             vec!["cargo".to_string(), "help".to_string(), "-h".to_string()]
         }
 
         // For `cargo help foo`, print out the usage message for the specified
         // subcommand by executing the command with the `-h` flag.
-        "help" => vec!["cargo".to_string(), flags.arg_args[0].clone(),
-                       "-h".to_string()],
+        "help" => vec!["cargo".to_string(), flags.arg_args[0].clone(), "-h".to_string()],
 
         // For all other invocations, we're of the form `cargo foo args...`. We
         // use the exact environment arguments to preserve tokens like `--` for
@@ -190,29 +191,32 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
     let cmds = list_commands(config);
     // Only consider candidates with a lev_distance of 3 or less so we don't
     // suggest out-of-the-blue options.
-    let mut filtered = cmds.iter().map(|c| (lev_distance(&c, cmd), c))
-                                  .filter(|&(d, _)| d < 4)
-                                  .collect::<Vec<_>>();
+    let mut filtered = cmds.iter()
+        .map(|c| (lev_distance(&c, cmd), c))
+        .filter(|&(d, _)| d < 4)
+        .collect::<Vec<_>>();
     filtered.sort_by(|a, b| a.0.cmp(&b.0));
     filtered.get(0).map(|slot| slot.1.clone())
 }
 
-fn execute_subcommand(config: &Config,
-                      cmd: &str,
-                      args: &[String]) -> CliResult<()> {
+fn execute_subcommand(config: &Config, cmd: &str, args: &[String]) -> CliResult<()> {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let path = search_directories(config)
-                    .iter()
-                    .map(|dir| dir.join(&command_exe))
-                    .find(|file| is_executable(file));
+        .iter()
+        .map(|dir| dir.join(&command_exe))
+        .find(|file| is_executable(file));
     let command = match path {
         Some(command) => command,
         None => {
             return Err(human(match find_closest(config, cmd) {
-                Some(closest) => format!("no such subcommand: `{}`\n\n\t\
-                                          Did you mean `{}`?\n", cmd, closest),
-                None => format!("no such subcommand: `{}`", cmd)
-            }).into())
+                    Some(closest) => {
+                        format!("no such subcommand: `{}`\n\n\tDid you mean `{}`?\n",
+                                cmd,
+                                closest)
+                    }
+                    None => format!("no such subcommand: `{}`", cmd),
+                })
+                .into())
         }
     };
     let err = match util::process(&command).args(&args[1..]).exec() {
@@ -236,16 +240,16 @@ fn list_commands(config: &Config) -> BTreeSet<String> {
     for dir in search_directories(config) {
         let entries = match fs::read_dir(dir) {
             Ok(entries) => entries,
-            _ => continue
+            _ => continue,
         };
         for entry in entries.filter_map(|e| e.ok()) {
             let path = entry.path();
             let filename = match path.file_name().and_then(|s| s.to_str()) {
                 Some(filename) => filename,
-                _ => continue
+                _ => continue,
             };
             if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
-                continue
+                continue;
             }
             if is_executable(entry.path()) {
                 let end = filename.len() - suffix.len();
@@ -264,9 +268,9 @@ fn list_commands(config: &Config) -> BTreeSet<String> {
 #[cfg(unix)]
 fn is_executable<P: AsRef<Path>>(path: P) -> bool {
     use std::os::unix::prelude::*;
-    fs::metadata(path).map(|metadata| {
-        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
-    }).unwrap_or(false)
+    fs::metadata(path)
+        .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
 }
 #[cfg(windows)]
 fn is_executable<P: AsRef<Path>>(path: P) -> bool {
@@ -287,7 +291,7 @@ fn init_git_transports(config: &Config) {
     // case. The custom transport, however, is not as well battle-tested.
     match cargo::ops::http_proxy_exists(config) {
         Ok(true) => {}
-        _ => return
+        _ => return,
     }
 
     let handle = match cargo::ops::http_handle(config) {

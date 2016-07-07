@@ -1,7 +1,7 @@
 use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, CliError, Human, Config, human};
-use cargo::util::important_paths::{find_root_manifest_for_wd};
+use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -89,6 +89,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                             &options.flag_bench),
             target_rustdoc_args: None,
             target_rustc_args: None,
+            compile_check: false,
         },
     };
 
@@ -99,7 +100,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
                 Some(i) => CliError::new(human("bench failed"), i),
-                None => CliError::new(Box::new(Human(err)), 101)
+                None => CliError::new(Box::new(Human(err)), 101),
             })
         }
     }
