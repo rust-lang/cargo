@@ -61,7 +61,7 @@ use util::ChainError;
 use util::graph::{Nodes, Edges};
 
 pub use self::encode::{EncodableResolve, EncodableDependency, EncodablePackageId};
-pub use self::encode::Metadata;
+pub use self::encode::{Metadata, WorkspaceResolve};
 
 mod encode;
 
@@ -674,7 +674,7 @@ fn build_features(s: &Summary, method: &Method)
         match s.features().get(feat) {
             Some(wanted_features) => {
                 for entry in wanted_features {
-                    // If the entry is of the form `foo/bar`, then we just lookup package 
+                    // If the entry is of the form `foo/bar`, then we just lookup package
                     // `foo` and enable its feature `bar`. We also add `foo` to the used
                     // set because `foo` might have been an optional dependency.
                     //
@@ -703,7 +703,7 @@ fn build_features(s: &Summary, method: &Method)
                 deps.entry(feat.to_string()).or_insert(Vec::new());
             }
         }
-        
+
         visited.remove(&feat.to_string());
 
         Ok(())
