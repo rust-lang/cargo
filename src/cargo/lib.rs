@@ -25,10 +25,9 @@ extern crate toml;
 extern crate url;
 
 use std::env;
-use std::io::prelude::*;
 use std::io;
 use rustc_serialize::{Decodable, Encodable};
-use rustc_serialize::json::{self, Json};
+use rustc_serialize::json;
 use docopt::Docopt;
 
 use core::{Shell, MultiShell, ShellConfig, Verbosity, ColorConfig};
@@ -48,31 +47,6 @@ pub mod core;
 pub mod ops;
 pub mod sources;
 pub mod util;
-
-pub fn execute_main<T, U, V>(
-                        exec: fn(T, U, &Config) -> CliResult<Option<V>>,
-                        options_first: bool,
-                        usage: &str)
-    where V: Encodable, T: Decodable, U: Decodable
-{
-    process::<V, _>(|rest, shell| {
-        call_main(exec, shell, usage, rest, options_first)
-    });
-}
-
-pub fn call_main<T, U, V>(
-            exec: fn(T, U, &Config) -> CliResult<Option<V>>,
-            shell: &Config,
-            usage: &str,
-            args: &[String],
-            options_first: bool) -> CliResult<Option<V>>
-    where V: Encodable, T: Decodable, U: Decodable
-{
-    let flags = try!(flags_from_args::<T>(usage, args, options_first));
-    let json = try!(json_from_stdin::<U>());
-
-    exec(flags, json, shell)
-}
 
 pub fn execute_main_without_stdin<T, V>(
                                       exec: fn(T, &Config) -> CliResult<Option<V>>,
@@ -248,22 +222,5 @@ fn flags_from_args<T>(usage: &str, args: &[String],
     docopt.decode().map_err(|e| {
         let code = if e.fatal() {1} else {0};
         CliError::new(human(e.to_string()), code)
-    })
-}
-
-fn json_from_stdin<T: Decodable>() -> CliResult<T> {
-    let mut reader = io::stdin();
-    let mut input = String::new();
-    try!(reader.read_to_string(&mut input).map_err(|_| {
-        CliError::new(human("Standard in did not exist or was not UTF-8"), 1)
-    }));
-
-    let json = try!(Json::from_str(&input).map_err(|_| {
-        CliError::new(human("Could not parse standard in as JSON"), 1)
-    }));
-    let mut decoder = json::Decoder::new(json);
-
-    Decodable::decode(&mut decoder).map_err(|_| {
-        CliError::new(human("Could not process standard in as input"), 1)
     })
 }
