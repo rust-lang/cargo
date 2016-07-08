@@ -4,6 +4,7 @@ use rustc_serialize::{Encodable, Decodable};
 use toml::{self, Encoder, Value};
 
 use core::{Resolve, resolver, Workspace};
+use core::resolver::WorkspaceResolve;
 use util::{CargoResult, ChainError, human, Filesystem};
 use util::toml as cargo_toml;
 
@@ -33,7 +34,10 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
 
 pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> {
     let mut e = Encoder::new();
-    resolve.encode(&mut e).unwrap();
+    WorkspaceResolve {
+        ws: ws,
+        resolve: resolve,
+    }.encode(&mut e).unwrap();
 
     let mut out = String::new();
 

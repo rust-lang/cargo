@@ -1,5 +1,9 @@
+#[macro_use]
 extern crate cargotest;
 extern crate hamcrest;
+
+use std::io::Read;
+use std::fs::File;
 
 use cargotest::support::{project, execs};
 use cargotest::support::registry::Package;
@@ -773,4 +777,50 @@ workspace: [..]
 this may be fixable by ensuring that this crate is depended on by the workspace \
 root: [..]
 "));
+}
+
+#[test]
+fn lock_doesnt_change_depending_on_crate() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ['baz']
+
+            [dependencies]
+            foo = "*"
+        "#)
+        .file("src/lib.rs", "")
+        .file("baz/Cargo.toml", r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("baz/src/lib.rs", "");
+    p.build();
+
+    Package::new("foo", "1.0.0").publish();
+    Package::new("bar", "1.0.0").publish();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+
+    let mut lockfile = String::new();
+    t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lockfile));
+
+    assert_that(p.cargo("build").cwd(p.root().join("baz")),
+                execs().with_status(0));
+
+    let mut lockfile2 = String::new();
+    t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lockfile2));
+
+    assert_eq!(lockfile, lockfile2);
 }
