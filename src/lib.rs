@@ -6,7 +6,7 @@ extern crate serde_json;
 pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq)]
 pub struct LinePosition(pub usize, pub usize);
 
 impl std::fmt::Display for LinePosition {
@@ -15,7 +15,7 @@ impl std::fmt::Display for LinePosition {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq)]
 pub struct LineRange(pub LinePosition, pub LinePosition);
 
 impl std::fmt::Display for LineRange {
@@ -24,7 +24,7 @@ impl std::fmt::Display for LineRange {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Hash, PartialEq)]
 pub struct Suggestion {
     pub message: String,
     pub file_name: String,
@@ -58,9 +58,9 @@ pub fn collect_suggestions(diagnostic: &Diagnostic, parent_message: Option<Strin
 
     suggestions.extend(diagnostic.spans.iter()
         .flat_map(|span| collect_span(&message, span)));
-    
+
     suggestions.extend(diagnostic.children.iter()
         .flat_map(|children| collect_suggestions(children, Some(message.clone()))));
-    
+
     suggestions
 }

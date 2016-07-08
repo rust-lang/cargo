@@ -9,7 +9,8 @@ use std::fs::File;
 use std::io::{Read, Write};
 use colored::Colorize;
 
-const USER_OPTIONS: &'static str = "What do you want to do? [r]eplace/[s]kip/[q]uit";
+const USER_OPTIONS: &'static str = "What do you want to do? \
+    [r]eplace/[s]kip/save and [q]uit/[a]bort (without saving)";
 
 fn main() {
     if let Err(error) = try_main() {
@@ -18,9 +19,15 @@ fn main() {
     }
 }
 
+macro_rules! flush {
+    () => (try!(std::io::stdout().flush());)
+}
+
 fn try_main() -> Result<(), ProgramError> {
     let file_name = try!(std::env::args().skip(1).next().ok_or(ProgramError::NoFile));
     let file = try!(read_file_to_string(&file_name));
+
+    let mut accepted_suggestions: Vec<rustfix::Suggestion> = vec![];
 
     'diagnostics: for line in file.lines().filter(not_empty) {
         let deserialized: rustfix::diagnostics::Diagnostic = try!(serde_json::from_str(&line));
@@ -34,48 +41,51 @@ fn try_main() -> Result<(), ProgramError> {
                 {replacement}\n",
                 info="Info".green().bold(),
                 message=split_at_lint_name(&suggestion.message),
-                arrow="-->".blue().bold(),
+                arrow="  -->".blue().bold(),
                 suggestion="Suggestion - Replace:".yellow().bold(),
                 file=suggestion.file_name, range=suggestion.line_range,
-                text=indent(&reset_indent(&suggestion.text)),
+                text=indent(4, &reset_indent(&suggestion.text)),
                 with="with:".yellow().bold(),
-                replacement=indent(&suggestion.replacement)
+                replacement=indent(4, &suggestion.replacement)
             );
 
             'userinput: loop {
-                println!("{prompt} {user_options}",
-                    prompt="==>".green().bold(), user_options=USER_OPTIONS.green());
+                print!("{arrow} {user_options}\n\
+                    {prompt} ",
+                    arrow="==>".green().bold(),
+                    prompt="  >".green().bold(),
+                    user_options=USER_OPTIONS.green());
 
+                flush!();
                 let mut input = String::new();
                 try!(std::io::stdin().read_line(&mut input));
 
                 match input.trim() {
-                    "q" => {
-                        println!("Thanks for playing.");
-                        break 'diagnostics;
-                    }
                     "s" => {
                         println!("Skipped.");
                         continue 'suggestions;
                     }
                     "r" => {
-                        let mut file = try!(File::open(&suggestion.file_name));
-                        let mut file_content = vec![];
-                        try!(file.read_to_end(&mut file_content));
-
-                        let mut new_content = vec![];
-                        new_content.extend_from_slice(&file_content[..suggestion.byte_range.0]);
-                        new_content.extend_from_slice(suggestion.replacement.as_bytes());
-                        new_content.extend_from_slice(&file_content[suggestion.byte_range.1..]);
-
-                        let mut file = try!(File::create(&suggestion.file_name));
-
-                        try!(file.set_len(new_content.len() as u64));
-                        try!(file.write_all(&new_content));
-                        println!("Replaced.");
+                        accepted_suggestions.push((*suggestion).clone());
+                        println!("Suggestion accepted. I'll remember that and apply it later.");
+                        continue 'suggestions;
                     },
+                    "q" => {
+                        println!("Good work. Let me just apply these {} changes!",
+                            accepted_suggestions.len());
+
+                        try!(apply_suggestions(&accepted_suggestions));
+
+                        println!("\nDone.");
+                        println!("Thanks for playing!");
+                        break 'diagnostics;
+                    }
+                    "a" => {
+                        println!("Let's get outta here!");
+                        break 'diagnostics;
+                    }
                     _ => {
-                        println!("{error}: I didn't get that. {user_options}",
+                        println!("{error}: I didn't quite get that. {user_options}",
                             error="Error".red().bold(), user_options=USER_OPTIONS);
                         continue 'userinput;
                     }
@@ -127,7 +137,7 @@ fn not_empty(s: &&str) -> bool {
 fn split_at_lint_name(s: &str) -> String {
     s.split(", #[")
     .collect::<Vec<_>>()
-    .join("\n      #[")
+    .join("\n      #[") // Length of whitespace == length of "Info: "
 }
 
 fn reset_indent(s: &str) -> String {
@@ -144,9 +154,38 @@ fn reset_indent(s: &str) -> String {
         .join("\n")
 }
 
-fn indent(s: &str) -> String {
+fn indent(size: u32, s: &str) -> String {
+    let whitespace: String = std::iter::repeat(' ').take(size as usize).collect();
+
     s.lines()
-    .map(|l| format!("    {}", l))
+    .map(|l| format!("{}{}", whitespace, l))
     .collect::<Vec<_>>()
     .join("\n")
+}
+
+fn apply_suggestions(suggestions: &[rustfix::Suggestion]) -> Result<(), ProgramError> {
+    for suggestion in suggestions.iter().rev() {
+        // let file_content = read_file_to_string(&suggestion.file_name);
+        // file_content.lines().skip(suggestion.line_range.0.0)
+        //     .take(suggestion.line_range.1.0) - suggestion.line_range.0.0;
+
+        let mut file = try!(File::open(&suggestion.file_name));
+        let mut file_content = vec![];
+        try!(file.read_to_end(&mut file_content));
+
+        let mut new_content = vec![];
+        new_content.extend_from_slice(&file_content[..suggestion.byte_range.0]);
+        new_content.extend_from_slice(suggestion.replacement.as_bytes());
+        new_content.extend_from_slice(&file_content[suggestion.byte_range.1..]);
+
+        let mut file = try!(File::create(&suggestion.file_name));
+
+        try!(file.set_len(new_content.len() as u64));
+        try!(file.write_all(&new_content));
+
+        print!(".");
+        flush!();
+    }
+
+    Ok(())
 }
