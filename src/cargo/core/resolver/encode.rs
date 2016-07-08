@@ -200,21 +200,32 @@ impl Decodable for EncodablePackageId {
     }
 }
 
-impl Encodable for Resolve {
+pub struct WorkspaceResolve<'a, 'cfg: 'a> {
+    pub ws: &'a Workspace<'cfg>,
+    pub resolve: &'a Resolve,
+}
+
+impl<'a, 'cfg> Encodable for WorkspaceResolve<'a, 'cfg> {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        let mut ids: Vec<&PackageId> = self.graph.iter().collect();
+        let mut ids: Vec<&PackageId> = self.resolve.graph.iter().collect();
         ids.sort();
 
-        let encodable = ids.iter().filter_map(|&id| {
-            if self.root == *id { return None; }
+        let root = self.ws.members().max_by_key(|member| {
+            member.name()
+        }).unwrap().package_id();
 
-            Some(encodable_resolve_node(id, self))
+        let encodable = ids.iter().filter_map(|&id| {
+            if root == id {
+                return None
+            }
+
+            Some(encodable_resolve_node(id, self.resolve))
         }).collect::<Vec<EncodableDependency>>();
 
         EncodableResolve {
             package: Some(encodable),
-            root: encodable_resolve_node(&self.root, self),
-            metadata: self.metadata.clone(),
+            root: encodable_resolve_node(&root, self.resolve),
+            metadata: self.resolve.metadata.clone(),
         }.encode(s)
     }
 }
