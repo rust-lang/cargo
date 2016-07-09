@@ -74,7 +74,7 @@ fn try_main() -> Result<(), ProgramError> {
 
     let suggestions: Vec<Suggestion> = json.lines()
         .filter(not_empty)
-        .flat_map(|line| serde_json::from_str::<Diagnostic>(&line))
+        .flat_map(|line| serde_json::from_str::<Diagnostic>(line))
         .flat_map(|diagnostic| rustfix::collect_suggestions(&diagnostic, None))
         .collect();
 
@@ -84,7 +84,7 @@ fn try_main() -> Result<(), ProgramError> {
 }
 
 fn json_from_file(file_name: &str) -> Result<String, ProgramError> {
-    read_file_to_string(&file_name).map_err(From::from)
+    read_file_to_string(file_name).map_err(From::from)
 }
 
 fn json_from_subcommand(subcommand: &str) -> Result<String, ProgramError> {
