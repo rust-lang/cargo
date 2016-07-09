@@ -7,20 +7,26 @@ pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq)]
-pub struct LinePosition(pub usize, pub usize);
+pub struct LinePosition {
+    pub line: usize,
+    pub column: usize,
+}
 
 impl std::fmt::Display for LinePosition {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}:{}", self.0, self.1)
+        write!(f, "{}:{}", self.line, self.column)
     }
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq)]
-pub struct LineRange(pub LinePosition, pub LinePosition);
+pub struct LineRange {
+    pub start: LinePosition,
+    pub end: LinePosition,
+}
 
 impl std::fmt::Display for LineRange {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}-{}", self.0, self.1)
+        write!(f, "{}-{}", self.start, self.end)
     }
 }
 
@@ -29,7 +35,6 @@ pub struct Suggestion {
     pub message: String,
     pub file_name: String,
     pub line_range: LineRange,
-    pub byte_range: (usize, usize),
     pub text: String,
     pub replacement: String,
 }
@@ -39,9 +44,16 @@ fn collect_span(message: &str, span: &DiagnosticSpan) -> Option<Suggestion> {
         Some(Suggestion {
             message: message.into(),
             file_name: span.file_name.clone(),
-            line_range: LineRange(LinePosition(span.line_start, span.column_start),
-                LinePosition(span.line_end, span.column_end)),
-            byte_range: (span.byte_start, span.byte_end),
+            line_range: LineRange {
+                start: LinePosition {
+                    line: span.line_start,
+                    column: span.column_start,
+                },
+                end: LinePosition {
+                    line: span.line_end,
+                    column: span.column_end,
+                },
+            },
             text: span.text.iter().map(|ref x| x.text.clone()).collect::<Vec<_>>().join("\n"),
             replacement: replacement,
         })
@@ -50,16 +62,18 @@ fn collect_span(message: &str, span: &DiagnosticSpan) -> Option<Suggestion> {
     }
 }
 
-pub fn collect_suggestions(diagnostic: &Diagnostic, parent_message: Option<String>)
-    -> Vec<Suggestion>
-{
+pub fn collect_suggestions(diagnostic: &Diagnostic,
+                           parent_message: Option<String>)
+                           -> Vec<Suggestion> {
     let message = parent_message.unwrap_or(diagnostic.message.clone());
     let mut suggestions = vec![];
 
-    suggestions.extend(diagnostic.spans.iter()
+    suggestions.extend(diagnostic.spans
+        .iter()
         .flat_map(|span| collect_span(&message, span)));
 
-    suggestions.extend(diagnostic.children.iter()
+    suggestions.extend(diagnostic.children
+        .iter()
         .flat_map(|children| collect_suggestions(children, Some(message.clone()))));
 
     suggestions
