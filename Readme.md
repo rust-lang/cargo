@@ -10,6 +10,7 @@ The goal of this tool is to read and apply the suggestions made by rustc (and th
 
 This tool can
 
+- parse rustc's diagnostics (it calls `cargo` for you and reads its output)
 - read a file of diagnostics (one JSON object per line)
 - interactively step through the suggestions and ask the user what to do
 - apply suggestions (currently whole lines only)
