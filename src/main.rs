@@ -74,7 +74,9 @@ fn try_main() -> Result<(), ProgramError> {
 
     let suggestions: Vec<Suggestion> = json.lines()
         .filter(not_empty)
+        // Convert JSON string (and eat parsing errors)
         .flat_map(|line| serde_json::from_str::<Diagnostic>(line))
+        // One diagnostic line might have multiple suggestions
         .flat_map(|diagnostic| rustfix::collect_suggestions(&diagnostic, None))
         .collect();
 
