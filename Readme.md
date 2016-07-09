@@ -1,6 +1,6 @@
 # rustfix
 
-**HIGHLY EXPERIMENTAL: CURRENTLY, IT REPLACES THE WRONG LINES!**
+> **HIGHLY EXPERIMENTAL – MIGHT EAT YOUR CODE**
 
 The goal of this tool is to read and apply the suggestions made by rustc (and third-party lints, like those offered by [Clippy](https://github.com/Manishearth/rust-clippy)).
 
@@ -10,7 +10,7 @@ This tool can
 
 - read a file of diagnostics (one JSON object per line)
 - interactively step through the suggestions and ask the user what to do
-- apply suggestions (currently overwrites the wrong lines!)
+- apply suggestions (currently whole lines only)
 
 ![rustfix demo](http://i.imgur.com/E9YkK76.png)
 
@@ -45,8 +45,8 @@ $ cargo clippy -- -Z unstable-options --error-format json &2> clippy.json
 
 Licensed under either of
 
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
 
 at your option.
 
