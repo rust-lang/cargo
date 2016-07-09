@@ -2,7 +2,9 @@
 
 > **HIGHLY EXPERIMENTAL – MIGHT EAT YOUR CODE**
 
-The goal of this tool is to read and apply the suggestions made by rustc (and third-party lints, like those offered by [Clippy](https://github.com/Manishearth/rust-clippy)).
+The goal of this tool is to read and apply the suggestions made by rustc (and third-party lints, like those offered by [Clippy][clippy]).
+
+[clippy]: https://github.com/Manishearth/rust-clippy
 
 ## Current state
 
@@ -14,6 +16,42 @@ This tool can
 
 ![rustfix demo](http://i.imgur.com/E9YkK76.png)
 
+## Installation
+
+Assuming you have a recent Rust nightly and Cargo installed:
+
+```sh
+$ cargo install --git https://github.com/killercup/rustfix.git
+```
+
+Make sure the binaries installed by Cargo are in your `$PATH`.
+
+## Usage
+
+In your project directory, just execute `rustfix`!
+
+You probably want to use `rustfix --clippy` to get all the suggestions from [Clippy][clippy] as well. Make sure you have `cargo clippy` installed (`cargo install clippy`).
+
+Please note that running `rustfix` multiple times in a project where no file was changed in the meantime will currently not generate any suggesions (as Cargo/Rust will skip the unchanged code and not compile it again).
+
+### CLI Options
+
+```plain
+rustfix 0.1.0
+Automatically apply suggestions made by rustc
+
+USAGE:
+    rustfix [FLAGS] [OPTIONS]
+
+FLAGS:
+        --clippy     Use `cargo clippy` for suggestions
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+        --from-file <FILE>    Read suggestions from file (each line is a JSON object)
+```
+
 ## Get the example running
 
 My current example output for diagnostics is based on [libui-rs](https://github.com/pcwalton/libui-rs). You can find the example JSON in `tests/fixtures/libui-rs/clippy.json`.
@@ -22,10 +60,10 @@ Run `rustfix`:
 
 ```sh
 $ cd tests/fixtures/libui-rs/
-$ cargo run -- clippy.json
+$ cargo run -- --from-file clippy.json
 ```
 
-### Generate the diagnostics JSON file yourself
+### Generate the example diagnostics JSON yourself
 
 ```sh
 $ git clone https://github.com/pcwalton/libui-rs.git
