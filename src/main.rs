@@ -309,7 +309,7 @@ fn apply_suggestion(suggestion: &Suggestion) -> Result<(), ProgramError> {
         .nth(suggestion.line_range.end.line - 1)
         .unwrap_or("")
         .chars()
-        .skip(suggestion.line_range.end.column)
+        .skip(suggestion.line_range.end.column - 1)
         .collect::<String>());
 
     // Add the lines after the section we want to replace
