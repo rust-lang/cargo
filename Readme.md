@@ -33,7 +33,7 @@ In your project directory, just execute `rustfix`!
 
 You probably want to use `rustfix --clippy` to get all the suggestions from [Clippy][clippy] as well. Make sure you have `cargo clippy` installed (`cargo install clippy`).
 
-Please note that running `rustfix` multiple times in a project where no file was changed in the meantime will currently not generate any suggesions (as Cargo/Rust will skip the unchanged code and not compile it again).
+Please note that running `rustfix` multiple times in a project where no file was changed in the meantime will currently not generate any suggestions (as Cargo/Rust will skip the unchanged code and not compile it again).
 
 ### CLI Options
 
@@ -77,7 +77,7 @@ $ cargo clippy -- -Z unstable-options --error-format json &2> clippy.json
 ## Gotchas
 
 - rustc JSON output is unstable
-- Not all suggestions can be applied trivially (e.g. clippy's "You should use `Default` instead of that `fn new()` you just wrote"-lint will replace your `new`-method with an `impl` block -- which is obvisouly invalid syntax.)
+- Not all suggestions can be applied trivially (e.g. clippy's "You should use `Default` instead of that `fn new()` you just wrote"-lint will replace your `new`-method with an `impl` block -- which is obviously invalid syntax.)
 - This tool _will_ eat your laundry
 
 ## License
