@@ -1,11 +1,12 @@
 [package]
 authors = ["Pascal Hertleif <killercup@gmail.com>"]
-name = "rustfix"
-version = "0.1.0"
-readme = "README.md"
 license = "Apache-2.0/MIT"
+name = "rustfix"
+readme = "README.md"
+version = "0.1.0"
 
 [dependencies]
+clap = "2.9.2"
 colored = "1.2.0"
 quick-error = "1.1.0"
 serde = "0.7.13"

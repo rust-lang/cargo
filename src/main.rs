@@ -1,13 +1,22 @@
+extern crate serde_json;
 #[macro_use]
 extern crate quick_error;
-extern crate serde_json;
+#[macro_use]
+extern crate clap;
 extern crate colored;
 
 extern crate rustfix;
 
 use std::fs::File;
 use std::io::{Read, Write};
+use std::error::Error;
+use std::process::Command;
+
 use colored::Colorize;
+use clap::{Arg, App};
+
+use rustfix::Suggestion;
+use rustfix::diagnostics::Diagnostic;
 
 const USER_OPTIONS: &'static str = "What do you want to do? \
     [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)";
@@ -21,7 +30,11 @@ fn main() {
             std::process::exit(0);
         }
         Err(error) => {
-            writeln!(std::io::stderr(), "An error occured: {:#?}", error).unwrap();
+            writeln!(std::io::stderr(), "An error occured: {}", error).unwrap();
+            writeln!(std::io::stderr(), "{:?}", error).unwrap();
+            if let Some(cause) = error.cause() {
+                writeln!(std::io::stderr(), "Cause: {:?}", cause).unwrap();
+            }
             std::process::exit(1);
         }
     }
@@ -32,64 +45,128 @@ macro_rules! flush {
 }
 
 fn try_main() -> Result<(), ProgramError> {
-    let file_name = try!(std::env::args().skip(1).next().ok_or(ProgramError::NoFile));
-    let file = try!(read_file_to_string(&file_name));
+    let matches = App::new("rustfix")
+        .about("Automatically apply suggestions made by rustc")
+        .version(crate_version!())
+        .arg(Arg::with_name("clippy")
+            .long("clippy")
+            .help("Use `cargo clippy` for suggestions"))
+        .arg(Arg::with_name("from_file")
+            .long("from-file")
+            .value_name("FILE")
+            .takes_value(true)
+            .help("Read suggestions from file (each line is a JSON object)"))
+        .get_matches();
 
-    let mut accepted_suggestions: Vec<rustfix::Suggestion> = vec![];
+    // Get JSON output from rustc...
+    let json = if let Some(file_name) = matches.value_of("from_file") {
+        // either by reading a file the user saved (probably only for debugging rustfix itself)...
+        try!(json_from_file(&file_name))
+    } else {
+        // or by spawning a subcommand that runs rustc.
+        let subcommand = if matches.is_present("clippy") {
+            "clippy"
+        } else {
+            "rustc"
+        };
+        try!(json_from_subcommand(subcommand))
+    };
 
-    'diagnostics: for line in file.lines().filter(not_empty) {
-        let deserialized: rustfix::diagnostics::Diagnostic = try!(serde_json::from_str(&line));
-        'suggestions: for suggestion in &rustfix::collect_suggestions(&deserialized, None) {
-            println!("\n\n{info}: {message}\n{arrow} \
-                      {file}:{range}\n{suggestion}\n\n{text}\n\n{with}\n\n{replacement}\n",
-                     info = "Info".green().bold(),
-                     message = split_at_lint_name(&suggestion.message),
-                     arrow = "  -->".blue().bold(),
-                     suggestion = "Suggestion - Replace:".yellow().bold(),
-                     file = suggestion.file_name,
-                     range = suggestion.line_range,
-                     text = indent(4, &reset_indent(&suggestion.text)),
-                     with = "with:".yellow().bold(),
-                     replacement = indent(4, &suggestion.replacement));
+    let suggestions: Vec<Suggestion> = json.lines()
+        .filter(not_empty)
+        .flat_map(|line| serde_json::from_str::<Diagnostic>(&line))
+        .flat_map(|diagnostic| rustfix::collect_suggestions(&diagnostic, None))
+        .collect();
 
-            'userinput: loop {
-                print!("{arrow} {user_options}\n\
-                    {prompt} ",
-                       arrow = "==>".green().bold(),
-                       prompt = "  >".green().bold(),
-                       user_options = USER_OPTIONS.green());
+    try!(handle_suggestions(&suggestions));
 
-                flush!();
-                let mut input = String::new();
-                try!(std::io::stdin().read_line(&mut input));
+    Ok(())
+}
 
-                match input.trim() {
-                    "s" => {
-                        println!("Skipped.");
-                        continue 'suggestions;
-                    }
-                    "r" => {
-                        accepted_suggestions.push((*suggestion).clone());
-                        println!("Suggestion accepted. I'll remember that and apply it later.");
-                        continue 'suggestions;
-                    }
-                    "q" => {
-                        println!("Thanks for playing!");
-                        break 'diagnostics;
-                    }
-                    "a" => {
-                        return Err(ProgramError::UserAbort);
-                    }
-                    _ => {
-                        println!("{error}: I didn't quite get that. {user_options}",
-                                 error = "Error".red().bold(),
-                                 user_options = USER_OPTIONS);
-                        continue 'userinput;
-                    }
+fn json_from_file(file_name: &str) -> Result<String, ProgramError> {
+    read_file_to_string(&file_name).map_err(From::from)
+}
+
+fn json_from_subcommand(subcommand: &str) -> Result<String, ProgramError> {
+    let output = try!(Command::new("cargo")
+        .args(&[subcommand,
+                "--quiet",
+                "--color", "never",
+                "--",
+                "-Z", "unstable-options",
+                "--error-format", "json"])
+        .output());
+
+    let content = try!(String::from_utf8(output.stderr));
+
+    if !output.status.success() {
+        return Err(ProgramError::SubcommandError(format!("cargo {}", subcommand), content));
+    }
+
+    Ok(content)
+}
+
+fn handle_suggestions(suggestions: &[Suggestion]) -> Result<(), ProgramError> {
+    let mut accepted_suggestions: Vec<&Suggestion> = vec![];
+
+    if suggestions.is_empty() {
+        println!("I don't have any suggestions for you right now. Check back later!");
+        return Ok(());
+    }
+
+    'suggestions: for suggestion in suggestions {
+        println!("\n\n{info}: {message}\n\
+            {arrow} {file}:{range}\n\
+            {suggestion}\n\n\
+            {text}\n\n\
+            {with}\n\n\
+            {replacement}\n",
+            info = "Info".green().bold(),
+            message = split_at_lint_name(&suggestion.message),
+            arrow = "  -->".blue().bold(),
+            suggestion = "Suggestion - Replace:".yellow().bold(),
+            file = suggestion.file_name,
+            range = suggestion.line_range,
+            text = indent(4, &reset_indent(&suggestion.text)),
+            with = "with:".yellow().bold(),
+            replacement = indent(4, &suggestion.replacement));
+
+        'userinput: loop {
+            print!("{arrow} {user_options}\n\
+                {prompt} ",
+                arrow = "==>".green().bold(),
+                prompt = "  >".green().bold(),
+                user_options = USER_OPTIONS.green());
+
+            flush!();
+            let mut input = String::new();
+            try!(std::io::stdin().read_line(&mut input));
+
+            match input.trim() {
+                "s" => {
+                    println!("Skipped.");
+                    continue 'suggestions;
+                }
+                "r" => {
+                    accepted_suggestions.push(suggestion);
+                    println!("Suggestion accepted. I'll remember that and apply it later.");
+                    continue 'suggestions;
+                }
+                "q" => {
+                    println!("Thanks for playing!");
+                    break 'suggestions;
+                }
+                "a" => {
+                    return Err(ProgramError::UserAbort);
+                }
+                _ => {
+                    println!("{error}: I didn't quite get that. {user_options}",
+                                error = "Error".red().bold(),
+                                user_options = USER_OPTIONS);
+                    continue 'userinput;
                 }
             }
         }
-
     }
 
     if !accepted_suggestions.is_empty() {
@@ -106,8 +183,6 @@ fn try_main() -> Result<(), ProgramError> {
         println!("\nDone.");
     }
 
-    println!("See you around!");
-
     Ok(())
 }
 
@@ -116,22 +191,32 @@ quick_error! {
     #[derive(Debug)]
     pub enum ProgramError {
         UserAbort {
-            description("Let's get outta here!")
+            display("Let's get outta here!")
         }
         /// Missing File
         NoFile {
-            description("No input file given")
+            display("No input file given")
+        }
+        SubcommandError(subcommand: String, output: String) {
+            display("Error executing subcommand `{}`", subcommand)
+            description(output)
         }
         /// Error while dealing with file or stdin/stdout
         Io(err: std::io::Error) {
             from()
             cause(err)
+            display("I/O error")
             description(err.description())
+        }
+        Utf8Error(err: std::string::FromUtf8Error) {
+            from()
+            display("Error reading input as UTF-8")
         }
         /// Error with deserialization
         Serde(err: serde_json::Error) {
             from()
             cause(err)
+            display("Serde JSON error")
             description(err.description())
         }
     }
@@ -188,7 +273,7 @@ fn indent(size: u32, s: &str) -> String {
 ///
 /// This function is as stupid as possible. Make sure you call for the replacemnts in one file in
 /// reverse order to not mess up the lines for replacements further down the road.
-fn apply_suggestion(suggestion: &rustfix::Suggestion) -> Result<(), ProgramError> {
+fn apply_suggestion(suggestion: &Suggestion) -> Result<(), ProgramError> {
     use std::cmp::max;
     use std::iter::repeat;
 
@@ -202,7 +287,7 @@ fn apply_suggestion(suggestion: &rustfix::Suggestion) -> Result<(), ProgramError
         .join("\n"));
 
     // Some suggestions seem to currently omit the trailing semicolon
-    let remember_a_semicolon = new_content.ends_with(';');
+    let remember_a_semicolon = suggestion.text.trim().ends_with(';');
 
     // Indentation
     new_content.push_str("\n");
