@@ -288,13 +288,29 @@ fn apply_suggestion(suggestion: &Suggestion) -> Result<(), ProgramError> {
         .join("\n"));
     new_content.push_str("\n");
 
-    // TODO(killercup): Replace sections of lines only
-    new_content.push_str(&indent((suggestion.line_range.start.column - 1) as u32,
-                                suggestion.replacement.trim()));
+    // Parts of line before replacement
+    new_content.push_str(&file_content.lines()
+        .nth(suggestion.line_range.start.line - 1)
+        .unwrap_or("")
+        .chars()
+        .take(suggestion.line_range.start.column - 1)
+        .collect::<String>());
 
+    // Insert new content! Finally!
+    new_content.push_str(&suggestion.replacement);
+
+    // TODO(killercup): better handling of trailing semicolons
     if suggestion.text.trim().ends_with(';') && !suggestion.replacement.trim().ends_with(';') {
         new_content.push_str(";");
     }
+
+    // Parts of line after replacement
+    new_content.push_str(&file_content.lines()
+        .nth(suggestion.line_range.end.line - 1)
+        .unwrap_or("")
+        .chars()
+        .skip(suggestion.line_range.end.column)
+        .collect::<String>());
 
     // Add the lines after the section we want to replace
     new_content.push_str("\n");
