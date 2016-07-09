@@ -277,7 +277,6 @@ fn indent(size: u32, s: &str) -> String {
 /// reverse order to not mess up the lines for replacements further down the road.
 fn apply_suggestion(suggestion: &Suggestion) -> Result<(), ProgramError> {
     use std::cmp::max;
-    use std::iter::repeat;
 
     let file_content = try!(read_file_to_string(&suggestion.file_name));
     let mut new_content = String::new();
@@ -287,20 +286,13 @@ fn apply_suggestion(suggestion: &Suggestion) -> Result<(), ProgramError> {
         .take(max(suggestion.line_range.start.line - 1, 0) as usize)
         .collect::<Vec<_>>()
         .join("\n"));
-
-    // Some suggestions seem to currently omit the trailing semicolon
-    let remember_a_semicolon = suggestion.text.trim().ends_with(';');
-
-    // Indentation
     new_content.push_str("\n");
-    new_content.push_str(&repeat(" ")
-        .take(suggestion.line_range.start.column - 1 as usize)
-        .collect::<String>());
 
     // TODO(killercup): Replace sections of lines only
-    new_content.push_str(suggestion.replacement.trim());
+    new_content.push_str(&indent((suggestion.line_range.start.column - 1) as u32,
+                                suggestion.replacement.trim()));
 
-    if remember_a_semicolon {
+    if suggestion.text.trim().ends_with(';') && !suggestion.replacement.trim().ends_with(';') {
         new_content.push_str(";");
     }
 
