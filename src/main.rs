@@ -200,15 +200,22 @@ fn apply_suggestion(suggestion: &rustfix::Suggestion) -> Result<(), ProgramError
         .take(max(suggestion.line_range.start.line - 1, 0) as usize)
         .collect::<Vec<_>>()
         .join("\n"));
-    new_content.push_str("\n");
+
+    // Some suggestions seem to currently omit the trailing semicolon
+    let remember_a_semicolon = new_content.ends_with(';');
 
     // Indentation
+    new_content.push_str("\n");
     new_content.push_str(&repeat(" ")
         .take(suggestion.line_range.start.column - 1 as usize)
         .collect::<String>());
 
     // TODO(killercup): Replace sections of lines only
     new_content.push_str(suggestion.replacement.trim());
+
+    if remember_a_semicolon {
+        new_content.push_str(";");
+    }
 
     // Add the lines after the section we want to replace
     new_content.push_str("\n");
