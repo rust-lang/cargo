@@ -101,6 +101,12 @@ fn custom_build_env_vars() {
                 let _host = env::var("HOST").unwrap();
 
                 let _feat = env::var("CARGO_FEATURE_FOO").unwrap();
+
+                let rustc = env::var("RUSTC").unwrap();
+                assert_eq!(rustc, "rustc");
+
+                let rustdoc = env::var("RUSTDOC").unwrap();
+                assert_eq!(rustdoc, "rustdoc");
             }}
         "#,
         p.root().join("target").join("debug").join("build").display());
@@ -2205,4 +2211,27 @@ fn links_with_dots() {
                        .with_stderr_contains("\
 [RUNNING] `rustc [..] --crate-name foo [..] -L foo[..]`
 "));
+}
+
+#[test]
+fn rustc_and_rustdoc_set_correctly() {
+    let build = project("builder")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "builder"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+              use std::env;
+
+              fn main() {
+                  assert_eq!(env::var("RUSTC").unwrap(), "rustc");
+                  assert_eq!(env::var("RUSTDOC").unwrap(), "rustdoc");
+              }
+        "#);
+    assert_that(build.cargo_process("bench"),
+                execs().with_status(0));
 }
