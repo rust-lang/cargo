@@ -535,6 +535,10 @@ impl TomlManifest {
             debug!("manifest has no build targets");
         }
 
+        if let Err(e) = unique_build_targets(&targets, layout) {
+            bail!("duplicate build target found: `{}`", e);
+        }
+
         let mut deps = Vec::new();
         let replace;
 
@@ -747,6 +751,18 @@ fn unique_names_in_targets(targets: &[TomlTarget]) -> Result<(), String> {
     for v in targets.iter().map(|e| e.name()) {
         if !seen.insert(v.clone()) {
             return Err(v);
+        }
+    }
+    Ok(())
+}
+
+/// Will check a list of build targets, and make sure the target names are unique within a vector.
+/// If not, the name of the offending build target is returned.
+fn unique_build_targets(targets: &[Target], layout: &Layout) -> Result<(), String> {
+    let mut seen = HashSet::new();
+    for v in targets.iter().map(|e| layout.root.join(e.src_path())) {
+        if !seen.insert(v.clone()) {
+            return Err(v.display().to_string());
         }
     }
     Ok(())

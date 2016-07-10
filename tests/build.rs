@@ -102,6 +102,39 @@ src[..]Cargo.toml:1:5-1:6 expected a value\n\n"))
 }
 
 #[test]
+fn cargo_compile_duplicate_build_targets() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "main"
+            crate-type = ["dylib"]
+
+            [dependencies]
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+
+    let error_message = format!("\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  duplicate build target found: `{}`",
+                     p.root().join("src[..]main.rs").display());
+
+    assert_that(p.cargo_process("build"),
+                execs()
+                .with_status(101)
+                .with_stderr(error_message)
+    )
+}
+
+#[test]
 fn cargo_compile_with_invalid_version() {
     let p = project("foo")
         .file("Cargo.toml", r#"
