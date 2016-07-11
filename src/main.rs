@@ -299,11 +299,6 @@ fn apply_suggestion(suggestion: &Suggestion) -> Result<(), ProgramError> {
     // Insert new content! Finally!
     new_content.push_str(&suggestion.replacement);
 
-    // TODO(killercup): better handling of trailing semicolons
-    if suggestion.text.trim().ends_with(';') && !suggestion.replacement.trim().ends_with(';') {
-        new_content.push_str(";");
-    }
-
     // Parts of line after replacement
     new_content.push_str(&file_content.lines()
         .nth(suggestion.line_range.end.line - 1)
