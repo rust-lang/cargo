@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 
 use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
-use core::{TargetKind, Profiles, Metadata, Dependency};
+use core::{TargetKind, Profiles, Metadata, Dependency, Workspace};
 use core::dependency::Kind as DepKind;
 use util::{self, CargoResult, ChainError, internal, Config, profile, Cfg, human};
 
@@ -55,13 +55,22 @@ struct TargetInfo {
 }
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
-    pub fn new(resolve: &'a Resolve,
+    pub fn new(ws: &Workspace<'cfg>,
+               resolve: &'a Resolve,
                packages: &'a PackageSet<'cfg>,
                config: &'cfg Config,
-               host: Layout,
-               target_layout: Option<Layout>,
                build_config: BuildConfig,
                profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
+
+        let dest = if build_config.release { "release" } else { "debug" };
+        let host_layout = try!(Layout::new(ws, None, &dest));
+        let target_layout = match build_config.requested_target.as_ref() {
+            Some(target) => {
+                Some(try!(Layout::new(ws, Some(&target), &dest)))
+            }
+            None => None,
+        };
+
         let target = build_config.requested_target.clone();
         let target = target.as_ref().map(|s| &s[..]);
         let target_triple = target.unwrap_or_else(|| {
@@ -72,7 +81,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         });
         Ok(Context {
             target_triple: target_triple,
-            host: host,
+            host: host_layout,
             target: target_layout,
             resolve: resolve,
             packages: packages,

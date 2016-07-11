@@ -80,18 +80,8 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         })
     }).collect::<Vec<_>>();
 
-    let dest = if build_config.release {"release"} else {"debug"};
     let root = try!(packages.get(resolve.root()));
-    let host_layout = try!(Layout::new(ws, None, &dest));
-    let target_layout = match build_config.requested_target.as_ref() {
-        Some(target) => {
-            Some(try!(layout::Layout::new(ws, Some(&target), &dest)))
-        }
-        None => None,
-    };
-
-    let mut cx = try!(Context::new(resolve, packages, config,
-                                   host_layout, target_layout,
+    let mut cx = try!(Context::new(ws, resolve, packages, config,
                                    build_config, profiles));
 
     let mut queue = JobQueue::new(&cx);
