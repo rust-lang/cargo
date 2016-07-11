@@ -5,7 +5,7 @@ use std::path::Path;
 use core::{Profiles, Workspace};
 use core::registry::PackageRegistry;
 use util::{CargoResult, human, ChainError, Config};
-use ops::{self, Layout, Context, BuildConfig, Kind, Unit};
+use ops::{self, Context, BuildConfig, Kind, Unit};
 
 pub struct CleanOptions<'a> {
     pub spec: &'a [String],
@@ -32,17 +32,13 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     let resolve = try!(ops::resolve_ws(&mut registry, ws));
     let packages = ops::get_resolved_packages(&resolve, registry);
 
-    let dest = if opts.release {"release"} else {"debug"};
-    let host_layout = try!(Layout::new(ws, None, dest));
-    let target_layout = match opts.target {
-        Some(target) => Some(try!(Layout::new(ws, Some(target), dest))),
-        None => None,
-    };
-
     let profiles = try!(ws.current()).manifest().profiles();
-    let mut cx = try!(Context::new(&resolve, &packages, opts.config,
-                                   host_layout, target_layout,
-                                   BuildConfig::default(),
+    let mut cx = try!(Context::new(ws, &resolve, &packages, opts.config,
+                                   BuildConfig {
+                                       release: opts.release,
+                                       requested_target: opts.target.map(|s| s.to_owned()),
+                                       ..BuildConfig::default()
+                                   },
                                    profiles));
     let mut units = Vec::new();
 
