@@ -88,6 +88,9 @@ let out_dir = env::var("OUT_DIR").unwrap();
               [profiles][profile]).
 * `DEP_<name>_<key>` - For more information about this set of environment
                        variables, see build script documentation about [`links`][links].
+* `RUSTC`, `RUSTDOC` - the compiler and documentation generator that Cargo has
+                       resolved to use, passed to the build script so it might
+                       use it as well.
 
 [links]: build-script.html#the-links-manifest-key
 [profile]: manifest.html#the-profile-sections
