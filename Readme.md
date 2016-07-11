@@ -6,6 +6,8 @@ The goal of this tool is to read and apply the suggestions made by rustc (and th
 
 [clippy]: https://github.com/Manishearth/rust-clippy
 
+[![Build Status](https://travis-ci.org/killercup/rustfix.svg?branch=master)](https://travis-ci.org/killercup/rustfix)
+
 ## Current state
 
 This tool can
