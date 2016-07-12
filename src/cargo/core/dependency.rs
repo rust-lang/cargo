@@ -21,7 +21,7 @@ pub struct DependencyInner {
     name: String,
     source_id: SourceId,
     req: VersionReq,
-    specified_req: Option<String>,
+    specified_req: bool,
     kind: Kind,
     only_match_name: bool,
 
@@ -90,15 +90,15 @@ impl DependencyInner {
     pub fn parse(name: &str,
                  version: Option<&str>,
                  source_id: &SourceId) -> CargoResult<DependencyInner> {
-        let version_req = match version {
-            Some(v) => try!(VersionReq::parse(v)),
-            None => VersionReq::any()
+        let (specified_req, version_req) = match version {
+            Some(v) => (true, try!(VersionReq::parse(v))),
+            None => (false, VersionReq::any())
         };
 
         Ok(DependencyInner {
             only_match_name: false,
             req: version_req,
-            specified_req: version.map(|s| s.to_string()),
+            specified_req: specified_req,
             .. DependencyInner::new_override(name, source_id)
         })
     }
@@ -113,7 +113,7 @@ impl DependencyInner {
             optional: false,
             features: Vec::new(),
             default_features: true,
-            specified_req: None,
+            specified_req: false,
             platform: None,
         }
     }
@@ -122,9 +122,7 @@ impl DependencyInner {
     pub fn name(&self) -> &str { &self.name }
     pub fn source_id(&self) -> &SourceId { &self.source_id }
     pub fn kind(&self) -> Kind { self.kind }
-    pub fn specified_req(&self) -> Option<&str> {
-        self.specified_req.as_ref().map(|s| &s[..])
-    }
+    pub fn specified_req(&self) -> bool { self.specified_req }
 
     /// If none, this dependency must be built for all platforms.
     /// If some, it must only be built for matching platforms.
@@ -234,7 +232,7 @@ impl Dependency {
     pub fn name(&self) -> &str { self.inner.name() }
     pub fn source_id(&self) -> &SourceId { self.inner.source_id() }
     pub fn kind(&self) -> Kind { self.inner.kind() }
-    pub fn specified_req(&self) -> Option<&str> { self.inner.specified_req() }
+    pub fn specified_req(&self) -> bool { self.inner.specified_req() }
 
     /// If none, this dependencies must be built for all platforms.
     /// If some, it must only be built for the specified platform.
