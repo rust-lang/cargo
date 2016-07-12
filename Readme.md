@@ -72,7 +72,7 @@ $ cargo run -- --from-file clippy.json
 $ git clone https://github.com/pcwalton/libui-rs.git
 # HEAD is at 13299d28f69f8009be8e08e453a9b0024f153a60
 $ cd libui-rs/ui/
-$ cargo clippy -- -Z unstable-options --error-format json &2> clippy.json
+$ cargo clippy -- -Z unstable-options --error-format json 2&> clippy.json
 # Manually remove the first line ("Compiling....")
 ```
 
