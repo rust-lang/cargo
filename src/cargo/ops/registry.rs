@@ -71,7 +71,7 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
                        -> CargoResult<()> {
     for dep in pkg.dependencies().iter() {
         if dep.source_id().is_path() {
-            if dep.specified_req().is_none() {
+            if !dep.specified_req() {
                 bail!("all path dependencies must have a version specified \
                        when publishing.\ndependency `{}` does not specify \
                        a version", dep.name())
