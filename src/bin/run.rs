@@ -1,7 +1,7 @@
 use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, CliError, Config, Human};
-use cargo::util::important_paths::{find_root_manifest_for_wd};
+use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -78,12 +78,16 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             ops::CompileFilter::Everything
         } else {
             ops::CompileFilter::Only {
-                lib: false, tests: &[], benches: &[],
-                bins: &bins, examples: &examples,
+                lib: false,
+                tests: &[],
+                benches: &[],
+                bins: &bins,
+                examples: &examples,
             }
         },
         target_rustdoc_args: None,
         target_rustc_args: None,
+        compile_check: false,
     };
 
     let ws = try!(Workspace::new(&root, config));

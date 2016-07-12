@@ -1,7 +1,7 @@
 use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, Config};
-use cargo::util::important_paths::{find_root_manifest_for_wd};
+use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -77,11 +77,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                             &empty,
                                             &empty),
             release: options.flag_release,
-            mode: ops::CompileMode::Doc {
-                deps: !options.flag_no_deps,
-            },
+            mode: ops::CompileMode::Doc { deps: !options.flag_no_deps },
             target_rustc_args: None,
             target_rustdoc_args: None,
+            compile_check: false,
         },
     };
 

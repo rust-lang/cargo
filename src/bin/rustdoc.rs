@@ -1,7 +1,7 @@
 use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, Config};
-use cargo::util::important_paths::{find_root_manifest_for_wd};
+use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -67,8 +67,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                 options.flag_quiet,
                                 &options.flag_color));
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path,
-                                              config.cwd()));
+    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
 
     let doc_opts = ops::DocOptions {
         open_result: options.flag_open,
@@ -89,6 +88,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             mode: ops::CompileMode::Doc { deps: false },
             target_rustdoc_args: Some(&options.arg_opts),
             target_rustc_args: None,
+            compile_check: false,
         },
     };
 

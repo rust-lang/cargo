@@ -1,7 +1,7 @@
 use cargo::core::Workspace;
 use cargo::ops;
 use cargo::util::{CliResult, CliError, Human, human, Config};
-use cargo::util::important_paths::{find_root_manifest_for_wd};
+use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -117,6 +117,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             filter: filter,
             target_rustdoc_args: None,
             target_rustc_args: None,
+            compile_check: false,
         },
     };
 
@@ -127,7 +128,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
                 Some(i) => CliError::new(human("test failed"), i),
-                None => CliError::new(Box::new(Human(err)), 101)
+                None => CliError::new(Box::new(Human(err)), 101),
             })
         }
     }

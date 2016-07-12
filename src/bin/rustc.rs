@@ -3,7 +3,7 @@ use std::env;
 use cargo::core::Workspace;
 use cargo::ops::{CompileOptions, CompileMode};
 use cargo::ops;
-use cargo::util::important_paths::{find_root_manifest_for_wd};
+use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::util::{CliResult, CliError, Config, human};
 
 #[derive(RustcDecodable)]
@@ -73,16 +73,16 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                 options.flag_quiet,
                                 &options.flag_color));
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path,
-                                              config.cwd()));
+    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
     let mode = match options.flag_profile.as_ref().map(|t| &t[..]) {
         Some("dev") | None => CompileMode::Build,
         Some("test") => CompileMode::Test,
         Some("bench") => CompileMode::Bench,
         Some(mode) => {
             let err = human(format!("unknown profile: `{}`, use dev,
-                                     test, or bench", mode));
-            return Err(CliError::new(err, 101))
+                                     test, or bench",
+                                    mode));
+            return Err(CliError::new(err, 101));
         }
     };
 
@@ -103,10 +103,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                         &options.flag_bench),
         target_rustdoc_args: None,
         target_rustc_args: options.arg_opts.as_ref().map(|a| &a[..]),
+        compile_check: false,
     };
 
     let ws = try!(Workspace::new(&root, config));
     try!(ops::compile(&ws, &opts));
     Ok(None)
 }
-

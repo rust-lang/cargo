@@ -17,7 +17,6 @@ pub struct Options {
     flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
-    flag_release: bool,
     flag_lib: bool,
     flag_bin: Vec<String>,
     flag_example: Vec<String>,
@@ -26,10 +25,10 @@ pub struct Options {
 }
 
 pub const USAGE: &'static str = "
-Compile a local package and all of its dependencies
+Compile a local package to check for compilation errors without creating an artifact
 
 Usage:
-    cargo build [options]
+    cargo check [options]
 
 Options:
     -h, --help                   Print this message
@@ -40,7 +39,6 @@ Options:
     --example NAME               Build only the specified example
     --test NAME                  Build only the specified test target
     --bench NAME                 Build only the specified benchmark target
-    --release                    Build artifacts in release mode, with optimizations
     --features FEATURES          Space-separated list of features to also build
     --no-default-features        Do not build the `default` feature
     --target TRIPLE              Build for the target triple
@@ -60,7 +58,7 @@ the --release flag will use the `release` profile instead.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    debug!("executing; cmd=cargo-build; args={:?}",
+    debug!("executing; cmd=cargo-check; args={:?}",
            env::args().collect::<Vec<_>>());
     try!(config.configure_shell(options.flag_verbose,
                                 options.flag_quiet,
@@ -77,7 +75,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         spec: &options.flag_package,
         exec_engine: None,
         mode: ops::CompileMode::Build,
-        release: options.flag_release,
+        release: false,
         filter: ops::CompileFilter::new(options.flag_lib,
                                         &options.flag_bin,
                                         &options.flag_test,
@@ -85,7 +83,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                         &options.flag_bench),
         target_rustdoc_args: None,
         target_rustc_args: None,
-        compile_check: false,
+        compile_check: true,
     };
 
     let ws = try!(Workspace::new(&root, config));

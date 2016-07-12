@@ -103,10 +103,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         exec_engine: None,
         mode: ops::CompileMode::Build,
         release: !options.flag_debug,
-        filter: ops::CompileFilter::new(false, &options.flag_bin, &[],
-                                        &options.flag_example, &[]),
+        filter: ops::CompileFilter::new(false, &options.flag_bin, &[], &options.flag_example, &[]),
         target_rustc_args: None,
         target_rustdoc_args: None,
+        compile_check: false,
     };
 
     let source = if let Some(url) = options.flag_git {
@@ -136,7 +136,12 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     if options.flag_list {
         try!(ops::install_list(root, config));
     } else {
-        try!(ops::install(root, krate, &source, vers, &compile_opts, options.flag_force));
+        try!(ops::install(root,
+                          krate,
+                          &source,
+                          vers,
+                          &compile_opts,
+                          options.flag_force));
     }
     Ok(None)
 }
