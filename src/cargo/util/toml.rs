@@ -558,19 +558,17 @@ impl TomlManifest {
             try!(process_dependencies(&mut cx, self.build_dependencies.as_ref(),
                                       Some(Kind::Build)));
 
-            if let Some(targets) = self.target.as_ref() {
-                for (name, platform) in targets.iter() {
-                    cx.platform = Some(try!(name.parse()));
-                    try!(process_dependencies(&mut cx,
-                                              platform.dependencies.as_ref(),
-                                              None));
-                    try!(process_dependencies(&mut cx,
-                                              platform.build_dependencies.as_ref(),
-                                              Some(Kind::Build)));
-                    try!(process_dependencies(&mut cx,
-                                              platform.dev_dependencies.as_ref(),
-                                              Some(Kind::Development)));
-                }
+            for (name, platform) in self.target.iter().flat_map(|t| t) {
+                cx.platform = Some(try!(name.parse()));
+                try!(process_dependencies(&mut cx,
+                                          platform.dependencies.as_ref(),
+                                          None));
+                try!(process_dependencies(&mut cx,
+                                          platform.build_dependencies.as_ref(),
+                                          Some(Kind::Build)));
+                try!(process_dependencies(&mut cx,
+                                          platform.dev_dependencies.as_ref(),
+                                          Some(Kind::Development)));
             }
 
             replace = try!(self.replace(&mut cx));
@@ -694,13 +692,8 @@ impl TomlManifest {
 
     fn replace(&self, cx: &mut Context)
                -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
-        let map = match self.replace {
-            Some(ref map) => map,
-            None => return Ok(Vec::new()),
-        };
-
         let mut replace = Vec::new();
-        for (spec, replacement) in map {
+        for (spec, replacement) in self.replace.iter().flat_map(|x| x) {
             let spec = try!(PackageIdSpec::parse(spec));
 
             let version_specified = match *replacement {
