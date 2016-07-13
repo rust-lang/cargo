@@ -195,7 +195,7 @@ fn cargo_test_failing_test() {
                 execs().with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] target[..]foo-[..]
-[ERROR] test failed", url = p.url()))
+[ERROR] test `[..]foo-[..]` failed", url = p.url()))
                        .with_stdout_contains("
 running 1 test
 test test_hello ... FAILED
