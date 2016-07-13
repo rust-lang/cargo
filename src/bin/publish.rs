@@ -13,6 +13,7 @@ pub struct Options {
     flag_color: Option<String>,
     flag_no_verify: bool,
     flag_allow_dirty: bool,
+    flag_jobs: Option<u32>,
 }
 
 pub const USAGE: &'static str = "
@@ -28,6 +29,7 @@ Options:
     --no-verify              Don't verify package tarball before publish
     --allow-dirty            Allow publishing with a dirty source directory
     --manifest-path PATH     Path to the manifest of the package to publish
+    -j N, --jobs N           Number of parallel jobs, defaults to # of CPUs
     -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
@@ -44,6 +46,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         flag_manifest_path,
         flag_no_verify: no_verify,
         flag_allow_dirty: allow_dirty,
+        flag_jobs: jobs,
         ..
     } = options;
 
@@ -55,6 +58,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         index: host,
         verify: !no_verify,
         allow_dirty: allow_dirty,
+        jobs: jobs,
     }));
     Ok(None)
 }
