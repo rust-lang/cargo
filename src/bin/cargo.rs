@@ -7,13 +7,14 @@ extern crate toml;
 #[macro_use] extern crate log;
 
 use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::{Path,PathBuf};
 
 use cargo::core::shell::Verbosity;
 use cargo::execute_main_without_stdin;
-use cargo::util::{self, CliResult, lev_distance, Config, human};
+use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
 use cargo::util::CliError;
 use cargo::util::process_builder::process;
 
@@ -138,7 +139,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         return Ok(None)
     }
 
-    let args = match &flags.arg_command[..] {
+    let mut args = match &flags.arg_command[..] {
         // For the commands `cargo` and `cargo help`, re-execute ourselves as
         // `cargo -h` so we can go through the normal process of printing the
         // help message.
@@ -166,8 +167,29 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         // For all other invocations, we're of the form `cargo foo args...`. We
         // use the exact environment arguments to preserve tokens like `--` for
         // example.
-        _ => env::args().collect(),
+        _ => {
+            let mut default_alias = HashMap::new();
+            default_alias.insert("b", "build".to_string());
+            default_alias.insert("t", "test".to_string());
+            default_alias.insert("r", "run".to_string());
+            let mut args: Vec<String> = env::args().collect();
+            if let Some(new_command) = default_alias.get(&args[1][..]){
+                args[1] = new_command.clone();
+            }
+            args
+        }
     };
+
+    let alias_list = try!(aliased_command(&config, &args[1]));
+    if let Some(alias_command) = alias_list {
+        // Replace old command with new command and flags
+        let chain = args.iter().take(1)
+            .chain(alias_command.iter())
+            .chain(args.iter().skip(2))
+            .map(|s| s.to_string())
+            .collect();
+        args = chain;
+    }
 
     macro_rules! cmd{
         ($name:ident) => (if args[1] == stringify!($name).replace("_", "-") {
@@ -184,6 +206,30 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
 
     try!(execute_subcommand(config, &args[1], &args));
     Ok(None)
+}
+
+fn aliased_command(config: &Config, command: &String) -> CargoResult<Option<Vec<String>>> {
+    let alias_name = format!("alias.{}", command);
+    let mut result = Ok(None);
+    match config.get_string(&alias_name) {
+        Ok(value) => {
+            if let Some(record) = value {
+                let alias_commands = record.val.split_whitespace()
+                                               .map(|s| s.to_string())
+                                               .collect();
+                result = Ok(Some(alias_commands));
+            }
+        },
+        Err(_) => {
+            let value = try!(config.get_list(&alias_name));
+            if let Some(record) = value {
+                let alias_commands: Vec<String> = record.val.iter()
+                                .map(|s| s.0.to_string()).collect();
+                result = Ok(Some(alias_commands));
+            }
+        }
+    }
+    result
 }
 
 fn find_closest(config: &Config, cmd: &str) -> Option<String> {
