@@ -550,6 +550,24 @@ impl TomlManifest {
                 layout: &layout,
             };
 
+            fn process_dependencies(
+                cx: &mut Context,
+                new_deps: Option<&HashMap<String, TomlDependency>>,
+                kind: Option<Kind>)
+                -> CargoResult<()>
+            {
+                let dependencies = match new_deps {
+                    Some(ref dependencies) => dependencies,
+                    None => return Ok(())
+                };
+                for (n, v) in dependencies.iter() {
+                    let dep = try!(v.to_dependency(n, cx, kind));
+                    cx.deps.push(dep);
+                }
+
+                Ok(())
+            }
+
             // Collect the deps
             try!(process_dependencies(&mut cx, self.dependencies.as_ref(),
                                       None));
@@ -798,22 +816,6 @@ impl TomlDependency {
         }
         Ok(dep.into_dependency())
     }
-}
-
-fn process_dependencies(cx: &mut Context,
-                        new_deps: Option<&HashMap<String, TomlDependency>>,
-                        kind: Option<Kind>)
-                        -> CargoResult<()> {
-    let dependencies = match new_deps {
-        Some(ref dependencies) => dependencies,
-        None => return Ok(())
-    };
-    for (n, v) in dependencies.iter() {
-        let dep = try!(v.to_dependency(n, cx, kind));
-        cx.deps.push(dep);
-    }
-
-    Ok(())
 }
 
 #[derive(RustcDecodable, Debug, Clone)]
