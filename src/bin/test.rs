@@ -126,7 +126,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         None => Ok(None),
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
-                Some(i) => CliError::new(human("test failed"), i),
+                Some(i) => CliError::new(human(format!("test `{}` failed", err.exec)), i),
                 None => CliError::new(Box::new(Human(err)), 101)
             })
         }

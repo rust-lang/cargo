@@ -480,7 +480,7 @@ fn stream_output(state: &JobState, cmd: &ProcessBuilder)
         child.wait()
     })().map_err(|e| {
         let msg = format!("could not exeute process {}", cmd);
-        process_error(&msg, Some(e), None, None)
+        process_error(&msg, Some(e), None, None, None)
     }));
     let output = Output {
         stdout: stdout,
@@ -489,7 +489,7 @@ fn stream_output(state: &JobState, cmd: &ProcessBuilder)
     };
     if !output.status.success() {
         let msg = format!("process didn't exit successfully: {}", cmd);
-        Err(process_error(&msg, None, Some(&status), Some(&output)))
+        Err(process_error(&msg, None, Some(&status), None, Some(&output)))
     } else {
         Ok(output)
     }
