@@ -13,6 +13,7 @@ pub struct Options {
     flag_no_metadata: bool,
     flag_list: bool,
     flag_allow_dirty: bool,
+    flag_jobs: Option<u32>,
 }
 
 pub const USAGE: &'static str = "
@@ -28,10 +29,10 @@ Options:
     --no-metadata           Ignore warnings about a lack of human-usable metadata
     --allow-dirty           Allow dirty working directories to be packaged
     --manifest-path PATH    Path to the manifest to compile
+    -j N, --jobs N          Number of parallel jobs, defaults to # of CPUs
     -v, --verbose ...       Use verbose output
     -q, --quiet             No output printed to stdout
     --color WHEN            Coloring: auto, always, never
-
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
@@ -46,6 +47,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         list: options.flag_list,
         check_metadata: !options.flag_no_metadata,
         allow_dirty: options.flag_allow_dirty,
+        jobs: options.flag_jobs,
     }));
     Ok(None)
 }

@@ -19,6 +19,7 @@ pub struct PackageOpts<'cfg> {
     pub check_metadata: bool,
     pub allow_dirty: bool,
     pub verify: bool,
+    pub jobs: Option<u32>,
 }
 
 pub fn package(ws: &Workspace,
@@ -68,7 +69,7 @@ pub fn package(ws: &Workspace,
     }));
     if opts.verify {
         try!(dst.seek(SeekFrom::Start(0)));
-        try!(run_verify(ws, dst.file()).chain_error(|| {
+        try!(run_verify(ws, dst.file(), opts).chain_error(|| {
             human("failed to verify package tarball")
         }))
     }
@@ -228,7 +229,7 @@ fn tar(ws: &Workspace,
     Ok(())
 }
 
-fn run_verify(ws: &Workspace, tar: &File) -> CargoResult<()> {
+fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()> {
     let config = ws.config();
     let pkg = try!(ws.current());
 
@@ -268,7 +269,7 @@ fn run_verify(ws: &Workspace, tar: &File) -> CargoResult<()> {
     let ws = Workspace::one(new_pkg, config);
     try!(ops::compile_ws(&ws, None, &ops::CompileOptions {
         config: config,
-        jobs: None,
+        jobs: opts.jobs,
         target: None,
         features: &[],
         no_default_features: false,
