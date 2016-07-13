@@ -264,9 +264,19 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
     }
 
+    /// Return the host triple for this context
+    pub fn host_triple(&self) -> &str {
+        &self.config.rustc_info().host[..]
+    }
+
     /// Return the target triple which this context is targeting.
     pub fn target_triple(&self) -> &str {
         &self.target_triple
+    }
+
+    /// Requested (not actual) target for the build
+    pub fn requested_target(&self) -> Option<&str> {
+        self.build_config.requested_target.as_ref().map(|s| &s[..])
     }
 
     /// Get the metadata for a target in a specific profile
@@ -600,8 +610,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => return true,
         };
         let (name, info) = match kind {
-            Kind::Host => (&self.config.rustc_info().host, &self.host_info),
-            Kind::Target => (&self.target_triple, &self.target_info),
+            Kind::Host => (self.host_triple(), &self.host_info),
+            Kind::Target => (self.target_triple(), &self.target_info),
         };
         platform.matches(name, info.cfg.as_ref().map(|cfg| &cfg[..]))
     }
@@ -631,11 +641,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Number of jobs specified for this build
     pub fn jobs(&self) -> u32 { self.build_config.jobs }
-
-    /// Requested (not actual) target for the build
-    pub fn requested_target(&self) -> Option<&str> {
-        self.build_config.requested_target.as_ref().map(|s| &s[..])
-    }
 
     pub fn lib_profile(&self, _pkg: &PackageId) -> &'a Profile {
         let (normal, test) = if self.build_config.release {
