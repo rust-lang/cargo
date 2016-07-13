@@ -35,6 +35,7 @@ pub struct PublishOpts<'cfg> {
     pub index: Option<String>,
     pub verify: bool,
     pub allow_dirty: bool,
+    pub jobs: Option<u32>,
 }
 
 pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
@@ -58,6 +59,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         list: false,
         check_metadata: true,
         allow_dirty: opts.allow_dirty,
+        jobs: opts.jobs,
     })).unwrap();
 
     // Upload said tarball to the specified destination
