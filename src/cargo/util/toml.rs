@@ -757,42 +757,35 @@ impl TomlDependency {
             cx.warnings.push(msg);
         }
 
-        let reference = details.branch.clone().map(GitReference::Branch)
-            .or_else(|| details.tag.clone().map(GitReference::Tag))
-            .or_else(|| details.rev.clone().map(GitReference::Rev))
-            .unwrap_or_else(|| GitReference::Branch("master".to_string()));
-
-        let new_source_id = match details.git {
-            Some(ref git) => {
-                let loc = try!(git.to_url().map_err(|e| {
-                    human(e)
-                }));
-                Some(SourceId::for_git(&loc, reference))
-            }
-            None => {
-                match details.path.as_ref() {
-                    Some(path) => {
-                        cx.nested_paths.push(PathBuf::from(path));
-                        // If the source id for the package we're parsing is a
-                        // path source, then we normalize the path here to get
-                        // rid of components like `..`.
-                        //
-                        // The purpose of this is to get a canonical id for the
-                        // package that we're depending on to ensure that builds
-                        // of this package always end up hashing to the same
-                        // value no matter where it's built from.
-                        if cx.source_id.is_path() {
-                            let path = cx.layout.root.join(path);
-                            let path = util::normalize_path(&path);
-                            Some(try!(SourceId::for_path(&path)))
-                        } else {
-                            Some(cx.source_id.clone())
-                        }
-                    }
-                    None => None,
+        let new_source_id = match (details.git.as_ref(), details.path.as_ref()) {
+            (Some(git), _) => {
+                let reference = details.branch.clone().map(GitReference::Branch)
+                    .or_else(|| details.tag.clone().map(GitReference::Tag))
+                    .or_else(|| details.rev.clone().map(GitReference::Rev))
+                    .unwrap_or_else(|| GitReference::Branch("master".to_string()));
+                let loc = try!(git.to_url().map_err(human));
+                SourceId::for_git(&loc, reference)
+            },
+            (None, Some(path)) => {
+                cx.nested_paths.push(PathBuf::from(path));
+                // If the source id for the package we're parsing is a path
+                // source, then we normalize the path here to get rid of
+                // components like `..`.
+                //
+                // The purpose of this is to get a canonical id for the package
+                // that we're depending on to ensure that builds of this package
+                // always end up hashing to the same value no matter where it's
+                // built from.
+                if cx.source_id.is_path() {
+                    let path = cx.layout.root.join(path);
+                    let path = util::normalize_path(&path);
+                    try!(SourceId::for_path(&path))
+                } else {
+                    cx.source_id.clone()
                 }
-            }
-        }.unwrap_or(try!(SourceId::for_central(cx.config)));
+            },
+            (None, None) => try!(SourceId::for_central(cx.config)),
+        };
 
         let version = details.version.as_ref().map(|v| &v[..]);
         let mut dep = try!(DependencyInner::parse(name, version, &new_source_id));
