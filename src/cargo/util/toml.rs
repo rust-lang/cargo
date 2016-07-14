@@ -550,6 +550,24 @@ impl TomlManifest {
                 layout: &layout,
             };
 
+            fn process_dependencies(
+                cx: &mut Context,
+                new_deps: Option<&HashMap<String, TomlDependency>>,
+                kind: Option<Kind>)
+                -> CargoResult<()>
+            {
+                let dependencies = match new_deps {
+                    Some(ref dependencies) => dependencies,
+                    None => return Ok(())
+                };
+                for (n, v) in dependencies.iter() {
+                    let dep = try!(v.to_dependency(n, cx, kind));
+                    cx.deps.push(dep);
+                }
+
+                Ok(())
+            }
+
             // Collect the deps
             try!(process_dependencies(&mut cx, self.dependencies.as_ref(),
                                       None));
@@ -558,19 +576,17 @@ impl TomlManifest {
             try!(process_dependencies(&mut cx, self.build_dependencies.as_ref(),
                                       Some(Kind::Build)));
 
-            if let Some(targets) = self.target.as_ref() {
-                for (name, platform) in targets.iter() {
-                    cx.platform = Some(try!(name.parse()));
-                    try!(process_dependencies(&mut cx,
-                                              platform.dependencies.as_ref(),
-                                              None));
-                    try!(process_dependencies(&mut cx,
-                                              platform.build_dependencies.as_ref(),
-                                              Some(Kind::Build)));
-                    try!(process_dependencies(&mut cx,
-                                              platform.dev_dependencies.as_ref(),
-                                              Some(Kind::Development)));
-                }
+            for (name, platform) in self.target.iter().flat_map(|t| t) {
+                cx.platform = Some(try!(name.parse()));
+                try!(process_dependencies(&mut cx,
+                                          platform.dependencies.as_ref(),
+                                          None));
+                try!(process_dependencies(&mut cx,
+                                          platform.build_dependencies.as_ref(),
+                                          Some(Kind::Build)));
+                try!(process_dependencies(&mut cx,
+                                          platform.dev_dependencies.as_ref(),
+                                          Some(Kind::Development)));
             }
 
             replace = try!(self.replace(&mut cx));
@@ -694,13 +710,8 @@ impl TomlManifest {
 
     fn replace(&self, cx: &mut Context)
                -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
-        let map = match self.replace {
-            Some(ref map) => map,
-            None => return Ok(Vec::new()),
-        };
-
         let mut replace = Vec::new();
-        for (spec, replacement) in map {
+        for (spec, replacement) in self.replace.iter().flat_map(|x| x) {
             let spec = try!(PackageIdSpec::parse(spec));
 
             let version_specified = match *replacement {
@@ -748,11 +759,10 @@ impl TomlDependency {
                      kind: Option<Kind>)
                      -> CargoResult<Dependency> {
         let details = match *self {
-            TomlDependency::Simple(ref version) => {
-                let mut d: DetailedTomlDependency = Default::default();
-                d.version = Some(version.clone());
-                d
-            }
+            TomlDependency::Simple(ref version) => DetailedTomlDependency {
+                version: Some(version.clone()),
+                .. Default::default()
+            },
             TomlDependency::Detailed(ref details) => details.clone(),
         };
 
@@ -765,42 +775,35 @@ impl TomlDependency {
             cx.warnings.push(msg);
         }
 
-        let reference = details.branch.clone().map(GitReference::Branch)
-            .or_else(|| details.tag.clone().map(GitReference::Tag))
-            .or_else(|| details.rev.clone().map(GitReference::Rev))
-            .unwrap_or_else(|| GitReference::Branch("master".to_string()));
-
-        let new_source_id = match details.git {
-            Some(ref git) => {
-                let loc = try!(git.to_url().map_err(|e| {
-                    human(e)
-                }));
-                Some(SourceId::for_git(&loc, reference))
-            }
-            None => {
-                match details.path.as_ref() {
-                    Some(path) => {
-                        cx.nested_paths.push(PathBuf::from(path));
-                        // If the source id for the package we're parsing is a
-                        // path source, then we normalize the path here to get
-                        // rid of components like `..`.
-                        //
-                        // The purpose of this is to get a canonical id for the
-                        // package that we're depending on to ensure that builds
-                        // of this package always end up hashing to the same
-                        // value no matter where it's built from.
-                        if cx.source_id.is_path() {
-                            let path = cx.layout.root.join(path);
-                            let path = util::normalize_path(&path);
-                            Some(try!(SourceId::for_path(&path)))
-                        } else {
-                            Some(cx.source_id.clone())
-                        }
-                    }
-                    None => None,
+        let new_source_id = match (details.git.as_ref(), details.path.as_ref()) {
+            (Some(git), _) => {
+                let reference = details.branch.clone().map(GitReference::Branch)
+                    .or_else(|| details.tag.clone().map(GitReference::Tag))
+                    .or_else(|| details.rev.clone().map(GitReference::Rev))
+                    .unwrap_or_else(|| GitReference::Branch("master".to_string()));
+                let loc = try!(git.to_url().map_err(human));
+                SourceId::for_git(&loc, reference)
+            },
+            (None, Some(path)) => {
+                cx.nested_paths.push(PathBuf::from(path));
+                // If the source id for the package we're parsing is a path
+                // source, then we normalize the path here to get rid of
+                // components like `..`.
+                //
+                // The purpose of this is to get a canonical id for the package
+                // that we're depending on to ensure that builds of this package
+                // always end up hashing to the same value no matter where it's
+                // built from.
+                if cx.source_id.is_path() {
+                    let path = cx.layout.root.join(path);
+                    let path = util::normalize_path(&path);
+                    try!(SourceId::for_path(&path))
+                } else {
+                    cx.source_id.clone()
                 }
-            }
-        }.unwrap_or(try!(SourceId::for_central(cx.config)));
+            },
+            (None, None) => try!(SourceId::for_central(cx.config)),
+        };
 
         let version = details.version.as_ref().map(|v| &v[..]);
         let mut dep = try!(DependencyInner::parse(name, version, &new_source_id));
@@ -813,22 +816,6 @@ impl TomlDependency {
         }
         Ok(dep.into_dependency())
     }
-}
-
-fn process_dependencies(cx: &mut Context,
-                        new_deps: Option<&HashMap<String, TomlDependency>>,
-                        kind: Option<Kind>)
-                        -> CargoResult<()> {
-    let dependencies = match new_deps {
-        Some(ref dependencies) => dependencies,
-        None => return Ok(())
-    };
-    for (n, v) in dependencies.iter() {
-        let dep = try!(v.to_dependency(n, cx, kind));
-        cx.deps.push(dep);
-    }
-
-    Ok(())
 }
 
 #[derive(RustcDecodable, Debug, Clone)]
