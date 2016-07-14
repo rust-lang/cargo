@@ -42,7 +42,6 @@ pub struct Context<'a, 'cfg: 'a> {
 
     host: Layout,
     target: Option<Layout>,
-    target_triple: String,
     target_info: TargetInfo,
     host_info: TargetInfo,
     profiles: &'a Profiles,
@@ -71,16 +70,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => None,
         };
 
-        let target = build_config.requested_target.clone();
-        let target = target.as_ref().map(|s| &s[..]);
-        let target_triple = target.unwrap_or_else(|| {
-            &config.rustc_info().host[..]
-        }).to_string();
         let engine = build_config.exec_engine.as_ref().cloned().unwrap_or({
             Arc::new(Box::new(ProcessEngine))
         });
         Ok(Context {
-            target_triple: target_triple,
             host: host_layout,
             target: target_layout,
             resolve: resolve,
@@ -138,7 +131,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             try!(self.visit_crate_type(unit, &mut crate_types));
         }
         try!(self.probe_target_info_kind(&crate_types, Kind::Target));
-        if self.build_config.requested_target.is_none() {
+        if self.requested_target().is_none() {
             self.host_info = self.target_info.clone();
         } else {
             try!(self.probe_target_info_kind(&crate_types, Kind::Host));
@@ -184,7 +177,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             process.arg("--crate-type").arg(crate_type);
         }
         if kind == Kind::Target {
-            process.arg("--target").arg(&self.target_triple);
+            process.arg("--target").arg(&self.target_triple());
         }
 
         let mut with_cfg = process.clone();
@@ -264,9 +257,19 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
     }
 
+    /// Return the host triple for this context
+    pub fn host_triple(&self) -> &str {
+        &self.build_config.host_triple
+    }
+
     /// Return the target triple which this context is targeting.
     pub fn target_triple(&self) -> &str {
-        &self.target_triple
+        self.requested_target().unwrap_or(self.host_triple())
+    }
+
+    /// Requested (not actual) target for the build
+    pub fn requested_target(&self) -> Option<&str> {
+        self.build_config.requested_target.as_ref().map(|s| &s[..])
     }
 
     /// Get the metadata for a target in a specific profile
@@ -366,11 +369,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             if unsupported.len() > 0 {
                 bail!("cannot produce {} for `{}` as the target `{}` \
                        does not support these crate types",
-                      unsupported.join(", "), unit.pkg, self.target_triple)
+                      unsupported.join(", "), unit.pkg, self.target_triple())
             }
             bail!("cannot compile `{}` as the target `{}` does not \
                    support any of the output crate types",
-                  unit.pkg, self.target_triple);
+                  unit.pkg, self.target_triple());
         }
         Ok(ret)
     }
@@ -600,8 +603,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => return true,
         };
         let (name, info) = match kind {
-            Kind::Host => (&self.config.rustc_info().host, &self.host_info),
-            Kind::Target => (&self.target_triple, &self.target_info),
+            Kind::Host => (self.host_triple(), &self.host_info),
+            Kind::Target => (self.target_triple(), &self.target_info),
         };
         platform.matches(name, info.cfg.as_ref().map(|cfg| &cfg[..]))
     }
@@ -631,11 +634,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Number of jobs specified for this build
     pub fn jobs(&self) -> u32 { self.build_config.jobs }
-
-    /// Requested (not actual) target for the build
-    pub fn requested_target(&self) -> Option<&str> {
-        self.build_config.requested_target.as_ref().map(|s| &s[..])
-    }
 
     pub fn lib_profile(&self, _pkg: &PackageId) -> &'a Profile {
         let (normal, test) = if self.build_config.release {

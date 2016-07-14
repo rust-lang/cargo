@@ -35,10 +35,11 @@ pub enum Kind { Host, Target }
 
 #[derive(Default, Clone)]
 pub struct BuildConfig {
+    pub host_triple: String,
     pub host: TargetConfig,
+    pub requested_target: Option<String>,
     pub target: TargetConfig,
     pub jobs: u32,
-    pub requested_target: Option<String>,
     pub exec_engine: Option<Arc<Box<ExecEngine>>>,
     pub release: bool,
     pub test: bool,

@@ -106,13 +106,13 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
      .env("CARGO_MANIFEST_DIR", unit.pkg.root())
      .env("NUM_JOBS", &cx.jobs().to_string())
      .env("TARGET", &match unit.kind {
-         Kind::Host => &cx.config.rustc_info().host[..],
+         Kind::Host => cx.host_triple(),
          Kind::Target => cx.target_triple(),
      })
      .env("DEBUG", &profile.debuginfo.to_string())
      .env("OPT_LEVEL", &profile.opt_level.to_string())
      .env("PROFILE", if cx.build_config.release {"release"} else {"debug"})
-     .env("HOST", &cx.config.rustc_info().host)
+     .env("HOST", cx.host_triple())
      .env("RUSTC", &cx.config.rustc())
      .env("RUSTDOC", &cx.config.rustdoc());
 
