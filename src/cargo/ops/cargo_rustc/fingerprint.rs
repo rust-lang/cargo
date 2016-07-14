@@ -172,13 +172,21 @@ impl Fingerprint {
                           a, b)
                 }
             }
-            (&LocalFingerprint::MtimeBased(ref a, ref ap),
-             &LocalFingerprint::MtimeBased(ref b, ref bp)) => {
-                let a = a.0.lock().unwrap();
-                let b = b.0.lock().unwrap();
-                if *a != *b {
-                    bail!("mtime based components have changed: {:?} != {:?}, \
-                           paths are {:?} and {:?}", *a, *b, ap, bp)
+            (&LocalFingerprint::MtimeBased(ref on_disk_mtime, ref ap),
+             &LocalFingerprint::MtimeBased(ref previously_built_mtime, ref bp)) => {
+                let on_disk_mtime = on_disk_mtime.0.lock().unwrap();
+                let previously_built_mtime = previously_built_mtime.0.lock().unwrap();
+
+                let should_rebuild = match (*on_disk_mtime, *previously_built_mtime) {
+                    (None, None) => false,
+                    (Some(_), None) | (None, Some(_)) => true,
+                    (Some(on_disk), Some(previously_built)) => on_disk > previously_built,
+                };
+
+                if should_rebuild {
+                    bail!("mtime based components have changed: previously {:?} now {:?}, \
+                           paths are {:?} and {:?}",
+                          *previously_built_mtime, *on_disk_mtime, ap, bp)
                 }
             }
             _ => bail!("local fingerprint type has changed"),
