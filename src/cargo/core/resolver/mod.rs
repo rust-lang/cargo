@@ -785,46 +785,51 @@ impl<'a> Context<'a> {
              dep: &Dependency) -> CargoResult<Vec<Candidate>> {
         let summaries = try!(registry.query(dep));
         summaries.into_iter().map(Rc::new).map(|summary| {
-            let mut replace = None;
-            let mut matched_spec = None;
-            for &(ref spec, ref dep) in self.replacements.iter() {
-                if !spec.matches(summary.package_id()) {
-                    continue
-                }
+            // get around lack of non-lexical lifetimes
+            let summary2 = summary.clone();
 
-                if replace.is_some() {
-                    bail!("overlapping replacement specifications found:\n\n  \
-                           * {}\n  * {}\n\nboth specifications match: {}",
-                          matched_spec.unwrap(), spec, summary.package_id());
-                }
+            let mut potential_matches = self.replacements.iter()
+                .filter(|&&(ref spec, _)| spec.matches(summary2.package_id()));
 
-                let mut summaries = try!(registry.query(dep)).into_iter();
-                let s = try!(summaries.next().chain_error(|| {
-                    human(format!("no matching package for override `{}` found\n\
-                                   location searched: {}\n\
-                                   version required: {}",
-                                  spec, dep.source_id(), dep.version_req()))
-                }));
-                let summaries = summaries.collect::<Vec<_>>();
-                if summaries.len() > 0 {
-                    let bullets = summaries.iter().map(|s| {
-                        format!("  * {}", s.package_id())
-                    }).collect::<Vec<_>>();
-                    bail!("the replacement specification `{}` matched \
-                           multiple packages:\n  * {}\n{}", spec,
-                          s.package_id(), bullets.join("\n"));
-                }
+            let &(ref spec, ref dep) = match potential_matches.next() {
+                None => return Ok(Candidate { summary: summary, replace: None }),
+                Some(replacement) => replacement,
+            };
 
-                // The dependency should be hard-coded to have the same name and
-                // an exact version requirement, so both of these assertions
-                // should never fail.
-                assert_eq!(s.version(), summary.version());
-                assert_eq!(s.name(), summary.name());
-
-                replace = Some(Rc::new(s));
-                matched_spec = Some(spec.clone());
+            let mut summaries = try!(registry.query(dep)).into_iter();
+            let s = try!(summaries.next().chain_error(|| {
+                human(format!("no matching package for override `{}` found\n\
+                               location searched: {}\n\
+                               version required: {}",
+                              spec, dep.source_id(), dep.version_req()))
+            }));
+            let summaries = summaries.collect::<Vec<_>>();
+            if summaries.len() > 0 {
+                let bullets = summaries.iter().map(|s| {
+                    format!("  * {}", s.package_id())
+                }).collect::<Vec<_>>();
+                bail!("the replacement specification `{}` matched \
+                       multiple packages:\n  * {}\n{}", spec, s.package_id(),
+                      bullets.join("\n"));
             }
-            Ok(Candidate { summary: summary, replace: replace })
+
+            // The dependency should be hard-coded to have the same name and an
+            // exact version requirement, so both of these assertions should
+            // never fail.
+            assert_eq!(s.version(), summary.version());
+            assert_eq!(s.name(), summary.name());
+
+            let replace = Rc::new(s);
+            let matched_spec = spec.clone();
+
+            // Make sure no duplicates
+            if let Some(&(ref spec, _)) = potential_matches.next() {
+                bail!("overlapping replacement specifications found:\n\n  \
+                       * {}\n  * {}\n\nboth specifications match: {}",
+                      matched_spec, spec, summary.package_id());
+            }
+
+            Ok(Candidate { summary: summary, replace: Some(replace) })
         }).collect()
     }
 
