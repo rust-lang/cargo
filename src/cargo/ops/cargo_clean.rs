@@ -35,8 +35,9 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     let profiles = try!(ws.current()).manifest().profiles();
     let mut cx = try!(Context::new(ws, &resolve, &packages, opts.config,
                                    BuildConfig {
-                                       release: opts.release,
+                                       host_triple: opts.config.rustc_info().host.clone(),
                                        requested_target: opts.target.map(|s| s.to_owned()),
+                                       release: opts.release,
                                        ..BuildConfig::default()
                                    },
                                    profiles));
