@@ -617,3 +617,55 @@ fn update() {
 [UPDATING] git repository `[..]`
 "));
 }
+
+// local -> near -> far
+// near is overridden with itself
+#[test]
+fn no_override_self() {
+    let deps = git::repo(&paths::root().join("override"))
+
+        .file("far/Cargo.toml", r#"
+            [package]
+            name = "far"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("far/src/lib.rs", "")
+
+        .file("near/Cargo.toml", r#"
+            [package]
+            name = "near"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            far = { path = "../far" }
+        "#)
+        .file("near/src/lib.rs", r#"
+            #![no_std]
+            pub extern crate far;
+        "#);
+
+    deps.build();
+
+    let p = project("local")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            near = {{ git = '{0}' }}
+
+            [replace]
+            "near:0.1.0" = {{ git = '{0}' }}
+        "#, deps.url()))
+        .file("src/lib.rs", r#"
+            #![no_std]
+            pub extern crate near;
+        "#);
+
+    assert_that(p.cargo_process("build").arg("--verbose"),
+                execs().with_status(0));
+}
