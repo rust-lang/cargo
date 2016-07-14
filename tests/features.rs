@@ -881,3 +881,73 @@ fn activating_feature_activates_dep() {
     assert_that(p.cargo_process("build").arg("--features").arg("a").arg("-v"),
                 execs().with_status(0));
 }
+
+#[test]
+fn dep_feature_in_cmd_line() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.derived]
+            path = "derived"
+        "#)
+        .file("src/main.rs", r#"
+            extern crate derived;
+            fn main() { derived::test(); }
+        "#)
+        .file("derived/Cargo.toml", r#"
+            [package]
+            name = "derived"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "../bar"
+
+            [features]
+            default = []
+            derived-feat = ["bar/some-feat"]
+        "#)
+        .file("derived/src/lib.rs", r#"
+            extern crate bar;
+            pub use bar::test;
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            some-feat = []
+        "#)
+        .file("bar/src/lib.rs", r#"
+            #[cfg(feature = "some-feat")]
+            pub fn test() { print!("test"); }
+        "#);
+
+    // The foo project requires that feature "some-feat" in "bar" is enabled.
+    // Building without any features enabled should fail:
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101));
+
+    // We should be able to enable the feature "derived-feat", which enables "some-feat",
+    // on the command line. The feature is enabled, thus building should be successful:
+    assert_that(p.cargo_process("build").arg("--features").arg("derived/derived-feat"),
+                execs().with_status(0));
+
+    // Trying to enable features of transitive dependencies is an error
+    assert_that(p.cargo_process("build").arg("--features").arg("bar/some-feat"),
+                execs().with_status(101).with_stderr("\
+[ERROR] Package `foo v0.0.1 ([..])` does not have these features: `bar`
+"));
+
+    // Hierarchical feature specification should still be disallowed
+    assert_that(p.cargo_process("build").arg("--features").arg("derived/bar/some-feat"),
+                execs().with_status(101).with_stderr("\
+[ERROR] feature names may not contain slashes: `bar/some-feat`
+"));
+}
