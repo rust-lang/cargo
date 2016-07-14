@@ -659,53 +659,41 @@ fn build_features(s: &Summary, method: &Method)
                    visited: &mut HashSet<String>) -> CargoResult<()> {
         if feat.is_empty() { return Ok(()) }
 
-        if !visited.insert(feat.to_string()) {
-            bail!("Cyclic feature dependency: feature `{}` depends \
-                   on itself", feat)
-        }
-
-        used.insert(feat.to_string());
-
-        // The lookup of here may fail if the feature corresponds to an optional
-        // dependency. If that is the case, we simply enable the optional dependency.
-        //
-        // Otherwise, we check what other features the feature wants and recursively
-        // add them.
-        match s.features().get(feat) {
-            Some(wanted_features) => {
-                for entry in wanted_features {
-                    // If the entry is of the form `foo/bar`, then we just lookup package
-                    // `foo` and enable its feature `bar`. We also add `foo` to the used
-                    // set because `foo` might have been an optional dependency.
-                    //
-                    // Otherwise the entry refers to another feature of our current package,
-                    // so we recurse by calling add_feature again, which may end up enabling
-                    // more features or just enabling a dependency (remember, optional
-                    // dependencies create an implicit feature with the same name).
-                    let mut parts = entry.splitn(2, '/');
-                    let feat_or_package = parts.next().unwrap();
-                    match parts.next() {
-                        Some(feat) => {
-                            let package = feat_or_package;
-                            used.insert(package.to_string());
-                            deps.entry(package.to_string())
-                                .or_insert(Vec::new())
-                                .push(feat.to_string());
-                        }
-                        None => {
-                            let feat = feat_or_package;
-                            try!(add_feature(s, feat, deps, used, visited));
-                        }
-                    }
-                }
+        // If this feature is of the form `foo/bar`, then we just lookup package
+        // `foo` and enable its feature `bar`. Otherwise this feature is of the
+        // form `foo` and we need to recurse to enable the feature `foo` for our
+        // own package, which may end up enabling more features or just enabling
+        // a dependency.
+        let mut parts = feat.splitn(2, '/');
+        let feat_or_package = parts.next().unwrap();
+        match parts.next() {
+            Some(feat) => {
+                let package = feat_or_package;
+                used.insert(package.to_string());
+                deps.entry(package.to_string())
+                    .or_insert(Vec::new())
+                    .push(feat.to_string());
             }
             None => {
-                deps.entry(feat.to_string()).or_insert(Vec::new());
+                let feat = feat_or_package;
+                if !visited.insert(feat.to_string()) {
+                    bail!("Cyclic feature dependency: feature `{}` depends \
+                           on itself", feat)
+                }
+                used.insert(feat.to_string());
+                match s.features().get(feat) {
+                    Some(recursive) => {
+                        for f in recursive {
+                            try!(add_feature(s, f, deps, used, visited));
+                        }
+                    }
+                    None => {
+                        deps.entry(feat.to_string()).or_insert(Vec::new());
+                    }
+                }
+                visited.remove(&feat.to_string());
             }
         }
-
-        visited.remove(&feat.to_string());
-
         Ok(())
     }
 }
