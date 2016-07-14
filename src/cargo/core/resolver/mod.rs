@@ -819,7 +819,12 @@ impl<'a> Context<'a> {
             assert_eq!(s.version(), summary.version());
             assert_eq!(s.name(), summary.name());
 
-            let replace = Rc::new(s);
+            let replace = if s.source_id() == summary.source_id() {
+                debug!("Preventing\n{:?}\nfrom replacing\n{:?}", summary, s);
+                None
+            } else {
+                Some(Rc::new(s))
+            };
             let matched_spec = spec.clone();
 
             // Make sure no duplicates
@@ -829,7 +834,7 @@ impl<'a> Context<'a> {
                       matched_spec, spec, summary.package_id());
             }
 
-            Ok(Candidate { summary: summary, replace: Some(replace) })
+            Ok(Candidate { summary: summary, replace: replace })
         }).collect()
     }
 
