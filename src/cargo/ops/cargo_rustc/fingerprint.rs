@@ -177,7 +177,7 @@ impl Fingerprint {
                 let a = a.0.lock().unwrap();
                 let b = b.0.lock().unwrap();
                 if *a != *b {
-                    bail!("mtime based comopnents have changed: {:?} != {:?}, \
+                    bail!("mtime based components have changed: {:?} != {:?}, \
                            paths are {:?} and {:?}", *a, *b, ap, bp)
                 }
             }
