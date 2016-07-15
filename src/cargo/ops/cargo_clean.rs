@@ -33,9 +33,10 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     let packages = ops::get_resolved_packages(&resolve, registry);
 
     let profiles = try!(ws.current()).manifest().profiles();
+    let host_triple = try!(opts.config.rustc_info()).host.clone();
     let mut cx = try!(Context::new(ws, &resolve, &packages, opts.config,
                                    BuildConfig {
-                                       host_triple: opts.config.rustc_info().host.clone(),
+                                       host_triple: host_triple,
                                        requested_target: opts.target.map(|s| s.to_owned()),
                                        release: opts.release,
                                        ..BuildConfig::default()

@@ -49,3 +49,10 @@ Options:
                 usage, &args, false);
     assert_eq!(result.unwrap(), Some("foo <version>".to_string()));
 }
+
+#[test]
+fn version_works_without_rustc() {
+    let p = project("foo");
+    assert_that(p.cargo_process("version").env("PATH", ""),
+                execs().with_status(0));
+}

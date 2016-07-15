@@ -24,7 +24,7 @@ use self::ConfigValue as CV;
 pub struct Config {
     home_path: Filesystem,
     shell: RefCell<MultiShell>,
-    rustc_info: Rustc,
+    rustc_info: RefCell<Option<Rustc>>,
     values: RefCell<HashMap<String, ConfigValue>>,
     values_loaded: Cell<bool>,
     cwd: PathBuf,
@@ -41,7 +41,7 @@ impl Config {
         let mut cfg = Config {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
-            rustc_info: Rustc::blank(),
+            rustc_info: RefCell::new(None),
             cwd: cwd,
             values: RefCell::new(HashMap::new()),
             values_loaded: Cell::new(false),
@@ -52,7 +52,6 @@ impl Config {
         };
 
         try!(cfg.scrape_tool_config());
-        try!(cfg.scrape_rustc_version());
         try!(cfg.scrape_target_dir_config());
 
         Ok(cfg)
@@ -100,7 +99,12 @@ impl Config {
 
     pub fn rustdoc(&self) -> &Path { &self.rustdoc }
 
-    pub fn rustc_info(&self) -> &Rustc { &self.rustc_info }
+    pub fn rustc_info(&self) -> CargoResult<Ref<Rustc>> {
+        if self.rustc_info.borrow().is_none() {
+            *self.rustc_info.borrow_mut() = Some(try!(Rustc::new(&self.rustc)));
+        }
+        Ok(Ref::map(self.rustc_info.borrow(), |opt| opt.as_ref().unwrap()))
+    }
 
     pub fn values(&self) -> CargoResult<Ref<HashMap<String, ConfigValue>>> {
         if !self.values_loaded.get() {
@@ -365,11 +369,6 @@ impl Config {
     fn scrape_tool_config(&mut self) -> CargoResult<()> {
         self.rustc = try!(self.get_tool("rustc"));
         self.rustdoc = try!(self.get_tool("rustdoc"));
-        Ok(())
-    }
-
-    fn scrape_rustc_version(&mut self) -> CargoResult<()> {
-        self.rustc_info = try!(Rustc::new(&self.rustc));
         Ok(())
     }
 

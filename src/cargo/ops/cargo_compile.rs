@@ -443,7 +443,7 @@ fn scrape_build_config(config: &Config,
     let cfg_target = try!(config.get_string("build.target")).map(|s| s.val);
     let target = target.or(cfg_target);
     let mut base = ops::BuildConfig {
-        host_triple: config.rustc_info().host.clone(),
+        host_triple: try!(config.rustc_info()).host.clone(),
         requested_target: target.clone(),
         jobs: jobs,
         ..Default::default()

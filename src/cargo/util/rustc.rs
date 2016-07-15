@@ -5,11 +5,12 @@ use util::{self, CargoResult, internal, ChainError};
 pub struct Rustc {
     pub verbose_version: String,
     pub host: String,
+    /// Backwards compatibility: does this compiler support `--cap-lints` flag?
     pub cap_lints: bool,
 }
 
 impl Rustc {
-    /// Run the compiler at `path` to learn varioues pieces of information about
+    /// Run the compiler at `path` to learn various pieces of information about
     /// it.
     ///
     /// If successful this function returns a description of the compiler along
@@ -18,33 +19,32 @@ impl Rustc {
         let mut cmd = util::process(path.as_ref());
         cmd.arg("-vV");
 
-        let mut ret = Rustc::blank();
         let mut first = cmd.clone();
         first.arg("--cap-lints").arg("allow");
-        let output = match first.exec_with_output() {
-            Ok(output) => { ret.cap_lints = true; output }
-            Err(..) => try!(cmd.exec_with_output()),
+
+        let (cap_lints, output) = match first.exec_with_output() {
+            Ok(output) => (true, output),
+            Err(..) => (false, try!(cmd.exec_with_output())),
         };
-        ret.verbose_version = try!(String::from_utf8(output.stdout).map_err(|_| {
+
+        let verbose_version = try!(String::from_utf8(output.stdout).map_err(|_| {
             internal("rustc -v didn't return utf8 output")
         }));
-        ret.host = {
-            let triple = ret.verbose_version.lines().filter(|l| {
+
+        let host = {
+            let triple = verbose_version.lines().find(|l| {
                 l.starts_with("host: ")
-            }).map(|l| &l[6..]).next();
+            }).map(|l| &l[6..]);
             let triple = try!(triple.chain_error(|| {
                 internal("rustc -v didn't have a line for `host:`")
             }));
             triple.to_string()
         };
-        Ok(ret)
-    }
 
-    pub fn blank() -> Rustc {
-        Rustc {
-            verbose_version: String::new(),
-            host: String::new(),
-            cap_lints: false,
-        }
+        Ok(Rustc {
+            verbose_version: verbose_version,
+            host: host,
+            cap_lints: cap_lints,
+        })
     }
 }
