@@ -117,7 +117,7 @@ fn run_doc_tests(options: &TestOptions,
 
     // We don't build/rust doctests if target != host
     if let Some(target) = options.compile_opts.target {
-        if config.rustc_info().host != target {
+        if try!(config.rustc_info()).host != target {
             return Ok(errors);
         }
     }
