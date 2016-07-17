@@ -398,6 +398,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
     let mut cred_helper_bad = None;
     let mut ssh_agent_attempts = Vec::new();
     let mut any_attempts = false;
+    let mut tried_sshkey = false;
 
     let mut res = f(&mut |url, username, allowed| {
         any_attempts = true;
@@ -433,7 +434,12 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
         // If we get called with this then the only way that should be possible
         // is if a username is specified in the URL itself (e.g. `username` is
         // Some), hence the unwrap() here. We try custom usernames down below.
-        if allowed.contains(git2::SSH_KEY) {
+        if allowed.contains(git2::SSH_KEY) && !tried_sshkey {
+            // If ssh-agent authentication fails, libgit2 will keep
+            // calling this callback asking for other authentication
+            // methods to try. Make sure we only try ssh-agent once,
+            // to avoid looping forever.
+            tried_sshkey = true;
             let username = username.unwrap();
             debug_assert!(!ssh_username_requested);
             ssh_agent_attempts.push(username.to_string());
