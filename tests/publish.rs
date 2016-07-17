@@ -327,3 +327,35 @@ fn new_crate_rejected() {
     assert_that(p.cargo("publish"),
                 execs().with_status(101));
 }
+
+#[test]
+fn dry_run() {
+    setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("publish").arg("--dry-run"),
+                execs().with_status(0).with_stderr(&format!("\
+[UPDATING] registry `{reg}`
+[WARNING] manifest has no documentation, [..]
+[PACKAGING] foo v0.0.1 ({dir})
+[VERIFYING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 [..]
+[UPLOADING] foo v0.0.1 ({dir})
+[WARNING] aborting upload due to dry run
+",
+        dir = p.url(),
+        reg = registry())));
+
+    // Ensure the API request wasn't actually made
+    assert!(!upload_path().join("api/v1/crates/new").exists());
+}
