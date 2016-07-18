@@ -14,6 +14,7 @@ pub struct Options {
     flag_no_verify: bool,
     flag_allow_dirty: bool,
     flag_jobs: Option<u32>,
+    flag_dry_run: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -30,6 +31,7 @@ Options:
     --allow-dirty            Allow publishing with a dirty source directory
     --manifest-path PATH     Path to the manifest of the package to publish
     -j N, --jobs N           Number of parallel jobs, defaults to # of CPUs
+    --dry-run                Perform all checks without uploading
     -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
@@ -47,6 +49,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         flag_no_verify: no_verify,
         flag_allow_dirty: allow_dirty,
         flag_jobs: jobs,
+        flag_dry_run: dry_run,
         ..
     } = options;
 
@@ -59,6 +62,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         verify: !no_verify,
         allow_dirty: allow_dirty,
         jobs: jobs,
+        dry_run: dry_run,
     }));
     Ok(None)
 }

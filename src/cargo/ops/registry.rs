@@ -36,6 +36,7 @@ pub struct PublishOpts<'cfg> {
     pub verify: bool,
     pub allow_dirty: bool,
     pub jobs: Option<u32>,
+    pub dry_run: bool,
 }
 
 pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
@@ -64,7 +65,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
 
     // Upload said tarball to the specified destination
     try!(opts.config.shell().status("Uploading", pkg.package_id().to_string()));
-    try!(transmit(&pkg, tarball.file(), &mut registry));
+    try!(transmit(opts.config, &pkg, tarball.file(), &mut registry, opts.dry_run));
 
     Ok(())
 }
@@ -87,8 +88,11 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
     Ok(())
 }
 
-fn transmit(pkg: &Package, tarball: &File, registry: &mut Registry)
-            -> CargoResult<()> {
+fn transmit(config: &Config,
+            pkg: &Package,
+            tarball: &File,
+            registry: &mut Registry,
+            dry_run: bool) -> CargoResult<()> {
     let deps = pkg.dependencies().iter().map(|dep| {
         NewCrateDependency {
             optional: dep.is_optional(),
@@ -121,6 +125,13 @@ fn transmit(pkg: &Package, tarball: &File, registry: &mut Registry)
         }
         None => {}
     }
+
+    // Do not upload if performing a dry run
+    if dry_run {
+        try!(config.shell().warn("aborting upload due to dry run"));
+        return Ok(());
+    }
+
     registry.publish(&NewCrate {
         name: pkg.name().to_string(),
         vers: pkg.version().to_string(),
