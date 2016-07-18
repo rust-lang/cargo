@@ -93,7 +93,7 @@ impl<'cfg> Compilation<'cfg> {
     /// well as the working directory of the child process.
     pub fn process(&self, cmd: CommandType, pkg: &Package)
                    -> CargoResult<CommandPrototype> {
-        let mut search_path = util::dylib_path();
+        let mut search_path = vec![];
 
         // Add -L arguments, after stripping off prefixes like "native=" or "framework=".
         for dir in self.native_dirs.iter() {
@@ -115,6 +115,7 @@ impl<'cfg> Compilation<'cfg> {
         }
         search_path.push(self.root_output.clone());
         search_path.push(self.deps_output.clone());
+        search_path.extend(util::dylib_path().into_iter());
         let search_path = try!(util::join_paths(&search_path,
                                                 util::dylib_path_envvar()));
         let mut cmd = try!(CommandPrototype::new(cmd, self.config));
