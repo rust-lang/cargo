@@ -524,7 +524,10 @@ fn error_message_for_missing_manifest() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] Unable to update file://[..]
+[ERROR] failed to load source for a dependency on `bar`
+
+Caused by:
+  Unable to update file://[..]
 
 Caused by:
   failed to read `[..]bar[..]Cargo.toml`

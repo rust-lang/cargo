@@ -32,6 +32,8 @@ pub struct Config {
     rustdoc: PathBuf,
     target_dir: RefCell<Option<Filesystem>>,
     extra_verbose: Cell<bool>,
+    frozen: Cell<bool>,
+    locked: Cell<bool>,
 }
 
 impl Config {
@@ -49,6 +51,8 @@ impl Config {
             rustdoc: PathBuf::from("rustdoc"),
             target_dir: RefCell::new(None),
             extra_verbose: Cell::new(false),
+            frozen: Cell::new(false),
+            locked: Cell::new(false),
         };
 
         try!(cfg.scrape_tool_config());
@@ -292,10 +296,12 @@ impl Config {
         })
     }
 
-    pub fn configure_shell(&self,
-                           verbose: u32,
-                           quiet: Option<bool>,
-                           color: &Option<String>) -> CargoResult<()> {
+    pub fn configure(&self,
+                     verbose: u32,
+                     quiet: Option<bool>,
+                     color: &Option<String>,
+                     frozen: bool,
+                     locked: bool) -> CargoResult<()> {
         let extra_verbose = verbose >= 2;
         let verbose = if verbose == 0 {None} else {Some(true)};
         let cfg_verbose = try!(self.get_bool("term.verbose")).map(|v| v.val);
@@ -329,12 +335,22 @@ impl Config {
         self.shell().set_verbosity(verbosity);
         try!(self.shell().set_color_config(color.map(|s| &s[..])));
         self.extra_verbose.set(extra_verbose);
+        self.frozen.set(frozen);
+        self.locked.set(locked);
 
         Ok(())
     }
 
     pub fn extra_verbose(&self) -> bool {
         self.extra_verbose.get()
+    }
+
+    pub fn network_allowed(&self) -> bool {
+        !self.frozen.get()
+    }
+
+    pub fn lock_update_allowed(&self) -> bool {
+        !self.frozen.get() && !self.locked.get()
     }
 
     fn load_values(&self) -> CargoResult<()> {

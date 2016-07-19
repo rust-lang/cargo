@@ -9,6 +9,8 @@ pub struct Options {
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_manifest_path: Option<String>,
+    flag_frozen: bool,
+    flag_locked: bool,
     arg_spec: Option<String>,
 }
 
@@ -24,6 +26,8 @@ Options:
     -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
+    --frozen                 Require Cargo.lock and cache are up to date
+    --locked                 Require Cargo.lock is up to date
 
 Given a <spec> argument, print out the fully qualified package id specifier.
 This command will generate an error if <spec> is ambiguous as to which package
@@ -48,9 +52,11 @@ Example Package IDs
 
 pub fn execute(options: Options,
                config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure_shell(options.flag_verbose,
-                                options.flag_quiet,
-                                &options.flag_color));
+    try!(config.configure(options.flag_verbose,
+                          options.flag_quiet,
+                          &options.flag_color,
+                          options.flag_frozen,
+                          options.flag_locked));
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path.clone(), config.cwd()));
     let ws = try!(Workspace::new(&root, config));
 

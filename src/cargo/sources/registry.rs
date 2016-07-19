@@ -177,6 +177,7 @@ use core::dependency::{Dependency, DependencyInner, Kind};
 use sources::{PathSource, git};
 use util::{CargoResult, Config, internal, ChainError, ToUrl, human};
 use util::{hex, Sha256, paths, Filesystem, FileLock};
+use util::network;
 use ops;
 
 const DEFAULT: &'static str = "https://github.com/rust-lang/crates.io-index";
@@ -315,7 +316,9 @@ impl<'cfg> RegistrySource<'cfg> {
                 body.extend_from_slice(buf);
                 Ok(buf.len())
             }));
-            try!(handle.perform());
+            try!(network::with_retry(self.config, || {
+                handle.perform()
+            }))
         }
         let code = try!(handle.response_code());
         if code != 200 && code != 0 {
@@ -495,7 +498,7 @@ impl<'cfg> RegistrySource<'cfg> {
         let refspec = "refs/heads/*:refs/remotes/origin/*";
 
         try!(git::fetch(&repo, &url, refspec, &self.config).chain_error(|| {
-            internal(format!("failed to fetch `{}`", url))
+            human(format!("failed to fetch `{}`", url))
         }));
 
         // git reset --hard origin/master
