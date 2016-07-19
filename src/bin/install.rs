@@ -16,6 +16,8 @@ pub struct Options {
     flag_root: Option<String>,
     flag_list: bool,
     flag_force: bool,
+    flag_frozen: bool,
+    flag_locked: bool,
 
     arg_crate: Option<String>,
     flag_vers: Option<String>,
@@ -56,6 +58,8 @@ Build and install options:
     -v, --verbose ...         Use verbose output
     -q, --quiet               Less output printed to stdout
     --color WHEN              Coloring: auto, always, never
+    --frozen                  Require Cargo.lock and cache are up to date
+    --locked                  Require Cargo.lock is up to date
 
 This command manages Cargo's local set of installed binary crates. Only packages
 which have [[bin]] targets can be installed, and all binaries are installed into
@@ -89,9 +93,11 @@ The `--list` option will list all installed packages (and their versions).
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure_shell(options.flag_verbose,
-                                options.flag_quiet,
-                                &options.flag_color));
+    try!(config.configure(options.flag_verbose,
+                          options.flag_quiet,
+                          &options.flag_color,
+                          options.flag_frozen,
+                          options.flag_locked));
 
     let compile_opts = ops::CompileOptions {
         config: config,

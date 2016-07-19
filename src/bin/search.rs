@@ -10,7 +10,9 @@ pub struct Options {
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_limit: Option<u32>,
-    arg_query: Vec<String>
+    flag_frozen: bool,
+    flag_locked: bool,
+    arg_query: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -27,12 +29,16 @@ Options:
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
     --limit LIMIT            Limit the number of results (default: 10, max: 100)
+    --frozen                 Require Cargo.lock and cache are up to date
+    --locked                 Require Cargo.lock is up to date
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure_shell(options.flag_verbose,
-                                options.flag_quiet,
-                                &options.flag_color));
+    try!(config.configure(options.flag_verbose,
+                          options.flag_quiet,
+                          &options.flag_color,
+                          options.flag_frozen,
+                          options.flag_locked));
     let Options {
         flag_host: host,
         flag_limit: limit,

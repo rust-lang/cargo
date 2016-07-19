@@ -28,6 +28,8 @@ pub struct Flags {
     flag_explain: Option<String>,
     arg_command: String,
     arg_args: Vec<String>,
+    flag_locked: bool,
+    flag_frozen: bool,
 }
 
 const USAGE: &'static str = "
@@ -45,6 +47,8 @@ Options:
     -v, --verbose ...   Use verbose output
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
+    --frozen            Require Cargo.lock and cache are up to date
+    --locked            Require Cargo.lock is up to date
 
 Some common cargo commands are (see all commands with --list):
     build       Compile the current project
@@ -66,6 +70,16 @@ See 'cargo help <command>' for more information on a specific command.
 fn main() {
     env_logger::init().unwrap();
     execute_main_without_stdin(execute, true, USAGE)
+}
+
+macro_rules! configure_shell {
+    ($config:expr, $options:expr) => (
+        try!($config.configure($options.flag_verbose,
+                               $options.flag_quiet,
+                               &$options.flag_color,
+                               $options.flag_frozen,
+                               $options.flag_locked));
+    )
 }
 
 macro_rules! each_subcommand{
@@ -113,9 +127,11 @@ each_subcommand!(declare_mod);
   on this top-level information.
 */
 fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure_shell(flags.flag_verbose,
-                                flags.flag_quiet,
-                                &flags.flag_color));
+    try!(config.configure(flags.flag_verbose,
+                          flags.flag_quiet,
+                          &flags.flag_color,
+                          flags.flag_frozen,
+                          flags.flag_locked));
 
     init_git_transports(config);
     cargo::util::job::setup();

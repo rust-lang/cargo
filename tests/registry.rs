@@ -1070,3 +1070,34 @@ fn upstream_warnings_on_extra_verbose() {
 [..]warning: function is never used[..]
 "));
 }
+
+#[test]
+fn disallow_network() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            foo = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build").arg("--frozen"),
+                execs().with_status(101).with_stderr("\
+[UPDATING] registry `[..]`
+error: failed to load source for a dependency on `foo`
+
+Caused by:
+  Unable to update registry [..]
+
+Caused by:
+  failed to fetch `[..]`
+
+Caused by:
+  attempting to update a git repository, but --frozen was specified
+"));
+}

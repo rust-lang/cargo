@@ -269,7 +269,10 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
 
         let ret = if overrides.is_empty() {
             // Ensure the requested source_id is loaded
-            try!(self.ensure_loaded(dep.source_id(), Kind::Normal));
+            try!(self.ensure_loaded(dep.source_id(), Kind::Normal).chain_error(|| {
+                human(format!("failed to load source for a dependency \
+                               on `{}`", dep.name()))
+            }));
 
             match self.sources.get_mut(dep.source_id()) {
                 Some(src) => try!(src.query(&dep)),

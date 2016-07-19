@@ -24,6 +24,8 @@ pub struct Options {
     flag_color: Option<String>,
     flag_release: bool,
     flag_no_fail_fast: bool,
+    flag_frozen: bool,
+    flag_locked: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -52,6 +54,8 @@ Options:
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
     --no-fail-fast               Run all tests regardless of failure
+    --frozen                     Require Cargo.lock and cache are up to date
+    --locked                     Require Cargo.lock is up to date
 
 All of the trailing arguments are passed to the test binaries generated for
 filtering tests and generally providing options configuring how they run. For
@@ -81,9 +85,11 @@ To get the list of all options available for the test binaries use this:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure_shell(options.flag_verbose,
-                                options.flag_quiet,
-                                &options.flag_color));
+    try!(config.configure(options.flag_verbose,
+                          options.flag_quiet,
+                          &options.flag_color,
+                          options.flag_frozen,
+                          options.flag_locked));
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
 
     let empty = Vec::new();

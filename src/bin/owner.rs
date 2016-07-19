@@ -12,6 +12,8 @@ pub struct Options {
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_list: bool,
+    flag_frozen: bool,
+    flag_locked: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -30,6 +32,8 @@ Options:
     -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
+    --frozen                 Require Cargo.lock and cache are up to date
+    --locked                 Require Cargo.lock is up to date
 
 This command will modify the owners for a package on the specified registry (or
 default). Note that owners of a package can upload new versions, yank old
@@ -41,9 +45,11 @@ and troubleshooting.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure_shell(options.flag_verbose,
-                                options.flag_quiet,
-                                &options.flag_color));
+    try!(config.configure(options.flag_verbose,
+                          options.flag_quiet,
+                          &options.flag_color,
+                          options.flag_frozen,
+                          options.flag_locked));
     let opts = ops::OwnersOptions {
         krate: options.arg_crate,
         token: options.flag_token,

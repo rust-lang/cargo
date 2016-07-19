@@ -182,6 +182,11 @@ pub fn registry(config: &Config,
 
 /// Create a new HTTP handle with appropriate global configuration for cargo.
 pub fn http_handle(config: &Config) -> CargoResult<Easy> {
+    if !config.network_allowed() {
+        bail!("attempting to make an HTTP request, but --frozen was \
+               specified")
+    }
+
     // The timeout option for libcurl by default times out the entire transfer,
     // but we probably don't want this. Instead we only set timeouts for the
     // connect phase as well as a "low speed" timeout so if we don't receive

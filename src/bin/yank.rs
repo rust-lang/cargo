@@ -11,6 +11,8 @@ pub struct Options {
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_undo: bool,
+    flag_frozen: bool,
+    flag_locked: bool,
 }
 
 pub static USAGE: &'static str = "
@@ -28,6 +30,8 @@ Options:
     -v, --verbose ...   Use verbose output
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
+    --frozen            Require Cargo.lock and cache are up to date
+    --locked            Require Cargo.lock is up to date
 
 The yank command removes a previously pushed crate's version from the server's
 index. This command does not delete any data, and the crate will still be
@@ -39,9 +43,11 @@ crates to be locked to any yanked version.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure_shell(options.flag_verbose,
-                                options.flag_quiet,
-                                &options.flag_color));
+    try!(config.configure(options.flag_verbose,
+                          options.flag_quiet,
+                          &options.flag_color,
+                          options.flag_frozen,
+                          options.flag_locked));
     try!(ops::yank(config,
                    options.arg_crate,
                    options.flag_vers,
