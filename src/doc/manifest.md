@@ -427,6 +427,8 @@ integration tests, and benchmarks respectively.
   *.rs
 ```
 
+To structure your code after you've created the files and folders for your project, you should remember to use Rust's module system, which you can read about in [the book](https://doc.rust-lang.org/book/crates-and-modules.html).
+
 # Examples
 
 Files located under `examples` are example uses of the functionality provided by
