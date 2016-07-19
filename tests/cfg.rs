@@ -189,7 +189,7 @@ fn dont_include() {
         .file("b/src/lib.rs", "");
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
-[COMPILING] a v0.0.1 ([..])
+[COMPILING] (debug) a v0.0.1 ([..])
 "));
 }
 
@@ -220,9 +220,9 @@ fn works_through_the_registry() {
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
 [DOWNLOADING] [..]
-[COMPILING] foo v0.1.0 ([..])
-[COMPILING] bar v0.1.0 ([..])
-[COMPILING] a v0.0.1 ([..])
+[COMPILING] (debug) foo v0.1.0 ([..])
+[COMPILING] (debug) bar v0.1.0 ([..])
+[COMPILING] (debug) a v0.0.1 ([..])
 "));
 }
 

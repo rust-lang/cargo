@@ -28,7 +28,7 @@ fn build_lib_for_foo() {
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] (debug) foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug \
         --emit=dep-info,link \
@@ -57,7 +57,7 @@ fn lib() {
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] (debug) foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         -C debug-assertions=off \
         --out-dir {dir}{sep}target{sep}debug \
@@ -87,7 +87,7 @@ fn build_main_and_allow_unstable_options() {
                 execs()
                 .with_status(0)
                 .with_stderr(&format!("\
-[COMPILING] {name} v{version} ({url})
+[COMPILING] (debug) {name} v{version} ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name {name} --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug \
         --emit=dep-info,link \
@@ -151,7 +151,7 @@ fn build_with_args_to_one_of_multiple_binaries() {
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] (debug) foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug [..]`
 [RUNNING] `rustc src{sep}bin{sep}bar.rs --crate-name bar --crate-type bin -g \
@@ -206,7 +206,7 @@ fn build_with_args_to_one_of_multiple_tests() {
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] (debug) foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         --out-dir {dir}{sep}target{sep}debug [..]`
 [RUNNING] `rustc tests{sep}bar.rs --crate-name bar -g \
@@ -249,9 +249,9 @@ fn build_foo_with_bar_dependency() {
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
-[COMPILING] bar v0.1.0 ([..])
+[COMPILING] (debug) bar v0.1.0 ([..])
 [RUNNING] `[..] -g -C [..]`
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] (debug) foo v0.0.1 ({url})
 [RUNNING] `[..] -g -C debug-assertions [..]`
 ",
                 url = foo.url())));
@@ -292,7 +292,7 @@ fn build_only_bar_dependency() {
                 execs()
                 .with_status(0)
                 .with_stderr("\
-[COMPILING] bar v0.1.0 ([..])
+[COMPILING] (debug) bar v0.1.0 ([..])
 [RUNNING] `[..]--crate-name bar --crate-type lib [..] -C debug-assertions [..]`
 "));
 }

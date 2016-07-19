@@ -45,8 +45,8 @@ fn override_simple() {
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
-[COMPILING] foo v0.1.0 (file://[..])
-[COMPILING] local v0.0.1 (file://[..])
+[COMPILING] (debug) foo v0.1.0 (file://[..])
+[COMPILING] (debug) local v0.0.1 (file://[..])
 "));
 }
 
@@ -143,9 +143,9 @@ fn transitive() {
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] bar v0.2.0 (registry [..])
-[COMPILING] foo v0.1.0 (file://[..])
-[COMPILING] bar v0.2.0 (registry [..])
-[COMPILING] local v0.0.1 (file://[..])
+[COMPILING] (debug) foo v0.1.0 (file://[..])
+[COMPILING] (debug) bar v0.2.0 (registry [..])
+[COMPILING] (debug) local v0.0.1 (file://[..])
 "));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
@@ -189,8 +189,8 @@ fn persists_across_rebuilds() {
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `file://[..]`
-[COMPILING] foo v0.1.0 (file://[..])
-[COMPILING] local v0.0.1 (file://[..])
+[COMPILING] (debug) foo v0.1.0 (file://[..])
+[COMPILING] (debug) local v0.0.1 (file://[..])
 "));
 
     assert_that(p.cargo("build"),
@@ -234,8 +234,8 @@ fn replace_registry_with_path() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
-[COMPILING] foo v0.1.0 (file://[..])
-[COMPILING] local v0.0.1 (file://[..])
+[COMPILING] (debug) foo v0.1.0 (file://[..])
+[COMPILING] (debug) local v0.0.1 (file://[..])
 "));
 }
 
@@ -293,10 +293,10 @@ fn use_a_spec_to_select() {
 [UPDATING] git repository `[..]`
 [DOWNLOADING] [..]
 [DOWNLOADING] [..]
-[COMPILING] [..]
-[COMPILING] [..]
-[COMPILING] [..]
-[COMPILING] local v0.0.1 (file://[..])
+[COMPILING] (debug) [..]
+[COMPILING] (debug) [..]
+[COMPILING] (debug) [..]
+[COMPILING] (debug) local v0.0.1 (file://[..])
 "));
 }
 
@@ -338,9 +338,9 @@ fn override_adds_some_deps() {
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
 [DOWNLOADING] foo v0.1.1 (registry [..])
-[COMPILING] foo v0.1.1 (registry [..])
-[COMPILING] bar v0.1.0 ([..])
-[COMPILING] local v0.0.1 (file://[..])
+[COMPILING] (debug) foo v0.1.1 (registry [..])
+[COMPILING] (debug) bar v0.1.0 ([..])
+[COMPILING] (debug) local v0.0.1 (file://[..])
 "));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));

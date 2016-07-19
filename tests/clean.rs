@@ -132,7 +132,7 @@ fn clean_release() {
                 execs().with_status(0));
     assert_that(p.cargo("build").arg("--release"),
                 execs().with_status(0).with_stderr("\
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING] (release) foo v0.0.1 ([..])
 "));
 }
 
@@ -169,7 +169,7 @@ fn build_script() {
                 execs().with_status(0));
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING] (debug) foo v0.0.1 ([..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]main.rs [..]`

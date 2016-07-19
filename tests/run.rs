@@ -24,7 +24,7 @@ fn simple() {
     assert_that(p.cargo_process("run"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) foo v0.0.1 ({dir})
 [RUNNING] `target{sep}debug{sep}foo[..]`", dir = path2url(p.root()), sep = SEP))
                        .with_stdout("\
 hello
@@ -128,7 +128,7 @@ fn exit_code() {
     assert_that(p.cargo_process("run"),
                 execs().with_status(2)
                        .with_stderr("\
-[COMPILING] foo v0.0.1 (file[..])
+[COMPILING] (debug) foo v0.0.1 (file[..])
 [RUNNING] `target[..]`
 [ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 "));
@@ -150,7 +150,7 @@ fn exit_code_verbose() {
     assert_that(p.cargo_process("run").arg("-v"),
                 execs().with_status(2)
                        .with_stderr("\
-[COMPILING] foo v0.0.1 (file[..])
+[COMPILING] (debug) foo v0.0.1 (file[..])
 [RUNNING] `rustc [..]`
 [RUNNING] `target[..]`
 [ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
@@ -216,7 +216,7 @@ fn specify_name() {
     assert_that(p.cargo_process("run").arg("--bin").arg("a").arg("-v"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) foo v0.0.1 ({dir})
 [RUNNING] `rustc src[..]lib.rs [..]`
 [RUNNING] `rustc src[..]a.rs [..]`
 [RUNNING] `target{sep}debug{sep}a[..]`", dir = path2url(p.root()), sep = SEP))
@@ -227,7 +227,7 @@ hello a.rs
     assert_that(p.cargo("run").arg("--bin").arg("b").arg("-v"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING] (debug) foo v0.0.1 ([..])
 [RUNNING] `rustc src[..]b.rs [..]`
 [RUNNING] `target{sep}debug{sep}b[..]`", sep = SEP))
                        .with_stdout("\
@@ -255,7 +255,7 @@ fn run_example() {
     assert_that(p.cargo_process("run").arg("--example").arg("a"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) foo v0.0.1 ({dir})
 [RUNNING] `target{sep}debug{sep}examples{sep}a[..]`", dir = path2url(p.root()), sep = SEP))
                        .with_stdout("\
 example
@@ -347,7 +347,7 @@ fn one_bin_multiple_examples() {
     assert_that(p.cargo_process("run"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) foo v0.0.1 ({dir})
 [RUNNING] `target{sep}debug{sep}main[..]`", dir = path2url(p.root()), sep = SEP))
                        .with_stdout("\
 hello main.rs
@@ -401,7 +401,7 @@ fn example_with_release_flag() {
     assert_that(p.cargo_process("run").arg("-v").arg("--release").arg("--example").arg("a"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] bar v0.0.1 ({url}/bar)
+[COMPILING] (release) bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -C opt-level=3 \
         -C metadata=[..] \
@@ -410,7 +410,7 @@ fn example_with_release_flag() {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] (release) foo v0.0.1 ({url})
 [RUNNING] `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -C opt-level=3 \
         --out-dir {dir}{sep}target{sep}release{sep}examples \
@@ -430,7 +430,7 @@ fast2"));
     assert_that(p.cargo("run").arg("-v").arg("--example").arg("a"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] bar v0.0.1 ({url}/bar)
+[COMPILING] (debug) bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -g \
         -C metadata=[..] \
@@ -439,7 +439,7 @@ fast2"));
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] (debug) foo v0.0.1 ({url})
 [RUNNING] `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -g \
         --out-dir {dir}{sep}target{sep}debug{sep}examples \
@@ -504,7 +504,7 @@ fn release_works() {
 
     assert_that(p.cargo_process("run").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (release) foo v0.0.1 ({dir})
 [RUNNING] `target{sep}release{sep}foo[..]`
 ",
         dir = path2url(p.root()),

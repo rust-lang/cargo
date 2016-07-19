@@ -32,8 +32,8 @@ fn simple() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) bar v0.0.1 (registry file://[..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
         dir = p.url(),
         reg = registry::registry())));
@@ -71,9 +71,9 @@ fn deps() {
 [UPDATING] registry `{reg}`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
-[COMPILING] baz v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) baz v0.0.1 (registry file://[..])
+[COMPILING] (debug) bar v0.0.1 (registry file://[..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
         dir = p.url(),
         reg = registry::registry())));
@@ -202,8 +202,8 @@ version required: >= 0.0.0
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] notyet v0.0.1 (registry file://[..])
-[COMPILING] notyet v0.0.1 (registry file://[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) notyet v0.0.1 (registry file://[..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
         dir = p.url(),
         reg = registry::registry())));
@@ -255,8 +255,8 @@ version required: ^0.0.1
 [VERIFYING] foo v0.0.1 ({dir})
 [UPDATING] registry `[..]`
 [DOWNLOADING] notyet v0.0.1 (registry file://[..])
-[COMPILING] notyet v0.0.1 (registry file://[..])
-[COMPILING] foo v0.0.1 ({dir}[..])
+[COMPILING] (debug) notyet v0.0.1 (registry file://[..])
+[COMPILING] (debug) foo v0.0.1 ({dir}[..])
 ", dir = p.url())));
 }
 
@@ -281,8 +281,8 @@ fn lockfile_locks() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) bar v0.0.1 (registry file://[..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
    dir = p.url())));
 
@@ -316,9 +316,9 @@ fn lockfile_locks_transitively() {
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
-[COMPILING] baz v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) baz v0.0.1 (registry file://[..])
+[COMPILING] (debug) bar v0.0.1 (registry file://[..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
    dir = p.url())));
 
@@ -355,9 +355,9 @@ fn yanks_are_not_used() {
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
-[COMPILING] baz v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) baz v0.0.1 (registry file://[..])
+[COMPILING] (debug) bar v0.0.1 (registry file://[..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
    dir = p.url())));
 }
@@ -488,8 +488,8 @@ fn update_lockfile() {
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [DOWNLOADING] [..] v0.0.2 (registry file://[..])
-[COMPILING] bar v0.0.2 (registry file://[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) bar v0.0.2 (registry file://[..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
    dir = p.url())));
 
@@ -505,8 +505,8 @@ fn update_lockfile() {
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [DOWNLOADING] [..] v0.0.3 (registry file://[..])
-[COMPILING] bar v0.0.3 (registry file://[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) bar v0.0.3 (registry file://[..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
    dir = p.url())));
 
@@ -554,8 +554,8 @@ fn dev_dependency_not_used() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) bar v0.0.1 (registry file://[..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
    dir = p.url())));
 }
@@ -621,9 +621,9 @@ fn updating_a_dep() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
-[COMPILING] bar v0.0.1 (registry file://[..])
-[COMPILING] a v0.0.1 ({dir}/a)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) bar v0.0.1 (registry file://[..])
+[COMPILING] (debug) a v0.0.1 ({dir}/a)
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
    dir = p.url())));
 
@@ -643,9 +643,9 @@ fn updating_a_dep() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.1.0 (registry file://[..])
-[COMPILING] bar v0.1.0 (registry file://[..])
-[COMPILING] a v0.0.1 ({dir}/a)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) bar v0.1.0 (registry file://[..])
+[COMPILING] (debug) a v0.0.1 ({dir}/a)
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
    dir = p.url())));
 }
@@ -688,9 +688,9 @@ fn git_and_registry_dep() {
 [UPDATING] [..]
 [UPDATING] [..]
 [DOWNLOADING] a v0.0.1 (registry file://[..])
-[COMPILING] a v0.0.1 (registry [..])
-[COMPILING] b v0.0.1 ([..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) a v0.0.1 (registry [..])
+[COMPILING] (debug) b v0.0.1 ([..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ",
    dir = p.url())));
     p.root().move_into_the_past();
@@ -734,8 +734,8 @@ fn update_publish_then_update() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] [..]
 [DOWNLOADING] a v0.1.1 (registry file://[..])
-[COMPILING] a v0.1.1 (registry [..])
-[COMPILING] foo v0.5.0 ({dir})
+[COMPILING] (debug) a v0.1.1 (registry [..])
+[COMPILING] (debug) foo v0.5.0 ({dir})
 ",
    dir = p.url())));
 
@@ -800,9 +800,9 @@ fn update_transitive_dependency() {
                 execs().with_status(0)
                        .with_stderr("\
 [DOWNLOADING] b v0.1.1 (registry file://[..])
-[COMPILING] b v0.1.1 (registry [..])
-[COMPILING] a v0.1.0 (registry [..])
-[COMPILING] foo v0.5.0 ([..])
+[COMPILING] (debug) b v0.1.1 (registry [..])
+[COMPILING] (debug) a v0.1.0 (registry [..])
+[COMPILING] (debug) foo v0.5.0 ([..])
 "));
 }
 
@@ -895,13 +895,13 @@ fn update_multiple_packages() {
                        .with_stderr_contains("\
 [DOWNLOADING] c v0.1.1 (registry file://[..])")
                        .with_stderr_contains("\
-[COMPILING] a v0.1.1 (registry [..])")
+[COMPILING] (debug) a v0.1.1 (registry [..])")
                        .with_stderr_contains("\
-[COMPILING] b v0.1.1 (registry [..])")
+[COMPILING] (debug) b v0.1.1 (registry [..])")
                        .with_stderr_contains("\
-[COMPILING] c v0.1.1 (registry [..])")
+[COMPILING] (debug) c v0.1.1 (registry [..])")
                        .with_stderr_contains("\
-[COMPILING] foo v0.5.0 ([..])"));
+[COMPILING] (debug) foo v0.5.0 ([..])"));
 }
 
 #[test]
@@ -1017,8 +1017,8 @@ fn only_download_relevant() {
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] baz v0.1.0 ([..])
-[COMPILING] baz v0.1.0 ([..])
-[COMPILING] bar v0.5.0 ([..])
+[COMPILING] (debug) baz v0.1.0 ([..])
+[COMPILING] (debug) bar v0.5.0 ([..])
 "));
 }
 

@@ -25,7 +25,7 @@ fn modifying_and_moving() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ", dir = path2url(p.root()))));
 
     assert_that(p.cargo("build"),
@@ -37,7 +37,7 @@ fn modifying_and_moving() {
          .write_all(b"#[allow(unused)]fn main() {}").unwrap();
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ", dir = path2url(p.root()))));
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
@@ -65,7 +65,7 @@ fn modify_only_some_files() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ", dir = path2url(p.root()))));
     assert_that(p.cargo("test"),
                 execs().with_status(0));
@@ -83,7 +83,7 @@ fn modify_only_some_files() {
     // Make sure the binary is rebuilt, not the lib
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ", dir = path2url(p.root()))));
     assert_that(&p.bin("foo"), existing_file());
 }
@@ -157,19 +157,19 @@ fn changing_features_is_ok() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
+[..]Compiling (debug) foo v0.0.1 ([..])
 "));
 
     assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(0)
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
+[..]Compiling (debug) foo v0.0.1 ([..])
 "));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
+[..]Compiling (debug) foo v0.0.1 ([..])
 "));
 
     assert_that(p.cargo("build"),
@@ -257,9 +257,9 @@ fn no_rebuild_transitive_target_deps() {
     assert_that(p.cargo("test").arg("--no-run"),
                 execs().with_status(0)
                        .with_stderr("\
-[COMPILING] c v0.0.1 ([..])
-[COMPILING] b v0.0.1 ([..])
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING] (debug) c v0.0.1 ([..])
+[COMPILING] (debug) b v0.0.1 ([..])
+[COMPILING] (debug) foo v0.0.1 ([..])
 "));
 }
 
@@ -350,13 +350,13 @@ fn same_build_dir_cached_packages() {
 
     assert_that(p.cargo("build").cwd(p.root().join("a1")),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] d v0.0.1 ({dir}/d)
-[COMPILING] c v0.0.1 ({dir}/c)
-[COMPILING] b v0.0.1 ({dir}/b)
-[COMPILING] a1 v0.0.1 ({dir}/a1)
+[COMPILING] (debug) d v0.0.1 ({dir}/d)
+[COMPILING] (debug) c v0.0.1 ({dir}/c)
+[COMPILING] (debug) b v0.0.1 ({dir}/b)
+[COMPILING] (debug) a1 v0.0.1 ({dir}/a1)
 ", dir = p.url())));
     assert_that(p.cargo("build").cwd(p.root().join("a2")),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] a2 v0.0.1 ({dir}/a2)
+[COMPILING] (debug) a2 v0.0.1 ({dir}/a2)
 ", dir = p.url())));
 }

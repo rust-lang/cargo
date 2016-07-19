@@ -89,7 +89,7 @@ fn rustdoc_foo_with_bar_dependency() {
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
-[COMPILING] bar v0.0.1 ([..])
+[COMPILING] (debug) bar v0.0.1 ([..])
 [RUNNING] `rustc [..]bar{sep}src{sep}lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ({url})
 [RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \

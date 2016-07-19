@@ -152,7 +152,7 @@ fn doc_no_deps() {
 
     assert_that(p.cargo_process("doc").arg("--no-deps"),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] bar v0.0.1 ({dir}/bar)
+[COMPILING] (debug) bar v0.0.1 ({dir}/bar)
 [DOCUMENTING] foo v0.0.1 ({dir})
 ",
         dir = path2url(p.root()))));

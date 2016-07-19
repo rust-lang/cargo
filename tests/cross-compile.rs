@@ -356,7 +356,7 @@ fn linker_and_ar() {
                                               .arg("-v"),
                 execs().with_status(101)
                        .with_stderr_contains(&format!("\
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] (debug) foo v0.5.0 ({url})
 [RUNNING] `rustc src[..]foo.rs --crate-name foo --crate-type bin -g \
     --out-dir {dir}[..]target[..]{target}[..]debug \
     --emit=dep-info,link \
@@ -471,7 +471,7 @@ fn cross_tests() {
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.0 ({foo})
+[COMPILING] (debug) foo v0.0.0 ({foo})
 [RUNNING] target[..]{triple}[..]bar-[..]
 [RUNNING] target[..]{triple}[..]foo-[..]", foo = p.url(), triple = target))
                        .with_stdout("
@@ -508,7 +508,7 @@ fn no_cross_doctests() {
         "#);
 
     let host_output = format!("\
-[COMPILING] foo v0.0.0 ({foo})
+[COMPILING] (debug) foo v0.0.0 ({foo})
 [RUNNING] target[..]foo-[..]
 [DOCTEST] foo
 ", foo = p.url());
@@ -529,7 +529,7 @@ fn no_cross_doctests() {
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.0 ({foo})
+[COMPILING] (debug) foo v0.0.0 ({foo})
 [RUNNING] target[..]{triple}[..]foo-[..]
 ", foo = p.url(), triple = target)));
 }
@@ -595,7 +595,7 @@ fn cross_with_a_build_script() {
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.0 (file://[..])
+[COMPILING] (debug) foo v0.0.0 (file://[..])
 [RUNNING] `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..]`
 [RUNNING] `{dir}[..]target[..]build[..]foo-[..]build-script-build`
 [RUNNING] `rustc src[..]main.rs [..] --target {target} [..]`
@@ -665,7 +665,7 @@ fn build_script_needed_for_host_and_target() {
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
                        .with_stderr_contains(&format!("\
-[COMPILING] d1 v0.0.0 ({url}/d1)", url = p.url()))
+[COMPILING] (debug) d1 v0.0.0 ({url}/d1)", url = p.url()))
                        .with_stderr_contains(&format!("\
 [RUNNING] `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`",
     dir = p.root().display()))
@@ -675,12 +675,12 @@ fn build_script_needed_for_host_and_target() {
                        .with_stderr_contains("\
 [RUNNING] `rustc d1[..]src[..]lib.rs [..]`")
                        .with_stderr_contains(&format!("\
-[COMPILING] d2 v0.0.0 ({url}/d2)", url = p.url()))
+[COMPILING] (debug) d2 v0.0.0 ({url}/d2)", url = p.url()))
                        .with_stderr_contains(&format!("\
 [RUNNING] `rustc d2[..]src[..]lib.rs [..] \
            -L /path/to/{host}`", host = host))
                        .with_stderr_contains(&format!("\
-[COMPILING] foo v0.0.0 ({url})", url = p.url()))
+[COMPILING] (debug) foo v0.0.0 ({url})", url = p.url()))
                        .with_stderr_contains(&format!("\
 [RUNNING] `rustc build.rs [..] --out-dir {dir}[..]target[..]build[..]foo-[..] \
            -L /path/to/{host}`", dir = p.root().display(), host = host))
@@ -794,7 +794,7 @@ fn plugin_build_script_right_arch() {
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(alternate()),
                 execs().with_status(0)
                        .with_stderr("\
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING] (debug) foo v0.0.1 ([..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc src[..]lib.rs [..]`
@@ -841,11 +841,11 @@ fn build_script_with_platform_specific_dependencies() {
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] d2 v0.0.0 ([..])
+[COMPILING] (debug) d2 v0.0.0 ([..])
 [RUNNING] `rustc d2[..]src[..]lib.rs [..]`
-[COMPILING] d1 v0.0.0 ([..])
+[COMPILING] (debug) d1 v0.0.0 ([..])
 [RUNNING] `rustc d1[..]src[..]lib.rs [..]`
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING] (debug) foo v0.0.1 ([..])
 [RUNNING] `rustc build.rs [..]`
 [RUNNING] `{dir}[..]target[..]build[..]foo-[..]build-script-build`
 [RUNNING] `rustc src[..]lib.rs [..] --target {target} [..]`
