@@ -1,8 +1,9 @@
-use std::path::Path;
+use std::path::PathBuf;
 
 use util::{self, CargoResult, internal, ChainError};
 
 pub struct Rustc {
+    pub path: PathBuf,
     pub verbose_version: String,
     pub host: String,
     /// Backwards compatibility: does this compiler support `--cap-lints` flag?
@@ -15,8 +16,8 @@ impl Rustc {
     ///
     /// If successful this function returns a description of the compiler along
     /// with a list of its capabilities.
-    pub fn new<P: AsRef<Path>>(path: P) -> CargoResult<Rustc> {
-        let mut cmd = util::process(path.as_ref());
+    pub fn new(path: PathBuf) -> CargoResult<Rustc> {
+        let mut cmd = util::process(&path);
         cmd.arg("-vV");
 
         let mut first = cmd.clone();
@@ -42,6 +43,7 @@ impl Rustc {
         };
 
         Ok(Rustc {
+            path: path,
             verbose_version: verbose_version,
             host: host,
             cap_lints: cap_lints,
