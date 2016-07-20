@@ -28,8 +28,8 @@ pub struct Config {
     values: RefCell<HashMap<String, ConfigValue>>,
     values_loaded: Cell<bool>,
     cwd: PathBuf,
-    rustc: PathBuf,
-    rustdoc: PathBuf,
+    rustc: RefCell<Option<PathBuf>>,
+    rustdoc: RefCell<Option<PathBuf>>,
     target_dir: RefCell<Option<Filesystem>>,
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
@@ -47,15 +47,14 @@ impl Config {
             cwd: cwd,
             values: RefCell::new(HashMap::new()),
             values_loaded: Cell::new(false),
-            rustc: PathBuf::from("rustc"),
-            rustdoc: PathBuf::from("rustdoc"),
+            rustc: RefCell::new(None),
+            rustdoc: RefCell::new(None),
             target_dir: RefCell::new(None),
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
             locked: Cell::new(false),
         };
 
-        try!(cfg.scrape_tool_config());
         try!(cfg.scrape_target_dir_config());
 
         Ok(cfg)
@@ -99,13 +98,24 @@ impl Config {
         self.shell.borrow_mut()
     }
 
-    pub fn rustc(&self) -> &Path { &self.rustc }
+    pub fn rustc(&self) -> CargoResult<Ref<Path>> {
+        if self.rustc.borrow().is_none() {
+            *self.rustc.borrow_mut() = Some(try!(self.get_tool("rustc")));
+        }
+        Ok(Ref::map(self.rustc.borrow(), |opt| opt.as_ref().map(AsRef::as_ref).unwrap()))
+    }
 
-    pub fn rustdoc(&self) -> &Path { &self.rustdoc }
+    pub fn rustdoc(&self) -> CargoResult<Ref<Path>> {
+        if self.rustdoc.borrow().is_none() {
+            *self.rustdoc.borrow_mut() = Some(try!(self.get_tool("rustdoc")));
+        }
+        Ok(Ref::map(self.rustdoc.borrow(), |opt| opt.as_ref().map(AsRef::as_ref).unwrap()))
+    }
 
     pub fn rustc_info(&self) -> CargoResult<Ref<Rustc>> {
         if self.rustc_info.borrow().is_none() {
-            *self.rustc_info.borrow_mut() = Some(try!(Rustc::new(&self.rustc)));
+            let path = try!(self.rustc());
+            *self.rustc_info.borrow_mut() = Some(try!(Rustc::new(&*path)));
         }
         Ok(Ref::map(self.rustc_info.borrow(), |opt| opt.as_ref().unwrap()))
     }
@@ -379,12 +389,6 @@ impl Config {
             CV::Table(map, _) => map,
             _ => unreachable!(),
         };
-        Ok(())
-    }
-
-    fn scrape_tool_config(&mut self) -> CargoResult<()> {
-        self.rustc = try!(self.get_tool("rustc"));
-        self.rustdoc = try!(self.get_tool("rustdoc"));
         Ok(())
     }
 

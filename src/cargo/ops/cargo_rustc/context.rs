@@ -166,7 +166,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                       &self.build_config,
                                       kind,
                                       "RUSTFLAGS"));
-        let mut process = util::process(self.config.rustc());
+        let mut process = util::process(&*try!(self.config.rustc()));
         process.arg("-")
                .arg("--crate-name").arg("_")
                .arg("--print=file-names")
