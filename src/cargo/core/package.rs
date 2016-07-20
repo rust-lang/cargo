@@ -131,7 +131,7 @@ impl<'cfg> PackageSet<'cfg> {
                sources: SourceMap<'cfg>) -> PackageSet<'cfg> {
         PackageSet {
             packages: package_ids.iter().map(|id| {
-                (id.clone(), LazyCell::new(None))
+                (id.clone(), LazyCell::new())
             }).collect(),
             sources: RefCell::new(sources),
         }

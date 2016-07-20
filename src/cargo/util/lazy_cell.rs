@@ -16,8 +16,8 @@ pub struct LazyCell<T> {
 
 impl<T> LazyCell<T> {
     /// Creates a new empty lazy cell.
-    pub fn new(init: Option<T>) -> LazyCell<T> {
-        LazyCell { inner: UnsafeCell::new(init) }
+    pub fn new() -> LazyCell<T> {
+        LazyCell { inner: UnsafeCell::new(None) }
     }
 
     /// Put a value into this cell.
@@ -51,5 +51,17 @@ impl<T> LazyCell<T> {
         unsafe {
             self.inner.into_inner()
         }
+    }
+
+    /// Borrows the contents of this lazy cell, initializing it if necessary.
+    pub fn get_or_try_init<Error, F>(&self, init: F) -> Result<&T, Error>
+        where F: FnOnce() -> Result<T, Error>
+    {
+        if self.borrow().is_none() {
+            if let Err(_) = self.fill(try!(init())) {
+                unreachable!();
+            }
+        }
+        Ok(self.borrow().unwrap())
     }
 }
