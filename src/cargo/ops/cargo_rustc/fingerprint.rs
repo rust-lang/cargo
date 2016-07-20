@@ -352,7 +352,7 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         try!(cx.rustflags_args(unit))
     };
     let fingerprint = Arc::new(Fingerprint {
-        rustc: util::hash_u64(&try!(cx.config.rustc_info()).verbose_version),
+        rustc: util::hash_u64(&try!(cx.config.rustc()).verbose_version),
         target: util::hash_u64(&unit.target),
         profile: util::hash_u64(&unit.profile),
         features: format!("{:?}", features),

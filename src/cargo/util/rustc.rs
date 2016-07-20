@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use util::{self, CargoResult, internal, ChainError};
+use util::{self, CargoResult, internal, ChainError, ProcessBuilder};
 
 pub struct Rustc {
     pub path: PathBuf,
@@ -48,5 +48,9 @@ impl Rustc {
             host: host,
             cap_lints: cap_lints,
         })
+    }
+
+    pub fn process(&self) -> ProcessBuilder {
+        util::process(&self.path)
     }
 }

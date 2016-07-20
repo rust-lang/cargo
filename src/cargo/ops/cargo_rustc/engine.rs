@@ -41,7 +41,7 @@ impl CommandPrototype {
         Ok(CommandPrototype {
             builder: {
                 let mut p = match ty {
-                    CommandType::Rustc => process(&*try!(config.rustc())),
+                    CommandType::Rustc => try!(config.rustc()).process(),
                     CommandType::Rustdoc => process(&*try!(config.rustdoc())),
                     CommandType::Target(ref s) |
                     CommandType::Host(ref s) => process(s),

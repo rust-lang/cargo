@@ -24,7 +24,7 @@ use self::ConfigValue as CV;
 pub struct Config {
     home_path: Filesystem,
     shell: RefCell<MultiShell>,
-    rustc_info: RefCell<Option<Rustc>>,
+    rustc: RefCell<Option<Rustc>>,
     values: RefCell<HashMap<String, ConfigValue>>,
     values_loaded: Cell<bool>,
     cwd: PathBuf,
@@ -42,7 +42,7 @@ impl Config {
         let mut cfg = Config {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
-            rustc_info: RefCell::new(None),
+            rustc: RefCell::new(None),
             cwd: cwd,
             values: RefCell::new(HashMap::new()),
             values_loaded: Cell::new(false),
@@ -96,11 +96,6 @@ impl Config {
         self.shell.borrow_mut()
     }
 
-    pub fn rustc(&self) -> CargoResult<Ref<Path>> {
-        let rustc = try!(self.rustc_info());
-        Ok(Ref::map(rustc, |r| r.path.as_ref()))
-    }
-
     pub fn rustdoc(&self) -> CargoResult<Ref<Path>> {
         if self.rustdoc.borrow().is_none() {
             *self.rustdoc.borrow_mut() = Some(try!(self.get_tool("rustdoc")));
@@ -108,12 +103,12 @@ impl Config {
         Ok(Ref::map(self.rustdoc.borrow(), |opt| opt.as_ref().map(AsRef::as_ref).unwrap()))
     }
 
-    pub fn rustc_info(&self) -> CargoResult<Ref<Rustc>> {
-        if self.rustc_info.borrow().is_none() {
+    pub fn rustc(&self) -> CargoResult<Ref<Rustc>> {
+        if self.rustc.borrow().is_none() {
             let path = try!(self.get_tool("rustc"));
-            *self.rustc_info.borrow_mut() = Some(try!(Rustc::new(path)));
+            *self.rustc.borrow_mut() = Some(try!(Rustc::new(path)));
         }
-        Ok(Ref::map(self.rustc_info.borrow(), |opt| opt.as_ref().unwrap()))
+        Ok(Ref::map(self.rustc.borrow(), |opt| opt.as_ref().unwrap()))
     }
 
     pub fn values(&self) -> CargoResult<Ref<HashMap<String, ConfigValue>>> {
