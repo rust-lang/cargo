@@ -1,4 +1,4 @@
-use std::cell::{RefCell, RefMut, Ref, Cell};
+use std::cell::{RefCell, RefMut, Cell};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::{HashMap};
 use std::env;
@@ -15,7 +15,7 @@ use toml;
 use core::shell::{Verbosity, ColorConfig};
 use core::{MultiShell, Workspace};
 use util::{CargoResult, CargoError, ChainError, Rustc, internal, human};
-use util::Filesystem;
+use util::{Filesystem, LazyCell};
 
 use util::toml as cargo_toml;
 
@@ -24,11 +24,10 @@ use self::ConfigValue as CV;
 pub struct Config {
     home_path: Filesystem,
     shell: RefCell<MultiShell>,
-    rustc: RefCell<Option<Rustc>>,
-    values: RefCell<HashMap<String, ConfigValue>>,
-    values_loaded: Cell<bool>,
+    rustc: LazyCell<Rustc>,
+    values: LazyCell<HashMap<String, ConfigValue>>,
     cwd: PathBuf,
-    rustdoc: RefCell<Option<PathBuf>>,
+    rustdoc: LazyCell<PathBuf>,
     target_dir: RefCell<Option<Filesystem>>,
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
@@ -42,11 +41,10 @@ impl Config {
         let mut cfg = Config {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
-            rustc: RefCell::new(None),
+            rustc: LazyCell::new(),
             cwd: cwd,
-            values: RefCell::new(HashMap::new()),
-            values_loaded: Cell::new(false),
-            rustdoc: RefCell::new(None),
+            values: LazyCell::new(),
+            rustdoc: LazyCell::new(),
             target_dir: RefCell::new(None),
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
@@ -96,27 +94,16 @@ impl Config {
         self.shell.borrow_mut()
     }
 
-    pub fn rustdoc(&self) -> CargoResult<Ref<Path>> {
-        if self.rustdoc.borrow().is_none() {
-            *self.rustdoc.borrow_mut() = Some(try!(self.get_tool("rustdoc")));
-        }
-        Ok(Ref::map(self.rustdoc.borrow(), |opt| opt.as_ref().map(AsRef::as_ref).unwrap()))
+    pub fn rustdoc(&self) -> CargoResult<&Path> {
+        self.rustdoc.get_or_try_init(|| self.get_tool("rustdoc")).map(AsRef::as_ref)
     }
 
-    pub fn rustc(&self) -> CargoResult<Ref<Rustc>> {
-        if self.rustc.borrow().is_none() {
-            let path = try!(self.get_tool("rustc"));
-            *self.rustc.borrow_mut() = Some(try!(Rustc::new(path)));
-        }
-        Ok(Ref::map(self.rustc.borrow(), |opt| opt.as_ref().unwrap()))
+    pub fn rustc(&self) -> CargoResult<&Rustc> {
+        self.rustc.get_or_try_init(|| Rustc::new(try!(self.get_tool("rustc"))))
     }
 
-    pub fn values(&self) -> CargoResult<Ref<HashMap<String, ConfigValue>>> {
-        if !self.values_loaded.get() {
-            try!(self.load_values());
-            self.values_loaded.set(true);
-        }
-        Ok(self.values.borrow())
+    pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
+        self.values.get_or_try_init(|| self.load_values())
     }
 
     pub fn cwd(&self) -> &Path { &self.cwd }
@@ -354,7 +341,7 @@ impl Config {
         !self.frozen.get() && !self.locked.get()
     }
 
-    fn load_values(&self) -> CargoResult<()> {
+    fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
 
         try!(walk_tree(&self.cwd, |mut file, path| {
@@ -376,11 +363,10 @@ impl Config {
         }).chain_error(|| human("Couldn't load Cargo configuration")));
 
 
-        *self.values.borrow_mut() = match cfg {
-            CV::Table(map, _) => map,
+        match cfg {
+            CV::Table(map, _) => Ok(map),
             _ => unreachable!(),
-        };
-        Ok(())
+        }
     }
 
     fn scrape_target_dir_config(&mut self) -> CargoResult<()> {
