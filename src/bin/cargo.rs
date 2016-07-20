@@ -150,8 +150,9 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     }
 
     if let Some(ref code) = flags.flag_explain {
-        try!(process(config.rustc()).arg("--explain").arg(code).exec()
-                                    .map_err(human));
+        try!(process(&*try!(config.rustc()))
+                 .arg("--explain").arg(code).exec()
+                 .map_err(human));
         return Ok(None)
     }
 
