@@ -28,7 +28,6 @@ pub struct Config {
     values: RefCell<HashMap<String, ConfigValue>>,
     values_loaded: Cell<bool>,
     cwd: PathBuf,
-    rustc: RefCell<Option<PathBuf>>,
     rustdoc: RefCell<Option<PathBuf>>,
     target_dir: RefCell<Option<Filesystem>>,
     extra_verbose: Cell<bool>,
@@ -47,7 +46,6 @@ impl Config {
             cwd: cwd,
             values: RefCell::new(HashMap::new()),
             values_loaded: Cell::new(false),
-            rustc: RefCell::new(None),
             rustdoc: RefCell::new(None),
             target_dir: RefCell::new(None),
             extra_verbose: Cell::new(false),
@@ -99,10 +97,8 @@ impl Config {
     }
 
     pub fn rustc(&self) -> CargoResult<Ref<Path>> {
-        if self.rustc.borrow().is_none() {
-            *self.rustc.borrow_mut() = Some(try!(self.get_tool("rustc")));
-        }
-        Ok(Ref::map(self.rustc.borrow(), |opt| opt.as_ref().map(AsRef::as_ref).unwrap()))
+        let rustc = try!(self.rustc_info());
+        Ok(Ref::map(rustc, |r| r.path.as_ref()))
     }
 
     pub fn rustdoc(&self) -> CargoResult<Ref<Path>> {
@@ -114,8 +110,8 @@ impl Config {
 
     pub fn rustc_info(&self) -> CargoResult<Ref<Rustc>> {
         if self.rustc_info.borrow().is_none() {
-            let path = try!(self.rustc());
-            *self.rustc_info.borrow_mut() = Some(try!(Rustc::new(&*path)));
+            let path = try!(self.get_tool("rustc"));
+            *self.rustc_info.borrow_mut() = Some(try!(Rustc::new(path)));
         }
         Ok(Ref::map(self.rustc_info.borrow(), |opt| opt.as_ref().unwrap()))
     }
