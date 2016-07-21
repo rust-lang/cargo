@@ -204,7 +204,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
 
     let name = unit.pkg.name().to_string();
     if !cx.show_warnings(unit.pkg.package_id()) {
-        if try!(cx.config.rustc_info()).cap_lints {
+        if try!(cx.config.rustc()).cap_lints {
             rustc.arg("--cap-lints").arg("allow");
         } else {
             rustc.arg("-Awarnings");
