@@ -1147,3 +1147,98 @@ Caused by:
   attempting to make an HTTP request, but --frozen was specified
 "));
 }
+
+#[test]
+fn add_dep_dont_update_registry() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            baz = { path = "baz" }
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("baz/Cargo.toml", r#"
+            [project]
+            name = "baz"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            remote = "0.3"
+        "#)
+        .file("baz/src/lib.rs", "");
+    p.build();
+
+    Package::new("remote", "0.3.4").publish();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+
+    t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(br#"
+        [project]
+        name = "bar"
+        version = "0.5.0"
+        authors = []
+
+        [dependencies]
+        baz = { path = "baz" }
+        remote = "0.3"
+    "#));
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stderr("\
+[COMPILING] bar v0.5.0 ([..])
+[FINISHED] [..]
+"));
+}
+
+#[test]
+fn bump_version_dont_update_registry() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            baz = { path = "baz" }
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("baz/Cargo.toml", r#"
+            [project]
+            name = "baz"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            remote = "0.3"
+        "#)
+        .file("baz/src/lib.rs", "");
+    p.build();
+
+    Package::new("remote", "0.3.4").publish();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+
+    t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(br#"
+        [project]
+        name = "bar"
+        version = "0.6.0"
+        authors = []
+
+        [dependencies]
+        baz = { path = "baz" }
+    "#));
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stderr("\
+[COMPILING] bar v0.6.0 ([..])
+[FINISHED] [..]
+"));
+}
