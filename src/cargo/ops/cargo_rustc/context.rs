@@ -8,7 +8,7 @@ use std::sync::Arc;
 use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, Profiles, Metadata, Dependency, Workspace};
 use core::dependency::Kind as DepKind;
-use util::{self, CargoResult, ChainError, internal, Config, profile, Cfg, human};
+use util::{CargoResult, ChainError, internal, Config, profile, Cfg, human};
 
 use super::TargetConfig;
 use super::custom_build::{BuildState, BuildScripts};
@@ -166,7 +166,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                       &self.build_config,
                                       kind,
                                       "RUSTFLAGS"));
-        let mut process = util::process(self.config.rustc());
+        let mut process = try!(self.config.rustc()).process();
         process.arg("-")
                .arg("--crate-name").arg("_")
                .arg("--print=file-names")

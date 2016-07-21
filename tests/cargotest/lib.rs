@@ -21,11 +21,12 @@ extern crate log;
 use cargo::util::Rustc;
 use std::ffi::OsStr;
 use std::time::Duration;
+use std::path::PathBuf;
 
 pub mod support;
 pub mod install;
 
-thread_local!(pub static RUSTC: Rustc = Rustc::new("rustc").unwrap());
+thread_local!(pub static RUSTC: Rustc = Rustc::new(PathBuf::from("rustc")).unwrap());
 
 pub fn rustc_host() -> String {
     RUSTC.with(|r| r.host.clone())

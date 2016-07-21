@@ -16,7 +16,6 @@ use cargo::core::shell::Verbosity;
 use cargo::execute_main_without_stdin;
 use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
 use cargo::util::CliError;
-use cargo::util::process_builder::process;
 
 #[derive(RustcDecodable)]
 pub struct Flags {
@@ -150,8 +149,8 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     }
 
     if let Some(ref code) = flags.flag_explain {
-        try!(process(config.rustc()).arg("--explain").arg(code).exec()
-                                    .map_err(human));
+        let mut procss = try!(config.rustc()).process();
+        try!(procss.arg("--explain").arg(code).exec().map_err(human));
         return Ok(None)
     }
 
