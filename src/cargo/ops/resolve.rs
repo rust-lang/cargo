@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use core::{PackageId, PackageIdSpec, SourceId, Workspace};
 use core::registry::PackageRegistry;
@@ -55,6 +55,36 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                         .filter(|s| !s.is_registry()));
     }
 
+    // In the case where a previous instance of resolve is available, we
+    // want to lock as many packages as possible to the previous version
+    // without disturbing the graph structure. To this end we perform
+    // two actions here:
+    //
+    // 1. We inform the package registry of all locked packages. This
+    //    involves informing it of both the locked package's id as well
+    //    as the versions of all locked dependencies. The registry will
+    //    then takes this information into account when it is queried.
+    //
+    // 2. The specified package's summary will have its dependencies
+    //    modified to their precise variants. This will instruct the
+    //    first step of the resolution process to not query for ranges
+    //    but rather for precise dependency versions.
+    //
+    //    This process must handle altered dependencies, however, as
+    //    it's possible for a manifest to change over time to have
+    //    dependencies added, removed, or modified to different version
+    //    ranges. To deal with this, we only actually lock a dependency
+    //    to the previously resolved version if the dependency listed
+    //    still matches the locked version.
+    if let Some(r) = previous {
+        for node in r.iter().filter(|p| keep(p, to_avoid, &to_avoid_sources)) {
+            let deps = r.deps_not_replaced(node)
+                        .filter(|p| keep(p, to_avoid, &to_avoid_sources))
+                        .cloned().collect();
+            registry.register_lock(node.clone(), deps);
+        }
+    }
+
     let mut summaries = Vec::new();
     for member in ws.members() {
         try!(registry.add_sources(&[member.package_id().source_id()
@@ -75,59 +105,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             }
         }
 
-        // If we don't have a previous instance of resolve then we just need to
-        // resolve our entire summary (method should be Everything) and we just
-        // move along to the next member.
-        let r = match previous {
-            Some(r) => r,
-            None => {
-                summaries.push((member.summary().clone(), method));
-                continue
-            }
-        };
-
-        // In the case where a previous instance of resolve is available, we
-        // want to lock as many packages as possible to the previous version
-        // without disturbing the graph structure. To this end we perform
-        // two actions here:
-        //
-        // 1. We inform the package registry of all locked packages. This
-        //    involves informing it of both the locked package's id as well
-        //    as the versions of all locked dependencies. The registry will
-        //    then takes this information into account when it is queried.
-        //
-        // 2. The specified package's summary will have its dependencies
-        //    modified to their precise variants. This will instruct the
-        //    first step of the resolution process to not query for ranges
-        //    but rather for precise dependency versions.
-        //
-        //    This process must handle altered dependencies, however, as
-        //    it's possible for a manifest to change over time to have
-        //    dependencies added, removed, or modified to different version
-        //    ranges. To deal with this, we only actually lock a dependency
-        //    to the previously resolved version if the dependency listed
-        //    still matches the locked version.
-        for node in r.iter().filter(|p| keep(p, to_avoid, &to_avoid_sources)) {
-            let deps = r.deps_not_replaced(node)
-                        .filter(|p| keep(p, to_avoid, &to_avoid_sources))
-                        .cloned().collect();
-            registry.register_lock(node.clone(), deps);
-        }
-
-        let summary = {
-            let map = r.deps_not_replaced(member.package_id()).filter(|p| {
-                keep(p, to_avoid, &to_avoid_sources)
-            }).map(|d| {
-                (d.name(), d)
-            }).collect::<HashMap<_, _>>();
-
-            member.summary().clone().map_dependencies(|dep| {
-                match map.get(dep.name()) {
-                    Some(&lock) if dep.matches_id(lock) => dep.lock_to(lock),
-                    _ => dep,
-                }
-            })
-        };
+        let summary = registry.lock(member.summary().clone());
         summaries.push((summary, method));
     }
 

@@ -201,22 +201,24 @@ impl<'cfg> PackageRegistry<'cfg> {
         Ok(ret)
     }
 
-    // This function is used to transform a summary to another locked summary if
-    // possible. This is where the concept of a lockfile comes into play.
-    //
-    // If a summary points at a package id which was previously locked, then we
-    // override the summary's id itself, as well as all dependencies, to be
-    // rewritten to the locked versions. This will transform the summary's
-    // source to a precise source (listed in the locked version) as well as
-    // transforming all of the dependencies from range requirements on imprecise
-    // sources to exact requirements on precise sources.
-    //
-    // If a summary does not point at a package id which was previously locked,
-    // we still want to avoid updating as many dependencies as possible to keep
-    // the graph stable. In this case we map all of the summary's dependencies
-    // to be rewritten to a locked version wherever possible. If we're unable to
-    // map a dependency though, we just pass it on through.
-    fn lock(&self, summary: Summary) -> Summary {
+    /// This function is used to transform a summary to another locked summary
+    /// if possible. This is where the concept of a lockfile comes into play.
+    ///
+    /// If a summary points at a package id which was previously locked, then we
+    /// override the summary's id itself, as well as all dependencies, to be
+    /// rewritten to the locked versions. This will transform the summary's
+    /// source to a precise source (listed in the locked version) as well as
+    /// transforming all of the dependencies from range requirements on
+    /// imprecise sources to exact requirements on precise sources.
+    ///
+    /// If a summary does not point at a package id which was previously locked,
+    /// or if any dependencies were added and don't have a previously listed
+    /// version, we still want to avoid updating as many dependencies as
+    /// possible to keep the graph stable. In this case we map all of the
+    /// summary's dependencies to be rewritten to a locked version wherever
+    /// possible. If we're unable to map a dependency though, we just pass it on
+    /// through.
+    pub fn lock(&self, summary: Summary) -> Summary {
         let pair = self.locked.get(summary.source_id()).and_then(|map| {
             map.get(summary.name())
         }).and_then(|vec| {
@@ -229,51 +231,43 @@ impl<'cfg> PackageRegistry<'cfg> {
             None => summary,
         };
         summary.map_dependencies(|dep| {
-            match pair {
-                // If we've got a known set of overrides for this summary, then
-                // one of a few cases can arise:
-                //
-                // 1. We have a lock entry for this dependency from the same
-                //    source as it's listed as coming from. In this case we make
-                //    sure to lock to precisely the given package id.
-                //
-                // 2. We have a lock entry for this dependency, but it's from a
-                //    different source than what's listed, or the version
-                //    requirement has changed. In this case we must discard the
-                //    locked version because the dependency needs to be
-                //    re-resolved.
-                //
-                // 3. We don't have a lock entry for this dependency, in which
-                //    case it was likely an optional dependency which wasn't
-                //    included previously so we just pass it through anyway.
-                Some(&(_, ref deps)) => {
-                    match deps.iter().find(|d| d.name() == dep.name()) {
-                        Some(lock) => {
-                            if dep.matches_id(lock) {
-                                dep.lock_to(lock)
-                            } else {
-                                dep
-                            }
-                        }
-                        None => dep,
-                    }
+            // If we've got a known set of overrides for this summary, then
+            // one of a few cases can arise:
+            //
+            // 1. We have a lock entry for this dependency from the same
+            //    source as it's listed as coming from. In this case we make
+            //    sure to lock to precisely the given package id.
+            //
+            // 2. We have a lock entry for this dependency, but it's from a
+            //    different source than what's listed, or the version
+            //    requirement has changed. In this case we must discard the
+            //    locked version because the dependency needs to be
+            //    re-resolved.
+            //
+            // 3. We don't have a lock entry for this dependency, in which
+            //    case it was likely an optional dependency which wasn't
+            //    included previously so we just pass it through anyway.
+            //
+            // Cases 1/2 are handled by `matches_id` and case 3 is handled by
+            // falling through to the logic below.
+            if let Some(&(_, ref locked_deps)) = pair {
+                let locked = locked_deps.iter().find(|id| dep.matches_id(id));
+                if let Some(locked) = locked {
+                    return dep.lock_to(locked)
                 }
+            }
 
-                // If this summary did not have a locked version, then we query
-                // all known locked packages to see if they match this
-                // dependency. If anything does then we lock it to that and move
-                // on.
-                None => {
-                    let v = self.locked.get(dep.source_id()).and_then(|map| {
-                        map.get(dep.name())
-                    }).and_then(|vec| {
-                        vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
-                    });
-                    match v {
-                        Some(&(ref id, _)) => dep.lock_to(id),
-                        None => dep
-                    }
-                }
+            // If this dependency did not have a locked version, then we query
+            // all known locked packages to see if they match this dependency.
+            // If anything does then we lock it to that and move on.
+            let v = self.locked.get(dep.source_id()).and_then(|map| {
+                map.get(dep.name())
+            }).and_then(|vec| {
+                vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
+            });
+            match v {
+                Some(&(ref id, _)) => dep.lock_to(id),
+                None => dep
             }
         })
     }
