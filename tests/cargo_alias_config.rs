@@ -101,3 +101,22 @@ fn alias_with_flags_config() {
                                      --emit=dep-info,link -L dependency=[..]")
                 );
 }
+
+#[test]
+fn cant_shadow_builtin() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", r#"
+            fn main() {
+         }"#)
+        .file(".cargo/config",r#"
+            [alias]
+            build = "fetch"
+         "#);;
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0)
+                       .with_stderr("\
+[COMPILING] foo v0.5.0 ([..])
+"));
+}
