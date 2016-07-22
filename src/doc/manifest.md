@@ -472,7 +472,7 @@ All of the  `[[bin]]`, `[lib]`, `[[bench]]`, `[[test]]`, and `[[example]]`
 sections support similar configuration for specifying how a target should be
 built. The double-bracket sections like `[[bin]]` are array-of-table of
 [TOML](https://github.com/toml-lang/toml#array-of-tables), which means you can
-wirte more than one `[[bin]]` sections to make serval executables in your crate.
+write more than one `[[bin]]` section to make several executables in your crate.
 
 The example below uses `[lib]`, but it also applies to all other sections
 as well. All values listed are the defaults for that option unless otherwise
