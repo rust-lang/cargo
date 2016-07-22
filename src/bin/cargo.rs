@@ -154,7 +154,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         return Ok(None)
     }
 
-    let mut args = match &flags.arg_command[..] {
+    let args = match &flags.arg_command[..] {
         // For the commands `cargo` and `cargo help`, re-execute ourselves as
         // `cargo -h` so we can go through the normal process of printing the
         // help message.
@@ -195,18 +195,32 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         }
     };
 
-    let alias_list = try!(aliased_command(&config, &args[1]));
-    if let Some(alias_command) = alias_list {
-        // Replace old command with new command and flags
-        let chain = args.iter().take(1)
-            .chain(alias_command.iter())
-            .chain(args.iter().skip(2))
-            .map(|s| s.to_string())
-            .collect();
-        args = chain;
+    if try_execute(&config, &args) {
+        return Ok(None)
     }
 
-    macro_rules! cmd{
+    let alias_list = try!(aliased_command(&config, &args[1]));
+    let args = match alias_list {
+        Some(alias_command) => {
+            let chain = args.iter().take(1)
+                .chain(alias_command.iter())
+                .chain(args.iter().skip(2))
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>();
+            if try_execute(&config, &chain) {
+                return Ok(None)
+            } else {
+                chain
+            }
+        }
+        None => args,
+    };
+    try!(execute_subcommand(config, &args[1], &args));
+    Ok(None)
+}
+
+fn try_execute(config: &Config, args: &[String]) -> bool {
+    macro_rules! cmd {
         ($name:ident) => (if args[1] == stringify!($name).replace("_", "-") {
             config.shell().set_verbosity(Verbosity::Verbose);
             let r = cargo::call_main_without_stdin($name::execute, config,
@@ -214,13 +228,12 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
                                                    &args,
                                                    false);
             cargo::process_executed(r, &mut config.shell());
-            return Ok(None)
+            return true
         })
     }
     each_subcommand!(cmd);
 
-    try!(execute_subcommand(config, &args[1], &args));
-    Ok(None)
+    return false
 }
 
 fn aliased_command(config: &Config, command: &String) -> CargoResult<Option<Vec<String>>> {
