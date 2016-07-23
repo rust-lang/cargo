@@ -13,7 +13,7 @@ use std::str::FromStr;
 use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::shell::{Verbosity, ColorConfig};
-use core::{MultiShell, Workspace};
+use core::MultiShell;
 use util::{CargoResult, CargoError, ChainError, Rustc, internal, human};
 use util::{Filesystem, LazyCell};
 
@@ -28,7 +28,7 @@ pub struct Config {
     values: LazyCell<HashMap<String, ConfigValue>>,
     cwd: PathBuf,
     rustdoc: LazyCell<PathBuf>,
-    target_dir: RefCell<Option<Filesystem>>,
+    target_dir: Option<Filesystem>,
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
     locked: Cell<bool>,
@@ -45,7 +45,7 @@ impl Config {
             cwd: cwd,
             values: LazyCell::new(),
             rustdoc: LazyCell::new(),
-            target_dir: RefCell::new(None),
+            target_dir: None,
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
             locked: Cell::new(false),
@@ -108,14 +108,8 @@ impl Config {
 
     pub fn cwd(&self) -> &Path { &self.cwd }
 
-    pub fn target_dir(&self, ws: &Workspace) -> Filesystem {
-        self.target_dir.borrow().clone().unwrap_or_else(|| {
-            Filesystem::new(ws.root().join("target"))
-        })
-    }
-
-    pub fn set_target_dir(&self, path: Filesystem) {
-        *self.target_dir.borrow_mut() = Some(path);
+    pub fn target_dir(&self) -> Option<&Filesystem> {
+        self.target_dir.as_ref()
     }
 
     fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
@@ -371,10 +365,10 @@ impl Config {
 
     fn scrape_target_dir_config(&mut self) -> CargoResult<()> {
         if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
-            *self.target_dir.borrow_mut() = Some(Filesystem::new(self.cwd.join(dir)));
+            self.target_dir = Some(Filesystem::new(self.cwd.join(dir)));
         } else if let Some(val) = try!(self.get_path("build.target-dir")) {
             let val = self.cwd.join(val.val);
-            *self.target_dir.borrow_mut() = Some(Filesystem::new(val));
+            self.target_dir = Some(Filesystem::new(val));
         }
         Ok(())
     }

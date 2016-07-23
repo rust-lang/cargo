@@ -6,7 +6,7 @@ use std::slice;
 use core::{Package, VirtualManifest, EitherManifest, SourceId};
 use core::{PackageIdSpec, Dependency};
 use ops;
-use util::{Config, CargoResult};
+use util::{Config, CargoResult, Filesystem};
 use util::paths;
 
 /// The core abstraction in Cargo for working with a workspace of crates.
@@ -31,6 +31,9 @@ pub struct Workspace<'cfg> {
     // missing, `package.workspace` is missing, and no `Cargo.toml` above
     // `current_manifest` was found on the filesystem with `[workspace]`.
     root_manifest: Option<PathBuf>,
+
+    // Allows to override the target directory for the purposes of `cargo install`.
+    target_dir: Option<Filesystem>,
 
     // List of members in this workspace with a listing of all their manifest
     // paths. The packages themselves can be looked up through the `packages`
@@ -86,6 +89,7 @@ impl<'cfg> Workspace<'cfg> {
                 packages: HashMap::new(),
             },
             root_manifest: None,
+            target_dir: None,
             members: Vec::new(),
         };
         ws.root_manifest = try!(ws.find_root(manifest_path));
@@ -103,7 +107,7 @@ impl<'cfg> Workspace<'cfg> {
     ///
     /// This is currently only used in niche situations like `cargo install` or
     /// `cargo package`.
-    pub fn one(package: Package, config: &'cfg Config) -> Workspace<'cfg> {
+    pub fn one(package: Package, config: &'cfg Config, target_dir: Option<Filesystem>) -> Workspace<'cfg> {
         let mut ws = Workspace {
             config: config,
             current_manifest: package.manifest_path().to_path_buf(),
@@ -112,6 +116,7 @@ impl<'cfg> Workspace<'cfg> {
                 packages: HashMap::new(),
             },
             root_manifest: None,
+            target_dir: target_dir,
             members: Vec::new(),
         };
         {
@@ -153,6 +158,16 @@ impl<'cfg> Workspace<'cfg> {
             Some(ref p) => p,
             None => &self.current_manifest
         }.parent().unwrap()
+    }
+
+    pub fn target_dir(&self) -> Filesystem {
+        if let Some(ref fs) = self.target_dir {
+            return fs.clone()
+        }
+        if let Some(fs) = self.config.target_dir() {
+            return fs.clone()
+        }
+        Filesystem::new(self.root().join("target"))
     }
 
     /// Returns the root [replace] section of this workspace.

@@ -52,7 +52,7 @@ pub fn package(ws: &Workspace,
     }
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
-    let dir = config.target_dir(ws).join("package");
+    let dir = ws.target_dir().join("package");
     let mut dst = {
         let tmp = format!(".{}", filename);
         try!(dir.open_rw(&tmp, config, "package scratch space"))
@@ -266,7 +266,7 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
     let new_pkg = Package::new(new_manifest, &manifest_path);
 
     // Now that we've rewritten all our path dependencies, compile it!
-    let ws = Workspace::one(new_pkg, config);
+    let ws = Workspace::one(new_pkg, config, None);
     try!(ops::compile_ws(&ws, None, &ops::CompileOptions {
         config: config,
         jobs: opts.jobs,

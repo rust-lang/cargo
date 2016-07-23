@@ -76,7 +76,20 @@ pub fn install(root: Option<&str>,
                                             crates.io, or use --path or --git to \
                                             specify alternate source"))))
     };
-    let ws = Workspace::one(pkg, config);
+
+
+    let mut td_opt = None;
+    let overidden_target_dir = if source_id.is_path() {
+        None
+    } else if let Ok(td) = TempDir::new("cargo-install") {
+        let p = td.path().to_owned();
+        td_opt = Some(td);
+        Some(Filesystem::new(p))
+    } else {
+        Some(Filesystem::new(config.cwd().join("target-install")))
+    };
+
+    let ws = Workspace::one(pkg, config, overidden_target_dir);
     let pkg = try!(ws.current());
 
     // Preflight checks to check up front whether we'll overwrite something.
@@ -89,19 +102,6 @@ pub fn install(root: Option<&str>,
         try!(check_overwrites(&dst, pkg, &opts.filter, &list, force));
     }
 
-    let mut td_opt = None;
-    let target_dir = if source_id.is_path() {
-        config.target_dir(&ws)
-    } else {
-        if let Ok(td) = TempDir::new("cargo-install") {
-            let p = td.path().to_owned();
-            td_opt = Some(td);
-            Filesystem::new(p)
-        } else {
-            Filesystem::new(config.cwd().join("target-install"))
-        }
-    };
-    config.set_target_dir(target_dir.clone());
     let compile = try!(ops::compile_ws(&ws, Some(source), opts).chain_error(|| {
         if let Some(td) = td_opt.take() {
             // preserve the temporary directory, so the user can inspect it
@@ -109,7 +109,7 @@ pub fn install(root: Option<&str>,
         }
 
         human(format!("failed to compile `{}`, intermediate artifacts can be \
-                       found at `{}`", pkg, target_dir.display()))
+                       found at `{}`", pkg, ws.target_dir().display()))
     }));
     let binaries: Vec<(&str, &Path)> = try!(compile.binaries.iter().map(|bin| {
         let name = bin.file_name().unwrap();
@@ -224,7 +224,7 @@ pub fn install(root: Option<&str>,
     if !source_id.is_path() {
         // Don't bother grabbing a lock as we're going to blow it all away
         // anyway.
-        let target_dir = target_dir.into_path_unlocked();
+        let target_dir = ws.target_dir().into_path_unlocked();
         try!(fs::remove_dir_all(&target_dir));
     }
 

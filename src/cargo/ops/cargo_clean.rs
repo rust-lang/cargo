@@ -16,7 +16,7 @@ pub struct CleanOptions<'a> {
 
 /// Cleans the project from build artifacts.
 pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
-    let target_dir = opts.config.target_dir(&ws);
+    let target_dir = ws.target_dir();
 
     // If we have a spec, then we need to delete some packages, otherwise, just
     // remove the whole target directory and be done with it!
