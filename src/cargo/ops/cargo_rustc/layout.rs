@@ -72,7 +72,7 @@ impl Layout {
     pub fn new(ws: &Workspace,
                triple: Option<&str>,
                dest: &str) -> CargoResult<Layout> {
-        let mut path = ws.config().target_dir(ws);
+        let mut path = ws.target_dir();
         // Flexible target specifications often point at filenames, so interpret
         // the target triple as a Path and then just use the file stem as the
         // component for the directory name.
