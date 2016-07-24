@@ -89,7 +89,7 @@ pub fn install(root: Option<&str>,
         Some(Filesystem::new(config.cwd().join("target-install")))
     };
 
-    let ws = Workspace::one(pkg, config, overidden_target_dir);
+    let ws = try!(Workspace::one(pkg, config, overidden_target_dir));
     let pkg = try!(ws.current());
 
     // Preflight checks to check up front whether we'll overwrite something.
