@@ -287,8 +287,11 @@ impl Config {
                      locked: bool) -> CargoResult<()> {
         let extra_verbose = verbose >= 2;
         let verbose = if verbose == 0 {None} else {Some(true)};
-        let cfg_verbose = try!(self.get_bool("term.verbose")).map(|v| v.val);
-        let cfg_color = try!(self.get_string("term.color")).map(|v| v.val);
+
+        // Ignore errors in the configuration files.
+        let cfg_verbose = self.get_bool("term.verbose").unwrap_or(None).map(|v| v.val);
+        let cfg_color = self.get_string("term.color").unwrap_or(None).map(|v| v.val);
+
         let color = color.as_ref().or(cfg_color.as_ref());
 
         let verbosity = match (verbose, cfg_verbose, quiet) {
