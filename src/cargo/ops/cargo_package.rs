@@ -266,7 +266,7 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
     let new_pkg = Package::new(new_manifest, &manifest_path);
 
     // Now that we've rewritten all our path dependencies, compile it!
-    let ws = Workspace::one(new_pkg, config, None);
+    let ws = try!(Workspace::one(new_pkg, config, None));
     try!(ops::compile_ws(&ws, None, &ops::CompileOptions {
         config: config,
         jobs: opts.jobs,

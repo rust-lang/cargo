@@ -28,7 +28,6 @@ pub struct Config {
     values: LazyCell<HashMap<String, ConfigValue>>,
     cwd: PathBuf,
     rustdoc: LazyCell<PathBuf>,
-    target_dir: Option<Filesystem>,
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
     locked: Cell<bool>,
@@ -37,23 +36,18 @@ pub struct Config {
 impl Config {
     pub fn new(shell: MultiShell,
                cwd: PathBuf,
-               homedir: PathBuf) -> CargoResult<Config> {
-        let mut cfg = Config {
+               homedir: PathBuf) -> Config {
+        Config {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
             rustc: LazyCell::new(),
             cwd: cwd,
             values: LazyCell::new(),
             rustdoc: LazyCell::new(),
-            target_dir: None,
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
             locked: Cell::new(false),
-        };
-
-        try!(cfg.scrape_target_dir_config());
-
-        Ok(cfg)
+        }
     }
 
     pub fn default() -> CargoResult<Config> {
@@ -65,7 +59,7 @@ impl Config {
             human("Cargo couldn't find your home directory. \
                   This probably means that $HOME was not set.")
         }));
-        Config::new(shell, cwd, homedir)
+        Ok(Config::new(shell, cwd, homedir))
     }
 
     pub fn home(&self) -> &Filesystem { &self.home_path }
@@ -108,8 +102,15 @@ impl Config {
 
     pub fn cwd(&self) -> &Path { &self.cwd }
 
-    pub fn target_dir(&self) -> Option<&Filesystem> {
-        self.target_dir.as_ref()
+    pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
+        if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
+            Ok(Some(Filesystem::new(self.cwd.join(dir))))
+        } else if let Some(val) = try!(self.get_path("build.target-dir")) {
+            let val = self.cwd.join(val.val);
+            Ok(Some(Filesystem::new(val)))
+        } else {
+            Ok(None)
+        }
     }
 
     fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
@@ -361,16 +362,6 @@ impl Config {
             CV::Table(map, _) => Ok(map),
             _ => unreachable!(),
         }
-    }
-
-    fn scrape_target_dir_config(&mut self) -> CargoResult<()> {
-        if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
-            self.target_dir = Some(Filesystem::new(self.cwd.join(dir)));
-        } else if let Some(val) = try!(self.get_path("build.target-dir")) {
-            let val = self.cwd.join(val.val);
-            self.target_dir = Some(Filesystem::new(val));
-        }
-        Ok(())
     }
 
     fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
