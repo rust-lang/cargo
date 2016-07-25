@@ -497,7 +497,7 @@ pub fn prepare_init(cx: &mut Context, unit: &Unit) -> CargoResult<()> {
 
 /// Return the (old, new) location for fingerprints for a package
 pub fn dir(cx: &Context, unit: &Unit) -> PathBuf {
-    cx.layout(unit.pkg, unit.kind).proxy().fingerprint(unit.pkg)
+    cx.layout(unit).proxy().fingerprint(unit.pkg)
 }
 
 /// Returns the (old, new) location for the dep info file of a target.

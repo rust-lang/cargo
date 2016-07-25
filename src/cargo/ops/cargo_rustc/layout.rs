@@ -49,9 +49,10 @@ use std::fs;
 use std::io;
 use std::path::{PathBuf, Path};
 
-use core::{Package, Target, Workspace};
+use core::{Package, Workspace};
 use util::{Config, FileLock, CargoResult, Filesystem};
 use util::hex::short_hash;
+use super::Unit;
 
 pub struct Layout {
     root: PathBuf,
@@ -165,11 +166,13 @@ impl<'a> LayoutProxy<'a> {
 
     pub fn proxy(&self) -> &'a Layout { self.root }
 
-    pub fn out_dir(&self, pkg: &Package, target: &Target) -> PathBuf {
-        if target.is_custom_build() {
-            self.build(pkg)
-        } else if target.is_example() {
+    pub fn out_dir(&self, unit: &Unit) -> PathBuf {
+        if unit.target.is_custom_build() {
+            self.build(unit.pkg)
+        } else if unit.target.is_example() {
             self.examples().to_path_buf()
+        } else if unit.target.is_lib() {
+            self.deps().to_path_buf()
         } else {
             self.root().to_path_buf()
         }

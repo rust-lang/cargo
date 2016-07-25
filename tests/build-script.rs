@@ -766,19 +766,17 @@ fn build_cmd_with_a_build_cmd() {
 [RUNNING] `rustc a[..]build.rs [..] --extern b=[..]`
 [RUNNING] `[..]a-[..]build-script-build[..]`
 [RUNNING] `rustc [..]lib.rs --crate-name a --crate-type lib -g \
-    -C metadata=[..] -C extra-filename=-[..] \
     --out-dir [..]target[..]deps --emit=dep-info,link \
-    -L [..]target[..]deps -L [..]target[..]deps`
+    -L [..]target[..]deps`
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc build.rs --crate-name build_script_build --crate-type bin \
-    -g \
-    --out-dir [..]build[..]foo-[..] --emit=dep-info,link \
-    -L [..]target[..]debug -L [..]target[..]deps \
-    --extern a=[..]liba-[..].rlib`
+    -g --out-dir [..] --emit=dep-info,link \
+    -L [..]target[..]deps \
+    --extern a=[..]liba[..].rlib`
 [RUNNING] `[..]foo-[..]build-script-build[..]`
 [RUNNING] `rustc [..]lib.rs --crate-name foo --crate-type lib -g \
-    --out-dir [..]target[..]debug --emit=dep-info,link \
-    -L [..]target[..]debug -L [..]target[..]deps`
+    --out-dir [..] --emit=dep-info,link \
+    -L [..]target[..]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
@@ -1175,7 +1173,7 @@ fn build_script_with_dynamic_native_dependency() {
 
             fn main() {
                 let src = PathBuf::from(env::var("SRC").unwrap());
-                println!("cargo:rustc-link-search={}/target/debug",
+                println!("cargo:rustc-link-search={}/target/debug/deps",
                          src.display());
             }
         "#)
