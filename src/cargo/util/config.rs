@@ -13,7 +13,7 @@ use std::str::FromStr;
 use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::shell::{Verbosity, ColorConfig};
-use core::{MultiShell, Workspace};
+use core::MultiShell;
 use util::{CargoResult, CargoError, ChainError, Rustc, internal, human};
 use util::{Filesystem, LazyCell};
 
@@ -28,7 +28,6 @@ pub struct Config {
     values: LazyCell<HashMap<String, ConfigValue>>,
     cwd: PathBuf,
     rustdoc: LazyCell<PathBuf>,
-    target_dir: RefCell<Option<Filesystem>>,
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
     locked: Cell<bool>,
@@ -37,23 +36,18 @@ pub struct Config {
 impl Config {
     pub fn new(shell: MultiShell,
                cwd: PathBuf,
-               homedir: PathBuf) -> CargoResult<Config> {
-        let mut cfg = Config {
+               homedir: PathBuf) -> Config {
+        Config {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
             rustc: LazyCell::new(),
             cwd: cwd,
             values: LazyCell::new(),
             rustdoc: LazyCell::new(),
-            target_dir: RefCell::new(None),
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
             locked: Cell::new(false),
-        };
-
-        try!(cfg.scrape_target_dir_config());
-
-        Ok(cfg)
+        }
     }
 
     pub fn default() -> CargoResult<Config> {
@@ -65,7 +59,7 @@ impl Config {
             human("Cargo couldn't find your home directory. \
                   This probably means that $HOME was not set.")
         }));
-        Config::new(shell, cwd, homedir)
+        Ok(Config::new(shell, cwd, homedir))
     }
 
     pub fn home(&self) -> &Filesystem { &self.home_path }
@@ -108,14 +102,15 @@ impl Config {
 
     pub fn cwd(&self) -> &Path { &self.cwd }
 
-    pub fn target_dir(&self, ws: &Workspace) -> Filesystem {
-        self.target_dir.borrow().clone().unwrap_or_else(|| {
-            Filesystem::new(ws.root().join("target"))
-        })
-    }
-
-    pub fn set_target_dir(&self, path: Filesystem) {
-        *self.target_dir.borrow_mut() = Some(path);
+    pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
+        if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
+            Ok(Some(Filesystem::new(self.cwd.join(dir))))
+        } else if let Some(val) = try!(self.get_path("build.target-dir")) {
+            let val = self.cwd.join(val.val);
+            Ok(Some(Filesystem::new(val)))
+        } else {
+            Ok(None)
+        }
     }
 
     fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
@@ -292,8 +287,11 @@ impl Config {
                      locked: bool) -> CargoResult<()> {
         let extra_verbose = verbose >= 2;
         let verbose = if verbose == 0 {None} else {Some(true)};
-        let cfg_verbose = try!(self.get_bool("term.verbose")).map(|v| v.val);
-        let cfg_color = try!(self.get_string("term.color")).map(|v| v.val);
+
+        // Ignore errors in the configuration files.
+        let cfg_verbose = self.get_bool("term.verbose").unwrap_or(None).map(|v| v.val);
+        let cfg_color = self.get_string("term.color").unwrap_or(None).map(|v| v.val);
+
         let color = color.as_ref().or(cfg_color.as_ref());
 
         let verbosity = match (verbose, cfg_verbose, quiet) {
@@ -367,16 +365,6 @@ impl Config {
             CV::Table(map, _) => Ok(map),
             _ => unreachable!(),
         }
-    }
-
-    fn scrape_target_dir_config(&mut self) -> CargoResult<()> {
-        if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
-            *self.target_dir.borrow_mut() = Some(Filesystem::new(self.cwd.join(dir)));
-        } else if let Some(val) = try!(self.get_path("build.target-dir")) {
-            let val = self.cwd.join(val.val);
-            *self.target_dir.borrow_mut() = Some(Filesystem::new(val));
-        }
-        Ok(())
     }
 
     fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
