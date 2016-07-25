@@ -30,6 +30,7 @@ pub struct JobQueue<'a> {
     compiled: HashSet<&'a PackageId>,
     documented: HashSet<&'a PackageId>,
     counts: HashMap<&'a PackageId, usize>,
+    desc: &'a str,
 }
 
 /// A helper structure for metadata about the state of a building package.
@@ -76,7 +77,7 @@ impl<'a> JobState<'a> {
 }
 
 impl<'a> JobQueue<'a> {
-    pub fn new<'cfg>(cx: &Context<'a, 'cfg>) -> JobQueue<'a> {
+    pub fn new<'cfg>(cx: &Context<'a, 'cfg>, desc: &'a str) -> JobQueue<'a> {
         let (tx, rx) = channel();
         JobQueue {
             jobs: cx.jobs() as usize,
@@ -88,6 +89,7 @@ impl<'a> JobQueue<'a> {
             compiled: HashSet::new(),
             documented: HashSet::new(),
             counts: HashMap::new(),
+            desc: desc,
         }
     }
 
@@ -264,6 +266,7 @@ impl<'a> JobQueue<'a> {
             return Ok(())
         }
 
+        let msg = format!("({}) {}", self.desc, key.pkg);
         match fresh {
             // Any dirty stage which runs at least one command gets printed as
             // being a compiled package
@@ -273,7 +276,7 @@ impl<'a> JobQueue<'a> {
                     try!(config.shell().status("Documenting", key.pkg));
                 } else {
                     self.compiled.insert(key.pkg);
-                    try!(config.shell().status("Compiling", key.pkg));
+                    try!(config.shell().status("Compiling", msg));
                 }
             }
             Fresh if self.counts[key.pkg] == 0 => {

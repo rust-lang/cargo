@@ -41,7 +41,7 @@ fn cargo_bench_simple() {
 
     assert_that(p.cargo("bench"),
                 execs().with_stderr(&format!("\
-[COMPILING] foo v0.5.0 ({})
+[COMPILING] (release) foo v0.5.0 ({})
 [RUNNING] target[..]release[..]foo-[..]", p.url()))
                        .with_stdout("
 running 1 test
@@ -75,7 +75,7 @@ fn bench_tarname() {
     assert_that(prj.cargo_process("bench").arg("--bench").arg("bin2"),
         execs().with_status(0)
                .with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (release) foo v0.0.1 ({dir})
 [RUNNING] target[..]release[..]bin2[..]
 ", dir = prj.url()))
                .with_stdout("
@@ -102,7 +102,7 @@ fn cargo_bench_verbose() {
 
     assert_that(p.cargo_process("bench").arg("-v").arg("hello"),
                 execs().with_stderr(&format!("\
-[COMPILING] foo v0.5.0 ({url})
+[COMPILING] (release) foo v0.5.0 ({url})
 [RUNNING] `rustc src[..]foo.rs [..]`
 [RUNNING] `[..]target[..]release[..]foo-[..] hello --bench`", url = p.url()))
                        .with_stdout("
@@ -185,7 +185,7 @@ fn cargo_bench_failing_test() {
 running 1 test
 test bench_hello ... ")
                        .with_stderr_contains(format!("\
-[COMPILING] foo v0.5.0 ({})
+[COMPILING] (release) foo v0.5.0 ({})
 [RUNNING] target[..]release[..]foo-[..]
 thread '[..]' panicked at 'assertion failed: \
     `(left == right)` (left: \
@@ -237,7 +237,7 @@ fn bench_with_lib_dep() {
 
     assert_that(p.cargo_process("bench"),
                 execs().with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] (release) foo v0.0.1 ({})
 [RUNNING] target[..]release[..]baz-[..]
 [RUNNING] target[..]release[..]foo-[..]", p.url()))
                        .with_stdout("
@@ -299,8 +299,8 @@ fn bench_with_deep_lib_dep() {
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ([..])
-[COMPILING] bar v0.0.1 ({dir})
+[COMPILING] (release) foo v0.0.1 ([..])
+[COMPILING] (release) bar v0.0.1 ({dir})
 [RUNNING] target[..]", dir = p.url()))
                        .with_stdout("
 running 1 test
@@ -345,7 +345,7 @@ fn external_bench_explicit() {
 
     assert_that(p.cargo_process("bench"),
                 execs().with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] (release) foo v0.0.1 ({})
 [RUNNING] target[..]release[..]bench-[..]
 [RUNNING] target[..]release[..]foo-[..]", p.url()))
                        .with_stdout("
@@ -394,7 +394,7 @@ fn external_bench_implicit() {
 
     assert_that(p.cargo_process("bench"),
                 execs().with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] (release) foo v0.0.1 ({})
 [RUNNING] target[..]release[..]external-[..]
 [RUNNING] target[..]release[..]foo-[..]", p.url()))
                        .with_stdout("
@@ -454,7 +454,7 @@ fn pass_through_command_line() {
     assert_that(p.cargo_process("bench").arg("bar"),
                 execs().with_status(0)
                 .with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (release) foo v0.0.1 ({dir})
 [RUNNING] target[..]release[..]foo-[..]", dir = p.url()))
                 .with_stdout("
 running 1 test
@@ -535,7 +535,7 @@ fn lib_bin_same_name() {
 
     assert_that(p.cargo_process("bench"),
                 execs().with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({})
+[COMPILING] (release) foo v0.0.1 ({})
 [RUNNING] target[..]release[..]foo-[..]
 [RUNNING] target[..]release[..]foo-[..]", p.url()))
                        .with_stdout("
@@ -588,7 +588,7 @@ fn lib_with_standard_name() {
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] syntax v0.0.1 ({dir})
+[COMPILING] (release) syntax v0.0.1 ({dir})
 [RUNNING] target[..]release[..]bench-[..]
 [RUNNING] target[..]release[..]syntax-[..]", dir = p.url()))
                        .with_stdout("
@@ -639,7 +639,7 @@ fn lib_with_standard_name2() {
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] syntax v0.0.1 ({dir})
+[COMPILING] (release) syntax v0.0.1 ({dir})
 [RUNNING] target[..]release[..]syntax-[..]", dir = p.url()))
                        .with_stdout("
 running 1 test
@@ -703,9 +703,9 @@ fn bench_dylib() {
     assert_that(p.cargo_process("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] bar v0.0.1 ({dir}/bar)
+[COMPILING] (release) bar v0.0.1 ({dir}/bar)
 [RUNNING] [..] -C opt-level=3 [..]
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (release) foo v0.0.1 ({dir})
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
@@ -770,7 +770,7 @@ fn bench_twice_with_build_cmd() {
     assert_that(p.cargo_process("bench"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (release) foo v0.0.1 ({dir})
 [RUNNING] target[..]release[..]foo-[..]", dir = p.url()))
                        .with_stdout("
 running 1 test
@@ -851,7 +851,7 @@ fn bench_with_examples() {
     assert_that(p.cargo_process("bench").arg("-v"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] testbench v6.6.6 ({url})
+[COMPILING] (release) testbench v6.6.6 ({url})
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
@@ -902,7 +902,7 @@ fn test_a_bench() {
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stderr("\
-[COMPILING] foo v0.1.0 ([..])
+[COMPILING] (debug) foo v0.1.0 ([..])
 [RUNNING] target[..]debug[..]b-[..]")
                        .with_stdout("
 running 1 test
@@ -939,7 +939,7 @@ fn test_bench_no_run() {
     assert_that(p.cargo_process("bench").arg("--no-run"),
                 execs().with_status(0)
                        .with_stderr("\
-[COMPILING] foo v0.1.0 ([..])
+[COMPILING] (release) foo v0.1.0 ([..])
 "));
 }
 

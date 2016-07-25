@@ -501,8 +501,8 @@ fn share_dependencies() {
                        .with_stderr("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] dep1 v0.1.3 ([..])
-[COMPILING] dep1 v0.1.3 ([..])
-[COMPILING] foo v0.1.0 ([..])
+[COMPILING] (debug) dep1 v0.1.3 ([..])
+[COMPILING] (debug) foo v0.1.0 ([..])
 "));
 }
 
@@ -585,16 +585,16 @@ fn lock_works_for_everyone() {
                 execs().with_status(0)
                        .with_stderr("\
 [DOWNLOADING] dep2 v0.1.0 ([..])
-[COMPILING] dep2 v0.1.0 ([..])
-[COMPILING] foo v0.1.0 ([..])
+[COMPILING] (debug) dep2 v0.1.0 ([..])
+[COMPILING] (debug) foo v0.1.0 ([..])
 "));
 
     assert_that(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(0)
                        .with_stderr("\
 [DOWNLOADING] dep1 v0.1.0 ([..])
-[COMPILING] dep1 v0.1.0 ([..])
-[COMPILING] bar v0.1.0 ([..])
+[COMPILING] (debug) dep1 v0.1.0 ([..])
+[COMPILING] (debug) bar v0.1.0 ([..])
 "));
 }
 

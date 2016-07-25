@@ -28,7 +28,7 @@ fn pathless_tools() {
 
     assert_that(foo.cargo_process("build").arg("--verbose"),
                 execs().with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] (debug) foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 ", url = foo.url())))
 }
@@ -69,7 +69,7 @@ fn absolute_tools() {
 
     assert_that(foo.cargo_process("build").arg("--verbose"),
                 execs().with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] (debug) foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
 ", url = foo.url(), ar = output.0, linker = output.1)))
 }
@@ -117,7 +117,7 @@ fn relative_tools() {
 
     assert_that(origin.cargo_process("build").cwd(foo_path).arg("--verbose"),
                 execs().with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({url})
+[COMPILING] (debug) foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
 ", url = foo_url, ar = output.0, linker = output.1)))
 }

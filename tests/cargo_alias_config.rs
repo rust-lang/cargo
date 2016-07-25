@@ -37,7 +37,7 @@ fn alias_default_config_overrides_config() {
 
     assert_that(p.cargo_process("b").arg("-v"),
                 execs().with_status(0).
-                with_stderr_contains("[COMPILING] foo v0.5.0 [..]"));
+                with_stderr_contains("[COMPILING] (debug) foo v0.5.0 [..]"));
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn alias_config() {
 
     assert_that(p.cargo_process("b-cargo-test").arg("-v"),
                 execs().with_status(0).
-                with_stderr_contains("[COMPILING] foo v0.5.0 [..]
+                with_stderr_contains("[COMPILING] (debug) foo v0.5.0 [..]
 [RUNNING] `rustc [..] --crate-name foo --crate-type \
 bin -g --out-dir [..] --emit=dep-info,link -L dependency=[..]\
 -L dependency=[..]"));
@@ -74,7 +74,7 @@ fn alias_list_test() {
 
     assert_that(p.cargo_process("b-cargo-test").arg("-v"),
                 execs().with_status(0).
-                with_stderr_contains("[COMPILING] foo v0.5.0 [..]").
+                with_stderr_contains("[COMPILING] (release) foo v0.5.0 [..]").
                 with_stderr_contains("[RUNNING] `rustc [..] --crate-name foo \
                                      --crate-type bin -C opt-level=3 --out-dir [..]\
                                      --emit=dep-info,link -L dependency=[..]")
@@ -95,7 +95,7 @@ fn alias_with_flags_config() {
 
     assert_that(p.cargo_process("b-cargo-test").arg("-v"),
                 execs().with_status(0).
-                with_stderr_contains("[COMPILING] foo v0.5.0 [..]").
+                with_stderr_contains("[COMPILING] (release) foo v0.5.0 [..]").
                 with_stderr_contains("[RUNNING] `rustc [..] --crate-name foo \
                                      --crate-type bin -C opt-level=3 --out-dir [..]\
                                      --emit=dep-info,link -L dependency=[..]")

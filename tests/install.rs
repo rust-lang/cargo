@@ -37,7 +37,7 @@ fn simple() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.1 (registry file://[..])
-[COMPILING] foo v0.0.1 (registry file://[..])
+[COMPILING] (release) foo v0.0.1 (registry file://[..])
 [INSTALLING] {home}[..]bin[..]foo[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
@@ -61,7 +61,7 @@ fn pick_max_version() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.2 (registry file://[..])
-[COMPILING] foo v0.0.2 (registry file://[..])
+[COMPILING] (release) foo v0.0.2 (registry file://[..])
 [INSTALLING] {home}[..]bin[..]foo[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
@@ -407,7 +407,7 @@ fn install_force() {
 
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] foo v0.2.0 ([..])
+[COMPILING] (release) foo v0.2.0 ([..])
 [REPLACING] {home}[..]bin[..]foo[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
@@ -449,7 +449,7 @@ fn install_force_partial_overlap() {
 
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] foo v0.2.0 ([..])
+[COMPILING] (release) foo v0.2.0 ([..])
 [INSTALLING] {home}[..]bin[..]foo-bin3[..]
 [REPLACING] {home}[..]bin[..]foo-bin2[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -499,7 +499,7 @@ fn install_force_bin() {
                     .arg("--path")
                     .arg(p.root()),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] foo v0.2.0 ([..])
+[COMPILING] (release) foo v0.2.0 ([..])
 [REPLACING] {home}[..]bin[..]foo-bin2[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
@@ -553,7 +553,7 @@ fn git_repo() {
     assert_that(cargo_process("install").arg("--git").arg(p.url().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] git repository `[..]`
-[COMPILING] foo v0.1.0 ([..])
+[COMPILING] (release) foo v0.1.0 ([..])
 [INSTALLING] {home}[..]bin[..]foo[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",

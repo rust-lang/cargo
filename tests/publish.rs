@@ -349,7 +349,7 @@ fn dry_run() {
 [WARNING] manifest has no documentation, [..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 [..]
+[COMPILING] (debug) foo v0.0.1 [..]
 [UPLOADING] foo v0.0.1 ({dir})
 [WARNING] aborting upload due to dry run
 ",

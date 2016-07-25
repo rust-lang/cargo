@@ -420,9 +420,9 @@ fn debug_release_ok() {
     let a = a.join().unwrap();
 
     assert_that(a, execs().with_status(0).with_stderr("\
-[COMPILING] foo v0.0.0 [..]
+[COMPILING] (debug) foo v0.0.0 [..]
 "));
     assert_that(b, execs().with_status(0).with_stderr("\
-[COMPILING] foo v0.0.0 [..]
+[COMPILING] (release) foo v0.0.0 [..]
 "));
 }

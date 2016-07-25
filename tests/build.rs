@@ -903,7 +903,7 @@ fn unused_keys() {
                 execs().with_status(0)
                        .with_stderr("\
 warning: unused manifest key: project.bulid
-[COMPILING] foo [..]
+[COMPILING] (debug) foo [..]
 "));
 
     let mut p = project("bar");
@@ -927,7 +927,7 @@ warning: unused manifest key: project.bulid
                 execs().with_status(0)
                        .with_stderr("\
 warning: unused manifest key: lib.build
-[COMPILING] foo [..]
+[COMPILING] (debug) foo [..]
 "));
 }
 
@@ -1018,7 +1018,7 @@ fn lto_build() {
         .file("src/main.rs", "fn main() {}");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] test v0.0.0 ({url})
+[COMPILING] (release) test v0.0.0 ({url})
 [RUNNING] `rustc src[..]main.rs --crate-name test --crate-type bin \
         -C opt-level=3 \
         -C lto \
@@ -1046,7 +1046,7 @@ fn verbose_build() {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] test v0.0.0 ({url})
+[COMPILING] (debug) test v0.0.0 ({url})
 [RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib -g \
         --out-dir {dir}[..]target[..]debug \
         --emit=dep-info,link \
@@ -1072,7 +1072,7 @@ fn verbose_release_build() {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] test v0.0.0 ({url})
+[COMPILING] (release) test v0.0.0 ({url})
 [RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
         --out-dir {dir}[..]target[..]release \
@@ -1114,7 +1114,7 @@ fn verbose_release_build_deps() {
         .file("foo/src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] foo v0.0.0 ({url}/foo)
+[COMPILING] (release) foo v0.0.0 ({url}/foo)
 [RUNNING] `rustc foo[..]src[..]lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=3 \
@@ -1124,7 +1124,7 @@ fn verbose_release_build_deps() {
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release[..]deps \
         -L dependency={dir}[..]target[..]release[..]deps`
-[COMPILING] test v0.0.0 ({url})
+[COMPILING] (release) test v0.0.0 ({url})
 [RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
         --out-dir {dir}[..]target[..]release \
@@ -1345,7 +1345,7 @@ fn lib_with_standard_name() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] syntax v0.0.1 ({dir})
+[COMPILING] (debug) syntax v0.0.1 ({dir})
 ",
                        dir = p.url())));
 }
@@ -1446,7 +1446,7 @@ fn freshness_ignores_excluded() {
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.0 ({url})
+[COMPILING] (debug) foo v0.0.0 ({url})
 ", url = foo.url())));
 
     // Smoke test to make sure it doesn't compile again
@@ -1494,14 +1494,14 @@ fn rebuild_preserves_out_dir() {
     assert_that(foo.cargo("build").env("FIRST", "1"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.0 ({url})
+[COMPILING] (debug) foo v0.0.0 ({url})
 ", url = foo.url())));
 
     File::create(&foo.root().join("src/bar.rs")).unwrap();
     assert_that(foo.cargo("build"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
-[COMPILING] foo v0.0.0 ({url})
+[COMPILING] (debug) foo v0.0.0 ({url})
 ", url = foo.url())));
 }
 
@@ -2232,7 +2232,7 @@ fn explicit_color_config_is_propagated_to_rustc() {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--color").arg("never"),
                 execs().with_status(0).with_stderr("\
-[COMPILING] test v0.0.0 ([..])
+[COMPILING] (debug) test v0.0.0 ([..])
 [RUNNING] `rustc src[..]lib.rs --color never --crate-name test --crate-type lib -g \
         --out-dir [..]target[..]debug \
         --emit=dep-info,link \

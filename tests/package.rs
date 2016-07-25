@@ -38,7 +38,7 @@ fn simple() {
 [WARNING] manifest has no documentation[..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[COMPILING] (debug) foo v0.0.1 ({dir}[..])
 ",
         dir = p.url())));
     assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
@@ -84,7 +84,7 @@ homepage or repository. See \
 http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[COMPILING] (debug) foo v0.0.1 ({dir}[..])
 ",
         dir = p.url())));
 
@@ -105,7 +105,7 @@ warning: manifest has no description, documentation, homepage or repository. See
 http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[COMPILING] (debug) foo v0.0.1 ({dir}[..])
 ",
         dir = p.url())));
 
@@ -126,7 +126,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info.
                 execs().with_status(0).with_stderr(&format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[COMPILING] (debug) foo v0.0.1 ({dir}[..])
 ",
         dir = p.url())));
 }
@@ -195,7 +195,7 @@ fn package_verification() {
 [WARNING] manifest has no description[..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[COMPILING] (debug) foo v0.0.1 ({dir}[..])
 ",
         dir = p.url())));
 }
@@ -356,7 +356,7 @@ fn ignore_nested() {
 [WARNING] manifest has no documentation[..]
 [PACKAGING] nested v0.0.1 ({dir})
 [VERIFYING] nested v0.0.1 ({dir})
-[COMPILING] nested v0.0.1 ({dir}[..])
+[COMPILING] (debug) nested v0.0.1 ({dir}[..])
 ",
         dir = p.url())));
     assert_that(&p.root().join("target/package/nested-0.0.1.crate"), existing_file());
@@ -443,7 +443,7 @@ fn repackage_on_source_change() {
 [WARNING] [..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
-[COMPILING] foo v0.0.1 ({dir}[..])
+[COMPILING] (debug) foo v0.0.1 ({dir}[..])
 ",
         dir = p.url())));
 

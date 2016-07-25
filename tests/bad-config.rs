@@ -458,7 +458,7 @@ fn unused_keys() {
     assert_that(foo.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
 warning: unused manifest key: target.foo.bar
-[COMPILING] foo v0.1.0 (file:///[..])
+[COMPILING] (debug) foo v0.1.0 (file:///[..])
 "));
 }
 
@@ -508,6 +508,6 @@ The TOML spec requires newlines after table definitions (e.g. `[a] b = 1` is
 invalid), but this file has a table header which does not have a newline after
 it. A newline needs to be added and this warning will soon become a hard error
 in the future.
-[COMPILING] empty_deps v0.0.0 ([..])
+[COMPILING] (debug) empty_deps v0.0.0 ([..])
 "));
 }

@@ -306,15 +306,15 @@ fn no_feature_doesnt_build() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
 
     assert_that(p.cargo("build").arg("--features").arg("bar"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] bar v0.0.1 ({dir}/bar)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) bar v0.0.1 ({dir}/bar)
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
@@ -354,15 +354,15 @@ fn default_feature_pulled_in() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] bar v0.0.1 ({dir}/bar)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) bar v0.0.1 ({dir}/bar)
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
 
     assert_that(p.cargo("build").arg("--no-default-features"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
@@ -458,9 +458,9 @@ fn groups_on_groups_on_groups() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] (debug) ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ", dir = p.url())));
 }
 
@@ -503,9 +503,9 @@ fn many_cli_features() {
 
     assert_that(p.cargo_process("build").arg("--features").arg("bar baz"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] (debug) ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ", dir = p.url())));
 }
 
@@ -565,9 +565,9 @@ fn union_features() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] d2 v0.0.1 ({dir}/d2)
-[COMPILING] d1 v0.0.1 ({dir}/d1)
-[COMPILING] foo v0.0.1 ({dir})
+[COMPILING] (debug) d2 v0.0.1 ({dir}/d2)
+[COMPILING] (debug) d1 v0.0.1 ({dir}/d1)
+[COMPILING] (debug) foo v0.0.1 ({dir})
 ", dir = p.url())));
 }
 
@@ -600,8 +600,8 @@ fn many_features_no_rebuilds() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
-[COMPILING] a v0.1.0 ({dir}/a)
-[COMPILING] b v0.1.0 ({dir})
+[COMPILING] (debug) a v0.1.0 ({dir}/a)
+[COMPILING] (debug) b v0.1.0 ({dir})
 ", dir = p.url())));
     p.root().move_into_the_past();
 
@@ -839,7 +839,7 @@ fn optional_and_dev_dep() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
-[COMPILING] test v0.1.0 ([..])
+[COMPILING] (debug) test v0.1.0 ([..])
 "));
 }
 

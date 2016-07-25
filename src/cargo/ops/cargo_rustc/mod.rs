@@ -81,11 +81,13 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         })
     }).collect::<Vec<_>>();
 
+    let is_release = build_config.release;
+
     let root = try!(packages.get(resolve.root()));
     let mut cx = try!(Context::new(ws, resolve, packages, config,
                                    build_config, profiles));
 
-    let mut queue = JobQueue::new(&cx);
+    let mut queue = JobQueue::new(&cx, if is_release { "release" } else { "debug" });
 
     try!(cx.prepare(root));
     try!(cx.probe_target_info(&units));
