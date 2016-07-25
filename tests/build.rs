@@ -1026,7 +1026,6 @@ fn lto_build() {
         -C lto \
         --out-dir {dir}[..]target[..]release \
         --emit=dep-info,link \
-        -L dependency={dir}[..]target[..]release \
         -L dependency={dir}[..]target[..]release[..]deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
@@ -1051,9 +1050,8 @@ fn verbose_build() {
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib -g \
-        --out-dir {dir}[..]target[..]debug \
+        --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}[..]target[..]debug \
         -L dependency={dir}[..]target[..]debug[..]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -1079,9 +1077,8 @@ fn verbose_release_build() {
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
-        --out-dir {dir}[..]target[..]release \
+        --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}[..]target[..]release \
         -L dependency={dir}[..]target[..]release[..]deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
@@ -1123,22 +1120,18 @@ fn verbose_release_build_deps() {
 [RUNNING] `rustc foo[..]src[..]lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=3 \
-        -C metadata=[..] \
-        -C extra-filename=-[..] \
-        --out-dir {dir}[..]target[..]release[..]deps \
+        --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}[..]target[..]release[..]deps \
         -L dependency={dir}[..]target[..]release[..]deps`
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
-        --out-dir {dir}[..]target[..]release \
+        --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}[..]target[..]release \
         -L dependency={dir}[..]target[..]release[..]deps \
         --extern foo={dir}[..]target[..]release[..]deps[..]\
-                     {prefix}foo-[..]{suffix} \
-        --extern foo={dir}[..]target[..]release[..]deps[..]libfoo-[..].rlib`
+                     {prefix}foo{suffix} \
+        --extern foo={dir}[..]target[..]release[..]deps[..]libfoo.rlib`
 [FINISHED] release [optimized] target(s) in [..]
 ",
                     dir = p.root().display(),
@@ -1783,14 +1776,14 @@ fn compile_then_delete() {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("run"), execs().with_status(0));
+    assert_that(p.cargo_process("run").arg("-v"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
     if cfg!(windows) {
         // On windows unlinking immediately after running often fails, so sleep
         sleep_ms(100);
     }
     fs::remove_file(&p.bin("foo")).unwrap();
-    assert_that(p.cargo("run"),
+    assert_that(p.cargo("run").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -2243,11 +2236,7 @@ fn explicit_color_config_is_propagated_to_rustc() {
     assert_that(p.cargo_process("build").arg("-v").arg("--color").arg("never"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] test v0.0.0 ([..])
-[RUNNING] `rustc src[..]lib.rs --color never --crate-name test --crate-type lib -g \
-        --out-dir [..]target[..]debug \
-        --emit=dep-info,link \
-        -L dependency=[..]target[..]debug \
-        -L dependency=[..]target[..]debug[..]deps`
+[RUNNING] `rustc [..] --color never [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }

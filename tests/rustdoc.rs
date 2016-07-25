@@ -24,7 +24,6 @@ fn rustdoc_simple() {
 [DOCUMENTING] foo v0.0.1 ({url})
 [RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \
         -o {dir}{sep}target{sep}doc \
-        -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
@@ -50,7 +49,6 @@ fn rustdoc_args() {
 [RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \
         -o {dir}{sep}target{sep}doc \
         --no-defaults \
-        -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
@@ -97,7 +95,6 @@ fn rustdoc_foo_with_bar_dependency() {
 [RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \
         -o {dir}{sep}target{sep}doc \
         --no-defaults \
-        -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
         --extern [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
@@ -144,7 +141,6 @@ fn rustdoc_only_bar_dependency() {
 [RUNNING] `rustdoc [..]bar{sep}src{sep}lib.rs --crate-name bar \
         -o {dir}{sep}target{sep}doc \
         --no-defaults \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,

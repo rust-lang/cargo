@@ -30,9 +30,8 @@ fn build_lib_for_foo() {
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
-        --out-dir {dir}{sep}target{sep}debug \
+        --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
@@ -61,9 +60,8 @@ fn lib() {
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         -C debug-assertions=off \
-        --out-dir {dir}{sep}target{sep}debug \
+        --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
@@ -91,17 +89,15 @@ fn build_main_and_allow_unstable_options() {
                 .with_stderr(&format!("\
 [COMPILING] {name} v{version} ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name {name} --crate-type lib -g \
-        --out-dir {dir}{sep}target{sep}debug \
+        --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 [RUNNING] `rustc src{sep}main.rs --crate-name {name} --crate-type bin -g \
         -C debug-assertions \
-        --out-dir {dir}{sep}target{sep}debug \
+        --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
-        --extern {name}={dir}{sep}target{sep}debug{sep}lib{name}.rlib`
+        --extern {name}={dir}{sep}target[..]lib{name}.rlib`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
             dir = p.root().display(), url = p.url(),
@@ -156,12 +152,11 @@ fn build_with_args_to_one_of_multiple_binaries() {
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
-        --out-dir {dir}{sep}target{sep}debug [..]`
+        --out-dir [..]`
 [RUNNING] `rustc src{sep}bin{sep}bar.rs --crate-name bar --crate-type bin -g \
         -C debug-assertions [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP,
-                dir = p.root().display(), url = p.url())));
+", sep = SEP, url = p.url())));
 }
 
 #[test]
@@ -212,12 +207,11 @@ fn build_with_args_to_one_of_multiple_tests() {
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
-        --out-dir {dir}{sep}target{sep}debug [..]`
+        --out-dir [..]`
 [RUNNING] `rustc tests{sep}bar.rs --crate-name bar -g \
         -C debug-assertions [..]--test[..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP,
-                dir = p.root().display(), url = p.url())));
+", sep = SEP, url = p.url())));
 }
 
 #[test]
@@ -255,7 +249,7 @@ fn build_foo_with_bar_dependency() {
                 .with_status(0)
                 .with_stderr(format!("\
 [COMPILING] bar v0.1.0 ([..])
-[RUNNING] `[..] -g -C [..]`
+[RUNNING] `[..] -g [..]`
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `[..] -g -C debug-assertions [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]

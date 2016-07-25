@@ -147,7 +147,7 @@ fn plugin_with_dynamic_native_dependency() {
 
             fn main() {
                 let src = PathBuf::from(env::var("SRC").unwrap());
-                println!("cargo:rustc-flags=-L {}", src.parent().unwrap()
+                println!("cargo:rustc-flags=-L {}/deps", src.parent().unwrap()
                                                        .display());
             }
         "#)

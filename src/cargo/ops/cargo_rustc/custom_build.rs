@@ -87,9 +87,10 @@ pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
 
 fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                         -> CargoResult<(Work, Work)> {
+    let host_unit = Unit { kind: Kind::Host, ..*unit };
     let (script_output, build_output) = {
-        (cx.layout(unit.pkg, Kind::Host).build(unit.pkg),
-         cx.layout(unit.pkg, unit.kind).build_out(unit.pkg))
+        (cx.layout(&host_unit).build(unit.pkg),
+         cx.layout(unit).build_out(unit.pkg))
     };
 
     // Building the command to execute
@@ -161,8 +162,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     };
     cx.build_explicit_deps.insert(*unit, (output_file.clone(), rerun_if_changed));
 
-    try!(fs::create_dir_all(&cx.layout(unit.pkg, Kind::Host).build(unit.pkg)));
-    try!(fs::create_dir_all(&cx.layout(unit.pkg, unit.kind).build(unit.pkg)));
+    try!(fs::create_dir_all(&cx.layout(&host_unit).build(unit.pkg)));
+    try!(fs::create_dir_all(&cx.layout(unit).build(unit.pkg)));
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
