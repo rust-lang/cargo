@@ -26,6 +26,7 @@ fn modifying_and_moving() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = path2url(p.root()))));
 
     assert_that(p.cargo("build"),
@@ -38,6 +39,7 @@ fn modifying_and_moving() {
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = path2url(p.root()))));
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
@@ -66,6 +68,7 @@ fn modify_only_some_files() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = path2url(p.root()))));
     assert_that(p.cargo("test"),
                 execs().with_status(0));
@@ -84,6 +87,7 @@ fn modify_only_some_files() {
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = path2url(p.root()))));
     assert_that(&p.bin("foo"), existing_file());
 }
@@ -158,18 +162,21 @@ fn changing_features_is_ok() {
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("build"),
@@ -260,6 +267,7 @@ fn no_rebuild_transitive_target_deps() {
 [COMPILING] c v0.0.1 ([..])
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -354,9 +362,11 @@ fn same_build_dir_cached_packages() {
 [COMPILING] c v0.0.1 ({dir}/c)
 [COMPILING] b v0.0.1 ({dir}/b)
 [COMPILING] a1 v0.0.1 ({dir}/a1)
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
     assert_that(p.cargo("build").cwd(p.root().join("a2")),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] a2 v0.0.1 ({dir}/a2)
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
 }

@@ -42,6 +42,7 @@ fn cargo_bench_simple() {
     assert_that(p.cargo("bench"),
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.5.0 ({})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]foo-[..]", p.url()))
                        .with_stdout("
 running 1 test
@@ -76,6 +77,7 @@ fn bench_tarname() {
         execs().with_status(0)
                .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]bin2[..]
 ", dir = prj.url()))
                .with_stdout("
@@ -104,6 +106,7 @@ fn cargo_bench_verbose() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc src[..]foo.rs [..]`
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `[..]target[..]release[..]foo-[..] hello --bench`", url = p.url()))
                        .with_stdout("
 running 1 test
@@ -186,6 +189,7 @@ running 1 test
 test bench_hello ... ")
                        .with_stderr_contains(format!("\
 [COMPILING] foo v0.5.0 ({})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]foo-[..]
 thread '[..]' panicked at 'assertion failed: \
     `(left == right)` (left: \
@@ -238,6 +242,7 @@ fn bench_with_lib_dep() {
     assert_that(p.cargo_process("bench"),
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]baz-[..]
 [RUNNING] target[..]release[..]foo-[..]", p.url()))
                        .with_stdout("
@@ -301,6 +306,7 @@ fn bench_with_deep_lib_dep() {
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ([..])
 [COMPILING] bar v0.0.1 ({dir})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]", dir = p.url()))
                        .with_stdout("
 running 1 test
@@ -346,6 +352,7 @@ fn external_bench_explicit() {
     assert_that(p.cargo_process("bench"),
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]bench-[..]
 [RUNNING] target[..]release[..]foo-[..]", p.url()))
                        .with_stdout("
@@ -395,6 +402,7 @@ fn external_bench_implicit() {
     assert_that(p.cargo_process("bench"),
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]external-[..]
 [RUNNING] target[..]release[..]foo-[..]", p.url()))
                        .with_stdout("
@@ -455,6 +463,7 @@ fn pass_through_command_line() {
                 execs().with_status(0)
                 .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]foo-[..]", dir = p.url()))
                 .with_stdout("
 running 1 test
@@ -466,7 +475,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
     assert_that(p.cargo("bench").arg("foo"),
                 execs().with_status(0)
-                       .with_stderr("\
+                       .with_stderr("[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]foo-[..]")
                        .with_stdout("
 running 1 test
@@ -536,6 +545,7 @@ fn lib_bin_same_name() {
     assert_that(p.cargo_process("bench"),
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]foo-[..]
 [RUNNING] target[..]release[..]foo-[..]", p.url()))
                        .with_stdout("
@@ -589,6 +599,7 @@ fn lib_with_standard_name() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]bench-[..]
 [RUNNING] target[..]release[..]syntax-[..]", dir = p.url()))
                        .with_stdout("
@@ -640,6 +651,7 @@ fn lib_with_standard_name2() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]syntax-[..]", dir = p.url()))
                        .with_stdout("
 running 1 test
@@ -709,6 +721,7 @@ fn bench_dylib() {
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] [..]target[..]release[..]bench-[..]
 [RUNNING] [..]target[..]release[..]foo-[..]", dir = p.url()))
                        .with_stdout("
@@ -730,6 +743,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
                        .with_stderr(&format!("\
 [FRESH] bar v0.0.1 ({dir}/bar)
 [FRESH] foo v0.0.1 ({dir})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] [..]target[..]release[..]bench-[..]
 [RUNNING] [..]target[..]release[..]foo-[..]", dir = p.url()))
                        .with_stdout("
@@ -771,6 +785,7 @@ fn bench_twice_with_build_cmd() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]foo-[..]", dir = p.url()))
                        .with_stdout("
 running 1 test
@@ -782,7 +797,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
     assert_that(p.cargo("bench"),
                 execs().with_status(0)
-                       .with_stderr("\
+                       .with_stderr("[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[..]release[..]foo-[..]")
                        .with_stdout("
 running 1 test
@@ -855,6 +870,7 @@ fn bench_with_examples() {
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `{dir}[..]target[..]release[..]testb1-[..] --bench`
 [RUNNING] `{dir}[..]target[..]release[..]testbench-[..] --bench`",
                 dir = p.root().display(), url = p.url()))
@@ -903,6 +919,7 @@ fn test_a_bench() {
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.1.0 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]b-[..]")
                        .with_stdout("
 running 1 test
@@ -940,6 +957,7 @@ fn test_bench_no_run() {
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.1.0 ([..])
+[FINISHED] release [optimized] target(s) in [..]
 "));
 }
 

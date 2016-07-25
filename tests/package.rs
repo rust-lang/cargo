@@ -39,6 +39,7 @@ fn simple() {
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
     assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
@@ -85,6 +86,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
 
@@ -106,6 +108,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
 
@@ -127,6 +130,7 @@ http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
 }
@@ -196,6 +200,7 @@ fn package_verification() {
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
 }
@@ -357,6 +362,7 @@ fn ignore_nested() {
 [PACKAGING] nested v0.0.1 ({dir})
 [VERIFYING] nested v0.0.1 ({dir})
 [COMPILING] nested v0.0.1 ({dir}[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
     assert_that(&p.root().join("target/package/nested-0.0.1.crate"), existing_file());
@@ -444,6 +450,7 @@ fn repackage_on_source_change() {
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
 

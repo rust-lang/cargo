@@ -190,6 +190,7 @@ fn dont_include() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] a v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -223,6 +224,7 @@ fn works_through_the_registry() {
 [COMPILING] foo v0.1.0 ([..])
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] a v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 

@@ -38,6 +38,7 @@ fn simple() {
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 (registry file://[..])
+[FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]foo[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
@@ -62,6 +63,7 @@ fn pick_max_version() {
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.2 (registry file://[..])
 [COMPILING] foo v0.0.2 (registry file://[..])
+[FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]foo[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
@@ -408,6 +410,7 @@ fn install_force() {
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.2.0 ([..])
+[FINISHED] release [optimized] target(s) in [..]
 [REPLACING] {home}[..]bin[..]foo[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
@@ -450,6 +453,7 @@ fn install_force_partial_overlap() {
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.2.0 ([..])
+[FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]foo-bin3[..]
 [REPLACING] {home}[..]bin[..]foo-bin2[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -500,6 +504,7 @@ fn install_force_bin() {
                     .arg(p.root()),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.2.0 ([..])
+[FINISHED] release [optimized] target(s) in [..]
 [REPLACING] {home}[..]bin[..]foo-bin2[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
@@ -554,6 +559,7 @@ fn git_repo() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] git repository `[..]`
 [COMPILING] foo v0.1.0 ([..])
+[FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]foo[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
@@ -690,7 +696,7 @@ fn do_not_rebuilds_on_local_install() {
     assert_that(p.cargo_process("build").arg("--release"),
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
-                execs().with_status(0).with_stderr("\
+                execs().with_status(0).with_stderr("[FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 "));
