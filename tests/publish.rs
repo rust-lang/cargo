@@ -350,6 +350,7 @@ fn dry_run() {
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 [..]
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [UPLOADING] foo v0.0.1 ({dir})
 [WARNING] aborting upload due to dry run
 ",

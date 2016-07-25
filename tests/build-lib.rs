@@ -14,6 +14,7 @@ fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
             dir = p.root().display(), url = p.url(),
             name = "foo", version = "0.0.1")

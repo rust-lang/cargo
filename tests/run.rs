@@ -25,6 +25,7 @@ fn simple() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target{sep}debug{sep}foo[..]`", dir = path2url(p.root()), sep = SEP))
                        .with_stdout("\
 hello
@@ -129,6 +130,7 @@ fn exit_code() {
                 execs().with_status(2)
                        .with_stderr("\
 [COMPILING] foo v0.0.1 (file[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
 [ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 "));
@@ -152,6 +154,7 @@ fn exit_code_verbose() {
                        .with_stderr("\
 [COMPILING] foo v0.0.1 (file[..])
 [RUNNING] `rustc [..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
 [ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 "));
@@ -219,6 +222,7 @@ fn specify_name() {
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] `rustc src[..]lib.rs [..]`
 [RUNNING] `rustc src[..]a.rs [..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target{sep}debug{sep}a[..]`", dir = path2url(p.root()), sep = SEP))
                        .with_stdout("\
 hello a.rs
@@ -229,6 +233,7 @@ hello a.rs
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc src[..]b.rs [..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target{sep}debug{sep}b[..]`", sep = SEP))
                        .with_stdout("\
 hello b.rs
@@ -256,6 +261,7 @@ fn run_example() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target{sep}debug{sep}examples{sep}a[..]`", dir = path2url(p.root()), sep = SEP))
                        .with_stdout("\
 example
@@ -348,6 +354,7 @@ fn one_bin_multiple_examples() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target{sep}debug{sep}main[..]`", dir = path2url(p.root()), sep = SEP))
                        .with_stdout("\
 hello main.rs
@@ -418,6 +425,7 @@ fn example_with_release_flag() {
         -L dependency={dir}{sep}target{sep}release \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
          --extern bar={dir}{sep}target{sep}release{sep}deps{sep}libbar-[..].rlib`
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `target{sep}release{sep}examples{sep}a[..]`
 ",
         dir = p.root().display(),
@@ -447,6 +455,7 @@ fast2"));
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
          --extern bar={dir}{sep}target{sep}debug{sep}deps{sep}libbar-[..].rlib`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target{sep}debug{sep}examples{sep}a[..]`
 ",
         dir = p.root().display(),
@@ -505,6 +514,7 @@ fn release_works() {
     assert_that(p.cargo_process("run").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `target{sep}release{sep}foo[..]`
 ",
         dir = path2url(p.root()),
@@ -575,6 +585,7 @@ fn run_from_executable_folder() {
     assert_that(p.cargo("run").cwd(cwd),
                 execs().with_status(0)
                        .with_stderr(&format!("\
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]\n\
 [RUNNING] `.{sep}foo[..]`", sep = SEP))
                        .with_stdout("\
 hello

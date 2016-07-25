@@ -47,6 +47,7 @@ fn override_simple() {
 [UPDATING] git repository `[..]`
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] local v0.0.1 (file://[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -146,6 +147,7 @@ fn transitive() {
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] bar v0.2.0 (registry [..])
 [COMPILING] local v0.0.1 (file://[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
@@ -191,6 +193,7 @@ fn persists_across_rebuilds() {
 [UPDATING] git repository `file://[..]`
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] local v0.0.1 (file://[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("build"),
@@ -236,6 +239,7 @@ fn replace_registry_with_path() {
 [UPDATING] registry `file://[..]`
 [COMPILING] foo v0.1.0 (file://[..])
 [COMPILING] local v0.0.1 (file://[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -297,6 +301,7 @@ fn use_a_spec_to_select() {
 [COMPILING] [..]
 [COMPILING] [..]
 [COMPILING] local v0.0.1 (file://[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -341,6 +346,7 @@ fn override_adds_some_deps() {
 [COMPILING] foo v0.1.1 (registry [..])
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] local v0.0.1 (file://[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
