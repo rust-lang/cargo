@@ -198,6 +198,9 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     if let Some(proxy) = try!(http_proxy(config)) {
         try!(handle.proxy(&proxy));
     }
+    if let Some(cainfo) = try!(config.get_path("http.cainfo")) {
+        try!(handle.cainfo(&cainfo.val));
+    }
     if let Some(timeout) = try!(http_timeout(config)) {
         try!(handle.connect_timeout(Duration::new(timeout as u64, 0)));
         try!(handle.low_speed_time(Duration::new(timeout as u64, 0)));
