@@ -54,21 +54,21 @@ pub fn execute_main_without_stdin<T, V>(
                                       usage: &str)
     where V: Encodable, T: Decodable
 {
-    process::<V, _>(|rest, shell| {
-        call_main_without_stdin(exec, shell, usage, rest, options_first)
+    process::<V, _>(|rest, config| {
+        call_main_without_stdin(exec, config, usage, rest, options_first)
     });
 }
 
 pub fn call_main_without_stdin<T, V>(
             exec: fn(T, &Config) -> CliResult<Option<V>>,
-            shell: &Config,
+            config: &Config,
             usage: &str,
             args: &[String],
             options_first: bool) -> CliResult<Option<V>>
     where V: Encodable, T: Decodable
 {
     let flags = try!(flags_from_args::<T>(usage, args, options_first));
-    exec(flags, shell)
+    exec(flags, config)
 }
 
 fn process<V, F>(mut callback: F)
