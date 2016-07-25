@@ -459,6 +459,7 @@ fn unused_keys() {
                 execs().with_status(0).with_stderr("\
 warning: unused manifest key: target.foo.bar
 [COMPILING] foo v0.1.0 (file:///[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -509,5 +510,6 @@ invalid), but this file has a table header which does not have a newline after
 it. A newline needs to be added and this warning will soon become a hard error
 in the future.
 [COMPILING] empty_deps v0.0.0 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }

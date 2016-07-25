@@ -904,6 +904,7 @@ fn unused_keys() {
                        .with_stderr("\
 warning: unused manifest key: project.bulid
 [COMPILING] foo [..]
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
     let mut p = project("bar");
@@ -928,6 +929,7 @@ warning: unused manifest key: project.bulid
                        .with_stderr("\
 warning: unused manifest key: lib.build
 [COMPILING] foo [..]
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -1026,6 +1028,7 @@ fn lto_build() {
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release \
         -L dependency={dir}[..]target[..]release[..]deps`
+[FINISHED] release [optimized] target(s) in [..]
 ",
 dir = p.root().display(),
 url = p.url(),
@@ -1052,6 +1055,7 @@ fn verbose_build() {
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]debug \
         -L dependency={dir}[..]target[..]debug[..]deps`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
 dir = p.root().display(),
 url = p.url(),
@@ -1079,6 +1083,7 @@ fn verbose_release_build() {
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release \
         -L dependency={dir}[..]target[..]release[..]deps`
+[FINISHED] release [optimized] target(s) in [..]
 ",
 dir = p.root().display(),
 url = p.url(),
@@ -1134,6 +1139,7 @@ fn verbose_release_build_deps() {
         --extern foo={dir}[..]target[..]release[..]deps[..]\
                      {prefix}foo-[..]{suffix} \
         --extern foo={dir}[..]target[..]release[..]deps[..]libfoo-[..].rlib`
+[FINISHED] release [optimized] target(s) in [..]
 ",
                     dir = p.root().display(),
                     url = p.url(),
@@ -1346,6 +1352,7 @@ fn lib_with_standard_name() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
                        dir = p.url())));
 }
@@ -1447,6 +1454,7 @@ fn freshness_ignores_excluded() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", url = foo.url())));
 
     // Smoke test to make sure it doesn't compile again
@@ -1495,6 +1503,7 @@ fn rebuild_preserves_out_dir() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", url = foo.url())));
 
     File::create(&foo.root().join("src/bar.rs")).unwrap();
@@ -1502,6 +1511,7 @@ fn rebuild_preserves_out_dir() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", url = foo.url())));
 }
 
@@ -2238,6 +2248,7 @@ fn explicit_color_config_is_propagated_to_rustc() {
         --emit=dep-info,link \
         -L dependency=[..]target[..]debug \
         -L dependency=[..]target[..]debug[..]deps`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -2261,5 +2272,6 @@ fn no_warn_about_package_metadata() {
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
-                       .with_stderr("[..] foo v0.0.1 ([..])\n"));
+                       .with_stderr("[..] foo v0.0.1 ([..])\n\
+                       [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]\n"));
 }

@@ -35,6 +35,7 @@ fn profile_overrides() {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
+[FINISHED] debug [optimized] target(s) in [..]
 ", sep = SEP,
 dir = p.root().display(),
 url = p.url(),
@@ -100,6 +101,7 @@ fn top_level_overrides_deps() {
         --extern foo={dir}{sep}target{sep}release{sep}deps{sep}\
                      {prefix}foo-[..]{suffix} \
         --extern foo={dir}{sep}target{sep}release{sep}deps{sep}libfoo-[..].rlib`
+[FINISHED] release [optimized + debuginfo] target(s) in [..]
 ",
                     dir = p.root().display(),
                     url = p.url(),

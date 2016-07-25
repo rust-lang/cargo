@@ -34,6 +34,7 @@ fn simple() {
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
         dir = p.url(),
         reg = registry::registry())));
@@ -44,6 +45,7 @@ fn simple() {
 [UPDATING] registry `{reg}`
 [..] bar v0.0.1 (registry file://[..])
 [..] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
         dir = p.url(),
         reg = registry::registry())));
@@ -74,6 +76,7 @@ fn deps() {
 [COMPILING] baz v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
         dir = p.url(),
         reg = registry::registry())));
@@ -204,6 +207,7 @@ version required: >= 0.0.0
 [DOWNLOADING] notyet v0.0.1 (registry file://[..])
 [COMPILING] notyet v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
         dir = p.url(),
         reg = registry::registry())));
@@ -257,6 +261,7 @@ version required: ^0.0.1
 [DOWNLOADING] notyet v0.0.1 (registry file://[..])
 [COMPILING] notyet v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir}[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ", dir = p.url())));
 }
 
@@ -283,6 +288,7 @@ fn lockfile_locks() {
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
    dir = p.url())));
 
@@ -319,6 +325,7 @@ fn lockfile_locks_transitively() {
 [COMPILING] baz v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
    dir = p.url())));
 
@@ -358,6 +365,7 @@ fn yanks_are_not_used() {
 [COMPILING] baz v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
    dir = p.url())));
 }
@@ -450,6 +458,7 @@ fn update_with_lockfile_if_packages_missing() {
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 "));
 }
 
@@ -490,6 +499,7 @@ fn update_lockfile() {
 [DOWNLOADING] [..] v0.0.2 (registry file://[..])
 [COMPILING] bar v0.0.2 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
    dir = p.url())));
 
@@ -507,6 +517,7 @@ fn update_lockfile() {
 [DOWNLOADING] [..] v0.0.3 (registry file://[..])
 [COMPILING] bar v0.0.3 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
    dir = p.url())));
 
@@ -556,6 +567,7 @@ fn dev_dependency_not_used() {
 [DOWNLOADING] [..] v0.0.1 (registry file://[..])
 [COMPILING] bar v0.0.1 (registry file://[..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
    dir = p.url())));
 }
@@ -624,6 +636,7 @@ fn updating_a_dep() {
 [COMPILING] bar v0.0.1 (registry file://[..])
 [COMPILING] a v0.0.1 ({dir}/a)
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
    dir = p.url())));
 
@@ -646,6 +659,7 @@ fn updating_a_dep() {
 [COMPILING] bar v0.1.0 (registry file://[..])
 [COMPILING] a v0.0.1 ({dir}/a)
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
    dir = p.url())));
 }
@@ -691,6 +705,7 @@ fn git_and_registry_dep() {
 [COMPILING] a v0.0.1 (registry [..])
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
    dir = p.url())));
     p.root().move_into_the_past();
@@ -736,6 +751,7 @@ fn update_publish_then_update() {
 [DOWNLOADING] a v0.1.1 (registry file://[..])
 [COMPILING] a v0.1.1 (registry [..])
 [COMPILING] foo v0.5.0 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 ",
    dir = p.url())));
 
@@ -803,6 +819,7 @@ fn update_transitive_dependency() {
 [COMPILING] b v0.1.1 (registry [..])
 [COMPILING] a v0.1.0 (registry [..])
 [COMPILING] foo v0.5.0 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 "));
 }
 
@@ -1019,6 +1036,7 @@ fn only_download_relevant() {
 [DOWNLOADING] baz v0.1.0 ([..])
 [COMPILING] baz v0.1.0 ([..])
 [COMPILING] bar v0.5.0 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..] secs
 "));
 }
 

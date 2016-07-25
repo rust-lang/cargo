@@ -154,6 +154,7 @@ fn doc_no_deps() {
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [DOCUMENTING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = path2url(p.root()))));
 

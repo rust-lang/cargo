@@ -307,6 +307,7 @@ fn no_feature_doesnt_build() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
@@ -315,6 +316,7 @@ fn no_feature_doesnt_build() {
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
@@ -356,6 +358,7 @@ fn default_feature_pulled_in() {
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
@@ -363,6 +366,7 @@ fn default_feature_pulled_in() {
     assert_that(p.cargo("build").arg("--no-default-features"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
@@ -461,6 +465,7 @@ fn groups_on_groups_on_groups() {
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
 }
 
@@ -506,6 +511,7 @@ fn many_cli_features() {
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
 }
 
@@ -568,6 +574,7 @@ fn union_features() {
 [COMPILING] d2 v0.0.1 ({dir}/d2)
 [COMPILING] d1 v0.0.1 ({dir}/d1)
 [COMPILING] foo v0.0.1 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
 }
 
@@ -602,6 +609,7 @@ fn many_features_no_rebuilds() {
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] a v0.1.0 ({dir}/a)
 [COMPILING] b v0.1.0 ({dir})
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
     p.root().move_into_the_past();
 
@@ -609,6 +617,7 @@ fn many_features_no_rebuilds() {
                 execs().with_status(0).with_stderr("\
 [FRESH] a v0.1.0 ([..]/a)
 [FRESH] b v0.1.0 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -840,6 +849,7 @@ fn optional_and_dev_dep() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] test v0.1.0 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
