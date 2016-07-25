@@ -6,7 +6,7 @@ use std::slice;
 use core::{Package, VirtualManifest, EitherManifest, SourceId};
 use core::{PackageIdSpec, Dependency};
 use ops;
-use util::{Config, CargoResult};
+use util::{Config, CargoResult, Filesystem};
 use util::paths;
 
 /// The core abstraction in Cargo for working with a workspace of crates.
@@ -31,6 +31,10 @@ pub struct Workspace<'cfg> {
     // missing, `package.workspace` is missing, and no `Cargo.toml` above
     // `current_manifest` was found on the filesystem with `[workspace]`.
     root_manifest: Option<PathBuf>,
+
+    // Shared target directory for all the packages of this workspace.
+    // `None` if the default path of `root/target` should be used.
+    target_dir: Option<Filesystem>,
 
     // List of members in this workspace with a listing of all their manifest
     // paths. The packages themselves can be looked up through the `packages`
@@ -78,6 +82,8 @@ impl<'cfg> Workspace<'cfg> {
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, config: &'cfg Config)
                -> CargoResult<Workspace<'cfg>> {
+        let target_dir = try!(config.target_dir());
+
         let mut ws = Workspace {
             config: config,
             current_manifest: manifest_path.to_path_buf(),
@@ -86,6 +92,7 @@ impl<'cfg> Workspace<'cfg> {
                 packages: HashMap::new(),
             },
             root_manifest: None,
+            target_dir: target_dir,
             members: Vec::new(),
         };
         ws.root_manifest = try!(ws.find_root(manifest_path));
@@ -103,7 +110,8 @@ impl<'cfg> Workspace<'cfg> {
     ///
     /// This is currently only used in niche situations like `cargo install` or
     /// `cargo package`.
-    pub fn one(package: Package, config: &'cfg Config) -> Workspace<'cfg> {
+    pub fn one(package: Package, config: &'cfg Config, target_dir: Option<Filesystem>)
+               -> CargoResult<Workspace<'cfg>> {
         let mut ws = Workspace {
             config: config,
             current_manifest: package.manifest_path().to_path_buf(),
@@ -112,15 +120,21 @@ impl<'cfg> Workspace<'cfg> {
                 packages: HashMap::new(),
             },
             root_manifest: None,
+            target_dir: None,
             members: Vec::new(),
         };
         {
             let key = ws.current_manifest.parent().unwrap();
             let package = MaybePackage::Package(package);
             ws.packages.packages.insert(key.to_path_buf(), package);
+            ws.target_dir = if let Some(dir) = target_dir {
+                Some(dir)
+            } else {
+                try!(ws.config.target_dir())
+            };
             ws.members.push(ws.current_manifest.clone());
         }
-        return ws
+        return Ok(ws)
     }
 
     /// Returns the current package of this workspace.
@@ -153,6 +167,12 @@ impl<'cfg> Workspace<'cfg> {
             Some(ref p) => p,
             None => &self.current_manifest
         }.parent().unwrap()
+    }
+
+    pub fn target_dir(&self) -> Filesystem {
+        self.target_dir.clone().unwrap_or_else(|| {
+            Filesystem::new(self.root().join("target"))
+        })
     }
 
     /// Returns the root [replace] section of this workspace.
