@@ -26,6 +26,7 @@ fn rustdoc_simple() {
         -o {dir}{sep}target{sep}doc \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
             dir = p.root().display(), url = p.url())));
 }
@@ -51,6 +52,7 @@ fn rustdoc_args() {
         --no-defaults \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
             dir = p.root().display(), url = p.url())));
 }
@@ -98,6 +100,7 @@ fn rustdoc_foo_with_bar_dependency() {
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
         --extern [..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
             dir = foo.root().display(), url = foo.url())));
 }
@@ -143,6 +146,7 @@ fn rustdoc_only_bar_dependency() {
         --no-defaults \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
             dir = foo.root().display())));
 }

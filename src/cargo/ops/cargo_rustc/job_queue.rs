@@ -30,6 +30,8 @@ pub struct JobQueue<'a> {
     compiled: HashSet<&'a PackageId>,
     documented: HashSet<&'a PackageId>,
     counts: HashMap<&'a PackageId, usize>,
+    is_release: bool,
+    is_doc_all: bool,
 }
 
 /// A helper structure for metadata about the state of a building package.
@@ -88,6 +90,8 @@ impl<'a> JobQueue<'a> {
             compiled: HashSet::new(),
             documented: HashSet::new(),
             counts: HashMap::new(),
+            is_release: cx.build_config.release,
+            is_doc_all: cx.build_config.doc_all,
         }
     }
 
@@ -118,6 +122,8 @@ impl<'a> JobQueue<'a> {
 
     fn drain_the_queue(&mut self, cx: &mut Context, scope: &Scope<'a>)
                        -> CargoResult<()> {
+        use std::time::Instant;
+
         let mut queue = Vec::new();
         trace!("queue: {:#?}", self.queue);
 
@@ -131,6 +137,7 @@ impl<'a> JobQueue<'a> {
         // successful and otherwise wait for pending work to finish if it failed
         // and then immediately return.
         let mut error = None;
+        let start_time = Instant::now();
         loop {
             while error.is_none() && self.active < self.jobs {
                 if !queue.is_empty() {
@@ -191,7 +198,24 @@ impl<'a> JobQueue<'a> {
             }
         }
 
+        let build_type = if self.is_release { "release" } else { "debug" };
+        let profile = cx.lib_profile(cx.resolve.root());
+        let mut opt_type = String::from(if profile.opt_level > 0 { "optimized" }
+                                        else { "unoptimized" });
+        if profile.debuginfo {
+            opt_type = opt_type + " + debuginfo";
+        }
+        let duration = start_time.elapsed();
+        let time_elapsed = format!("{}.{1:.2} secs",
+                                   duration.as_secs(),
+                                   duration.subsec_nanos() / 10000000);
         if self.queue.is_empty() {
+            if !self.is_doc_all {
+                try!(cx.config.shell().status("Finished", format!("{} [{}] target(s) in {}",
+                                                                  build_type,
+                                                                  opt_type,
+                                                                  time_elapsed)));
+            }
             Ok(())
         } else if let Some(e) = error {
             Err(e)

@@ -421,8 +421,10 @@ fn debug_release_ok() {
 
     assert_that(a, execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.0 [..]
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
     assert_that(b, execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.0 [..]
+[FINISHED] release [optimized] target(s) in [..]
 "));
 }

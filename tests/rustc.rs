@@ -34,6 +34,7 @@ fn build_lib_for_foo() {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
             dir = p.root().display(), url = p.url())));
 }
@@ -64,6 +65,7 @@ fn lib() {
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
             dir = p.root().display(), url = p.url())))
 }
@@ -100,6 +102,7 @@ fn build_main_and_allow_unstable_options() {
         -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
         --extern {name}={dir}{sep}target{sep}debug{sep}lib{name}.rlib`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
             dir = p.root().display(), url = p.url(),
             name = "foo", version = "0.0.1")));
@@ -156,6 +159,7 @@ fn build_with_args_to_one_of_multiple_binaries() {
         --out-dir {dir}{sep}target{sep}debug [..]`
 [RUNNING] `rustc src{sep}bin{sep}bar.rs --crate-name bar --crate-type bin -g \
         -C debug-assertions [..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
                 dir = p.root().display(), url = p.url())));
 }
@@ -211,6 +215,7 @@ fn build_with_args_to_one_of_multiple_tests() {
         --out-dir {dir}{sep}target{sep}debug [..]`
 [RUNNING] `rustc tests{sep}bar.rs --crate-name bar -g \
         -C debug-assertions [..]--test[..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
                 dir = p.root().display(), url = p.url())));
 }
@@ -253,6 +258,7 @@ fn build_foo_with_bar_dependency() {
 [RUNNING] `[..] -g -C [..]`
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `[..] -g -C debug-assertions [..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
                 url = foo.url())));
 }
@@ -294,6 +300,7 @@ fn build_only_bar_dependency() {
                 .with_stderr("\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `[..]--crate-name bar --crate-type lib [..] -C debug-assertions [..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
