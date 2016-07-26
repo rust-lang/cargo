@@ -57,6 +57,16 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let compare = compare_old_fingerprint(&loc, &*fingerprint);
     log_compare(unit, &compare);
 
+    // If our comparison failed (e.g. we're going to trigger a rebuild of this
+    // crate), then we also ensure the source of the crate passes all
+    // verification checks before we build it.
+    //
+    // The `Source::verify` method is intended to allow sources to execute
+    // pre-build checks to ensure that the relevant source code is all
+    // up-to-date and as expected. This is currently used primarily for
+    // directory sources which will use this hook to perform an integrity check
+    // on all files in the source to ensure they haven't changed. If they have
+    // changed then an error is issued.
     if compare.is_err() {
         let source_id = unit.pkg.package_id().source_id();
         let sources = cx.packages.sources();

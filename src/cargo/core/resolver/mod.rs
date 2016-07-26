@@ -169,7 +169,7 @@ this could be indicative of a few possible situations:
       but was replaced with one that doesn't
     * the lock file is corrupt
 
-unable to verify that `{0}` was the same as before in either situation
+unable to verify that `{0}` is the same as when the lockfile was generated
 ", id, id.source_id())
 
                 // If the checksums aren't equal, and neither is None, then they
@@ -185,7 +185,7 @@ this could be indicative of a few possible errors:
     * a replacement source in use (e.g. a mirror) returned a different checksum
     * the source itself may be corrupt in one way or another
 
-unable to verify that `{0}` was the same as before in any situation
+unable to verify that `{0}` is the same as when the lockfile was generated
 ", id);
                 }
             }
