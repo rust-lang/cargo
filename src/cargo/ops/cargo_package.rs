@@ -185,7 +185,9 @@ fn tar(ws: &Workspace,
             human(format!("non-utf8 path in source directory: {}",
                           relative.display()))
         }));
-        let mut file = try!(File::open(file));
+        let mut file = try!(File::open(file).chain_error(|| {
+            human(format!("failed to open for archiving: `{}`", file.display()))
+        }));
         try!(config.shell().verbose(|shell| {
             shell.status("Archiving", &relative)
         }));
