@@ -1,0 +1,119 @@
+.TH "CARGO\-RUSTDOC" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-rustdoc \- Build a package\[aq]s documentation, using specified
+custom flags.
+
+.SH SYNOPSIS
+.PP
+\f[I]cargo rustdoc\f[] [OPTIONS] [\-\-] [<OPTS>...]
+.SH DESCRIPTION
+.PP
+The specified target for the current package (or package specified by
+SPEC if provided) will be documented with the specified <OPTS>...
+being passed to the final rustdoc invocation.
+Dependencies will not be documented as part of this command.
+Note that rustdoc will still unconditionally receive arguments such as
+\-L, \-\-extern, and \-\-crate\-type, and the specified <OPTS>...
+will simply be added to the rustdoc invocation.
+.PP
+If the \-\-package argument is given, then SPEC is a package id
+specification which indicates which package should be documented.
+If it is not given, then the current package is documented.
+For more information on SPEC and its format, see the
+\f[C]cargo\ help\ pkgid\f[] command.
+
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-\-open
+Open the docs in a browser after the operation.
+.RS
+.RE
+.TP
+.B \-p \f[I]SPEC\f[], \-\-package \f[I]SPEC\f[]
+Package to document.
+.RS
+.RE
+.TP
+.B \-j \f[I]N\f[], \-\-jobs \f[I]N\f[]
+Number of parallel jobs, defaults to # of CPUs.
+.RS
+.RE
+.TP
+.B \-\-lib
+Build only this package\[aq]s library.
+.RS
+.RE
+.TP
+.B \-\-bin \f[I]NAME\f[]
+Build only the specified binary.
+.RS
+.RE
+.TP
+.B \-\-example \f[I]NAME\f[]
+Build only the specified example.
+.RS
+.RE
+.TP
+.B \-\-test \f[I]NAME\f[]
+Build only the specified test target.
+.RS
+.RE
+.TP
+.B \-\-bench \f[I]NAME\f[]
+Build only the specified benchmark target.
+.RS
+.RE
+.TP
+.B \-\-release
+Build artifacts in release mode, with optimizations.
+.RS
+.RE
+.TP
+.B \-\-features \f[I]FEATURES\f[]
+Space-separated list of features to also build.
+.RS
+.RE
+.TP
+.B \-\-no\-default\-features
+Do not build the \f[C]default\f[] feature.
+.RS
+.RE
+.TP
+.B \-\-target \f[I]TRIPLE\f[]
+Build for the target triple.
+.RS
+.RE
+.TP
+.B \-\-manifest\-path \f[I]PATH\f[]
+Path to the manifest to document.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+cargo(1), cargo-doc(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
