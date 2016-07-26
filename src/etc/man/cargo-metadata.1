@@ -1,0 +1,66 @@
+.TH "CARGO\-METADATA" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-metadata \- Machine-readable metadata about the current project
+.SH SYNOPSIS
+.PP
+\f[I]cargo metadata\f[] [OPTIONS]
+.SH DESCRIPTION
+.PP
+Output the resolved dependencies of a project, the concrete used versions
+including overrides, in machine-readable format.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-\-features \f[I]FEATURES\f[]
+Space-separated list of features.
+.RS
+.RE
+.TP
+.B \-\-no\-default\-features
+Do not include the \f[C]default\f[] feature.
+.RS
+.RE
+.TP
+.B \-\-no\-deps
+Output information only about the root package and don\[aq]t fetch
+dependencies.
+.RS
+.RE
+.TP
+.B \-\-manifest\-path \f[I]PATH\f[]
+Path to the manifest.
+.RS
+.RE
+.TP
+.B \-\-format\-version \f[I]VERSION\f[]
+Format version [default: 1]. Valid values: 1.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+cargo(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
