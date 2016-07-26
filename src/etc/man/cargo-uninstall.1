@@ -1,0 +1,55 @@
+.TH "CARGO\-UNINSTALL" "1" "May 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-uninstall \- Remove a Rust binary
+.SH SYNOPSIS
+.PP
+\f[I]cargo uninstall\f[] [OPTIONS] <SPEC>
+\f[I]cargo uninstall\f[] (\-h | \-\-help)
+.SH DESCRIPTION
+.PP
+The argument SPEC is a package id specification (see
+\f[C]cargo\ help\ pkgid\f[]) to specify which crate should be
+uninstalled.
+By default all binaries are uninstalled for a crate but the
+\f[C]\-\-bin\f[] and \f[C]\-\-example\f[] flags can be used to only
+uninstall particular binaries.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-\-root \f[I]DIR\f[]
+Directory to uninstall packages from.
+.RS
+.RE
+.TP
+.B \-\-bin \f[I]NAME\f[]
+Only uninstall the binary NAME.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+cargo(1), cargo-install(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
