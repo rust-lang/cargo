@@ -1,0 +1,121 @@
+.TH "CARGO\-RUSTC" "1" "July 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-rustc \- Compile a package and all of its dependencies
+.SH SYNOPSIS
+.PP
+\f[I]cargo rustc\f[] [OPTIONS] [\-\-] [<OPTS>...]
+.SH DESCRIPTION
+.PP
+.PP
+The specified target for the current package (or package specified by
+SPEC if provided) will be compiled along with all of its dependencies.
+The specified ...
+will all be passed to the final compiler invocation, not any of the
+dependencies.
+Note that the compiler will still unconditionally receive arguments such
+as \-L, \-\-extern, and \-\-crate\-type, and the specified ...
+will simply be added to the compiler invocation.
+.PP
+This command requires that only one target is being compiled.
+If more than one target is available for the current package the filters
+of \-\-lib, \-\-bin, etc, must be used to select which target is
+compiled.
+To pass flags to all compiler processes spawned by Cargo, use the
+$RUSTFLAGS environment variable or the \f[C]build.rustflags\f[]
+configuration option.
+.PP
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-p \f[I]SPEC\f[], \-\-package SPEC\f[]
+The profile to compiler for.
+.RS
+.RE
+.TP
+.B \-j \f[I]N\f[], \-\-jobs \f[I]N\f[]
+Number of parallel jobs, defaults to # of CPUs.
+.RS
+.RE
+.TP
+.B \-\-lib
+Build only this package\[aq]s library.
+.RS
+.RE
+.TP
+.B \-\-bin \f[I]NAME\f[]
+Build only the specified binary.
+.RS
+.RE
+.TP
+.B \-\-example \f[I]NAME\f[]
+Build only the specified example.
+.RS
+.RE
+.TP
+.B \-\-test \f[I]NAME\f[]
+Build only the specified test target.
+.RS
+.RE
+.TP
+.B \-\-bench \f[I]NAME\f[]
+Build only the specified benchmark target.
+.RS
+.RE
+.TP
+.B \-\-release
+Build artifacts in release mode, with optimizations.
+.RS
+.RE
+.TP
+.B \-\-profile \f[I]PROFILE
+Profile to build the selected target for.
+.RS
+.RE
+.TP
+.B \-\-features \f[I]FEATURES\f[]
+The version to yank or un\-yank.
+.RS
+.RE
+.TP
+.B \-\-no\-default\-features
+Do not compile default features for the package.
+.RS
+.RE
+.TP
+.B \-\-target \f[I]TRIPLE\f[]
+Target triple which compiles will be for.
+.RS
+.RE
+.TP
+.B \-\-manifest-path \f[I]PATH\f[]
+Path to the manifest to fetch dependencies for.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-run(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.

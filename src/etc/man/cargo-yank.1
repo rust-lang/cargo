@@ -1,0 +1,68 @@
+.TH "CARGO\-YANK" "1" "July 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-yank \- Remove a pushed crate from the index
+.SH SYNOPSIS
+.PP
+\f[I]cargo yank\f[] [OPTIONS] [<CRATE>]
+.SH DESCRIPTION
+.PP
+The yank command removes a previously pushed crate\[aq]s version from
+the server\[aq]s index.
+This command does not delete any data, and the crate will still be
+available for download via the registry\[aq]s download link.
+.PP
+Note that existing crates locked to a yanked version will still be able
+to download the yanked version to use it.
+Cargo will, however, not allow any new crates to be locked to any yanked
+version.
+.PP
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-\-vers \f[I]VERSION\f[]
+The version to yank or un-yank.
+.RS
+.RE
+.TP
+.B \-\-undo
+Undo a yank, putting a version back into the index.
+.RS
+.RE
+.TP
+.B \-\-index \f[I]INDEX\f[]
+Registry index to yank from.
+.RS
+.RE
+.TP
+.B \-\-token \f[I]TOKEN\f[]
+API token to use when authenticating.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-owner(1), cargo\-version(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.

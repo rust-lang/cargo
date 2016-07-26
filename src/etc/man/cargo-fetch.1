@@ -1,0 +1,52 @@
+.TH "CARGO\-FETCH" "1" "July 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-fetch \- Fetch dependencies of a package from the network
+.SH SYNOPSIS
+.PP
+\f[I]cargo fetch\f[] [OPTIONS]
+.SH DESCRIPTION
+.PP
+If a lockfile is available, this command will ensure that all of the git
+dependencies and/or registries dependencies are downloaded and locally
+available. The network is never touched after a `cargo fetch` unless
+the lockfile changes.
+
+If the lockfile is not available, then this is the equivalent of
+`cargo generate-lockfile`. A lockfile is generated and dependencies are also
+all updated.
+.PP
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-\-manifest-path \f[I]PATH\f[]
+Path to the manifest to fetch dependencies for.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-update(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
