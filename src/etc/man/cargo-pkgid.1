@@ -1,0 +1,75 @@
+.TH "CARGO\-PKGID" "1" "July 2016" "The Rust package manager" "Cargo Manual"
+.hy
+.SH NAME
+.PP
+cargo\-pkgid \- Print a fully qualified package specification
+.SH SYNOPSIS
+.PP
+\f[I]cargo pkgid\f[] [OPTIONS] [<SPEC>]
+.SH DESCRIPTION
+.PP
+Given a <SPEC> argument, print out the fully qualified package id
+specifier.  This command will generate an error if <SPEC> is ambiguous as
+to which package it refers to in the dependency graph.  If no <SPEC> is
+given, then the pkgid for the local package is printed.
+.PP
+This command requires that a lockfile is available and dependencies have
+been fetched.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Print this message.
+.RS
+.RE
+.TP
+.B \-\-manifest\-path \f[I]PATH\f[]
+Path to the manifest to the package to clean.
+.RS
+.RE
+.TP
+.B \-v, \-\-verbose
+Use verbose output.
+.RS
+.RE
+.TP
+.B \-q, \-\-quiet
+No output printed to stdout.
+.RS
+.RE
+.TP
+.B \-\-color \f[I]WHEN\f[]
+Coloring: auto, always, never.
+.RS
+.RE
+.SH EXAMPLES
+.PP
+Retrive package specification for foo package
+.IP
+.nf
+\f[C]
+$\ cargo\ pkgid\ foo
+\f[]
+.fi
+.PP
+Retrieve package specification for version 1.0.0 of foo
+.IP
+.nf
+\f[C]
+$\ cargo\ pkgid\ foo:1.0.0
+\f[]
+.fi
+.PP
+Retrive package specification for foo from crates.io
+.IP
+.nf
+\f[C]
+$\ cargo\ pkgid\ crates.io/foo
+\f[]
+.fi
+.SH SEE ALSO
+.PP
+cargo(1), cargo\-generate\-lockfile(1), cargo-search(1), cargo-metadata(1)
+.SH COPYRIGHT
+.PP
+This work is dual\-licensed under Apache 2.0 and MIT terms.
+See \f[I]COPYRIGHT\f[] file in the cargo source distribution.
