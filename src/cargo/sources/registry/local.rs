@@ -75,12 +75,17 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
 
         // We don't actually need to download anything per-se, we just need to
         // verify the checksum matches the .crate file itself.
-        let mut data = Vec::new();
-        try!(crate_file.read_to_end(&mut data).chain_error(|| {
-            human(format!("failed to read `{}`", crate_file.path().display()))
-        }));
         let mut state = Sha256::new();
-        state.update(&data);
+        let mut buf = [0; 64 * 1024];
+        loop {
+            let n = try!(crate_file.read(&mut buf).chain_error(|| {
+                human(format!("failed to read `{}`", crate_file.path().display()))
+            }));
+            if n == 0 {
+                break
+            }
+            state.update(&buf[..n]);
+        }
         if state.finish().to_hex() != checksum {
             bail!("failed to verify the checksum of `{}`", pkg)
         }

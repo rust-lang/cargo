@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::io::prelude::*;
-use std::fs::{File, OpenOptions};
+use std::fs::File;
 use std::path::Path;
 
 use rustc_serialize::json;
@@ -8,7 +8,7 @@ use rustc_serialize::json;
 use core::dependency::{Dependency, DependencyInner, Kind};
 use core::{SourceId, Summary, PackageId, Registry};
 use sources::registry::{RegistryPackage, RegistryDependency, INDEX_LOCK};
-use util::{CargoResult, ChainError, internal, Filesystem, human, Config};
+use util::{CargoResult, ChainError, internal, Filesystem, Config};
 
 pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
@@ -16,18 +16,21 @@ pub struct RegistryIndex<'cfg> {
     cache: HashMap<String, Vec<(Summary, bool)>>,
     hashes: HashMap<(String, String), String>, // (name, vers) => cksum
     config: &'cfg Config,
+    locked: bool,
 }
 
 impl<'cfg> RegistryIndex<'cfg> {
     pub fn new(id: &SourceId,
                path: &Filesystem,
-               config: &'cfg Config) -> RegistryIndex<'cfg> {
+               config: &'cfg Config,
+               locked: bool) -> RegistryIndex<'cfg> {
         RegistryIndex {
             source_id: id.clone(),
             path: path.clone(),
             cache: HashMap::new(),
             hashes: HashMap::new(),
             config: config,
+            locked: locked,
         }
     }
 
@@ -52,34 +55,43 @@ impl<'cfg> RegistryIndex<'cfg> {
         if self.cache.contains_key(name) {
             return Ok(self.cache.get(name).unwrap());
         }
-        // If the lock file doesn't already exist then this'll cause *someone*
-        // to create it. We don't actually care who creates it, and if it's
-        // already there this should have no effect.
-        drop(OpenOptions::new()
-                        .write(true)
-                        .create(true)
-                        .open(self.path.join(INDEX_LOCK).into_path_unlocked()));
-        let lock = self.path.open_ro(Path::new(INDEX_LOCK),
-                                     self.config,
-                                     "the registry index");
-        let file = lock.and_then(|lock| {
-            let path = lock.path().parent().unwrap();
-            let fs_name = name.chars().flat_map(|c| {
-                c.to_lowercase()
-            }).collect::<String>();
+        let summaries = try!(self.load_summaries(name));
+        let summaries = summaries.into_iter().filter(|summary| {
+            summary.0.package_id().name() == name
+        }).collect();
+        self.cache.insert(name.to_string(), summaries);
+        Ok(self.cache.get(name).unwrap())
+    }
 
-            // see module comment for why this is structured the way it is
-            let path = match fs_name.len() {
-                1 => path.join("1").join(&fs_name),
-                2 => path.join("2").join(&fs_name),
-                3 => path.join("3").join(&fs_name[..1]).join(&fs_name),
-                _ => path.join(&fs_name[0..2])
-                         .join(&fs_name[2..4])
-                         .join(&fs_name),
-            };
-            File::open(&path).map_err(human)
-        });
-        let summaries = match file {
+    fn load_summaries(&mut self, name: &str) -> CargoResult<Vec<(Summary, bool)>> {
+        let (path, _lock) = if self.locked {
+            let lock = self.path.open_ro(Path::new(INDEX_LOCK),
+                                         self.config,
+                                         "the registry index");
+            match lock {
+                Ok(lock) => {
+                    (lock.path().parent().unwrap().to_path_buf(), Some(lock))
+                }
+                Err(_) => return Ok(Vec::new()),
+            }
+        } else {
+            (self.path.clone().into_path_unlocked(), None)
+        };
+
+        let fs_name = name.chars().flat_map(|c| {
+            c.to_lowercase()
+        }).collect::<String>();
+
+        // see module comment for why this is structured the way it is
+        let path = match fs_name.len() {
+            1 => path.join("1").join(&fs_name),
+            2 => path.join("2").join(&fs_name),
+            3 => path.join("3").join(&fs_name[..1]).join(&fs_name),
+            _ => path.join(&fs_name[0..2])
+                     .join(&fs_name[2..4])
+                     .join(&fs_name),
+        };
+        match File::open(&path) {
             Ok(mut f) => {
                 let mut contents = String::new();
                 try!(f.read_to_string(&mut contents));
@@ -87,18 +99,13 @@ impl<'cfg> RegistryIndex<'cfg> {
                 ret = contents.lines().filter(|l| l.trim().len() > 0)
                               .map(|l| self.parse_registry_package(l))
                               .collect();
-                try!(ret.chain_error(|| {
+                ret.chain_error(|| {
                     internal(format!("failed to parse registry's information \
                                       for: {}", name))
-                }))
+                })
             }
-            Err(..) => Vec::new(),
-        };
-        let summaries = summaries.into_iter().filter(|summary| {
-            summary.0.package_id().name() == name
-        }).collect();
-        self.cache.insert(name.to_string(), summaries);
-        Ok(self.cache.get(name).unwrap())
+            Err(..) => Ok(Vec::new()),
+        }
     }
 
     /// Parse a line from the registry's index file into a Summary for a

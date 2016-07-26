@@ -181,6 +181,7 @@ pub struct RegistrySource<'cfg> {
     updated: bool,
     ops: Box<RegistryData + 'cfg>,
     index: index::RegistryIndex<'cfg>,
+    index_locked: bool,
 }
 
 #[derive(RustcDecodable)]
@@ -240,7 +241,7 @@ impl<'cfg> RegistrySource<'cfg> {
                   config: &'cfg Config) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = remote::RemoteRegistry::new(source_id, config, &name);
-        RegistrySource::new(source_id, config, &name, Box::new(ops))
+        RegistrySource::new(source_id, config, &name, Box::new(ops), true)
     }
 
     pub fn local(source_id: &SourceId,
@@ -248,13 +249,14 @@ impl<'cfg> RegistrySource<'cfg> {
                  config: &'cfg Config) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = local::LocalRegistry::new(path, config, &name);
-        RegistrySource::new(source_id, config, &name, Box::new(ops))
+        RegistrySource::new(source_id, config, &name, Box::new(ops), false)
     }
 
     fn new(source_id: &SourceId,
            config: &'cfg Config,
            name: &str,
-           ops: Box<RegistryData + 'cfg>) -> RegistrySource<'cfg> {
+           ops: Box<RegistryData + 'cfg>,
+           index_locked: bool) -> RegistrySource<'cfg> {
         RegistrySource {
             src_path: config.registry_source_path().join(name),
             config: config,
@@ -262,7 +264,9 @@ impl<'cfg> RegistrySource<'cfg> {
             updated: false,
             index: index::RegistryIndex::new(source_id,
                                              ops.index_path(),
-                                             config),
+                                             config,
+                                             index_locked),
+            index_locked: index_locked,
             ops: ops,
         }
     }
@@ -306,7 +310,8 @@ impl<'cfg> RegistrySource<'cfg> {
         let path = self.ops.index_path();
         self.index = index::RegistryIndex::new(&self.source_id,
                                                path,
-                                               self.config);
+                                               self.config,
+                                               self.index_locked);
         Ok(())
     }
 }

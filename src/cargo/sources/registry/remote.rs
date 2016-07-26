@@ -53,7 +53,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn update_index(&mut self) -> CargoResult<()> {
-        // Ensure that this'll actually succeed later on.
+        // Ensure that we'll actually be able to acquire an HTTP handle later on
+        // once we start trying to download crates. This will weed out any
+        // problems with `.cargo/config` configuration related to HTTP.
+        //
+        // This way if there's a problem the error gets printed before we even
+        // hit the index, which may not actually read this configuration.
         try!(ops::http_handle(self.config));
 
         // Then we actually update the index
