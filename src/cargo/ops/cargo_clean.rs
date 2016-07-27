@@ -73,7 +73,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     try!(cx.probe_target_info(&units));
 
     for unit in units.iter() {
-        let layout = cx.layout(&unit.pkg, unit.kind);
+        let layout = cx.layout(unit);
         try!(rm_rf(&layout.proxy().fingerprint(&unit.pkg)));
         try!(rm_rf(&layout.build(&unit.pkg)));
 

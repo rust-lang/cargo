@@ -134,7 +134,7 @@ fn run_doc_tests(options: &TestOptions,
             p.arg("--test").arg(lib)
              .arg("--crate-name").arg(&crate_name);
 
-            for &rust_dep in &[&compilation.deps_output, &compilation.root_output] {
+            for &rust_dep in &[&compilation.deps_output] {
                 let mut arg = OsString::from("dependency=");
                 arg.push(rust_dep);
                 p.arg("-L").arg(arg);

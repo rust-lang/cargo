@@ -31,9 +31,8 @@ fn profile_overrides() {
         -C opt-level=1 \
         -C debug-assertions=on \
         -C rpath \
-        --out-dir {dir}{sep}target{sep}debug \
+        --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 [FINISHED] debug [optimized] target(s) in [..]
 ", sep = SEP,
@@ -84,23 +83,19 @@ fn top_level_overrides_deps() {
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=1 \
         -g \
-        -C metadata=[..] \
-        -C extra-filename=-[..] \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}release{sep}deps \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -g \
-        --out-dir {dir}{sep}target{sep}release \
+        --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}release \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
         --extern foo={dir}{sep}target{sep}release{sep}deps{sep}\
-                     {prefix}foo-[..]{suffix} \
-        --extern foo={dir}{sep}target{sep}release{sep}deps{sep}libfoo-[..].rlib`
+                     {prefix}foo[..]{suffix} \
+        --extern foo={dir}{sep}target{sep}release{sep}deps{sep}libfoo.rlib`
 [FINISHED] release [optimized + debuginfo] target(s) in [..]
 ",
                     dir = p.root().display(),
