@@ -258,7 +258,9 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         for &(ref filename, _linkable) in filenames.iter() {
             let dst = root.join(filename);
             if fs::metadata(&dst).is_ok() {
-                try!(fs::remove_file(&dst));
+                try!(fs::remove_file(&dst).chain_error(|| {
+                    human(format!("Could not remove file: {}.", dst.display()))
+                }));
             }
         }
 
