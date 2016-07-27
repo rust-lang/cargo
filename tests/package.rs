@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate cargotest;
 extern crate flate2;
 extern crate git2;
@@ -465,4 +466,40 @@ fn repackage_on_source_change() {
         entry.unwrap().path().unwrap().into_owned()
     }).collect::<Vec<PathBuf>>();
     assert_that(&entry_paths, contains(vec![PathBuf::from("foo-0.0.1/src/foo.rs")]));
+}
+
+#[test]
+#[cfg(unix)]
+fn broken_symlink() {
+    use std::os::unix::fs;
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = 'foo'
+            documentation = 'foo'
+            homepage = 'foo'
+            repository = 'foo'
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#);
+    p.build();
+    t!(fs::symlink("nowhere", &p.root().join("src/foo.rs")));
+
+    assert_that(p.cargo("package").arg("-v"),
+                execs().with_status(101)
+                       .with_stderr_contains("\
+error: failed to prepare local package for uploading
+
+Caused by:
+  failed to open for archiving: `[..]foo.rs`
+
+Caused by:
+  [..]
+"));
 }
