@@ -87,7 +87,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
 
     let mut queue = JobQueue::new(&cx);
 
-    try!(cx.prepare(root));
+    try!(cx.prepare());
     try!(cx.probe_target_info(&units));
     try!(custom_build::build_map(&mut cx, &units));
 
@@ -104,7 +104,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
     try!(queue.execute(&mut cx));
 
     for unit in units.iter() {
-        let out_dir = cx.layout(unit.pkg, unit.kind).build_out(unit.pkg)
+        let out_dir = cx.layout(unit).build_out(unit.pkg)
                         .display().to_string();
         cx.compilation.extra_env.entry(unit.pkg.package_id().clone())
           .or_insert(Vec::new())
@@ -228,6 +228,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let do_rename = unit.target.allows_underscores() && !unit.profile.test;
     let real_name = unit.target.name().to_string();
     let crate_name = unit.target.crate_name();
+    let move_outputs_up = unit.pkg.package_id() == cx.resolve.root();
 
     let rustc_dep_info_loc = if do_rename {
         root.join(&crate_name)
@@ -271,7 +272,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
             let src = dst.with_file_name(dst.file_name().unwrap()
                                             .to_str().unwrap()
                                             .replace(&real_name, &crate_name));
-            if !has_custom_args || fs::metadata(&src).is_ok() {
+            if !has_custom_args || src.exists() {
                 try!(fs::rename(&src, &dst).chain_error(|| {
                     internal(format!("could not rename crate {:?}", src))
                 }));
@@ -284,6 +285,40 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                               rustc_dep_info_loc))
             }));
             try!(fingerprint::append_current_dir(&dep_info_loc, &cwd));
+        }
+
+        // If we're a "root crate", e.g. the target of this compilation, then we
+        // hard link our outputs out of the `deps` directory into the directory
+        // above. This means that `cargo build` will produce binaries in
+        // `target/debug` which one probably expects.
+        if move_outputs_up {
+            for &(ref filename, _linkable) in filenames.iter() {
+                let src = root.join(filename);
+                // This may have been a `cargo rustc` command which changes the
+                // output, so the source may not actually exist.
+                if !src.exists() {
+                    continue
+                }
+
+                // We currently only lift files up from the `deps` directory. If
+                // it was compiled into something like `example/` or `doc/` then
+                // we don't want to link it up.
+                let src_dir = src.parent().unwrap();
+                if !src_dir.ends_with("deps") {
+                    continue
+                }
+                let dst = src_dir.parent().unwrap()
+                                 .join(src.file_name().unwrap());
+                if dst.exists() {
+                    try!(fs::remove_file(&dst).chain_error(|| {
+                        human(format!("failed to remove: {}", dst.display()))
+                    }));
+                }
+                try!(fs::hard_link(&src, &dst).chain_error(|| {
+                    human(format!("failed to link `{}` to `{}`",
+                                  src.display(), dst.display()))
+                }));
+            }
         }
 
         Ok(())
@@ -390,8 +425,7 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     try!(build_deps_args(&mut rustdoc, cx, unit));
 
     if unit.pkg.has_custom_build() {
-        rustdoc.env("OUT_DIR", &cx.layout(unit.pkg, unit.kind)
-                                  .build_out(unit.pkg));
+        rustdoc.env("OUT_DIR", &cx.layout(unit).build_out(unit.pkg));
     }
 
     rustdoc.args(&try!(cx.rustdocflags_args(unit)));
@@ -552,12 +586,7 @@ fn build_plugin_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit) {
 
 fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
                    -> CargoResult<()> {
-    let layout = cx.layout(unit.pkg, unit.kind);
-    cmd.arg("-L").arg(&{
-        let mut root = OsString::from("dependency=");
-        root.push(layout.root());
-        root
-    });
+    let layout = cx.layout(unit);
     cmd.arg("-L").arg(&{
         let mut deps = OsString::from("dependency=");
         deps.push(layout.deps());
@@ -569,7 +598,7 @@ fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
     }
 
     for unit in try!(cx.dep_targets(unit)).iter() {
-        if unit.target.linkable() {
+        if unit.target.linkable() && !unit.profile.doc {
             try!(link_to(cmd, cx, unit));
         }
     }
@@ -578,8 +607,6 @@ fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
 
     fn link_to(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
                -> CargoResult<()> {
-        let layout = cx.layout(unit.pkg, unit.kind);
-
         for (filename, linkable) in try!(cx.target_filenames(unit)) {
             if !linkable {
                 continue
@@ -587,7 +614,7 @@ fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
             let mut v = OsString::new();
             v.push(&unit.target.crate_name());
             v.push("=");
-            v.push(layout.root());
+            v.push(cx.out_dir(unit));
             v.push(&path::MAIN_SEPARATOR.to_string());
             v.push(&filename);
             cmd.arg("--extern").arg(&v);
@@ -600,9 +627,8 @@ pub fn process(cmd: CommandType, pkg: &Package,
                cx: &Context) -> CargoResult<CommandPrototype> {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
-    let layout = cx.layout(pkg, Kind::Host);
     let mut search_path = util::dylib_path();
-    search_path.push(layout.deps().to_path_buf());
+    search_path.push(cx.host_dylib_path().to_path_buf());
 
     // We want to use the same environment and such as normal processes, but we
     // want to override the dylib search path with the one we just calculated.

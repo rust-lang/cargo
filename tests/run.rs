@@ -411,20 +411,16 @@ fn example_with_release_flag() {
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -C opt-level=3 \
-        -C metadata=[..] \
-        -C extra-filename=[..] \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}release{sep}deps \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -C opt-level=3 \
         --out-dir {dir}{sep}target{sep}release{sep}examples \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}release \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
-         --extern bar={dir}{sep}target{sep}release{sep}deps{sep}libbar-[..].rlib`
+         --extern bar={dir}{sep}target{sep}release{sep}deps{sep}libbar.rlib`
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `target{sep}release{sep}examples{sep}a[..]`
 ",
@@ -441,20 +437,16 @@ fast2"));
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
         -g \
-        -C metadata=[..] \
-        -C extra-filename=[..] \
         --out-dir {dir}{sep}target{sep}debug{sep}deps \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc examples{sep}a.rs --crate-name a --crate-type bin \
         -g \
         --out-dir {dir}{sep}target{sep}debug{sep}examples \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
-         --extern bar={dir}{sep}target{sep}debug{sep}deps{sep}libbar-[..].rlib`
+         --extern bar={dir}{sep}target{sep}debug{sep}deps{sep}libbar.rlib`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target{sep}debug{sep}examples{sep}a[..]`
 ",

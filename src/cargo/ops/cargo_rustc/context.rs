@@ -96,7 +96,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Prepare this context, ensuring that all filesystem directories are in
     /// place.
-    pub fn prepare(&mut self, root: &Package) -> CargoResult<()> {
+    pub fn prepare(&mut self) -> CargoResult<()> {
         let _p = profile::start("preparing layout");
 
         try!(self.host.prepare().chain_error(|| {
@@ -111,10 +111,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => {}
         }
 
-        self.compilation.root_output =
-                self.layout(root, Kind::Target).proxy().dest().to_path_buf();
-        self.compilation.deps_output =
-                self.layout(root, Kind::Target).proxy().deps().to_path_buf();
+        let layout = self.target.as_ref().unwrap_or(&self.host);
+        self.compilation.root_output = layout.dest().to_path_buf();
+        self.compilation.deps_output = layout.deps().to_path_buf();
         Ok(())
     }
 
@@ -237,9 +236,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Returns the appropriate directory layout for either a plugin or not.
-    pub fn layout(&self, pkg: &Package, kind: Kind) -> LayoutProxy {
-        let primary = pkg.package_id() == self.resolve.root();
-        match kind {
+    pub fn layout(&self, unit: &Unit) -> LayoutProxy {
+        let primary = unit.pkg.package_id() == self.resolve.root();
+        match unit.kind {
             Kind::Host => LayoutProxy::new(&self.host, primary),
             Kind::Target => LayoutProxy::new(self.target.as_ref()
                                                  .unwrap_or(&self.host),
@@ -247,13 +246,18 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
     }
 
+    /// Returns the path for plugin/dylib dependencies
+    pub fn host_dylib_path(&self) -> &Path {
+        self.host.deps()
+    }
+
     /// Returns the appropriate output directory for the specified package and
     /// target.
     pub fn out_dir(&self, unit: &Unit) -> PathBuf {
         if unit.profile.doc {
-            self.layout(unit.pkg, unit.kind).doc_root()
+            self.layout(unit).doc_root()
         } else {
-            self.layout(unit.pkg, unit.kind).out_dir(unit.pkg, unit.target)
+            self.layout(unit).out_dir(unit)
         }
     }
 
@@ -289,7 +293,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             let mut metadata = unit.pkg.generate_metadata();
             metadata.mix(&format!("bin-{}", unit.target.name()));
             Some(metadata)
-        } else if unit.pkg.package_id() == self.resolve.root() &&
+        } else if unit.pkg.package_id().source_id().is_path() &&
                   !unit.profile.test {
             // If we're not building a unit test then the root package never
             // needs any metadata as it's guaranteed to not conflict with any

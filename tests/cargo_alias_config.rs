@@ -56,8 +56,7 @@ fn alias_config() {
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]
 [RUNNING] `rustc [..] --crate-name foo --crate-type \
-bin -g --out-dir [..] --emit=dep-info,link -L dependency=[..]\
--L dependency=[..]"));
+bin -g --out-dir [..] --emit=dep-info,link -L dependency=[..]"));
 }
 
 #[test]
