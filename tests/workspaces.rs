@@ -5,6 +5,7 @@ extern crate hamcrest;
 use std::io::{Read, Write};
 use std::fs::File;
 
+use cargotest::sleep_ms;
 use cargotest::support::{project, execs};
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
@@ -862,6 +863,8 @@ fn rebuild_please() {
 
     assert_that(p.cargo("run").cwd(p.root().join("bin")),
                 execs().with_status(0));
+
+    sleep_ms(1000);
 
     t!(t!(File::create(p.root().join("lib/src/lib.rs"))).write_all(br#"
         pub fn foo() -> u32 { 1 }
