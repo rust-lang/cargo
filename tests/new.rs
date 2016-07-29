@@ -21,9 +21,11 @@ fn cargo_process(s: &str) -> ProcessBuilder {
 
 #[test]
 fn simple_lib() {
-    assert_that(cargo_process("new").arg("foo").arg("--vcs").arg("none")
+    assert_that(cargo_process("new").arg("--lib").arg("foo").arg("--vcs").arg("none")
                                     .env("USER", "foo"),
-                execs().with_status(0));
+                execs().with_status(0).with_stderr("\
+[CREATED] library `foo` project
+"));
 
     assert_that(&paths::root().join("foo"), existing_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
@@ -36,9 +38,11 @@ fn simple_lib() {
 
 #[test]
 fn simple_bin() {
-    assert_that(cargo_process("new").arg("foo").arg("--bin")
+    assert_that(cargo_process("new").arg("--bin").arg("foo")
                                     .env("USER", "foo"),
-                execs().with_status(0));
+                execs().with_status(0).with_stderr("\
+[CREATED] binary (application) `foo` project
+"));
 
     assert_that(&paths::root().join("foo"), existing_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
@@ -52,9 +56,18 @@ fn simple_bin() {
 }
 
 #[test]
+fn both_lib_and_bin() {
+    let td = TempDir::new("cargo").unwrap();
+    assert_that(cargo_process("new").arg("--lib").arg("--bin").arg("foo").cwd(td.path().clone())
+                                    .env("USER", "foo"),
+                execs().with_status(101).with_stderr(
+                    "[ERROR] can't specify both lib and binary outputs"));
+}
+
+#[test]
 fn simple_git() {
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("foo").cwd(td.path().clone())
+    assert_that(cargo_process("new").arg("--lib").arg("foo").cwd(td.path().clone())
                                     .env("USER", "foo"),
                 execs().with_status(0));
 
@@ -120,7 +133,7 @@ use --name to override crate name"));
 
 #[test]
 fn rust_prefix_stripped() {
-    assert_that(cargo_process("new").arg("rust-foo").env("USER", "foo"),
+    assert_that(cargo_process("new").arg("--lib").arg("rust-foo").env("USER", "foo"),
                 execs().with_status(0)
                        .with_stdout("note: package will be named `foo`; use --name to override"));
     let toml = paths::root().join("rust-foo/Cargo.toml");
