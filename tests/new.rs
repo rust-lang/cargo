@@ -56,6 +56,15 @@ fn simple_bin() {
 }
 
 #[test]
+fn both_lib_and_bin() {
+    let td = TempDir::new("cargo").unwrap();
+    assert_that(cargo_process("new").arg("--lib").arg("--bin").arg("foo").cwd(td.path().clone())
+                                    .env("USER", "foo"),
+                execs().with_status(101).with_stderr(
+                    "[ERROR] can't specify both lib and binary outputs"));
+}
+
+#[test]
 fn simple_git() {
     let td = TempDir::new("cargo").unwrap();
     assert_that(cargo_process("new").arg("--lib").arg("foo").cwd(td.path().clone())
