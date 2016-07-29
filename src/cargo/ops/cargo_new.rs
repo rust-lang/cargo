@@ -21,6 +21,7 @@ pub enum VersionControl { Git, Hg, NoVcs }
 pub struct NewOptions<'a> {
     pub version_control: Option<VersionControl>,
     pub bin: bool,
+    pub lib: bool,
     pub path: &'a str,
     pub name: Option<&'a str>,
 }
@@ -50,6 +51,31 @@ impl Decodable for VersionControl {
                 return Err(d.error(&err));
             }
         })
+    }
+}
+
+impl<'a> NewOptions<'a> {
+    pub fn new(version_control: Option<VersionControl>,
+           bin: bool,
+           lib: bool,
+           path: &'a str,
+           name: Option<&'a str>) -> NewOptions<'a> {
+
+        // default to lib
+        let is_lib = if !bin {
+            true
+        }
+        else {
+            lib
+        };
+
+        NewOptions {
+            version_control: version_control,
+            bin: bin,
+            lib: is_lib,
+            path: path,
+            name: name,
+        }
     }
 }
 
@@ -235,6 +261,10 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
               path.display())
     }
 
+    if opts.lib && opts.bin {
+        bail!("can't specify both lib and binary outputs");
+    }
+
     let name = try!(get_name(&path, &opts, config));
     try!(check_name(name));
 
@@ -258,6 +288,10 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
     let cargotoml_path = path.join("Cargo.toml");
     if fs::metadata(&cargotoml_path).is_ok() {
         bail!("`cargo init` cannot be run on existing Cargo projects")
+    }
+
+    if opts.lib && opts.bin {
+        bail!("can't specify both lib and binary outputs");
     }
 
     let name = try!(get_name(&path, &opts, config));
