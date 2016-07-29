@@ -768,7 +768,7 @@ fn new_warns_you_this_will_not_work() {
         .file("src/lib.rs", "");
     p.build();
 
-    assert_that(p.cargo("new").arg("bar").env("USER", "foo"),
+    assert_that(p.cargo("new").arg("--lib").arg("bar").env("USER", "foo"),
                 execs().with_status(0)
                        .with_stderr("\
 warning: compiling this new crate may not work due to invalid workspace \
@@ -780,6 +780,7 @@ workspace: [..]
 
 this may be fixable by ensuring that this crate is depended on by the workspace \
 root: [..]
+[CREATED] library `bar` project
 "));
 }
 

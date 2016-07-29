@@ -9,6 +9,7 @@ pub struct Options {
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_bin: bool,
+    flag_lib: bool,
     arg_path: String,
     flag_name: Option<String>,
     flag_vcs: Option<ops::VersionControl>,
@@ -28,7 +29,8 @@ Options:
     --vcs VCS           Initialize a new repository for the given version
                         control system (git or hg) or do not initialize any version
                         control at all (none) overriding a global configuration.
-    --bin               Use a binary instead of a library template
+    --bin               Use a binary (application) template
+    --lib               Use a library template
     --name NAME         Set the resulting package name
     -v, --verbose ...   Use verbose output
     -q, --quiet         No output printed to stdout
@@ -45,16 +47,22 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                           options.flag_frozen,
                           options.flag_locked));
 
-    let Options { flag_bin, arg_path, flag_name, flag_vcs, .. } = options;
+    let Options { flag_bin, flag_lib, arg_path, flag_name, flag_vcs, .. } = options;
 
-    let opts = ops::NewOptions {
-        version_control: flag_vcs,
-        bin: flag_bin,
-        path: &arg_path,
-        name: flag_name.as_ref().map(|s| s.as_ref()),
-    };
+    let opts = ops::NewOptions::new(flag_vcs,
+                                    flag_bin,
+                                    flag_lib,
+                                    &arg_path,
+                                    flag_name.as_ref().map(|s| s.as_ref()));
 
+    let opts_lib = opts.lib;
     try!(ops::new(opts, config));
+
+    try!(config.shell().status("Created", format!("{} `{}` project",
+                                                   if opts_lib { "library" }
+                                                   else {"binary (application)"},
+                                                   arg_path)));
+
     Ok(None)
 }
 
