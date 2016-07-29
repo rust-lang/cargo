@@ -54,6 +54,15 @@ fn simple_bin() {
                 existing_file());
 }
 
+#[test]
+fn both_lib_and_bin() {
+    let td = TempDir::new("cargo").unwrap();
+    assert_that(cargo_process("init").arg("--lib").arg("--bin").cwd(td.path().clone())
+                                    .env("USER", "foo"),
+                execs().with_status(101).with_stderr(
+                    "[ERROR] can't specify both lib and binary outputs"));
+}
+
 fn bin_already_exists(explicit: bool, rellocation: &str) {
     let path = paths::root().join("foo");
     fs::create_dir_all(&path.join("src")).unwrap();
