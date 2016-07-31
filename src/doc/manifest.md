@@ -545,9 +545,10 @@ other copies. The syntax is similar to the `[dependencies]` section:
 Each key in the `[replace]` table is a [package id
 specification](pkgid-spec.html) which allows arbitrarily choosing a node in the
 dependency graph to override. The value of each key is the same as the
-`[dependencies]` syntax for specifying dependencies. Note that when a crate is
-overridden the copy it's overridden with must have both the same name and
-version, but it can come from a different source (e.g. git or a local path).
+`[dependencies]` syntax for specifying dependencies, except that you can't
+specify features. Note that when a crate is overridden the copy it's overridden
+with must have both the same name and version, but it can come from a different
+source (e.g. git or a local path).
 
 More information about overriding dependencies can be found in the [overriding
 dependencies][replace] section of the documentation.
