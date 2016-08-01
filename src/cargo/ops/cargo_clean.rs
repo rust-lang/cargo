@@ -28,7 +28,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         return rm_rf(&target_dir);
     }
 
-    let mut registry = PackageRegistry::new(opts.config);
+    let mut registry = try!(PackageRegistry::new(opts.config));
     let resolve = try!(ops::resolve_ws(&mut registry, ws));
     let packages = ops::get_resolved_packages(&resolve, registry);
 

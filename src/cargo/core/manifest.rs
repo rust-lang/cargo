@@ -4,7 +4,8 @@ use std::path::{PathBuf, Path};
 use semver::Version;
 use rustc_serialize::{Encoder, Encodable};
 
-use core::{Dependency, PackageId, PackageIdSpec, Summary, WorkspaceConfig};
+use core::{Dependency, PackageId, Summary, SourceId, PackageIdSpec};
+use core::WorkspaceConfig;
 use core::package_id::Metadata;
 
 pub enum EitherManifest {
@@ -231,6 +232,14 @@ impl Manifest {
 
     pub fn set_summary(&mut self, summary: Summary) {
         self.summary = summary;
+    }
+
+    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
+                      -> Manifest {
+        Manifest {
+            summary: self.summary.map_source(to_replace, replace_with),
+            ..self
+        }
     }
 }
 

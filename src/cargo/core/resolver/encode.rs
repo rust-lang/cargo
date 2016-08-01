@@ -1,10 +1,12 @@
 use std::collections::{HashMap, BTreeMap};
+use std::fmt;
+use std::str::FromStr;
 
 use regex::Regex;
 use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
 use core::{Package, PackageId, SourceId, Workspace};
-use util::{CargoResult, Graph, Config};
+use util::{CargoResult, Graph, Config, internal, ChainError, CargoError};
 
 use super::Resolve;
 
@@ -18,7 +20,7 @@ pub struct EncodableResolve {
 pub type Metadata = BTreeMap<String, String>;
 
 impl EncodableResolve {
-    pub fn to_resolve(&self, ws: &Workspace) -> CargoResult<Resolve> {
+    pub fn to_resolve(self, ws: &Workspace) -> CargoResult<Resolve> {
         let path_deps = build_path_deps(ws);
         let default = try!(ws.current()).package_id().source_id();
 
@@ -90,13 +92,56 @@ impl EncodableResolve {
                 try!(add_dependencies(id, pkg));
             }
         }
+        let mut metadata = self.metadata.unwrap_or(BTreeMap::new());
+
+        // Parse out all package checksums. After we do this we can be in a few
+        // situations:
+        //
+        // * We parsed no checksums. In this situation we're dealing with an old
+        //   lock file and we're gonna fill them all in.
+        // * We parsed some checksums, but not one for all packages listed. It
+        //   could have been the case that some were listed, then an older Cargo
+        //   client added more dependencies, and now we're going to fill in the
+        //   missing ones.
+        // * There are too many checksums listed, indicative of an older Cargo
+        //   client removing a package but not updating the checksums listed.
+        //
+        // In all of these situations they're part of normal usage, so we don't
+        // really worry about it. We just try to slurp up as many checksums as
+        // possible.
+        let mut checksums = HashMap::new();
+        let prefix = "checksum ";
+        let mut to_remove = Vec::new();
+        for (k, v) in metadata.iter().filter(|p| p.0.starts_with(prefix)) {
+            to_remove.push(k.to_string());
+            let k = &k[prefix.len()..];
+            let id: EncodablePackageId = try!(k.parse().chain_error(|| {
+                internal("invalid encoding of checksum in lockfile")
+            }));
+            let id = try!(to_package_id(&id.name,
+                                        &id.version,
+                                        id.source.as_ref(),
+                                        default,
+                                        &path_deps));
+            let v = if v == "<none>" {
+                None
+            } else {
+                Some(v.to_string())
+            };
+            checksums.insert(id, v);
+        }
+
+        for k in to_remove {
+            metadata.remove(&k);
+        }
 
         Ok(Resolve {
             graph: g,
             root: root,
             features: HashMap::new(),
-            metadata: self.metadata.clone(),
             replacements: replacements,
+            checksums: checksums,
+            metadata: metadata,
         })
     }
 }
@@ -168,34 +213,52 @@ pub struct EncodablePackageId {
     source: Option<SourceId>
 }
 
-impl Encodable for EncodablePackageId {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        let mut out = format!("{} {}", self.name, self.version);
+impl fmt::Display for EncodablePackageId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "{} {}", self.name, self.version));
         if let Some(ref s) = self.source {
-            out.push_str(&format!(" ({})", s.to_url()));
+            try!(write!(f, " ({})", s.to_url()));
         }
-        out.encode(s)
+        Ok(())
     }
 }
 
-impl Decodable for EncodablePackageId {
-    fn decode<D: Decoder>(d: &mut D) -> Result<EncodablePackageId, D::Error> {
-        let string: String = try!(Decodable::decode(d));
+impl FromStr for EncodablePackageId {
+    type Err = Box<CargoError>;
+
+    fn from_str(s: &str) -> CargoResult<EncodablePackageId> {
         let regex = Regex::new(r"^([^ ]+) ([^ ]+)(?: \(([^\)]+)\))?$").unwrap();
-        let captures = regex.captures(&string)
-                            .expect("invalid serialized PackageId");
+        let captures = try!(regex.captures(s).ok_or_else(|| {
+            internal("invalid serialized PackageId")
+        }));
 
         let name = captures.at(1).unwrap();
         let version = captures.at(2).unwrap();
 
-        let source = captures.at(3);
-
-        let source_id = source.map(|s| SourceId::from_url(s));
+        let source_id = match captures.at(3) {
+            Some(s) => Some(try!(SourceId::from_url(s))),
+            None => None,
+        };
 
         Ok(EncodablePackageId {
             name: name.to_string(),
             version: version.to_string(),
             source: source_id
+        })
+    }
+}
+
+impl Encodable for EncodablePackageId {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        self.to_string().encode(s)
+    }
+}
+
+impl Decodable for EncodablePackageId {
+    fn decode<D: Decoder>(d: &mut D) -> Result<EncodablePackageId, D::Error> {
+        String::decode(d).and_then(|string| {
+            string.parse::<EncodablePackageId>()
+                  .map_err(|e| d.error(&e.to_string()))
         })
     }
 }
@@ -220,12 +283,25 @@ impl<'a, 'cfg> Encodable for WorkspaceResolve<'a, 'cfg> {
             }
 
             Some(encodable_resolve_node(id, self.resolve))
-        }).collect::<Vec<EncodableDependency>>();
+        }).collect::<Vec<_>>();
 
+        let mut metadata = self.resolve.metadata.clone();
+
+        for id in ids.iter().filter(|id| !id.source_id().is_path()) {
+            let checksum = match self.resolve.checksums[*id] {
+                Some(ref s) => &s[..],
+                None => "<none>",
+            };
+            let id = encodable_package_id(id);
+            metadata.insert(format!("checksum {}", id.to_string()),
+                            checksum.to_string());
+        }
+
+        let metadata = if metadata.len() == 0 {None} else {Some(metadata)};
         EncodableResolve {
             package: Some(encodable),
             root: encodable_resolve_node(&root, self.resolve),
-            metadata: self.resolve.metadata.clone(),
+            metadata: metadata,
         }.encode(s)
     }
 }

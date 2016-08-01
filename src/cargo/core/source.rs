@@ -4,13 +4,17 @@ use std::fmt::{self, Formatter};
 use std::hash;
 use std::path::Path;
 use std::sync::Arc;
-use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
+use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
+use std::sync::atomic::Ordering::SeqCst;
 
+use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 use url::Url;
 
 use core::{Package, PackageId, Registry};
-use sources::{PathSource, GitSource, RegistrySource};
+use ops;
 use sources::git;
+use sources::{PathSource, GitSource, RegistrySource, CRATES_IO};
+use sources::DirectorySource;
 use util::{human, Config, CargoResult, ToUrl};
 
 /// A Source finds and downloads remote packages based on names and
@@ -35,6 +39,35 @@ pub trait Source: Registry {
     /// The `pkg` argument is the package which this fingerprint should only be
     /// interested in for when this source may contain multiple packages.
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String>;
+
+    /// If this source supports it, verifies the source of the package
+    /// specified.
+    ///
+    /// Note that the source may also have performed other checksum-based
+    /// verification during the `download` step, but this is intended to be run
+    /// just before a crate is compiled so it may perform more expensive checks
+    /// which may not be cacheable.
+    fn verify(&self, _pkg: &PackageId) -> CargoResult<()> {
+        Ok(())
+    }
+}
+
+impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
+    fn update(&mut self) -> CargoResult<()> {
+        (**self).update()
+    }
+
+    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
+        (**self).download(id)
+    }
+
+    fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
+        (**self).fingerprint(pkg)
+    }
+
+    fn verify(&self, pkg: &PackageId) -> CargoResult<()> {
+        (**self).verify(pkg)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -45,6 +78,10 @@ enum Kind {
     Path,
     /// represents the central registry
     Registry,
+    /// represents a local filesystem-based registry
+    LocalRegistry,
+    /// represents a directory-based registry
+    Directory,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -91,14 +128,14 @@ impl SourceId {
     ///                     libssh2-static-sys#80e71a3021618eb05\
     ///                     656c58fb7c5ef5f12bc747f");
     /// ```
-    pub fn from_url(string: &str) -> SourceId {
+    pub fn from_url(string: &str) -> CargoResult<SourceId> {
         let mut parts = string.splitn(2, '+');
         let kind = parts.next().unwrap();
         let url = parts.next().unwrap();
 
         match kind {
             "git" => {
-                let mut url = url.to_url().unwrap();
+                let mut url = try!(url.to_url());
                 let mut reference = GitReference::Branch("master".to_string());
                 for (k, v) in url.query_pairs() {
                     match &k[..] {
@@ -114,18 +151,18 @@ impl SourceId {
                 let precise = url.fragment().map(|s| s.to_owned());
                 url.set_fragment(None);
                 url.set_query(None);
-                SourceId::for_git(&url, reference).with_precise(precise)
-            }
+                Ok(SourceId::for_git(&url, reference).with_precise(precise))
+            },
             "registry" => {
-                let url = url.to_url().unwrap();
-                SourceId::new(Kind::Registry, url)
-                    .with_precise(Some("locked".to_string()))
+                let url = try!(url.to_url());
+                Ok(SourceId::new(Kind::Registry, url)
+                            .with_precise(Some("locked".to_string())))
             }
             "path" => {
-                let url = url.to_url().unwrap();
-                SourceId::new(Kind::Path, url)
+                let url = try!(url.to_url());
+                Ok(SourceId::new(Kind::Path, url))
             }
-            _ => panic!("Unsupported serialized SourceId"),
+            kind => Err(human(format!("unsupported source protocol: {}", kind)))
         }
     }
 
@@ -150,12 +187,18 @@ impl SourceId {
             SourceIdInner { kind: Kind::Registry, ref url, .. } => {
                 format!("registry+{}", url)
             }
+            SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
+                format!("local-registry+{}", url)
+            }
+            SourceIdInner { kind: Kind::Directory, ref url, .. } => {
+                format!("directory+{}", url)
+            }
         }
     }
 
     // Pass absolute path
     pub fn for_path(path: &Path) -> CargoResult<SourceId> {
-        let url = try!(path.to_url().map_err(human));
+        let url = try!(path.to_url());
         Ok(SourceId::new(Kind::Path, url))
     }
 
@@ -167,12 +210,36 @@ impl SourceId {
         SourceId::new(Kind::Registry, url.clone())
     }
 
+    pub fn for_local_registry(path: &Path) -> CargoResult<SourceId> {
+        let url = try!(path.to_url());
+        Ok(SourceId::new(Kind::LocalRegistry, url))
+    }
+
+    pub fn for_directory(path: &Path) -> CargoResult<SourceId> {
+        let url = try!(path.to_url());
+        Ok(SourceId::new(Kind::Directory, url))
+    }
+
     /// Returns the `SourceId` corresponding to the main repository.
     ///
     /// This is the main cargo registry by default, but it can be overridden in
     /// a `.cargo/config`.
-    pub fn for_central(config: &Config) -> CargoResult<SourceId> {
-        Ok(SourceId::for_registry(&try!(RegistrySource::url(config))))
+    pub fn crates_io(config: &Config) -> CargoResult<SourceId> {
+        let cfg = try!(ops::registry_configuration(config));
+        let url = if let Some(ref index) = cfg.index {
+            static WARNED: AtomicBool = ATOMIC_BOOL_INIT;
+            if !WARNED.swap(true, SeqCst) {
+                try!(config.shell().warn("custom registry support via \
+                                          the `registry.index` configuration is \
+                                          being removed, this functionality \
+                                          will not work in the future"));
+            }
+            &index[..]
+        } else {
+            CRATES_IO
+        };
+        let url = try!(url.to_url());
+        Ok(SourceId::for_registry(&url))
     }
 
     pub fn url(&self) -> &Url {
@@ -182,7 +249,7 @@ impl SourceId {
         self.inner.kind == Kind::Path
     }
     pub fn is_registry(&self) -> bool {
-        self.inner.kind == Kind::Registry
+        self.inner.kind == Kind::Registry || self.inner.kind == Kind::LocalRegistry
     }
 
     pub fn is_git(&self) -> bool {
@@ -204,7 +271,21 @@ impl SourceId {
                 };
                 Box::new(PathSource::new(&path, self, config))
             }
-            Kind::Registry => Box::new(RegistrySource::new(self, config)),
+            Kind::Registry => Box::new(RegistrySource::remote(self, config)),
+            Kind::LocalRegistry => {
+                let path = match self.inner.url.to_file_path() {
+                    Ok(p) => p,
+                    Err(()) => panic!("path sources cannot be remote"),
+                };
+                Box::new(RegistrySource::local(self, &path, config))
+            }
+            Kind::Directory => {
+                let path = match self.inner.url.to_file_path() {
+                    Ok(p) => p,
+                    Err(()) => panic!("path sources cannot be remote"),
+                };
+                Box::new(DirectorySource::new(&path, self, config))
+            }
         }
     }
 
@@ -233,7 +314,7 @@ impl SourceId {
             Kind::Registry => {}
             _ => return false,
         }
-        self.inner.url.to_string() == RegistrySource::default_url()
+        self.inner.url.to_string() == CRATES_IO
     }
 }
 
@@ -267,8 +348,10 @@ impl Encodable for SourceId {
 
 impl Decodable for SourceId {
     fn decode<D: Decoder>(d: &mut D) -> Result<SourceId, D::Error> {
-        let string: String = Decodable::decode(d).ok().expect("Invalid encoded SourceId");
-        Ok(SourceId::from_url(&string))
+        let string: String = try!(Decodable::decode(d));
+        SourceId::from_url(&string).map_err(|e| {
+            d.error(&e.to_string())
+        })
     }
 }
 
@@ -288,8 +371,12 @@ impl fmt::Display for SourceId {
                 }
                 Ok(())
             }
-            SourceIdInner { kind: Kind::Registry, ref url, .. } => {
+            SourceIdInner { kind: Kind::Registry, ref url, .. } |
+            SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
                 write!(f, "registry {}", url)
+            }
+            SourceIdInner { kind: Kind::Directory, ref url, .. } => {
+                write!(f, "dir {}", url)
             }
         }
     }

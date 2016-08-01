@@ -187,5 +187,7 @@ that this flag *does not change the behavior of Cargo*, it simply asserts that
 Cargo shouldn't touch the network as a previous command has been run to ensure
 that network activity shouldn't be necessary.
 
-Note that Cargo does not yet support vendoring in a first-class fashion, but
-this is a hotly desired feature and coming soon!
+For more information about vendoring, see documentation on [source
+replacement][replace].
+
+[replace]: source-replacement.html

@@ -652,7 +652,8 @@ fn substitute_macros(input: &str) -> String {
         ("[VERIFYING]",   "   Verifying"),
         ("[ARCHIVING]",   "   Archiving"),
         ("[INSTALLING]",  "  Installing"),
-        ("[REPLACING]",   "   Replacing")
+        ("[REPLACING]",   "   Replacing"),
+        ("[UNPACKING]",   "   Unpacking"),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in macros.iter() {
