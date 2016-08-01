@@ -775,8 +775,44 @@ impl TomlDependency {
             cx.warnings.push(msg);
         }
 
+        if details.git.is_none() {
+            let git_only_keys = [
+                (&details.branch, "branch"),
+                (&details.tag, "tag"),
+                (&details.rev, "rev")
+            ];
+
+            for &(key, key_name) in git_only_keys.iter() {
+                if key.is_some() {
+                    let msg = format!("key `{}` is ignored for dependency ({}). \
+                                       This will be considered an error in future versions",
+                                      key_name, name);
+                    cx.warnings.push(msg)
+                }
+            }
+        }
+
         let new_source_id = match (details.git.as_ref(), details.path.as_ref()) {
-            (Some(git), _) => {
+            (Some(git), maybe_path) => {
+                if maybe_path.is_some() {
+                    let msg = format!("dependency ({}) specification is ambiguous. \
+                                       Only one of `git` or `path` is allowed. \
+                                       This will be considered an error in future versions", name);
+                    cx.warnings.push(msg)
+                }
+
+                let n_details = [&details.branch, &details.tag, &details.rev]
+                    .iter()
+                    .filter(|d| d.is_some())
+                    .count();
+
+                if n_details > 1 {
+                    let msg = format!("dependency ({}) specification is ambiguous. \
+                                       Only one of `branch`, `tag` or `rev` is allowed. \
+                                       This will be considered an error in future versions", name);
+                    cx.warnings.push(msg)
+                }
+
                 let reference = details.branch.clone().map(GitReference::Branch)
                     .or_else(|| details.tag.clone().map(GitReference::Tag))
                     .or_else(|| details.rev.clone().map(GitReference::Rev))
