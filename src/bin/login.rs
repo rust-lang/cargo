@@ -43,10 +43,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let token = match options.arg_token.clone() {
         Some(token) => token,
         None => {
-            let src = try!(SourceId::for_central(config));
-            let mut src = RegistrySource::new(&src, config);
+            let src = try!(SourceId::crates_io(config));
+            let mut src = RegistrySource::remote(&src, config);
             try!(src.update());
-            let config = try!(src.config());
+            let config = try!(src.config()).unwrap();
             let host = options.flag_host.clone().unwrap_or(config.api);
             println!("please visit {}me and paste the API Token below", host);
             let mut line = String::new();

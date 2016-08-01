@@ -249,6 +249,7 @@ impl Dependency {
     pub fn is_transitive(&self) -> bool { self.inner.is_transitive() }
     pub fn is_build(&self) -> bool { self.inner.is_build() }
     pub fn is_optional(&self) -> bool { self.inner.is_optional() }
+
     /// Returns true if the default features of the dependency are requested.
     pub fn uses_default_features(&self) -> bool {
         self.inner.uses_default_features()
@@ -262,6 +263,17 @@ impl Dependency {
     /// Returns true if the package (`id`) can fulfill this dependency request.
     pub fn matches_id(&self, id: &PackageId) -> bool {
         self.inner.matches_id(id)
+    }
+
+    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
+                      -> Dependency {
+        if self.source_id() != to_replace {
+            self
+        } else {
+            Rc::try_unwrap(self.inner).unwrap_or_else(|r| (*r).clone())
+               .set_source_id(replace_with.clone())
+               .into_dependency()
+        }
     }
 }
 

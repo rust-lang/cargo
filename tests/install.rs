@@ -26,7 +26,7 @@ fn pkg(name: &str, vers: &str) {
             extern crate {};
             fn main() {{}}
         ", name))
-        .publish()
+        .publish();
 }
 
 #[test]
@@ -36,8 +36,8 @@ fn simple() {
     assert_that(cargo_process("install").arg("foo"),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
-[DOWNLOADING] foo v0.0.1 (registry file://[..])
-[COMPILING] foo v0.0.1 (registry file://[..])
+[DOWNLOADING] foo v0.0.1 (registry [..])
+[COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]foo[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -61,8 +61,8 @@ fn pick_max_version() {
     assert_that(cargo_process("install").arg("foo"),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
-[DOWNLOADING] foo v0.0.2 (registry file://[..])
-[COMPILING] foo v0.0.2 (registry file://[..])
+[DOWNLOADING] foo v0.0.2 (registry [..])
+[COMPILING] foo v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]foo[..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -77,7 +77,7 @@ fn missing() {
     assert_that(cargo_process("install").arg("bar"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
-[ERROR] could not find `bar` in `registry file://[..]`
+[ERROR] could not find `bar` in `registry [..]`
 "));
 }
 
@@ -87,7 +87,7 @@ fn bad_version() {
     assert_that(cargo_process("install").arg("foo").arg("--vers=0.2.0"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
-[ERROR] could not find `foo` in `registry file://[..]` with version `0.2.0`
+[ERROR] could not find `foo` in `registry [..]` with version `0.2.0`
 "));
 }
 
@@ -533,7 +533,7 @@ fn compile_failure() {
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(101).with_stderr_contains("\
-[ERROR] failed to compile `foo v0.1.0 (file://[..])`, intermediate artifacts can be \
+[ERROR] failed to compile `foo v0.1.0 ([..])`, intermediate artifacts can be \
     found at `[..]target`
 
 Caused by:
@@ -583,9 +583,9 @@ fn list() {
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--list"),
                 execs().with_status(0).with_stdout("\
-bar v0.2.1 (registry [..]):
+bar v0.2.1:
     bar[..]
-foo v0.0.1 (registry [..]):
+foo v0.0.1:
     foo[..]
 "));
 }
@@ -606,7 +606,7 @@ fn uninstall_bin_does_not_exist() {
                 execs().with_status(0));
     assert_that(cargo_process("uninstall").arg("foo").arg("--bin=bar"),
                 execs().with_status(101).with_stderr("\
-[ERROR] binary `bar[..]` not installed as part of `foo v0.0.1 ([..])`
+[ERROR] binary `bar[..]` not installed as part of `foo v0.0.1`
 "));
 }
 

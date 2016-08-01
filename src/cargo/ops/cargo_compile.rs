@@ -97,7 +97,7 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
                                 no_default_features: bool)
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
 
-    let mut registry = PackageRegistry::new(ws.config());
+    let mut registry = try!(PackageRegistry::new(ws.config()));
 
     if let Some(source) = source {
         registry.add_preloaded(try!(ws.current()).package_id().source_id(),
@@ -389,6 +389,7 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
         None => return Ok(())
     };
     let current = try!(ws.current());
+
     let paths = paths.val.iter().map(|&(ref s, ref p)| {
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
@@ -482,11 +483,11 @@ fn scrape_target_config(config: &Config, triple: &str)
             rerun_if_changed: Vec::new(),
             warnings: Vec::new(),
         };
-        for (k, value) in try!(value.table()).0 {
+        for (k, value) in try!(value.table(&lib_name)).0 {
             let key = format!("{}.{}", key, k);
             match &k[..] {
                 "rustc-flags" => {
-                    let (flags, definition) = try!(value.string());
+                    let (flags, definition) = try!(value.string(&k));
                     let whence = format!("in `{}` (in {})", key,
                                          definition.display());
                     let (paths, links) = try!(
@@ -496,22 +497,22 @@ fn scrape_target_config(config: &Config, triple: &str)
                     output.library_links.extend(links);
                 }
                 "rustc-link-lib" => {
-                    let list = try!(value.list());
+                    let list = try!(value.list(&k));
                     output.library_links.extend(list.iter()
                                                     .map(|v| v.0.clone()));
                 }
                 "rustc-link-search" => {
-                    let list = try!(value.list());
+                    let list = try!(value.list(&k));
                     output.library_paths.extend(list.iter().map(|v| {
                         PathBuf::from(&v.0)
                     }));
                 }
                 "rustc-cfg" => {
-                    let list = try!(value.list());
+                    let list = try!(value.list(&k));
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 _ => {
-                    let val = try!(value.string()).0;
+                    let val = try!(value.string(&k)).0;
                     output.metadata.push((k.clone(), val.to_string()));
                 }
             }

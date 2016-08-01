@@ -99,6 +99,14 @@ impl Package {
                                     .filter(|&(d, _)| d < 4);
         matches.min_by_key(|t| t.0).map(|t| t.1)
     }
+
+    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
+                      -> Package {
+        Package {
+            manifest: self.manifest.map_source(to_replace, replace_with),
+            manifest_path: self.manifest_path,
+        }
+    }
 }
 
 impl fmt::Display for Package {

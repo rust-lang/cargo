@@ -74,11 +74,14 @@ fn bad3() {
               proxy = true
         "#);
     Package::new("foo", "1.0.0").publish();
+
     assert_that(foo.cargo_process("publish").arg("-v"),
                 execs().with_status(101).with_stderr("\
-[UPDATING] registry `[..]`
-[ERROR] invalid configuration for key `http.proxy`
-expected a string, but found a boolean in [..]config
+error: failed to update registry [..]
+
+Caused by:
+  invalid configuration for key `http.proxy`
+expected a string, but found a boolean for `http.proxy` in [..]config
 "));
 }
 
@@ -95,7 +98,7 @@ fn bad4() {
 
 Caused by:
   invalid configuration for key `cargo-new.name`
-expected a string, but found a boolean in [..]config
+expected a string, but found a boolean for `cargo-new.name` in [..]config
 "));
 }
 
@@ -539,6 +542,156 @@ This will be considered an error in future versions
 }
 
 #[test]
+fn bad_source_config1() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [source.foo]
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+error: no source URL specified for `source.foo`, need [..]
+"));
+}
+
+#[test]
+fn bad_source_config2() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [source.crates-io]
+            registry = 'http://example.com'
+            replace-with = 'bar'
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+error: failed to load source for a dependency on `bar`
+
+Caused by:
+  Unable to update registry https://[..]
+
+Caused by:
+  could not find a configured source with the name `bar` \
+    when attempting to lookup `crates-io` (configuration in [..])
+"));
+}
+
+#[test]
+fn bad_source_config3() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [source.crates-io]
+            registry = 'http://example.com'
+            replace-with = 'crates-io'
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+error: failed to load source for a dependency on `bar`
+
+Caused by:
+  Unable to update registry https://[..]
+
+Caused by:
+  detected a cycle of `replace-with` sources, [..]
+"));
+}
+
+#[test]
+fn bad_source_config4() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [source.crates-io]
+            registry = 'http://example.com'
+            replace-with = 'bar'
+
+            [source.bar]
+            registry = 'http://example.com'
+            replace-with = 'crates-io'
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+error: failed to load source for a dependency on `bar`
+
+Caused by:
+  Unable to update registry https://[..]
+
+Caused by:
+  detected a cycle of `replace-with` sources, the source `crates-io` is \
+    eventually replaced with itself (configuration in [..])
+"));
+}
+
+#[test]
+fn bad_source_config5() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [source.crates-io]
+            registry = 'http://example.com'
+            replace-with = 'bar'
+
+            [source.bar]
+            registry = 'not a url'
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+error: configuration key `source.bar.registry` specified an invalid URL (in [..])
+
+Caused by:
+  invalid url `not a url`: [..]
+"));
+}
+
+#[test]
 fn both_git_and_path_specified() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
@@ -562,6 +715,31 @@ This will be considered an error in future versions
 }
 
 #[test]
+fn bad_source_config6() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [source.crates-io]
+            registry = 'http://example.com'
+            replace-with = ['not', 'a', 'string']
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+error: expected a string, but found a array for `source.crates-io.replace-with` in [..]
+"));
+}
+
+#[test]
 fn ignored_git_revision() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
@@ -580,4 +758,31 @@ fn ignored_git_revision() {
                 execs().with_stderr_contains("\
 [WARNING] key `branch` is ignored for dependency (bar). \
 This will be considered an error in future versions"));
+}
+
+#[test]
+fn bad_source_config7() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [source.foo]
+            registry = 'http://example.com'
+            local-registry = 'file:///another/file'
+        "#);
+
+    Package::new("bar", "0.1.0").publish();
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+error: more than one source URL specified for `source.foo`
+"));
 }

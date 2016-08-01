@@ -15,6 +15,7 @@ pub struct Summary {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
     features: HashMap<String, Vec<String>>,
+    checksum: Option<String>,
 }
 
 impl Summary {
@@ -60,6 +61,7 @@ impl Summary {
             package_id: pkg_id,
             dependencies: dependencies,
             features: features,
+            checksum: None,
         })
     }
 
@@ -69,9 +71,17 @@ impl Summary {
     pub fn source_id(&self) -> &SourceId { self.package_id.source_id() }
     pub fn dependencies(&self) -> &[Dependency] { &self.dependencies }
     pub fn features(&self) -> &HashMap<String, Vec<String>> { &self.features }
+    pub fn checksum(&self) -> Option<&str> {
+        self.checksum.as_ref().map(|s| &s[..])
+    }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
         self.package_id = id;
+        self
+    }
+
+    pub fn set_checksum(mut self, cksum: String) -> Summary {
+        self.checksum = Some(cksum);
         self
     }
 
@@ -81,22 +91,23 @@ impl Summary {
         self.dependencies = deps.into_iter().map(f).collect();
         self
     }
+
+    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
+                      -> Summary {
+        let me = if self.package_id().source_id() == to_replace {
+            let new_id = self.package_id().with_source_id(replace_with);
+            self.override_id(new_id)
+        } else {
+            self
+        };
+        me.map_dependencies(|dep| {
+            dep.map_source(to_replace, replace_with)
+        })
+    }
 }
 
 impl PartialEq for Summary {
     fn eq(&self, other: &Summary) -> bool {
         self.package_id == other.package_id
     }
-}
-
-pub trait SummaryVec {
-    fn names(&self) -> Vec<String>;
-}
-
-impl SummaryVec for Vec<Summary> {
-    // TODO: Move to Registry
-    fn names(&self) -> Vec<String> {
-        self.iter().map(|summary| summary.name().to_string()).collect()
-    }
-
 }

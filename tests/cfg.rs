@@ -221,8 +221,8 @@ fn works_through_the_registry() {
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
 [DOWNLOADING] [..]
-[COMPILING] foo v0.1.0 ([..])
-[COMPILING] bar v0.1.0 ([..])
+[COMPILING] foo v0.1.0
+[COMPILING] bar v0.1.0
 [COMPILING] a v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
