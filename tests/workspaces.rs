@@ -6,7 +6,7 @@ use std::io::{Read, Write};
 use std::fs::File;
 
 use cargotest::sleep_ms;
-use cargotest::support::{project, execs};
+use cargotest::support::{project, execs, git};
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
@@ -876,4 +876,37 @@ fn rebuild_please() {
 
     assert_that(p.cargo("run").cwd(p.root().join("bin")),
                 execs().with_status(101));
+}
+
+#[test]
+fn workspace_in_git() {
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [workspace]
+                members = ["foo"]
+            "#)
+            .file("foo/Cargo.toml", r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#)
+            .file("foo/src/lib.rs", "")
+    }).unwrap();
+    let p = project("foo")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "lib"
+            version = "0.1.0"
+
+            [dependencies.foo]
+            git = '{}'
+        "#, git_project.url()))
+        .file("src/lib.rs", r#"
+            pub fn foo() -> u32 { 0 }
+        "#);
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
 }

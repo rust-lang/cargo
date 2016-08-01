@@ -119,9 +119,15 @@ fn read_nested_packages(path: &Path,
                         visited: &mut HashSet<PathBuf>) -> CargoResult<()> {
     if !visited.insert(path.to_path_buf()) { return Ok(()) }
 
-    let manifest = try!(find_project_manifest_exact(path, "Cargo.toml"));
+    let manifest_path = try!(find_project_manifest_exact(path, "Cargo.toml"));
 
-    let (pkg, nested) = try!(read_package(&manifest, source_id, config));
+    let (manifest, nested) = try!(read_manifest(&manifest_path, source_id, config));
+    let manifest = match manifest {
+        EitherManifest::Real(manifest) => manifest,
+        EitherManifest::Virtual(..) => return Ok(()),
+    };
+    let pkg = Package::new(manifest, &manifest_path);
+
     let pkg_id = pkg.package_id().clone();
     if !all_packages.contains_key(&pkg_id) {
         all_packages.insert(pkg_id, pkg);
