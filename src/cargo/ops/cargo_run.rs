@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use ops::{self, CompileFilter};
-use util::{self, CargoResult, process, ProcessError};
+use util::{self, CargoResult, ProcessError};
 use core::Workspace;
 
 pub fn run(ws: &Workspace,
