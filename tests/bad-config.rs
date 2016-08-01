@@ -513,3 +513,71 @@ in the future.
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
+
+#[test]
+fn ambiguous_git_reference() {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+
+        [dependencies.bar]
+        git = "https://example.com"
+        branch = "master"
+        tag = "some-tag"
+    "#)
+    .file("src/lib.rs", "");
+
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_stderr_contains("\
+[WARNING] dependency (bar) specification is ambiguous. \
+Only one of `branch`, `tag` or `rev` is allowed. \
+This will be considered an error in future versions
+"));
+}
+
+#[test]
+fn both_git_and_path_specified() {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+
+        [dependencies.bar]
+        git = "https://example.com"
+        path = "bar"
+    "#)
+        .file("src/lib.rs", "");
+
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_stderr_contains("\
+[WARNING] dependency (bar) specification is ambiguous. \
+Only one of `git` or `path` is allowed. \
+This will be considered an error in future versions
+"));
+}
+
+#[test]
+fn ignored_git_revision() {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+
+        [dependencies.bar]
+        path = "bar"
+        branch = "spam"
+    "#)
+        .file("src/lib.rs", "");
+
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_stderr_contains("\
+[WARNING] key `branch` is ignored for dependency (bar). \
+This will be considered an error in future versions"));
+}
