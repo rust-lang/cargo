@@ -45,6 +45,9 @@ toml = "0.1.29"
 url = "1.1"
 winapi = "0.2"
 
+[target.'cfg(unix)'.dependencies]
+openssl = "0.7"
+
 [dev-dependencies]
 hamcrest = "0.1"
 bufstream = "0.1"
