@@ -1024,6 +1024,7 @@ fn lto_build() {
 [RUNNING] `rustc src[..]main.rs --crate-name test --crate-type bin \
         -C opt-level=3 \
         -C lto \
+        -C metadata=[..] \
         --out-dir {dir}[..]target[..]release \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release[..]deps`
@@ -1050,6 +1051,7 @@ fn verbose_build() {
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib -g \
+        -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]debug[..]deps`
@@ -1077,6 +1079,7 @@ fn verbose_release_build() {
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
+        -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release[..]deps`
@@ -1120,12 +1123,14 @@ fn verbose_release_build_deps() {
 [RUNNING] `rustc foo[..]src[..]lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=3 \
+        -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release[..]deps`
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
+        -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}[..]target[..]release[..]deps \

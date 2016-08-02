@@ -9,7 +9,7 @@ use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::shell::ColorConfig;
 use util::{self, CargoResult, human};
-use util::{Config, internal, ChainError, profile, join_paths};
+use util::{Config, internal, ChainError, profile, join_paths, short_hash};
 
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
@@ -554,9 +554,14 @@ fn build_base_args(cx: &Context,
         }
     }
 
-    if let Some(m) = cx.target_metadata(unit) {
-        cmd.arg("-C").arg(&format!("metadata={}", m.metadata));
-        cmd.arg("-C").arg(&format!("extra-filename={}", m.extra_filename));
+    match cx.target_metadata(unit) {
+        Some(m) => {
+            cmd.arg("-C").arg(&format!("metadata={}", m.metadata));
+            cmd.arg("-C").arg(&format!("extra-filename={}", m.extra_filename));
+        }
+        None => {
+            cmd.arg("-C").arg(&format!("metadata={}", short_hash(unit.pkg)));
+        }
     }
 
     if rpath {

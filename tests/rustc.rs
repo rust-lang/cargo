@@ -30,6 +30,7 @@ fn build_lib_for_foo() {
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
+        -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
@@ -60,6 +61,7 @@ fn lib() {
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
         -C debug-assertions=off \
+        -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
@@ -89,11 +91,13 @@ fn build_main_and_allow_unstable_options() {
                 .with_stderr(&format!("\
 [COMPILING] {name} v{version} ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name {name} --crate-type lib -g \
+        -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug{sep}deps`
 [RUNNING] `rustc src{sep}main.rs --crate-name {name} --crate-type bin -g \
         -C debug-assertions \
+        -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
@@ -152,6 +156,7 @@ fn build_with_args_to_one_of_multiple_binaries() {
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
+        -C metadata=[..] \
         --out-dir [..]`
 [RUNNING] `rustc src{sep}bin{sep}bar.rs --crate-name bar --crate-type bin -g \
         -C debug-assertions [..]`
@@ -207,6 +212,7 @@ fn build_with_args_to_one_of_multiple_tests() {
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
+        -C metadata=[..] \
         --out-dir [..]`
 [RUNNING] `rustc tests{sep}bar.rs --crate-name bar -g \
         -C debug-assertions [..]--test[..]`
