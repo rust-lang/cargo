@@ -30,6 +30,7 @@ fn profile_overrides() {
 [RUNNING] `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -C debug-assertions=on \
+        -C metadata=[..] \
         -C rpath \
         --out-dir [..] \
         --emit=dep-info,link \
@@ -83,6 +84,7 @@ fn top_level_overrides_deps() {
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=1 \
         -g \
+        -C metadata=[..] \
         --out-dir {dir}{sep}target{sep}release{sep}deps \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release{sep}deps`
@@ -90,6 +92,7 @@ fn top_level_overrides_deps() {
 [RUNNING] `rustc src{sep}lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -g \
+        -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}release{sep}deps \
