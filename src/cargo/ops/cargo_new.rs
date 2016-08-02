@@ -375,6 +375,9 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     if !opts.bin {
         ignore.push_str("Cargo.lock\n");
     }
+    // Add a rule to ignore rustfmt backup files in the vcs ignore file
+    ignore.push_str("# Ignore rustfmt backup files\n");
+    ignore.push_str("*.rs.bk\n");
 
     let vcs = match (opts.version_control, cfg.version_control, in_existing_vcs_repo) {
         (None, None, false) => VersionControl::Git,
