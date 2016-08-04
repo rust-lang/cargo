@@ -89,6 +89,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
 
     try!(cx.prepare());
     try!(cx.probe_target_info(&units));
+    try!(cx.build_used_in_plugin_map(&units));
     try!(custom_build::build_map(&mut cx, &units));
 
     for unit in units.iter() {
@@ -512,8 +513,20 @@ fn build_base_args(cx: &Context,
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
     }
 
+    // If a panic mode was configured *and* we're not ever going to be used in a
+    // plugin, then we can compile with that panic mode.
+    //
+    // If we're used in a plugin then we'll eventually be linked to libsyntax
+    // most likely which isn't compiled with a custom panic mode, so we'll just
+    // get an error if we actually compile with that. This fixes `panic=abort`
+    // crates which have plugin dependencies, but unfortunately means that
+    // dependencies shared between the main application and plugins must be
+    // compiled without `panic=abort`. This isn't so bad, though, as the main
+    // application will still be compiled with `panic=abort`.
     if let Some(panic) = panic.as_ref() {
-        cmd.arg("-C").arg(format!("panic={}", panic));
+        if !cx.used_in_plugin.contains(unit) {
+            cmd.arg("-C").arg(format!("panic={}", panic));
+        }
     }
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually
