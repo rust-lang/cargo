@@ -15,7 +15,6 @@ use url::Url;
 use hamcrest as ham;
 use cargo::util::ProcessBuilder;
 use cargo::util::ProcessError;
-use cargo::util::process;
 
 use support::paths::CargoPathExt;
 
