@@ -117,21 +117,18 @@ fn cargo_compile_duplicate_build_targets() {
             [dependencies]
         "#)
         .file("src/main.rs", r#"
+            #![allow(warnings)]
             fn main() {}
         "#);
 
-    let error_message = format!("\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  duplicate build target found: `{}`",
-                     p.root().join("src[..]main.rs").display());
-
     assert_that(p.cargo_process("build"),
                 execs()
-                .with_status(101)
-                .with_stderr(error_message)
-    )
+                .with_status(0)
+                .with_stderr("\
+warning: file found to be present in multiple build targets: [..]main.rs
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] [..]
+"));
 }
 
 #[test]
