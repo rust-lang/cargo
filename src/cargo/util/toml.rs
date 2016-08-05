@@ -536,7 +536,8 @@ impl TomlManifest {
         }
 
         if let Err(e) = unique_build_targets(&targets, layout) {
-            bail!("duplicate build target found: `{}`", e);
+            warnings.push(format!("file found to be present in multiple \
+                                   build targets: {}", e));
         }
 
         let mut deps = Vec::new();
