@@ -1,7 +1,7 @@
 % Replacing sources
 
 Cargo supports the ability to **replace one source with another** to express
-strategies along the lines of mirrors or vendoering dependencies. Configuration
+strategies along the lines of mirrors or vendoring dependencies. Configuration
 is currently done through the [`.cargo/config` configuration][config] mechanism,
 like so:
 
@@ -9,7 +9,7 @@ like so:
 
 ```toml
 # The `source` table is where all keys related to source-replacement
-# are store.
+# are stored.
 [source]
 
 # Under the `source` table are a number of other tables whose keys are a
@@ -27,7 +27,7 @@ directory = "vendor"
 replace-with = "my-awesome-source"
 ```
 
-With this configuration Cargo attempt to look up all crates in the directory
+With this configuration Cargo attempts to look up all crates in the directory
 "vendor" rather than querying the online registry at crates.io. Using source
 replacement Cargo can express:
 
