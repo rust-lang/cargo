@@ -79,7 +79,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
     let mut url = url.clone();
 
     // Strip a trailing slash
-    if url.path().ends_with("/") {
+    if url.path().ends_with('/') {
         url.path_segments_mut().unwrap().pop_if_empty();
     }
 
