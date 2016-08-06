@@ -288,7 +288,7 @@ impl<'cfg> PathSource<'cfg> {
             let dir = try!(dir).path();
             let name = dir.file_name().and_then(|s| s.to_str());
             // Skip dotfile directories
-            if name.map(|s| s.starts_with(".")) == Some(true) {
+            if name.map(|s| s.starts_with('.')) == Some(true) {
                 continue
             } else if is_root {
                 // Skip cargo artifacts

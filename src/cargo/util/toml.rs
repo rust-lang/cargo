@@ -93,7 +93,7 @@ fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
                 // even valid UTF-8. Here we just ignore all of them and require
                 // that they are explicitly specified in Cargo.toml if desired.
                 f.file_name().and_then(|s| s.to_str()).map(|s| {
-                    !s.starts_with(".")
+                    !s.starts_with('.')
                 }).unwrap_or(true)
             }))
         }
@@ -925,7 +925,7 @@ impl TomlTarget {
             Some(ref name) => {
                 if name.trim().is_empty() {
                     Err(human("library target names cannot be empty.".to_string()))
-                } else if name.contains("-") {
+                } else if name.contains('-') {
                     Err(human(format!("library target names cannot contain hyphens: {}",
                                       name)))
                 } else {
