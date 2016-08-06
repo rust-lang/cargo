@@ -215,7 +215,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                             return Some(Ok(Token::String(&self.orig[start+1..end])))
                         }
                     }
-                    return Some(Err(human(format!("unterminated string in cfg"))))
+                    return Some(Err(human("unterminated string in cfg".to_string())))
                 }
                 Some((start, ch)) if is_ident_start(ch) => {
                     while let Some(&(end, ch)) = self.s.peek() {
