@@ -12,9 +12,7 @@ use std::borrow::Cow;
 use std::env;
 
 pub fn escape(s: Cow<str>) -> Cow<str> {
-    if cfg!(unix) {
-        unix::escape(s)
-    } else if env::var("MSYSTEM").is_ok() {
+    if cfg!(unix) || env::var("MSYSTEM").is_ok() {
         unix::escape(s)
     } else {
         windows::escape(s)
