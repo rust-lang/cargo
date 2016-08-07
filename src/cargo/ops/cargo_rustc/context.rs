@@ -39,6 +39,7 @@ pub struct Context<'a, 'cfg: 'a> {
     pub build_config: BuildConfig,
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
     pub links: Links<'a>,
+    pub used_in_plugin: HashSet<Unit<'a>>,
 
     host: Layout,
     target: Option<Layout>,
@@ -91,6 +92,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),
             links: Links::new(),
+            used_in_plugin: HashSet::new(),
         })
     }
 
@@ -232,6 +234,41 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
         info.crate_types = map;
         info.cfg = cfg;
+        Ok(())
+    }
+
+    /// Builds up the `used_in_plugin` internal to this context from the list of
+    /// top-level units.
+    ///
+    /// This will recursively walk `units` and all of their dependencies to
+    /// determine which crate are going to be used in plugins or not.
+    pub fn build_used_in_plugin_map(&mut self, units: &[Unit<'a>])
+                                    -> CargoResult<()> {
+        let mut visited = HashSet::new();
+        for unit in units {
+            try!(self.walk_used_in_plugin_map(unit,
+                                              unit.target.for_host(),
+                                              &mut visited));
+        }
+        Ok(())
+    }
+
+    fn walk_used_in_plugin_map(&mut self,
+                               unit: &Unit<'a>,
+                               is_plugin: bool,
+                               visited: &mut HashSet<(Unit<'a>, bool)>)
+                               -> CargoResult<()> {
+        if !visited.insert((*unit, is_plugin)) {
+            return Ok(())
+        }
+        if is_plugin {
+            self.used_in_plugin.insert(*unit);
+        }
+        for unit in try!(self.dep_targets(unit)) {
+            try!(self.walk_used_in_plugin_map(&unit,
+                                              is_plugin || unit.target.for_host(),
+                                              visited));
+        }
         Ok(())
     }
 

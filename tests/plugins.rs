@@ -274,3 +274,93 @@ fn native_plugin_dependency_with_custom_ar_linker() {
 [ERROR] could not exec the linker [..]
 "));
 }
+
+#[test]
+fn panic_abort_plugins() {
+    if !is_nightly() {
+        return
+    }
+
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [profile.dev]
+            panic = 'abort'
+
+            [dependencies]
+            foo = { path = "foo" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            plugin = true
+        "#)
+        .file("foo/src/lib.rs", r#"
+            #![feature(rustc_private)]
+            extern crate syntax;
+        "#);
+
+    assert_that(bar.cargo_process("build"),
+                execs().with_status(0));
+}
+
+#[test]
+fn shared_panic_abort_plugins() {
+    if !is_nightly() {
+        return
+    }
+
+    let bar = project("top")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "top"
+            version = "0.0.1"
+            authors = []
+
+            [profile.dev]
+            panic = 'abort'
+
+            [dependencies]
+            foo = { path = "foo" }
+            bar = { path = "bar" }
+        "#)
+        .file("src/lib.rs", "
+            extern crate bar;
+        ")
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            plugin = true
+
+            [dependencies]
+            bar = { path = "../bar" }
+        "#)
+        .file("foo/src/lib.rs", r#"
+            #![feature(rustc_private)]
+            extern crate syntax;
+            extern crate bar;
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(bar.cargo_process("build"),
+                execs().with_status(0));
+}
