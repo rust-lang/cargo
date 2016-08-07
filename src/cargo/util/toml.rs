@@ -93,7 +93,7 @@ fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
                 // even valid UTF-8. Here we just ignore all of them and require
                 // that they are explicitly specified in Cargo.toml if desired.
                 f.file_name().and_then(|s| s.to_str()).map(|s| {
-                    !s.starts_with(".")
+                    !s.starts_with('.')
                 }).unwrap_or(true)
             }))
         }
@@ -653,8 +653,8 @@ impl TomlManifest {
                                          replace,
                                          workspace_config);
         if project.license_file.is_some() && project.license.is_some() {
-            manifest.add_warning(format!("only one of `license` or \
-                                          `license-file` is necessary"));
+            manifest.add_warning("only one of `license` or \
+                                 `license-file` is necessary".to_string());
         }
         for warning in warnings {
             manifest.add_warning(warning.clone());
@@ -924,8 +924,8 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err(human(format!("library target names cannot be empty.")))
-                } else if name.contains("-") {
+                    Err(human("library target names cannot be empty.".to_string()))
+                } else if name.contains('-') {
                     Err(human(format!("library target names cannot contain hyphens: {}",
                                       name)))
                 } else {
@@ -940,12 +940,12 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err(human(format!("binary target names cannot be empty.")))
+                    Err(human("binary target names cannot be empty.".to_string()))
                 } else {
                     Ok(())
                 }
             },
-            None => Err(human(format!("binary target bin.name is required")))
+            None => Err(human("binary target bin.name is required".to_string()))
         }
     }
 
@@ -953,12 +953,12 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err(human(format!("example target names cannot be empty")))
+                    Err(human("example target names cannot be empty".to_string()))
                 } else {
                     Ok(())
                 }
             },
-            None => Err(human(format!("example target example.name is required")))
+            None => Err(human("example target example.name is required".to_string()))
         }
     }
 
@@ -966,12 +966,12 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err(human(format!("test target names cannot be empty")))
+                    Err(human("test target names cannot be empty".to_string()))
                 } else {
                     Ok(())
                 }
             },
-            None => Err(human(format!("test target test.name is required")))
+            None => Err(human("test target test.name is required".to_string()))
         }
     }
 
@@ -979,12 +979,12 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err(human(format!("bench target names cannot be empty")))
+                    Err(human("bench target names cannot be empty".to_string()))
                 } else {
                     Ok(())
                 }
             },
-            None => Err(human(format!("bench target bench.name is required")))
+            None => Err(human("bench target bench.name is required".to_string()))
         }
     }
 }
