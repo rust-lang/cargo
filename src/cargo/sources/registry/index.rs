@@ -180,7 +180,7 @@ impl<'cfg> Registry for RegistryIndex<'cfg> {
         summaries.retain(|s| {
             match self.source_id.precise() {
                 Some(p) if p.starts_with(dep.name()) &&
-                           p[dep.name().len()..].starts_with("=") => {
+                           p[dep.name().len()..].starts_with('=') => {
                     let vers = &p[dep.name().len() + 1..];
                     s.version().to_string() == vers
                 }

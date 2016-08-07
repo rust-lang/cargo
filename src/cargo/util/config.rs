@@ -197,8 +197,8 @@ impl Config {
 
     pub fn get_path(&self, key: &str) -> CargoResult<Option<Value<PathBuf>>> {
         if let Some(val) = try!(self.get_string(&key)) {
-            let is_path = val.val.contains("/") ||
-                          (cfg!(windows) && val.val.contains("\\"));
+            let is_path = val.val.contains('/') ||
+                          (cfg!(windows) && val.val.contains('\\'));
             let path = if is_path {
                 val.definition.root(self).join(val.val)
             } else {
