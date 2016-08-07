@@ -291,7 +291,7 @@ fn acquire(config: &Config,
         human(format!("failed to lock file: {}", path.display()))
     });
 
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", not(target_env = "musl")))]
     fn is_on_nfs_mount(path: &Path) -> bool {
         use std::ffi::CString;
         use std::mem;
@@ -310,7 +310,7 @@ fn acquire(config: &Config,
         }
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(any(not(target_os = "linux"), target_env = "musl"))]
     fn is_on_nfs_mount(_path: &Path) -> bool {
         false
     }
