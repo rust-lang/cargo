@@ -17,7 +17,7 @@ kernel32-sys = "0.2"
 libc = "0.2"
 log = "0.3"
 rustc-serialize = "0.3"
-tar = "0.4"
+tar = { version = "0.4", default-features = false }
 tempdir = "0.3"
 term = "0.4.4"
 url = "1.1"
