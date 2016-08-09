@@ -857,7 +857,6 @@ fn output_separate_lines() {
 [RUNNING] `[..]foo-[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..] -L foo -l static=foo`
 [ERROR] could not find native static library [..]
-[ERROR] Could not compile [..]
 "));
 }
 
@@ -886,7 +885,6 @@ fn output_separate_lines_new() {
 [RUNNING] `[..]foo-[..]build-script-build[..]`
 [RUNNING] `rustc [..] --crate-name foo [..] -L foo -l static=foo`
 [ERROR] could not find native static library [..]
-[ERROR] Could not compile [..]
 "));
 }
 
