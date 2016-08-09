@@ -2,10 +2,11 @@ use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::Path;
 
-use curl::easy::Easy;
+use curl::easy::{Easy, List};
 use git2;
-use rustc_serialize::json;
 use rustc_serialize::hex::ToHex;
+use rustc_serialize::json;
+use url::Url;
 
 use core::{PackageId, SourceId};
 use ops;
@@ -70,10 +71,29 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
         try!(self.config.shell().status("Updating",
              format!("registry `{}`", self.source_id.url())));
+
         let repo = try!(git2::Repository::open(path).or_else(|_| {
             let _ = lock.remove_siblings();
             git2::Repository::init(path)
         }));
+
+        if self.source_id.url().host_str() == Some("github.com") {
+            if let Ok(oid) = repo.refname_to_id("refs/heads/master") {
+                let handle = match self.handle {
+                    Some(ref mut handle) => handle,
+                    None => {
+                        self.handle = Some(try!(ops::http_handle(self.config)));
+                        self.handle.as_mut().unwrap()
+                    }
+                };
+                debug!("attempting github fast path for {}",
+                       self.source_id.url());
+                if github_up_to_date(handle, &self.source_id.url(), &oid) {
+                    return Ok(())
+                }
+                debug!("fast path failed, falling back to a git fetch");
+            }
+        }
 
         // git fetch origin
         let url = self.source_id.url().to_string();
@@ -150,4 +170,51 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         try!(dst.seek(SeekFrom::Start(0)));
         Ok(dst)
     }
+}
+
+/// Updating the index is done pretty regularly so we want it to be as fast as
+/// possible. For registries hosted on github (like the crates.io index) there's
+/// a fast path available to use [1] to tell us that there's no updates to be
+/// made.
+///
+/// This function will attempt to hit that fast path and verify that the `oid`
+/// is actually the current `master` branch of the repository. If `true` is
+/// returned then no update needs to be performed, but if `false` is returned
+/// then the standard update logic still needs to happen.
+///
+/// [1]: https://developer.github.com/v3/repos/commits/#get-the-sha-1-of-a-commit-reference
+///
+/// Note that this function should never cause an actual failure because it's
+/// just a fast path. As a result all errors are ignored in this function and we
+/// just return a `bool`. Any real errors will be reported through the normal
+/// update path above.
+fn github_up_to_date(handle: &mut Easy, url: &Url, oid: &git2::Oid) -> bool {
+    macro_rules! try {
+        ($e:expr) => (match $e {
+            Some(e) => e,
+            None => return false,
+        })
+    }
+
+    // This expects github urls in the form `github.com/user/repo` and nothing
+    // else
+    let mut pieces = try!(url.path_segments());
+    let username = try!(pieces.next());
+    let repo = try!(pieces.next());
+    if pieces.next().is_some() {
+        return false
+    }
+
+    let url = format!("https://api.github.com/repos/{}/{}/commits/master",
+                      username, repo);
+    try!(handle.get(true).ok());
+    try!(handle.url(&url).ok());
+    try!(handle.useragent("cargo").ok());
+    let mut headers = List::new();
+    try!(headers.append("Accept: application/vnd.github.3.sha").ok());
+    try!(headers.append(&format!("If-None-Match: \"{}\"", oid)).ok());
+    try!(handle.http_headers(headers).ok());
+    try!(handle.perform().ok());
+
+    try!(handle.response_code().ok()) == 304
 }
