@@ -237,6 +237,89 @@ Caused by:
 }
 
 #[test]
+fn duplicate_packages_in_cargo_lock() {
+    Package::new("foo", "0.1.0").publish();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", r#"
+            [root]
+            name = "bar"
+            version = "0.0.1"
+            dependencies = [
+             "foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+            ]
+
+            [[package]]
+            name = "foo"
+            version = "0.1.0"
+            source = "registry+https://github.com/rust-lang/crates.io-index"
+
+            [[package]]
+            name = "foo"
+            version = "0.1.0"
+            source = "registry+https://github.com/rust-lang/crates.io-index"
+        "#);
+    p.build();
+
+    assert_that(p.cargo("build").arg("--verbose"),
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse lock file at: [..]
+
+Caused by:
+  package `foo` is specified twice in the lockfile
+"));
+}
+
+#[test]
+fn bad_source_in_cargo_lock() {
+    Package::new("foo", "0.1.0").publish();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", r#"
+            [root]
+            name = "bar"
+            version = "0.0.1"
+            dependencies = [
+             "foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+            ]
+
+            [[package]]
+            name = "foo"
+            version = "0.1.0"
+            source = "You shall not parse"
+        "#);
+    p.build();
+
+    assert_that(p.cargo("build").arg("--verbose"),
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse lock file at: [..]
+
+Caused by:
+  invalid source `You shall not parse` for the key `package.source`
+"));
+}
+
+#[test]
 fn bad_git_dependency() {
     let foo = project("foo")
     .file("Cargo.toml", r#"

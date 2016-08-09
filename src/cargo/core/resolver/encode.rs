@@ -20,7 +20,7 @@ pub struct EncodableResolve {
 pub type Metadata = BTreeMap<String, String>;
 
 impl EncodableResolve {
-    pub fn to_resolve(self, ws: &Workspace) -> CargoResult<Resolve> {
+    pub fn into_resolve(self, ws: &Workspace) -> CargoResult<Resolve> {
         let path_deps = build_path_deps(ws);
         let default = try!(ws.current()).package_id().source_id();
 
@@ -48,14 +48,17 @@ impl EncodableResolve {
             let mut register_pkg = |pkgid: &PackageId| {
                 let precise = pkgid.source_id().precise()
                                    .map(|s| s.to_string());
-                assert!(tmp.insert(pkgid.clone(), precise).is_none(),
-                        "a package was referenced twice in the lockfile");
+                if tmp.insert(pkgid.clone(), precise).is_some() {
+                    return Err(internal(format!("package `{}` is specified twice in the lockfile",
+                                                pkgid.name())));
+                }
                 g.add(pkgid.clone(), &[]);
+                Ok(())
             };
 
-            register_pkg(&root);
+            try!(register_pkg(&root));
             for id in ids.iter() {
-                register_pkg(id);
+                try!(register_pkg(id));
             }
         }
 
