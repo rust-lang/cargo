@@ -26,7 +26,7 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
         let table = toml::Value::Table(table);
         let mut d = toml::Decoder::new(table);
         let v: resolver::EncodableResolve = try!(Decodable::decode(&mut d));
-        Ok(Some(try!(v.to_resolve(ws))))
+        Ok(Some(try!(v.into_resolve(ws))))
     }).chain_error(|| {
         human(format!("failed to parse lock file at: {}", f.path().display()))
     })
