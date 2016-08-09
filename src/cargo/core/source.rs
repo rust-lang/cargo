@@ -131,7 +131,7 @@ impl SourceId {
     pub fn from_url(string: &str) -> CargoResult<SourceId> {
         let mut parts = string.splitn(2, '+');
         let kind = parts.next().unwrap();
-        let url = parts.next().unwrap();
+        let url = try!(parts.next().ok_or(human(format!("invalid source `{}`", string))));
 
         match kind {
             "git" => {
