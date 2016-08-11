@@ -59,6 +59,8 @@ pub struct CompileOptions<'a> {
     pub release: bool,
     /// Mode for this compile.
     pub mode: CompileMode,
+    /// `--error_format` flag for the compiler.
+    pub message_format: MessageFormat,
     /// Extra arguments to be passed to rustdoc (for main crate and dependencies)
     pub target_rustdoc_args: Option<&'a [String]>,
     /// The specified target will be compiled with all the available arguments,
@@ -72,6 +74,23 @@ pub enum CompileMode {
     Build,
     Bench,
     Doc { deps: bool },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum MessageFormat {
+    Human,
+    Json
+}
+
+impl MessageFormat {
+    pub fn from_option(opt: &Option<String>) -> CargoResult<MessageFormat> {
+        match opt.as_ref().map(|s| s.as_ref()) {
+            None | Some("human") => Ok(MessageFormat::Human),
+            Some("json-v1") => Ok(MessageFormat::Json),
+            Some(other) => bail!("argument for --message-format must be human or json-v1, \
+                                 but found `{}`", other)
+        }
+    }
 }
 
 pub enum CompileFilter<'a> {
@@ -150,7 +169,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     let root_package = try!(ws.current());
     let CompileOptions { config, jobs, target, spec, features,
                          all_features, no_default_features,
-                         release, mode,
+                         release, mode, message_format,
                          ref filter, ref exec_engine,
                          ref target_rustdoc_args,
                          ref target_rustc_args } = *options;
@@ -242,6 +261,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         build_config.exec_engine = exec_engine.clone();
         build_config.release = release;
         build_config.test = mode == CompileMode::Test;
+        build_config.json_errors = message_format == MessageFormat::Json;
         if let CompileMode::Doc { deps } = mode {
             build_config.doc_all = deps;
         }

@@ -258,7 +258,7 @@ pub struct Execs {
     expect_exit_code: Option<i32>,
     expect_stdout_contains: Vec<String>,
     expect_stderr_contains: Vec<String>,
-    expect_json: Option<Json>,
+    expect_json: Option<Vec<Json>>,
 }
 
 impl Execs {
@@ -288,7 +288,9 @@ impl Execs {
     }
 
     pub fn with_json(mut self, expected: &str) -> Execs {
-        self.expect_json = Some(Json::from_str(expected).unwrap());
+        self.expect_json = Some(expected.split("\n\n").map(|obj| {
+            Json::from_str(obj).unwrap()
+        }).collect());
         self
     }
 
@@ -324,8 +326,18 @@ impl Execs {
                                 &actual.stdout, true));
         }
 
-        if let Some(ref expect_json) = self.expect_json {
-            try!(self.match_json(expect_json, &actual.stdout));
+        if let Some(ref objects) = self.expect_json {
+            let lines = match str::from_utf8(&actual.stdout) {
+                Err(..) => return Err("stdout was not utf8 encoded".to_owned()),
+                Ok(stdout) => stdout.lines().collect::<Vec<_>>(),
+            };
+            if lines.len() != objects.len() {
+                return Err(format!("expected {} json lines, got {}",
+                                   objects.len(), lines.len()));
+            }
+            for (obj, line) in objects.iter().zip(lines) {
+                try!(self.match_json(obj, line));
+            }
         }
         Ok(())
     }
@@ -375,14 +387,9 @@ impl Execs {
 
     }
 
-    fn match_json(&self, expected: &Json, stdout: &[u8]) -> ham::MatchResult {
-        let stdout = match str::from_utf8(stdout) {
-            Err(..) => return Err("stdout was not utf8 encoded".to_owned()),
-            Ok(stdout) => stdout,
-        };
-
-        let actual = match Json::from_str(stdout) {
-             Err(..) => return Err(format!("Invalid json {}", stdout)),
+    fn match_json(&self, expected: &Json, line: &str) -> ham::MatchResult {
+        let actual = match Json::from_str(line) {
+             Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
              Ok(actual) => actual,
         };
 

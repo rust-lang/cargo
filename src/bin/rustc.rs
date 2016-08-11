@@ -19,6 +19,7 @@ pub struct Options {
     flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
+    flag_message_format: Option<String>,
     flag_release: bool,
     flag_lib: bool,
     flag_bin: Vec<String>,
@@ -55,6 +56,7 @@ Options:
     -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
+    --message-format FMT     Error format: human, json-v1
     --frozen                 Require Cargo.lock and cache are up to date
     --locked                 Require Cargo.lock is up to date
 
@@ -80,6 +82,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                           &options.flag_color,
                           options.flag_frozen,
                           options.flag_locked));
+    let message_format = try!(ops::MessageFormat::from_option(
+        &options.flag_message_format
+    ));
 
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path,
                                               config.cwd()));
@@ -110,6 +115,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                         &options.flag_test,
                                         &options.flag_example,
                                         &options.flag_bench),
+        message_format: message_format,
         target_rustdoc_args: None,
         target_rustc_args: options.arg_opts.as_ref().map(|a| &a[..]),
     };
