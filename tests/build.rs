@@ -2277,6 +2277,81 @@ fn explicit_color_config_is_propagated_to_rustc() {
 }
 
 #[test]
+fn compiler_json_error_format() {
+    if !is_nightly() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", "fn main() { let unused = 92; }")
+        .file("bar/Cargo.toml", r#"
+            [project]
+
+            name = "bar"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+        "#)
+        .file("bar/src/lib.rs", r#"fn dead() {}"#);
+
+    assert_that(p.cargo_process("build").arg("-v")
+                    .arg("--message-format").arg("json-v1"),
+                execs().with_json(r#"
+    {
+        "reason":"rustc-message",
+        "package_id":"bar 0.5.0 ([..])",
+        "target":{"kind":["lib"],"name":"bar","src_path":"[..]lib.rs"},
+        "message":{
+            "children":[],"code":null,"level":"warning","rendered":null,
+            "message":"function is never used: `dead`, #[warn(dead_code)] on by default",
+            "spans":[{
+                "byte_end":12,"byte_start":0,"column_end":13,"column_start":1,"expansion":null,
+                "file_name":"[..]","is_primary":true,"label":null,"line_end":1,"line_start":1,
+                "suggested_replacement":null,
+                "text":[{"highlight_end":13,"highlight_start":1,"text":"fn dead() {}"}]
+            }]
+        }
+    }
+
+    {
+        "reason":"rustc-message",
+        "package_id":"foo 0.5.0 ([..])",
+        "target":{"kind":["bin"],"name":"foo","src_path":"[..]main.rs"},
+        "message":{
+            "children":[],"code":null,"level":"warning","rendered":null,
+            "message":"unused variable: `unused`, #[warn(unused_variables)] on by default",
+            "spans":[{
+                "byte_end":22,"byte_start":16,"column_end":23,"column_start":17,"expansion":null,
+                "file_name":"[..]","is_primary":true,"label":null,"line_end":1,"line_start":1,
+                "suggested_replacement":null,
+                "text":[{"highlight_end":23,"highlight_start":17,"text":"[..]"}]
+            }]
+        }
+    }
+"#));
+}
+
+#[test]
+fn wrong_message_format_option() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo_process("build").arg("--message-format").arg("XML"),
+                execs().with_status(101)
+                       .with_stderr_contains("\
+[ERROR] argument for --message-format must be human or json-v1, but found `XML`"));
+}
+
+#[test]
 fn no_warn_about_package_metadata() {
     let p = project("foo")
         .file("Cargo.toml", r#"
