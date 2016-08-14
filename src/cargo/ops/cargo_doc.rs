@@ -53,7 +53,10 @@ pub fn doc(ws: &Workspace,
         // Don't bother locking here as if this is getting deleted there's
         // nothing we can do about it and otherwise if it's getting overwritten
         // then that's also ok!
-        let target_dir = ws.target_dir();
+        let mut target_dir = ws.target_dir();
+        if let Some(triple) = options.compile_opts.target {
+            target_dir.push(Path::new(triple).file_stem().unwrap());
+        }
         let path = target_dir.join("doc").join(&name).join("index.html");
         let path = path.into_path_unlocked();
         if fs::metadata(&path).is_ok() {
