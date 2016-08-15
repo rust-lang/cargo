@@ -9,6 +9,8 @@ use std::io::Write;
 use std::net::TcpListener;
 use std::process::Stdio;
 use std::thread;
+use std::sync::mpsc::channel;
+use std::time::Duration;
 
 use cargotest::install::{has_installed_exe, cargo_home};
 use cargotest::support::git;
@@ -427,4 +429,71 @@ fn debug_release_ok() {
 [COMPILING] foo v0.0.0 [..]
 [FINISHED] release [optimized] target(s) in [..]
 "));
+}
+
+#[test]
+fn no_deadlock_with_git_dependencies() {
+    let dep1 = git::new("dep1", |project| {
+        project.file("Cargo.toml", r#"
+            [project]
+            name = "dep1"
+            version = "0.5.0"
+            authors = []
+        "#).file("src/lib.rs", "")
+    }).unwrap();
+
+    let dep2 = git::new("dep2", |project| {
+        project.file("Cargo.toml", r#"
+            [project]
+            name = "dep2"
+            version = "0.5.0"
+            authors = []
+        "#).file("src/lib.rs", "")
+    }).unwrap();
+
+    let p = project("foo")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+
+            [dependencies]
+            dep1 = {{ git = '{}' }}
+            dep2 = {{ git = '{}' }}
+        "#, dep1.url(), dep2.url()))
+        .file("src/main.rs", "fn main() { }");
+    p.build();
+
+    let n_concurrent_builds = 5;
+
+    let (tx, rx) = channel();
+    for _ in 0..n_concurrent_builds {
+        let cmd = p.cargo("build").build_command()
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn();
+        let tx = tx.clone();
+        thread::spawn(move || {
+            let result = cmd.unwrap().wait_with_output().unwrap();
+            tx.send(result).unwrap()
+        });
+    }
+
+    //TODO: use `Receiver::recv_timeout` once it is stable.
+    let recv_timeout = |chan: &::std::sync::mpsc::Receiver<_>| {
+        for _ in 0..3000 {
+            if let Ok(x) = chan.try_recv() {
+                return x
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        chan.try_recv().expect("Deadlock!")
+    };
+
+    for _ in 0..n_concurrent_builds {
+        let result = recv_timeout(&rx);
+        assert_that(result, execs().with_status(0))
+    }
+
 }

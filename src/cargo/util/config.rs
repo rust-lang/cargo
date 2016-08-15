@@ -15,7 +15,7 @@ use toml;
 use core::shell::{Verbosity, ColorConfig};
 use core::MultiShell;
 use util::{CargoResult, CargoError, ChainError, Rustc, internal, human};
-use util::{Filesystem, LazyCell};
+use util::{Filesystem, FileLock, LazyCell};
 
 use util::toml as cargo_toml;
 
@@ -31,6 +31,7 @@ pub struct Config {
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
     locked: Cell<bool>,
+    git_lock: LazyCell<FileLock>,
 }
 
 impl Config {
@@ -47,6 +48,7 @@ impl Config {
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
             locked: Cell::new(false),
+            git_lock: LazyCell::new(),
         }
     }
 
@@ -64,12 +66,23 @@ impl Config {
 
     pub fn home(&self) -> &Filesystem { &self.home_path }
 
-    pub fn git_db_path(&self) -> Filesystem {
-        self.home_path.join("git").join("db")
+    pub fn git_path(&self) -> Filesystem {
+        self.home_path.join("git")
     }
 
-    pub fn git_checkout_path(&self) -> Filesystem {
-        self.home_path.join("git").join("checkouts")
+    /// All git sources are protected by a single file lock, which is stored
+    /// in the `Config` struct. Ideally, we should use a lock per repository,
+    /// but this leads to deadlocks when several instances of Cargo acquire
+    /// locks in different order (see #2987).
+    ///
+    /// Holding the lock only during checkout is not enough. For example, two
+    /// instances of Cargo may checkout different commits from the same branch
+    /// to the same directory. So the lock is acquired when the first git source
+    /// is updated and released when the `Config` struct is destroyed.
+    pub fn lock_git(&self) -> CargoResult<&FileLock> {
+        self.git_lock.get_or_try_init(|| {
+            self.git_path().open_rw(".cargo-lock-git", self, "the git checkouts")
+        })
     }
 
     pub fn registry_index_path(&self) -> Filesystem {
