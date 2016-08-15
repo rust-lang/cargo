@@ -482,7 +482,7 @@ fn no_deadlock_with_git_dependencies() {
 
     //TODO: use `Receiver::recv_timeout` once it is stable.
     let recv_timeout = |chan: &::std::sync::mpsc::Receiver<_>| {
-        for _ in 0..200 {
+        for _ in 0..3000 {
             if let Ok(x) = chan.try_recv() {
                 return x
             }
