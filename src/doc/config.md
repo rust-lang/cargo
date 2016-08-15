@@ -51,8 +51,9 @@ paths = ["/path/to/override"]
 name = "..."
 email = "..."
 
-# By default `cargo new` will initialize a new git repository. This key can be
-# set to `none` to disable this behavior.
+# By default `cargo new` will initialize a new Git repository. This key can be
+# set to `hg` to create a Mercurial repository, or `none` to disable this
+# behavior.
 vcs = "none"
 
 # For the following sections, $triple refers to any valid target triple, not the
