@@ -6,7 +6,7 @@ use url::Url;
 use core::source::{Source, SourceId};
 use core::GitReference;
 use core::{Package, PackageId, Summary, Registry, Dependency};
-use util::{CargoResult, Config, FileLock, to_hex};
+use util::{CargoResult, Config, to_hex};
 use sources::PathSource;
 use sources::git::utils::{GitRemote, GitRevision};
 
@@ -18,7 +18,6 @@ pub struct GitSource<'cfg> {
     source_id: SourceId,
     path_source: Option<PathSource<'cfg>>,
     rev: Option<GitRevision>,
-    checkout_lock: Option<FileLock>,
     ident: String,
     config: &'cfg Config,
 }
@@ -42,7 +41,6 @@ impl<'cfg> GitSource<'cfg> {
             source_id: source_id.clone(),
             path_source: None,
             rev: None,
-            checkout_lock: None,
             ident: ident,
             config: config,
         }
@@ -128,14 +126,9 @@ impl<'cfg> Registry for GitSource<'cfg> {
 
 impl<'cfg> Source for GitSource<'cfg> {
     fn update(&mut self) -> CargoResult<()> {
-        // First, lock both the global database and checkout locations that
-        // we're going to use. We may be performing a fetch into these locations
-        // so we need writable access.
-        let db_lock = format!(".cargo-lock-{}", self.ident);
-        let db_lock = try!(self.config.git_db_path()
-                                      .open_rw(&db_lock, self.config,
-                                               "the git database"));
-        let db_path = db_lock.parent().join(&self.ident);
+        let lock = try!(self.config.lock_git());
+
+        let db_path = lock.parent().join("db").join(&self.ident);
 
         let reference_path = match self.source_id.git_reference() {
             Some(&GitReference::Branch(ref s)) |
@@ -143,13 +136,8 @@ impl<'cfg> Source for GitSource<'cfg> {
             Some(&GitReference::Rev(ref s)) => s,
             None => panic!("not a git source"),
         };
-        let checkout_lock = format!(".cargo-lock-{}-{}", self.ident,
-                                    reference_path);
-        let checkout_lock = try!(self.config.git_checkout_path()
-                                     .join(&self.ident)
-                                     .open_rw(&checkout_lock, self.config,
-                                              "the git checkout"));
-        let checkout_path = checkout_lock.parent().join(reference_path);
+        let checkout_path = lock.parent().join("checkouts")
+            .join(&self.ident).join(reference_path);
 
         // Resolve our reference to an actual revision, and check if the
         // databaes already has that revision. If it does, we just load a
@@ -187,7 +175,6 @@ impl<'cfg> Source for GitSource<'cfg> {
         // swipe our checkout location to another revision while we're using it!
         self.path_source = Some(path_source);
         self.rev = Some(actual_rev);
-        self.checkout_lock = Some(checkout_lock);
         self.path_source.as_mut().unwrap().update()
     }
 
