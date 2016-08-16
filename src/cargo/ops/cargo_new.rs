@@ -1,19 +1,22 @@
 use std::env;
-use std::fs;
-use std::path::Path;
+use std::fs::{self, DirEntry, File};
+use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
-
 use rustc_serialize::{Decodable, Decoder};
 
 use git2::Config as GitConfig;
 
 use term::color::BLACK;
 
-use core::Workspace;
-use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
-use util::{Config, paths};
+use handlebars::{Handlebars, Context, no_escape};
+use tempdir::TempDir;
 
-use toml;
+use core::Workspace;
+use sources::git::clone;
+use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
+use util::{Config, paths, template};
+use util::template::{TemplateSet, TemplateFile, TemplateDirectory, TemplateType};
+use util::template::{InputFileTemplateFile, InMemoryTemplateFile, get_template_type};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionControl { Git, Hg, NoVcs }
@@ -24,6 +27,8 @@ pub struct NewOptions<'a> {
     pub lib: bool,
     pub path: &'a str,
     pub name: Option<&'a str>,
+    pub template_subdir: Option<&'a str>,
+    pub template: Option<&'a str>,
 }
 
 struct SourceFileInformation {
@@ -34,9 +39,10 @@ struct SourceFileInformation {
 
 struct MkOptions<'a> {
     version_control: Option<VersionControl>,
+    template_subdir: Option<&'a str>,
+    template: Option<&'a str>,
     path: &'a Path,
     name: &'a str,
-    source_files: Vec<SourceFileInformation>,
     bin: bool,
 }
 
@@ -59,7 +65,9 @@ impl<'a> NewOptions<'a> {
            bin: bool,
            lib: bool,
            path: &'a str,
-           name: Option<&'a str>) -> NewOptions<'a> {
+           name: Option<&'a str>,
+           template_subdir: Option<&'a str>,
+           template: Option<&'a str>) -> NewOptions<'a> {
 
         // default to lib
         let is_lib = if !bin {
@@ -75,6 +83,8 @@ impl<'a> NewOptions<'a> {
             lib: is_lib,
             path: path,
             name: name,
+            template_subdir: template_subdir,
+            template: template,
         }
     }
 }
@@ -83,6 +93,52 @@ struct CargoNewConfig {
     name: Option<String>,
     email: Option<String>,
     version_control: Option<VersionControl>,
+}
+
+fn get_input_template(config: &Config, opts: &MkOptions) -> CargoResult<TemplateSet> {
+    let name = opts.name;
+
+    let template_type = try!(get_template_type(opts.template, opts.template_subdir));
+    let template_set = match template_type {
+        // given template is a remote git repository & needs to be cloned
+        TemplateType::GitRepo(repo_url) => {
+            let template_dir = try!(TempDir::new(name));
+            config.shell().status("Cloning", &repo_url)?;
+            clone(&repo_url, &template_dir.path(), &config)?;
+            let template_path = find_template_subdir(&template_dir.path(), opts.template_subdir);
+            TemplateSet {
+                template_dir: Some(TemplateDirectory::Temp(template_dir)),
+                template_files: try!(collect_template_dir(&template_path, opts.path))
+            }
+        },
+        // given template is a local directory
+        TemplateType::LocalDir(directory) => {
+            // make sure that the template exists
+            if fs::metadata(&directory).is_err() {
+                bail!("template `{}` not found", directory);
+            }
+            let template_path = find_template_subdir(&PathBuf::from(&directory),
+                                                     opts.template_subdir);
+            TemplateSet {
+                template_dir: Some(TemplateDirectory::Normal(PathBuf::from(directory))),
+                template_files: try!(collect_template_dir(&template_path, opts.path))
+            }
+        },
+        // no template given, use either "lib" or "bin" templates depending on the
+        // presence of the --bin flag.
+        TemplateType::Builtin => {
+            let template_files = if opts.bin {
+                create_bin_template()
+            } else {
+                create_lib_template()
+            };
+            TemplateSet {
+                template_dir: None,
+                template_files: template_files
+            }
+        }
+    };
+    Ok(template_set)
 }
 
 fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoResult<&'a str> {
@@ -277,9 +333,10 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
+        template_subdir: opts.template_subdir,
+        template: opts.template,
         path: &path,
         name: name,
-        source_files: vec![plan_new_source_file(opts.bin, name.to_string())],
         bin: opts.bin,
     };
 
@@ -343,10 +400,11 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
 
     let mkopts = MkOptions {
         version_control: version_control,
+        template_subdir: opts.template_subdir,
+        template: opts.template,
         path: &path,
         name: name,
         bin: src_paths_types.iter().any(|x|x.bin),
-        source_files: src_paths_types,
     };
 
     mk(config, &mkopts).chain_error(|| {
@@ -410,7 +468,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
 
     let (author_name, email) = discover_author()?;
     // Hoo boy, sure glad we've got exhaustivenes checking behind us.
-    let author = match (cfg.name, cfg.email, author_name, email) {
+    let author = match (cfg.name.clone(), cfg.email.clone(), author_name, email) {
         (Some(name), Some(email), _, _) |
         (Some(name), None, _, Some(email)) |
         (None, Some(email), name, _) |
@@ -419,73 +477,50 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
         (None, None, name, None) => name,
     };
 
-    let mut cargotoml_path_specifier = String::new();
+    // construct the mapping used to populate the template
+    // if in the future we want to make more varaibles available in
+    // the templates, this would be the place to do it.
+    let mut handlebars = Handlebars::new();
+    // We don't want html escaping unless users explicitly ask for it...
+    handlebars.register_escape_fn(no_escape);
+    handlebars.register_helper("toml-escape", Box::new(template::toml_escape_helper));
+    handlebars.register_helper("html-escape", Box::new(template::html_escape_helper));
 
-    // Calculare what [lib] and [[bin]]s do we need to append to Cargo.toml
+    let mut data = BTreeMap::new();
+    data.insert("name".to_owned(), name.to_owned());
+    data.insert("author".to_owned(), author);
 
-    for i in &opts.source_files {
-        if i.bin {
-            if i.relative_path != "src/main.rs" {
-                cargotoml_path_specifier.push_str(&format!(r#"
-[[bin]]
-name = "{}"
-path = {}
-"#, i.target_name, toml::Value::String(i.relative_path.clone())));
-            }
-        } else {
-            if i.relative_path != "src/lib.rs" {
-                cargotoml_path_specifier.push_str(&format!(r#"
-[lib]
-name = "{}"
-path = {}
-"#, i.target_name, toml::Value::String(i.relative_path.clone())));
-            }
-        }
-    }
+    let template_set = try!(get_input_template(config, opts));
+    for template in template_set.template_files.iter() {
+        let template_str = try!(template.template());
+        let dest_path = path.join(template.path());
 
-    // Create Cargo.toml file with necessary [lib] and [[bin]] sections, if needed
-
-    paths::write(&path.join("Cargo.toml"), format!(
-r#"[package]
-name = "{}"
-version = "0.1.0"
-authors = [{}]
-
-[dependencies]
-{}"#, name, toml::Value::String(author), cargotoml_path_specifier).as_bytes())?;
-
-
-    // Create all specified source files
-    // (with respective parent directories)
-    // if they are don't exist
-
-    for i in &opts.source_files {
-        let path_of_source_file = path.join(i.relative_path.clone());
-
-        if let Some(src_dir) = path_of_source_file.parent() {
-            fs::create_dir_all(src_dir)?;
+        // Skip files that already exist.
+        if fs::metadata(&dest_path).is_ok() {
+            continue;
         }
 
-        let default_file_content : &[u8] = if i.bin {
-            b"\
-fn main() {
-    println!(\"Hello, world!\");
-}
-"
-        } else {
-            b"\
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-    }
-}
-"
-        };
+        let parent = try!(dest_path.parent()
+                          .chain_error(|| {
+                              human(format!("failed to make sure parent directory \
+                                             exists for {}", dest_path.display()))
+                          }));
+        try!(fs::create_dir_all(&parent)
+             .chain_error(|| {
+                 human(format!("failed to create path to destination file {}",
+                               parent.display()))
+             }));
 
-        if !fs::metadata(&path_of_source_file).map(|x| x.is_file()).unwrap_or(false) {
-            paths::write(&path_of_source_file, default_file_content)?;
-        }
+        // create the new file & render the template to it
+        let mut dest_file = try!(File::create(&dest_path).chain_error(|| {
+                                     human(format!("failed to open file for writing: {}",
+                                                   dest_path.display()))
+                                 }));
+
+        try!(handlebars.template_renderw(&template_str, &Context::wraps(&data), &mut dest_file)
+            .chain_error(|| {
+                human(format!("Failed to render template for file: {}", dest_path.display()))
+        }))
     }
 
     if let Err(e) = Workspace::new(&path.join("Cargo.toml"), config) {
@@ -493,8 +528,34 @@ mod tests {
                            workspace configuration\n\n{}", e);
         config.shell().warn(msg)?;
     }
-
     Ok(())
+}
+
+// When the command line has --template=<repository-or-directory> and
+// --template-subdir=<template-name> then find_template_subdir fixes up the name as appropriate.
+fn find_template_subdir(template_dir: &Path, template: Option<&str>) -> PathBuf {
+    match template {
+        Some(template) => template_dir.join(template),
+        None => template_dir.to_path_buf()
+    }
+}
+
+fn collect_template_dir(template_path: &PathBuf, _: &Path) -> CargoResult<Vec<Box<TemplateFile>>> {
+    let mut templates = Vec::<Box<TemplateFile>>::new();
+    // For every file found inside the given template directory, compile it as a handlebars
+    // template and render it with the above data to a new file inside the target directory
+    try!(walk_template_dir(&template_path, &mut |entry| {
+        let entry_path = entry.path();
+        let dest_file_name = PathBuf::from(try!(entry_path.strip_prefix(&template_path)
+                                  .chain_error(|| {
+                                      human(format!("entry is somehow not a subpath \
+                                                     of the directory being walked."))
+                                  })));
+        templates.push(Box::new(InputFileTemplateFile::new(entry_path, 
+                                                           dest_file_name.to_path_buf())));
+        Ok(())
+    }));
+    Ok(templates)
 }
 
 fn get_environment_variable(variables: &[&str] ) -> Option<String>{
@@ -548,11 +609,90 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
         }
         None => None
     };
+
     Ok(CargoNewConfig {
         name: name,
         email: email,
         version_control: vcs,
     })
+}
+
+/// Recursively list directory contents under `dir`, only visiting files.
+///
+/// This will also filter out files & files types which we don't want to
+/// try generate templates for. Image files, for instance.
+///
+/// It also filters out certain files & file types, as we don't want t
+///
+/// We use this instead of std::fs::walk_dir as it is marked as unstable for now
+///
+/// This is a modified version of the example at:
+///    http://doc.rust-lang.org/std/fs/fn.read_dir.html
+fn walk_template_dir(dir: &Path, cb: &mut FnMut(DirEntry) -> CargoResult<()>) -> CargoResult<()> {
+    let attr = try!(fs::metadata(&dir));
+    let ignore_files = vec![".gitignore"];
+
+    if !attr.is_dir() {
+        return Ok(());
+    }
+    for entry in try!(fs::read_dir(dir)) {
+        let entry = try!(entry);
+        let attr = try!(fs::metadata(&entry.path()));
+        if attr.is_dir() {
+            if let Some(ref path_str) = entry.path().to_str() {
+                if !&path_str.contains(".git") {
+                    try!(walk_template_dir(&entry.path(), cb));
+                }
+            }
+        } else {
+            if let Some(file_name) = entry.path().file_name() {
+                if ignore_files.contains(&file_name.to_str().unwrap()) {
+                    continue
+                }
+            }
+            try!(cb(entry));
+        }
+    }
+    Ok(())
+}
+
+/// Create a generic template
+///
+/// This consists of a Cargo.toml, and a src directory.
+fn create_generic_template() -> Vec<Box<TemplateFile>> {
+    let template_file = Box::new(InMemoryTemplateFile::new(PathBuf::from("Cargo.toml"),
+    String::from(r#"[package]
+name = "{{name}}"
+version = "0.1.0"
+authors = [{{toml-escape author}}]
+
+[dependencies]
+"#)));
+    vec![template_file]
+}
+
+/// Create a new "lib" project
+fn create_lib_template() -> Vec<Box<TemplateFile>> {
+    let mut template_files = create_generic_template();
+    let lib_file = Box::new(InMemoryTemplateFile::new(PathBuf::from("src/lib.rs"),
+    String::from(r#"#[test]
+fn it_works() {
+}
+"#)));
+    template_files.push(lib_file);
+    template_files
+}
+
+/// Create a new "bin" project
+fn create_bin_template() -> Vec<Box<TemplateFile>> {
+    let mut template_files = create_generic_template();
+    let main_file = Box::new(InMemoryTemplateFile::new(PathBuf::from("src/main.rs"),
+String::from("fn main() {
+    println!(\"Hello, world!\");
+}
+")));
+    template_files.push(main_file);
+    template_files
 }
 
 #[cfg(test)]

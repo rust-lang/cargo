@@ -40,7 +40,7 @@ _cargo()
 	local opt__locate_project="$opt_mani -h --help"
 	local opt__login="$opt_common $opt_lock --host"
 	local opt__metadata="$opt_common $opt_feat $opt_mani $opt_lock --format-version --no-deps"
-	local opt__new="$opt_common $opt_lock --vcs --bin --lib --name"
+	local opt__new="$opt_common $opt_lock --vcs --bin --lib --name --template"
 	local opt__owner="$opt_common $opt_lock -a --add -r --remove -l --list --index --token"
 	local opt__package="$opt_common $opt_mani $opt_lock $opt_jobs --allow-dirty -l --list --no-verify --no-metadata"
 	local opt__pkgid="${opt__fetch} $opt_pkg"
