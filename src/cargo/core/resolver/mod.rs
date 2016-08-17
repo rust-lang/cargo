@@ -980,15 +980,24 @@ impl<'a> Context<'a> {
 fn check_cycles(resolve: &Resolve,
                 activations: &HashMap<(String, SourceId), Vec<Rc<Summary>>>)
                 -> CargoResult<()> {
-    let mut summaries = HashMap::new();
-    for summary in activations.values().flat_map(|v| v) {
-        summaries.insert(summary.package_id(), &**summary);
+    let summaries: HashMap<&PackageId, &Summary> = activations.values()
+        .flat_map(|v| v)
+        .map(|s| (s.package_id(), &**s))
+        .collect();
+
+    // Sort packages to produce user friendly deterministic errors.
+    let all_packages = resolve.iter().collect::<BinaryHeap<_>>().into_sorted_vec();
+    let mut checked = HashSet::new();
+    for pkg in all_packages {
+        if !checked.contains(pkg) {
+            try!(visit(resolve,
+                       pkg,
+                       &summaries,
+                       &mut HashSet::new(),
+                       &mut checked))
+        }
     }
-    return visit(resolve,
-                 resolve.root(),
-                 &summaries,
-                 &mut HashSet::new(),
-                 &mut HashSet::new());
+    return Ok(());
 
     fn visit<'a>(resolve: &'a Resolve,
                  id: &'a PackageId,
