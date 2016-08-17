@@ -69,14 +69,13 @@ mod encode;
 /// is a package and edges represent dependencies between packages.
 ///
 /// Each instance of `Resolve` also understands the full set of features used
-/// for each package as well as what the root package is.
+/// for each package.
 #[derive(PartialEq, Eq, Clone)]
 pub struct Resolve {
     graph: Graph<PackageId>,
     replacements: HashMap<PackageId, PackageId>,
     features: HashMap<PackageId, HashSet<String>>,
     checksums: HashMap<PackageId, Option<String>>,
-    root: PackageId,
     metadata: Metadata,
 }
 
@@ -200,10 +199,6 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.iter()
     }
 
-    pub fn root(&self) -> &PackageId {
-        &self.root
-    }
-
     pub fn deps(&self, pkg: &PackageId) -> Deps {
         Deps { edges: self.graph.edges(pkg), resolve: self }
     }
@@ -268,8 +263,7 @@ struct Context<'a> {
 }
 
 /// Builds the list of all packages required to build the first argument.
-pub fn resolve(root: &PackageId,
-               summaries: &[(Summary, Method)],
+pub fn resolve(summaries: &[(Summary, Method)],
                replacements: &[(PackageIdSpec, Dependency)],
                registry: &mut Registry) -> CargoResult<Resolve> {
     let cx = Context {
@@ -279,13 +273,12 @@ pub fn resolve(root: &PackageId,
         activations: HashMap::new(),
         replacements: replacements,
     };
-    let _p = profile::start(format!("resolving: {}", root));
+    let _p = profile::start(format!("resolving"));
     let cx = try!(activate_deps_loop(cx, registry, summaries));
 
     let mut resolve = Resolve {
         graph: cx.resolve_graph,
         features: cx.resolve_features,
-        root: root.clone(),
         checksums: HashMap::new(),
         metadata: BTreeMap::new(),
         replacements: cx.resolve_replacements,

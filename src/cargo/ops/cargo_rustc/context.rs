@@ -76,7 +76,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Arc::new(Box::new(ProcessEngine))
         });
         let current_package = try!(ws.current()).package_id().clone();
-        assert_eq!(&current_package, resolve.root());
         Ok(Context {
             host: host_layout,
             target: target_layout,
