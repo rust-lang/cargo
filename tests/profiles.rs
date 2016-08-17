@@ -4,6 +4,7 @@ extern crate hamcrest;
 use std::env;
 use std::path::MAIN_SEPARATOR as SEP;
 
+use cargotest::is_nightly;
 use cargotest::support::{project, execs};
 use hamcrest::assert_that;
 
@@ -40,6 +41,85 @@ fn profile_overrides() {
 dir = p.root().display(),
 url = p.url(),
 )));
+}
+
+#[test]
+fn opt_level_override_0() {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [package]
+
+            name = "test"
+            version = "0.0.0"
+            authors = []
+
+            [profile.dev]
+            opt-level = 0
+        "#)
+        .file("src/lib.rs", "");
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0).with_stderr(&format!("\
+[COMPILING] test v0.0.0 ({url})
+[RUNNING] `rustc src{sep}lib.rs --crate-name test --crate-type lib \
+        -g \
+        -C metadata=[..] \
+        --out-dir [..] \
+        --emit=dep-info,link \
+        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+[FINISHED] [..] target(s) in [..]
+", sep = SEP,
+dir = p.root().display(),
+url = p.url()
+)));
+}
+
+fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", &format!(r#"
+            [package]
+
+            name = "test"
+            version = "0.0.0"
+            authors = []
+
+            [profile.dev]
+            opt-level = {level}
+        "#, level = profile_level))
+        .file("src/lib.rs", "");
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0).with_stderr(&format!("\
+[COMPILING] test v0.0.0 ({url})
+[RUNNING] `rustc src{sep}lib.rs --crate-name test --crate-type lib \
+        -C opt-level={level} \
+        -g \
+        -C debug-assertions=on \
+        -C metadata=[..] \
+        --out-dir [..] \
+        --emit=dep-info,link \
+        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+[FINISHED] [..] target(s) in [..]
+", sep = SEP,
+dir = p.root().display(),
+url = p.url(),
+level = rustc_level
+)));
+}
+
+#[test]
+fn opt_level_overrides() {
+    if !is_nightly() { return }
+
+    for &(profile_level, rustc_level) in &[
+        ("1", "1"),
+        ("2", "2"),
+        ("3", "3"),
+        ("\"s\"", "s"),
+        ("\"z\"", "z"),
+    ] {
+        check_opt_level_override(profile_level, rustc_level)
+    }
 }
 
 #[test]
