@@ -1887,7 +1887,7 @@ fn cyclic_deps_rejected() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] cyclic package dependency: package `foo v0.0.1 ([..])` depends on itself
+[ERROR] cyclic package dependency: package `a v0.0.1 ([..])` depends on itself
 "));
 }
 
