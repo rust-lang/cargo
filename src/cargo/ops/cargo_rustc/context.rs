@@ -29,6 +29,7 @@ pub struct Unit<'a> {
 pub struct Context<'a, 'cfg: 'a> {
     pub config: &'cfg Config,
     pub resolve: &'a Resolve,
+    pub current_package: PackageId,
     pub compilation: Compilation<'cfg>,
     pub packages: &'a PackageSet<'cfg>,
     pub build_state: Arc<BuildState>,
@@ -74,10 +75,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let engine = build_config.exec_engine.as_ref().cloned().unwrap_or({
             Arc::new(Box::new(ProcessEngine))
         });
+        let current_package = try!(ws.current()).package_id().clone();
+        assert_eq!(&current_package, resolve.root());
         Ok(Context {
             host: host_layout,
             target: target_layout,
             resolve: resolve,
+            current_package: current_package,
             packages: packages,
             config: config,
             target_info: TargetInfo::default(),
@@ -274,7 +278,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Returns the appropriate directory layout for either a plugin or not.
     pub fn layout(&self, unit: &Unit) -> LayoutProxy {
-        let primary = unit.pkg.package_id() == self.resolve.root();
+        let primary = unit.pkg.package_id() == &self.current_package;
         match unit.kind {
             Kind::Host => LayoutProxy::new(&self.host, primary),
             Kind::Target => LayoutProxy::new(self.target.as_ref()
@@ -704,7 +708,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn show_warnings(&self, pkg: &PackageId) -> bool {
-        pkg == self.resolve.root() || pkg.source_id().is_path() ||
+        pkg == &self.current_package || pkg.source_id().is_path() ||
             self.config.extra_verbose()
     }
 }
