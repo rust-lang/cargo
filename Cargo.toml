@@ -37,7 +37,7 @@ miow = "0.1"
 num_cpus = "1.0"
 regex = "0.1"
 rustc-serialize = "0.3"
-semver = "0.4"
+semver = "0.2.3"
 tar = { version = "0.4", default-features = false }
 tempdir = "0.3"
 term = "0.4.4"
