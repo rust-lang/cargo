@@ -242,7 +242,7 @@ endef
 $(foreach target,$(CFG_TARGET),$(eval $(call BUILD_OPENSSL,$(target))))
 
 target/openssl/openssl-$(OPENSSL_VERS).tar.gz: | target/openssl/
-	curl -o $(@) https://openssl.org/source/openssl-$(OPENSSL_VERS).tar.gz
+	curl -o $(@) https://www.openssl.org/source/openssl-$(OPENSSL_VERS).tar.gz
 	sha256sum $(@) > $(@).sha256
 	test $(OPENSSL_SHA256) = `cut -d ' ' -f 1 $(@).sha256`
 
