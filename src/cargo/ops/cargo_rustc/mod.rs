@@ -477,7 +477,7 @@ fn build_base_args(cx: &Context,
                    unit: &Unit,
                    crate_types: &[&str]) {
     let Profile {
-        opt_level, lto, codegen_units, ref rustc_args, debuginfo,
+        ref opt_level, lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, rpath, test, doc: _doc, run_custom_build,
         ref panic, rustdoc_args: _,
     } = *unit.profile;
@@ -509,7 +509,7 @@ fn build_base_args(cx: &Context,
         cmd.arg("-C").arg("prefer-dynamic");
     }
 
-    if opt_level != 0 {
+    if opt_level != "0" {
         cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
     }
 
@@ -549,9 +549,9 @@ fn build_base_args(cx: &Context,
         cmd.args(args);
     }
 
-    if debug_assertions && opt_level > 0 {
+    if debug_assertions && opt_level != "0" {
         cmd.args(&["-C", "debug-assertions=on"]);
-    } else if !debug_assertions && opt_level == 0 {
+    } else if !debug_assertions && opt_level == "0" {
         cmd.args(&["-C", "debug-assertions=off"]);
     }
 

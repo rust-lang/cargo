@@ -111,7 +111,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
          Kind::Target => cx.target_triple(),
      })
      .env("DEBUG", &profile.debuginfo.to_string())
-     .env("OPT_LEVEL", &profile.opt_level.to_string())
+     .env("OPT_LEVEL", &profile.opt_level)
      .env("PROFILE", if cx.build_config.release {"release"} else {"debug"})
      .env("HOST", cx.host_triple())
      .env("RUSTC", &try!(cx.config.rustc()).path)
