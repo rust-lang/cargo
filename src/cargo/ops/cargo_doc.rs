@@ -82,12 +82,11 @@ fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
     use std::env;
     let mut methods = Vec::new();
     // trying $BROWSER
-    match env::var("BROWSER"){
-        Ok(name) => match Command::new(name).arg(path).status() {
+    if let Ok(name) = env::var("BROWSER") {
+        match Command::new(name).arg(path).status() {
             Ok(_) => return Ok("$BROWSER"),
             Err(_) => methods.push("$BROWSER")
-        },
-        Err(_) => () // Do nothing here if $BROWSER is not found
+        }
     }
 
     for m in ["xdg-open", "gnome-open", "kde-open"].iter() {
