@@ -732,5 +732,6 @@ pub fn set_config(cfg: &Config,
     let contents = toml::Value::Table(toml).to_string();
     try!(file.seek(SeekFrom::Start(0)));
     try!(file.write_all(contents.as_bytes()));
+    try!(file.file().set_len(contents.len() as u64));
     Ok(())
 }
