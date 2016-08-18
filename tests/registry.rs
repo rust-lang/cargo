@@ -581,6 +581,19 @@ fn login_with_no_cargo_dir() {
 }
 
 #[test]
+fn login_with_differently_sized_token() {
+    // Verify that the configuration file gets properly trunchated.
+    let home = paths::home().join("new-home");
+    t!(fs::create_dir(&home));
+    assert_that(cargo_process().arg("login").arg("lmaolmaolmao").arg("-v"),
+                execs().with_status(0));
+    assert_that(cargo_process().arg("login").arg("lmao").arg("-v"),
+                execs().with_status(0));
+    assert_that(cargo_process().arg("login").arg("lmaolmaolmao").arg("-v"),
+                execs().with_status(0));
+}
+
+#[test]
 fn bad_license_file() {
     Package::new("foo", "1.0.0").publish();
     let p = project("all")
