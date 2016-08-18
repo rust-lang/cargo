@@ -69,14 +69,13 @@ mod encode;
 /// is a package and edges represent dependencies between packages.
 ///
 /// Each instance of `Resolve` also understands the full set of features used
-/// for each package as well as what the root package is.
+/// for each package.
 #[derive(PartialEq, Eq, Clone)]
 pub struct Resolve {
     graph: Graph<PackageId>,
     replacements: HashMap<PackageId, PackageId>,
     features: HashMap<PackageId, HashSet<String>>,
     checksums: HashMap<PackageId, Option<String>>,
-    root: PackageId,
     metadata: Metadata,
 }
 
@@ -200,10 +199,6 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.iter()
     }
 
-    pub fn root(&self) -> &PackageId {
-        &self.root
-    }
-
     pub fn deps(&self, pkg: &PackageId) -> Deps {
         Deps { edges: self.graph.edges(pkg), resolve: self }
     }
@@ -268,8 +263,7 @@ struct Context<'a> {
 }
 
 /// Builds the list of all packages required to build the first argument.
-pub fn resolve(root: &PackageId,
-               summaries: &[(Summary, Method)],
+pub fn resolve(summaries: &[(Summary, Method)],
                replacements: &[(PackageIdSpec, Dependency)],
                registry: &mut Registry) -> CargoResult<Resolve> {
     let cx = Context {
@@ -279,13 +273,12 @@ pub fn resolve(root: &PackageId,
         activations: HashMap::new(),
         replacements: replacements,
     };
-    let _p = profile::start(format!("resolving: {}", root));
+    let _p = profile::start(format!("resolving"));
     let cx = try!(activate_deps_loop(cx, registry, summaries));
 
     let mut resolve = Resolve {
         graph: cx.resolve_graph,
         features: cx.resolve_features,
-        root: root.clone(),
         checksums: HashMap::new(),
         metadata: BTreeMap::new(),
         replacements: cx.resolve_replacements,
@@ -980,15 +973,24 @@ impl<'a> Context<'a> {
 fn check_cycles(resolve: &Resolve,
                 activations: &HashMap<(String, SourceId), Vec<Rc<Summary>>>)
                 -> CargoResult<()> {
-    let mut summaries = HashMap::new();
-    for summary in activations.values().flat_map(|v| v) {
-        summaries.insert(summary.package_id(), &**summary);
+    let summaries: HashMap<&PackageId, &Summary> = activations.values()
+        .flat_map(|v| v)
+        .map(|s| (s.package_id(), &**s))
+        .collect();
+
+    // Sort packages to produce user friendly deterministic errors.
+    let all_packages = resolve.iter().collect::<BinaryHeap<_>>().into_sorted_vec();
+    let mut checked = HashSet::new();
+    for pkg in all_packages {
+        if !checked.contains(pkg) {
+            try!(visit(resolve,
+                       pkg,
+                       &summaries,
+                       &mut HashSet::new(),
+                       &mut checked))
+        }
     }
-    return visit(resolve,
-                 resolve.root(),
-                 &summaries,
-                 &mut HashSet::new(),
-                 &mut HashSet::new());
+    return Ok(());
 
     fn visit<'a>(resolve: &'a Resolve,
                  id: &'a PackageId,

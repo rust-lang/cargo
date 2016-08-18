@@ -81,7 +81,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         })
     }).collect::<Vec<_>>();
 
-    let root = try!(packages.get(resolve.root()));
+    let root = try!(ws.current());
     let mut cx = try!(Context::new(ws, resolve, packages, config,
                                    build_config, profiles));
 
@@ -229,7 +229,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let do_rename = unit.target.allows_underscores() && !unit.profile.test;
     let real_name = unit.target.name().to_string();
     let crate_name = unit.target.crate_name();
-    let move_outputs_up = unit.pkg.package_id() == cx.resolve.root();
+    let move_outputs_up = unit.pkg.package_id() == &cx.current_package;
 
     let rustc_dep_info_loc = if do_rename {
         root.join(&crate_name)
@@ -504,7 +504,7 @@ fn build_base_args(cx: &Context,
     let prefer_dynamic = (unit.target.for_host() &&
                           !unit.target.is_custom_build()) ||
                          (crate_types.contains(&"dylib") &&
-                          unit.pkg.package_id() != cx.resolve.root());
+                          unit.pkg.package_id() != &cx.current_package);
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }

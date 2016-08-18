@@ -148,10 +148,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => root_replace.to_vec(),
     };
 
-    let mut resolved = try!(resolver::resolve(try!(ws.current()).package_id(),
-                                              &summaries,
-                                              &replace,
-                                              registry));
+    let mut resolved = try!(resolver::resolve(&summaries, &replace, registry));
     if let Some(previous) = previous {
         try!(resolved.merge_from(previous));
     }
