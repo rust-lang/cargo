@@ -121,7 +121,7 @@ impl Encodable for TargetKind {
 
 #[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Profile {
-    pub opt_level: u32,
+    pub opt_level: String,
     pub lto: bool,
     pub codegen_units: Option<u32>,    // None = use rustc default
     pub rustc_args: Option<Vec<String>>,
@@ -473,7 +473,7 @@ impl Profile {
 
     pub fn default_release() -> Profile {
         Profile {
-            opt_level: 3,
+            opt_level: "3".to_string(),
             debuginfo: false,
             ..Profile::default()
         }
@@ -511,7 +511,7 @@ impl Profile {
 impl Default for Profile {
     fn default() -> Profile {
         Profile {
-            opt_level: 0,
+            opt_level: "0".to_string(),
             lto: false,
             codegen_units: None,
             rustc_args: None,

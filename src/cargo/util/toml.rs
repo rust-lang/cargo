@@ -256,9 +256,28 @@ pub struct TomlProfiles {
     release: Option<TomlProfile>,
 }
 
+#[derive(Clone)]
+pub struct TomlOptLevel(String);
+
+impl Decodable for TomlOptLevel {
+    fn decode<D: Decoder>(d: &mut D) -> Result<TomlOptLevel, D::Error> {
+        match d.read_u32() {
+            Ok(i) => Ok(TomlOptLevel(i.to_string())),
+            Err(_) => {
+                match d.read_str() {
+                    Ok(ref s) if s == "s" || s == "z" =>
+                        Ok(TomlOptLevel(s.to_string())),
+                    Ok(_) | Err(_) =>
+                        Err(d.error("expected an integer, a string \"z\" or a string \"s\""))
+                }
+            }
+        }
+    }
+}
+
 #[derive(RustcDecodable, Clone, Default)]
 pub struct TomlProfile {
-    opt_level: Option<u32>,
+    opt_level: Option<TomlOptLevel>,
     lto: Option<bool>,
     codegen_units: Option<u32>,
     debug: Option<bool>,
@@ -1188,14 +1207,14 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
 
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
         let &TomlProfile {
-            opt_level, lto, codegen_units, debug, debug_assertions, rpath,
+            ref opt_level, lto, codegen_units, debug, debug_assertions, rpath,
             ref panic
         } = match toml {
             Some(toml) => toml,
             None => return profile,
         };
         Profile {
-            opt_level: opt_level.unwrap_or(profile.opt_level),
+            opt_level: opt_level.clone().unwrap_or(TomlOptLevel(profile.opt_level)).0,
             lto: lto.unwrap_or(profile.lto),
             codegen_units: codegen_units,
             rustc_args: None,
