@@ -140,7 +140,6 @@ impl EncodableResolve {
 
         Ok(Resolve {
             graph: g,
-            root: root,
             features: HashMap::new(),
             replacements: replacements,
             checksums: checksums,

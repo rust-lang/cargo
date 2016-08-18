@@ -53,7 +53,7 @@ fn metadata_full(ws: &Workspace,
 
     Ok(ExportInfo {
         packages: packages,
-        resolve: Some(MetadataResolve(resolve)),
+        resolve: Some(MetadataResolve(resolve, try!(ws.current()).package_id().clone())),
         version: VERSION,
     })
 }
@@ -68,7 +68,7 @@ pub struct ExportInfo {
 /// Newtype wrapper to provide a custom `Encodable` implementation.
 /// The one from lockfile does not fit because it uses a non-standard
 /// format for `PackageId`s
-struct MetadataResolve(Resolve);
+struct MetadataResolve(Resolve, PackageId);
 
 impl Encodable for MetadataResolve {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
@@ -85,8 +85,9 @@ impl Encodable for MetadataResolve {
         }
 
         let resolve = &self.0;
+        let root = &self.1;
         let encodable = EncodableResolve {
-            root: resolve.root(),
+            root: root,
             nodes: resolve.iter().map(|id| {
                 Node {
                     id: id,
