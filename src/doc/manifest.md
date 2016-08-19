@@ -527,9 +527,12 @@ name = "..."
 crate-type = ["dylib"] # could be `staticlib` as well
 ```
 
-The available options are `dylib`, `rlib`, and `staticlib`. You should only use
-this option in a project. Cargo will always compile packages (dependencies)
-based on the requirements of the project that includes them.
+The available options are `dylib`, `rlib`, `staticlib`, and `cdylib`. You
+should only use this option in a project. Cargo will always compile packages
+(dependencies) based on the requirements of the project that includes them.
+
+You can read more about the different crate types in the 
+[Rust Reference Manual](https://doc.rust-lang.org/reference.html#linkage)
 
 # The `[replace]` Section
 
