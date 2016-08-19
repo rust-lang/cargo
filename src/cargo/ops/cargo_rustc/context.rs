@@ -335,11 +335,30 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Some(metadata)
         } else if unit.pkg.package_id().source_id().is_path() &&
                   !unit.profile.test {
-            // If we're not building a unit test then the root package never
-            // needs any metadata as it's guaranteed to not conflict with any
-            // other output filenames. This means that we'll have predictable
+            // If we're not building a unit test but we're building a path
+            // dependency, then we're likely compiling the "current package" or
+            // some package in a workspace. In this situation we pass no
+            // metadata by default so we'll have predictable
             // file names like `target/debug/libfoo.{a,so,rlib}` and such.
-            None
+            //
+            // Note, though, that the compiler's build system at least wants
+            // path dependencies to have hashes in filenames. To account for
+            // that we have an extra hack here which reads the
+            // `__CARGO_DEFAULT_METADATA` environment variable and creates a
+            // hash in the filename if that's present.
+            //
+            // This environment variable should not be relied on! It's basically
+            // just here for rustbuild. We need a more principled method of
+            // doing this eventually.
+            if unit.target.is_lib() {
+                env::var("__CARGO_DEFAULT_LIB_METADATA").ok().map(|meta| {
+                    let mut metadata = unit.pkg.generate_metadata();
+                    metadata.mix(&meta);
+                    metadata
+                })
+            } else {
+                None
+            }
         } else {
             metadata.cloned()
         }
