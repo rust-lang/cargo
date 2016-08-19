@@ -17,7 +17,9 @@ pub fn resolve_ws(registry: &mut PackageRegistry, ws: &Workspace)
     let resolve = try!(resolve_with_previous(registry, ws,
                                              Method::Everything,
                                              prev.as_ref(), None));
-    if try!(ws.current()).package_id().source_id().is_path() {
+
+    // Avoid writing a lockfile if we are `cargo install`ing a non local package.
+    if ws.current_opt().map(|pkg| pkg.package_id().source_id().is_path()).unwrap_or(true) {
         try!(ops::write_pkg_lockfile(ws, &resolve));
     }
     Ok(resolve)

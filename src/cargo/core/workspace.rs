@@ -6,7 +6,7 @@ use std::slice;
 use core::{Package, VirtualManifest, EitherManifest, SourceId};
 use core::{PackageIdSpec, Dependency};
 use ops;
-use util::{Config, CargoResult, Filesystem};
+use util::{Config, CargoResult, Filesystem, human};
 use util::paths;
 
 /// The core abstraction in Cargo for working with a workspace of crates.
@@ -143,13 +143,17 @@ impl<'cfg> Workspace<'cfg> {
     /// actually a "virtual Cargo.toml", in which case an error is returned
     /// indicating that something else should be passed.
     pub fn current(&self) -> CargoResult<&Package> {
+        self.current_opt().ok_or_else(||
+            human(format!("manifest path `{}` is a virtual manifest, but this \
+                           command requires running against an actual package in \
+                           this workspace", self.current_manifest.display()))
+        )
+    }
+
+    pub fn current_opt(&self) -> Option<&Package> {
         match *self.packages.get(&self.current_manifest) {
-            MaybePackage::Package(ref p) => Ok(p),
-            MaybePackage::Virtual(..) => {
-                bail!("manifest path `{}` is a virtual manifest, but this \
-                       command requires running against an actual package in \
-                       this workspace", self.current_manifest.display())
-            }
+            MaybePackage::Package(ref p) => Some(p),
+            MaybePackage::Virtual(..) => None
         }
     }
 

@@ -555,7 +555,8 @@ fn git_repo() {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
-    assert_that(cargo_process("install").arg("--git").arg(p.url().to_string()),
+    // use `--locked` to test that we don't even try to write a lockfile
+    assert_that(cargo_process("install").arg("--locked").arg("--git").arg(p.url().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] git repository `[..]`
 [COMPILING] foo v0.1.0 ([..])
