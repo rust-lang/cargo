@@ -12,8 +12,7 @@ pub struct DocOptions<'a> {
     pub compile_opts: ops::CompileOptions<'a>,
 }
 
-pub fn doc(ws: &Workspace,
-           options: &DocOptions) -> CargoResult<()> {
+pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     let package = try!(ws.current());
 
     let mut lib_names = HashSet::new();
@@ -42,11 +41,12 @@ pub fn doc(ws: &Workspace,
             bail!("Passing multiple packages and `open` is not supported")
         } else if options.compile_opts.spec.len() == 1 {
             try!(PackageIdSpec::parse(&options.compile_opts.spec[0]))
-                                             .name().replace("-", "_")
+                .name()
+                .replace("-", "_")
         } else {
             match lib_names.iter().chain(bin_names.iter()).nth(0) {
                 Some(s) => s.to_string(),
-                None => return Ok(())
+                None => return Ok(()),
             }
         };
 
@@ -85,14 +85,14 @@ fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
     if let Ok(name) = env::var("BROWSER") {
         match Command::new(name).arg(path).status() {
             Ok(_) => return Ok("$BROWSER"),
-            Err(_) => methods.push("$BROWSER")
+            Err(_) => methods.push("$BROWSER"),
         }
     }
 
     for m in ["xdg-open", "gnome-open", "kde-open"].iter() {
         match Command::new(m).arg(path).status() {
             Ok(_) => return Ok(m),
-            Err(_) => methods.push(m)
+            Err(_) => methods.push(m),
         }
     }
 
@@ -103,7 +103,7 @@ fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
 fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
     match Command::new("cmd").arg("/C").arg(path).status() {
         Ok(_) => return Ok("cmd /C"),
-        Err(_) => return Err(vec!["cmd /C"])
+        Err(_) => return Err(vec!["cmd /C"]),
     };
 }
 
@@ -111,6 +111,6 @@ fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
 fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
     match Command::new("open").arg(path).status() {
         Ok(_) => return Ok("open"),
-        Err(_) => return Err(vec!["open"])
+        Err(_) => return Err(vec!["open"]),
     };
 }
