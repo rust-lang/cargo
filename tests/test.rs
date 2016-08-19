@@ -2232,3 +2232,33 @@ fn cfg_test_even_with_no_harness() {
 [RUNNING] `[..]`
 "));
 }
+
+#[test]
+fn panic_abort_multiple() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+
+            [profile.release]
+            panic = 'abort'
+        "#)
+        .file("src/lib.rs", "extern crate a;")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+    assert_that(p.cargo_process("test")
+                 .arg("--release").arg("-v")
+                 .arg("-p").arg("foo")
+                 .arg("-p").arg("a"),
+                execs().with_status(0));
+}
