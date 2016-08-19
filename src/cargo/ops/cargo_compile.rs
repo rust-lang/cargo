@@ -308,17 +308,22 @@ fn generate_targets<'a>(pkg: &'a Package,
                     }).collect::<Vec<_>>())
                 }
                 CompileMode::Test => {
+                    let deps = if release {
+                        &profiles.bench_deps
+                    } else {
+                        &profiles.test_deps
+                    };
                     let mut base = pkg.targets().iter().filter(|t| {
                         t.tested()
                     }).map(|t| {
-                        (t, if t.is_example() {build} else {profile})
+                        (t, if t.is_example() {deps} else {profile})
                     }).collect::<Vec<_>>();
 
                     // Always compile the library if we're testing everything as
                     // it'll be needed for doctests
                     if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
                         if t.doctested() {
-                            base.push((t, build));
+                            base.push((t, deps));
                         }
                     }
                     Ok(base)
