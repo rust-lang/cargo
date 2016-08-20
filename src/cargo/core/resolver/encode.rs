@@ -13,7 +13,8 @@ use super::Resolve;
 #[derive(RustcEncodable, RustcDecodable, Debug)]
 pub struct EncodableResolve {
     package: Option<Vec<EncodableDependency>>,
-    root: EncodableDependency,
+    /// `root` is optional to allow forward compatibility.
+    root: Option<EncodableDependency>,
     metadata: Option<Metadata>,
 }
 
@@ -28,9 +29,6 @@ impl EncodableResolve {
         let mut tmp = HashMap::new();
         let mut replacements = HashMap::new();
 
-        let packages = Vec::new();
-        let packages = self.package.as_ref().unwrap_or(&packages);
-
         let id2pkgid = |id: &EncodablePackageId| {
             to_package_id(&id.name, &id.version, id.source.as_ref(),
                           default, &path_deps)
@@ -40,7 +38,14 @@ impl EncodableResolve {
                           default, &path_deps)
         };
 
-        let root = try!(dep2pkgid(&self.root));
+        let packages = {
+            let mut packages = self.package.unwrap_or(Vec::new());
+            if let Some(root) = self.root {
+                packages.insert(0, root);
+            }
+            packages
+        };
+
         let ids = try!(packages.iter().map(&dep2pkgid)
                                .collect::<CargoResult<Vec<_>>>());
 
@@ -56,7 +61,6 @@ impl EncodableResolve {
                 Ok(())
             };
 
-            try!(register_pkg(&root));
             for id in ids.iter() {
                 try!(register_pkg(id));
             }
@@ -90,8 +94,7 @@ impl EncodableResolve {
                 Ok(())
             };
 
-            try!(add_dependencies(&root, &self.root));
-            for (id, pkg) in ids.iter().zip(packages) {
+            for (id, ref pkg) in ids.iter().zip(packages) {
                 try!(add_dependencies(id, pkg));
             }
         }
@@ -268,6 +271,7 @@ impl Decodable for EncodablePackageId {
 pub struct WorkspaceResolve<'a, 'cfg: 'a> {
     pub ws: &'a Workspace<'cfg>,
     pub resolve: &'a Resolve,
+    pub use_root_key: bool,
 }
 
 impl<'a, 'cfg> Encodable for WorkspaceResolve<'a, 'cfg> {
@@ -280,7 +284,7 @@ impl<'a, 'cfg> Encodable for WorkspaceResolve<'a, 'cfg> {
         }).unwrap().package_id();
 
         let encodable = ids.iter().filter_map(|&id| {
-            if root == id {
+            if self.use_root_key && root == id {
                 return None
             }
 
@@ -300,9 +304,15 @@ impl<'a, 'cfg> Encodable for WorkspaceResolve<'a, 'cfg> {
         }
 
         let metadata = if metadata.len() == 0 {None} else {Some(metadata)};
+
+        let root = if self.use_root_key {
+            Some(encodable_resolve_node(&root, self.resolve))
+        } else {
+            None
+        };
         EncodableResolve {
             package: Some(encodable),
-            root: encodable_resolve_node(&root, self.resolve),
+            root: root,
             metadata: metadata,
         }.encode(s)
     }

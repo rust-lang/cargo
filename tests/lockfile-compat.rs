@@ -276,3 +276,44 @@ unable to verify that `foo v0.1.0 ([..])` is the same as when the lockfile was g
 
 "));
 }
+
+#[test]
+fn lockfile_without_root() {
+    Package::new("foo", "0.1.0").publish();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    let lockfile = r#"[[package]]
+name = "bar"
+version = "0.0.1"
+dependencies = [
+ "foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+"#;
+    File::create(p.root().join("Cargo.lock")).unwrap()
+        .write_all(lockfile.as_bytes()).unwrap();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+
+    let mut lock = String::new();
+    File::open(p.root().join("Cargo.lock")).unwrap()
+        .read_to_string(&mut lock).unwrap();
+    assert!(lock.starts_with(lockfile.trim()));
+}
