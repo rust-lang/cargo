@@ -224,7 +224,7 @@ fn bad_cargo_lock() {
         version = "0.0.0"
         authors = []
     "#)
-    .file("Cargo.lock", "")
+    .file("Cargo.lock", "[[package]]\nfoo = 92")
     .file("src/lib.rs", "");
 
     assert_that(foo.cargo_process("build").arg("-v"),
@@ -232,7 +232,7 @@ fn bad_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]Cargo.lock
 
 Caused by:
-  expected a section for the key `root`
+  expected a value of type `string` for the key `package.name`
 "));
 }
 
