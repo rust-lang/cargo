@@ -388,17 +388,12 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
         Some(list) => list,
         None => return Ok(())
     };
-    let current = try!(ws.current());
 
     let paths = paths.val.iter().map(|&(ref s, ref p)| {
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
         // to get the directory containing the `.cargo` folder.
         (p.parent().unwrap().parent().unwrap().join(s), p)
-    }).filter(|&(ref p, _)| {
-        // Make sure we don't override the local package, even if it's in the
-        // list of override paths.
-        current.root() != &**p
     });
 
     for (path, definition) in paths {
