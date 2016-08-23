@@ -33,10 +33,28 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
 }
 
 pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> {
+    // Load the original lockfile if it exists.
+    let ws_root = Filesystem::new(ws.root().to_path_buf());
+    let orig = ws_root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file");
+    let orig = orig.and_then(|mut f| {
+        let mut s = String::new();
+        try!(f.read_to_string(&mut s));
+        Ok(s)
+    });
+
+    // Forward compatibility: if `orig` uses rootless format
+    // from the future, do the same.
+    let use_root_key = if let Ok(ref orig) = orig {
+        !orig.starts_with("[[package]]")
+    } else {
+        true
+    };
+
     let mut e = Encoder::new();
     WorkspaceResolve {
         ws: ws,
         resolve: resolve,
+        use_root_key: use_root_key,
     }.encode(&mut e).unwrap();
 
     let mut out = String::new();
@@ -44,10 +62,10 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
     // Note that we do not use e.toml.to_string() as we want to control the
     // exact format the toml is in to ensure pretty diffs between updates to the
     // lockfile.
-    let root = e.toml.get(&"root".to_string()).unwrap();
-
-    out.push_str("[root]\n");
-    emit_package(root.as_table().unwrap(), &mut out);
+    if let Some(root) = e.toml.get(&"root".to_string()) {
+        out.push_str("[root]\n");
+        emit_package(root.as_table().unwrap(), &mut out);
+    }
 
     let deps = e.toml.get(&"package".to_string()).unwrap().as_slice().unwrap();
     for dep in deps.iter() {
@@ -65,18 +83,8 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
         None => {}
     }
 
-    let root = Filesystem::new(ws.root().to_path_buf());
-
-    // Load the original lockfile if it exists.
-    //
     // If the lockfile contents haven't changed so don't rewrite it. This is
     // helpful on read-only filesystems.
-    let orig = root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file");
-    let orig = orig.and_then(|mut f| {
-        let mut s = String::new();
-        try!(f.read_to_string(&mut s));
-        Ok(s)
-    });
     if let Ok(orig) = orig {
         if has_crlf_line_endings(&orig) {
             out = out.replace("\n", "\r\n");
@@ -93,7 +101,7 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
     }
 
     // Ok, if that didn't work just write it out
-    root.open_rw("Cargo.lock", ws.config(), "Cargo.lock file").and_then(|mut f| {
+    ws_root.open_rw("Cargo.lock", ws.config(), "Cargo.lock file").and_then(|mut f| {
         try!(f.file().set_len(0));
         try!(f.write_all(out.as_bytes()));
         Ok(())

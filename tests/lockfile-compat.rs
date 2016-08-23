@@ -7,7 +7,7 @@ use std::io::prelude::*;
 
 use cargotest::support::git;
 use cargotest::support::registry::Package;
-use cargotest::support::{execs, project};
+use cargotest::support::{execs, project, lines_match};
 use hamcrest::assert_that;
 
 #[test]
@@ -275,4 +275,90 @@ this could be indicative of a few possible situations:
 unable to verify that `foo v0.1.0 ([..])` is the same as when the lockfile was generated
 
 "));
+}
+
+#[test]
+fn current_lockfile_format() {
+    Package::new("foo", "0.1.0").publish();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+
+    let mut actual = String::new();
+    File::open(p.root().join("Cargo.lock")).unwrap()
+        .read_to_string(&mut actual).unwrap();
+
+    let expected = "\
+[root]
+name = \"bar\"
+version = \"0.0.1\"
+dependencies = [
+ \"foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)\",
+]
+
+[[package]]
+name = \"foo\"
+version = \"0.1.0\"
+source = \"registry+https://github.com/rust-lang/crates.io-index\"
+
+[metadata]
+\"checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)\" = \"[..]\"";
+
+    for (l, r) in expected.lines().zip(actual.lines()) {
+        assert!(lines_match(l, r), "Lines differ:\n{}\n\n{}", l, r);
+    }
+
+    assert_eq!(actual.lines().count(), expected.lines().count());
+}
+
+#[test]
+fn lockfile_without_root() {
+    Package::new("foo", "0.1.0").publish();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    let lockfile = r#"[[package]]
+name = "bar"
+version = "0.0.1"
+dependencies = [
+ "foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+"#;
+    File::create(p.root().join("Cargo.lock")).unwrap()
+        .write_all(lockfile.as_bytes()).unwrap();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+
+    let mut lock = String::new();
+    File::open(p.root().join("Cargo.lock")).unwrap()
+        .read_to_string(&mut lock).unwrap();
+    assert!(lock.starts_with(lockfile.trim()));
 }

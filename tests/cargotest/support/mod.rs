@@ -412,7 +412,7 @@ impl Execs {
     }
 }
 
-fn lines_match(expected: &str, mut actual: &str) -> bool {
+pub fn lines_match(expected: &str, mut actual: &str) -> bool {
     for (i, part) in expected.split("[..]").enumerate() {
         match actual.find(part) {
             Some(j) => {
