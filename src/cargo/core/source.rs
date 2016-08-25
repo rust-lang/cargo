@@ -242,6 +242,16 @@ impl SourceId {
         Ok(SourceId::for_registry(&url))
     }
 
+    /// Returns the `SourceId` corresponding to the compiler source
+    ///
+    /// This is located in the sysroot in <sysroot>/rustlib/src.
+    pub fn compiler(config: &Config) -> CargoResult<SourceId> {
+        let mut loc = try!(config.rustc()).sysroot.clone();
+        loc.push("rustlib");
+        loc.push("src");
+        Self::for_local_registry(&loc)
+    }
+
     pub fn url(&self) -> &Url {
         &self.inner.url
     }

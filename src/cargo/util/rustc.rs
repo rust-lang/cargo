@@ -6,6 +6,7 @@ pub struct Rustc {
     pub path: PathBuf,
     pub verbose_version: String,
     pub host: String,
+    pub sysroot: PathBuf,
     /// Backwards compatibility: does this compiler support `--cap-lints` flag?
     pub cap_lints: bool,
 }
@@ -29,8 +30,17 @@ impl Rustc {
         };
 
         let verbose_version = try!(String::from_utf8(output.stdout).map_err(|_| {
-            internal("rustc -v didn't return utf8 output")
+            internal("rustc -v didn't return UTF-8 output")
         }));
+
+        let mut sysroot_raw = try!(util::process(&path).arg("--print").arg("sysroot")
+                                   .exec_with_output()).stdout;
+        // Trim final newline
+        assert_eq!(sysroot_raw.pop(), Some(b'\n'));
+        // What about invalid code sequences on Windows?
+        let sysroot = From::from(try!(String::from_utf8(sysroot_raw).map_err(|_| {
+            internal("rustc --print sysroot didn't not return UTF-8 output")
+        })));
 
         let host = {
             let triple = verbose_version.lines().find(|l| {
@@ -46,6 +56,7 @@ impl Rustc {
             path: path,
             verbose_version: verbose_version,
             host: host,
+            sysroot: sysroot,
             cap_lints: cap_lints,
         })
     }

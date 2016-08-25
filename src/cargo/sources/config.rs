@@ -59,6 +59,10 @@ impl<'cfg> SourceConfigMap<'cfg> {
             id: try!(SourceId::crates_io(config)),
             replace_with: None,
         });
+        base.add("compiler", SourceConfig {
+            id: try!(SourceId::compiler(config)),
+            replace_with: None,
+        });
         Ok(base)
     }
 
@@ -163,6 +167,12 @@ a lock file compatible with `{orig}` cannot be generated in this situation
         if srcs.next().is_some() {
             return Err(human(format!("more than one source URL specified for \
                                       `source.{}`", name)))
+        }
+
+        if name == "compiler" || src == try!(SourceId::compiler(self.config)) {
+            try!(self.config.shell().warn(
+                "the \"compiler source\" is unstable \
+                 and may be removed in any later version of Cargo"));
         }
 
         let mut replace_with = None;
