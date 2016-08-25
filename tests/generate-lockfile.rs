@@ -28,10 +28,8 @@ fn adding_and_removing_packages() {
     assert_that(p.cargo_process("generate-lockfile"),
                 execs().with_status(0));
 
-    let lockfile = p.root().join("Cargo.lock");
     let toml = p.root().join("Cargo.toml");
-    let mut lock1 = String::new();
-    File::open(&lockfile).unwrap().read_to_string(&mut lock1).unwrap();
+    let lock1 = p.read_lockfile();
 
     // add a dep
     File::create(&toml).unwrap().write_all(br#"
@@ -45,8 +43,7 @@ fn adding_and_removing_packages() {
     "#).unwrap();
     assert_that(p.cargo("generate-lockfile"),
                 execs().with_status(0));
-    let mut lock2 = String::new();
-    File::open(&lockfile).unwrap().read_to_string(&mut lock2).unwrap();
+    let lock2 = p.read_lockfile();
     assert!(lock1 != lock2);
 
     // change the dep
@@ -58,8 +55,7 @@ fn adding_and_removing_packages() {
     "#).unwrap();
     assert_that(p.cargo("generate-lockfile"),
                 execs().with_status(0));
-    let mut lock3 = String::new();
-    File::open(&lockfile).unwrap().read_to_string(&mut lock3).unwrap();
+    let lock3 = p.read_lockfile();
     assert!(lock1 != lock3);
     assert!(lock2 != lock3);
 
@@ -73,8 +69,7 @@ fn adding_and_removing_packages() {
     "#).unwrap();
     assert_that(p.cargo("generate-lockfile"),
                 execs().with_status(0));
-    let mut lock4 = String::new();
-    File::open(&lockfile).unwrap().read_to_string(&mut lock4).unwrap();
+    let lock4 = p.read_lockfile();
     assert_eq!(lock1, lock4);
 }
 
@@ -105,25 +100,20 @@ bar = "baz"
 foo = "bar"
 "#;
     let lockfile = p.root().join("Cargo.lock");
-    {
-        let mut lock = String::new();
-        File::open(&lockfile).unwrap().read_to_string(&mut lock).unwrap();
-        let data = lock + metadata;
-        File::create(&lockfile).unwrap().write_all(data.as_bytes()).unwrap();
-    }
+    let lock = p.read_lockfile();
+    let data = lock + metadata;
+    File::create(&lockfile).unwrap().write_all(data.as_bytes()).unwrap();
 
     // Build and make sure the metadata is still there
     assert_that(p.cargo("build"),
                 execs().with_status(0));
-    let mut lock = String::new();
-    File::open(&lockfile).unwrap().read_to_string(&mut lock).unwrap();
+    let lock = p.read_lockfile();
     assert!(lock.contains(metadata.trim()), "{}", lock);
 
     // Update and make sure the metadata is still there
     assert_that(p.cargo("update"),
                 execs().with_status(0));
-    let mut lock = String::new();
-    File::open(&lockfile).unwrap().read_to_string(&mut lock).unwrap();
+    let lock = p.read_lockfile();
     assert!(lock.contains(metadata.trim()), "{}", lock);
 }
 
@@ -153,10 +143,7 @@ fn preserve_line_endings_issue_2076() {
     assert_that(p.cargo("generate-lockfile"),
                 execs().with_status(0));
 
-    let mut lock0 = String::new();
-    {
-        File::open(&lockfile).unwrap().read_to_string(&mut lock0).unwrap();
-    }
+    let lock0 = p.read_lockfile();
 
     assert!(lock0.starts_with("[root]\n"));
 
@@ -168,10 +155,7 @@ fn preserve_line_endings_issue_2076() {
     assert_that(p.cargo("generate-lockfile"),
                 execs().with_status(0));
 
-    let mut lock2 = String::new();
-    {
-        File::open(&lockfile).unwrap().read_to_string(&mut lock2).unwrap();
-    }
+    let lock2 = p.read_lockfile();
 
     assert!(lock2.starts_with("[root]\r\n"));
     assert_eq!(lock1, lock2);
