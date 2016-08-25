@@ -23,19 +23,16 @@ pub type Metadata = BTreeMap<String, String>;
 impl EncodableResolve {
     pub fn into_resolve(self, ws: &Workspace) -> CargoResult<Resolve> {
         let path_deps = build_path_deps(ws);
-        let default = try!(ws.current()).package_id().source_id();
 
         let mut g = Graph::new();
         let mut tmp = HashMap::new();
         let mut replacements = HashMap::new();
 
         let id2pkgid = |id: &EncodablePackageId| {
-            to_package_id(&id.name, &id.version, id.source.as_ref(),
-                          default, &path_deps)
+            to_package_id(&id.name, &id.version, id.source.as_ref(), &path_deps)
         };
         let dep2pkgid = |dep: &EncodableDependency| {
-            to_package_id(&dep.name, &dep.version, dep.source.as_ref(),
-                          default, &path_deps)
+            to_package_id(&dep.name, &dep.version, dep.source.as_ref(), &path_deps)
         };
 
         let packages = {
@@ -127,7 +124,6 @@ impl EncodableResolve {
             let id = try!(to_package_id(&id.name,
                                         &id.version,
                                         id.source.as_ref(),
-                                        default,
                                         &path_deps));
             let v = if v == "<none>" {
                 None
@@ -194,11 +190,14 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
 fn to_package_id(name: &str,
                  version: &str,
                  source: Option<&SourceId>,
-                 default_source: &SourceId,
                  path_sources: &HashMap<String, SourceId>)
                  -> CargoResult<PackageId> {
-    let source = source.or(path_sources.get(name)).unwrap_or(default_source);
-    PackageId::new(name, version, source)
+    if let Some(source) = source.or(path_sources.get(name)) {
+        PackageId::new(name, version, source)
+    } else {
+        let dummy_source = SourceId::from_url("path+file:///dummy_path").unwrap();
+        PackageId::new(name, version, &dummy_source)
+    }
 }
 
 

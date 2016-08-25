@@ -750,7 +750,7 @@ fn git_with_lockfile() {
             [root]
             name = "foo"
             version = "0.1.0"
-            dependencies = [ "b 0.1.0" ]
+            dependencies = [ "bar 0.1.0" ]
 
             [[package]]
             name = "bar"
