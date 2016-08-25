@@ -2,9 +2,6 @@
 extern crate cargotest;
 extern crate hamcrest;
 
-use std::fs::File;
-use std::io::prelude::*;
-
 use cargotest::support::git;
 use cargotest::support::registry::Package;
 use cargotest::support::{execs, project, lines_match};
@@ -13,19 +10,6 @@ use hamcrest::assert_that;
 #[test]
 fn oldest_lockfile_still_works() {
     Package::new("foo", "0.1.0").publish();
-
-    let p = project("bar")
-        .file("Cargo.toml", r#"
-            [project]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies]
-            foo = "0.1.0"
-        "#)
-        .file("src/lib.rs", "");
-    p.build();
 
     let lockfile = r#"
 [root]
@@ -40,15 +24,25 @@ name = "foo"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 "#;
-    File::create(p.root().join("Cargo.lock")).unwrap()
-        .write_all(lockfile.as_bytes()).unwrap();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", lockfile);
+    p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 
-    let mut lock = String::new();
-    File::open(p.root().join("Cargo.lock")).unwrap()
-        .read_to_string(&mut lock).unwrap();
+    let lock = p.read_lockfile();
     assert!(lock.starts_with(lockfile.trim()));
 }
 
@@ -66,10 +60,8 @@ fn totally_wild_checksums_works() {
             [dependencies]
             foo = "0.1.0"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
-
-    File::create(p.root().join("Cargo.lock")).unwrap().write_all(br#"
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", r#"
 [root]
 name = "bar"
 version = "0.0.1"
@@ -85,14 +77,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [metadata]
 "checksum baz 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "checksum"
 "checksum foo 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "checksum"
-"#).unwrap();
+"#);
+
+    p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 
-    let mut lock = String::new();
-    File::open(p.root().join("Cargo.lock")).unwrap()
-        .read_to_string(&mut lock).unwrap();
+    let lock = p.read_lockfile();
     assert!(lock.starts_with(r#"
 [root]
 name = "bar"
@@ -124,10 +116,8 @@ fn wrong_checksum_is_an_error() {
             [dependencies]
             foo = "0.1.0"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
-
-    t!(t!(File::create(p.root().join("Cargo.lock"))).write_all(br#"
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", r#"
 [root]
 name = "bar"
 version = "0.0.1"
@@ -142,7 +132,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "checksum"
-"#));
+"#);
+
+    p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
@@ -177,10 +169,8 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
             [dependencies]
             foo = "0.1.0"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
-
-    t!(t!(File::create(p.root().join("Cargo.lock"))).write_all(br#"
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", r#"
 [root]
 name = "bar"
 version = "0.0.1"
@@ -195,7 +185,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "<none>"
-"#));
+"#);
+    p.build();
 
     assert_that(p.cargo("fetch"),
                 execs().with_status(101).with_stderr("\
@@ -238,10 +229,8 @@ fn listed_checksum_bad_if_we_cannot_compute() {
             [dependencies]
             foo = {{ git = '{}' }}
         "#, git.url()))
-        .file("src/lib.rs", "");
-    p.build();
-
-    let lockfile = format!(r#"
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", &format!(r#"
 [root]
 name = "bar"
 version = "0.0.1"
@@ -256,9 +245,9 @@ source = "git+{0}"
 
 [metadata]
 "checksum foo 0.1.0 (git+{0})" = "checksum"
-"#, git.url());
-    File::create(p.root().join("Cargo.lock")).unwrap()
-        .write_all(lockfile.as_bytes()).unwrap();
+"#, git.url()));
+
+    p.build();
 
     assert_that(p.cargo("fetch"),
                 execs().with_status(101).with_stderr("\
@@ -296,9 +285,7 @@ fn current_lockfile_format() {
 
     assert_that(p.cargo("build"), execs().with_status(0));
 
-    let mut actual = String::new();
-    File::open(p.root().join("Cargo.lock")).unwrap()
-        .read_to_string(&mut actual).unwrap();
+    let actual = p.read_lockfile();
 
     let expected = "\
 [root]
@@ -327,19 +314,6 @@ source = \"registry+https://github.com/rust-lang/crates.io-index\"
 fn lockfile_without_root() {
     Package::new("foo", "0.1.0").publish();
 
-    let p = project("bar")
-        .file("Cargo.toml", r#"
-            [package]
-            name = "bar"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies]
-            foo = "0.1.0"
-        "#)
-        .file("src/lib.rs", "");
-    p.build();
-
     let lockfile = r#"[[package]]
 name = "bar"
 version = "0.0.1"
@@ -352,13 +326,24 @@ name = "foo"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 "#;
-    File::create(p.root().join("Cargo.lock")).unwrap()
-        .write_all(lockfile.as_bytes()).unwrap();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", lockfile);
+
+    p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
 
-    let mut lock = String::new();
-    File::open(p.root().join("Cargo.lock")).unwrap()
-        .read_to_string(&mut lock).unwrap();
+    let lock = p.read_lockfile();
     assert!(lock.starts_with(lockfile.trim()));
 }
