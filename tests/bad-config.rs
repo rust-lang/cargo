@@ -822,7 +822,7 @@ fn both_git_and_path_specified() {
     assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_stderr_contains("\
 [WARNING] dependency (bar) specification is ambiguous. \
-Only one of `git` or `path` is allowed. \
+Only one of `git` or `path` or `stdlib = true` is allowed. \
 This will be considered an error in future versions
 "));
 }

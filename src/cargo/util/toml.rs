@@ -223,6 +223,7 @@ pub struct DetailedTomlDependency {
     branch: Option<String>,
     tag: Option<String>,
     rev: Option<String>,
+    stdlib: Option<bool>,
     features: Option<Vec<String>>,
     optional: Option<bool>,
     default_features: Option<bool>,
@@ -580,6 +581,7 @@ impl TomlManifest {
             fn process_dependencies(
                 cx: &mut Context,
                 new_deps: Option<&HashMap<String, TomlDependency>>,
+                allow_explicit_stdlib: bool,
                 kind: Option<Kind>)
                 -> CargoResult<()>
             {
@@ -588,6 +590,16 @@ impl TomlManifest {
                     None => return Ok(())
                 };
                 for (n, v) in dependencies.iter() {
+                    if let &TomlDependency::Detailed(DetailedTomlDependency {
+                        stdlib: Some(true),
+                        ..
+                    }) = v {
+                        if !allow_explicit_stdlib {
+                            return Err(human(format!(
+                                "dependency {} cannot have `stdlib = true`",
+                                n)))
+                        }
+                    }
                     let dep = try!(v.to_dependency(n, cx, kind));
                     cx.deps.push(dep);
                 }
@@ -597,23 +609,23 @@ impl TomlManifest {
 
             // Collect the deps
             try!(process_dependencies(&mut cx, self.dependencies.as_ref(),
-                                      None));
+                                      true, None));
             try!(process_dependencies(&mut cx, self.dev_dependencies.as_ref(),
-                                      Some(Kind::Development)));
+                                      false, Some(Kind::Development)));
             try!(process_dependencies(&mut cx, self.build_dependencies.as_ref(),
-                                      Some(Kind::Build)));
+                                      false, Some(Kind::Build)));
 
             for (name, platform) in self.target.iter().flat_map(|t| t) {
                 cx.platform = Some(try!(name.parse()));
                 try!(process_dependencies(&mut cx,
                                           platform.dependencies.as_ref(),
-                                          None));
+                                          true, None));
                 try!(process_dependencies(&mut cx,
                                           platform.build_dependencies.as_ref(),
-                                          Some(Kind::Build)));
+                                          false, Some(Kind::Build)));
                 try!(process_dependencies(&mut cx,
                                           platform.dev_dependencies.as_ref(),
-                                          Some(Kind::Development)));
+                                          false, Some(Kind::Development)));
             }
 
             replace = try!(self.replace(&mut cx));
@@ -836,13 +848,19 @@ impl TomlDependency {
             }
         }
 
-        let new_source_id = match (details.git.as_ref(), details.path.as_ref()) {
-            (Some(git), maybe_path) => {
-                if maybe_path.is_some() {
-                    let msg = format!("dependency ({}) specification is ambiguous. \
-                                       Only one of `git` or `path` is allowed. \
-                                       This will be considered an error in future versions", name);
-                    cx.warnings.push(msg)
+        let one_source_message = format!(
+            "dependency ({}) specification is ambiguous. \
+             Only one of `git` or `path` or `stdlib = true` is allowed. \
+             This will be considered an error in future versions",
+            name);
+
+        let new_source_id = match (details.git.as_ref(),
+                                   details.path.as_ref(),
+                                   details.stdlib)
+        {
+            (Some(git), maybe_path, maybe_stdlib) => {
+                if maybe_path.is_some() || (maybe_stdlib == Some(true)) {
+                    cx.warnings.push(one_source_message)
                 }
 
                 let n_details = [&details.branch, &details.tag, &details.rev]
@@ -864,7 +882,11 @@ impl TomlDependency {
                 let loc = try!(git.to_url());
                 SourceId::for_git(&loc, reference)
             },
-            (None, Some(path)) => {
+            (None, Some(path), maybe_stdlib) => {
+                if maybe_stdlib == Some(true) {
+                    cx.warnings.push(one_source_message)
+                }
+
                 cx.nested_paths.push(PathBuf::from(path));
                 // If the source id for the package we're parsing is a path
                 // source, then we normalize the path here to get rid of
@@ -882,7 +904,8 @@ impl TomlDependency {
                     cx.source_id.clone()
                 }
             },
-            (None, None) => try!(SourceId::crates_io(cx.config)),
+            (None, None, Some(true)) => try!(SourceId::compiler(cx.config)),
+            (None, None, _) => try!(SourceId::crates_io(cx.config)),
         };
 
         let version = details.version.as_ref().map(|v| &v[..]);
