@@ -1,4 +1,4 @@
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{HashMap, HashSet, BTreeMap};
 use std::fmt;
 use std::str::FromStr;
 
@@ -23,20 +23,6 @@ pub type Metadata = BTreeMap<String, String>;
 impl EncodableResolve {
     pub fn into_resolve(self, ws: &Workspace) -> CargoResult<Resolve> {
         let path_deps = build_path_deps(ws);
-        let default = try!(ws.current()).package_id().source_id();
-
-        let mut g = Graph::new();
-        let mut tmp = HashMap::new();
-        let mut replacements = HashMap::new();
-
-        let id2pkgid = |id: &EncodablePackageId| {
-            to_package_id(&id.name, &id.version, id.source.as_ref(),
-                          default, &path_deps)
-        };
-        let dep2pkgid = |dep: &EncodableDependency| {
-            to_package_id(&dep.name, &dep.version, dep.source.as_ref(),
-                          default, &path_deps)
-        };
 
         let packages = {
             let mut packages = self.package.unwrap_or(Vec::new());
@@ -46,58 +32,83 @@ impl EncodableResolve {
             packages
         };
 
-        let ids = try!(packages.iter().map(&dep2pkgid)
-                               .collect::<CargoResult<Vec<_>>>());
+        // `PackageId`s in the lock file don't include the `source` part
+        // for workspace members, so we reconstruct proper ids.
+        let (live_pkgs, all_pkgs) = {
+            let mut live_pkgs = HashMap::new();
+            let mut all_pkgs = HashSet::new();
+            for pkg in packages.iter() {
+                let enc_id = EncodablePackageId {
+                    name: pkg.name.clone(),
+                    version: pkg.version.clone(),
+                    source: pkg.source.clone(),
+                };
 
-        {
-            let mut register_pkg = |pkgid: &PackageId| {
-                let precise = pkgid.source_id().precise()
-                                   .map(|s| s.to_string());
-                if tmp.insert(pkgid.clone(), precise).is_some() {
+                if !all_pkgs.insert(enc_id.clone()) {
                     return Err(internal(format!("package `{}` is specified twice in the lockfile",
-                                                pkgid.name())));
+                                                pkg.name)));
                 }
-                g.add(pkgid.clone(), &[]);
-                Ok(())
-            };
+                let id = match pkg.source.as_ref().or(path_deps.get(&pkg.name)) {
+                    // We failed to find a local package in the workspace.
+                    // It must have been removed and should be ignored.
+                    None => continue,
+                    Some(source) => try!(PackageId::new(&pkg.name, &pkg.version, source))
+                };
 
-            for id in ids.iter() {
-                try!(register_pkg(id));
+                assert!(live_pkgs.insert(enc_id, (id, pkg)).is_none())
             }
-        }
+            (live_pkgs, all_pkgs)
+        };
 
-        {
-            let mut add_dependencies = |id: &PackageId, pkg: &EncodableDependency|
-                                        -> CargoResult<()> {
-                if let Some(ref replace) = pkg.replace {
-                    let replace = try!(id2pkgid(replace));
-                    let replace_precise = tmp.get(&replace).map(|p| {
-                        replace.with_precise(p.clone())
-                    }).unwrap_or(replace);
-                    replacements.insert(id.clone(), replace_precise);
-                    assert!(pkg.dependencies.is_none());
-                    return Ok(())
+        let lookup_id = |enc_id: &EncodablePackageId| -> CargoResult<Option<PackageId>> {
+            match live_pkgs.get(enc_id) {
+                Some(&(ref id, _)) => Ok(Some(id.clone())),
+                None => if all_pkgs.contains(enc_id) {
+                    // Package is found in the lockfile, but it is
+                    // no longer a member of the workspace.
+                    Ok(None)
+                } else {
+                    Err(internal(format!("package `{}` is specified as a dependency, \
+                                          but is missing from the package list", enc_id)))
                 }
+            }
+        };
 
+        let g = {
+            let mut g = Graph::new();
+
+            for &(ref id, _) in live_pkgs.values() {
+                g.add(id.clone(), &[]);
+            }
+
+            for &(ref id, ref pkg) in live_pkgs.values() {
                 let deps = match pkg.dependencies {
                     Some(ref deps) => deps,
-                    None => return Ok(()),
+                    None => continue
                 };
-                for edge in deps.iter() {
-                    let to_depend_on = try!(id2pkgid(edge));
-                    let precise_pkgid =
-                        tmp.get(&to_depend_on)
-                           .map(|p| to_depend_on.with_precise(p.clone()))
-                           .unwrap_or(to_depend_on.clone());
-                    g.link(id.clone(), precise_pkgid);
-                }
-                Ok(())
-            };
 
-            for (id, ref pkg) in ids.iter().zip(packages) {
-                try!(add_dependencies(id, pkg));
+                for edge in deps.iter() {
+                    if let Some(to_depend_on) = try!(lookup_id(edge)) {
+                        g.link(id.clone(), to_depend_on);
+                    }
+                }
             }
-        }
+            g
+        };
+
+        let replacements = {
+            let mut replacements = HashMap::new();
+            for &(ref id, ref pkg) in live_pkgs.values() {
+                if let Some(ref replace) = pkg.replace {
+                    assert!(pkg.dependencies.is_none());
+                    if let Some(replace_id) = try!(lookup_id(replace)) {
+                        replacements.insert(id.clone(), replace_id);
+                    }
+                }
+            }
+            replacements
+        };
+
         let mut metadata = self.metadata.unwrap_or(BTreeMap::new());
 
         // Parse out all package checksums. After we do this we can be in a few
@@ -121,14 +132,14 @@ impl EncodableResolve {
         for (k, v) in metadata.iter().filter(|p| p.0.starts_with(prefix)) {
             to_remove.push(k.to_string());
             let k = &k[prefix.len()..];
-            let id: EncodablePackageId = try!(k.parse().chain_error(|| {
+            let enc_id: EncodablePackageId = try!(k.parse().chain_error(|| {
                 internal("invalid encoding of checksum in lockfile")
             }));
-            let id = try!(to_package_id(&id.name,
-                                        &id.version,
-                                        id.source.as_ref(),
-                                        default,
-                                        &path_deps));
+            let id = match lookup_id(&enc_id) {
+                Ok(Some(id)) => id,
+                _ => continue,
+            };
+
             let v = if v == "<none>" {
                 None
             } else {
@@ -191,17 +202,6 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
     }
 }
 
-fn to_package_id(name: &str,
-                 version: &str,
-                 source: Option<&SourceId>,
-                 default_source: &SourceId,
-                 path_sources: &HashMap<String, SourceId>)
-                 -> CargoResult<PackageId> {
-    let source = source.or(path_sources.get(name)).unwrap_or(default_source);
-    PackageId::new(name, version, source)
-}
-
-
 #[derive(RustcEncodable, RustcDecodable, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub struct EncodableDependency {
     name: String,
@@ -211,7 +211,7 @@ pub struct EncodableDependency {
     replace: Option<EncodablePackageId>,
 }
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Hash, Clone)]
 pub struct EncodablePackageId {
     name: String,
     version: String,

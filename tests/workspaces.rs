@@ -910,3 +910,33 @@ fn workspace_in_git() {
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 }
+
+
+#[test]
+fn lockfile_can_specify_nonexistant_members() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["a"]
+        "#)
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("a/src/main.rs", "fn main() {}")
+        .file("Cargo.lock", r#"
+            [root]
+            name = "a"
+            version = "0.1.0"
+
+            [[package]]
+            name = "b"
+            version = "0.1.0"
+        "#);
+
+    p.build();
+
+    assert_that(p.cargo("build").cwd(p.root().join("a")), execs().with_status(0));
+}
