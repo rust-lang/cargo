@@ -3,8 +3,6 @@ pub use self::imp::Sha256;
 // Someone upstream will link to OpenSSL, so we don't need to explicitly
 // link to it ourselves. Hence we pick up Sha256 digests from OpenSSL
 #[cfg(not(windows))]
-// allow improper ctypes because size_t falls under that in old compilers
-#[allow(bad_style, improper_ctypes)]
 mod imp {
     extern crate openssl;
 

@@ -71,16 +71,6 @@ fn main() {
     execute_main_without_stdin(execute, true, USAGE)
 }
 
-macro_rules! configure_shell {
-    ($config:expr, $options:expr) => (
-        try!($config.configure($options.flag_verbose,
-                               $options.flag_quiet,
-                               &$options.flag_color,
-                               $options.flag_frozen,
-                               $options.flag_locked));
-    )
-}
-
 macro_rules! each_subcommand{
     ($mac:ident) => {
         $mac!(bench);
