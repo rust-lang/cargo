@@ -320,6 +320,36 @@ Caused by:
 }
 
 #[test]
+fn bad_dependency_in_lockfile() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("Cargo.lock", r#"
+            [root]
+            name = "foo"
+            version = "0.0.1"
+            dependencies = [
+             "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+            ]
+        "#);
+    p.build();
+
+    assert_that(p.cargo("build").arg("--verbose"),
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse lock file at: [..]
+
+Caused by:
+  package `bar 0.1.0 ([..])` is specified as a dependency, but is missing from the package list
+"));
+
+}
+
+#[test]
 fn bad_git_dependency() {
     let foo = project("foo")
     .file("Cargo.toml", r#"
