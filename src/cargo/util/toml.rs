@@ -763,6 +763,11 @@ impl TomlManifest {
                        requirement, but found one for `{}`", spec);
             }
 
+            if let Some(true) = replacement.stdlib {
+                bail!("replacements cannot be standard library packages, \
+                       but found one for `{}`", spec);
+            }
+
             let dep = try!(replacement
                            .to_dependency(spec.name(), cx, None));
             let dep = {

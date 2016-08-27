@@ -73,3 +73,27 @@ Caused by:
   local registry path is not a directory: [..]
 "));
 }
+
+#[test]
+fn stdlib_replacement() {
+    setup();
+    let p = project("local")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+
+            [replace]
+            "foo:1.0.0" = { stdlib = true }
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("update").arg("--verbose"),
+                execs().with_status(101).with_stderr_contains("\
+[ERROR] failed to parse manifest at [..]
+
+Caused by:
+  replacements cannot be standard library packages, but found one for `foo:1.0.0`
+"));
+}
