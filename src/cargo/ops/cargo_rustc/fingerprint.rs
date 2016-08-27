@@ -535,7 +535,7 @@ fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint)
 
     let old_fingerprint_json = try!(paths::read(&loc.with_extension("json")));
     let old_fingerprint = try!(json::decode(&old_fingerprint_json).chain_error(|| {
-        internal(format!("failed to deserialize json"))
+        internal("failed to deserialize json")
     }));
     new_fingerprint.compare(&old_fingerprint)
 }
@@ -589,13 +589,13 @@ fn dep_info_mtime_if_fresh(dep_info: &Path) -> CargoResult<Option<FileTime>> {
             file.pop();
             file.push(' ');
             file.push_str(try!(deps.next().chain_error(|| {
-                internal(format!("malformed dep-info format, trailing \\"))
+                internal("malformed dep-info format, trailing \\")
             })));
         }
         paths.push(cwd.join(&file));
     }
 
-    Ok(mtime_if_fresh(&dep_info, paths.iter()))
+    Ok(mtime_if_fresh(dep_info, paths.iter()))
 }
 
 fn pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String> {

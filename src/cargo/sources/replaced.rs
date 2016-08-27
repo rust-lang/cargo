@@ -50,7 +50,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
     }
 
     fn fingerprint(&self, id: &Package) -> CargoResult<String> {
-        self.inner.fingerprint(&id)
+        self.inner.fingerprint(id)
     }
 
     fn verify(&self, id: &PackageId) -> CargoResult<()> {

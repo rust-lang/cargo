@@ -49,7 +49,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let Options { flag_bin, flag_lib, arg_path, flag_name, flag_vcs, .. } = options;
 
-    let tmp = &arg_path.unwrap_or(format!("."));
+    let tmp = &arg_path.unwrap_or(".".into());
     let opts = ops::NewOptions::new(flag_vcs,
                                      flag_bin,
                                      flag_lib,
@@ -65,4 +65,3 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     Ok(None)
 }
-

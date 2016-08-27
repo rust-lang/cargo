@@ -350,11 +350,7 @@ impl BuildOutput {
         let mut flags_iter = value.split(|c: char| c.is_whitespace())
                                   .filter(|w| w.chars().any(|c| !c.is_whitespace()));
         let (mut library_links, mut library_paths) = (Vec::new(), Vec::new());
-        loop {
-            let flag = match flags_iter.next() {
-                Some(f) => f,
-                None => break
-            };
+        while let Some(flag) = flags_iter.next() {
             if flag != "-l" && flag != "-L" {
                 bail!("Only `-l` and `-L` flags are allowed in {}: `{}`",
                       whence, value)

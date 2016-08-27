@@ -88,7 +88,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                 };
                 debug!("attempting github fast path for {}",
                        self.source_id.url());
-                if github_up_to_date(handle, &self.source_id.url(), &oid) {
+                if github_up_to_date(handle, self.source_id.url(), &oid) {
                     return Ok(())
                 }
                 debug!("fast path failed, falling back to a git fetch");

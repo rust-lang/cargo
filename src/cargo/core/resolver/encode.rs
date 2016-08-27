@@ -303,7 +303,7 @@ impl<'a, 'cfg> Encodable for WorkspaceResolve<'a, 'cfg> {
                             checksum.to_string());
         }
 
-        let metadata = if metadata.len() == 0 {None} else {Some(metadata)};
+        let metadata = if metadata.is_empty() { None } else { Some(metadata) };
 
         let root = if self.use_root_key {
             Some(encodable_resolve_node(&root, self.resolve))

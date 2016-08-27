@@ -489,15 +489,13 @@ impl<'src> SourceMap<'src> {
         let source = self.map.get(id);
 
         source.map(|s| {
-            let s: &(Source + 'src) = &**s;
-            s
+            &**s
         })
     }
 
     pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut (Source + 'src)> {
         self.map.get_mut(id).map(|s| {
-            let s: &mut (Source + 'src) = &mut **s;
-            s
+            &mut **s
         })
     }
 

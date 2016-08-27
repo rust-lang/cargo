@@ -139,7 +139,7 @@ impl Filesystem {
     /// Handles errors where other Cargo processes are also attempting to
     /// concurrently create this directory.
     pub fn create_dir(&self) -> io::Result<()> {
-        return create_dir_all(&self.root);
+        create_dir_all(&self.root)
     }
 
     /// Returns an adaptor that can be used to print the path of this
@@ -318,7 +318,7 @@ fn acquire(config: &Config,
 
 fn create_dir_all(path: &Path) -> io::Result<()> {
     match create_dir(path) {
-        Ok(()) => return Ok(()),
+        Ok(()) => Ok(()),
         Err(e) => {
             if e.kind() == io::ErrorKind::NotFound {
                 if let Some(p) = path.parent() {

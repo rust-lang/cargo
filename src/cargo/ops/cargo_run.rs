@@ -42,7 +42,7 @@ pub fn run(ws: &Workspace,
 
     let compile = try!(ops::compile(ws, options));
     let exe = &compile.binaries[0];
-    let exe = match util::without_prefix(&exe, config.cwd()) {
+    let exe = match util::without_prefix(exe, config.cwd()) {
         Some(path) if path.file_name() == Some(path.as_os_str())
                    => Path::new(".").join(path).to_path_buf(),
         Some(path) => path.to_path_buf(),

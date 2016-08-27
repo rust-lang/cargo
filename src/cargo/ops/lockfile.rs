@@ -75,12 +75,9 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
         emit_package(dep, &mut out);
     }
 
-    match e.toml.get(&"metadata".to_string()) {
-        Some(metadata) => {
-            out.push_str("[metadata]\n");
-            out.push_str(&metadata.to_string());
-        }
-        None => {}
+    if let Some(metadata) = e.toml.get(&"metadata".to_string()) {
+        out.push_str("[metadata]\n");
+        out.push_str(&metadata.to_string());
     }
 
     // If the lockfile contents haven't changed so don't rewrite it. This is
@@ -128,8 +125,8 @@ fn emit_package(dep: &toml::Table, out: &mut String) {
         out.push_str(&format!("source = {}\n", lookup(dep, "source")));
     }
 
-    if let Some(ref s) = dep.get("dependencies") {
-        let slice = Value::as_slice(*s).unwrap();
+    if let Some(s) = dep.get("dependencies") {
+        let slice = Value::as_slice(s).unwrap();
 
         if !slice.is_empty() {
             out.push_str("dependencies = [\n");

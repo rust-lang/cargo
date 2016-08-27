@@ -85,7 +85,7 @@ fn run_unit_tests(options: &TestOptions,
     let mut errors = Vec::new();
 
     for &(ref pkg, _, ref exe) in &compilation.tests {
-        let to_display = match util::without_prefix(exe, &cwd) {
+        let to_display = match util::without_prefix(exe, cwd) {
             Some(path) => path,
             None => &**exe,
         };
@@ -151,7 +151,7 @@ fn run_doc_tests(options: &TestOptions,
                 p.arg("--cfg").arg(cfg);
             }
 
-            for (_, libs) in compilation.libraries.iter() {
+            for libs in compilation.libraries.values() {
                 for &(ref target, ref lib) in libs.iter() {
                     // Note that we can *only* doctest rlib outputs here.  A
                     // staticlib output cannot be linked by the compiler (it just

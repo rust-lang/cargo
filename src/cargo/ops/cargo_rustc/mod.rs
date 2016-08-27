@@ -131,7 +131,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                 let pkgid = unit.pkg.package_id();
                 if !unit.target.is_lib() { continue }
                 if unit.profile.doc { continue }
-                if cx.compilation.libraries.contains_key(&pkgid) {
+                if cx.compilation.libraries.contains_key(pkgid) {
                     continue
                 }
 
@@ -369,7 +369,7 @@ fn add_plugin_deps(rustc: &mut CommandPrototype,
                    build_scripts: &BuildScripts)
                    -> CargoResult<()> {
     let var = util::dylib_path_envvar();
-    let search_path = rustc.get_env(var).unwrap_or(OsString::new());
+    let search_path = rustc.get_env(var).unwrap_or_default();
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for id in build_scripts.plugins.iter() {
         let key = (id.clone(), Kind::Host);

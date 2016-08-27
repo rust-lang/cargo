@@ -206,7 +206,7 @@ impl Error for ConcreteCargoError {
     fn description(&self) -> &str { &self.description }
     fn cause(&self) -> Option<&Error> {
         self.cause.as_ref().map(|c| {
-            let e: &Error = &**c; e
+            &**c as &Error
         })
     }
 }
@@ -386,14 +386,14 @@ pub fn process_error(msg: &str,
 
     if let Some(out) = output {
         match str::from_utf8(&out.stdout) {
-            Ok(s) if s.trim().len() > 0 => {
+            Ok(s) if !s.trim().is_empty() => {
                 desc.push_str("\n--- stdout\n");
                 desc.push_str(s);
             }
             Ok(..) | Err(..) => {}
         }
         match str::from_utf8(&out.stderr) {
-            Ok(s) if s.trim().len() > 0 => {
+            Ok(s) if !s.trim().is_empty() => {
                 desc.push_str("\n--- stderr\n");
                 desc.push_str(s);
             }

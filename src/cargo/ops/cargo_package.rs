@@ -38,7 +38,7 @@ pub fn package(ws: &Workspace,
     if opts.list {
         let root = pkg.root();
         let mut list: Vec<_> = try!(src.list_files(&pkg)).iter().map(|file| {
-            util::without_prefix(&file, &root).unwrap().to_path_buf()
+            util::without_prefix(file, root).unwrap().to_path_buf()
         }).collect();
         list.sort();
         for file in list.iter() {
@@ -109,7 +109,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
         if !things.is_empty() {
             things.push_str(" or ");
         }
-        things.push_str(&missing.last().unwrap());
+        things.push_str(missing.last().unwrap());
 
         try!(config.shell().warn(
             &format!("manifest has no {things}. \
@@ -179,7 +179,7 @@ fn tar(ws: &Workspace,
     let config = ws.config();
     let root = pkg.root();
     for file in try!(src.list_files(pkg)).iter() {
-        let relative = util::without_prefix(&file, &root).unwrap();
+        let relative = util::without_prefix(file, root).unwrap();
         try!(check_filename(relative));
         let relative = try!(relative.to_str().chain_error(|| {
             human(format!("non-utf8 path in source directory: {}",

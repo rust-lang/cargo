@@ -134,7 +134,7 @@ impl<'cfg> Workspace<'cfg> {
             };
             ws.members.push(ws.current_manifest.clone());
         }
-        return Ok(ws)
+        Ok(ws)
     }
 
     /// Returns the current package of this workspace.

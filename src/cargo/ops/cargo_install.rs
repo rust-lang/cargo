@@ -1,7 +1,6 @@
 use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
-use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -136,10 +135,8 @@ pub fn install(root: Option<&str>,
     for &(bin, src) in binaries.iter() {
         let dst = staging_dir.path().join(bin);
         // Try to move if `target_dir` is transient.
-        if !source_id.is_path() {
-            if fs::rename(src, &dst).is_ok() {
-                continue
-            }
+        if !source_id.is_path() && fs::rename(src, &dst).is_ok() {
+            continue
         }
         try!(fs::copy(src, &dst).chain_error(|| {
             human(format!("failed to copy `{}` to `{}`", src.display(),
@@ -231,7 +228,7 @@ pub fn install(root: Option<&str>,
 
     // Print a warning that if this directory isn't in PATH that they won't be
     // able to run these commands.
-    let path = env::var_os("PATH").unwrap_or(OsString::new());
+    let path = env::var_os("PATH").unwrap_or_default();
     for path in env::split_paths(&path) {
         if path == dst {
             return Ok(())
@@ -334,7 +331,7 @@ fn check_overwrites(dst: &Path,
     }
     // Format the error message.
     let mut msg = String::new();
-    for (ref bin, p) in duplicates.iter() {
+    for (bin, p) in duplicates.iter() {
         msg.push_str(&format!("binary `{}` already exists in destination", bin));
         if let Some(p) = p.as_ref() {
             msg.push_str(&format!(" as part of `{}`\n", p));

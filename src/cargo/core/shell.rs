@@ -125,9 +125,7 @@ impl MultiShell {
             Some("auto") => Auto,
             Some("always") => Always,
             Some("never") => Never,
-
             None => Auto,
-
             Some(arg) => bail!("argument for --color must be auto, always, or \
                                 never, but found `{}`", arg),
         };

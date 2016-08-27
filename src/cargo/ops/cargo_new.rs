@@ -301,7 +301,7 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
 
     try!(detect_source_paths_and_types(&path, name, &mut src_paths_types));
 
-    if src_paths_types.len() == 0 {
+    if src_paths_types.is_empty() {
         src_paths_types.push(plan_new_source_file(opts.bin, name.to_string()));
     } else {
         // --bin option may be ignored if lib.rs or src/lib.rs present

@@ -42,12 +42,12 @@ impl Encodable for Package {
         let package_id = summary.package_id();
 
         SerializedPackage {
-            name: &package_id.name(),
+            name: package_id.name(),
             version: &package_id.version().to_string(),
             id: package_id,
             source: summary.source_id(),
             dependencies: summary.dependencies(),
-            targets: &self.manifest.targets(),
+            targets: self.manifest.targets(),
             features: summary.features(),
             manifest_path: &self.manifest_path.display().to_string(),
         }.encode(s)

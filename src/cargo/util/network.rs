@@ -5,7 +5,7 @@ use util::{CargoResult, Config, errors};
 /// Retry counts provided by Config object 'net.retry'. Config shell outputs
 /// a warning on per retry.
 ///
-/// Closure must return a CargoResult.
+/// Closure must return a `CargoResult`.
 ///
 /// Example:
 /// use util::network;
