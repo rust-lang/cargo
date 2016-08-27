@@ -143,6 +143,107 @@ version required: ^1.0
 "));
 }
 
+
+#[test]
+fn explicit_stdlib_deps_with_flag() {
+    setup();
+    Package::new("core", "1.0.0").local(true).publish();
+    Package::new("std", "1.0.0").local(true).file("src/lib.rs", STD).publish();
+    Package::new("test", "1.0.0").local(true).publish();
+
+    let p = project("local")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+            implicit-dependencies = false
+
+            [dependencies]
+            core = { version = "1", stdlib = true }
+            std = { version = "1", stdlib = true }
+            test = { version = "1", stdlib = true }
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("--verbose"),
+                execs().with_status(0)
+                .with_stderr_contains(
+                    "[WARNING] the \"compiler source\" is unstable [..]")
+                .with_stderr_contains(
+                    "[WARNING] explicit dependencies are unstable"));
+}
+
+#[test]
+fn implicit_stdlib_dep_with_flag() {
+    setup();
+    Package::new("core", "1.0.0").local(true).publish();
+    Package::new("std", "1.0.0").local(true).file("src/lib.rs", STD).publish();
+    Package::new("test", "1.0.0").local(true).publish();
+
+    let p = project("local")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+            implicit-dependencies = true
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("--verbose"),
+                execs().with_status(0)
+                .with_stderr_contains(
+                    "[WARNING] the \"compiler source\" is unstable [..]"));
+}
+
+#[test]
+fn no_primary_stdlib_deps_at_all() {
+    setup();
+    // For dev & build
+    Package::new("core", "1.0.0")
+        .file("src/lib.rs", "I AM INVALID SYNTAX CANNOT COMPILE")
+        .local(true).publish();
+    Package::new("std", "1.0.0").local(true).publish();
+    Package::new("test", "1.0.0").local(true).publish();
+
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+        implicit-dependencies = false
+    "#)
+    .file("src/lib.rs", "");
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+}
+
+#[test]
+fn mixed_expicit_and_implicit_stdlib_deps() {
+    setup();
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+        implicit-dependencies = true
+
+        [dependencies]
+        foo = { stdlib = true }
+    "#)
+    .file("src/lib.rs", "");
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  cannot use explicit stdlib deps when implicit deps were explicitly enabled.
+"));
+}
+
 #[test]
 fn stdlib_replacement() {
     setup();

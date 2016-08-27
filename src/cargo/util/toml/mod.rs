@@ -300,6 +300,7 @@ pub struct TomlProject {
     include: Option<Vec<String>>,
     publish: Option<bool>,
     workspace: Option<String>,
+    implicit_dependencies: Option<bool>,
 
     // package metadata
     description: Option<String>,
@@ -659,10 +660,34 @@ impl TomlManifest {
                 cx.warnings.push("explicit dependencies are unstable".to_string());
             }
 
+            if project.implicit_dependencies.is_some() {
+                cx.warnings.push(
+                    "the implicit-dependencies flag is unstable \
+                     (and furthermore is not currently planned on being stabilized)."
+                        .to_string());
+            }
+
+            // Based on "implicit_dependencies" flag and actual usage of
+            // explicit stdlib dependencies
+            let implicit_primary = match (explicit_primary,
+                                          project.implicit_dependencies)
+            {
+                (true, Some(true)) => bail!(
+                    "cannot use explicit stdlib deps when implicit deps \
+                     were explicitly enabled."),
+                // With explicit deps, and flag not "yes", resolve "no"
+                (true, _)  => false,
+                // With no explcit deps and no flag, resolve "yes" for
+                // backwards-compat
+                (false, None) => true,
+                // With no explcit deps and the flag, obey the flag
+                (false, Some(x)) => x,
+            };
+
             // Add implicit deps
             cx.platform = None;
 
-            if !explicit_primary {
+            if implicit_primary {
                 try!(process_deps(&mut cx, Some(&implicit_deps::primary()),
                                   true, keep_stdlib_deps, None));
             }
