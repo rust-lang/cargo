@@ -60,21 +60,18 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                           .clone()]));
 
         // If we're resolving everything then we include all members of the
-        // workspace. If we want a specific set of requirements then we only
-        // resolve the main crate as it's the only one we're compiling. This
+        // workspace. If we want a specific set of requirements and we're
+        // compiling only a single workspace crate then resolve only it. This
         // case should only happen after we have a previous resolution, however,
         // so assert that the previous exists.
-        let method = match method {
-            Method::Everything => Method::Everything,
-            Method::Required { .. } => {
-                assert!(previous.is_some());
-                if member.package_id() == try!(ws.current()).package_id() {
-                    method
-                } else {
-                    continue
+        if let Method::Required { .. } = method {
+            assert!(previous.is_some());
+            if let Some(current) = ws.current_opt() {
+                if member.package_id() != current.package_id() {
+                    continue;
                 }
             }
-        };
+        }
 
         // If we don't have a previous instance of resolve then we just need to
         // resolve our entire summary (method should be Everything) and we just

@@ -3,7 +3,7 @@ extern crate hamcrest;
 
 use hamcrest::assert_that;
 use cargotest::support::registry::Package;
-use cargotest::support::{project, execs, basic_bin_manifest, main_file};
+use cargotest::support::{project, execs, basic_bin_manifest, basic_lib_manifest, main_file};
 
 #[test]
 fn cargo_metadata_simple() {
@@ -32,6 +32,7 @@ fn cargo_metadata_simple() {
                 "manifest_path": "[..]Cargo.toml"
             }
         ],
+        "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
@@ -149,6 +150,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "version": "0.5.0"
             }
         ],
+        "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
         "resolve": {
             "nodes": [
                 {
@@ -172,6 +174,128 @@ fn cargo_metadata_with_deps_and_version() {
         },
         "version": 1
     }"#));
+}
+
+#[test]
+fn workspace_metadata() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["bar", "baz"]
+        "#)
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
+        .file("baz/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo_process("metadata"), execs().with_status(0).with_json(r#"
+    {
+        "packages": [
+            {
+                "name": "bar",
+                "version": "0.5.0",
+                "id": "bar[..]",
+                "source": null,
+                "dependencies": [],
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "name": "bar",
+                        "src_path": "[..]bar[..]src[..]lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]bar[..]Cargo.toml"
+            },
+            {
+                "name": "baz",
+                "version": "0.5.0",
+                "id": "baz[..]",
+                "source": null,
+                "dependencies": [],
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "name": "baz",
+                        "src_path": "[..]baz[..]src[..]lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]baz[..]Cargo.toml"
+            }
+        ],
+        "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
+        "resolve": {
+            "nodes": [
+                {
+                    "dependencies": [],
+                    "id": "baz 0.5.0 (path+file:[..]baz)"
+                },
+                {
+                    "dependencies": [],
+                    "id": "bar 0.5.0 (path+file:[..]bar)"
+                }
+            ],
+            "root": null
+        },
+        "version": 1
+    }"#))
+}
+
+#[test]
+fn workspace_metadata_no_deps() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["bar", "baz"]
+        "#)
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
+        .file("baz/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo_process("metadata").arg("--no-deps"), execs().with_status(0).with_json(r#"
+    {
+        "packages": [
+            {
+                "name": "bar",
+                "version": "0.5.0",
+                "id": "bar[..]",
+                "source": null,
+                "dependencies": [],
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "name": "bar",
+                        "src_path": "[..]bar[..]src[..]lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]bar[..]Cargo.toml"
+            },
+            {
+                "name": "baz",
+                "version": "0.5.0",
+                "id": "baz[..]",
+                "source": null,
+                "dependencies": [],
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "name": "baz",
+                        "src_path": "[..]baz[..]src[..]lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]baz[..]Cargo.toml"
+            }
+        ],
+        "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
+        "resolve": null,
+        "version": 1
+    }"#))
 }
 
 #[test]
@@ -204,6 +328,7 @@ const MANIFEST_OUTPUT: &'static str=
         "features":{},
         "manifest_path":"[..]Cargo.toml"
     }],
+    "workspace_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
     "resolve": null,
     "version": 1
 }"#;
