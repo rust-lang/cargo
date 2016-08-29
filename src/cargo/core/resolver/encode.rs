@@ -96,15 +96,18 @@ impl EncodableResolve {
             g
         };
 
-        let replacements: HashMap<_, _> = try!(live_pkgs.values()
-            .filter_map(|&(ref id, pkg)| pkg.replace.as_ref().and_then(|replace| {
-                assert!(pkg.dependencies.is_none());
-                match lookup_id(replace) {
-                    Err(e) => Some(Err(e)),
-                    Ok(None) => None,
-                    Ok(Some(replace)) => Some(Ok((id.clone(), replace)))
+        let replacements = {
+            let mut replacements = HashMap::new();
+            for &(ref id, ref pkg) in live_pkgs.values() {
+                if let Some(ref replace) = pkg.replace {
+                    assert!(pkg.dependencies.is_none());
+                    if let Some(replace_id) = try!(lookup_id(replace)) {
+                        replacements.insert(id.clone(), replace_id);
+                    }
                 }
-            })).collect());
+            }
+            replacements
+        };
 
         let mut metadata = self.metadata.unwrap_or(BTreeMap::new());
 
