@@ -1967,7 +1967,10 @@ fn rustc_env_var() {
                  .env("RUSTC", "rustc-that-does-not-exist").arg("-v"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] could not execute process `rustc-that-does-not-exist -vV` ([..])
+[ERROR] failed to parse manifest at [..]
+
+Caused by:
+  could not execute process `rustc-that-does-not-exist -vV` ([..])
 
 Caused by:
 [..]
