@@ -35,6 +35,8 @@ pub fn package(ws: &Workspace,
         try!(check_metadata(pkg, config));
     }
 
+    try!(verify_dependencies(&pkg));
+
     if opts.list {
         let root = pkg.root();
         let mut list: Vec<_> = try!(src.list_files(&pkg)).iter().map(|file| {
@@ -115,6 +117,20 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
             &format!("manifest has no {things}. \
                     See http://doc.crates.io/manifest.html#package-metadata for more info.",
                     things = things)))
+    }
+    Ok(())
+}
+
+// check that the package dependencies are safe to deploy.
+fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
+    for dep in pkg.dependencies() {
+        if dep.source_id().is_path() {
+            if !dep.specified_req() {
+                bail!("all path dependencies must have a version specified \
+                       when packaging.\ndependency `{}` does not specify \
+                       a version.", dep.name())
+            }
+        }
     }
     Ok(())
 }
