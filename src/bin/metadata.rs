@@ -7,6 +7,7 @@ use cargo::util::{CliResult, Config};
 pub struct Options {
     flag_color: Option<String>,
     flag_features: Vec<String>,
+    flag_all_features: bool,
     flag_format_version: u32,
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
@@ -27,6 +28,7 @@ Usage:
 Options:
     -h, --help                 Print this message
     --features FEATURES        Space-separated list of features
+    --all-features             Build all available features
     --no-default-features      Do not include the `default` feature
     --no-deps                  Output information only about the root package
                                and don't fetch dependencies.
@@ -50,6 +52,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<ExportInfo
 
     let options = OutputMetadataOptions {
         features: options.flag_features,
+        all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
         no_deps: options.flag_no_deps,
         version: options.flag_format_version,

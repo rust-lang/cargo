@@ -9,6 +9,7 @@ pub struct Options {
     flag_example: Option<String>,
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,
+    flag_all_features: bool,
     flag_no_default_features: bool,
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
@@ -34,6 +35,7 @@ Options:
     -j N, --jobs N          Number of parallel jobs, defaults to # of CPUs
     --release               Build artifacts in release mode, with optimizations
     --features FEATURES     Space-separated list of features to also build
+    --all-features          Build all available features
     --no-default-features   Do not build the `default` feature
     --target TRIPLE         Build for the target triple
     --manifest-path PATH    Path to the manifest to execute
@@ -75,6 +77,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| &t[..]),
         features: &options.flag_features,
+        all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
         spec: &[],
         exec_engine: None,

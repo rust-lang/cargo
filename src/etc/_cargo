@@ -20,6 +20,7 @@ case $state in
             bench)
                 _arguments \
                     '--features=[space separated feature list]' \
+                    '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
                     "${command_scope_spec[@]}" \
@@ -36,6 +37,7 @@ case $state in
             build)
                 _arguments \
                     '--features=[space separated feature list]' \
+                    '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
                     "${command_scope_spec[@]}" \
@@ -64,6 +66,7 @@ case $state in
             doc)
                 _arguments \
                     '--features=[space separated feature list]' \
+                    '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
                     '--manifest-path=[path to manifest]: :_files -/' \
@@ -131,6 +134,7 @@ case $state in
                     '--debug[build in debug mode instead of release mode]' \
                     '--example[install the specified example instead of binaries]' \
                     '--features=[space separated feature list]' \
+                    '--all-features[enable all available features]' \
                     '--git=[URL from which to install the crate]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
@@ -168,6 +172,7 @@ case $state in
                     '--no-default-features[do not include the default feature]' \
                     '--manifest-path=[path to manifest]: :_files -/' \
                     '--features=[space separated feature list]' \
+                    '--all-features[enable all available features]' \
                     '--format-version=[format version(default: 1)]' \
                     '--color=:colorization option:(auto always never)' \
                     ;;
@@ -241,6 +246,7 @@ case $state in
                 _arguments \
                     '--example=[name of the bin target]' \
                     '--features=[space separated feature list]' \
+                    '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
                     '--manifest-path=[path to manifest]: :_files -/' \
@@ -258,6 +264,7 @@ case $state in
                 _arguments \
                     '--color=:colorization option:(auto always never)' \
                     '--features=[features to compile for the package]' \
+                    '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'=[number of parallel jobs, defaults to # of CPUs]' \
                     '--manifest-path=[path to the manifest to fetch dependencies for]' \
@@ -275,6 +282,7 @@ case $state in
                 _arguments \
                     '--color=:colorization option:(auto always never)' \
                     '--features=[space-separated list of features to also build]' \
+                    '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'=[number of parallel jobs, defaults to # of CPUs]' \
                     '--manifest-path=[path to the manifest to document]' \
@@ -301,6 +309,7 @@ case $state in
             test)
                 _arguments \
                     '--features=[space separated feature list]' \
+                    '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
                     '--manifest-path=[path to manifest]: :_files -/' \

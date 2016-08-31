@@ -960,4 +960,48 @@ fn dep_feature_in_cmd_line() {
                 execs().with_status(101).with_stderr("\
 [ERROR] feature names may not contain slashes: `bar/some-feat`
 "));
+
+#[test]
+fn all_features_flag_enables_all_features() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            foo = []
+            bar = []
+
+            [dependencies.baz]
+            path = "baz"
+            optional = true
+        "#)
+        .file("src/main.rs", r#"
+            #[cfg(feature = "foo")]
+            pub fn foo() {}
+
+            #[cfg(feature = "bar")]
+            pub fn bar() {
+                extern crate baz;
+                baz::baz();
+            }
+
+            fn main() {
+                foo();
+                bar();
+            }
+        "#)
+        .file("baz/Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("baz/src/lib.rs", "pub fn baz() {}");
+
+    assert_that(p.cargo_process("build").arg("--all-features"),
+                execs().with_status(0));
+}
 }
