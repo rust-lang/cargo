@@ -44,6 +44,8 @@ pub struct CompileOptions<'a> {
     pub target: Option<&'a str>,
     /// Extra features to build for the root package
     pub features: &'a [String],
+    /// Flag whether all available features should be built for the root package
+    pub all_features: bool,
     /// Flag if the default feature should be built for the root package
     pub no_default_features: bool,
     /// Root package to build (if None it's the current one)
@@ -94,6 +96,7 @@ pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
 pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
                                 source: Option<Box<Source + 'a>>,
                                 features: Vec<String>,
+                                all_features: bool,
                                 no_default_features: bool)
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
 
@@ -115,10 +118,14 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
 
     try!(add_overrides(&mut registry, ws));
 
-    let method = Method::Required{
-        dev_deps: true, // TODO: remove this option?
-        features: &features,
-        uses_default_features: !no_default_features,
+    let method = if all_features {
+        Method::Everything
+    } else {
+        Method::Required {
+            dev_deps: true, // TODO: remove this option?
+            features: &features,
+            uses_default_features: !no_default_features,
+        }
     };
 
     let resolved_with_overrides =
@@ -137,7 +144,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                       -> CargoResult<ops::Compilation<'a>> {
     let root_package = try!(ws.current());
     let CompileOptions { config, jobs, target, spec, features,
-                         no_default_features, release, mode,
+                         all_features, no_default_features,
+                         release, mode,
                          ref filter, ref exec_engine,
                          ref target_rustdoc_args,
                          ref target_rustc_args } = *options;
@@ -157,7 +165,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     }
 
     let (packages, resolve_with_overrides) = {
-        try!(resolve_dependencies(ws, source, features, no_default_features))
+        try!(resolve_dependencies(ws, source, features, all_features, no_default_features))
     };
 
     let mut pkgids = Vec::new();

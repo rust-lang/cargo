@@ -7,6 +7,7 @@ use cargo::util::important_paths::{find_root_manifest_for_wd};
 pub struct Options {
     arg_args: Vec<String>,
     flag_features: Vec<String>,
+    flag_all_features: bool,
     flag_jobs: Option<u32>,
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
@@ -47,6 +48,7 @@ Options:
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --release                    Build artifacts in release mode, with optimizations
     --features FEATURES          Space-separated list of features to also build
+    --all-features               Build all available features
     --no-default-features        Do not build the `default` feature
     --target TRIPLE              Build for the target triple
     --manifest-path PATH         Path to the manifest to build tests for
@@ -115,6 +117,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|s| &s[..]),
             features: &options.flag_features,
+            all_features: options.flag_all_features,
             no_default_features: options.flag_no_default_features,
             spec: &options.flag_package,
             exec_engine: None,
