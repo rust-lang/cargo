@@ -12,6 +12,7 @@ pub struct Options {
     flag_package: Option<String>,
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,
+    flag_all_features: bool,
     flag_no_default_features: bool,
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
@@ -47,6 +48,7 @@ Options:
     --release                Build artifacts in release mode, with optimizations
     --profile PROFILE        Profile to build the selected target for
     --features FEATURES      Features to compile for the package
+    --all-features           Build all available features
     --no-default-features    Do not compile default features for the package
     --target TRIPLE          Target triple which compiles will be for
     --manifest-path PATH     Path to the manifest to fetch dependencies for
@@ -97,6 +99,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| &t[..]),
         features: &options.flag_features,
+        all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
         spec: &options.flag_package.map_or(Vec::new(), |s| vec![s]),
         exec_engine: None,

@@ -8,6 +8,7 @@ pub struct Options {
     arg_opts: Vec<String>,
     flag_target: Option<String>,
     flag_features: Vec<String>,
+    flag_all_features: bool,
     flag_jobs: Option<u32>,
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
@@ -44,6 +45,7 @@ Options:
     --bench NAME             Build only the specified benchmark target
     --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Space-separated list of features to also build
+    --all-features           Build all available features
     --no-default-features    Do not build the `default` feature
     --target TRIPLE          Build for the target triple
     --manifest-path PATH     Path to the manifest to document
@@ -83,6 +85,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|t| &t[..]),
             features: &options.flag_features,
+            all_features: options.flag_all_features,
             no_default_features: options.flag_no_default_features,
             spec: &options.flag_package.map_or(Vec::new(), |s| vec![s]),
             exec_engine: None,

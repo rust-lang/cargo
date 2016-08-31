@@ -10,6 +10,7 @@ const VERSION: u32 = 1;
 pub struct OutputMetadataOptions {
     pub features: Vec<String>,
     pub no_default_features: bool,
+    pub all_features: bool,
     pub no_deps: bool,
     pub version: u32,
 }
@@ -45,6 +46,7 @@ fn metadata_full(ws: &Workspace,
     let deps = try!(ops::resolve_dependencies(ws,
                                               None,
                                               opt.features.clone(),
+                                              opt.all_features,
                                               opt.no_default_features));
     let (packages, resolve) = deps;
 
