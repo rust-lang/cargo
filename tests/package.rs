@@ -207,6 +207,37 @@ fn package_verification() {
 }
 
 #[test]
+fn path_dependency_no_version() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("package"),
+                execs().with_status(101).with_stderr("\
+[WARNING] manifest has no documentation, homepage or repository. See http://doc.crates.io/manifest.html#package-metadata for more info.
+[ERROR] all path dependencies must have a version specified when packaging.
+dependency `bar` does not specify a version.
+"));
+}
+
+#[test]
 fn exclude() {
     let p = project("foo")
         .file("Cargo.toml", r#"
