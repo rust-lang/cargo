@@ -6,6 +6,7 @@ use cargo::util::{CliResult, Config, ToUrl};
 pub struct Options {
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,
+    flag_all_features: bool,
     flag_no_default_features: bool,
     flag_debug: bool,
     flag_bin: Vec<String>,
@@ -48,8 +49,9 @@ Specifying what crate to install:
 Build and install options:
     -h, --help                Print this message
     -j N, --jobs N            Number of parallel jobs, defaults to # of CPUs
-    --features FEATURES       Space-separated list of features to activate
     -f, --force               Force overwriting existing crates or binaries
+    --features FEATURES       Space-separated list of features to activate
+    --all-features            Build all available features
     --no-default-features     Do not build the `default` feature
     --debug                   Build in debug mode instead of release mode
     --bin NAME                Only install the binary NAME
@@ -104,6 +106,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         jobs: options.flag_jobs,
         target: None,
         features: &options.flag_features,
+        all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
         spec: &[],
         exec_engine: None,
