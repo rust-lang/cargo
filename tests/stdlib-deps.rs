@@ -13,6 +13,8 @@ fn setup() {
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));
     t!(t!(File::create(root.join(".cargo/config"))).write_all(br#"
+        keep-stdlib-dependencies = true
+
         [source.compiler]
         registry = 'https://wut'
         replace-with = 'my-awesome-local-registry'
@@ -42,6 +44,8 @@ fn explicit_stdlib_deps() {
     assert_that(p.cargo_process("build").arg("--verbose"),
                 execs().with_status(0)
                 .with_stderr_contains(
+                    "[WARNING] the `keep-stdlib-dependencies` config key is unstable")
+                .with_stderr_contains(
                     "[WARNING] the \"compiler source\" is unstable [..]")
                 .with_stderr_contains(
                     "[WARNING] explicit dependencies are unstable"));
@@ -66,6 +70,8 @@ fn unresolved_explicit_stdlib_deps() {
                 execs().with_status(101)
                 .with_stderr_contains(
                     "[WARNING] the \"compiler source\" is unstable [..]")
+                .with_stderr_contains(
+                    "[WARNING] the `keep-stdlib-dependencies` config key is unstable")
                 .with_stderr_contains(
                     "[WARNING] explicit dependencies are unstable")
                 .with_stderr_contains("\
@@ -103,5 +109,52 @@ fn stdlib_replacement() {
 
 Caused by:
   replacements cannot be standard library packages, but found one for `foo:1.0.0`
+"));
+}
+
+#[test]
+fn good_explicit_stdlib_deps_pruned() {
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+
+        [dependencies]
+        core = { version = "1", stdlib = true }
+        alloc = { version = "1", stdlib = true }
+    "#)
+    .file("src/lib.rs", "")
+    .file(".cargo/config", r#"
+        keep-stdlib-dependencies = false
+    "#);
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+}
+
+#[test]
+fn bad_explicit_deps_enabled_pruned_still_error() {
+    setup();
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.0"
+        authors = []
+
+        [dependencies]
+        core = { version = "bad bad bad", stdlib = true }
+    "#)
+    .file("src/lib.rs", "")
+    .file(".cargo/config", r#"
+        keep-stdlib-dependecies = false
+    "#);
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(101).with_stderr("\
+error: failed to parse manifest at [..]
+
+Caused by:
+  [..]
 "));
 }

@@ -582,6 +582,7 @@ impl TomlManifest {
                 cx: &mut Context,
                 new_deps: Option<&HashMap<String, TomlDependency>>,
                 allow_explicit_stdlib: bool,
+                keep_stdlib_deps: bool,
                 kind: Option<Kind>)
                 -> CargoResult<bool>
             {
@@ -589,43 +590,67 @@ impl TomlManifest {
 
                 for (n, v) in new_deps.iter().flat_map(|t| *t) {
                     let detailed = v.elaborate();
-                    if let Some(true) = detailed.stdlib {
-                        has_explicit_stdlib |= true;
-                        if !allow_explicit_stdlib {
-                            return Err(human(format!(
-                                "dependency {} cannot have `stdlib = true`",
-                                n)))
+                    let is_stdlib = match detailed.stdlib {
+                        None => false,
+                        Some(true) => {
+                            has_explicit_stdlib |= true;
+                            if !allow_explicit_stdlib {
+                                bail!(
+                                    "dependency {} cannot have `stdlib = true`",
+                                    n);
+                            }
+                            true
                         }
-                    }
+                        Some(false) => bail!(
+                            "`stdlib = false` is not allowed. \
+                             Just remove the field from dependency {}.",
+                            n),
+                    };
                     let dep = try!(detailed.to_dependency(n, cx, kind));
-                    cx.deps.push(dep);
+                    // We still do everything up to here for basic error
+                    // checking of stdlib deps
+                    if if is_stdlib { keep_stdlib_deps } else { true } {
+                        cx.deps.push(dep);
+                    }
                 }
 
                 Ok(has_explicit_stdlib)
             }
 
+            let keep_stdlib_deps = match
+                try!(config.get_bool("keep-stdlib-dependencies"))
+            {
+                None    => false,
+                Some(b) => {
+                    cx.warnings.push(
+                        "the `keep-stdlib-dependencies` config key is unstable"
+                            .to_string());
+                    b.val
+                },
+            };
+
             // Collect the deps
             let mut explicit_primary = try!(process_deps(
                 &mut cx, self.dependencies.as_ref(),
-                true, None));
+                true, keep_stdlib_deps, None));
             let mut explicit_dev = try!(process_deps(
                 &mut cx, self.dev_dependencies.as_ref(),
-                false, Some(Kind::Development)));
+                false, keep_stdlib_deps, Some(Kind::Development)));
             let mut explicit_build = try!(process_deps(
                 &mut cx, self.build_dependencies.as_ref(),
-                false, Some(Kind::Build)));
+                false, keep_stdlib_deps, Some(Kind::Build)));
 
             for (name, platform) in self.target.iter().flat_map(|t| t) {
                 cx.platform = Some(try!(name.parse()));
                 explicit_primary |= try!(process_deps(
                     &mut cx, platform.dependencies.as_ref(),
-                    true, None));
+                    true, keep_stdlib_deps, None));
                 explicit_dev |= try!(process_deps(
                     &mut cx, platform.build_dependencies.as_ref(),
-                    false, Some(Kind::Build)));
+                    false, keep_stdlib_deps, Some(Kind::Build)));
                 explicit_build |= try!(process_deps(
                     &mut cx, platform.dev_dependencies.as_ref(),
-                    false, Some(Kind::Development)));
+                    false, keep_stdlib_deps, Some(Kind::Development)));
             }
 
             if explicit_primary || explicit_dev || explicit_build {
