@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["GitReference",""]],"struct":[["SourceId","Unique identifier for a source of packages."],["SourceMap",""],["SourcesMut",""]],"trait":[["Source","A Source finds and downloads remote packages based on names and versions."]],"type":[["Sources",""]]});

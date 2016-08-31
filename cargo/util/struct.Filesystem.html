@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Filesystem` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Filesystem">
+
+    <title>cargo::util::Filesystem - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>cargo</a>::<wbr><a href='index.html'>util</a></p><script>window.sidebarCurrent = {name: 'Filesystem', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>cargo</a>::<wbr><a href='index.html'>util</a>::<wbr><a class='struct' href=''>Filesystem</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-14690' class='srclink' href='../../src/cargo/src/cargo/util/flock.rs.html#108-110' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Filesystem {
+    // some fields omitted
+}</pre><div class='docblock'><p>A &quot;filesystem&quot; is intended to be a globally shared, hence locked, resource
+in Cargo.</p>
+
+<p>The <code>Path</code> of a filesystem cannot be learned unless it&#39;s done in a locked
+fashion, and otherwise functions on this structure are prepared to handle
+concurrent invocations across multiple instances of Cargo.</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../../cargo/util/struct.Filesystem.html' title='cargo::util::Filesystem'>Filesystem</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-14692' class='srclink' href='../../src/cargo/src/cargo/util/flock.rs.html#112-233' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>(path: <a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.PathBuf.html' title='std::path::PathBuf'>PathBuf</a>) -&gt; <a class='struct' href='../../cargo/util/struct.Filesystem.html' title='cargo::util::Filesystem'>Filesystem</a></code></h4>
+<div class='docblock'><p>Creates a new filesystem to be rooted at the given path.</p>
+</div><h4 id='method.join' class='method'><code>fn <a href='#method.join' class='fnname'>join</a>&lt;T:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>&gt;&gt;(&amp;self, other: T) -&gt; <a class='struct' href='../../cargo/util/struct.Filesystem.html' title='cargo::util::Filesystem'>Filesystem</a></code></h4>
+<div class='docblock'><p>Like <code>Path::join</code>, creates a new filesystem rooted at this filesystem
+joined with the given path.</p>
+</div><h4 id='method.push' class='method'><code>fn <a href='#method.push' class='fnname'>push</a>&lt;T:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>&gt;&gt;(&amp;mut self, other: T)</code></h4>
+<div class='docblock'><p>Like <code>Path::push</code>, pushes a new path component onto this filesystem.</p>
+</div><h4 id='method.into_path_unlocked' class='method'><code>fn <a href='#method.into_path_unlocked' class='fnname'>into_path_unlocked</a>(self) -&gt; <a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.PathBuf.html' title='std::path::PathBuf'>PathBuf</a></code></h4>
+<div class='docblock'><p>Consumes this filesystem and returns the underlying <code>PathBuf</code>.</p>
+
+<p>Note that this is a relatively dangerous operation and should be used
+with great caution!.</p>
+</div><h4 id='method.create_dir' class='method'><code>fn <a href='#method.create_dir' class='fnname'>create_dir</a>(&amp;self) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/std/io/error/type.Result.html' title='std::io::error::Result'>Result</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Creates the directory pointed to by this filesystem.</p>
+
+<p>Handles errors where other Cargo processes are also attempting to
+concurrently create this directory.</p>
+</div><h4 id='method.display' class='method'><code>fn <a href='#method.display' class='fnname'>display</a>(&amp;self) -&gt; <a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Display.html' title='std::path::Display'>Display</a></code></h4>
+<div class='docblock'><p>Returns an adaptor that can be used to print the path of this
+filesystem.</p>
+</div><h4 id='method.open_rw' class='method'><code>fn <a href='#method.open_rw' class='fnname'>open_rw</a>&lt;P&gt;(&amp;self, path: P, config: &amp;<a class='struct' href='../../cargo/util/config/struct.Config.html' title='cargo::util::config::Config'>Config</a>, msg: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; <a class='type' href='../../cargo/util/errors/type.CargoResult.html' title='cargo::util::errors::CargoResult'>CargoResult</a>&lt;<a class='struct' href='../../cargo/util/struct.FileLock.html' title='cargo::util::FileLock'>FileLock</a>&gt; <span class='where'>where P: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>&gt;</span></code></h4>
+<div class='docblock'><p>Opens exclusive access to a file, returning the locked version of a
+file.</p>
+
+<p>This function will create a file at <code>path</code> if it doesn&#39;t already exist
+(including intermediate directories), and then it will acquire an
+exclusive lock on <code>path</code>. If the process must block waiting for the
+lock, the <code>msg</code> is printed to <code>config</code>.</p>
+
+<p>The returned file can be accessed to look at the path and also has
+read/write access to the underlying file.</p>
+</div><h4 id='method.open_ro' class='method'><code>fn <a href='#method.open_ro' class='fnname'>open_ro</a>&lt;P&gt;(&amp;self, path: P, config: &amp;<a class='struct' href='../../cargo/util/config/struct.Config.html' title='cargo::util::config::Config'>Config</a>, msg: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; <a class='type' href='../../cargo/util/errors/type.CargoResult.html' title='cargo::util::errors::CargoResult'>CargoResult</a>&lt;<a class='struct' href='../../cargo/util/struct.FileLock.html' title='cargo::util::FileLock'>FileLock</a>&gt; <span class='where'>where P: <a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html' title='core::convert::AsRef'>AsRef</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>&gt;</span></code></h4>
+<div class='docblock'><p>Opens shared access to a file, returning the locked version of a file.</p>
+
+<p>This function will fail if <code>path</code> doesn&#39;t already exist, but if it does
+then it will acquire a shared lock on <code>path</code>. If the process must block
+waiting for the lock, the <code>msg</code> is printed to <code>config</code>.</p>
+
+<p>The returned file can be accessed to look at the path and also has read
+access to the underlying file. Any writes to the file will return an
+error.</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a> for <a class='struct' href='../../cargo/util/struct.Filesystem.html' title='cargo::util::Filesystem'>Filesystem</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-14680' class='srclink' href='../../src/cargo/src/cargo/util/flock.rs.html#107' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> for <a class='struct' href='../../cargo/util/struct.Filesystem.html' title='cargo::util::Filesystem'>Filesystem</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-14686' class='srclink' href='../../src/cargo/src/cargo/util/flock.rs.html#107' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class='struct' href='../../cargo/util/struct.Filesystem.html' title='cargo::util::Filesystem'>Filesystem</a></code></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "cargo";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

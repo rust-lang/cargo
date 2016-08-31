@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Target` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Target">
+
+    <title>cargo::core::manifest::Target - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>manifest</a></p><script>window.sidebarCurrent = {name: 'Target', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>manifest</a>::<wbr><a class='struct' href=''>Target</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-2192' class='srclink' href='../../../src/cargo/src/cargo/core/manifest.rs.html#153-164' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Target {
+    // some fields omitted
+}</pre><div class='docblock'><p>Information about a binary, a library, an example, etc. that is part of the
+package.</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-2296' class='srclink' href='../../../src/cargo/src/cargo/core/manifest.rs.html#264-450' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.lib_target' class='method'><code>fn <a href='#method.lib_target' class='fnname'>lib_target</a>(name: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, crate_targets: <a class='struct' href='https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='enum' href='../../../cargo/core/manifest/enum.LibKind.html' title='cargo::core::manifest::LibKind'>LibKind</a>&gt;, src_path: &amp;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>, metadata: <a class='struct' href='../../../cargo/core/package_id/struct.Metadata.html' title='cargo::core::package_id::Metadata'>Metadata</a>) -&gt; <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<h4 id='method.bin_target' class='method'><code>fn <a href='#method.bin_target' class='fnname'>bin_target</a>(name: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, src_path: &amp;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>, metadata: <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='../../../cargo/core/package_id/struct.Metadata.html' title='cargo::core::package_id::Metadata'>Metadata</a>&gt;) -&gt; <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<h4 id='method.custom_build_target' class='method'><code>fn <a href='#method.custom_build_target' class='fnname'>custom_build_target</a>(name: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, src_path: &amp;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>, metadata: <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='../../../cargo/core/package_id/struct.Metadata.html' title='cargo::core::package_id::Metadata'>Metadata</a>&gt;) -&gt; <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<div class='docblock'><p>Builds a <code>Target</code> corresponding to the <code>build = &quot;build.rs&quot;</code> entry.</p>
+</div><h4 id='method.example_target' class='method'><code>fn <a href='#method.example_target' class='fnname'>example_target</a>(name: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, src_path: &amp;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>) -&gt; <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<h4 id='method.test_target' class='method'><code>fn <a href='#method.test_target' class='fnname'>test_target</a>(name: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, src_path: &amp;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>, metadata: <a class='struct' href='../../../cargo/core/package_id/struct.Metadata.html' title='cargo::core::package_id::Metadata'>Metadata</a>) -&gt; <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<h4 id='method.bench_target' class='method'><code>fn <a href='#method.bench_target' class='fnname'>bench_target</a>(name: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, src_path: &amp;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>, metadata: <a class='struct' href='../../../cargo/core/package_id/struct.Metadata.html' title='cargo::core::package_id::Metadata'>Metadata</a>) -&gt; <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<h4 id='method.name' class='method'><code>fn <a href='#method.name' class='fnname'>name</a>(&amp;self) -&gt; &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a></code></h4>
+<h4 id='method.crate_name' class='method'><code>fn <a href='#method.crate_name' class='fnname'>crate_name</a>(&amp;self) -&gt; <a class='struct' href='https://doc.rust-lang.org/nightly/collections/string/struct.String.html' title='collections::string::String'>String</a></code></h4>
+<h4 id='method.src_path' class='method'><code>fn <a href='#method.src_path' class='fnname'>src_path</a>(&amp;self) -&gt; &amp;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a></code></h4>
+<h4 id='method.metadata' class='method'><code>fn <a href='#method.metadata' class='fnname'>metadata</a>(&amp;self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;&amp;<a class='struct' href='../../../cargo/core/package_id/struct.Metadata.html' title='cargo::core::package_id::Metadata'>Metadata</a>&gt;</code></h4>
+<h4 id='method.kind' class='method'><code>fn <a href='#method.kind' class='fnname'>kind</a>(&amp;self) -&gt; &amp;<a class='enum' href='../../../cargo/core/manifest/enum.TargetKind.html' title='cargo::core::manifest::TargetKind'>TargetKind</a></code></h4>
+<h4 id='method.tested' class='method'><code>fn <a href='#method.tested' class='fnname'>tested</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.harness' class='method'><code>fn <a href='#method.harness' class='fnname'>harness</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.documented' class='method'><code>fn <a href='#method.documented' class='fnname'>documented</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.for_host' class='method'><code>fn <a href='#method.for_host' class='fnname'>for_host</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.benched' class='method'><code>fn <a href='#method.benched' class='fnname'>benched</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.doctested' class='method'><code>fn <a href='#method.doctested' class='fnname'>doctested</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.allows_underscores' class='method'><code>fn <a href='#method.allows_underscores' class='fnname'>allows_underscores</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.is_lib' class='method'><code>fn <a href='#method.is_lib' class='fnname'>is_lib</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.linkable' class='method'><code>fn <a href='#method.linkable' class='fnname'>linkable</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.is_bin' class='method'><code>fn <a href='#method.is_bin' class='fnname'>is_bin</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.is_example' class='method'><code>fn <a href='#method.is_example' class='fnname'>is_example</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.is_test' class='method'><code>fn <a href='#method.is_test' class='fnname'>is_test</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.is_bench' class='method'><code>fn <a href='#method.is_bench' class='fnname'>is_bench</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.is_custom_build' class='method'><code>fn <a href='#method.is_custom_build' class='fnname'>is_custom_build</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.rustc_crate_types' class='method'><code>fn <a href='#method.rustc_crate_types' class='fnname'>rustc_crate_types</a>(&amp;self) -&gt; <a class='struct' href='https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;&amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>&gt;</code></h4>
+<div class='docblock'><p>Returns the arguments suitable for <code>--crate-type</code> to pass to rustc.</p>
+</div><h4 id='method.can_lto' class='method'><code>fn <a href='#method.can_lto' class='fnname'>can_lto</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.set_tested' class='method'><code>fn <a href='#method.set_tested' class='fnname'>set_tested</a>(&amp;mut self, tested: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; &amp;mut <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<h4 id='method.set_benched' class='method'><code>fn <a href='#method.set_benched' class='fnname'>set_benched</a>(&amp;mut self, benched: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; &amp;mut <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<h4 id='method.set_doctest' class='method'><code>fn <a href='#method.set_doctest' class='fnname'>set_doctest</a>(&amp;mut self, doctest: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; &amp;mut <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<h4 id='method.set_for_host' class='method'><code>fn <a href='#method.set_for_host' class='fnname'>set_for_host</a>(&amp;mut self, for_host: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; &amp;mut <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<h4 id='method.set_harness' class='method'><code>fn <a href='#method.set_harness' class='fnname'>set_harness</a>(&amp;mut self, harness: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; &amp;mut <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<h4 id='method.set_doc' class='method'><code>fn <a href='#method.set_doc' class='fnname'>set_doc</a>(&amp;mut self, doc: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>) -&gt; &amp;mut <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a> for <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-2089' class='srclink' href='../../../src/cargo/src/cargo/core/manifest.rs.html#152' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> for <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-2104' class='srclink' href='../../../src/cargo/src/cargo/core/manifest.rs.html#152' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a> for <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-2117' class='srclink' href='../../../src/cargo/src/cargo/core/manifest.rs.html#152' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.eq' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
+</div><h4 id='method.ne' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, __arg_0: &amp;<a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>This method tests for <code>!=</code>.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a> for <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-2164' class='srclink' href='../../../src/cargo/src/cargo/core/manifest.rs.html#152' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.hash' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#tymethod.hash' class='fnname'>hash</a>&lt;__H:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html' title='core::hash::Hasher'>Hasher</a>&gt;(&amp;self, __arg_0: &amp;mut __H)</code></h4>
+<div class='docblock'><p>Feeds this value into the state given, updating the hasher as necessary.</p>
+</div><h4 id='method.hash_slice' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#method.hash_slice' class='fnname'>hash_slice</a>&lt;H&gt;(data: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[Self]</a>, state: &amp;mut H) <span class='where'>where H: <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html' title='core::hash::Hasher'>Hasher</a></span></code><div class='since' title='Stable since Rust version 1.3.0'>1.3.0</div></h4>
+<div class='docblock'><p>Feeds a slice of this type into the state provided.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> for <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-2179' class='srclink' href='../../../src/cargo/src/cargo/core/manifest.rs.html#152' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/rustc-serialize/rustc_serialize/serialize/trait.Encodable.html' title='rustc_serialize::serialize::Encodable'>Encodable</a> for <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-2229' class='srclink' href='../../../src/cargo/src/cargo/core/manifest.rs.html#173-181' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.encode' class='method'><code>fn <a href='https://doc.rust-lang.org/rustc-serialize/rustc_serialize/serialize/trait.Encodable.html#tymethod.encode' class='fnname'>encode</a>&lt;S:&nbsp;<a class='trait' href='https://doc.rust-lang.org/rustc-serialize/rustc_serialize/serialize/trait.Encoder.html' title='rustc_serialize::serialize::Encoder'>Encoder</a>&gt;(&amp;self, s: &amp;mut S) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>,&nbsp;S::Error&gt;</code></h4>
+</div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html' title='core::fmt::Display'>Display</a> for <a class='struct' href='../../../cargo/core/manifest/struct.Target.html' title='cargo::core::manifest::Target'>Target</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-2390' class='srclink' href='../../../src/cargo/src/cargo/core/manifest.rs.html#452-463' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt-1' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../../jquery.js"></script>
+    <script src="../../../main.js"></script>
+    
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

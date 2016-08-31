@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["PackageIdError",""]],"struct":[["Metadata",""],["PackageId","Identifier for a specific version of a package in a specific source."]]});

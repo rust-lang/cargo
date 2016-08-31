@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `SourceMap` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, SourceMap">
+
+    <title>cargo::core::source::SourceMap - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>source</a></p><script>window.sidebarCurrent = {name: 'SourceMap', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>source</a>::<wbr><a class='struct' href=''>SourceMap</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-581' class='srclink' href='../../../src/cargo/src/cargo/core/source.rs.html#469-471' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct SourceMap&lt;'src&gt; {
+    // some fields omitted
+}</pre><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl&lt;'src&gt; <a class='struct' href='../../../cargo/core/source/struct.SourceMap.html' title='cargo::core::source::SourceMap'>SourceMap</a>&lt;'src&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a id='src-591' class='srclink' href='../../../src/cargo/src/cargo/core/source.rs.html#479-527' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; <a class='struct' href='../../../cargo/core/source/struct.SourceMap.html' title='cargo::core::source::SourceMap'>SourceMap</a>&lt;'src&gt;</code></h4>
+<h4 id='method.contains' class='method'><code>fn <a href='#method.contains' class='fnname'>contains</a>(&amp;self, id: &amp;<a class='struct' href='../../../cargo/core/source/struct.SourceId.html' title='cargo::core::source::SourceId'>SourceId</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.get' class='method'><code>fn <a href='#method.get' class='fnname'>get</a>(&amp;self, id: &amp;<a class='struct' href='../../../cargo/core/source/struct.SourceId.html' title='cargo::core::source::SourceId'>SourceId</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;&amp;<a class='trait' href='../../../cargo/core/source/trait.Source.html' title='cargo::core::source::Source'>Source</a> + 'src&gt;</code></h4>
+<h4 id='method.get_mut' class='method'><code>fn <a href='#method.get_mut' class='fnname'>get_mut</a>(&amp;mut self, id: &amp;<a class='struct' href='../../../cargo/core/source/struct.SourceId.html' title='cargo::core::source::SourceId'>SourceId</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;&amp;mut <a class='trait' href='../../../cargo/core/source/trait.Source.html' title='cargo::core::source::Source'>Source</a> + 'src&gt;</code></h4>
+<h4 id='method.get_by_package_id' class='method'><code>fn <a href='#method.get_by_package_id' class='fnname'>get_by_package_id</a>(&amp;self, pkg_id: &amp;<a class='struct' href='../../../cargo/core/package_id/struct.PackageId.html' title='cargo::core::package_id::PackageId'>PackageId</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;&amp;<a class='trait' href='../../../cargo/core/source/trait.Source.html' title='cargo::core::source::Source'>Source</a> + 'src&gt;</code></h4>
+<h4 id='method.insert' class='method'><code>fn <a href='#method.insert' class='fnname'>insert</a>(&amp;mut self, id: &amp;<a class='struct' href='../../../cargo/core/source/struct.SourceId.html' title='cargo::core::source::SourceId'>SourceId</a>, source: <a class='struct' href='https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../../../cargo/core/source/trait.Source.html' title='cargo::core::source::Source'>Source</a> + 'src&gt;)</code></h4>
+<h4 id='method.is_empty' class='method'><code>fn <a href='#method.is_empty' class='fnname'>is_empty</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.len' class='method'><code>fn <a href='#method.len' class='fnname'>len</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a></code></h4>
+<h4 id='method.sources' class='method'><code>fn <a href='#method.sources' class='fnname'>sources</a>&lt;'a&gt;(&amp;'a self) -&gt; <a class='type' href='../../../cargo/core/source/type.Sources.html' title='cargo::core::source::Sources'>Sources</a>&lt;'a,&nbsp;'src&gt;</code></h4>
+<h4 id='method.sources_mut' class='method'><code>fn <a href='#method.sources_mut' class='fnname'>sources_mut</a>&lt;'a&gt;(&amp;'a mut self) -&gt; <a class='struct' href='../../../cargo/core/source/struct.SourcesMut.html' title='cargo::core::source::SourcesMut'>SourcesMut</a>&lt;'a,&nbsp;'src&gt;</code></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../../jquery.js"></script>
+    <script src="../../../main.js"></script>
+    
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

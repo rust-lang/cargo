@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ColorConfig",""],["Verbosity",""]],"struct":[["MultiShell",""],["Shell",""],["ShellConfig",""]]});

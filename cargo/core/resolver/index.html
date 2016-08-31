@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `resolver` mod in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, resolver">
+
+    <title>cargo::core::resolver - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a></p><script>window.sidebarCurrent = {name: 'resolver', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Module <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a class='mod' href=''>resolver</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-2421' class='srclink' href='../../../src/cargo/src/cargo/core/resolver/mod.rs.html#1-1030' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Resolution of the entire dependency graph for a crate</p>
+
+<p>This module implements the core logic in taking the world of crates and
+constraints and creating a resolved graph with locked versions for all
+crates and their dependencies. This is separate from the registry module
+which is more worried about discovering crates from various sources, this
+module just uses the Registry trait as a source to learn about crates from.</p>
+
+<p>Actually solving a constraint graph is an NP-hard problem. This algorithm
+is basically a nice heuristic to make sure we get roughly the best answer
+most of the time. The constraints that we&#39;re working with are:</p>
+
+<ol>
+<li>Each crate can have any number of dependencies. Each dependency can
+declare a version range that it is compatible with.</li>
+<li>Crates can be activated with multiple version (e.g. show up in the
+dependency graph twice) so long as each pairwise instance have
+semver-incompatible versions.</li>
+</ol>
+
+<p>The algorithm employed here is fairly simple, we simply do a DFS, activating
+the &quot;newest crate&quot; (highest version) first and then going to the next
+option. The heuristics we employ are:</p>
+
+<ul>
+<li>Never try to activate a crate version which is incompatible. This means we
+only try crates which will actually satisfy a dependency and we won&#39;t ever
+try to activate a crate that&#39;s semver compatible with something else
+activated (as we&#39;re only allowed to have one).</li>
+<li>Always try to activate the highest version crate first. The default
+dependency in Cargo (e.g. when you write <code>foo = &quot;0.1.2&quot;</code>) is
+semver-compatible, so selecting the highest version possible will allow us
+to hopefully satisfy as many dependencies at once.</li>
+</ul>
+
+<p>Beyond that, what&#39;s implemented below is just a naive backtracking version
+which should in theory try all possible combinations of dependencies and
+versions to see if one works. The first resolution that works causes
+everything to bail out immediately and return success, and only if <em>nothing</em>
+works do we actually return an error up the stack.</p>
+
+<h2 id='performance' class='section-header'><a href='#performance'>Performance</a></h2>
+<p>Note that this is a relatively performance-critical portion of Cargo. The
+data that we&#39;re processing is proportional to the size of the dependency
+graph, which can often be quite large (e.g. take a look at Servo). To make
+matters worse the DFS algorithm we&#39;re implemented is inherently quite
+inefficient. When we add the requirement of backtracking on top it means
+that we&#39;re implementing something that probably shouldn&#39;t be allocating all
+over the place.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.Deps.html'
+                                  title='cargo::core::resolver::Deps'>Deps</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.DepsNotReplaced.html'
+                                  title='cargo::core::resolver::DepsNotReplaced'>DepsNotReplaced</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.EncodableDependency.html'
+                                  title='cargo::core::resolver::EncodableDependency'>EncodableDependency</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.EncodablePackageId.html'
+                                  title='cargo::core::resolver::EncodablePackageId'>EncodablePackageId</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.EncodableResolve.html'
+                                  title='cargo::core::resolver::EncodableResolve'>EncodableResolve</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.Resolve.html'
+                                  title='cargo::core::resolver::Resolve'>Resolve</a></td>
+                           <td class='docblock short'>
+                                <p>Represents a fully resolved package dependency graph. Each node in the graph
+is a package and edges represent dependencies between packages.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.WorkspaceResolve.html'
+                                  title='cargo::core::resolver::WorkspaceResolve'>WorkspaceResolve</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.Method.html'
+                                  title='cargo::core::resolver::Method'>Method</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.resolve.html'
+                                  title='cargo::core::resolver::resolve'>resolve</a></td>
+                           <td class='docblock short'>
+                                <p>Builds the list of all packages required to build the first argument.</p>
+                           </td>
+                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Metadata.html'
+                                  title='cargo::core::resolver::Metadata'>Metadata</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../../jquery.js"></script>
+    <script src="../../../main.js"></script>
+    
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

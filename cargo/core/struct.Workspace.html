@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Workspace` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Workspace">
+
+    <title>cargo::core::Workspace - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>cargo</a>::<wbr><a href='index.html'>core</a></p><script>window.sidebarCurrent = {name: 'Workspace', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>cargo</a>::<wbr><a href='index.html'>core</a>::<wbr><a class='struct' href=''>Workspace</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-4313' class='srclink' href='../../src/cargo/src/cargo/core/workspace.rs.html#17-43' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Workspace&lt;'cfg&gt; {
+    // some fields omitted
+}</pre><div class='docblock'><p>The core abstraction in Cargo for working with a workspace of crates.</p>
+
+<p>A workspace is often created very early on and then threaded through all
+other functions. It&#39;s typically through this object that the current
+package is loaded and/or learned about.</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl&lt;'cfg&gt; <a class='struct' href='../../cargo/core/struct.Workspace.html' title='cargo::core::Workspace'>Workspace</a>&lt;'cfg&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a id='src-4353' class='srclink' href='../../src/cargo/src/cargo/core/workspace.rs.html#76-437' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>(manifest_path: &amp;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>, config: &amp;'cfg <a class='struct' href='../../cargo/util/config/struct.Config.html' title='cargo::util::config::Config'>Config</a>) -&gt; <a class='type' href='../../cargo/util/errors/type.CargoResult.html' title='cargo::util::errors::CargoResult'>CargoResult</a>&lt;<a class='struct' href='../../cargo/core/struct.Workspace.html' title='cargo::core::Workspace'>Workspace</a>&lt;'cfg&gt;&gt;</code></h4>
+<div class='docblock'><p>Creates a new workspace given the target manifest pointed to by
+<code>manifest_path</code>.</p>
+
+<p>This function will construct the entire workspace by determining the
+root and all member packages. It will then validate the workspace
+before returning it, so <code>Ok</code> is only returned for valid workspaces.</p>
+</div><h4 id='method.one' class='method'><code>fn <a href='#method.one' class='fnname'>one</a>(package: <a class='struct' href='../../cargo/core/package/struct.Package.html' title='cargo::core::package::Package'>Package</a>, config: &amp;'cfg <a class='struct' href='../../cargo/util/config/struct.Config.html' title='cargo::util::config::Config'>Config</a>, target_dir: <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='../../cargo/util/struct.Filesystem.html' title='cargo::util::Filesystem'>Filesystem</a>&gt;) -&gt; <a class='type' href='../../cargo/util/errors/type.CargoResult.html' title='cargo::util::errors::CargoResult'>CargoResult</a>&lt;<a class='struct' href='../../cargo/core/struct.Workspace.html' title='cargo::core::Workspace'>Workspace</a>&lt;'cfg&gt;&gt;</code></h4>
+<div class='docblock'><p>Creates a &quot;tempoarary workspace&quot; from one package which only contains
+that package.</p>
+
+<p>This constructor will not touch the filesystem and only creates an
+in-memory workspace. That is, all configuration is ignored, it&#39;s just
+intended for that one package.</p>
+
+<p>This is currently only used in niche situations like <code>cargo install</code> or
+<code>cargo package</code>.</p>
+</div><h4 id='method.current' class='method'><code>fn <a href='#method.current' class='fnname'>current</a>(&amp;self) -&gt; <a class='type' href='../../cargo/util/errors/type.CargoResult.html' title='cargo::util::errors::CargoResult'>CargoResult</a>&lt;&amp;<a class='struct' href='../../cargo/core/package/struct.Package.html' title='cargo::core::package::Package'>Package</a>&gt;</code></h4>
+<div class='docblock'><p>Returns the current package of this workspace.</p>
+
+<p>Note that this can return an error if it the current manifest is
+actually a &quot;virtual Cargo.toml&quot;, in which case an error is returned
+indicating that something else should be passed.</p>
+</div><h4 id='method.current_opt' class='method'><code>fn <a href='#method.current_opt' class='fnname'>current_opt</a>(&amp;self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;&amp;<a class='struct' href='../../cargo/core/package/struct.Package.html' title='cargo::core::package::Package'>Package</a>&gt;</code></h4>
+<h4 id='method.config' class='method'><code>fn <a href='#method.config' class='fnname'>config</a>(&amp;self) -&gt; &amp;'cfg <a class='struct' href='../../cargo/util/config/struct.Config.html' title='cargo::util::config::Config'>Config</a></code></h4>
+<div class='docblock'><p>Returns the <code>Config</code> this workspace is associated with.</p>
+</div><h4 id='method.root' class='method'><code>fn <a href='#method.root' class='fnname'>root</a>(&amp;self) -&gt; &amp;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a></code></h4>
+<div class='docblock'><p>Returns the root path of this workspace.</p>
+
+<p>That is, this returns the path of the directory containing the
+<code>Cargo.toml</code> which is the root of this workspace.</p>
+</div><h4 id='method.target_dir' class='method'><code>fn <a href='#method.target_dir' class='fnname'>target_dir</a>(&amp;self) -&gt; <a class='struct' href='../../cargo/util/struct.Filesystem.html' title='cargo::util::Filesystem'>Filesystem</a></code></h4>
+<h4 id='method.root_replace' class='method'><code>fn <a href='#method.root_replace' class='fnname'>root_replace</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(</a><a class='struct' href='../../cargo/core/struct.PackageIdSpec.html' title='cargo::core::PackageIdSpec'>PackageIdSpec</a>, <a class='struct' href='../../cargo/core/dependency/struct.Dependency.html' title='cargo::core::dependency::Dependency'>Dependency</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>)</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a></code></h4>
+<div class='docblock'><p>Returns the root [replace] section of this workspace.</p>
+
+<p>This may be from a virtual crate or an actual crate.</p>
+</div><h4 id='method.members' class='method'><code>fn <a href='#method.members' class='fnname'>members</a>&lt;'a&gt;(&amp;'a self) -&gt; Members&lt;'a,&nbsp;'cfg&gt;</code></h4>
+<div class='docblock'><p>Returns an iterator over all packages in this workspace</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "cargo";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

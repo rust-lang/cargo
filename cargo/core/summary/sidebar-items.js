@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Summary","Subset of a `Manifest`. Contains only the most important informations about a package."]]});

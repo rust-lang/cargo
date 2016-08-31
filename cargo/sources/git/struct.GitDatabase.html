@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `GitDatabase` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, GitDatabase">
+
+    <title>cargo::sources::git::GitDatabase - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>sources</a>::<wbr><a href='index.html'>git</a></p><script>window.sidebarCurrent = {name: 'GitDatabase', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>sources</a>::<wbr><a href='index.html'>git</a>::<wbr><a class='struct' href=''>GitDatabase</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-10116' class='srclink' href='../../../src/cargo/src/cargo/sources/git/utils.rs.html#44-48' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct GitDatabase {
+    // some fields omitted
+}</pre><div class='docblock'><p>GitDatabase is a local clone of a remote repository&#39;s database. Multiple
+GitCheckouts can be cloned from this GitDatabase.</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../../../cargo/sources/git/struct.GitDatabase.html' title='cargo::sources::git::GitDatabase'>GitDatabase</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-10233' class='srclink' href='../../../src/cargo/src/cargo/sources/git/utils.rs.html#162-222' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.copy_to' class='method'><code>fn <a href='#method.copy_to' class='fnname'>copy_to</a>(&amp;self, rev: <a class='struct' href='../../../cargo/sources/git/struct.GitRevision.html' title='cargo::sources::git::GitRevision'>GitRevision</a>, dest: &amp;<a class='struct' href='https://doc.rust-lang.org/nightly/std/path/struct.Path.html' title='std::path::Path'>Path</a>, cargo_config: &amp;<a class='struct' href='../../../cargo/util/config/struct.Config.html' title='cargo::util::config::Config'>Config</a>) -&gt; <a class='type' href='../../../cargo/util/errors/type.CargoResult.html' title='cargo::util::errors::CargoResult'>CargoResult</a>&lt;<a class='struct' href='../../../cargo/sources/git/struct.GitCheckout.html' title='cargo::sources::git::GitCheckout'>GitCheckout</a>&gt;</code></h4>
+<h4 id='method.rev_for' class='method'><code>fn <a href='#method.rev_for' class='fnname'>rev_for</a>(&amp;self, reference: &amp;<a class='enum' href='../../../cargo/core/source/enum.GitReference.html' title='cargo::core::source::GitReference'>GitReference</a>) -&gt; <a class='type' href='../../../cargo/util/errors/type.CargoResult.html' title='cargo::util::errors::CargoResult'>CargoResult</a>&lt;<a class='struct' href='../../../cargo/sources/git/struct.GitRevision.html' title='cargo::sources::git::GitRevision'>GitRevision</a>&gt;</code></h4>
+<h4 id='method.has_ref' class='method'><code>fn <a href='#method.has_ref' class='fnname'>has_ref</a>(&amp;self, reference: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; <a class='type' href='../../../cargo/util/errors/type.CargoResult.html' title='cargo::util::errors::CargoResult'>CargoResult</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/rustc-serialize/rustc_serialize/serialize/trait.Encodable.html' title='rustc_serialize::serialize::Encodable'>Encodable</a> for <a class='struct' href='../../../cargo/sources/git/struct.GitDatabase.html' title='cargo::sources::git::GitDatabase'>GitDatabase</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-10138' class='srclink' href='../../../src/cargo/src/cargo/sources/git/utils.rs.html#56-63' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.encode' class='method'><code>fn <a href='https://doc.rust-lang.org/rustc-serialize/rustc_serialize/serialize/trait.Encodable.html#tymethod.encode' class='fnname'>encode</a>&lt;S:&nbsp;<a class='trait' href='https://doc.rust-lang.org/rustc-serialize/rustc_serialize/serialize/trait.Encoder.html' title='rustc_serialize::serialize::Encoder'>Encoder</a>&gt;(&amp;self, s: &amp;mut S) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>,&nbsp;S::Error&gt;</code></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../../jquery.js"></script>
+    <script src="../../../main.js"></script>
+    
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>
