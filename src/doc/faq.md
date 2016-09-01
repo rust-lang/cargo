@@ -130,10 +130,10 @@ picture to decide what versions of dependencies should be used.
 
 # Can libraries use `*` as a version for their dependencies?
 
-**Starting January 22nd, 2016, [crates.io] will begin rejecting packages with
-wildcard dependency constraints.**
+**As of January 22nd, 2016, [crates.io] rejects all packages (not just libraries)
+with wildcard dependency constraints.**
 
-While they _can_, strictly speaking, they should not. A version requirement
+While libraries _can_, strictly speaking, they should not. A version requirement
 of `*` says “This will work with every version ever,” which is never going
 to be true. Libraries should always specify the range that they do work with,
 even if it’s something as general as “every 1.x.y version.”
