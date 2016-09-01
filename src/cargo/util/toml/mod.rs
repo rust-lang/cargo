@@ -687,17 +687,26 @@ impl TomlManifest {
             // Add implicit deps
             cx.platform = None;
 
+            if try!(config.get_table("custom-implicit-stdlib-dependencies")).is_some() {
+                cx.warnings.push(
+                    "the `custom-implicit-stdlib-dependencies` config key is unstable"
+                        .to_string());
+            }
+
             if implicit_primary {
-                try!(process_deps(&mut cx, Some(&implicit_deps::primary()),
-                                  true, keep_stdlib_deps, None));
+                try!(process_deps(
+                    &mut cx, Some(&try!(implicit_deps::primary(config))),
+                    true, keep_stdlib_deps, None));
             }
             if !explicit_dev {
-                try!(process_deps(&mut cx, Some(&implicit_deps::dev()),
-                                  true, keep_stdlib_deps, Some(Kind::Development)));
+                try!(process_deps(
+                    &mut cx, Some(&try!(implicit_deps::dev(config))),
+                    true, keep_stdlib_deps, Some(Kind::Development)));
             }
             if !explicit_build {
-                try!(process_deps(&mut cx, Some(&implicit_deps::build()),
-                                  true, keep_stdlib_deps, Some(Kind::Build)));
+                try!(process_deps(
+                    &mut cx, Some(&try!(implicit_deps::build(config))),
+                    true, keep_stdlib_deps, Some(Kind::Build)));
             }
 
             replace = try!(self.replace(&mut cx));

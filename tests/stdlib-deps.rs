@@ -314,3 +314,37 @@ Caused by:
   [..]
 "));
 }
+
+
+#[test]
+fn override_implicit_deps() {
+    setup();
+    Package::new("not-wanted", "0.0.1").local(true).publish();
+    let foo = project("asdf")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "local"
+        version = "0.0.0"
+        authors = []
+    "#)
+    .file("src/lib.rs", "")
+    .file(".cargo/config", r#"
+        [custom-implicit-stdlib-dependencies]
+        dependencies       = [ "foo" ]
+        dev-dependencies   = [ ]
+        build-dependencies = [ ]
+    "#);
+    assert_that(foo.cargo_process("build").arg("-v"),
+                execs().with_status(101)
+                .with_stderr_contains(
+                    "[WARNING] the \"compiler source\" is unstable [..]")
+                .with_stderr_contains(
+                    "[WARNING] the `keep-stdlib-dependencies` config key is unstable")
+                .with_stderr_contains(
+                    "[WARNING] the `custom-implicit-stdlib-dependencies` config key is unstable")
+                .with_stderr_contains("\
+[ERROR] no matching package named `foo` found (required by `local`)
+location searched: registry file://[..]
+version required: ^1.0
+"));
+}
