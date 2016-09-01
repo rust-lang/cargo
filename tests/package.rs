@@ -37,6 +37,7 @@ fn simple() {
     assert_that(p.cargo_process("package"),
                 execs().with_status(0).with_stderr(&format!("\
 [WARNING] manifest has no documentation[..]
+See [..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
@@ -82,8 +83,8 @@ fn metadata_warning() {
     assert_that(p.cargo_process("package"),
                 execs().with_status(0).with_stderr(&format!("\
 warning: manifest has no description, license, license-file, documentation, \
-homepage or repository. See \
-http://doc.crates.io/manifest.html#package-metadata for more info.
+homepage or repository.
+See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
@@ -104,8 +105,8 @@ http://doc.crates.io/manifest.html#package-metadata for more info.
         "#);
     assert_that(p.cargo_process("package"),
                 execs().with_status(0).with_stderr(&format!("\
-warning: manifest has no description, documentation, homepage or repository. See \
-http://doc.crates.io/manifest.html#package-metadata for more info.
+warning: manifest has no description, documentation, homepage or repository.
+See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
@@ -165,6 +166,7 @@ fn package_verbose() {
     assert_that(cargo.clone().arg("package").arg("-v").arg("--no-verify"),
                 execs().with_status(0).with_stderr("\
 [WARNING] manifest has no description[..]
+See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -175,6 +177,7 @@ fn package_verbose() {
                      .cwd(p.root().join("a")),
                 execs().with_status(0).with_stderr("\
 [WARNING] manifest has no description[..]
+See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -198,12 +201,45 @@ fn package_verification() {
     assert_that(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 [WARNING] manifest has no description[..]
+See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
+}
+
+#[test]
+fn path_dependency_no_version() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("package"),
+                execs().with_status(101).with_stderr("\
+[WARNING] manifest has no documentation, homepage or repository.
+See http://doc.crates.io/manifest.html#package-metadata for more info.
+[ERROR] all path dependencies must have a version specified when packaging.
+dependency `bar` does not specify a version.
+"));
 }
 
 #[test]
@@ -225,6 +261,7 @@ fn exclude() {
     assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [WARNING] manifest has no description[..]
+See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -251,6 +288,7 @@ fn include() {
     assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [WARNING] manifest has no description[..]
+See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
@@ -360,6 +398,7 @@ fn ignore_nested() {
     assert_that(p.cargo_process("package"),
                 execs().with_status(0).with_stderr(&format!("\
 [WARNING] manifest has no documentation[..]
+See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] nested v0.0.1 ({dir})
 [VERIFYING] nested v0.0.1 ({dir})
 [COMPILING] nested v0.0.1 ({dir}[..])
@@ -408,6 +447,7 @@ fn package_weird_characters() {
     assert_that(p.cargo_process("package"),
                 execs().with_status(101).with_stderr("\
 warning: [..]
+See [..]
 [PACKAGING] foo [..]
 [ERROR] failed to prepare local package for uploading
 
@@ -448,6 +488,7 @@ fn repackage_on_source_change() {
     // Check that cargo rebuilds the tarball
     assert_that(pro, execs().with_status(0).with_stderr(&format!("\
 [WARNING] [..]
+See [..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
