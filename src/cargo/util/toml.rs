@@ -583,11 +583,14 @@ impl TomlManifest {
                 new_deps: Option<&HashMap<String, TomlDependency>>,
                 allow_explicit_stdlib: bool,
                 kind: Option<Kind>)
-                -> CargoResult<()>
+                -> CargoResult<bool>
             {
+                let mut has_explicit_stdlib = false;
+
                 for (n, v) in new_deps.iter().flat_map(|t| *t) {
                     let detailed = v.elaborate();
                     if let Some(true) = detailed.stdlib {
+                        has_explicit_stdlib |= true;
                         if !allow_explicit_stdlib {
                             return Err(human(format!(
                                 "dependency {} cannot have `stdlib = true`",
@@ -598,31 +601,35 @@ impl TomlManifest {
                     cx.deps.push(dep);
                 }
 
-                Ok(())
+                Ok(has_explicit_stdlib)
             }
 
             // Collect the deps
-            try!(process_deps(
+            let mut explicit_primary = try!(process_deps(
                 &mut cx, self.dependencies.as_ref(),
                 true, None));
-            try!(process_deps(
+            let mut explicit_dev = try!(process_deps(
                 &mut cx, self.dev_dependencies.as_ref(),
                 false, Some(Kind::Development)));
-            try!(process_deps(
+            let mut explicit_build = try!(process_deps(
                 &mut cx, self.build_dependencies.as_ref(),
                 false, Some(Kind::Build)));
 
             for (name, platform) in self.target.iter().flat_map(|t| t) {
                 cx.platform = Some(try!(name.parse()));
-                try!(process_deps(
+                explicit_primary |= try!(process_deps(
                     &mut cx, platform.dependencies.as_ref(),
                     true, None));
-                try!(process_deps(
+                explicit_dev |= try!(process_deps(
                     &mut cx, platform.build_dependencies.as_ref(),
                     false, Some(Kind::Build)));
-                try!(process_deps(
+                explicit_build |= try!(process_deps(
                     &mut cx, platform.dev_dependencies.as_ref(),
                     false, Some(Kind::Development)));
+            }
+
+            if explicit_primary || explicit_dev || explicit_build {
+                cx.warnings.push("explicit dependencies are unstable".to_string());
             }
 
             replace = try!(self.replace(&mut cx));

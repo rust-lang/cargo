@@ -39,9 +39,12 @@ fn explicit_stdlib_deps() {
         "#)
         .file("src/lib.rs", "");
 
-    assert_that(p.cargo_process("update").arg("--verbose"),
-                execs().with_status(0).with_stderr(
-                    "[WARNING] the \"compiler source\" is unstable [..]"));
+    assert_that(p.cargo_process("build").arg("--verbose"),
+                execs().with_status(0)
+                .with_stderr_contains(
+                    "[WARNING] the \"compiler source\" is unstable [..]")
+                .with_stderr_contains(
+                    "[WARNING] explicit dependencies are unstable"));
 }
 
 #[test]
@@ -59,8 +62,13 @@ fn unresolved_explicit_stdlib_deps() {
         "#)
         .file("src/lib.rs", "");
 
-    assert_that(p.cargo_process("update").arg("--verbose"),
-                execs().with_status(101).with_stderr_contains("\
+    assert_that(p.cargo_process("build").arg("--verbose"),
+                execs().with_status(101)
+                .with_stderr_contains(
+                    "[WARNING] the \"compiler source\" is unstable [..]")
+                .with_stderr_contains(
+                    "[WARNING] explicit dependencies are unstable")
+                .with_stderr_contains("\
 [ERROR] failed to load source for a dependency on `core`
 
 Caused by:
