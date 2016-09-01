@@ -144,3 +144,44 @@ fn impl_and_derive() {
     assert_that(client.cargo("run"),
                 execs().with_status(0).with_stdout("X { success: true }"));
 }
+
+#[test]
+fn plugin_and_rustc_macro() {
+    if !is_nightly() {
+        return;
+    }
+
+    let questionable = project("questionable")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "questionable"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            plugin = true
+            rustc-macro = true
+        "#)
+        .file("src/lib.rs", r#"
+            #![feature(plugin_registrar, rustc_private)]
+            #![feature(rustc_macro, rustc_macro_lib)]
+
+            extern crate rustc_plugin;
+            use rustc_plugin::Registry;
+
+            extern crate rustc_macro;
+            use rustc_macro::TokenStream;
+
+            #[plugin_registrar]
+            pub fn plugin_registrar(reg: &mut Registry) {}
+
+            #[rustc_macro_derive(Questionable)]
+            pub fn questionable(input: TokenStream) -> TokenStream {
+                input
+            }
+        "#);
+
+    let msg = "  lib.plugin and lib.rustc-macro cannot both be true";
+    assert_that(questionable.cargo_process("build"),
+                execs().with_status(101).with_stderr_contains(msg));
+}
