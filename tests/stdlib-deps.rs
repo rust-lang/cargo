@@ -24,10 +24,19 @@ fn setup() {
     "#));
 }
 
+static STD: &'static str = r#"
+pub mod prelude {
+    pub mod v1 {
+    }
+}
+"#;
+
 #[test]
 fn explicit_stdlib_deps() {
     setup();
     Package::new("core", "1.0.0").local(true).publish();
+    Package::new("std", "1.0.0").local(true).file("src/lib.rs", STD).publish();
+    Package::new("test", "1.0.0").local(true).publish();
 
     let p = project("local")
         .file("Cargo.toml", r#"
@@ -38,6 +47,8 @@ fn explicit_stdlib_deps() {
 
             [dependencies]
             core = { version = "1", stdlib = true }
+            std = { version = "1", stdlib = true }
+            test = { version = "1", stdlib = true }
         "#)
         .file("src/lib.rs", "");
 
@@ -52,8 +63,35 @@ fn explicit_stdlib_deps() {
 }
 
 #[test]
+fn implicit_stdlib_deps() {
+    setup();
+    Package::new("core", "1.0.0").local(true).publish();
+    Package::new("std", "1.0.0").local(true).file("src/lib.rs", STD).publish();
+    Package::new("test", "1.0.0").local(true).publish();
+
+    let p = project("local")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+        "#)
+       .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("--verbose"),
+                execs().with_status(0)
+                .with_stderr_contains(
+                    "[WARNING] the \"compiler source\" is unstable [..]"));
+}
+
+#[test]
 fn unresolved_explicit_stdlib_deps() {
     setup();
+    Package::new("core", "1.0.0").local(true).publish();
+    // For dev & build
+    Package::new("std", "1.0.0").local(true).publish();
+    Package::new("test", "1.0.0").local(true).publish();
+
     let p = project("local")
         .file("Cargo.toml", r#"
             [package]
@@ -62,10 +100,9 @@ fn unresolved_explicit_stdlib_deps() {
             authors = []
 
             [dependencies]
-            core = { version = "1", stdlib = true }
+            foo = { version = "1", stdlib = true }
         "#)
         .file("src/lib.rs", "");
-
     assert_that(p.cargo_process("build").arg("--verbose"),
                 execs().with_status(101)
                 .with_stderr_contains(
@@ -75,16 +112,34 @@ fn unresolved_explicit_stdlib_deps() {
                 .with_stderr_contains(
                     "[WARNING] explicit dependencies are unstable")
                 .with_stderr_contains("\
-[ERROR] failed to load source for a dependency on `core`
+[ERROR] no matching package named `foo` found (required by `local`)
+location searched: registry file://[..]
+version required: ^1
+"));
+}
 
-Caused by:
-  Unable to update registry file://[..]
+#[test]
+fn unresolved_implicit_stdlib_deps() {
+    setup();
+    Package::new("core", "1.0.0").local(true).publish();
 
-Caused by:
-  failed to update replaced source `registry file://[..]
+    let p = project("local")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "");
 
-Caused by:
-  local registry path is not a directory: [..]
+    assert_that(p.cargo_process("build").arg("--verbose"),
+                execs().with_status(101)
+                .with_stderr_contains(
+                    "[WARNING] the \"compiler source\" is unstable [..]")
+                .with_stderr_contains("\
+[ERROR] no matching package named `std` found (required by `local`)
+location searched: registry file://[..]
+version required: ^1.0
 "));
 }
 

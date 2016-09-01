@@ -17,6 +17,8 @@ use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
 use util::{self, CargoResult, human, ToUrl, ToSemver, ChainError, Config};
 
+mod implicit_deps;
+
 /// Representation of the projects file layout.
 ///
 /// This structure is used to hold references to all project files that are relevant to cargo.
@@ -655,6 +657,22 @@ impl TomlManifest {
 
             if explicit_primary || explicit_dev || explicit_build {
                 cx.warnings.push("explicit dependencies are unstable".to_string());
+            }
+
+            // Add implicit deps
+            cx.platform = None;
+
+            if !explicit_primary {
+                try!(process_deps(&mut cx, Some(&implicit_deps::primary()),
+                                  true, keep_stdlib_deps, None));
+            }
+            if !explicit_dev {
+                try!(process_deps(&mut cx, Some(&implicit_deps::dev()),
+                                  true, keep_stdlib_deps, Some(Kind::Development)));
+            }
+            if !explicit_build {
+                try!(process_deps(&mut cx, Some(&implicit_deps::build()),
+                                  true, keep_stdlib_deps, Some(Kind::Build)));
             }
 
             replace = try!(self.replace(&mut cx));
