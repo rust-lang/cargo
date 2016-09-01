@@ -60,6 +60,7 @@ fn simple() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
+See [..]
 [PACKAGING] foo v0.0.1 ({dir})
 [UPLOADING] foo v0.0.1 ({dir})
 ",
@@ -357,6 +358,7 @@ fn dry_run() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [WARNING] manifest has no documentation, [..]
+See [..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 [..]
