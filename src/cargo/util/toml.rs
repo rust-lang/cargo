@@ -1011,6 +1011,15 @@ impl TomlTarget {
     }
 
     fn validate_crate_type(&self) -> CargoResult<()> {
+        // Per the Macros 1.1 RFC:
+        //
+        // > Initially if a crate is compiled with the rustc-macro crate type
+        // > (and possibly others) it will forbid exporting any items in the
+        // > crate other than those functions tagged #[rustc_macro_derive] and
+        // > those functions must also be placed at the crate root.
+        //
+        // A plugin requires exporting plugin_registrar so a crate cannot be
+        // both at once.
         if self.plugin == Some(true) && self.rustc_macro == Some(true) {
             Err(human("lib.plugin and lib.rustc-macro cannot both be true".to_string()))
         } else {
