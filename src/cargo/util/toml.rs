@@ -1063,7 +1063,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
               .set_for_host(match (toml.plugin, toml.rustc_macro) {
                   (None, None) => t2.for_host(),
                   (Some(true), _) | (_, Some(true)) => true,
-                  _ => false,
+                  (Some(false), _) | (_, Some(false)) => false,
               });
     }
 
