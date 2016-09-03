@@ -207,7 +207,7 @@ error: 1 dirty files found in the working directory:
 
 bar
 
-to publish despite this, pass `--allow-dirty` to `cargo publish`
+to proceed despite this, pass the `--allow-dirty` flag
 "));
 }
 

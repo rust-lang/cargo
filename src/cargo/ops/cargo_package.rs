@@ -173,8 +173,7 @@ fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
             Ok(())
         } else {
             bail!("{} dirty files found in the working directory:\n\n{}\n\n\
-                   to publish despite this, pass `--allow-dirty` to \
-                   `cargo publish`",
+                   to proceed despite this, pass the `--allow-dirty` flag",
                   dirty.len(), dirty.join("\n"))
         }
     }
