@@ -6,7 +6,7 @@ extern crate hamcrest;
 extern crate tar;
 extern crate cargo;
 
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
@@ -542,5 +542,39 @@ Caused by:
 
 Caused by:
   [..]
+"));
+}
+
+#[test]
+fn do_not_package_if_repository_is_dirty() {
+    // Create a Git repository containing a minimal Rust project.
+    git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // Modify Cargo.toml without committing the change.
+    let p = project("foo");
+    let manifest_path = p.root().join("Cargo.toml");
+    let mut manifest = t!(OpenOptions::new().append(true).open(manifest_path));
+    t!(writeln!(manifest, ""));
+
+    assert_that(p.cargo("package"),
+                execs().with_status(101)
+                       .with_stderr("\
+error: 1 dirty files found in the working directory:
+
+Cargo.toml
+
+to proceed despite this, pass the `--allow-dirty` flag
 "));
 }
