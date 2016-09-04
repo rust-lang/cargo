@@ -178,14 +178,14 @@ and a populated cache of the crates reflected in the lock file. If either of
 these components are missing, then they're required for the build to succeed and
 must be fetched remotely.
 
-As of Rust 1.11.0 (to be released 2016-09-29) Cargo understands a new flag,
-`--frozen`, which is an assertion that it shouldn't touch the network. When
-passed, Cargo will immediately return an error if it would otherwise attempt a
-network request. The error should include contextual information about why the
-network request is being made in the first place to help debug as well. Note
-that this flag *does not change the behavior of Cargo*, it simply asserts that
-Cargo shouldn't touch the network as a previous command has been run to ensure
-that network activity shouldn't be necessary.
+As of Rust 1.11.0 Cargo understands a new flag, `--frozen`, which is an
+assertion that it shouldn't touch the network. When passed, Cargo will
+immediately return an error if it would otherwise attempt a network request.
+The error should include contextual information about why the network request is
+being made in the first place to help debug as well. Note that this flag *does
+not change the behavior of Cargo*, it simply asserts that Cargo shouldn't touch
+the network as a previous command has been run to ensure that network activity
+shouldn't be necessary.
 
 For more information about vendoring, see documentation on [source
 replacement][replace].
