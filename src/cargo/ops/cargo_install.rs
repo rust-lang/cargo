@@ -47,200 +47,205 @@ impl Drop for Transaction {
 }
 
 pub fn install(root: Option<&str>,
-               krate: Option<&str>,
-               source_id: &SourceId,
+               krates: Vec< (Option<&str>, &SourceId) >,
                vers: Option<&str>,
                opts: &ops::CompileOptions,
                force: bool) -> CargoResult<()> {
     let config = opts.config;
     let root = try!(resolve_root(root, config));
     let map = try!(SourceConfigMap::new(config));
-    let (pkg, source) = if source_id.is_git() {
-        try!(select_pkg(GitSource::new(source_id, config), source_id,
-                        krate, vers, &mut |git| git.read_packages()))
-    } else if source_id.is_path() {
-        let path = source_id.url().to_file_path().ok()
-                            .expect("path sources must have a valid path");
-        let mut src = PathSource::new(&path, source_id, config);
-        try!(src.update().chain_error(|| {
-            human(format!("`{}` is not a crate root; specify a crate to \
-                           install from crates.io, or use --path or --git to \
-                           specify an alternate source", path.display()))
-        }));
-        try!(select_pkg(PathSource::new(&path, source_id, config),
-                        source_id, krate, vers,
-                        &mut |path| path.read_packages()))
-    } else {
-        try!(select_pkg(try!(map.load(source_id)),
-                        source_id, krate, vers,
-                        &mut |_| Err(human("must specify a crate to install from \
-                                            crates.io, or use --path or --git to \
-                                            specify alternate source"))))
-    };
 
+    for (krate, source_id) in krates {
 
-    let mut td_opt = None;
-    let overidden_target_dir = if source_id.is_path() {
-        None
-    } else if let Ok(td) = TempDir::new("cargo-install") {
-        let p = td.path().to_owned();
-        td_opt = Some(td);
-        Some(Filesystem::new(p))
-    } else {
-        Some(Filesystem::new(config.cwd().join("target-install")))
-    };
-
-    let ws = try!(Workspace::one(pkg, config, overidden_target_dir));
-    let pkg = try!(ws.current());
-
-    // Preflight checks to check up front whether we'll overwrite something.
-    // We have to check this again afterwards, but may as well avoid building
-    // anything if we're gonna throw it away anyway.
-    {
-        let metadata = try!(metadata(config, &root));
-        let list = try!(read_crate_list(metadata.file()));
-        let dst = metadata.parent().join("bin");
-        try!(check_overwrites(&dst, pkg, &opts.filter, &list, force));
-    }
-
-    let compile = try!(ops::compile_ws(&ws, Some(source), opts).chain_error(|| {
-        if let Some(td) = td_opt.take() {
-            // preserve the temporary directory, so the user can inspect it
-            td.into_path();
-        }
-
-        human(format!("failed to compile `{}`, intermediate artifacts can be \
-                       found at `{}`", pkg, ws.target_dir().display()))
-    }));
-    let binaries: Vec<(&str, &Path)> = try!(compile.binaries.iter().map(|bin| {
-        let name = bin.file_name().unwrap();
-        if let Some(s) = name.to_str() {
-            Ok((s, bin.as_ref()))
+        let (pkg, source) = if source_id.is_git() {
+            try!(select_pkg(GitSource::new(source_id, config), source_id,
+                            krate, vers, &mut |git| git.read_packages()))
+        } else if source_id.is_path() {
+            let path = source_id.url().to_file_path().ok()
+                                .expect("path sources must have a valid path");
+            let mut src = PathSource::new(&path, source_id, config);
+            try!(src.update().chain_error(|| {
+                human(format!("`{}` is not a crate root; specify a crate to \
+                               install from crates.io, or use --path or --git to \
+                               specify an alternate source", path.display()))
+            }));
+            try!(select_pkg(PathSource::new(&path, source_id, config),
+                            source_id, krate, vers,
+                            &mut |path| path.read_packages()))
         } else {
-            bail!("Binary `{:?}` name can't be serialized into string", name)
-        }
-    }).collect::<CargoResult<_>>());
-
-    let metadata = try!(metadata(config, &root));
-    let mut list = try!(read_crate_list(metadata.file()));
-    let dst = metadata.parent().join("bin");
-    let duplicates = try!(check_overwrites(&dst, pkg, &opts.filter,
-                                           &list, force));
-
-    try!(fs::create_dir_all(&dst));
-
-    // Copy all binaries to a temporary directory under `dst` first, catching
-    // some failure modes (e.g. out of space) before touching the existing
-    // binaries. This directory will get cleaned up via RAII.
-    let staging_dir = try!(TempDir::new_in(&dst, "cargo-install"));
-    for &(bin, src) in binaries.iter() {
-        let dst = staging_dir.path().join(bin);
-        // Try to move if `target_dir` is transient.
-        if !source_id.is_path() {
-            if fs::rename(src, &dst).is_ok() {
-                continue
-            }
-        }
-        try!(fs::copy(src, &dst).chain_error(|| {
-            human(format!("failed to copy `{}` to `{}`", src.display(),
-                          dst.display()))
-        }));
-    }
-
-    let (to_replace, to_install): (Vec<&str>, Vec<&str>) =
-        binaries.iter().map(|&(bin, _)| bin)
-                       .partition(|&bin| duplicates.contains_key(bin));
-
-    let mut installed = Transaction { bins: Vec::new() };
-
-    // Move the temporary copies into `dst` starting with new binaries.
-    for bin in to_install.iter() {
-        let src = staging_dir.path().join(bin);
-        let dst = dst.join(bin);
-        try!(config.shell().status("Installing", dst.display()));
-        try!(fs::rename(&src, &dst).chain_error(|| {
-            human(format!("failed to move `{}` to `{}`", src.display(),
-                          dst.display()))
-        }));
-        installed.bins.push(dst);
-    }
-
-    // Repeat for binaries which replace existing ones but don't pop the error
-    // up until after updating metadata.
-    let mut replaced_names = Vec::new();
-    let result = {
-        let mut try_install = || -> CargoResult<()> {
-            for &bin in to_replace.iter() {
-                let src = staging_dir.path().join(bin);
-                let dst = dst.join(bin);
-                try!(config.shell().status("Replacing", dst.display()));
-                try!(fs::rename(&src, &dst).chain_error(|| {
-                    human(format!("failed to move `{}` to `{}`", src.display(),
-                                  dst.display()))
-                }));
-                replaced_names.push(bin);
-            }
-            Ok(())
+            try!(select_pkg(try!(map.load(source_id)),
+                            source_id, krate, vers,
+                            &mut |_| Err(human("must specify a crate to install from \
+                                                crates.io, or use --path or --git to \
+                                                specify alternate source"))))
         };
-        try_install()
-    };
 
-    // Update records of replaced binaries.
-    for &bin in replaced_names.iter() {
-        if let Some(&Some(ref p)) = duplicates.get(bin) {
-            if let Some(set) = list.v1.get_mut(p) {
-                set.remove(bin);
+
+        let mut td_opt = None;
+        let overidden_target_dir = if source_id.is_path() {
+            None
+        } else if let Ok(td) = TempDir::new("cargo-install") {
+            let p = td.path().to_owned();
+            td_opt = Some(td);
+            Some(Filesystem::new(p))
+        } else {
+            Some(Filesystem::new(config.cwd().join("target-install")))
+        };
+
+        let ws = try!(Workspace::one(pkg, config, overidden_target_dir));
+        let pkg = try!(ws.current());
+
+        // Preflight checks to check up front whether we'll overwrite something.
+        // We have to check this again afterwards, but may as well avoid building
+        // anything if we're gonna throw it away anyway.
+        {
+            let metadata = try!(metadata(config, &root));
+            let list = try!(read_crate_list(metadata.file()));
+            let dst = metadata.parent().join("bin");
+            try!(check_overwrites(&dst, pkg, &opts.filter, &list, force));
+        }
+
+        let compile = try!(ops::compile_ws(&ws, Some(source), opts).chain_error(|| {
+            if let Some(td) = td_opt.take() {
+                // preserve the temporary directory, so the user can inspect it
+                td.into_path();
+            }
+
+            human(format!("failed to compile `{}`, intermediate artifacts can be \
+                           found at `{}`", pkg, ws.target_dir().display()))
+        }));
+        let binaries: Vec<(&str, &Path)> = try!(compile.binaries.iter().map(|bin| {
+            let name = bin.file_name().unwrap();
+            if let Some(s) = name.to_str() {
+                Ok((s, bin.as_ref()))
+            } else {
+                bail!("Binary `{:?}` name can't be serialized into string", name)
+            }
+        }).collect::<CargoResult<_>>());
+
+        let metadata = try!(metadata(config, &root));
+        let mut list = try!(read_crate_list(metadata.file()));
+        let dst = metadata.parent().join("bin");
+        let duplicates = try!(check_overwrites(&dst, pkg, &opts.filter,
+                                               &list, force));
+
+        try!(fs::create_dir_all(&dst));
+
+        // Copy all binaries to a temporary directory under `dst` first, catching
+        // some failure modes (e.g. out of space) before touching the existing
+        // binaries. This directory will get cleaned up via RAII.
+        let staging_dir = try!(TempDir::new_in(&dst, "cargo-install"));
+        for &(bin, src) in binaries.iter() {
+            let dst = staging_dir.path().join(bin);
+            // Try to move if `target_dir` is transient.
+            if !source_id.is_path() {
+                if fs::rename(src, &dst).is_ok() {
+                    continue
+                }
+            }
+            try!(fs::copy(src, &dst).chain_error(|| {
+                human(format!("failed to copy `{}` to `{}`", src.display(),
+                              dst.display()))
+            }));
+        }
+
+        let (to_replace, to_install): (Vec<&str>, Vec<&str>) =
+            binaries.iter().map(|&(bin, _)| bin)
+                           .partition(|&bin| duplicates.contains_key(bin));
+
+        let mut installed = Transaction { bins: Vec::new() };
+
+        // Move the temporary copies into `dst` starting with new binaries.
+        for bin in to_install.iter() {
+            let src = staging_dir.path().join(bin);
+            let dst = dst.join(bin);
+            try!(config.shell().status("Installing", dst.display()));
+            try!(fs::rename(&src, &dst).chain_error(|| {
+                human(format!("failed to move `{}` to `{}`", src.display(),
+                              dst.display()))
+            }));
+            installed.bins.push(dst);
+        }
+
+        // Repeat for binaries which replace existing ones but don't pop the error
+        // up until after updating metadata.
+        let mut replaced_names = Vec::new();
+        let result = {
+            let mut try_install = || -> CargoResult<()> {
+                for &bin in to_replace.iter() {
+                    let src = staging_dir.path().join(bin);
+                    let dst = dst.join(bin);
+                    try!(config.shell().status("Replacing", dst.display()));
+                    try!(fs::rename(&src, &dst).chain_error(|| {
+                        human(format!("failed to move `{}` to `{}`", src.display(),
+                                      dst.display()))
+                    }));
+                    replaced_names.push(bin);
+                }
+                Ok(())
+            };
+            try_install()
+        };
+
+        // Update records of replaced binaries.
+        for &bin in replaced_names.iter() {
+            if let Some(&Some(ref p)) = duplicates.get(bin) {
+                if let Some(set) = list.v1.get_mut(p) {
+                    set.remove(bin);
+                }
+            }
+            list.v1.entry(pkg.package_id().clone())
+                   .or_insert_with(|| BTreeSet::new())
+                   .insert(bin.to_string());
+        }
+
+        // Remove empty metadata lines.
+        let pkgs = list.v1.iter()
+                       .filter_map(|(p, set)| if set.is_empty() { Some(p.clone()) } else { None })
+                       .collect::<Vec<_>>();
+        for p in pkgs.iter() {
+            list.v1.remove(p);
+        }
+
+        // If installation was successful record newly installed binaries.
+        if result.is_ok() {
+            list.v1.entry(pkg.package_id().clone())
+                   .or_insert_with(|| BTreeSet::new())
+                   .extend(to_install.iter().map(|s| s.to_string()));
+        }
+
+        let write_result = write_crate_list(metadata.file(), list);
+        match write_result {
+            // Replacement error (if any) isn't actually caused by write error
+            // but this seems to be the only way to show both.
+            Err(err) => try!(result.chain_error(|| err)),
+            Ok(_) => try!(result),
+        }
+
+        // Reaching here means all actions have succeeded. Clean up.
+        installed.success();
+        if !source_id.is_path() {
+            // Don't bother grabbing a lock as we're going to blow it all away
+            // anyway.
+            let target_dir = ws.target_dir().into_path_unlocked();
+            try!(fs::remove_dir_all(&target_dir));
+        }
+
+        // Print a warning that if this directory isn't in PATH that they won't be
+        // able to run these commands.
+        let path = env::var_os("PATH").unwrap_or(OsString::new());
+        for path in env::split_paths(&path) {
+            if path == dst {
+                return Ok(())
             }
         }
-        list.v1.entry(pkg.package_id().clone())
-               .or_insert_with(|| BTreeSet::new())
-               .insert(bin.to_string());
+
+        try!(config.shell().warn(&format!("be sure to add `{}` to your PATH to be \
+                                           able to run the installed binaries",
+                                          dst.display())));
+
     }
 
-    // Remove empty metadata lines.
-    let pkgs = list.v1.iter()
-                      .filter_map(|(p, set)| if set.is_empty() { Some(p.clone()) } else { None })
-                      .collect::<Vec<_>>();
-    for p in pkgs.iter() {
-        list.v1.remove(p);
-    }
-
-    // If installation was successful record newly installed binaries.
-    if result.is_ok() {
-        list.v1.entry(pkg.package_id().clone())
-               .or_insert_with(|| BTreeSet::new())
-               .extend(to_install.iter().map(|s| s.to_string()));
-    }
-
-    let write_result = write_crate_list(metadata.file(), list);
-    match write_result {
-        // Replacement error (if any) isn't actually caused by write error
-        // but this seems to be the only way to show both.
-        Err(err) => try!(result.chain_error(|| err)),
-        Ok(_) => try!(result),
-    }
-
-    // Reaching here means all actions have succeeded. Clean up.
-    installed.success();
-    if !source_id.is_path() {
-        // Don't bother grabbing a lock as we're going to blow it all away
-        // anyway.
-        let target_dir = ws.target_dir().into_path_unlocked();
-        try!(fs::remove_dir_all(&target_dir));
-    }
-
-    // Print a warning that if this directory isn't in PATH that they won't be
-    // able to run these commands.
-    let path = env::var_os("PATH").unwrap_or(OsString::new());
-    for path in env::split_paths(&path) {
-        if path == dst {
-            return Ok(())
-        }
-    }
-
-    try!(config.shell().warn(&format!("be sure to add `{}` to your PATH to be \
-                                       able to run the installed binaries",
-                                      dst.display())));
     Ok(())
 }
 

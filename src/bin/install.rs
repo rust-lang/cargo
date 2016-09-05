@@ -132,7 +132,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         SourceId::for_git(&url, gitref)
     } else if let Some(path) = options.flag_path {
         try!(SourceId::for_path(&config.cwd().join(path)))
-    } else if options.arg_crate == None {
+    } else if options.arg_crate.is_none() {
         try!(SourceId::for_path(&config.cwd()))
     } else {
         try!(SourceId::crates_io(config))
@@ -145,7 +145,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     if options.flag_list {
         try!(ops::install_list(root, config));
     } else {
-        try!(ops::install(root, krate, &source, vers, &compile_opts, options.flag_force));
+        try!(ops::install(root, vec![(krate, &source)], vers, &compile_opts, options.flag_force));
     }
     Ok(None)
 }
