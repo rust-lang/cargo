@@ -484,7 +484,9 @@ specified.
 
 [lib]
 # The name of a target is the name of the library that will be generated. This
-# is defaulted to the name of the package or project.
+# is defaulted to the name of the package or project, with any dashes replaced
+# with underscores. (Rust `extern crate` declarations reference this name;
+# therefore the value must be a valid Rust identifier to be usable.)
 name = "foo"
 
 # This field points at where the crate is located, relative to the `Cargo.toml`.
