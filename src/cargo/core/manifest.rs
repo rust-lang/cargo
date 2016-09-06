@@ -61,6 +61,7 @@ pub enum LibKind {
     Lib,
     Rlib,
     Dylib,
+    RustcMacro,
     Other(String),
 }
 
@@ -70,6 +71,7 @@ impl LibKind {
             "lib" => LibKind::Lib,
             "rlib" => LibKind::Rlib,
             "dylib" => LibKind::Dylib,
+            "rustc-macro" => LibKind::RustcMacro,
             s => LibKind::Other(s.to_string()),
         }
     }
@@ -80,6 +82,7 @@ impl LibKind {
             LibKind::Lib => "lib",
             LibKind::Rlib => "rlib",
             LibKind::Dylib => "dylib",
+            LibKind::RustcMacro => "rustc-macro",
             LibKind::Other(ref s) => s,
         }
     }
@@ -88,7 +91,8 @@ impl LibKind {
         match *self {
             LibKind::Lib |
             LibKind::Rlib |
-            LibKind::Dylib => true,
+            LibKind::Dylib |
+            LibKind::RustcMacro => true,
             LibKind::Other(..) => false,
         }
     }

@@ -510,6 +510,10 @@ doc = true
 # for Cargo to correctly compile it and make it available for all dependencies.
 plugin = false
 
+# If the target is meant to be a "macros 1.1" procedural macro, this field must
+# be set to true.
+rustc-macro = false
+
 # If set to false, `cargo test` will omit the `--test` flag to rustc, which
 # stops it from generating a test harness. This is useful when the binary being
 # built manages the test runner itself.
@@ -529,9 +533,10 @@ name = "..."
 crate-type = ["dylib"] # could be `staticlib` as well
 ```
 
-The available options are `dylib`, `rlib`, `staticlib`, and `cdylib`. You
-should only use this option in a project. Cargo will always compile packages
-(dependencies) based on the requirements of the project that includes them.
+The available options are `dylib`, `rlib`, `staticlib`, `cdylib`, and
+`rustc-macro`. You should only use this option in a project. Cargo will always
+compile packages (dependencies) based on the requirements of the project that
+includes them.
 
 You can read more about the different crate types in the 
 [Rust Reference Manual](https://doc.rust-lang.org/reference.html#linkage)
