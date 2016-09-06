@@ -17,15 +17,20 @@ else:
 if sys.platform == 'linux' or sys.platform == 'linux2':
     host = host_bits + '-unknown-linux-gnu'
     targets = [
-        'i686-unknown-linux-gnu',
-        'x86_64-unknown-linux-gnu',
-        'x86_64-unknown-linux-musl',
+        'aarch64-unknown-linux-gnu',
         'arm-unknown-linux-gnueabi',
         'arm-unknown-linux-gnueabihf',
         'armv7-unknown-linux-gnueabihf',
-        'aarch64-unknown-linux-gnu',
         'i686-unknown-freebsd',
+        'i686-unknown-linux-gnu',
+        'mips-unknown-linux-gnu',
+        'mipsel-unknown-linux-gnu',
+        'powerpc-unknown-linux-gnu',
+        'powerpc64-unknown-linux-gnu',
+        'powerpc64le-unknown-linux-gnu',
         'x86_64-unknown-freebsd',
+        'x86_64-unknown-linux-gnu',
+        'x86_64-unknown-linux-musl',
         'x86_64-unknown-netbsd',
     ]
 elif sys.platform == 'darwin':
