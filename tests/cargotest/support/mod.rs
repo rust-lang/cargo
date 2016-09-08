@@ -198,6 +198,11 @@ pub fn project(name: &str) -> ProjectBuilder {
     ProjectBuilder::new(name, paths::root().join(name))
 }
 
+// Generates a project layout inside our fake home dir
+pub fn project_in_home(name: &str) -> ProjectBuilder {
+    ProjectBuilder::new(name, paths::home().join(name))
+}
+
 // === Helpers ===
 
 pub fn main_file(println: &str, deps: &[&str]) -> String {
