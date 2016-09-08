@@ -22,6 +22,30 @@ use util::toml as cargo_toml;
 
 use self::ConfigValue as CV;
 
+#[derive(PartialEq, Eq, Hash)]
+struct ConfigFile {
+    path: Option<PathBuf>,
+}
+
+impl ConfigFile {
+    pub fn new(path: PathBuf) -> ConfigFile {
+        let canonical = match fs::canonicalize(path) {
+            Ok(p) => Some(p),
+            Err(_) => None,
+        };
+
+        ConfigFile { path: canonical }
+    }
+
+    pub fn exist(&self) -> bool {
+        self.path.is_some()
+    }
+
+    pub fn as_path_buf(&self) -> Option<PathBuf> {
+        self.path.clone()
+    }
+}
+
 pub struct Config {
     home_path: Filesystem,
     shell: RefCell<MultiShell>,
@@ -676,21 +700,19 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     where F: FnMut(File, &Path) -> CargoResult<()>
 {
     let mut current = pwd;
-    let mut stash: HashSet<String> = HashSet::new();
+    let mut stash: HashSet<ConfigFile> = HashSet::new();
 
     loop {
-        let possible = current.join(".cargo").join("config");
-        if fs::metadata(&possible).is_ok() {
-            let canonical = fs::canonicalize(possible).unwrap();
-            let string = canonical.to_str().unwrap().to_owned();
-            if stash.get(&string).is_none() {
-                let file = try!(File::open(&canonical));
+        let possible = ConfigFile::new(current.join(".cargo").join("config"));
+        if possible.exist() && stash.get(&possible).is_none() {
+            let name = possible.as_path_buf().unwrap();
+            let file = try!(File::open(&name));
 
-                try!(walk(file, &canonical));
+            try!(walk(file, &name));
 
-                stash.insert(string);
-            }
+            stash.insert(possible);
         }
+
         match current.parent() {
             Some(p) => current = p,
             None => break,
@@ -704,13 +726,11 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
         human("Cargo couldn't find your home directory. \
               This probably means that $HOME was not set.")
     }));
-    let config = home.join("config");
-    let key = config.to_str().unwrap().to_owned();
-    if stash.get(&key).is_none() {
-        if fs::metadata(&config).is_ok() {
-            let file = try!(File::open(&config));
-            try!(walk(file, &config));
-        }
+    let config = ConfigFile::new(home.join("config"));
+    if config.exist() && stash.get(&config).is_none() {
+        let name = config.as_path_buf().unwrap();
+        let file = try!(File::open(&name));
+        try!(walk(file, &name));
     }
 
     Ok(())
