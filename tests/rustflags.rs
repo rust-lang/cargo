@@ -5,7 +5,7 @@ use std::io::Write;
 use std::fs::{self, File};
 
 use cargotest::rustc_host;
-use cargotest::support::{project, execs, paths};
+use cargotest::support::{project, project_in_home, execs, paths};
 use hamcrest::assert_that;
 
 #[test]
@@ -851,4 +851,30 @@ fn build_rustflags_no_recompile() {
                 execs().with_status(0));
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_stdout("").with_status(0));
+}
+
+#[test]
+fn build_rustflags_with_home_config() {
+    // We need a config file inside the home directory
+    let home = paths::home();
+    let home_config = home.join(".cargo");
+    fs::create_dir(&home_config).unwrap();
+    File::create(&home_config.join("config")).unwrap().write_all(br#"
+        [build]
+        rustflags = ["-Cllvm-args=-x86-asm-syntax=intel"]
+    "#).unwrap();
+
+    // And we need the project to be inside the home directory
+    // so the walking process finds the home project twice.
+    let p = project_in_home("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build").arg("-v"),
+                execs().with_status(0));
 }

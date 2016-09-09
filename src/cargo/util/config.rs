@@ -1,6 +1,7 @@
 use std::cell::{RefCell, RefMut, Cell};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::hash_map::{HashMap};
+use std::collections::hash_map::HashMap;
+use std::collections::HashSet;
 use std::env;
 use std::fmt;
 use std::fs::{self, File};
@@ -675,6 +676,7 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     where F: FnMut(File, &Path) -> CargoResult<()>
 {
     let mut current = pwd;
+    let mut stash: HashSet<PathBuf> = HashSet::new();
 
     loop {
         let possible = current.join(".cargo").join("config");
@@ -682,7 +684,10 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
             let file = try!(File::open(&possible));
 
             try!(walk(file, &possible));
+
+            stash.insert(possible);
         }
+
         match current.parent() {
             Some(p) => current = p,
             None => break,
@@ -696,12 +701,10 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
         human("Cargo couldn't find your home directory. \
               This probably means that $HOME was not set.")
     }));
-    if !pwd.starts_with(&home) {
-        let config = home.join("config");
-        if fs::metadata(&config).is_ok() {
-            let file = try!(File::open(&config));
-            try!(walk(file, &config));
-        }
+    let config = home.join("config");
+    if !stash.contains(&config) && fs::metadata(&config).is_ok() {
+        let file = try!(File::open(&config));
+        try!(walk(file, &config));
     }
 
     Ok(())
