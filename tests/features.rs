@@ -960,6 +960,7 @@ fn dep_feature_in_cmd_line() {
                 execs().with_status(101).with_stderr("\
 [ERROR] feature names may not contain slashes: `bar/some-feat`
 "));
+}
 
 #[test]
 fn all_features_flag_enables_all_features() {
@@ -1003,5 +1004,4 @@ fn all_features_flag_enables_all_features() {
 
     assert_that(p.cargo_process("build").arg("--all-features"),
                 execs().with_status(0));
-}
 }
