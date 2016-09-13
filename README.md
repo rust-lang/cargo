@@ -76,6 +76,12 @@ bit versions of cargo on unix you would use:
 $ ./configure --target=i686-unknown-linux-gnu,x86_64-unknown-linux-gnu
 ```
 
+## Running the tests
+
+To run cargo's tests, use `cargo test`. If you do not have the cross-compilers
+installed locally, ignore the cross-compile test failures, or disable them by
+using `CFG_DISABLE_CROSS_TESTS=1 cargo test`.
+
 ## Adding new subcommands to Cargo
 
 Cargo is designed to be extensible with new subcommands without having to modify
