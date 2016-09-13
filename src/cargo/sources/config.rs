@@ -146,6 +146,9 @@ a lock file compatible with `{orig}` cannot be generated in this situation
             path.push(s);
             srcs.push(try!(SourceId::for_directory(&path)));
         }
+        if name == "crates-io" && srcs.is_empty() {
+            srcs.push(try!(SourceId::crates_io(self.config)));
+        }
 
         let mut srcs = srcs.into_iter();
         let src = try!(srcs.next().chain_error(|| {
