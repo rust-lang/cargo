@@ -1,10 +1,13 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+
+use semver;
 
 use core::{PackageId, SourceId, Workspace};
 use core::registry::PackageRegistry;
 use core::resolver::{self, Resolve, Method};
 use ops;
 use util::CargoResult;
+use util::config::Config;
 
 /// Resolve all dependencies for the specified `package` using the previous
 /// lockfile as a guide if present.
@@ -151,6 +154,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     if let Some(previous) = previous {
         try!(resolved.merge_from(previous));
     }
+    try!(warn_if_multiple_versions(&resolved, previous, ws.config()));
     return Ok(resolved);
 
     fn keep<'a>(p: &&'a PackageId,
@@ -162,4 +166,74 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             None => true,
         }
     }
+}
+
+fn warn_if_multiple_versions(resolved: &Resolve,
+                             previous: Option<&Resolve>,
+                             config: &Config)
+                             -> CargoResult<()> {
+    let package_version_map = build_version_map(resolved);
+    let previous_version_map = previous.map(build_version_map).unwrap_or(HashMap::new());
+
+    for ((package_name, package_source), versions) in package_version_map {
+        let old_version_count = previous_version_map.get(&(package_name, package_source))
+                                                    .unwrap_or(&BTreeSet::new()).len();
+        if versions.len() > 1 && old_version_count <= 1 {
+            let mut warning = format!("using multiple versions of crate \"{}\"", package_name);
+
+            for version in versions {
+                let target = try!(PackageId::new(package_name, version, package_source));
+                let replaced = resolved.replacement(&target).unwrap_or(&target);
+                warning = warning + "\n" + &try!(path_to_package(resolved, &replaced));
+            }
+
+            try!(config.shell().warn(warning));
+        }
+    }
+
+    Ok(())
+}
+
+fn build_version_map(resolved: &Resolve) -> HashMap<(&str, &SourceId), BTreeSet<&semver::Version>> {
+    let mut package_version_map : HashMap<(&str, &SourceId), BTreeSet<&semver::Version>> =
+        HashMap::new();
+
+    for package_id in resolved.iter() {
+        let key = (package_id.name(), package_id.source_id());
+        package_version_map.entry(key).or_insert(BTreeSet::new()).insert(package_id.version());
+    }
+
+    package_version_map
+}
+
+// Implements a breadth-first search to get the shortest path from the root package to a given
+// target package
+fn path_to_package(resolved: &Resolve, target_id: &PackageId) -> CargoResult<String> {
+    let mut queue : VecDeque<(&PackageId, Vec<&PackageId>)> = VecDeque::new();
+    queue.push_back((resolved.root(), vec![]));
+    let mut visited = HashSet::new();
+
+    while !queue.is_empty() {
+        let (current_id, path) = queue.pop_front().unwrap();
+        if current_id == target_id {
+            let mut path_string = String::new();
+            for id in path {
+                path_string = path_string + &format!("{} v{} -> ", id.name(), id.version());
+            }
+            return Ok(path_string + &format!("{} v{}", current_id.name(), current_id.version()));
+        }
+
+        visited.insert(current_id);
+        for dependency_package_id in resolved.deps(current_id) {
+            if !visited.contains(dependency_package_id) {
+                let mut path = path.clone();
+                path.push(current_id);
+                queue.push_back((dependency_package_id, path));
+            }
+        }
+    }
+
+    // This should never happen; path_to_package should only be called with a Resolve that has the
+    // target package in it
+    panic!("(unable to find dependency path to {} v{})", target_id.name(), target_id.version())
 }

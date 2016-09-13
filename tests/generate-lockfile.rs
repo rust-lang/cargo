@@ -5,6 +5,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargotest::support::{project, execs};
+use cargotest::support::registry::{self, Package};
 use hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
@@ -182,5 +183,65 @@ fn cargo_update_generate_lockfile() {
     assert_that(&lockfile, is_not(existing_file()));
     assert_that(p.cargo("update"), execs().with_status(0).with_stdout(""));
     assert_that(&lockfile, existing_file());
+}
 
+#[test]
+fn warn_about_multiple_versions_on_generate() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "0.0.1"
+            baz = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    Package::new("bar", "0.0.1").publish();
+    Package::new("bar", "0.0.2").publish();
+    Package::new("baz", "0.0.1").dep("bar", "0.0.2").publish();
+
+    assert_that(p.cargo_process("generate-lockfile"),
+                execs().with_status(0)
+                       .with_stderr_contains("\
+[WARNING] using multiple versions of crate \"bar\"
+foo v0.0.1 -> bar v0.0.1
+foo v0.0.1 -> baz v0.0.1 -> bar v0.0.2
+"));
+}
+
+#[test]
+fn warn_about_multiple_versions_on_update() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "0.0.1"
+            baz = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    Package::new("bar", "0.0.1").publish();
+    Package::new("bar", "0.0.2").publish();
+    Package::new("baz", "0.0.1").dep("bar", "0.0.2").publish();
+
+    assert_that(p.cargo_process("update"),
+                execs().with_status(0)
+                       .with_stderr_contains("\
+[WARNING] using multiple versions of crate \"bar\"
+foo v0.0.1 -> bar v0.0.1
+foo v0.0.1 -> baz v0.0.1 -> bar v0.0.2
+"));
+
+    assert_that(p.cargo("update"),
+                execs().with_status(0)
+                .with_stderr(&format!("\
+[UPDATING] registry `{}`", registry::registry())));
 }
