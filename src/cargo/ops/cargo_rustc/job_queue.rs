@@ -170,12 +170,12 @@ impl<'a> JobQueue<'a> {
                 }
                 Message::Stdout(out) => {
                     if cx.config.extra_verbose() {
-                        try!(write!(cx.config.shell().out(), "{}", out));
+                        try!(writeln!(cx.config.shell().out(), "{}", out));
                     }
                 }
                 Message::Stderr(err) => {
                     if cx.config.extra_verbose() {
-                        try!(write!(cx.config.shell().err(), "{}", err));
+                        try!(writeln!(cx.config.shell().err(), "{}", err));
                     }
                 }
                 Message::Finish(result) => {
