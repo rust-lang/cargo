@@ -132,7 +132,7 @@ fn exit_code() {
 [COMPILING] foo v0.0.1 (file[..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
-[ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
+[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 "));
 }
 
@@ -156,7 +156,7 @@ fn exit_code_verbose() {
 [RUNNING] `rustc [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
-[ERROR] Process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
+[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 "));
 }
 

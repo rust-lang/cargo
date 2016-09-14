@@ -715,7 +715,7 @@ fn build_deps_not_for_normal() {
 [ERROR] Could not compile `foo`.
 
 Caused by:
-  Process didn't exit successfully: [..]
+  process didn't exit successfully: [..]
 "));
 }
 

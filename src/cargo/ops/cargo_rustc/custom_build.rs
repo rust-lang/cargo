@@ -3,16 +3,12 @@ use std::fs;
 use std::path::{PathBuf, Path};
 use std::str;
 use std::sync::{Mutex, Arc};
-use std::process::{Stdio, Output};
 
 use core::PackageId;
-use util::{CargoResult, Human};
+use util::{CargoResult, Human, Freshness};
 use util::{internal, ChainError, profile, paths};
-use util::{Freshness, ProcessBuilder, read2};
-use util::errors::{process_error, ProcessError};
 
 use super::job::Work;
-use super::job_queue::JobState;
 use super::{fingerprint, Kind, Context, Unit};
 use super::CommandType;
 
@@ -209,7 +205,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         // And now finally, run the build command itself!
         state.running(&p);
         let cmd = p.into_process_builder();
-        let output = try!(stream_output(state, &cmd).map_err(|mut e| {
+        let output = try!(cmd.exec_with_streaming(
+            &mut |out_line| state.stdout(out_line),
+            &mut |err_line| state.stderr(err_line),
+        ).map_err(|mut e| {
             e.desc = format!("failed to run custom build command for `{}`\n{}",
                              pkg_name, e.desc);
             Human(e)
@@ -441,57 +440,5 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
         if scripts.seen_to_link.insert((pkg.clone(), kind)) {
             scripts.to_link.push((pkg.clone(), kind));
         }
-    }
-}
-
-fn stream_output(state: &JobState, cmd: &ProcessBuilder)
-                 -> Result<Output, ProcessError> {
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
-
-    let status = try!((|| {
-        let mut cmd = cmd.build_command();
-        cmd.stdout(Stdio::piped())
-           .stderr(Stdio::piped())
-           .stdin(Stdio::null());
-        let mut child = try!(cmd.spawn());
-        let out = child.stdout.take().unwrap();
-        let err = child.stderr.take().unwrap();
-
-        try!(read2(out, err, &mut |is_out, data, eof| {
-            let idx = if eof {
-                data.len()
-            } else {
-                match data.iter().rposition(|b| *b == b'\n') {
-                    Some(i) => i + 1,
-                    None => return,
-                }
-            };
-            let data = data.drain(..idx);
-            let dst = if is_out {&mut stdout} else {&mut stderr};
-            let start = dst.len();
-            dst.extend(data);
-            let s = String::from_utf8_lossy(&dst[start..]);
-            if is_out {
-                state.stdout(&s);
-            } else {
-                state.stderr(&s);
-            }
-        }));
-        child.wait()
-    })().map_err(|e| {
-        let msg = format!("could not exeute process {}", cmd);
-        process_error(&msg, Some(e), None, None)
-    }));
-    let output = Output {
-        stdout: stdout,
-        stderr: stderr,
-        status: status,
-    };
-    if !output.status.success() {
-        let msg = format!("process didn't exit successfully: {}", cmd);
-        Err(process_error(&msg, None, Some(&status), Some(&output)))
-    } else {
-        Ok(output)
     }
 }

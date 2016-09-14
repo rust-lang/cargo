@@ -3,9 +3,9 @@ use std::env;
 use std::ffi::{OsString, OsStr};
 use std::fmt;
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::{Command, Stdio, Output};
 
-use util::{ProcessError, process_error};
+use util::{ProcessError, process_error, read2};
 use util::shell_escape::escape;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -75,7 +75,7 @@ impl ProcessBuilder {
     pub fn exec(&self) -> Result<(), ProcessError> {
         let mut command = self.build_command();
         let exit = try!(command.status().map_err(|e| {
-            process_error(&format!("Could not execute process `{}`",
+            process_error(&format!("could not execute process `{}`",
                                    self.debug_string()),
                           Some(e), None, None)
         }));
@@ -83,7 +83,7 @@ impl ProcessBuilder {
         if exit.success() {
             Ok(())
         } else {
-            Err(process_error(&format!("Process didn't exit successfully: `{}`",
+            Err(process_error(&format!("process didn't exit successfully: `{}`",
                                        self.debug_string()),
                               None, Some(&exit), None))
         }
@@ -93,7 +93,7 @@ impl ProcessBuilder {
         let mut command = self.build_command();
 
         let output = try!(command.output().map_err(|e| {
-            process_error(&format!("Could not execute process `{}`",
+            process_error(&format!("could not execute process `{}`",
                                self.debug_string()),
                           Some(e), None, None)
         }));
@@ -101,9 +101,66 @@ impl ProcessBuilder {
         if output.status.success() {
             Ok(output)
         } else {
-            Err(process_error(&format!("Process didn't exit successfully: `{}`",
+            Err(process_error(&format!("process didn't exit successfully: `{}`",
                                        self.debug_string()),
                               None, Some(&output.status), Some(&output)))
+        }
+    }
+
+    pub fn exec_with_streaming(&self,
+                               on_stdout_line: &mut FnMut(&str),
+                               on_stderr_line: &mut FnMut(&str))
+                               -> Result<Output, ProcessError> {
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+
+        let mut cmd = self.build_command();
+        cmd.stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .stdin(Stdio::null());
+
+        let status = try!((|| {
+            let mut child = try!(cmd.spawn());
+            let out = child.stdout.take().unwrap();
+            let err = child.stderr.take().unwrap();
+            try!(read2(out, err, &mut |is_out, data, eof| {
+                let idx = if eof {
+                    data.len()
+                } else {
+                    match data.iter().rposition(|b| *b == b'\n') {
+                        Some(i) => i + 1,
+                        None => return,
+                    }
+                };
+                let data = data.drain(..idx);
+                let dst = if is_out {&mut stdout} else {&mut stderr};
+                let start = dst.len();
+                dst.extend(data);
+                for line in String::from_utf8_lossy(&dst[start..]).lines() {
+                    if is_out {
+                        on_stdout_line(line)
+                    } else {
+                        on_stderr_line(line)
+                    }
+                }
+            }));
+            child.wait()
+        })().map_err(|e| {
+            process_error(&format!("could not execute process `{}`",
+                                   self.debug_string()),
+                          Some(e), None, None)
+        }));
+        let output = Output {
+            stdout: stdout,
+            stderr: stderr,
+            status: status,
+        };
+        if !output.status.success() {
+            Err(process_error(&format!("process didn't exit successfully: `{}`",
+                                       self.debug_string()),
+                              None, Some(&output.status), Some(&output)))
+        } else {
+            Ok(output)
         }
     }
 
