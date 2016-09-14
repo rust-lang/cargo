@@ -101,7 +101,7 @@ impl<'cfg> Workspace<'cfg> {
         Ok(ws)
     }
 
-    /// Creates a "tempoarary workspace" from one package which only contains
+    /// Creates a "temporary workspace" from one package which only contains
     /// that package.
     ///
     /// This constructor will not touch the filesystem and only creates an
@@ -461,6 +461,12 @@ impl<'cfg> Packages<'cfg> {
                 }))
             }
         }
+    }
+}
+
+impl<'a, 'cfg> Members<'a, 'cfg> {
+    pub fn is_empty(self) -> bool {
+        self.count() == 0
     }
 }
 
