@@ -940,3 +940,25 @@ fn lockfile_can_specify_nonexistant_members() {
 
     assert_that(p.cargo("build").cwd(p.root().join("a")), execs().with_status(0));
 }
+
+#[test]
+fn you_cannot_generate_lockfile_for_empty_workspaces() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("bar/src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("update"),
+                execs().with_status(101)
+                       .with_stderr("\
+error: you can't generate a lockfile for an empty workspace.
+"));
+}
