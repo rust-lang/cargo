@@ -31,6 +31,10 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
         bail!("cannot specify both aggressive and precise simultaneously")
     }
 
+    if ws.members().is_empty() {
+        bail!("you can't generate a lockfile for an empty workspace.")
+    }
+
     let previous_resolve = match try!(ops::load_pkg_lockfile(ws)) {
         Some(resolve) => resolve,
         None => return generate_lockfile(ws),
