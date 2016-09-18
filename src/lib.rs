@@ -54,7 +54,7 @@ fn collect_span(message: &str, span: &DiagnosticSpan) -> Option<Suggestion> {
                     column: span.column_end,
                 },
             },
-            text: span.text.iter().map(|ref x| x.text.clone()).collect::<Vec<_>>().join("\n"),
+            text: span.text.iter().map(|x| x.text.clone()).collect::<Vec<_>>().join("\n"),
             replacement: replacement,
         })
     } else {
