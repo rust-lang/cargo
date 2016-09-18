@@ -2,7 +2,7 @@
 
 > **HIGHLY EXPERIMENTAL – MIGHT EAT YOUR CODE**
 
-The goal of this tool is to read and apply the suggestions made by rustc (and third-party lints, like those offered by [Clippy][clippy]).
+The goal of this tool is to read and apply the suggestions made by rustc (and third-party lints, like those offered by [clippy]).
 
 [clippy]: https://github.com/Manishearth/rust-clippy
 
