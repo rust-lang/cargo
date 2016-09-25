@@ -14,6 +14,8 @@ fn read_manifest_output() -> String {
     "name":"foo",
     "version":"0.5.0",
     "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
+    "license": null,
+    "license_file": null,
     "source":null,
     "dependencies":[],
     "targets":[{
