@@ -402,8 +402,10 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
            .cwd(cx.config.cwd())
            .arg("--crate-name").arg(&unit.target.crate_name());
 
-    if let Some(target) = cx.requested_target() {
-        rustdoc.arg("--target").arg(target);
+    if unit.kind != Kind::Host {
+        if let Some(target) = cx.requested_target() {
+            rustdoc.arg("--target").arg(target);
+        }
     }
 
     let doc_dir = cx.out_dir(unit);
