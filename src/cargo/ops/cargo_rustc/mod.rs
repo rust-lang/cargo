@@ -317,9 +317,11 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                         human(format!("failed to remove: {}", dst.display()))
                     }));
                 }
-                try!(fs::hard_link(&src, &dst).chain_error(|| {
-                    human(format!("failed to link `{}` to `{}`",
-                                  src.display(), dst.display()))
+                try!(fs::hard_link(&src, &dst)
+                     .or_else(|_| fs::copy(&src, &dst).map(|_| ()))
+                     .chain_error(|| {
+                         human(format!("failed to link or copy `{}` to `{}`",
+                                       src.display(), dst.display()))
                 }));
             }
         }
