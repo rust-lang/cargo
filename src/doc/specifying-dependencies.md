@@ -307,7 +307,7 @@ winhttp = "0.4.0"
 [target.'cfg(unix)'.dependencies]
 openssl = "1.0.1"
 
-[target.'cfg(target_arch = "x86)'.dependencies]
+[target.'cfg(target_arch = "x86")'.dependencies]
 native = { path = "native/i686" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
