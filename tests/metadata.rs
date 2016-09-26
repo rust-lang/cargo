@@ -19,6 +19,8 @@ fn cargo_metadata_simple() {
                 "id": "foo[..]",
                 "source": null,
                 "dependencies": [],
+                "license": null,
+                "license_file": null,
                 "targets": [
                     {
                         "kind": [
@@ -80,6 +82,8 @@ fn cargo_metadata_with_deps_and_version() {
                 "manifest_path": "[..]Cargo.toml",
                 "name": "baz",
                 "source": "registry+[..]",
+                "license": null,
+                "license_file": null,
                 "targets": [
                     {
                         "kind": [
@@ -109,6 +113,8 @@ fn cargo_metadata_with_deps_and_version() {
                 "manifest_path": "[..]Cargo.toml",
                 "name": "bar",
                 "source": "registry+[..]",
+                "license": null,
+                "license_file": null,
                 "targets": [
                     {
                         "kind": [
@@ -138,6 +144,8 @@ fn cargo_metadata_with_deps_and_version() {
                 "manifest_path": "[..]Cargo.toml",
                 "name": "foo",
                 "source": null,
+                "license": "MIT",
+                "license_file": null,
                 "targets": [
                     {
                         "kind": [
@@ -198,6 +206,8 @@ fn workspace_metadata() {
                 "id": "bar[..]",
                 "source": null,
                 "dependencies": [],
+                "license": null,
+                "license_file": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -214,6 +224,8 @@ fn workspace_metadata() {
                 "id": "baz[..]",
                 "source": null,
                 "dependencies": [],
+                "license": null,
+                "license_file": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -265,6 +277,8 @@ fn workspace_metadata_no_deps() {
                 "id": "bar[..]",
                 "source": null,
                 "dependencies": [],
+                "license": null,
+                "license_file": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -281,6 +295,8 @@ fn workspace_metadata_no_deps() {
                 "id": "baz[..]",
                 "source": null,
                 "dependencies": [],
+                "license": null,
+                "license_file": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -320,6 +336,8 @@ const MANIFEST_OUTPUT: &'static str=
         "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
         "source":null,
         "dependencies":[],
+        "license": null,
+        "license_file": null,
         "targets":[{
             "kind":["bin"],
             "name":"foo",
