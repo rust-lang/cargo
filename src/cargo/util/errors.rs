@@ -110,6 +110,7 @@ pub struct ProcessError {
     pub desc: String,
     pub exit: Option<ExitStatus>,
     pub output: Option<Output>,
+    pub exec: String,
     cause: Option<io::Error>,
 }
 
@@ -137,6 +138,7 @@ impl fmt::Debug for ProcessError {
 /// Error when testcases fail
 pub struct CargoTestError {
     pub desc: String,
+    pub exec: String,
     pub exit: Option<ExitStatus>,
     pub causes: Vec<ProcessError>,
 }
@@ -149,14 +151,15 @@ impl CargoTestError {
         let desc = errors.iter().map(|error| error.desc.clone())
                                 .collect::<Vec<String>>()
                                 .join("\n");
+
         CargoTestError {
             desc: desc,
+            exec: errors[0].exec.clone(),
             exit: errors[0].exit,
             causes: errors,
         }
     }
 }
-
 impl fmt::Display for CargoTestError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&self.desc, f)
@@ -377,6 +380,7 @@ impl CargoError for str::ParseBoolError {}
 pub fn process_error(msg: &str,
                      cause: Option<io::Error>,
                      status: Option<&ExitStatus>,
+                     cmd: Option<String>,
                      output: Option<&Output>) -> ProcessError {
     let exit = match status {
         Some(s) => status_to_string(s),
@@ -400,11 +404,16 @@ pub fn process_error(msg: &str,
             Ok(..) | Err(..) => {}
         }
     }
+    let exec = match cmd {
+        Some(e) => e,
+        None => "".to_string()
+    };
 
     return ProcessError {
         desc: desc,
         exit: status.cloned(),
         output: output.cloned(),
+        exec: exec,
         cause: cause,
     };
 
