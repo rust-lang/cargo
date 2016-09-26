@@ -229,6 +229,38 @@ fn works_through_the_registry() {
 }
 
 #[test]
+fn ignore_version_from_other_platform() {
+    let this_family = if cfg!(unix) {"unix"} else {"windows"};
+    let other_family = if cfg!(unix) {"windows"} else {"unix"};
+    Package::new("foo", "0.1.0").publish();
+    Package::new("foo", "0.2.0").publish();
+
+    let p = project("a")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [target.'cfg({})'.dependencies]
+            foo = "0.1.0"
+
+            [target.'cfg({})'.dependencies]
+            foo = "0.2.0"
+        "#, this_family, other_family))
+        .file("src/lib.rs", "extern crate foo;");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0).with_stderr("\
+[UPDATING] registry [..]
+[DOWNLOADING] [..]
+[COMPILING] foo v0.1.0
+[COMPILING] a v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
+}
+
+#[test]
 fn bad_target_spec() {
     let p = project("a")
         .file("Cargo.toml", &r#"
