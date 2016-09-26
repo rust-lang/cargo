@@ -454,7 +454,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let deps = self.resolve.deps(id);
         let mut ret = try!(deps.filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
-                d.name() == dep.name()
+                d.name() == dep.name() && d.version_req().matches(dep.version())
             }).any(|d| {
                 // If this target is a build command, then we only want build
                 // dependencies, otherwise we want everything *other than* build
