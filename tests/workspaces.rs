@@ -962,3 +962,51 @@ fn you_cannot_generate_lockfile_for_empty_workspaces() {
 error: you can't generate a lockfile for an empty workspace.
 "));
 }
+
+#[test]
+fn workspace_with_transitive_dev_deps() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = ["mbrubeck@example.com"]
+
+            [dependencies.bar]
+            path = "bar"
+
+            [workspace]
+        "#)
+        .file("src/main.rs", r#"fn main() {}"#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.5.0"
+            authors = ["mbrubeck@example.com"]
+
+            [dev-dependencies.baz]
+            path = "../baz"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            pub fn init() {}
+
+            #[cfg(test)]
+
+            #[test]
+            fn test() {
+                extern crate baz;
+                baz::do_stuff();
+            }
+        "#)
+        .file("baz/Cargo.toml", r#"
+            [project]
+            name = "baz"
+            version = "0.5.0"
+            authors = ["mbrubeck@example.com"]
+        "#)
+        .file("baz/src/lib.rs", r#"pub fn do_stuff() {}"#);
+    p.build();
+
+    assert_that(p.cargo("test").args(&["-p", "bar"]),
+                execs().with_status(0));
+}
