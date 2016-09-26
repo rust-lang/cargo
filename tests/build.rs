@@ -1967,7 +1967,7 @@ fn rustc_env_var() {
                  .env("RUSTC", "rustc-that-does-not-exist").arg("-v"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] Could not execute process `rustc-that-does-not-exist -vV` ([..])
+[ERROR] could not execute process `rustc-that-does-not-exist -vV` ([..])
 
 Caused by:
 [..]
