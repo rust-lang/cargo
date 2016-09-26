@@ -47,7 +47,8 @@ fn metadata_full(ws: &Workspace,
                                               None,
                                               opt.features.clone(),
                                               opt.all_features,
-                                              opt.no_default_features));
+                                              opt.no_default_features,
+                                              &[]));
     let (packages, resolve) = deps;
 
     let packages = try!(packages.package_ids()
