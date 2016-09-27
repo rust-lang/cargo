@@ -110,13 +110,13 @@ pub struct ProcessError {
     pub desc: String,
     pub exit: Option<ExitStatus>,
     pub output: Option<Output>,
-    cause: Option<io::Error>,
+    cause: Option<Box<Error + Send>>,
 }
 
 impl Error for ProcessError {
     fn description(&self) -> &str { &self.desc }
     fn cause(&self) -> Option<&Error> {
-        self.cause.as_ref().map(|s| s as &Error)
+        self.cause.as_ref().map(|e| &**e as &Error)
     }
 }
 
@@ -375,9 +375,10 @@ impl CargoError for str::ParseBoolError {}
 // Construction helpers
 
 pub fn process_error(msg: &str,
-                     cause: Option<io::Error>,
+                     cause: Option<Box<Error + Send>>,
                      status: Option<&ExitStatus>,
-                     output: Option<&Output>) -> ProcessError {
+                     output: Option<&Output>) -> ProcessError
+{
     let exit = match status {
         Some(s) => status_to_string(s),
         None => "never executed".to_string(),

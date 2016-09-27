@@ -280,11 +280,15 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                 message: json::Json,
             }
             process_builder.exec_with_streaming(
-                &mut |line| assert!(line.is_empty()),
+                &mut |line| if !line.is_empty() {
+                    Err(internal(&format!("compiler stdout is not empty: `{}`", line)))
+                } else {
+                    Ok(())
+                },
                 &mut |line| {
-                    let rustc_message = json::Json::from_str(line).unwrap_or_else(|_| {
-                        panic!("Compiler produced invalid json: `{}`", line)
-                    });
+                    let rustc_message = try!(json::Json::from_str(line).map_err(|_| {
+                        internal(&format!("compiler produced invalid json: `{}`", line))
+                    }));
 
                     let message = Message {
                         reason: "rustc-message",
@@ -294,7 +298,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                     };
                     let encoded = json::encode(&message).unwrap();
                     println!("{}", encoded);
-
+                    Ok(())
                 },
             ).map(|_| ())
         } else {
