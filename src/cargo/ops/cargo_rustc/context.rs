@@ -105,15 +105,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let _p = profile::start("preparing layout");
 
         try!(self.host.prepare().chain_error(|| {
-            internal(format!("couldn't prepare build directories"))
+            internal("couldn't prepare build directories")
         }));
-        match self.target {
-            Some(ref mut target) => {
-                try!(target.prepare().chain_error(|| {
-                    internal(format!("couldn't prepare build directories"))
-                }));
-            }
-            None => {}
+        if let Some(ref mut target) = self.target {
+            try!(target.prepare().chain_error(|| {
+                internal("couldn't prepare build directories")
+            }));
         }
 
         let layout = self.target.as_ref().unwrap_or(&self.host);
@@ -192,8 +189,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             has_cfg = false;
             process.exec_with_output()
         }).chain_error(|| {
-            human(format!("failed to run `rustc` to learn about \
-                           target-specific information"))
+            human("failed to run `rustc` to learn about \
+                   target-specific information")
         }));
 
         let error = str::from_utf8(&output.stderr).unwrap();
@@ -429,7 +426,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         }
         if ret.is_empty() {
-            if unsupported.len() > 0 {
+            if !unsupported.is_empty() {
                 bail!("cannot produce {} for `{}` as the target `{}` \
                        does not support these crate types",
                       unsupported.join(", "), unit.pkg, self.target_triple())
@@ -768,7 +765,7 @@ fn env_args(config: &Config,
 
     // First try RUSTFLAGS from the environment
     if let Some(a) = env::var(name).ok() {
-        let args = a.split(" ")
+        let args = a.split(' ')
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_string);

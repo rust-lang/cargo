@@ -19,8 +19,8 @@ impl fmt::Display for GitRevision {
     }
 }
 
-/// GitRemote represents a remote repository. It gets cloned into a local
-/// GitDatabase.
+/// Represents a remote repository. It gets cloned into a local
+/// `GitDatabase`.
 #[derive(PartialEq,Clone,Debug)]
 pub struct GitRemote {
     url: Url,
@@ -39,8 +39,8 @@ impl Encodable for GitRemote {
     }
 }
 
-/// GitDatabase is a local clone of a remote repository's database. Multiple
-/// GitCheckouts can be cloned from this GitDatabase.
+/// A local clone of a remote repository's database. Multiple
+/// `GitCheckout`s can be cloned from `GitDatabase`.
 pub struct GitDatabase {
     remote: GitRemote,
     path: PathBuf,
@@ -62,9 +62,9 @@ impl Encodable for GitDatabase {
     }
 }
 
-/// GitCheckout is a local checkout of a particular revision. Calling
+/// A local checkout of a particular revision. Calling
 /// `clone_into` with a reference will resolve the reference into a revision,
-/// and return a CargoError if no revision for that reference was found.
+/// and return a `CargoError` if no revision for that reference was found.
 pub struct GitCheckout<'a> {
     database: &'a GitDatabase,
     location: PathBuf,
@@ -144,7 +144,7 @@ impl GitRemote {
         // Create a local anonymous remote in the repository to fetch the url
         let url = self.url.to_string();
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(dst, &url, refspec, &cargo_config)
+        fetch(dst, &url, refspec, cargo_config)
     }
 
     fn clone_into(&self, dst: &Path, cargo_config: &Config) -> CargoResult<git2::Repository> {
@@ -304,7 +304,7 @@ impl<'a> GitCheckout<'a> {
     }
 
     fn update_submodules(&self, cargo_config: &Config) -> CargoResult<()> {
-        return update_submodules(&self.repo, &cargo_config);
+        return update_submodules(&self.repo, cargo_config);
 
         fn update_submodules(repo: &git2::Repository, cargo_config: &Config) -> CargoResult<()> {
             info!("update submodules for: {:?}", repo.workdir().unwrap());
@@ -443,7 +443,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
             let username = username.unwrap();
             debug_assert!(!ssh_username_requested);
             ssh_agent_attempts.push(username.to_string());
-            return git2::Cred::ssh_key_from_agent(&username)
+            return git2::Cred::ssh_key_from_agent(username)
         }
 
         // Sometimes libgit2 will ask for a username/password in plaintext. This
@@ -538,7 +538,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
     res.chain_error(|| {
         let mut msg = "failed to authenticate when downloading \
                        repository".to_string();
-        if ssh_agent_attempts.len() > 0 {
+        if !ssh_agent_attempts.is_empty() {
             let names = ssh_agent_attempts.iter()
                                           .map(|s| format!("`{}`", s))
                                           .collect::<Vec<_>>()

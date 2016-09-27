@@ -210,7 +210,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                 Some((_, ',')) => return Some(Ok(Token::Comma)),
                 Some((_, '=')) => return Some(Ok(Token::Equals)),
                 Some((start, '"')) => {
-                    while let Some((end, ch)) = self.s.next() {
+                    for (end, ch) in self.s.next() {
                         if ch == '"' {
                             return Some(Ok(Token::String(&self.orig[start+1..end])))
                         }

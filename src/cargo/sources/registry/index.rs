@@ -96,7 +96,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 let mut contents = String::new();
                 try!(f.read_to_string(&mut contents));
                 let ret: CargoResult<Vec<(Summary, bool)>>;
-                ret = contents.lines().filter(|l| l.trim().len() > 0)
+                ret = contents.lines().filter(|l| !l.trim().is_empty())
                               .map(|l| self.parse_registry_package(l))
                               .collect();
                 ret.chain_error(|| {

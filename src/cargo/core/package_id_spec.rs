@@ -16,7 +16,7 @@ pub struct PackageIdSpec {
 
 impl PackageIdSpec {
     pub fn parse(spec: &str) -> CargoResult<PackageIdSpec> {
-        if spec.contains("/") {
+        if spec.contains('/') {
             if let Ok(url) = spec.to_url() {
                 return PackageIdSpec::from_url(url);
             }
@@ -113,9 +113,10 @@ impl PackageIdSpec {
     pub fn matches(&self, package_id: &PackageId) -> bool {
         if self.name() != package_id.name() { return false }
 
-        match self.version {
-            Some(ref v) => if v != package_id.version() { return false },
-            None => {}
+        if let Some(ref v) =  self.version {
+            if v != package_id.version() {
+                return false
+            }
         }
 
         match self.url {
@@ -187,11 +188,8 @@ impl fmt::Display for PackageIdSpec {
             }
             None => { printed_name = true; try!(write!(f, "{}", self.name)) }
         }
-        match self.version {
-            Some(ref v) => {
-                try!(write!(f, "{}{}", if printed_name {":"} else {"#"}, v));
-            }
-            None => {}
+        if let Some(ref v) = self.version {
+            try!(write!(f, "{}{}", if printed_name {":"} else {"#"}, v));
         }
         Ok(())
     }

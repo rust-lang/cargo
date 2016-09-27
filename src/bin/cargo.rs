@@ -185,7 +185,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         }
     };
 
-    if try_execute(&config, &args) {
+    if try_execute(config, &args) {
         return Ok(None)
     }
 
@@ -197,7 +197,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
                 .chain(args.iter().skip(2))
                 .map(|s| s.to_string())
                 .collect::<Vec<_>>();
-            if try_execute(&config, &chain) {
+            if try_execute(config, &chain) {
                 return Ok(None)
             } else {
                 chain
@@ -223,10 +223,10 @@ fn try_execute(config: &Config, args: &[String]) -> bool {
     }
     each_subcommand!(cmd);
 
-    return false
+    false
 }
 
-fn aliased_command(config: &Config, command: &String) -> CargoResult<Option<Vec<String>>> {
+fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<String>>> {
     let alias_name = format!("alias.{}", command);
     let mut result = Ok(None);
     match config.get_string(&alias_name) {
@@ -254,7 +254,7 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
     let cmds = list_commands(config);
     // Only consider candidates with a lev_distance of 3 or less so we don't
     // suggest out-of-the-blue options.
-    let mut filtered = cmds.iter().map(|c| (lev_distance(&c, cmd), c))
+    let mut filtered = cmds.iter().map(|c| (lev_distance(c, cmd), c))
                                   .filter(|&(d, _)| d < 4)
                                   .collect::<Vec<_>>();
     filtered.sort_by(|a, b| a.0.cmp(&b.0));

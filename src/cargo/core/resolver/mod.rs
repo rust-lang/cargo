@@ -273,7 +273,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
         activations: HashMap::new(),
         replacements: replacements,
     };
-    let _p = profile::start(format!("resolving"));
+    let _p = profile::start("resolving");
     let cx = try!(activate_deps_loop(cx, registry, summaries));
 
     let mut resolve = Resolve {
@@ -544,7 +544,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                                      &mut features) {
                     None => return Err(activation_error(&cx, registry, &parent,
                                                         &dep,
-                                                        &cx.prev_active(&dep),
+                                                        cx.prev_active(&dep),
                                                         &candidates)),
                     Some(candidate) => candidate,
                 }
@@ -670,7 +670,7 @@ fn activation_error(cx: &Context,
     // indicate that we updated a sub-package and forgot to run `cargo
     // update`. In this case try to print a helpful error!
     if dep.source_id().is_path() &&
-       dep.version_req().to_string().starts_with("=") &&
+       dep.version_req().to_string().starts_with('=') &&
        !candidates.is_empty() {
         msg.push_str("\nconsider running `cargo update` to update \
                       a path dependency's locked version");
@@ -873,7 +873,7 @@ impl<'a> Context<'a> {
                               spec, dep.source_id(), dep.version_req()))
             }));
             let summaries = summaries.collect::<Vec<_>>();
-            if summaries.len() > 0 {
+            if !summaries.is_empty() {
                 let bullets = summaries.iter().map(|s| {
                     format!("  * {}", s.package_id())
                 }).collect::<Vec<_>>();
@@ -937,7 +937,7 @@ impl<'a> Context<'a> {
             let mut base = feature_deps.remove(dep.name()).unwrap_or(vec![]);
             base.extend(dep.features().iter().map(|x| x.clone()));
             for feature in base.iter() {
-                if feature.contains("/") {
+                if feature.contains('/') {
                     bail!("feature names may not contain slashes: `{}`", feature);
                 }
             }

@@ -57,7 +57,7 @@ impl Encodable for Dependency {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         SerializedDependency {
             name: self.name(),
-            source: &self.source_id(),
+            source: self.source_id(),
             req: self.version_req().to_string(),
             kind: self.kind(),
             optional: self.is_optional(),
@@ -301,7 +301,7 @@ impl FromStr for Platform {
     type Err = Box<CargoError>;
 
     fn from_str(s: &str) -> CargoResult<Platform> {
-        if s.starts_with("cfg(") && s.ends_with(")") {
+        if s.starts_with("cfg(") && s.ends_with(')') {
             let s = &s[4..s.len()-1];
             s.parse().map(Platform::Cfg).chain_error(|| {
                 human(format!("failed to parse `{}` as a cfg expression", s))

@@ -60,7 +60,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
                                 test_deps, bench_deps];
                 for profile in profiles.iter() {
                     units.push(Unit {
-                        pkg: &pkg,
+                        pkg: pkg,
                         target: target,
                         profile: profile,
                         kind: *kind,
@@ -77,7 +77,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         try!(rm_rf(&layout.proxy().fingerprint(&unit.pkg)));
         try!(rm_rf(&layout.build(&unit.pkg)));
 
-        let root = cx.out_dir(&unit);
+        let root = cx.out_dir(unit);
         for (filename, _) in try!(cx.target_filenames(&unit)) {
             try!(rm_rf(&root.join(&filename)));
         }

@@ -47,14 +47,14 @@ impl Encodable for Package {
         let license_file = manmeta.license_file.as_ref().map(String::as_ref);
 
         SerializedPackage {
-            name: &package_id.name(),
+            name: package_id.name(),
             version: &package_id.version().to_string(),
             id: package_id,
             license: license,
             license_file: license_file,
             source: summary.source_id(),
             dependencies: summary.dependencies(),
-            targets: &self.manifest.targets(),
+            targets: self.manifest.targets(),
             features: summary.features(),
             manifest_path: &self.manifest_path.display().to_string(),
         }.encode(s)

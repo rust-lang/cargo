@@ -79,25 +79,23 @@ fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
         files.push(file);
     }
 }
+
 fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
-    match fs::read_dir(&root) {
-        Ok(new) => {
-            files.extend(new.filter_map(|dir| {
-                dir.map(|d| d.path()).ok()
-            }).filter(|f| {
-                f.extension().and_then(|s| s.to_str()) == Some("rs")
-            }).filter(|f| {
-                // Some unix editors may create "dotfiles" next to original
-                // source files while they're being edited, but these files are
-                // rarely actually valid Rust source files and sometimes aren't
-                // even valid UTF-8. Here we just ignore all of them and require
-                // that they are explicitly specified in Cargo.toml if desired.
-                f.file_name().and_then(|s| s.to_str()).map(|s| {
-                    !s.starts_with('.')
-                }).unwrap_or(true)
-            }))
-        }
-        Err(_) => {/* just don't add anything if the directory doesn't exist, etc. */}
+    if let Ok(new) = fs::read_dir(&root) {
+        files.extend(new.filter_map(|dir| {
+            dir.map(|d| d.path()).ok()
+        }).filter(|f| {
+            f.extension().and_then(|s| s.to_str()) == Some("rs")
+        }).filter(|f| {
+            // Some unix editors may create "dotfiles" next to original
+            // source files while they're being edited, but these files are
+            // rarely actually valid Rust source files and sometimes aren't
+            // even valid UTF-8. Here we just ignore all of them and require
+            // that they are explicitly specified in Cargo.toml if desired.
+            f.file_name().and_then(|s| s.to_str()).map(|s| {
+                !s.starts_with('.')
+            }).unwrap_or(true)
+        }))
     }
 }
 
@@ -164,7 +162,7 @@ pub fn to_manifest(contents: &str,
 pub fn parse(toml: &str,
              file: &Path,
              config: &Config) -> CargoResult<toml::Table> {
-    let mut first_parser = toml::Parser::new(&toml);
+    let mut first_parser = toml::Parser::new(toml);
     if let Some(toml) = first_parser.parse() {
         return Ok(toml);
     }
@@ -184,7 +182,7 @@ in the future.", file.display());
         return Ok(toml)
     }
 
-    let mut error_str = format!("could not parse input as TOML\n");
+    let mut error_str = "could not parse input as TOML\n".to_string();
     for error in first_parser.errors.iter() {
         let (loline, locol) = first_parser.to_linecol(error.lo);
         let (hiline, hicol) = first_parser.to_linecol(error.hi);
@@ -572,7 +570,7 @@ impl TomlManifest {
                 config: config,
                 warnings: &mut warnings,
                 platform: None,
-                layout: &layout,
+                layout: layout,
             };
 
             fn process_dependencies(
@@ -582,7 +580,7 @@ impl TomlManifest {
                 -> CargoResult<()>
             {
                 let dependencies = match new_deps {
-                    Some(ref dependencies) => dependencies,
+                    Some(dependencies) => dependencies,
                     None => return Ok(())
                 };
                 for (n, v) in dependencies.iter() {
@@ -629,8 +627,8 @@ impl TomlManifest {
             }
         }
 
-        let exclude = project.exclude.clone().unwrap_or(Vec::new());
-        let include = project.include.clone().unwrap_or(Vec::new());
+        let exclude = project.exclude.clone().unwrap_or_default();
+        let include = project.include.clone().unwrap_or_default();
 
         let summary = try!(Summary::new(pkgid, deps,
                                         self.features.clone()
@@ -644,7 +642,7 @@ impl TomlManifest {
             license: project.license.clone(),
             license_file: project.license_file.clone(),
             repository: project.repository.clone(),
-            keywords: project.keywords.clone().unwrap_or(Vec::new()),
+            keywords: project.keywords.clone().unwrap_or_default(),
         };
 
         let workspace_config = match (self.workspace.as_ref(),
@@ -880,7 +878,7 @@ impl TomlDependency {
 
         let version = details.version.as_ref().map(|v| &v[..]);
         let mut dep = try!(DependencyInner::parse(name, version, &new_source_id));
-        dep = dep.set_features(details.features.unwrap_or(Vec::new()))
+        dep = dep.set_features(details.features.unwrap_or_default())
                  .set_default_features(details.default_features.unwrap_or(true))
                  .set_optional(details.optional.unwrap_or(false))
                  .set_platform(cx.platform.clone());
