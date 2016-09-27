@@ -348,3 +348,51 @@ unable to verify that `foo v0.0.1` is the same as when the lockfile was generate
 
 "));
 }
+
+#[test]
+fn crates_io_registry_url_is_optional() {
+    let root = paths::root();
+    t!(fs::create_dir(&root.join(".cargo")));
+    t!(t!(File::create(root.join(".cargo/config"))).write_all(br#"
+        [source.crates-io]
+        replace-with = 'my-awesome-local-registry'
+
+        [source.my-awesome-local-registry]
+        local-registry = 'registry'
+    "#));
+
+    Package::new("foo", "0.0.1")
+            .local(true)
+            .file("src/lib.rs", "pub fn foo() {}")
+            .publish();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.0.1"
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate foo;
+            pub fn bar() {
+                foo::foo();
+            }
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0).with_stderr(&format!("\
+[UNPACKING] foo v0.0.1 ([..])
+[COMPILING] foo v0.0.1
+[COMPILING] bar v0.0.1 ({dir})
+[FINISHED] [..]
+",
+        dir = p.url())));
+    assert_that(p.cargo("build"), execs().with_status(0).with_stderr("\
+[FINISHED] [..]
+"));
+    assert_that(p.cargo("test"), execs().with_status(0));
+}
