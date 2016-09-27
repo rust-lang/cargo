@@ -115,18 +115,28 @@ impl ProjectBuilder {
     pub fn url(&self) -> Url { path2url(self.root()) }
 
     pub fn bin(&self, b: &str) -> PathBuf {
-        self.build_dir().join("debug").join(&format!("{}{}", b,
-                                                     env::consts::EXE_SUFFIX))
+        self.debug_dir().join(&format!("{}{}", b, env::consts::EXE_SUFFIX))
     }
 
     pub fn release_bin(&self, b: &str) -> PathBuf {
-        self.build_dir().join("release").join(&format!("{}{}", b,
-                                                       env::consts::EXE_SUFFIX))
+        self.release_dir().join(&format!("{}{}", b, env::consts::EXE_SUFFIX))
     }
 
     pub fn target_bin(&self, target: &str, b: &str) -> PathBuf {
         self.build_dir().join(target).join("debug")
                         .join(&format!("{}{}", b, env::consts::EXE_SUFFIX))
+    }
+
+    pub fn deps(&self) -> PathBuf {
+        self.debug_dir().join("deps")
+    }
+
+    pub fn debug_dir(&self) -> PathBuf {
+        self.build_dir().join("debug")
+    }
+
+    pub fn release_dir(&self) -> PathBuf {
+        self.build_dir().join("release")
     }
 
     pub fn build_dir(&self) -> PathBuf {

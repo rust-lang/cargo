@@ -21,7 +21,9 @@ fn read_manifest_output() -> String {
     "targets":[{
         "kind":["bin"],
         "name":"foo",
-        "src_path":"src[..]foo.rs"
+        "src_path":"src[..]foo.rs",
+        "metadata": null,
+        "filename": "foo"
     }],
     "features":{},
     "manifest_path":"[..]Cargo.toml"

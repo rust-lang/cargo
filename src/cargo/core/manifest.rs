@@ -172,6 +172,8 @@ struct SerializedTarget<'a> {
     kind: &'a TargetKind,
     name: &'a str,
     src_path: &'a str,
+    metadata: Option<&'a str>,
+    filename: &'a str,
 }
 
 impl Encodable for Target {
@@ -180,6 +182,8 @@ impl Encodable for Target {
             kind: &self.kind,
             name: &self.name,
             src_path: &self.src_path.display().to_string(),
+            metadata: self.metadata.as_ref().map(|m| m.metadata.as_ref()),
+            filename: self.filename().as_ref(),
         }.encode(s)
     }
 }
@@ -366,6 +370,20 @@ impl Target {
     pub fn documented(&self) -> bool { self.doc }
     pub fn for_host(&self) -> bool { self.for_host }
     pub fn benched(&self) -> bool { self.benched }
+
+    pub fn filename(&self) -> String {
+        let crate_name = self.crate_name();     // XXX conditional on allows_underscores()?
+        let extra_filename = match self.metadata() {
+            None => "",
+            Some(&Metadata { ref extra_filename, .. }) => extra_filename,
+        };
+
+        match self.kind {
+            TargetKind::Lib(_) =>
+                format!("lib{}{}.rlib", crate_name, extra_filename),
+            _ => format!("{}{}", crate_name, extra_filename),
+        }
+    }
 
     pub fn doctested(&self) -> bool {
         self.doctest && match self.kind {
