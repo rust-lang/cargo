@@ -206,8 +206,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         state.running(&p);
         let cmd = p.into_process_builder();
         let output = try!(cmd.exec_with_streaming(
-            &mut |out_line| state.stdout(out_line),
-            &mut |err_line| state.stderr(err_line),
+            &mut |out_line| { state.stdout(out_line); Ok(()) },
+            &mut |err_line| { state.stderr(err_line); Ok(()) },
         ).map_err(|mut e| {
             e.desc = format!("failed to run custom build command for `{}`\n{}",
                              pkg_name, e.desc);
