@@ -28,7 +28,7 @@ use std::sync::Arc;
 
 use core::registry::PackageRegistry;
 use core::{Source, SourceId, PackageSet, Package, Target};
-use core::{Profile, TargetKind, Profiles, Workspace};
+use core::{Profile, TargetKind, Profiles, Workspace, PackageIdSpec};
 use core::resolver::{Method, Resolve};
 use ops::{self, BuildOutput, ExecEngine};
 use sources::PathSource;
@@ -97,7 +97,8 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
                                 source: Option<Box<Source + 'a>>,
                                 features: Vec<String>,
                                 all_features: bool,
-                                no_default_features: bool)
+                                no_default_features: bool,
+                                spec: &'a [String])
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
 
     let mut registry = try!(PackageRegistry::new(ws.config()));
@@ -128,9 +129,13 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
         }
     };
 
+    let specs = try!(spec.iter().map(|p| PackageIdSpec::parse(p))
+                                .collect::<CargoResult<Vec<_>>>());
+
     let resolved_with_overrides =
             try!(ops::resolve_with_previous(&mut registry, ws,
-                                            method, Some(&resolve), None));
+                                            method, Some(&resolve), None,
+                                            &specs));
 
     let packages = ops::get_resolved_packages(&resolved_with_overrides,
                                               registry);
@@ -164,9 +169,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         try!(generate_targets(root_package, profiles, mode, filter, release));
     }
 
-    let (packages, resolve_with_overrides) = {
-        try!(resolve_dependencies(ws, source, features, all_features, no_default_features))
-    };
+    let (packages, resolve_with_overrides) =
+        try!(resolve_dependencies(ws, source, features, all_features, no_default_features, spec));
 
     let mut pkgids = Vec::new();
     if spec.len() > 0 {

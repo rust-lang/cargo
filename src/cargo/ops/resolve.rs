@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use core::{PackageId, SourceId, Workspace};
+use core::{PackageId, PackageIdSpec, SourceId, Workspace};
 use core::registry::PackageRegistry;
 use core::resolver::{self, Resolve, Method};
 use ops;
@@ -16,7 +16,7 @@ pub fn resolve_ws(registry: &mut PackageRegistry, ws: &Workspace)
     let prev = try!(ops::load_pkg_lockfile(ws));
     let resolve = try!(resolve_with_previous(registry, ws,
                                              Method::Everything,
-                                             prev.as_ref(), None));
+                                             prev.as_ref(), None, &[]));
 
     // Avoid writing a lockfile if we are `cargo install`ing a non local package.
     if ws.current_opt().map(|pkg| pkg.package_id().source_id().is_path()).unwrap_or(true) {
@@ -38,7 +38,8 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                  ws: &Workspace,
                                  method: Method,
                                  previous: Option<&'a Resolve>,
-                                 to_avoid: Option<&HashSet<&'a PackageId>>)
+                                 to_avoid: Option<&HashSet<&'a PackageId>>,
+                                 specs: &[PackageIdSpec])
                                  -> CargoResult<Resolve> {
     // Here we place an artificial limitation that all non-registry sources
     // cannot be locked at more than one revision. This means that if a git
@@ -67,7 +68,8 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         if let Method::Required { .. } = method {
             assert!(previous.is_some());
             if let Some(current) = ws.current_opt() {
-                if member.package_id() != current.package_id() {
+                if member.package_id() != current.package_id() &&
+                   !specs.iter().any(|spec| spec.matches(member.package_id())) {
                     continue;
                 }
             }
