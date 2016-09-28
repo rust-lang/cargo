@@ -10,7 +10,7 @@ use rustc_serialize::json;
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::shell::ColorConfig;
-use util::{self, CargoResult, human};
+use util::{self, CargoResult, human, machine_message};
 use util::{Config, internal, ChainError, profile, join_paths, short_hash};
 
 use self::job::{Job, Work};
@@ -272,13 +272,6 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         state.running(&rustc);
         let process_builder = rustc.into_process_builder();
         try!(if json_errors {
-            #[derive(RustcEncodable)]
-            struct Message<'a> {
-                reason: &'a str,
-                package_id: &'a PackageId,
-                target: &'a Target,
-                message: json::Json,
-            }
             process_builder.exec_with_streaming(
                 &mut |line| if !line.is_empty() {
                     Err(internal(&format!("compiler stdout is not empty: `{}`", line)))
@@ -286,18 +279,16 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                     Ok(())
                 },
                 &mut |line| {
-                    let rustc_message = try!(json::Json::from_str(line).map_err(|_| {
+                    let compiler_message = try!(json::Json::from_str(line).map_err(|_| {
                         internal(&format!("compiler produced invalid json: `{}`", line))
                     }));
 
-                    let message = Message {
-                        reason: "rustc-message",
-                        package_id: &package_id,
-                        target: &target,
-                        message: rustc_message,
-                    };
-                    let encoded = json::encode(&message).unwrap();
-                    println!("{}", encoded);
+                    machine_message::FromCompiler::new(
+                        &package_id,
+                        &target,
+                        compiler_message
+                    ).emit();
+
                     Ok(())
                 },
             ).map(|_| ())

@@ -2305,7 +2305,7 @@ fn compiler_json_error_format() {
                     .arg("--message-format").arg("json-v1"),
                 execs().with_json(r#"
     {
-        "reason":"rustc-message",
+        "reason":"compiler-message",
         "package_id":"bar 0.5.0 ([..])",
         "target":{"kind":["lib"],"name":"bar","src_path":"[..]lib.rs"},
         "message":{
@@ -2321,7 +2321,7 @@ fn compiler_json_error_format() {
     }
 
     {
-        "reason":"rustc-message",
+        "reason":"compiler-message",
         "package_id":"foo 0.5.0 ([..])",
         "target":{"kind":["bin"],"name":"foo","src_path":"[..]main.rs"},
         "message":{
