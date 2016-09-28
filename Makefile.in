@@ -136,7 +136,7 @@ clean:
 # === Documentation
 
 DOCS := index faq config guide manifest build-script pkgid-spec crates-io \
-	environment-variables specifying-dependencies source-replacement
+	environment-variables specifying-dependencies source-replacement policies
 DOC_DIR := target/doc
 DOC_OPTS := --markdown-no-toc \
 		--markdown-css stylesheets/normalize.css \
