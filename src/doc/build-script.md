@@ -440,7 +440,7 @@ build = "build.rs"
 [dependencies]
 libssh2-sys = { git = "https://github.com/alexcrichton/ssh2-rs" }
 
-[target.x86_64-unknown-linux-gnu.dependencies]
+[target.'cfg(unix)'.dependencies]
 openssl-sys = { git = "https://github.com/alexcrichton/openssl-sys" }
 
 # ...
@@ -452,7 +452,7 @@ crate (`libgit2-sys`) links to the `git2` native library.
 
 Here we also see the unconditional dependency on `libssh2` via the
 `libssh2-sys` crate, as well as a platform-specific dependency on `openssl-sys`
-for unix (other variants elided for now). It may seem a little counterintuitive
+for \*nix (other variants elided for now). It may seem a little counterintuitive
 to express *C dependencies* in the *Cargo manifest*, but this is actually using
 one of Cargo’s conventions in this space.
 
