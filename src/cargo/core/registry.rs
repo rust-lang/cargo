@@ -1,4 +1,4 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::HashMap;
 
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use core::PackageSet;
@@ -188,17 +188,16 @@ impl<'cfg> PackageRegistry<'cfg> {
     }
 
     fn query_overrides(&mut self, dep: &Dependency)
-                       -> CargoResult<Vec<Summary>> {
-        let mut seen = HashSet::new();
-        let mut ret = Vec::new();
+                       -> CargoResult<Option<Summary>> {
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.name(), s);
-            ret.extend(try!(src.query(&dep)).into_iter().filter(|s| {
-                seen.insert(s.name().to_string())
-            }));
+            let mut results = try!(src.query(&dep));
+            if results.len() > 0 {
+                return Ok(Some(results.remove(0)))
+            }
         }
-        Ok(ret)
+        Ok(None)
     }
 
     // This function is used to transform a summary to another locked summary if
@@ -277,25 +276,89 @@ impl<'cfg> PackageRegistry<'cfg> {
             }
         })
     }
+
+    fn warn_bad_override(&self,
+                         override_summary: &Summary,
+                         real_summary: &Summary) -> CargoResult<()> {
+        let real = real_summary.package_id();
+        let map = try!(self.locked.get(real.source_id()).chain_error(|| {
+            human(format!("failed to find lock source of {}", real))
+        }));
+        let list = try!(map.get(real.name()).chain_error(|| {
+            human(format!("failed to find lock name of {}", real))
+        }));
+        let &(_, ref real_deps) = try!(list.iter().find(|&&(ref id, _)| {
+            real == id
+        }).chain_error(|| {
+            human(format!("failed to find lock version of {}", real))
+        }));
+        let mut real_deps = real_deps.clone();
+
+        let boilerplate = "\
+This is currently allowed but is known to produce buggy behavior with spurious
+recompiles and changes to the crate graph. Path overrides unfortunately were
+never intended to support this feature, so for now this message is just a
+warning. In the future, however, this message will become a hard error.
+
+To change the dependency graph via an override it's recommended to use the
+`[replace]` feature of Cargo instead of the path override feature. This is
+documented online at the url below for more information.
+
+http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
+";
+
+        for dep in override_summary.dependencies() {
+            if let Some(i) = real_deps.iter().position(|id| dep.matches_id(id)) {
+                real_deps.remove(i);
+                continue
+            }
+            let msg = format!("\
+                path override for crate `{}` has altered the original list of\n\
+                dependencies; the dependency on `{}` was either added or\n\
+                modified to not match the previously resolved version\n\n\
+                {}", override_summary.package_id().name(), dep.name(), boilerplate);
+            try!(self.source_config.config().shell().warn(&msg));
+            return Ok(())
+        }
+
+        for id in real_deps {
+            let msg = format!("\
+                path override for crate `{}` has altered the original list of
+                dependencies; the dependency on `{}` was removed\n\n
+                {}", override_summary.package_id().name(), id.name(), boilerplate);
+            try!(self.source_config.config().shell().warn(&msg));
+            return Ok(())
+        }
+
+        Ok(())
+    }
 }
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        let overrides = try!(self.query_overrides(&dep));
+        // Ensure the requested source_id is loaded
+        try!(self.ensure_loaded(dep.source_id(), Kind::Normal).chain_error(|| {
+            human(format!("failed to load source for a dependency \
+                           on `{}`", dep.name()))
+        }));
 
-        let ret = if overrides.is_empty() {
-            // Ensure the requested source_id is loaded
-            try!(self.ensure_loaded(dep.source_id(), Kind::Normal).chain_error(|| {
-                human(format!("failed to load source for a dependency \
-                               on `{}`", dep.name()))
-            }));
+        let override_summary = try!(self.query_overrides(&dep));
+        let real_summaries = match self.sources.get_mut(dep.source_id()) {
+            Some(src) => Some(try!(src.query(&dep))),
+            None => None,
+        };
 
-            match self.sources.get_mut(dep.source_id()) {
-                Some(src) => try!(src.query(&dep)),
-                None => Vec::new(),
+        let ret = match (override_summary, real_summaries) {
+            (Some(candidate), Some(summaries)) => {
+                if summaries.len() != 1 {
+                    bail!("found an override with a non-locked list");
+                }
+                try!(self.warn_bad_override(&candidate, &summaries[0]));
+                vec![candidate]
             }
-        } else {
-            overrides
+            (Some(_), None) => bail!("override found but no real ones"),
+            (None, Some(summaries)) => summaries,
+            (None, None) => Vec::new(),
         };
 
         // post-process all returned summaries to ensure that we lock all
