@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use std::hash::{Hasher, Hash, SipHasher};
 
 use rustc_serialize::hex::ToHex;

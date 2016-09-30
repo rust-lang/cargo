@@ -1,12 +1,12 @@
 use std::fmt::{self, Debug, Formatter};
-use std::hash::{Hash, Hasher, SipHasher};
 
 use url::Url;
 
 use core::source::{Source, SourceId};
 use core::GitReference;
 use core::{Package, PackageId, Summary, Registry, Dependency};
-use util::{CargoResult, Config, to_hex};
+use util::{CargoResult, Config};
+use util::hex::short_hash;
 use sources::PathSource;
 use sources::git::utils::{GitRemote, GitRevision};
 
@@ -57,8 +57,6 @@ impl<'cfg> GitSource<'cfg> {
 }
 
 fn ident(url: &Url) -> String {
-    let mut hasher = SipHasher::new_with_keys(0,0);
-
     let url = canonicalize_url(url);
     let ident = url.path_segments().and_then(|mut s| s.next_back()).unwrap_or("");
 
@@ -68,8 +66,7 @@ fn ident(url: &Url) -> String {
         ident
     };
 
-    url.hash(&mut hasher);
-    format!("{}-{}", ident, to_hex(hasher.finish()))
+    format!("{}-{}", ident, short_hash(&url))
 }
 
 // Some hacks and heuristics for making equivalent URLs hash the same
