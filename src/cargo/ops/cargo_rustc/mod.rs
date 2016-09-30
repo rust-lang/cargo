@@ -159,6 +159,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             cx.compilation.native_dirs.insert(dir.clone());
         }
     }
+    cx.compilation.target = cx.target_triple().to_string();
     Ok(cx.compilation)
 }
 
