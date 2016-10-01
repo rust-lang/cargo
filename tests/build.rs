@@ -2302,7 +2302,7 @@ fn compiler_json_error_format() {
         .file("bar/src/lib.rs", r#"fn dead() {}"#);
 
     assert_that(p.cargo_process("build").arg("-v")
-                    .arg("--message-format").arg("json-v1"),
+                    .arg("--message-format").arg("json"),
                 execs().with_json(r#"
     {
         "reason":"compiler-message",
@@ -2346,9 +2346,9 @@ fn wrong_message_format_option() {
     p.build();
 
     assert_that(p.cargo_process("build").arg("--message-format").arg("XML"),
-                execs().with_status(101)
-                       .with_stderr_contains("\
-[ERROR] argument for --message-format must be human or json-v1, but found `XML`"));
+                execs().with_status(1)
+                       .with_stderr_contains(
+r#"[ERROR] Could not match 'xml' with any of the allowed variants: ["Human", "Json"]"#));
 }
 
 #[test]
