@@ -76,21 +76,10 @@ pub enum CompileMode {
     Doc { deps: bool },
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, RustcDecodable)]
 pub enum MessageFormat {
     Human,
     Json
-}
-
-impl MessageFormat {
-    pub fn from_option(opt: &Option<String>) -> CargoResult<MessageFormat> {
-        match opt.as_ref().map(|s| s.as_ref()) {
-            None | Some("human") => Ok(MessageFormat::Human),
-            Some("json-v1") => Ok(MessageFormat::Json),
-            Some(other) => bail!("argument for --message-format must be human or json-v1, \
-                                 but found `{}`", other)
-        }
-    }
 }
 
 pub enum CompileFilter<'a> {
