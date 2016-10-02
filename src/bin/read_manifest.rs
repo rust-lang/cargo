@@ -11,7 +11,8 @@ pub struct Options {
 }
 
 pub const USAGE: &'static str = "
-Print a JSON representation of a Cargo.toml manifest
+Deprecated, use `cargo metadata --no-deps` instead.
+Print a JSON representation of a Cargo.toml manifest.
 
 Usage:
     cargo read-manifest [options]
