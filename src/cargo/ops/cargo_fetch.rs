@@ -6,7 +6,7 @@ use util::CargoResult;
 /// Executes `cargo fetch`.
 pub fn fetch<'a>(ws: &Workspace<'a>) -> CargoResult<(Resolve, PackageSet<'a>)> {
     let mut registry = try!(PackageRegistry::new(ws.config()));
-    let resolve = try!(ops::resolve_ws(&mut registry, ws, ws.config()));
+    let resolve = try!(ops::resolve_ws(&mut registry, ws));
     let packages = get_resolved_packages(&resolve, registry);
     for id in resolve.iter() {
         try!(packages.get(id, ws.config()));

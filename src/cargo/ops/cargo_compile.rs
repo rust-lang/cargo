@@ -118,7 +118,7 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
 
     // First, resolve the root_package's *listed* dependencies, as well as
     // downloading and updating all remotes and such.
-    let resolve = try!(ops::resolve_ws(&mut registry, ws, ws.config()));
+    let resolve = try!(ops::resolve_ws(&mut registry, ws));
 
     // Second, resolve with precisely what we're doing. Filter out
     // transitive dependencies if necessary, specify features, handle
@@ -143,7 +143,7 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
     let resolved_with_overrides =
             try!(ops::resolve_with_previous(&mut registry, ws,
                                             method, Some(&resolve), None,
-                                            &specs, ws.config()));
+                                            &specs));
 
     let packages = ops::get_resolved_packages(&resolved_with_overrides,
                                               registry);

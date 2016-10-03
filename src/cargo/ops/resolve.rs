@@ -4,19 +4,19 @@ use core::{PackageId, PackageIdSpec, SourceId, Workspace};
 use core::registry::PackageRegistry;
 use core::resolver::{self, Resolve, Method};
 use ops;
-use util::{CargoResult, Config};
+use util::CargoResult;
 
 /// Resolve all dependencies for the specified `package` using the previous
 /// lockfile as a guide if present.
 ///
 /// This function will also write the result of resolution as a new
 /// lockfile.
-pub fn resolve_ws(registry: &mut PackageRegistry, ws: &Workspace, config: &Config)
+pub fn resolve_ws(registry: &mut PackageRegistry, ws: &Workspace)
                    -> CargoResult<Resolve> {
     let prev = try!(ops::load_pkg_lockfile(ws));
     let resolve = try!(resolve_with_previous(registry, ws,
                                              Method::Everything,
-                                             prev.as_ref(), None, &[], config));
+                                             prev.as_ref(), None, &[]));
 
     // Avoid writing a lockfile if we are `cargo install`ing a non local package.
     if ws.current_opt().map(|pkg| pkg.package_id().source_id().is_path()).unwrap_or(true) {
@@ -39,8 +39,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                  method: Method,
                                  previous: Option<&'a Resolve>,
                                  to_avoid: Option<&HashSet<&'a PackageId>>,
-                                 specs: &[PackageIdSpec],
-                                 config: &Config)
+                                 specs: &[PackageIdSpec])
                                  -> CargoResult<Resolve> {
     // Here we place an artificial limitation that all non-registry sources
     // cannot be locked at more than one revision. This means that if a git
@@ -128,7 +127,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => root_replace.to_vec(),
     };
 
-    let mut resolved = try!(resolver::resolve(&summaries, &replace, registry, config));
+    let mut resolved = try!(resolver::resolve(&summaries, &replace, registry, ws.config()));
     if let Some(previous) = previous {
         try!(resolved.merge_from(previous));
     }
