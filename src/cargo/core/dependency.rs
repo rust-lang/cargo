@@ -7,7 +7,7 @@ use semver::ReqParseError;
 use rustc_serialize::{Encoder, Encodable};
 
 use core::{SourceId, Summary, PackageId};
-use util::{CargoError, CargoResult, Cfg, CfgExpr, ChainError, human};
+use util::{CargoError, CargoResult, Cfg, CfgExpr, ChainError, human, Config};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
@@ -90,7 +90,8 @@ impl DependencyInner {
     /// Attempt to create a `Dependency` from an entry in the manifest.
     pub fn parse(name: &str,
                  version: Option<&str>,
-                 source_id: &SourceId) -> CargoResult<DependencyInner> {
+                 source_id: &SourceId,
+                 _config: &Config) -> CargoResult<DependencyInner> {
         let (specified_req, version_req) = match version {
             Some(v) => (true, try!(DependencyInner::parse_with_deprecated(v))),
             None => (false, VersionReq::any())
@@ -233,8 +234,9 @@ impl Dependency {
     /// Attempt to create a `Dependency` from an entry in the manifest.
     pub fn parse(name: &str,
                  version: Option<&str>,
-                 source_id: &SourceId) -> CargoResult<Dependency> {
-        DependencyInner::parse(name, version, source_id).map(|di| {
+                 source_id: &SourceId,
+                 config: &Config) -> CargoResult<Dependency> {
+        DependencyInner::parse(name, version, source_id, config).map(|di| {
             di.into_dependency()
         })
     }

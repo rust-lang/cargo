@@ -156,7 +156,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }));
         }
-        for dep in try!(self.dep_targets(&unit)) {
+        for dep in try!(self.dep_targets(&unit, self.config)) {
             try!(self.visit_crate_type(&dep, crate_types));
         }
         Ok(())
@@ -251,7 +251,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         for unit in units {
             try!(self.walk_used_in_plugin_map(unit,
                                               unit.target.for_host(),
-                                              &mut visited));
+                                              &mut visited,
+                                              self.config));
         }
         Ok(())
     }
@@ -259,7 +260,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     fn walk_used_in_plugin_map(&mut self,
                                unit: &Unit<'a>,
                                is_plugin: bool,
-                               visited: &mut HashSet<(Unit<'a>, bool)>)
+                               visited: &mut HashSet<(Unit<'a>, bool)>,
+                               config: &Config)
                                -> CargoResult<()> {
         if !visited.insert((*unit, is_plugin)) {
             return Ok(())
@@ -267,10 +269,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         if is_plugin {
             self.used_in_plugin.insert(*unit);
         }
-        for unit in try!(self.dep_targets(unit)) {
+        for unit in try!(self.dep_targets(unit, config)) {
             try!(self.walk_used_in_plugin_map(&unit,
                                               is_plugin || unit.target.for_host(),
-                                              visited));
+                                              visited,
+                                              config));
         }
         Ok(())
     }
@@ -443,11 +446,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
-    pub fn dep_targets(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
+    pub fn dep_targets(&self, unit: &Unit<'a>, config: &Config) -> CargoResult<Vec<Unit<'a>>> {
         if unit.profile.run_custom_build {
             return self.dep_run_custom_build(unit)
         } else if unit.profile.doc {
-            return self.doc_deps(unit);
+            return self.doc_deps(unit, config);
         }
 
         let id = unit.pkg.package_id();
@@ -490,7 +493,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 true
             })
         }).filter_map(|id| {
-            match self.get_package(id) {
+            match self.get_package(id, config) {
                 Ok(pkg) => {
                     pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
                         Ok(Unit {
@@ -564,7 +567,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             profile: &self.profiles.dev,
             ..*unit
         };
-        let deps = try!(self.dep_targets(&tmp));
+        let deps = try!(self.dep_targets(&tmp, self.config));
         Ok(deps.iter().filter_map(|unit| {
             if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
                 return None
@@ -578,7 +581,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Returns the dependencies necessary to document a package
-    fn doc_deps(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
+    fn doc_deps(&self, unit: &Unit<'a>, config: &Config) -> CargoResult<Vec<Unit<'a>>> {
         let deps = self.resolve.deps(unit.pkg.package_id()).filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
@@ -590,7 +593,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             })
         }).map(|dep| {
-            self.get_package(dep)
+            self.get_package(dep, config)
         });
 
         // To document a library, we depend on dependencies actually being
@@ -673,8 +676,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Gets a package for the given package id.
-    pub fn get_package(&self, id: &PackageId) -> CargoResult<&'a Package> {
-        self.packages.get(id)
+    pub fn get_package(&self, id: &PackageId, config: &Config) -> CargoResult<&'a Package> {
+        self.packages.get(id, config)
     }
 
     /// Get the user-specified linker for a particular host or target

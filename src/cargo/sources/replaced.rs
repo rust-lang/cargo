@@ -1,5 +1,5 @@
 use core::{Source, Registry, PackageId, Package, Dependency, Summary, SourceId};
-use util::{CargoResult, ChainError, human};
+use util::{CargoResult, ChainError, human, Config};
 
 pub struct ReplacedSource<'cfg> {
     to_replace: SourceId,
@@ -20,9 +20,9 @@ impl<'cfg> ReplacedSource<'cfg> {
 }
 
 impl<'cfg> Registry for ReplacedSource<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self, dep: &Dependency, config: &Config) -> CargoResult<Vec<Summary>> {
         let dep = dep.clone().map_source(&self.to_replace, &self.replace_with);
-        let ret = try!(self.inner.query(&dep).chain_error(|| {
+        let ret = try!(self.inner.query(&dep, config).chain_error(|| {
             human(format!("failed to query replaced source `{}`",
                           self.to_replace))
         }));
@@ -40,9 +40,9 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         })
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
+    fn download(&mut self, id: &PackageId, config: &Config) -> CargoResult<Package> {
         let id = id.with_source_id(&self.replace_with);
-        let pkg = try!(self.inner.download(&id).chain_error(|| {
+        let pkg = try!(self.inner.download(&id, config).chain_error(|| {
             human(format!("failed to download replaced source `{}`",
                           self.to_replace))
         }));

@@ -35,13 +35,13 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Return the hash listed for a specified PackageId.
-    pub fn hash(&mut self, pkg: &PackageId) -> CargoResult<String> {
+    pub fn hash(&mut self, pkg: &PackageId, config: &Config) -> CargoResult<String> {
         let key = (pkg.name().to_string(), pkg.version().to_string());
         if let Some(s) = self.hashes.get(&key) {
             return Ok(s.clone())
         }
         // Ok, we're missing the key, so parse the index file to load it.
-        try!(self.summaries(pkg.name()));
+        try!(self.summaries(pkg.name(), config));
         self.hashes.get(&key).chain_error(|| {
             internal(format!("no hash listed for {}", pkg))
         }).map(|s| s.clone())
@@ -51,11 +51,11 @@ impl<'cfg> RegistryIndex<'cfg> {
     ///
     /// Returns a list of pairs of (summary, yanked) for the package name
     /// specified.
-    pub fn summaries(&mut self, name: &str) -> CargoResult<&Vec<(Summary, bool)>> {
+    pub fn summaries(&mut self, name: &str, config: &Config) -> CargoResult<&Vec<(Summary, bool)>> {
         if self.cache.contains_key(name) {
             return Ok(self.cache.get(name).unwrap());
         }
-        let summaries = try!(self.load_summaries(name));
+        let summaries = try!(self.load_summaries(name, config));
         let summaries = summaries.into_iter().filter(|summary| {
             summary.0.package_id().name() == name
         }).collect();
@@ -63,7 +63,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         Ok(self.cache.get(name).unwrap())
     }
 
-    fn load_summaries(&mut self, name: &str) -> CargoResult<Vec<(Summary, bool)>> {
+    fn load_summaries(&mut self, name: &str, config: &Config) -> CargoResult<Vec<(Summary, bool)>> {
         let (path, _lock) = if self.locked {
             let lock = self.path.open_ro(Path::new(INDEX_LOCK),
                                          self.config,
@@ -97,7 +97,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 try!(f.read_to_string(&mut contents));
                 let ret: CargoResult<Vec<(Summary, bool)>>;
                 ret = contents.lines().filter(|l| l.trim().len() > 0)
-                              .map(|l| self.parse_registry_package(l))
+                              .map(|l| self.parse_registry_package(l, config))
                               .collect();
                 ret.chain_error(|| {
                     internal(format!("failed to parse registry's information \
@@ -112,14 +112,14 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// package.
     ///
     /// The returned boolean is whether or not the summary has been yanked.
-    fn parse_registry_package(&mut self, line: &str)
+    fn parse_registry_package(&mut self, line: &str, config: &Config)
                               -> CargoResult<(Summary, bool)> {
         let RegistryPackage {
             name, vers, cksum, deps, features, yanked
         } = try!(json::decode::<RegistryPackage>(line));
         let pkgid = try!(PackageId::new(&name, &vers, &self.source_id));
         let deps: CargoResult<Vec<Dependency>> = deps.into_iter().map(|dep| {
-            self.parse_registry_dependency(dep)
+            self.parse_registry_dependency(dep, config)
         }).collect();
         let deps = try!(deps);
         let summary = try!(Summary::new(pkgid, deps, features));
@@ -129,14 +129,14 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Converts an encoded dependency in the registry to a cargo dependency
-    fn parse_registry_dependency(&self, dep: RegistryDependency)
+    fn parse_registry_dependency(&self, dep: RegistryDependency, config: &Config)
                                  -> CargoResult<Dependency> {
         let RegistryDependency {
             name, req, features, optional, default_features, target, kind
         } = dep;
 
         let dep = try!(DependencyInner::parse(&name, Some(&req),
-                                              &self.source_id));
+                                              &self.source_id, config));
         let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
             "dev" => Kind::Development,
             "build" => Kind::Build,
@@ -165,9 +165,9 @@ impl<'cfg> RegistryIndex<'cfg> {
 }
 
 impl<'cfg> Registry for RegistryIndex<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self, dep: &Dependency, config: &Config) -> CargoResult<Vec<Summary>> {
         let mut summaries = {
-            let summaries = try!(self.summaries(dep.name()));
+            let summaries = try!(self.summaries(dep.name(), config));
             summaries.iter().filter(|&&(_, yanked)| {
                 dep.source_id().precise().is_some() || !yanked
             }).map(|s| s.0.clone()).collect::<Vec<_>>()
@@ -187,7 +187,7 @@ impl<'cfg> Registry for RegistryIndex<'cfg> {
                 _ => true,
             }
         });
-        summaries.query(dep)
+        summaries.query(dep, config)
     }
 
     fn supports_checksums(&self) -> bool {

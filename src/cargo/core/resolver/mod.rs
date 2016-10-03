@@ -55,7 +55,7 @@ use semver;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
-use util::{CargoResult, Graph, human, CargoError};
+use util::{CargoResult, Graph, human, CargoError, Config};
 use util::profile;
 use util::ChainError;
 use util::graph::{Nodes, Edges};
@@ -265,7 +265,8 @@ struct Context<'a> {
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summaries: &[(Summary, Method)],
                replacements: &[(PackageIdSpec, Dependency)],
-               registry: &mut Registry) -> CargoResult<Resolve> {
+               registry: &mut Registry,
+               config: &Config) -> CargoResult<Resolve> {
     let cx = Context {
         resolve_graph: Graph::new(),
         resolve_features: HashMap::new(),
@@ -274,7 +275,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
         replacements: replacements,
     };
     let _p = profile::start(format!("resolving"));
-    let cx = try!(activate_deps_loop(cx, registry, summaries));
+    let cx = try!(activate_deps_loop(cx, registry, summaries, config));
 
     let mut resolve = Resolve {
         graph: cx.resolve_graph,
@@ -305,7 +306,8 @@ fn activate(cx: &mut Context,
             registry: &mut Registry,
             parent: Option<&Rc<Summary>>,
             candidate: Candidate,
-            method: &Method)
+            method: &Method,
+            config: &Config)
             -> CargoResult<Option<DepsFrame>> {
     if let Some(parent) = parent {
         cx.resolve_graph.link(parent.package_id().clone(),
@@ -333,7 +335,7 @@ fn activate(cx: &mut Context,
         }
     };
 
-    let deps = try!(cx.build_deps(registry, &candidate, method));
+    let deps = try!(cx.build_deps(registry, &candidate, method, config));
 
     Ok(Some(DepsFrame {
         parent: candidate,
@@ -435,7 +437,8 @@ struct BacktrackFrame<'a> {
 /// dependency graph, cx.resolve is returned.
 fn activate_deps_loop<'a>(mut cx: Context<'a>,
                           registry: &mut Registry,
-                          summaries: &[(Summary, Method)])
+                          summaries: &[(Summary, Method)],
+                          config: &Config)
                           -> CargoResult<Context<'a>> {
     // Note that a `BinaryHeap` is used for the remaining dependencies that need
     // activation. This heap is sorted such that the "largest value" is the most
@@ -451,7 +454,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         let summary = Rc::new(summary.clone());
         let candidate = Candidate { summary: summary, replace: None };
         remaining_deps.extend(try!(activate(&mut cx, registry, None, candidate,
-                                            method)));
+                                            method, config)));
     }
 
     // Main resolution loop, this is the workhorse of the resolution algorithm.
@@ -545,7 +548,8 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                     None => return Err(activation_error(&cx, registry, &parent,
                                                         &dep,
                                                         &cx.prev_active(&dep),
-                                                        &candidates)),
+                                                        &candidates,
+                                                        config)),
                     Some(candidate) => candidate,
                 }
             }
@@ -559,7 +563,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
                candidate.summary.version());
         remaining_deps.extend(try!(activate(&mut cx, registry, Some(&parent),
-                                            candidate, &method)));
+                                            candidate, &method, config)));
     }
 
     Ok(cx)
@@ -595,7 +599,8 @@ fn activation_error(cx: &Context,
                     parent: &Summary,
                     dep: &Dependency,
                     prev_active: &[Rc<Summary>],
-                    candidates: &[Candidate]) -> Box<CargoError> {
+                    candidates: &[Candidate],
+                    config: &Config) -> Box<CargoError> {
     if candidates.len() > 0 {
         let mut msg = format!("failed to select a version for `{}` \
                                (required by `{}`):\n\
@@ -648,7 +653,7 @@ fn activation_error(cx: &Context,
     let mut msg = msg;
     let all_req = semver::VersionReq::parse("*").unwrap();
     let new_dep = dep.clone_inner().set_version_req(all_req).into_dependency();
-    let mut candidates = match registry.query(&new_dep) {
+    let mut candidates = match registry.query(&new_dep, config) {
         Ok(candidates) => candidates,
         Err(e) => return e,
     };
@@ -816,7 +821,8 @@ impl<'a> Context<'a> {
     fn build_deps(&mut self,
                   registry: &mut Registry,
                   candidate: &Summary,
-                  method: &Method) -> CargoResult<Vec<DepInfo>> {
+                  method: &Method,
+                  config: &Config) -> CargoResult<Vec<DepInfo>> {
         // First, figure out our set of dependencies based on the requsted set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
@@ -825,7 +831,7 @@ impl<'a> Context<'a> {
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
         let mut deps = try!(deps.into_iter().map(|(dep, features)| {
-            let mut candidates = try!(self.query(registry, &dep));
+            let mut candidates = try!(self.query(registry, &dep, config));
             // When we attempt versions for a package, we'll want to start at
             // the maximum version and work our way down.
             candidates.sort_by(|a, b| {
@@ -851,8 +857,9 @@ impl<'a> Context<'a> {
     /// return.
     fn query(&self,
              registry: &mut Registry,
-             dep: &Dependency) -> CargoResult<Vec<Candidate>> {
-        let summaries = try!(registry.query(dep));
+             dep: &Dependency,
+             config: &Config) -> CargoResult<Vec<Candidate>> {
+        let summaries = try!(registry.query(dep, config));
         summaries.into_iter().map(Rc::new).map(|summary| {
             // get around lack of non-lexical lifetimes
             let summary2 = summary.clone();
@@ -865,7 +872,7 @@ impl<'a> Context<'a> {
                 Some(replacement) => replacement,
             };
 
-            let mut summaries = try!(registry.query(dep)).into_iter();
+            let mut summaries = try!(registry.query(dep, config)).into_iter();
             let s = try!(summaries.next().chain_error(|| {
                 human(format!("no matching package for override `{}` found\n\
                                location searched: {}\n\

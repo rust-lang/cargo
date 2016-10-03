@@ -118,7 +118,7 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
 
     // First, resolve the root_package's *listed* dependencies, as well as
     // downloading and updating all remotes and such.
-    let resolve = try!(ops::resolve_ws(&mut registry, ws));
+    let resolve = try!(ops::resolve_ws(&mut registry, ws, ws.config()));
 
     // Second, resolve with precisely what we're doing. Filter out
     // transitive dependencies if necessary, specify features, handle
@@ -143,7 +143,7 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
     let resolved_with_overrides =
             try!(ops::resolve_with_previous(&mut registry, ws,
                                             method, Some(&resolve), None,
-                                            &specs));
+                                            &specs, ws.config()));
 
     let packages = ops::get_resolved_packages(&resolved_with_overrides,
                                               registry);
@@ -190,7 +190,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     };
 
     let to_builds = try!(pkgids.iter().map(|id| {
-        packages.get(id)
+        packages.get(id, config)
     }).collect::<CargoResult<Vec<_>>>());
 
     let mut general_targets = Vec::new();

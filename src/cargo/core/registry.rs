@@ -10,7 +10,7 @@ use sources::config::SourceConfigMap;
 /// See also `core::Source`.
 pub trait Registry {
     /// Attempt to find the packages that match a dependency request.
-    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>>;
+    fn query(&mut self, name: &Dependency, config: &Config) -> CargoResult<Vec<Summary>>;
 
     /// Returns whether or not this registry will return summaries with
     /// checksums listed.
@@ -22,22 +22,22 @@ pub trait Registry {
 }
 
 impl Registry for Vec<Summary> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self, dep: &Dependency, _config: &Config) -> CargoResult<Vec<Summary>> {
         Ok(self.iter().filter(|summary| dep.matches(*summary))
                .cloned().collect())
     }
 }
 
 impl Registry for Vec<Package> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self, dep: &Dependency, _config: &Config) -> CargoResult<Vec<Summary>> {
         Ok(self.iter().filter(|pkg| dep.matches(pkg.summary()))
                .map(|pkg| pkg.summary().clone()).collect())
     }
 }
 
 impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
-    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
-        (**self).query(name)
+    fn query(&mut self, name: &Dependency, config: &Config) -> CargoResult<Vec<Summary>> {
+        (**self).query(name, config)
     }
 }
 
@@ -364,7 +364,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
 #[cfg(test)]
 pub mod test {
     use core::{Summary, Registry, Dependency};
-    use util::{CargoResult};
+    use util::{CargoResult, Config};
 
     pub struct RegistryBuilder {
         summaries: Vec<Summary>,
@@ -405,13 +405,13 @@ pub mod test {
     }
 
     impl Registry for RegistryBuilder {
-        fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+        fn query(&mut self, dep: &Dependency, config: &Config) -> CargoResult<Vec<Summary>> {
             debug!("querying; dep={:?}", dep);
 
             let overrides = self.query_overrides(dep);
 
             if overrides.is_empty() {
-                self.summaries.query(dep)
+                self.summaries.query(dep, config)
             } else {
                 Ok(overrides)
             }

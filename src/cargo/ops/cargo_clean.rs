@@ -29,7 +29,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     }
 
     let mut registry = try!(PackageRegistry::new(opts.config));
-    let resolve = try!(ops::resolve_ws(&mut registry, ws));
+    let resolve = try!(ops::resolve_ws(&mut registry, ws, opts.config));
     let packages = ops::get_resolved_packages(&resolve, registry);
 
     let profiles = try!(ws.current()).manifest().profiles();
@@ -47,7 +47,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     for spec in opts.spec {
         // Translate the spec to a Package
         let pkgid = try!(resolve.query(spec));
-        let pkg = try!(packages.get(&pkgid));
+        let pkg = try!(packages.get(&pkgid, ws.config()));
 
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {

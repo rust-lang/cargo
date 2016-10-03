@@ -156,7 +156,7 @@ impl<'cfg> PackageSet<'cfg> {
         Box::new(self.packages.iter().map(|&(ref p, _)| p))
     }
 
-    pub fn get(&self, id: &PackageId) -> CargoResult<&Package> {
+    pub fn get(&self, id: &PackageId, config: &Config) -> CargoResult<&Package> {
         let slot = try!(self.packages.iter().find(|p| p.0 == *id).chain_error(|| {
             internal(format!("couldn't find `{}` in package set", id))
         }));
@@ -168,7 +168,7 @@ impl<'cfg> PackageSet<'cfg> {
         let source = try!(sources.get_mut(id.source_id()).chain_error(|| {
             internal(format!("couldn't find source for `{}`", id))
         }));
-        let pkg = try!(source.download(id).chain_error(|| {
+        let pkg = try!(source.download(id, config).chain_error(|| {
             human("unable to get packages from source")
         }));
         assert!(slot.fill(pkg).is_ok());

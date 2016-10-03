@@ -883,7 +883,7 @@ impl TomlDependency {
         };
 
         let version = details.version.as_ref().map(|v| &v[..]);
-        let mut dep = try!(DependencyInner::parse(name, version, &new_source_id));
+        let mut dep = try!(DependencyInner::parse(name, version, &new_source_id, cx.config));
         dep = dep.set_features(details.features.unwrap_or(Vec::new()))
                  .set_default_features(details.default_features.unwrap_or(true))
                  .set_optional(details.optional.unwrap_or(false))
