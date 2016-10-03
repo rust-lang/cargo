@@ -737,7 +737,11 @@ impl TomlManifest {
                -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
         let mut replace = Vec::new();
         for (spec, replacement) in self.replace.iter().flat_map(|x| x) {
-            let spec = try!(PackageIdSpec::parse(spec));
+            let spec = try!(PackageIdSpec::parse(spec).chain_error(|| {
+                human(format!("replacements must specify a valid semver \
+                               version to replace, but `{}` does not",
+                              spec))
+            }));
 
             let version_specified = match *replacement {
                 TomlDependency::Detailed(ref d) => d.version.is_some(),
