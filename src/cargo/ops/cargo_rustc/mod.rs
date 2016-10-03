@@ -130,7 +130,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             if !unit.target.is_lib() { continue }
 
             // Include immediate lib deps as well
-            for unit in try!(cx.dep_targets(unit)).iter() {
+            for unit in try!(cx.dep_targets(unit, cx.config)).iter() {
                 let pkgid = unit.pkg.package_id();
                 if !unit.target.is_lib() { continue }
                 if unit.profile.doc { continue }
@@ -197,7 +197,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     drop(p);
 
     // Be sure to compile all dependencies of this target as well.
-    for unit in try!(cx.dep_targets(unit)).iter() {
+    for unit in try!(cx.dep_targets(unit, cx.config)).iter() {
         try!(compile(cx, jobs, unit));
     }
     Ok(())
@@ -652,7 +652,7 @@ fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
         cmd.env("OUT_DIR", &layout.build_out(unit.pkg));
     }
 
-    for unit in try!(cx.dep_targets(unit)).iter() {
+    for unit in try!(cx.dep_targets(unit, cx.config)).iter() {
         if unit.target.linkable() && !unit.profile.doc {
             try!(link_to(cmd, cx, unit));
         }

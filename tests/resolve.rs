@@ -10,17 +10,19 @@ use hamcrest::{assert_that, equal_to, contains};
 use cargo::core::source::{SourceId, GitReference};
 use cargo::core::dependency::Kind::{self, Development};
 use cargo::core::{Dependency, PackageId, Summary, Registry};
-use cargo::util::{CargoResult, ToUrl};
+use cargo::util::{CargoResult, ToUrl, Config};
 use cargo::core::resolver::{self, Method};
 
 fn resolve<R: Registry>(pkg: PackageId, deps: Vec<Dependency>,
                         registry: &mut R)
                         -> CargoResult<Vec<PackageId>> {
+    let config = Config::default().unwrap();
     let summary = Summary::new(pkg.clone(), deps, HashMap::new()).unwrap();
     let method = Method::Everything;
     Ok(try!(resolver::resolve(&[(summary, method)],
                               &[],
-                              registry)).iter().map(|p| {
+                              registry,
+                              &config)).iter().map(|p| {
         p.clone()
     }).collect())
 }
@@ -33,7 +35,8 @@ impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
         let url = "http://example.com".to_url().unwrap();
         let source_id = SourceId::for_registry(&url);
-        Dependency::parse(self, Some("1.0.0"), &source_id).unwrap()
+        let config = Config::default().unwrap();
+        Dependency::parse(self, Some("1.0.0"), &source_id, &config).unwrap()
     }
 }
 
@@ -101,14 +104,16 @@ fn dep(name: &str) -> Dependency { dep_req(name, "1.0.0") }
 fn dep_req(name: &str, req: &str) -> Dependency {
     let url = "http://example.com".to_url().unwrap();
     let source_id = SourceId::for_registry(&url);
-    Dependency::parse(name, Some(req), &source_id).unwrap()
+    let config = Config::default().unwrap();
+    Dependency::parse(name, Some(req), &source_id, &config).unwrap()
 }
 
 fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.to_url().unwrap();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&url, master);
-    Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
+    let config = Config::default().unwrap();
+    Dependency::parse(name, Some("1.0.0"), &source_id, &config).unwrap()
 }
 fn dep_kind(name: &str, kind: Kind) -> Dependency {
     dep(name).clone_inner().set_kind(kind).into_dependency()

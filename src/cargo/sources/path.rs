@@ -310,8 +310,8 @@ impl<'cfg> Debug for PathSource<'cfg> {
 }
 
 impl<'cfg> Registry for PathSource<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        self.packages.query(dep)
+    fn query(&mut self, dep: &Dependency, config: &Config) -> CargoResult<Vec<Summary>> {
+        self.packages.query(dep, config)
     }
 }
 
@@ -326,7 +326,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
+    fn download(&mut self, id: &PackageId, _config: &Config) -> CargoResult<Package> {
         trace!("getting packages; id={}", id);
 
         let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);

@@ -44,7 +44,7 @@ impl<'cfg> Debug for DirectorySource<'cfg> {
 }
 
 impl<'cfg> Registry for DirectorySource<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self, dep: &Dependency, _config: &Config) -> CargoResult<Vec<Summary>> {
         let packages = self.packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
         let summaries = matches.map(|pkg| pkg.summary().clone());
@@ -98,7 +98,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
+    fn download(&mut self, id: &PackageId, _config: &Config) -> CargoResult<Package> {
         self.packages.get(id).map(|p| &p.0).cloned().chain_error(|| {
             human(format!("failed to find package with id: {}", id))
         })

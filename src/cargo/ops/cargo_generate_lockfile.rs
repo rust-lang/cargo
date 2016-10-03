@@ -19,7 +19,7 @@ pub fn generate_lockfile(ws: &Workspace) -> CargoResult<()> {
     let mut registry = try!(PackageRegistry::new(ws.config()));
     let resolve = try!(ops::resolve_with_previous(&mut registry, ws,
                                                   Method::Everything,
-                                                  None, None, &[]));
+                                                  None, None, &[], ws.config()));
     try!(ops::write_pkg_lockfile(ws, &resolve));
     Ok(())
 }
@@ -79,7 +79,8 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
                                                   Method::Everything,
                                                   Some(&previous_resolve),
                                                   Some(&to_avoid),
-                                                  &[]));
+                                                  &[],
+                                                  ws.config()));
 
     // Summarize what is changing for the user.
     let print_change = |status: &str, msg: String| {
