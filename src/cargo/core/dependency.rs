@@ -3,6 +3,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use semver::VersionReq;
+use semver::ReqParseError;
 use rustc_serialize::{Encoder, Encodable};
 
 use core::{SourceId, Summary, PackageId};
@@ -91,7 +92,7 @@ impl DependencyInner {
                  version: Option<&str>,
                  source_id: &SourceId) -> CargoResult<DependencyInner> {
         let (specified_req, version_req) = match version {
-            Some(v) => (true, try!(VersionReq::parse(v))),
+            Some(v) => (true, try!(DependencyInner::parse_with_deprecated(v))),
             None => (false, VersionReq::any())
         };
 
@@ -101,6 +102,22 @@ impl DependencyInner {
             specified_req: specified_req,
             .. DependencyInner::new_override(name, source_id)
         })
+    }
+
+    fn parse_with_deprecated(req: &str) -> Result<VersionReq, ReqParseError> {
+        match VersionReq::parse(req) {
+            Err(e) => {
+                match e {
+                    ReqParseError::DeprecatedVersionRequirement(requirement) => {
+                        // warn here
+                        
+                        Ok(requirement)
+                    }
+                    e => Err(e),
+                }
+            },
+            Ok(v) => Ok(v),
+        }
     }
 
     pub fn new_override(name: &str, source_id: &SourceId) -> DependencyInner {
