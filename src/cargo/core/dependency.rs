@@ -91,9 +91,9 @@ impl DependencyInner {
     pub fn parse(name: &str,
                  version: Option<&str>,
                  source_id: &SourceId,
-                 _config: &Config) -> CargoResult<DependencyInner> {
+                 config: &Config) -> CargoResult<DependencyInner> {
         let (specified_req, version_req) = match version {
-            Some(v) => (true, try!(DependencyInner::parse_with_deprecated(v))),
+            Some(v) => (true, try!(DependencyInner::parse_with_deprecated(v, config))),
             None => (false, VersionReq::any())
         };
 
@@ -105,16 +105,19 @@ impl DependencyInner {
         })
     }
 
-    fn parse_with_deprecated(req: &str) -> Result<VersionReq, ReqParseError> {
+    fn parse_with_deprecated(req: &str, config: &Config) -> CargoResult<VersionReq> {
         match VersionReq::parse(req) {
             Err(e) => {
                 match e {
                     ReqParseError::DeprecatedVersionRequirement(requirement) => {
-                        // warn here
+                        let msg = format!("One of your version requirements ({}) is invalid. \
+Previous versions of Cargo accepted this malformed requirement, but it is being deprecated. Please \
+use {} instead.", req, requirement);
+                        try!(config.shell().warn(&msg));
                         
                         Ok(requirement)
                     }
-                    e => Err(e),
+                    e => Err(From::from(e)),
                 }
             },
             Ok(v) => Ok(v),
