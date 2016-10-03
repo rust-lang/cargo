@@ -257,6 +257,7 @@ mod tests {
     #[test]
     fn bad_parsing() {
         assert!(PackageIdSpec::parse("baz:").is_err());
+        assert!(PackageIdSpec::parse("baz:*").is_err());
         assert!(PackageIdSpec::parse("baz:1.0").is_err());
         assert!(PackageIdSpec::parse("http://baz:1.0").is_err());
         assert!(PackageIdSpec::parse("http://#baz:1.0").is_err());

@@ -78,6 +78,32 @@ Caused by:
 }
 
 #[test]
+fn invalid_semver_version() {
+    let p = project("local")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "*"
+
+            [replace]
+            "foo:*" = { git = 'https://example.com' }
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr_contains("\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  replacements must specify a valid semver version to replace, but `foo:*` does not
+"));
+}
+
+#[test]
 fn different_version() {
     Package::new("foo", "0.2.0").publish();
     Package::new("foo", "0.1.0").publish();
