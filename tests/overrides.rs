@@ -95,7 +95,7 @@ fn invalid_semver_version() {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr_contains("\
 error: failed to parse manifest at `[..]`
 
 Caused by:
