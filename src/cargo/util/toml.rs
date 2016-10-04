@@ -905,7 +905,7 @@ struct TomlTarget {
     bench: Option<bool>,
     doc: Option<bool>,
     plugin: Option<bool>,
-    rustc_macro: Option<bool>,
+    proc_macro: Option<bool>,
     harness: Option<bool>,
 }
 
@@ -934,7 +934,7 @@ impl TomlTarget {
             bench: None,
             doc: None,
             plugin: None,
-            rustc_macro: None,
+            proc_macro: None,
             harness: None,
         }
     }
@@ -1017,15 +1017,15 @@ impl TomlTarget {
     fn validate_crate_type(&self) -> CargoResult<()> {
         // Per the Macros 1.1 RFC:
         //
-        // > Initially if a crate is compiled with the rustc-macro crate type
+        // > Initially if a crate is compiled with the proc-macro crate type
         // > (and possibly others) it will forbid exporting any items in the
-        // > crate other than those functions tagged #[rustc_macro_derive] and
+        // > crate other than those functions tagged #[proc_macro_derive] and
         // > those functions must also be placed at the crate root.
         //
         // A plugin requires exporting plugin_registrar so a crate cannot be
         // both at once.
-        if self.plugin == Some(true) && self.rustc_macro == Some(true) {
-            Err(human("lib.plugin and lib.rustc-macro cannot both be true".to_string()))
+        if self.plugin == Some(true) && self.proc_macro == Some(true) {
+            Err(human("lib.plugin and lib.proc-macro cannot both be true".to_string()))
         } else {
             Ok(())
         }
@@ -1064,7 +1064,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
               .set_doctest(toml.doctest.unwrap_or(t2.doctested()))
               .set_benched(toml.bench.unwrap_or(t2.benched()))
               .set_harness(toml.harness.unwrap_or(t2.harness()))
-              .set_for_host(match (toml.plugin, toml.rustc_macro) {
+              .set_for_host(match (toml.plugin, toml.proc_macro) {
                   (None, None) => t2.for_host(),
                   (Some(true), _) | (_, Some(true)) => true,
                   (Some(false), _) | (_, Some(false)) => false,
@@ -1081,7 +1081,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
             Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
             None => {
                 vec![ if l.plugin == Some(true) {LibKind::Dylib}
-                      else if l.rustc_macro == Some(true) {LibKind::RustcMacro}
+                      else if l.proc_macro == Some(true) {LibKind::ProcMacro}
                       else {LibKind::Lib} ]
             }
         };
