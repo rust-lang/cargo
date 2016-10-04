@@ -1055,7 +1055,7 @@ fn lto_build() {
         -C opt-level=3 \
         -C lto \
         -C metadata=[..] \
-        --out-dir {dir}[/]target[/]release \
+        --out-dir {dir}[/]target[/]release[/]deps \
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps`
 [FINISHED] release [optimized] target(s) in [..]
@@ -1789,6 +1789,7 @@ fn example_bin_same_name() {
         .unwrap();
 
     assert_that(&p.bin("foo"), is_not(existing_file()));
+    // We expect a file of the form bin/foo-{metadata_hash}
     assert_that(&p.bin("examples/foo"), existing_file());
 
     p.cargo("test").arg("--no-run").arg("-v")
@@ -1796,6 +1797,7 @@ fn example_bin_same_name() {
                    .unwrap();
 
     assert_that(&p.bin("foo"), is_not(existing_file()));
+    // We expect a file of the form bin/foo-{metadata_hash}
     assert_that(&p.bin("examples/foo"), existing_file());
 }
 
@@ -2162,9 +2164,9 @@ fn build_multiple_packages() {
     assert_that(process(&p.bin("foo")),
                 execs().with_stdout("i am foo\n"));
 
-    let d1_path = &p.build_dir().join("debug").join("deps")
+    let d1_path = &p.build_dir().join("debug")
                                 .join(format!("d1{}", env::consts::EXE_SUFFIX));
-    let d2_path = &p.build_dir().join("debug").join("deps")
+    let d2_path = &p.build_dir().join("debug")
                                 .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
     assert_that(d1_path, existing_file());

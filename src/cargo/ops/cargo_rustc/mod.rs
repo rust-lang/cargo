@@ -110,14 +110,18 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
           .or_insert(Vec::new())
           .push(("OUT_DIR".to_string(), out_dir));
 
-        for (filename, _linkable) in try!(cx.target_filenames(unit)) {
-            let dst = cx.out_dir(unit).join(filename);
+        for (dst, link_dst, _linkable) in try!(cx.target_filenames(unit)) {
+            let bindst = match link_dst {
+                Some(link_dst) => link_dst,
+                None => dst.clone(),
+            };
+
             if unit.profile.test {
                 cx.compilation.tests.push((unit.pkg.clone(),
                                            unit.target.name().to_string(),
                                            dst));
             } else if unit.target.is_bin() || unit.target.is_example() {
-                cx.compilation.binaries.push(dst);
+                cx.compilation.binaries.push(bindst);
             } else if unit.target.is_lib() {
                 let pkgid = unit.pkg.package_id().clone();
                 cx.compilation.libraries.entry(pkgid).or_insert(Vec::new())
@@ -135,8 +139,8 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                 }
 
                 let v = try!(cx.target_filenames(unit));
-                let v = v.into_iter().map(|(f, _)| {
-                    (unit.target.clone(), cx.out_dir(unit).join(f))
+                let v = v.into_iter().map(|(f, _, _)| {
+                    (unit.target.clone(), f)
                 }).collect::<Vec<_>>();
                 cx.compilation.libraries.insert(pkgid.clone(), v);
             }
@@ -228,9 +232,9 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let do_rename = unit.target.allows_underscores() && !unit.profile.test;
     let real_name = unit.target.name().to_string();
     let crate_name = unit.target.crate_name();
-    let move_outputs_up = unit.pkg.package_id() == &cx.current_package;
 
-    let rustc_dep_info_loc = if do_rename {
+    // XXX(Rely on target_filenames iterator as source of truth rather than rederiving filestem)
+    let rustc_dep_info_loc = if do_rename && cx.target_metadata(unit).is_none() {
         root.join(&crate_name)
     } else {
         root.join(&cx.file_stem(unit))
@@ -257,8 +261,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
 
         // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
         //                              this manually
-        for &(ref filename, _linkable) in filenames.iter() {
-            let dst = root.join(filename);
+        for &(ref dst, ref _link_dst, _linkable) in filenames.iter() {
             if fs::metadata(&dst).is_ok() {
                 try!(fs::remove_file(&dst).chain_error(|| {
                     human(format!("Could not remove file: {}.", dst.display()))
@@ -295,7 +298,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         }));
 
         if do_rename && real_name != crate_name {
-            let dst = root.join(&filenames[0].0);
+            let dst = &filenames[0].0;
             let src = dst.with_file_name(dst.file_name().unwrap()
                                             .to_str().unwrap()
                                             .replace(&real_name, &crate_name));
@@ -307,6 +310,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         }
 
         if !has_custom_args || fs::metadata(&rustc_dep_info_loc).is_ok() {
+            info!("Renaming dep_info {:?} to {:?}", rustc_dep_info_loc, dep_info_loc);
             try!(fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_error(|| {
                 internal(format!("could not rename dep info: {:?}",
                               rustc_dep_info_loc))
@@ -318,36 +322,30 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         // hard link our outputs out of the `deps` directory into the directory
         // above. This means that `cargo build` will produce binaries in
         // `target/debug` which one probably expects.
-        if move_outputs_up {
-            for &(ref filename, _linkable) in filenames.iter() {
-                let src = root.join(filename);
-                // This may have been a `cargo rustc` command which changes the
-                // output, so the source may not actually exist.
-                if !src.exists() {
-                    continue
-                }
+        for (src, link_dst, _linkable) in filenames {
+            // This may have been a `cargo rustc` command which changes the
+            // output, so the source may not actually exist.
+            debug!("Thinking about linking {} to {:?}", src.display(), link_dst);
+            if !src.exists() || link_dst.is_none() {
+                continue
+            }
+            let dst = link_dst.unwrap();
 
-                // We currently only lift files up from the `deps` directory. If
-                // it was compiled into something like `example/` or `doc/` then
-                // we don't want to link it up.
-                let src_dir = src.parent().unwrap();
-                if !src_dir.ends_with("deps") {
-                    continue
-                }
-                let dst = src_dir.parent().unwrap()
-                                 .join(src.file_name().unwrap());
-                if dst.exists() {
-                    try!(fs::remove_file(&dst).chain_error(|| {
-                        human(format!("failed to remove: {}", dst.display()))
-                    }));
-                }
-                try!(fs::hard_link(&src, &dst)
-                     .or_else(|_| fs::copy(&src, &dst).map(|_| ()))
-                     .chain_error(|| {
-                         human(format!("failed to link or copy `{}` to `{}`",
-                                       src.display(), dst.display()))
+            debug!("linking {} to {}", src.display(), dst.display());
+            if dst.exists() {
+                try!(fs::remove_file(&dst).chain_error(|| {
+                    human(format!("failed to remove: {}", dst.display()))
                 }));
             }
+            try!(fs::hard_link(&src, &dst)
+                 .or_else(|err| {
+                     debug!("hard link failed {}. falling back to fs::copy", err);
+                     fs::copy(&src, &dst).map(|_| ())
+                 })
+                 .chain_error(|| {
+                     human(format!("failed to link or copy `{}` to `{}`",
+                                   src.display(), dst.display()))
+            }));
         }
 
         Ok(())
@@ -658,7 +656,7 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
 
     fn link_to(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
                -> CargoResult<()> {
-        for (filename, linkable) in try!(cx.target_filenames(unit)) {
+        for (dst, _link_dst, linkable) in try!(cx.target_filenames(unit)) {
             if !linkable {
                 continue
             }
@@ -667,7 +665,7 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
             v.push("=");
             v.push(cx.out_dir(unit));
             v.push(&path::MAIN_SEPARATOR.to_string());
-            v.push(&filename);
+            v.push(&dst.file_name().unwrap());
             cmd.arg("--extern").arg(&v);
         }
         Ok(())

@@ -175,7 +175,7 @@ impl<'a> LayoutProxy<'a> {
         } else if unit.target.is_lib() {
             self.deps().to_path_buf()
         } else {
-            self.root().to_path_buf()
+            self.deps().to_path_buf()
         }
     }
 
