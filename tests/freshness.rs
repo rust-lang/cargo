@@ -145,7 +145,7 @@ fn rebuild_sub_package_then_while_package() {
 }
 
 #[test]
-fn changing_features_is_ok() {
+fn changing_lib_features_caches_targets() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -172,16 +172,201 @@ fn changing_features_is_ok() {
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
+    /* Targets should be cached from the first build */
+
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(""));
+
+    assert_that(p.cargo("build").arg("--features").arg("foo"),
+                execs().with_status(0)
+                       .with_stderr("\
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
+}
+
+#[test]
+fn changing_bin_paths_common_target_features_caches_targets() {
+    /// Make sure dep_cache crate is built once per feature
+    let p = project("foo")
+        .file(".cargo/config", r#"
+            [build]
+            target-dir = "./target"
+        "#)
+        .file("dep_crate/Cargo.toml", r#"
+            [package]
+            name    = "dep_crate"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            ftest  = []
+        "#)
+        .file("dep_crate/src/lib.rs", r#"
+            #[cfg(feature = "ftest")]
+            pub fn yo() {
+                println!("ftest on")
+            }
+            #[cfg(not(feature = "ftest"))]
+            pub fn yo() {
+                println!("ftest off")
+            }
+        "#)
+        .file("a/Cargo.toml", r#"
+            [package]
+            name    = "a"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            dep_crate = {path = "../dep_crate", features = []}
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/src/main.rs", r#"
+            extern crate dep_crate;
+            use dep_crate::yo;
+            fn main() {
+                yo();
+            }
+        "#)
+        .file("b/Cargo.toml", r#"
+            [package]
+            name    = "b"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            dep_crate = {path = "../dep_crate", features = ["ftest"]}
+        "#)
+        .file("b/src/lib.rs", "")
+        .file("b/src/main.rs", r#"
+            extern crate dep_crate;
+            use dep_crate::yo;
+            fn main() {
+                yo();
+            }
+        "#);
+
+    /* Build and rebuild a/. Ensure dep_crate only builds once */
+    assert_that(p.cargo_process("run").cwd(p.root().join("a")),
+                execs().with_status(0)
+                       .with_stdout("ftest off")
+                       .with_stderr("\
+[..]Compiling dep_crate v0.0.1 ([..])
+[..]Compiling a v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]target/debug/a`
+"));
+    assert_that(p.cargo("clean").arg("-p").arg("a").cwd(p.root().join("a")),
+                execs().with_status(0));
+    assert_that(p.cargo("run").cwd(p.root().join("a")),
+                execs().with_status(0)
+                       .with_stdout("ftest off")
+                       .with_stderr("\
+[..]Compiling a v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]target/debug/a`
+"));
+
+    /* Build and rebuild b/. Ensure dep_crate only builds once */
+    assert_that(p.cargo("run").cwd(p.root().join("b")),
+                execs().with_status(0)
+                       .with_stdout("ftest on")
+                       .with_stderr("\
+[..]Compiling dep_crate v0.0.1 ([..])
+[..]Compiling b v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]target/debug/b`
+"));
+    assert_that(p.cargo("clean").arg("-p").arg("b").cwd(p.root().join("b")),
+                execs().with_status(0));
+    assert_that(p.cargo("run").cwd(p.root().join("b")),
+                execs().with_status(0)
+                       .with_stdout("ftest on")
+                       .with_stderr("\
+[..]Compiling b v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]target/debug/b`
+"));
+
+    /* Build a/ package again. If we cache different feature dep builds correctly,
+     * this should not cause a rebuild of dep_crate */
+    assert_that(p.cargo("clean").arg("-p").arg("a").cwd(p.root().join("a")),
+                execs().with_status(0));
+    assert_that(p.cargo("run").cwd(p.root().join("a")),
+                execs().with_status(0)
+                       .with_stdout("ftest off")
+                       .with_stderr("\
+[..]Compiling a v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]target/debug/a`
+"));
+
+    /* Build b/ package again. If we cache different feature dep builds correctly,
+     * this should not cause a rebuild */
+    assert_that(p.cargo("clean").arg("-p").arg("b").cwd(p.root().join("b")),
+                execs().with_status(0));
+    assert_that(p.cargo("run").cwd(p.root().join("b")),
+                execs().with_status(0)
+                       .with_stdout("ftest on")
+                       .with_stderr("\
+[..]Compiling b v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..]target/debug/b`
+"));
+}
+
+#[test]
+fn changing_bin_features_caches_targets() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.1"
+
+            [features]
+            foo = []
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0)
+                       .with_stderr("\
+[..]Compiling foo v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    assert_that(p.cargo("build").arg("--features").arg("foo"),
+                execs().with_status(0)
+                       .with_stderr("\
+[..]Compiling foo v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    /* Targets should be cached from the first build */
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stderr("\
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stdout(""));
+
+    assert_that(p.cargo("build").arg("--features").arg("foo"),
+                execs().with_status(0)
+                       .with_stderr("\
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
 }
 
 #[test]
