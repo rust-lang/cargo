@@ -359,7 +359,7 @@ fn linker_and_ar() {
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc src[/]foo.rs --crate-name foo --crate-type bin -g \
     -C metadata=[..] \
-    --out-dir {dir}[/]target[/]{target}[/]debug \
+    --out-dir {dir}[/]target[/]{target}[/]debug[/]deps \
     --emit=dep-info,link \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
@@ -473,7 +473,7 @@ fn cross_tests() {
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]{triple}[/]debug[/]bar-[..][EXE]
+[RUNNING] target[/]{triple}[/]debug[/]deps[/]bar-[..][EXE]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]", foo = p.url(), triple = target))
                        .with_stdout("
 running 1 test

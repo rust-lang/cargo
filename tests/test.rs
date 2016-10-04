@@ -40,7 +40,7 @@ fn cargo_test_simple() {
                 execs().with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]foo-[..][EXE]", p.url()))
+[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]", p.url()))
                        .with_stdout("
 running 1 test
 test test_hello ... ok
@@ -93,7 +93,7 @@ fn cargo_test_release() {
 [RUNNING] [..] -C opt-level=3 [..]
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE]`
-[RUNNING] `[..]target[/]release[/]test-[..][EXE]`
+[RUNNING] `[..]target[/]release[/]deps[/]test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]lib.rs[..]`", dir = p.url()))
                        .with_stdout("
@@ -130,7 +130,7 @@ fn cargo_test_verbose() {
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc src[/]foo.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target[/]debug[/]foo-[..][EXE] hello`", url = p.url()))
+[RUNNING] `[..]target[/]debug[/]deps[/]foo-[..][EXE] hello`", url = p.url()))
                        .with_stdout("
 running 1 test
 test test_hello ... ok
@@ -198,7 +198,7 @@ fn cargo_test_failing_test() {
                 execs().with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({url})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]foo-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
 [ERROR] test failed", url = p.url()))
                        .with_stdout_contains("
 running 1 test
@@ -258,7 +258,7 @@ fn test_with_lib_dep() {
                 execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]baz-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]baz-[..][EXE]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
 [DOCTEST] foo", p.url()))
                        .with_stdout("
@@ -375,7 +375,7 @@ fn external_test_explicit() {
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
-[RUNNING] target[/]debug[/]test-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]test-[..][EXE]
 [DOCTEST] foo", p.url()))
                        .with_stdout("
 running 1 test
@@ -423,7 +423,7 @@ fn external_test_implicit() {
                 execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]external-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]external-[..][EXE]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
 [DOCTEST] foo", p.url()))
                        .with_stdout("
@@ -568,7 +568,7 @@ fn lib_bin_same_name() {
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
-[RUNNING] target[/]debug[/]foo-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
 [DOCTEST] foo", p.url()))
                        .with_stdout("
 running 1 test
@@ -621,7 +621,7 @@ fn lib_with_standard_name() {
 [COMPILING] syntax v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]syntax-[..][EXE]
-[RUNNING] target[/]debug[/]test-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]test-[..][EXE]
 [DOCTEST] syntax", dir = p.url()))
                        .with_stdout("
 running 1 test
@@ -675,7 +675,7 @@ fn lib_with_standard_name2() {
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]syntax-[..][EXE]", dir = p.url()))
+[RUNNING] target[/]debug[/]deps[/]syntax-[..][EXE]", dir = p.url()))
                        .with_stdout("
 running 1 test
 test test ... ok
@@ -715,7 +715,7 @@ fn lib_without_name() {
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]syntax-[..][EXE]", dir = p.url()))
+[RUNNING] target[/]debug[/]deps[/]syntax-[..][EXE]", dir = p.url()))
                        .with_stdout("
 running 1 test
 test test ... ok
@@ -974,7 +974,7 @@ fn test_dylib() {
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
-[RUNNING] target[/]debug[/]test-[..][EXE]", dir = p.url()))
+[RUNNING] target[/]debug[/]deps[/]test-[..][EXE]", dir = p.url()))
                        .with_stdout("
 running 1 test
 test foo ... ok
@@ -994,7 +994,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
                        .with_stderr("\
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
-[RUNNING] target[/]debug[/]test-[..][EXE]")
+[RUNNING] target[/]debug[/]deps[/]test-[..][EXE]")
                        .with_stdout("
 running 1 test
 test foo ... ok
@@ -1154,7 +1154,7 @@ fn test_run_specific_bin_target() {
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]bin2-[..][EXE]", dir = prj.url()))
+[RUNNING] target[/]debug[/]deps[/]bin2-[..][EXE]", dir = prj.url()))
                        .with_stdout("
 running 1 test
 test test2 ... ok
@@ -1183,7 +1183,7 @@ fn test_run_specific_test_target() {
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]b-[..][EXE]", dir = prj.url()))
+[RUNNING] target[/]debug[/]deps[/]b-[..][EXE]", dir = prj.url()))
                        .with_stdout("
 running 1 test
 test test_b ... ok
@@ -1219,7 +1219,7 @@ fn test_no_harness() {
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]bar-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]bar-[..][EXE]
 ",
                        dir = p.url())));
 }
@@ -1746,7 +1746,7 @@ fn filter_no_doc_tests() {
                 execs().with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]foo[..][EXE]")
+[RUNNING] target[/]debug[/]deps[/]foo[..][EXE]")
                        .with_stdout("
 running 0 tests
 
@@ -1944,7 +1944,7 @@ fn no_fail_fast() {
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
-[RUNNING] target[/]debug[/]test_add_one-[..][EXE]")
+[RUNNING] target[/]debug[/]deps[/]test_add_one-[..][EXE]")
                        .with_stdout_contains("
 running 0 tests
 
@@ -1952,7 +1952,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 ")
                        .with_stderr_contains("\
-[RUNNING] target[/]debug[/]test_sub_one-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]test_sub_one-[..][EXE]
 [DOCTEST] foo")
                        .with_stdout_contains("\
 test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured

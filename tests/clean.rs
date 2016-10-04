@@ -80,9 +80,9 @@ fn clean_multiple_packages() {
                                         .arg("-p").arg("foo"),
                 execs().with_status(0));
 
-    let d1_path = &p.build_dir().join("debug").join("deps")
+    let d1_path = &p.build_dir().join("debug")
                                 .join(format!("d1{}", env::consts::EXE_SUFFIX));
-    let d2_path = &p.build_dir().join("debug").join("deps")
+    let d2_path = &p.build_dir().join("debug")
                                 .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
 

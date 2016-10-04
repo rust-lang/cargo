@@ -172,11 +172,17 @@ fn changing_lib_features_caches_targets() {
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
-    /* Targets should be cached from the first build */
+    /* Targets should be cached from the first build
+       XXX Sadly these cannot be cached since the "symlink" step is
+           not separate from the "compile" step. Packages which link
+           to top level binaries eg (deps/foo-abc123 -> foo) are forced
+           to do an extra recompile here.
+    */
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
+[..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
@@ -187,13 +193,71 @@ fn changing_lib_features_caches_targets() {
     assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(0)
                        .with_stderr("\
+[..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
 #[test]
+fn changing_profiles_caches_targets() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.1"
+
+            [profile.dev]
+            panic = "abort"
+
+            [profile.test]
+            panic = "unwind"
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0)
+                       .with_stderr("\
+[..]Compiling foo v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    assert_that(p.cargo("test"),
+                execs().with_status(0)
+                       .with_stderr("\
+[..]Compiling foo v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
+[DOCTEST] foo
+"));
+
+    /* Targets should be cached from the first build
+       XXX Sadly these cannot be cached since the "symlink" step is
+           not separate from the "compile" step. Packages which link
+           to top level binaries eg (deps/foo-abc123 -> foo) are forced
+           to do an extra recompile here.
+    */
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stderr("\
+[..]Compiling foo v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    assert_that(p.cargo("test").arg("foo"),
+                execs().with_status(0)
+                       .with_stderr("\
+[..]Compiling foo v0.0.1 ([..])
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
+[DOCTEST] foo
+"));
+}
+
+#[test]
 fn changing_bin_paths_common_target_features_caches_targets() {
-    /// Make sure dep_cache crate is built once per feature
+    // Make sure dep_cache crate is built once per feature
     let p = project("foo")
         .file(".cargo/config", r#"
             [build]
@@ -261,7 +325,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/a`
+[RUNNING] `[..]target[/]debug[/]a[EXE]`
 "));
     assert_that(p.cargo("clean").arg("-p").arg("a").cwd(p.root().join("a")),
                 execs().with_status(0));
@@ -271,7 +335,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                        .with_stderr("\
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/a`
+[RUNNING] `[..]target[/]debug[/]a[EXE]`
 "));
 
     /* Build and rebuild b/. Ensure dep_crate only builds once */
@@ -282,7 +346,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/b`
+[RUNNING] `[..]target[/]debug[/]b[EXE]`
 "));
     assert_that(p.cargo("clean").arg("-p").arg("b").cwd(p.root().join("b")),
                 execs().with_status(0));
@@ -292,7 +356,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                        .with_stderr("\
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/b`
+[RUNNING] `[..]target[/]debug[/]b[EXE]`
 "));
 
     /* Build a/ package again. If we cache different feature dep builds correctly,
@@ -305,7 +369,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                        .with_stderr("\
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/a`
+[RUNNING] `[..]target[/]debug[/]a[EXE]`
 "));
 
     /* Build b/ package again. If we cache different feature dep builds correctly,
@@ -318,7 +382,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                        .with_stderr("\
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]target/debug/b`
+[RUNNING] `[..]target[/]debug[/]b[EXE]`
 "));
 }
 
@@ -334,38 +398,54 @@ fn changing_bin_features_caches_targets() {
             [features]
             foo = []
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", r#"
+            fn main() {
+                let msg = if cfg!(feature = "foo") { "feature on" } else { "feature off" };
+                println!("{}", msg);
+            }
+        "#);
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo_process("run"),
                 execs().with_status(0)
+                       .with_stdout("feature off")
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target[/]debug[/]foo[EXE]`
 "));
 
-    assert_that(p.cargo("build").arg("--features").arg("foo"),
+    assert_that(p.cargo("run").arg("--features").arg("foo"),
                 execs().with_status(0)
+                       .with_stdout("feature on")
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target[/]debug[/]foo[EXE]`
 "));
 
-    /* Targets should be cached from the first build */
+    /* Targets should be cached from the first build
+       XXX Sadly these cannot be cached since the "symlink" step is
+           not separate from the "compile" step. Packages which link
+           to top level binaries eg (deps/foo-abc123 -> foo) are forced
+           to do an extra recompile here.
+    */
 
-    assert_that(p.cargo("build"),
+    assert_that(p.cargo("run"),
                 execs().with_status(0)
+                       .with_stdout("feature off")
                        .with_stderr("\
+[..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target[/]debug[/]foo[EXE]`
 "));
 
-    assert_that(p.cargo("build"),
+    assert_that(p.cargo("run").arg("--features").arg("foo"),
                 execs().with_status(0)
-                       .with_stdout(""));
-
-    assert_that(p.cargo("build").arg("--features").arg("foo"),
-                execs().with_status(0)
+                       .with_stdout("feature on")
                        .with_stderr("\
+[..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target[/]debug[/]foo[EXE]`
 "));
 }
 
