@@ -775,8 +775,16 @@ fn env_args(config: &Config,
         return Ok(args.collect());
     }
 
-    // Then the build.rustflags value
     let name = name.chars().flat_map(|c| c.to_lowercase()).collect::<String>();
+    // Then the target.*.rustflags value
+    let target = build_config.requested_target.as_ref().unwrap_or(&build_config.host_triple);
+    let key = format!("target.{}.{}", target, name);
+    if let Some(args) = try!(config.get_list(&key)) {
+        let args = args.val.into_iter().map(|a| a.0);
+        return Ok(args.collect());
+    }
+
+    // Then the build.rustflags value
     let key = format!("build.{}", name);
     if let Some(args) = try!(config.get_list(&key)) {
         let args = args.val.into_iter().map(|a| a.0);

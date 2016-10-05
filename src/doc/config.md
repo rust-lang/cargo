@@ -69,6 +69,9 @@ linker = ".."
 # Similar to the above linker configuration, but this only applies to
 # when the `$triple` is being compiled for.
 linker = ".."
+# custom flags to pass to all compiler invocations that target $triple
+# this value overrides build.rustflags when both are present
+rustflags = ["..", ".."]
 
 # Configuration keys related to the registry
 [registry]

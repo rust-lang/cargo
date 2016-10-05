@@ -878,3 +878,74 @@ fn build_rustflags_with_home_config() {
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
+
+#[test]
+fn target_rustflags_normal_source() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", "fn main() {}")
+        .file("examples/b.rs", "fn main() {}")
+        .file("tests/c.rs", "#[test] fn f() { }")
+        .file("benches/d.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            #[bench] fn run1(_ben: &mut test::Bencher) { }"#)
+        .file(".cargo/config", &format!("
+            [target.{}]
+            rustflags = [\"-Z\", \"bogus\"]
+            ", rustc_host()));
+    p.build();
+
+    assert_that(p.cargo("build")
+                .arg("--lib"),
+                execs().with_status(101));
+    assert_that(p.cargo("build")
+                .arg("--bin=a"),
+                execs().with_status(101));
+    assert_that(p.cargo("build")
+                .arg("--example=b"),
+                execs().with_status(101));
+    assert_that(p.cargo("test"),
+                execs().with_status(101));
+    assert_that(p.cargo("bench"),
+                execs().with_status(101));
+}
+
+// target.{}.rustflags takes precedence over build.rustflags
+#[test]
+fn target_rustflags_precedence() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", &format!("
+            [build]
+            rustflags = [\"--cfg\", \"foo\"]
+
+            [target.{}]
+            rustflags = [\"-Z\", \"bogus\"]
+            ", rustc_host()));
+    p.build();
+
+    assert_that(p.cargo("build")
+                .arg("--lib"),
+                execs().with_status(101));
+    assert_that(p.cargo("build")
+                .arg("--bin=a"),
+                execs().with_status(101));
+    assert_that(p.cargo("build")
+                .arg("--example=b"),
+                execs().with_status(101));
+    assert_that(p.cargo("test"),
+                execs().with_status(101));
+    assert_that(p.cargo("bench"),
+                execs().with_status(101));
+}
