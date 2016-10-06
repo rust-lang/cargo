@@ -5,10 +5,12 @@ use std::fs;
 use std::path::{self, PathBuf};
 use std::sync::Arc;
 
+use rustc_serialize::json;
+
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::shell::ColorConfig;
-use util::{self, CargoResult, human};
+use util::{self, CargoResult, human, machine_message};
 use util::{Config, internal, ChainError, profile, join_paths, short_hash};
 
 use self::job::{Job, Work};
@@ -44,6 +46,7 @@ pub struct BuildConfig {
     pub release: bool,
     pub test: bool,
     pub doc_all: bool,
+    pub json_errors: bool,
 }
 
 #[derive(Clone, Default)]
@@ -213,7 +216,6 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         }
     }
     let has_custom_args = unit.profile.rustc_args.is_some();
-    let exec_engine = cx.exec_engine.clone();
 
     let filenames = try!(cx.target_filenames(unit));
     let root = cx.out_dir(unit);
@@ -241,7 +243,9 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let cwd = cx.config.cwd().to_path_buf();
 
     rustc.args(&try!(cx.rustflags_args(unit)));
-
+    let json_errors = cx.build_config.json_errors;
+    let package_id = unit.pkg.package_id().clone();
+    let target = unit.target.clone();
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
@@ -267,7 +271,31 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         }
 
         state.running(&rustc);
-        try!(exec_engine.exec(rustc).chain_error(|| {
+        let process_builder = rustc.into_process_builder();
+        try!(if json_errors {
+            process_builder.exec_with_streaming(
+                &mut |line| if !line.is_empty() {
+                    Err(internal(&format!("compiler stdout is not empty: `{}`", line)))
+                } else {
+                    Ok(())
+                },
+                &mut |line| {
+                    let compiler_message = try!(json::Json::from_str(line).map_err(|_| {
+                        internal(&format!("compiler produced invalid json: `{}`", line))
+                    }));
+
+                    machine_message::FromCompiler::new(
+                        &package_id,
+                        &target,
+                        compiler_message
+                    ).emit();
+
+                    Ok(())
+                },
+            ).map(|_| ())
+        } else {
+            process_builder.exec()
+        }.chain_error(|| {
             human(format!("Could not compile `{}`.", name))
         }));
 
@@ -494,6 +522,10 @@ fn build_base_args(cx: &Context,
     let color_config = cx.config.shell().color_config();
     if color_config != ColorConfig::Auto {
         cmd.arg("--color").arg(&color_config.to_string());
+    }
+
+    if cx.build_config.json_errors {
+        cmd.arg("--error-format").arg("json");
     }
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());

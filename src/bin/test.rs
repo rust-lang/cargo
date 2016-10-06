@@ -1,5 +1,5 @@
 use cargo::core::Workspace;
-use cargo::ops;
+use cargo::ops::{self, MessageFormat};
 use cargo::util::{CliResult, CliError, Human, human, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
@@ -23,6 +23,7 @@ pub struct Options {
     flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
+    flag_message_format: MessageFormat,
     flag_release: bool,
     flag_no_fail_fast: bool,
     flag_frozen: bool,
@@ -55,6 +56,7 @@ Options:
     -v, --verbose ...            Use verbose output
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
+    --message-format FMT         Error format: human, json [default: human]
     --no-fail-fast               Run all tests regardless of failure
     --frozen                     Require Cargo.lock and cache are up to date
     --locked                     Require Cargo.lock is up to date
@@ -92,6 +94,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                           &options.flag_color,
                           options.flag_frozen,
                           options.flag_locked));
+
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
 
     let empty = Vec::new();
@@ -124,6 +127,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             release: options.flag_release,
             mode: mode,
             filter: filter,
+            message_format: options.flag_message_format,
             target_rustdoc_args: None,
             target_rustc_args: None,
         },

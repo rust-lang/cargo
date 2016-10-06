@@ -23,6 +23,7 @@ pub type CargoResult<T> = Result<T, Box<CargoError>>;
 pub trait CargoError: Error + Send + 'static {
     fn is_human(&self) -> bool { false }
     fn cargo_cause(&self) -> Option<&CargoError>{ None }
+    fn as_error(&self) -> &Error where Self: Sized { self as &Error }
 }
 
 impl Error for Box<CargoError> {
@@ -110,13 +111,13 @@ pub struct ProcessError {
     pub desc: String,
     pub exit: Option<ExitStatus>,
     pub output: Option<Output>,
-    cause: Option<io::Error>,
+    cause: Option<Box<CargoError>>,
 }
 
 impl Error for ProcessError {
     fn description(&self) -> &str { &self.desc }
     fn cause(&self) -> Option<&Error> {
-        self.cause.as_ref().map(|s| s as &Error)
+        self.cause.as_ref().map(|e| e.as_error())
     }
 }
 
@@ -375,9 +376,10 @@ impl CargoError for str::ParseBoolError {}
 // Construction helpers
 
 pub fn process_error(msg: &str,
-                     cause: Option<io::Error>,
+                     cause: Option<Box<CargoError>>,
                      status: Option<&ExitStatus>,
-                     output: Option<&Output>) -> ProcessError {
+                     output: Option<&Output>) -> ProcessError
+{
     let exit = match status {
         Some(s) => status_to_string(s),
         None => "never executed".to_string(),
