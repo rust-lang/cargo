@@ -5,7 +5,7 @@ use std::fmt;
 use std::path::Path;
 use std::process::{Command, Stdio, Output};
 
-use util::{ProcessError, process_error, read2};
+use util::{CargoResult, ProcessError, process_error, read2};
 use util::shell_escape::escape;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -77,7 +77,7 @@ impl ProcessBuilder {
         let exit = try!(command.status().map_err(|e| {
             process_error(&format!("could not execute process `{}`",
                                    self.debug_string()),
-                          Some(e), None, None)
+                          Some(Box::new(e)), None, None)
         }));
 
         if exit.success() {
@@ -94,8 +94,8 @@ impl ProcessBuilder {
 
         let output = try!(command.output().map_err(|e| {
             process_error(&format!("could not execute process `{}`",
-                               self.debug_string()),
-                          Some(e), None, None)
+                                   self.debug_string()),
+                          Some(Box::new(e)), None, None)
         }));
 
         if output.status.success() {
@@ -108,8 +108,8 @@ impl ProcessBuilder {
     }
 
     pub fn exec_with_streaming(&self,
-                               on_stdout_line: &mut FnMut(&str),
-                               on_stderr_line: &mut FnMut(&str))
+                               on_stdout_line: &mut FnMut(&str) -> CargoResult<()>,
+                               on_stderr_line: &mut FnMut(&str) -> CargoResult<()>)
                                -> Result<Output, ProcessError> {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
@@ -119,6 +119,7 @@ impl ProcessBuilder {
             .stderr(Stdio::piped())
             .stdin(Stdio::null());
 
+        let mut callback_error = None;
         let status = try!((|| {
             let mut child = try!(cmd.spawn());
             let out = child.stdout.take().unwrap();
@@ -137,10 +138,14 @@ impl ProcessBuilder {
                 let start = dst.len();
                 dst.extend(data);
                 for line in String::from_utf8_lossy(&dst[start..]).lines() {
-                    if is_out {
+                    if callback_error.is_some() { break }
+                    let callback_result = if is_out {
                         on_stdout_line(line)
                     } else {
                         on_stderr_line(line)
+                    };
+                    if let Err(e) = callback_result {
+                        callback_error = Some(e);
                     }
                 }
             }));
@@ -148,7 +153,7 @@ impl ProcessBuilder {
         })().map_err(|e| {
             process_error(&format!("could not execute process `{}`",
                                    self.debug_string()),
-                          Some(e), None, None)
+                          Some(Box::new(e)), None, None)
         }));
         let output = Output {
             stdout: stdout,
@@ -159,6 +164,10 @@ impl ProcessBuilder {
             Err(process_error(&format!("process didn't exit successfully: `{}`",
                                        self.debug_string()),
                               None, Some(&output.status), Some(&output)))
+        } else if let Some(e) = callback_error {
+            Err(process_error(&format!("failed to parse process output: `{}`",
+                                       self.debug_string()),
+                              Some(Box::new(e)), Some(&output.status), Some(&output)))
         } else {
             Ok(output)
         }

@@ -1,5 +1,5 @@
 use cargo::core::Workspace;
-use cargo::ops;
+use cargo::ops::{self, MessageFormat};
 use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
@@ -17,6 +17,7 @@ pub struct Options {
     flag_release: bool,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
+    flag_message_format: MessageFormat,
     flag_package: Option<String>,
     flag_lib: bool,
     flag_bin: Vec<String>,
@@ -52,6 +53,7 @@ Options:
     -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
+    --message-format FMT     Error format: human, json [default: human]
     --frozen                 Require Cargo.lock and cache are up to date
     --locked                 Require Cargo.lock is up to date
 
@@ -95,6 +97,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                             &options.flag_test,
                                             &options.flag_example,
                                             &options.flag_bench),
+            message_format: options.flag_message_format,
             mode: ops::CompileMode::Doc { deps: false },
             target_rustdoc_args: Some(&options.arg_opts),
             target_rustc_args: None,

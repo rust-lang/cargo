@@ -114,6 +114,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         release: !options.flag_debug,
         filter: ops::CompileFilter::new(false, &options.flag_bin, &[],
                                         &options.flag_example, &[]),
+        message_format: ops::MessageFormat::Human,
         target_rustc_args: None,
         target_rustdoc_args: None,
     };

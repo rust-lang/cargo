@@ -211,8 +211,7 @@ pub fn version() -> String {
     })
 }
 
-fn flags_from_args<T>(usage: &str, args: &[String],
-                          options_first: bool) -> CliResult<T>
+fn flags_from_args<T>(usage: &str, args: &[String], options_first: bool) -> CliResult<T>
     where T: Decodable
 {
     let docopt = Docopt::new(usage).unwrap()
