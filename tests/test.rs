@@ -2332,3 +2332,35 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]feature_a[..]`"));
 }
+
+#[test]
+fn test_release_ignore_panic() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+
+            [profile.test]
+            panic = 'abort'
+            [profile.release]
+            panic = 'abort'
+        "#)
+        .file("src/lib.rs", "extern crate a;")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+    p.build();
+    println!("test");
+    assert_that(p.cargo("test").arg("-v"), execs().with_status(0));
+    println!("bench");
+    assert_that(p.cargo("bench").arg("-v"), execs().with_status(0));
+}
