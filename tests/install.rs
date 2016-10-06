@@ -793,3 +793,36 @@ fn readonly_dir() {
                 execs().with_status(0));
     assert_that(cargo_home(), has_installed_exe("foo"));
 }
+
+#[test]
+fn use_path_workspace() {
+    Package::new("foo", "1.0.0").publish();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["baz"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("baz/Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            foo = "1"
+        "#)
+        .file("baz/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    let lock = p.read_lockfile();
+    assert_that(p.cargo("install"), execs().with_status(0));
+    let lock2 = p.read_lockfile();
+    assert!(lock == lock2, "different lockfiles");
+}
