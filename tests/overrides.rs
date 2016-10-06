@@ -708,3 +708,70 @@ fn no_override_self() {
     assert_that(p.cargo_process("build").arg("--verbose"),
                 execs().with_status(0));
 }
+
+#[test]
+fn broken_path_override_warns() {
+    Package::new("foo", "0.1.0").publish();
+    Package::new("foo", "0.2.0").publish();
+
+    let p = project("local")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a1" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("a1/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1"
+        "#)
+        .file("a1/src/lib.rs", "")
+        .file("a2/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.2"
+        "#)
+        .file("a2/src/lib.rs", "")
+        .file(".cargo/config", r#"
+            paths = ["a2"]
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0)
+                       .with_stderr("\
+[UPDATING] [..]
+warning: path override for crate `a` has altered the original list of
+dependencies; the dependency on `foo` was either added or
+modified to not match the previously resolved version
+
+This is currently allowed but is known to produce buggy behavior with spurious
+recompiles and changes to the crate graph. Path overrides unfortunately were
+never intended to support this feature, so for now this message is just a
+warning. In the future, however, this message will become a hard error.
+
+To change the dependency graph via an override it's recommended to use the
+`[replace]` feature of Cargo instead of the path override feature. This is
+documented online at the url below for more information.
+
+http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
+
+[DOWNLOADING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[FINISHED] [..]
+"));
+}

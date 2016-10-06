@@ -62,6 +62,10 @@ impl<'cfg> SourceConfigMap<'cfg> {
         Ok(base)
     }
 
+    pub fn config(&self) -> &'cfg Config {
+        self.config
+    }
+
     pub fn load(&self, id: &SourceId) -> CargoResult<Box<Source + 'cfg>> {
         debug!("loading: {}", id);
         let mut name = match self.id2name.get(id) {
