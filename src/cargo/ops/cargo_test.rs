@@ -116,10 +116,8 @@ fn run_doc_tests(options: &TestOptions,
     let config = options.compile_opts.config;
 
     // We don't build/rust doctests if target != host
-    if let Some(target) = options.compile_opts.target {
-        if try!(config.rustc()).host != target {
-            return Ok(errors);
-        }
+    if try!(config.rustc()).host != compilation.target {
+        return Ok(errors);
     }
 
     let libs = compilation.to_doc_test.iter().map(|package| {

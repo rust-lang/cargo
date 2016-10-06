@@ -44,6 +44,8 @@ pub struct Compilation<'cfg> {
     /// Features enabled during this compilation.
     pub cfgs: HashSet<String>,
 
+    pub target: String,
+
     config: &'cfg Config,
 }
 
@@ -60,6 +62,7 @@ impl<'cfg> Compilation<'cfg> {
             to_doc_test: Vec::new(),
             cfgs: HashSet::new(),
             config: config,
+            target: String::new(),
         }
     }
 
