@@ -123,7 +123,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
                           flags.flag_locked));
 
     init_git_transports(config);
-    cargo::util::job::setup();
+    let _token = cargo::util::job::setup();
 
     if flags.flag_version {
         println!("{}", cargo::version());
