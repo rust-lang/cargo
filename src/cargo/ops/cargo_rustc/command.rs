@@ -2,31 +2,9 @@ use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::Path;
-use std::process::Output;
 
-use util::{CargoResult, ProcessError, ProcessBuilder, process};
+use util::{CargoResult, ProcessBuilder, process};
 use util::Config;
-
-/// Trait for objects that can execute commands.
-pub trait ExecEngine: Send + Sync {
-    fn exec(&self, CommandPrototype) -> Result<(), ProcessError>;
-    fn exec_with_output(&self, CommandPrototype) -> Result<Output, ProcessError>;
-}
-
-/// Default implementation of `ExecEngine`.
-#[derive(Clone, Copy)]
-pub struct ProcessEngine;
-
-impl ExecEngine for ProcessEngine {
-    fn exec(&self, command: CommandPrototype) -> Result<(), ProcessError> {
-        command.into_process_builder().exec()
-    }
-
-    fn exec_with_output(&self, command: CommandPrototype)
-                        -> Result<Output, ProcessError> {
-        command.into_process_builder().exec_with_output()
-    }
-}
 
 /// Prototype for a command that must be executed.
 #[derive(Clone)]

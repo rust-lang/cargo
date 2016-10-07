@@ -1,6 +1,6 @@
 use std::ffi::{OsString, OsStr};
 
-use ops::{self, ExecEngine, ProcessEngine, Compilation};
+use ops::{self, Compilation};
 use util::{self, CargoResult, CargoTestError, ProcessError};
 use core::Workspace;
 
@@ -98,7 +98,7 @@ fn run_unit_tests(options: &TestOptions,
             shell.status("Running", cmd.to_string())
         }));
 
-        if let Err(e) = ExecEngine::exec(&ProcessEngine, cmd) {
+        if let Err(e) = cmd.into_process_builder().exec() {
             errors.push(e);
             if !options.no_fail_fast {
                 break
@@ -175,7 +175,7 @@ fn run_doc_tests(options: &TestOptions,
             try!(config.shell().verbose(|shell| {
                 shell.status("Running", p.to_string())
             }));
-            if let Err(e) = ExecEngine::exec(&ProcessEngine, p) {
+            if let Err(e) = p.into_process_builder().exec() {
                 errors.push(e);
                 if !options.no_fail_fast {
                     return Ok(errors);
