@@ -293,7 +293,6 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
         all_features: false,
         spec: &[],
         filter: ops::CompileFilter::Everything,
-        exec_engine: None,
         release: false,
         message_format: ops::MessageFormat::Human,
         mode: ops::CompileMode::Build,

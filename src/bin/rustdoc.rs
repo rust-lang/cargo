@@ -90,7 +90,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             all_features: options.flag_all_features,
             no_default_features: options.flag_no_default_features,
             spec: &options.flag_package.map_or(Vec::new(), |s| vec![s]),
-            exec_engine: None,
             release: options.flag_release,
             filter: ops::CompileFilter::new(options.flag_lib,
                                             &options.flag_bin,

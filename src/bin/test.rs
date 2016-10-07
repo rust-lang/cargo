@@ -123,7 +123,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             all_features: options.flag_all_features,
             no_default_features: options.flag_no_default_features,
             spec: &options.flag_package,
-            exec_engine: None,
             release: options.flag_release,
             mode: mode,
             filter: filter,

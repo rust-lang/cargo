@@ -13,7 +13,7 @@ use util::{CargoResult, profile, internal};
 
 use super::{Context, Kind, Unit};
 use super::job::Job;
-use super::engine::CommandPrototype;
+use super::command::CommandPrototype;
 
 /// A management structure of the entire dependency graph to compile.
 ///

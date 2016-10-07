@@ -18,14 +18,14 @@ use self::job_queue::JobQueue;
 
 pub use self::compilation::Compilation;
 pub use self::context::{Context, Unit};
-pub use self::engine::{CommandPrototype, CommandType, ExecEngine, ProcessEngine};
+pub use self::command::{CommandPrototype, CommandType};
 pub use self::layout::{Layout, LayoutProxy};
 pub use self::custom_build::{BuildOutput, BuildMap, BuildScripts};
 
-mod context;
+mod command;
 mod compilation;
+mod context;
 mod custom_build;
-mod engine;
 mod fingerprint;
 mod job;
 mod job_queue;
@@ -42,7 +42,6 @@ pub struct BuildConfig {
     pub requested_target: Option<String>,
     pub target: TargetConfig,
     pub jobs: u32,
-    pub exec_engine: Option<Arc<Box<ExecEngine>>>,
     pub release: bool,
     pub test: bool,
     pub doc_all: bool,
@@ -467,7 +466,6 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let name = unit.pkg.name().to_string();
     let build_state = cx.build_state.clone();
     let key = (unit.pkg.package_id().clone(), unit.kind);
-    let exec_engine = cx.exec_engine.clone();
 
     Ok(Work::new(move |state| {
         if let Some(output) = build_state.outputs.lock().unwrap().get(&key) {
@@ -476,7 +474,7 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
             }
         }
         state.running(&rustdoc);
-        exec_engine.exec(rustdoc).chain_error(|| {
+        rustdoc.into_process_builder().exec().chain_error(|| {
             human(format!("Could not document `{}`.", name))
         })
     }))
