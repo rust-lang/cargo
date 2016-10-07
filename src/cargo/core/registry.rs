@@ -364,7 +364,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
 #[cfg(test)]
 pub mod test {
     use core::{Summary, Registry, Dependency};
-    use util::{CargoResult};
+    use util::CargoResult;
 
     pub struct RegistryBuilder {
         summaries: Vec<Summary>,

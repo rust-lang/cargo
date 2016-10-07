@@ -3,10 +3,11 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use semver::VersionReq;
+use semver::ReqParseError;
 use rustc_serialize::{Encoder, Encodable};
 
 use core::{SourceId, Summary, PackageId};
-use util::{CargoError, CargoResult, Cfg, CfgExpr, ChainError, human};
+use util::{CargoError, CargoResult, Cfg, CfgExpr, ChainError, human, Config};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
@@ -87,11 +88,21 @@ impl Encodable for Kind {
 
 impl DependencyInner {
     /// Attempt to create a `Dependency` from an entry in the manifest.
+    ///
+    /// The `deprecated_extra` information is set to `Some` when this method
+    /// should *also* parse historically deprecated semver requirements. This
+    /// information allows providing diagnostic information about what's going
+    /// on.
+    ///
+    /// If set to `None`, then historically deprecated semver requirements will
+    /// all be rejected.
     pub fn parse(name: &str,
                  version: Option<&str>,
-                 source_id: &SourceId) -> CargoResult<DependencyInner> {
+                 source_id: &SourceId,
+                 deprecated_extra: Option<(&PackageId, &Config)>)
+                 -> CargoResult<DependencyInner> {
         let (specified_req, version_req) = match version {
-            Some(v) => (true, try!(VersionReq::parse(v))),
+            Some(v) => (true, try!(DependencyInner::parse_with_deprecated(v, deprecated_extra))),
             None => (false, VersionReq::any())
         };
 
@@ -101,6 +112,40 @@ impl DependencyInner {
             specified_req: specified_req,
             .. DependencyInner::new_override(name, source_id)
         })
+    }
+
+    fn parse_with_deprecated(req: &str,
+                             extra: Option<(&PackageId, &Config)>)
+                             -> CargoResult<VersionReq> {
+        match VersionReq::parse(req) {
+            Err(e) => {
+                let (inside, config) = match extra {
+                    Some(pair) => pair,
+                    None => return Err(e.into()),
+                };
+                match e {
+                    ReqParseError::DeprecatedVersionRequirement(requirement) => {
+                        let msg = format!("\
+parsed version requirement `{}` is no longer valid
+
+Previous versions of Cargo accepted this malformed requirement,
+but it is being deprecated. This was found when parsing the manifest
+of {} {}, and the correct version requirement is `{}`.
+
+This will soon become a hard error, so it's either recommended to
+update to a fixed version or contact the upstream maintainer about
+this warning.
+",
+	req, inside.name(), inside.version(), requirement);
+                        try!(config.shell().warn(&msg));
+
+                        Ok(requirement)
+                    }
+                    e => Err(From::from(e)),
+                }
+            },
+            Ok(v) => Ok(v),
+        }
     }
 
     pub fn new_override(name: &str, source_id: &SourceId) -> DependencyInner {
@@ -216,8 +261,20 @@ impl Dependency {
     /// Attempt to create a `Dependency` from an entry in the manifest.
     pub fn parse(name: &str,
                  version: Option<&str>,
-                 source_id: &SourceId) -> CargoResult<Dependency> {
-        DependencyInner::parse(name, version, source_id).map(|di| {
+                 source_id: &SourceId,
+                 inside: &PackageId,
+                 config: &Config) -> CargoResult<Dependency> {
+        let arg = Some((inside, config));
+        DependencyInner::parse(name, version, source_id, arg).map(|di| {
+            di.into_dependency()
+        })
+    }
+
+    /// Attempt to create a `Dependency` from an entry in the manifest.
+    pub fn parse_no_deprecated(name: &str,
+                               version: Option<&str>,
+                               source_id: &SourceId) -> CargoResult<Dependency> {
+        DependencyInner::parse(name, version, source_id, None).map(|di| {
             di.into_dependency()
         })
     }
