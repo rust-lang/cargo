@@ -1242,3 +1242,101 @@ fn bump_version_dont_update_registry() {
 [FINISHED] [..]
 "));
 }
+
+#[test]
+fn old_version_req() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            remote = "0.2*"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    Package::new("remote", "0.2.0").publish();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stderr("\
+warning: parsed version requirement `0.2*` is no longer valid
+
+Previous versions of Cargo accepted this malformed requirement,
+but it is being deprecated. This was found when parsing the manifest
+of bar 0.5.0, and the correct version requirement is `0.2.*`.
+
+This will soon become a hard error, so it's either recommended to
+update to a fixed version or contact the upstream maintainer about
+this warning.
+
+warning: parsed version requirement `0.2*` is no longer valid
+
+Previous versions of Cargo accepted this malformed requirement,
+but it is being deprecated. This was found when parsing the manifest
+of bar 0.5.0, and the correct version requirement is `0.2.*`.
+
+This will soon become a hard error, so it's either recommended to
+update to a fixed version or contact the upstream maintainer about
+this warning.
+
+[UPDATING] [..]
+[DOWNLOADING] [..]
+[COMPILING] [..]
+[COMPILING] [..]
+[FINISHED] [..]
+"));
+}
+
+#[test]
+fn old_version_req_upstream() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            remote = "0.3"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    Package::new("remote", "0.3.0")
+			.file("Cargo.toml", r#"
+				[project]
+                name = "remote"
+                version = "0.3.0"
+                authors = []
+
+                [dependencies]
+                bar = "0.2*"
+			"#)
+            .file("src/lib.rs", "")
+			.publish();
+    Package::new("bar", "0.2.0").publish();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stderr("\
+[UPDATING] [..]
+[DOWNLOADING] [..]
+warning: parsed version requirement `0.2*` is no longer valid
+
+Previous versions of Cargo accepted this malformed requirement,
+but it is being deprecated. This was found when parsing the manifest
+of remote 0.3.0, and the correct version requirement is `0.2.*`.
+
+This will soon become a hard error, so it's either recommended to
+update to a fixed version or contact the upstream maintainer about
+this warning.
+
+[COMPILING] [..]
+[COMPILING] [..]
+[FINISHED] [..]
+"));
+}
