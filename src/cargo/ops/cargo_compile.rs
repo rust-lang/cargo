@@ -100,11 +100,14 @@ pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
 
 pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
                                 source: Option<Box<Source + 'a>>,
-                                features: Vec<String>,
+                                features: &[String],
                                 all_features: bool,
                                 no_default_features: bool,
                                 spec: &'a [String])
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
+    let features = features.iter().flat_map(|s| {
+        s.split_whitespace()
+    }).map(|s| s.to_string()).collect::<Vec<String>>();
 
     let mut registry = try!(PackageRegistry::new(ws.config()));
 
@@ -161,9 +164,6 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                          ref target_rustc_args } = *options;
 
     let target = target.map(|s| s.to_string());
-    let features = features.iter().flat_map(|s| {
-        s.split(' ')
-    }).map(|s| s.to_string()).collect::<Vec<String>>();
 
     if jobs == Some(0) {
         bail!("jobs must be at least 1")
