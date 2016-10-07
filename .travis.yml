@@ -27,9 +27,13 @@ env:
     - CARGOFLAGS=-j1
     - secure: scGpeetUfba5RWyuS4yt10bPoFAI9wpHEReIFqEx7eH5vr2Anajk6+70jW6GdrWVdUvdINiArlQ3An2DeB9vEUWcBjw8WvuPtOH0tDMoSsuVloPlFD8yn1Ac0Bx9getAO5ofxqtoNg+OV4MDVuGabEesqAOWqURNrBC7XK+ntC8=
 
-os:
-  - linux
-  - osx
+matrix:
+  include:
+    - os: osx
+      rust: stable
+      before_install:
+        - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
+        - export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
 
 branches:
   only:
