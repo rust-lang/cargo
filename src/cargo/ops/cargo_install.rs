@@ -258,7 +258,7 @@ fn select_pkg<'a, T>(mut source: T,
     try!(source.update());
     match name {
         Some(name) => {
-            let dep = try!(Dependency::parse(name, vers, source_id));
+            let dep = try!(Dependency::parse_no_deprecated(name, vers, source_id));
             let deps = try!(source.query(&dep));
             match deps.iter().map(|p| p.package_id()).max() {
                 Some(pkgid) => {

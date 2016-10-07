@@ -33,7 +33,7 @@ impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
         let url = "http://example.com".to_url().unwrap();
         let source_id = SourceId::for_registry(&url);
-        Dependency::parse(self, Some("1.0.0"), &source_id).unwrap()
+        Dependency::parse_no_deprecated(self, Some("1.0.0"), &source_id).unwrap()
     }
 }
 
@@ -101,14 +101,14 @@ fn dep(name: &str) -> Dependency { dep_req(name, "1.0.0") }
 fn dep_req(name: &str, req: &str) -> Dependency {
     let url = "http://example.com".to_url().unwrap();
     let source_id = SourceId::for_registry(&url);
-    Dependency::parse(name, Some(req), &source_id).unwrap()
+    Dependency::parse_no_deprecated(name, Some(req), &source_id).unwrap()
 }
 
 fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.to_url().unwrap();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&url, master);
-    Dependency::parse(name, Some("1.0.0"), &source_id).unwrap()
+    Dependency::parse_no_deprecated(name, Some("1.0.0"), &source_id).unwrap()
 }
 fn dep_kind(name: &str, kind: Kind) -> Dependency {
     dep(name).clone_inner().set_kind(kind).into_dependency()
