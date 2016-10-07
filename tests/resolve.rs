@@ -10,7 +10,7 @@ use hamcrest::{assert_that, equal_to, contains};
 use cargo::core::source::{SourceId, GitReference};
 use cargo::core::dependency::Kind::{self, Development};
 use cargo::core::{Dependency, PackageId, Summary, Registry};
-use cargo::util::{CargoResult, ToUrl, Config};
+use cargo::util::{CargoResult, ToUrl};
 use cargo::core::resolver::{self, Method};
 
 fn resolve<R: Registry>(pkg: PackageId, deps: Vec<Dependency>,
@@ -33,8 +33,7 @@ impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
         let url = "http://example.com".to_url().unwrap();
         let source_id = SourceId::for_registry(&url);
-        let config = Config::default().unwrap();
-        Dependency::parse(self, Some("1.0.0"), &source_id, &config).unwrap()
+        Dependency::parse_no_deprecated(self, Some("1.0.0"), &source_id).unwrap()
     }
 }
 
@@ -102,16 +101,14 @@ fn dep(name: &str) -> Dependency { dep_req(name, "1.0.0") }
 fn dep_req(name: &str, req: &str) -> Dependency {
     let url = "http://example.com".to_url().unwrap();
     let source_id = SourceId::for_registry(&url);
-    let config = Config::default().unwrap();
-    Dependency::parse(name, Some(req), &source_id, &config).unwrap()
+    Dependency::parse_no_deprecated(name, Some(req), &source_id).unwrap()
 }
 
 fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.to_url().unwrap();
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&url, master);
-    let config = Config::default().unwrap();
-    Dependency::parse(name, Some("1.0.0"), &source_id, &config).unwrap()
+    Dependency::parse_no_deprecated(name, Some("1.0.0"), &source_id).unwrap()
 }
 fn dep_kind(name: &str, kind: Kind) -> Dependency {
     dep(name).clone_inner().set_kind(kind).into_dependency()
