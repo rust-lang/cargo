@@ -19,18 +19,23 @@ $(function() {
         pres[i].className += ' language-rust';
     }
 
+    // Toggles docs menu
     $('button.dropdown, a.dropdown').click(function(el, e) {
-        $(this).toggleClass('active');
-        $(this).siblings('ul').toggleClass('open');
+        $(this).toggleClass('active').siblings('ul').toggleClass('open');
 
-        if ($(this).hasClass('active')) {
-            $(document).on('mousedown.useroptions', function() {
-                setTimeout(function() {
-                    $('button.dropdown, a.dropdown').removeClass('active');
-                    $('button.dropdown + ul').removeClass('open');
-                }, 150);
-                $(document).off('mousedown.useroptions');
-            });
+        return false;
+    });
+
+    // A click in the page anywhere but in the menu will turn the menu off
+    $(document).on('click', function(e) {
+        // Checks to make sure the click did not come from inside dropdown menu
+        // if it doesn't we close the menu
+        // else, we do nothing and just follow the link
+        if (!$(e.target).closest('ul.dropdown').length) {
+            var toggles = $('button.dropdown.active, a.dropdown.active');
+            toggles.toggleClass('active').siblings('ul').toggleClass('open');
+
+            return false;
         }
     });
 });
