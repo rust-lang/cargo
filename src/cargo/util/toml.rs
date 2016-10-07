@@ -336,6 +336,7 @@ impl TomlProject {
 }
 
 struct Context<'a, 'b> {
+    pkgid: Option<&'a PackageId>,
     deps: &'a mut Vec<Dependency>,
     source_id: &'a SourceId,
     nested_paths: &'a mut Vec<PathBuf>,
@@ -566,6 +567,7 @@ impl TomlManifest {
         {
 
             let mut cx = Context {
+                pkgid: Some(&pkgid),
                 deps: &mut deps,
                 source_id: source_id,
                 nested_paths: &mut nested_paths,
@@ -714,6 +716,7 @@ impl TomlManifest {
         let mut warnings = Vec::new();
         let mut deps = Vec::new();
         let replace = try!(self.replace(&mut Context {
+            pkgid: None,
             deps: &mut deps,
             source_id: source_id,
             nested_paths: &mut nested_paths,
@@ -883,7 +886,13 @@ impl TomlDependency {
         };
 
         let version = details.version.as_ref().map(|v| &v[..]);
-        let mut dep = try!(DependencyInner::parse(name, version, &new_source_id, cx.config));
+        let mut dep = match cx.pkgid {
+            Some(id) => {
+                try!(DependencyInner::parse(name, version, &new_source_id,
+                                            Some((id, cx.config))))
+            }
+            None => try!(DependencyInner::parse(name, version, &new_source_id, None)),
+        };
         dep = dep.set_features(details.features.unwrap_or(Vec::new()))
                  .set_default_features(details.default_features.unwrap_or(true))
                  .set_optional(details.optional.unwrap_or(false))

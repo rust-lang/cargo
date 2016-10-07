@@ -135,9 +135,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             name, req, features, optional, default_features, target, kind
         } = dep;
 
-        let dep = try!(DependencyInner::parse(&name, Some(&req),
-                                              &self.source_id,
-                                              self.config));
+        let dep = try!(DependencyInner::parse(&name, Some(&req), &self.source_id, None));
         let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
             "dev" => Kind::Development,
             "build" => Kind::Build,

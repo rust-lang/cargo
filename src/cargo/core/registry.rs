@@ -364,7 +364,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
 #[cfg(test)]
 pub mod test {
     use core::{Summary, Registry, Dependency};
-    use util::{CargoResult, Config};
+    use util::CargoResult;
 
     pub struct RegistryBuilder {
         summaries: Vec<Summary>,
@@ -405,13 +405,13 @@ pub mod test {
     }
 
     impl Registry for RegistryBuilder {
-        fn query(&mut self, dep: &Dependency, config: &Config) -> CargoResult<Vec<Summary>> {
+        fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
             debug!("querying; dep={:?}", dep);
 
             let overrides = self.query_overrides(dep);
 
             if overrides.is_empty() {
-                self.summaries.query(dep, config)
+                self.summaries.query(dep)
             } else {
                 Ok(overrides)
             }

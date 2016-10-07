@@ -57,7 +57,7 @@ pub fn install(root: Option<&str>,
     let map = try!(SourceConfigMap::new(config));
     let (pkg, source) = if source_id.is_git() {
         try!(select_pkg(GitSource::new(source_id, config), source_id,
-                        krate, vers, config, &mut |git| git.read_packages()))
+                        krate, vers, &mut |git| git.read_packages()))
     } else if source_id.is_path() {
         let path = source_id.url().to_file_path().ok()
                             .expect("path sources must have a valid path");
@@ -68,11 +68,11 @@ pub fn install(root: Option<&str>,
                            specify an alternate source", path.display()))
         }));
         try!(select_pkg(PathSource::new(&path, source_id, config),
-                        source_id, krate, vers, config,
+                        source_id, krate, vers,
                         &mut |path| path.read_packages()))
     } else {
         try!(select_pkg(try!(map.load(source_id)),
-                        source_id, krate, vers, config,
+                        source_id, krate, vers,
                         &mut |_| Err(human("must specify a crate to install from \
                                             crates.io, or use --path or --git to \
                                             specify alternate source"))))
@@ -251,7 +251,6 @@ fn select_pkg<'a, T>(mut source: T,
                      source_id: &SourceId,
                      name: Option<&str>,
                      vers: Option<&str>,
-                     config: &Config,
                      list_all: &mut FnMut(&mut T) -> CargoResult<Vec<Package>>)
                      -> CargoResult<(Package, Box<Source + 'a>)>
     where T: Source + 'a
@@ -259,7 +258,7 @@ fn select_pkg<'a, T>(mut source: T,
     try!(source.update());
     match name {
         Some(name) => {
-            let dep = try!(Dependency::parse(name, vers, source_id, config));
+            let dep = try!(Dependency::parse_no_deprecated(name, vers, source_id));
             let deps = try!(source.query(&dep));
             match deps.iter().map(|p| p.package_id()).max() {
                 Some(pkgid) => {
