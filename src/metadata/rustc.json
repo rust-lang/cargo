@@ -1,0 +1,3196 @@
+{
+    "packages": [
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_borrowck",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_passes",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_trans",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "graphviz",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_privacy",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_resolve",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_metadata",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_typeck",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_lint",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "flate",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "arena",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "proc_macro",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_incremental",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_mir",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_llvm",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_save_analysis",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_ext",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_plugin",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_back",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_eval",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_driver 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_driver)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_driver/Cargo.toml",
+            "name": "rustc_driver",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_driver",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {
+                "jemalloc": []
+            },
+            "id": "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_back/Cargo.toml",
+            "name": "rustc_back",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_back",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_errors/Cargo.toml",
+            "name": "rustc_errors",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_errors",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_data_structures 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_data_structures)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_data_structures/Cargo.toml",
+            "name": "rustc_data_structures",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_data_structures",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "fmt_macros",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "arena",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_platform_intrinsics",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_back",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_eval",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_math",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_typeck 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_typeck)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_typeck/Cargo.toml",
+            "name": "rustc_typeck",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_typeck",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_bitflags",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libsyntax/Cargo.toml",
+            "name": "syntax",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "syntax",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_data_structures",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "flate",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_macro",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_llvm",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_ext",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_back",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_math",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_metadata 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_metadata)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_metadata/Cargo.toml",
+            "name": "rustc_metadata",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_metadata",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_macro 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_macro)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_macro/Cargo.toml",
+            "name": "rustc_macro",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_macro",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_eval",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_math",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_passes 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_passes)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_passes/Cargo.toml",
+            "name": "rustc_passes",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_passes",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_const_math 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_math)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_const_math/Cargo.toml",
+            "name": "rustc_const_math",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_const_math",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_bitflags",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "graphviz",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "fmt_macros",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_data_structures",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "flate",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "arena",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_llvm",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_back",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_math",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc/Cargo.toml",
+            "name": "rustc",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [],
+            "features": {},
+            "id": "fmt_macros 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libfmt_macros)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libfmt_macros/Cargo.toml",
+            "name": "fmt_macros",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "fmt_macros",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": "dev",
+                    "name": "tempdir",
+                    "optional": false,
+                    "req": "^0.3",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "gcc 0.3.28 (registry+https://github.com/rust-lang/crates.io-index)",
+            "manifest_path": "/Users/acharles/.cargo/registry/src/github.com-1ecc6299db9ec823/gcc-0.3.28/Cargo.toml",
+            "name": "gcc",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "gcc",
+                    "src_path": "/Users/acharles/.cargo/registry/src/github.com-1ecc6299db9ec823/gcc-0.3.28/src/lib.rs"
+                },
+                {
+                    "kind": [
+                        "bin"
+                    ],
+                    "name": "gcc-shim",
+                    "src_path": "/Users/acharles/.cargo/registry/src/github.com-1ecc6299db9ec823/gcc-0.3.28/src/bin/gcc-shim.rs"
+                },
+                {
+                    "kind": [
+                        "test"
+                    ],
+                    "name": "cc_env",
+                    "src_path": "/Users/acharles/.cargo/registry/src/github.com-1ecc6299db9ec823/gcc-0.3.28/tests/cc_env.rs"
+                },
+                {
+                    "kind": [
+                        "test"
+                    ],
+                    "name": "test",
+                    "src_path": "/Users/acharles/.cargo/registry/src/github.com-1ecc6299db9ec823/gcc-0.3.28/tests/test.rs"
+                }
+            ],
+            "version": "0.3.28"
+        },
+        {
+            "dependencies": [],
+            "features": {},
+            "id": "graphviz 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgraphviz)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libgraphviz/Cargo.toml",
+            "name": "graphviz",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "graphviz",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_trans",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_resolve",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_metadata",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_data_structures",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_lint",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "arena",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_driver",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_back",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_eval",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_math",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": "build",
+                    "name": "build_helper",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": "build",
+                    "name": "gcc",
+                    "optional": false,
+                    "req": "^0.3.27",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustdoc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustdoc)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustdoc/Cargo.toml",
+            "name": "rustdoc",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustdoc",
+                    "src_path": "lib.rs"
+                },
+                {
+                    "kind": [
+                        "custom-build"
+                    ],
+                    "name": "build-script-build",
+                    "src_path": "build.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_bitflags",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": "build",
+                    "name": "build_helper",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": "build",
+                    "name": "gcc",
+                    "optional": false,
+                    "req": "^0.3.27",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {
+                "static-libstdcpp": []
+            },
+            "id": "rustc_llvm 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_llvm)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_llvm/Cargo.toml",
+            "name": "rustc_llvm",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_llvm",
+                    "src_path": "lib.rs"
+                },
+                {
+                    "kind": [
+                        "custom-build"
+                    ],
+                    "name": "build-script-build",
+                    "src_path": "build.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [],
+            "features": {},
+            "id": "rustc_platform_intrinsics 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_platform_intrinsics)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_platform_intrinsics/Cargo.toml",
+            "name": "rustc_platform_intrinsics",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_platform_intrinsics",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "graphviz",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_data_structures",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "flate",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "arena",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_platform_intrinsics",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_incremental",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_llvm",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_back",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_eval",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_math",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_trans 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_trans)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_trans/Cargo.toml",
+            "name": "rustc_trans",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_trans",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_plugin",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "proc_macro 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libproc_macro)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libproc_macro/Cargo.toml",
+            "name": "proc_macro",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "proc_macro",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [],
+            "features": {},
+            "id": "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/liblog/Cargo.toml",
+            "name": "log",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib",
+                        "rlib"
+                    ],
+                    "name": "log",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_bitflags",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "graphviz",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_data_structures",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_back",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_eval",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_math",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_mir 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_mir)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_mir/Cargo.toml",
+            "name": "rustc_mir",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_mir",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libsyntax_pos/Cargo.toml",
+            "name": "syntax_pos",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "syntax_pos",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_bitflags",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_metadata",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_back",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_plugin 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_plugin)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_plugin/Cargo.toml",
+            "name": "rustc_plugin",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_plugin",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_save_analysis 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_save_analysis)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_save_analysis/Cargo.toml",
+            "name": "rustc_save_analysis",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_save_analysis",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libserialize/Cargo.toml",
+            "name": "serialize",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib",
+                        "rlib"
+                    ],
+                    "name": "serialize",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "arena",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_resolve 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_resolve)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_resolve/Cargo.toml",
+            "name": "rustc_resolve",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_resolve",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_back",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_eval",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_lint 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_lint)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_lint/Cargo.toml",
+            "name": "rustc_lint",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_lint",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "graphviz",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_data_structures",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_incremental 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_incremental)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_incremental/Cargo.toml",
+            "name": "rustc_incremental",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_incremental",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustdoc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_driver",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_back",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {
+                "jemalloc": [
+                    "rustc_back/jemalloc"
+                ]
+            },
+            "id": "rustc-main 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/rustc/Cargo.toml",
+            "name": "rustc-main",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "bin"
+                    ],
+                    "name": "rustc",
+                    "src_path": "rustc.rs"
+                },
+                {
+                    "kind": [
+                        "bin"
+                    ],
+                    "name": "rustdoc",
+                    "src_path": "rustdoc.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": "build",
+                    "name": "build_helper",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": "build",
+                    "name": "gcc",
+                    "optional": false,
+                    "req": "^0.3.27",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "flate 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libflate)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libflate/Cargo.toml",
+            "name": "flate",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "flate",
+                    "src_path": "lib.rs"
+                },
+                {
+                    "kind": [
+                        "custom-build"
+                    ],
+                    "name": "build-script-build",
+                    "src_path": "build.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [],
+            "features": {},
+            "id": "arena 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libarena)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libarena/Cargo.toml",
+            "name": "arena",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "arena",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "graphviz",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_data_structures",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_mir",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_borrowck 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_borrowck)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_borrowck/Cargo.toml",
+            "name": "rustc_borrowck",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_borrowck",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "graphviz",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "serialize",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_back",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_const_math",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_const_eval 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_eval)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_const_eval/Cargo.toml",
+            "name": "rustc_const_eval",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_const_eval",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [],
+            "features": {},
+            "id": "rustc_bitflags 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_bitflags)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_bitflags/Cargo.toml",
+            "name": "rustc_bitflags",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "rustc_bitflags",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [],
+            "features": {},
+            "id": "build_helper 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/build_helper)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/build_helper/Cargo.toml",
+            "name": "build_helper",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "build_helper",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.1.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_privacy 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_privacy)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_privacy/Cargo.toml",
+            "name": "rustc_privacy",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "rustc_privacy",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "fmt_macros",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax_pos",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "syntax",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_macro",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "log",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_errors",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "syntax_ext 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_ext)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libsyntax_ext/Cargo.toml",
+            "name": "syntax_ext",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib"
+                    ],
+                    "name": "syntax_ext",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        }
+    ],
+    "resolve": {
+        "nodes": [
+            {
+                "dependencies": [
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)",
+                    "rustc_mir 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_mir)",
+                    "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "rustc_save_analysis 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_save_analysis)",
+                    "rustc_plugin 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_plugin)",
+                    "rustc_typeck 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_typeck)",
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "rustc_metadata 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_metadata)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc_resolve 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_resolve)",
+                    "rustc_lint 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_lint)",
+                    "rustc_passes 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_passes)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "graphviz 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgraphviz)",
+                    "rustc_incremental 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_incremental)",
+                    "flate 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libflate)",
+                    "rustc_llvm 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_llvm)",
+                    "arena 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libarena)",
+                    "rustc_borrowck 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_borrowck)",
+                    "rustc_const_eval 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_eval)",
+                    "rustc_trans 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_trans)",
+                    "rustc_privacy 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_privacy)",
+                    "proc_macro 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libproc_macro)",
+                    "syntax_ext 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_ext)"
+                ],
+                "id": "rustc_driver 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_driver)"
+            },
+            {
+                "dependencies": [
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)"
+            },
+            {
+                "dependencies": [
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)"
+            },
+            {
+                "dependencies": [
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_data_structures 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_data_structures)"
+            },
+            {
+                "dependencies": [
+                    "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "rustc_const_math 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_math)",
+                    "fmt_macros 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libfmt_macros)",
+                    "rustc_platform_intrinsics 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_platform_intrinsics)",
+                    "arena 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libarena)",
+                    "rustc_const_eval 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_eval)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_typeck 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_typeck)"
+            },
+            {
+                "dependencies": [
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "rustc_bitflags 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_bitflags)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)"
+            },
+            {
+                "dependencies": [
+                    "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "rustc_data_structures 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_data_structures)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc_macro 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_macro)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "rustc_const_math 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_math)",
+                    "flate 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libflate)",
+                    "rustc_llvm 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_llvm)",
+                    "syntax_ext 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_ext)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_metadata 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_metadata)"
+            },
+            {
+                "dependencies": [
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)"
+                ],
+                "id": "rustc_macro 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_macro)"
+            },
+            {
+                "dependencies": [
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "rustc_const_math 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_math)",
+                    "rustc_const_eval 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_eval)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_passes 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_passes)"
+            },
+            {
+                "dependencies": [
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_const_math 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_math)"
+            },
+            {
+                "dependencies": [
+                    "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "rustc_data_structures 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_data_structures)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc_const_math 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_math)",
+                    "fmt_macros 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libfmt_macros)",
+                    "graphviz 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgraphviz)",
+                    "flate 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libflate)",
+                    "rustc_llvm 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_llvm)",
+                    "arena 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libarena)",
+                    "rustc_bitflags 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_bitflags)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)"
+            },
+            {
+                "dependencies": [],
+                "id": "fmt_macros 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libfmt_macros)"
+            },
+            {
+                "dependencies": [],
+                "id": "gcc 0.3.28 (registry+https://github.com/rust-lang/crates.io-index)"
+            },
+            {
+                "dependencies": [],
+                "id": "graphviz 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgraphviz)"
+            },
+            {
+                "dependencies": [
+                    "rustc_driver 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_driver)",
+                    "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "rustc_data_structures 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_data_structures)",
+                    "rustc_resolve 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_resolve)",
+                    "rustc_metadata 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_metadata)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc_lint 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_lint)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "rustc_const_math 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_math)",
+                    "gcc 0.3.28 (registry+https://github.com/rust-lang/crates.io-index)",
+                    "arena 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libarena)",
+                    "rustc_const_eval 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_eval)",
+                    "rustc_trans 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_trans)",
+                    "build_helper 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/build_helper)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustdoc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustdoc)"
+            },
+            {
+                "dependencies": [
+                    "gcc 0.3.28 (registry+https://github.com/rust-lang/crates.io-index)",
+                    "rustc_bitflags 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_bitflags)",
+                    "build_helper 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/build_helper)"
+                ],
+                "id": "rustc_llvm 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_llvm)"
+            },
+            {
+                "dependencies": [],
+                "id": "rustc_platform_intrinsics 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_platform_intrinsics)"
+            },
+            {
+                "dependencies": [
+                    "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "rustc_data_structures 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_data_structures)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "rustc_const_math 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_math)",
+                    "graphviz 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgraphviz)",
+                    "rustc_incremental 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_incremental)",
+                    "flate 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libflate)",
+                    "rustc_platform_intrinsics 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_platform_intrinsics)",
+                    "rustc_llvm 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_llvm)",
+                    "arena 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libarena)",
+                    "rustc_const_eval 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_eval)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_trans 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_trans)"
+            },
+            {
+                "dependencies": [
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "rustc_plugin 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_plugin)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "proc_macro 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libproc_macro)"
+            },
+            {
+                "dependencies": [],
+                "id": "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+            },
+            {
+                "dependencies": [
+                    "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "rustc_data_structures 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_data_structures)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "rustc_const_math 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_math)",
+                    "graphviz 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgraphviz)",
+                    "rustc_const_eval 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_eval)",
+                    "rustc_bitflags 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_bitflags)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_mir 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_mir)"
+            },
+            {
+                "dependencies": [
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)"
+                ],
+                "id": "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)"
+            },
+            {
+                "dependencies": [
+                    "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "rustc_metadata 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_metadata)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "rustc_bitflags 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_bitflags)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_plugin 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_plugin)"
+            },
+            {
+                "dependencies": [
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_save_analysis 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_save_analysis)"
+            },
+            {
+                "dependencies": [
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)"
+            },
+            {
+                "dependencies": [
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "arena 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libarena)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_resolve 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_resolve)"
+            },
+            {
+                "dependencies": [
+                    "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "rustc_const_eval 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_eval)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_lint 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_lint)"
+            },
+            {
+                "dependencies": [
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "rustc_data_structures 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_data_structures)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "graphviz 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgraphviz)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_incremental 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_incremental)"
+            },
+            {
+                "dependencies": [
+                    "rustc_driver 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_driver)",
+                    "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+                    "rustdoc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustdoc)"
+                ],
+                "id": "rustc-main 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc)"
+            },
+            {
+                "dependencies": [
+                    "gcc 0.3.28 (registry+https://github.com/rust-lang/crates.io-index)",
+                    "build_helper 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/build_helper)"
+                ],
+                "id": "flate 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libflate)"
+            },
+            {
+                "dependencies": [],
+                "id": "arena 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libarena)"
+            },
+            {
+                "dependencies": [
+                    "rustc_mir 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_mir)",
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "rustc_data_structures 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_data_structures)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "graphviz 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgraphviz)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_borrowck 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_borrowck)"
+            },
+            {
+                "dependencies": [
+                    "rustc_back 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_back)",
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "serialize 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libserialize)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)",
+                    "rustc_const_math 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_math)",
+                    "graphviz 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgraphviz)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "rustc_const_eval 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_const_eval)"
+            },
+            {
+                "dependencies": [],
+                "id": "rustc_bitflags 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_bitflags)"
+            },
+            {
+                "dependencies": [],
+                "id": "build_helper 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/build_helper)"
+            },
+            {
+                "dependencies": [
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc)"
+                ],
+                "id": "rustc_privacy 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_privacy)"
+            },
+            {
+                "dependencies": [
+                    "rustc_errors 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_errors)",
+                    "syntax_pos 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_pos)",
+                    "syntax 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax)",
+                    "rustc_macro 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_macro)",
+                    "fmt_macros 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libfmt_macros)",
+                    "log 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liblog)"
+                ],
+                "id": "syntax_ext 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libsyntax_ext)"
+            }
+        ],
+        "root": "rustc-main 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc)"
+    },
+    "version": 1
+}

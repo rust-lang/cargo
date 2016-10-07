@@ -1,0 +1,99 @@
+{
+    "packages": [
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc-serialize",
+                    "optional": false,
+                    "req": "^0.3",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "cargo-metadata 0.1.0 (path+file:///home/user/cargo/src/metadata)",
+            "manifest_path": "/home/user/cargo/src/metadata/Cargo.toml",
+            "name": "cargo-metadata",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "cargo_metadata",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.1.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": "dev",
+                    "name": "rand",
+                    "optional": false,
+                    "req": "^0.3",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
+            "manifest_path": "/home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/rustc-serialize-0.3.19/Cargo.toml",
+            "name": "rustc-serialize",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "rustc-serialize",
+                    "src_path": "/home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/rustc-serialize-0.3.19/src/lib.rs"
+                },
+                {
+                    "kind": [
+                        "bench"
+                    ],
+                    "name": "hex",
+                    "src_path": "/home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/rustc-serialize-0.3.19/benches/hex.rs"
+                },
+                {
+                    "kind": [
+                        "bench"
+                    ],
+                    "name": "base64",
+                    "src_path": "/home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/rustc-serialize-0.3.19/benches/base64.rs"
+                },
+                {
+                    "kind": [
+                        "bench"
+                    ],
+                    "name": "json",
+                    "src_path": "/home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/rustc-serialize-0.3.19/benches/json.rs"
+                }
+            ],
+            "version": "0.3.19"
+        }
+    ],
+    "resolve": {
+        "nodes": [
+            {
+                "dependencies": [
+                    "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)"
+                ],
+                "id": "cargo-metadata 0.1.0 (path+file:///home/user/cargo/src/metadata)"
+            },
+            {
+                "dependencies": [],
+                "id": "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)"
+            }
+        ],
+        "root": "cargo-metadata 0.1.0 (path+file:///home/user/cargo/src/metadata)"
+    },
+    "version": 1
+}

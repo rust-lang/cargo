@@ -1,0 +1,35 @@
+{
+    "packages": [
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc-serialize",
+                    "optional": false,
+                    "req": "^0.3",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "cargo-metadata 0.1.0 (path+file:///home/user/cargo/src/metadata)",
+            "manifest_path": "/home/user/cargo/src/metadata/Cargo.toml",
+            "name": "cargo-metadata",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "cargo_metadata",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.1.0"
+        }
+    ],
+    "resolve": null,
+    "version": 1
+}
