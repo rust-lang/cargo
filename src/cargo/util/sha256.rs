@@ -13,16 +13,16 @@ mod imp {
 
     impl Sha256 {
         pub fn new() -> Sha256 {
-            Sha256(Hasher::new(Type::SHA256))
+            Sha256(Hasher::new(Type::SHA256).unwrap())
         }
 
         pub fn update(&mut self, bytes: &[u8]) {
-            let _ = self.0.write_all(bytes);
+            self.0.write_all(bytes).unwrap();
         }
 
         pub fn finish(&mut self) -> [u8; 32] {
             let mut ret = [0u8; 32];
-            ret.copy_from_slice(&self.0.finish()[..]);
+            ret.copy_from_slice(&self.0.finish().unwrap()[..]);
             ret
         }
     }
