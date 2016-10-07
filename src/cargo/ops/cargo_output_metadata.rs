@@ -52,7 +52,7 @@ fn metadata_full(ws: &Workspace,
     let (packages, resolve) = deps;
 
     let packages = try!(packages.package_ids()
-                                .map(|i| packages.get(i, ws.config()).map(|p| p.clone()))
+                                .map(|i| packages.get(i).map(|p| p.clone()))
                                 .collect());
 
     Ok(ExportInfo {

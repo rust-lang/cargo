@@ -16,13 +16,11 @@ use cargo::core::resolver::{self, Method};
 fn resolve<R: Registry>(pkg: PackageId, deps: Vec<Dependency>,
                         registry: &mut R)
                         -> CargoResult<Vec<PackageId>> {
-    let config = Config::default().unwrap();
     let summary = Summary::new(pkg.clone(), deps, HashMap::new()).unwrap();
     let method = Method::Everything;
     Ok(try!(resolver::resolve(&[(summary, method)],
                               &[],
-                              registry,
-                              &config)).iter().map(|p| {
+                              registry)).iter().map(|p| {
         p.clone()
     }).collect())
 }

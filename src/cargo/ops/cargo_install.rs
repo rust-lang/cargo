@@ -260,10 +260,10 @@ fn select_pkg<'a, T>(mut source: T,
     match name {
         Some(name) => {
             let dep = try!(Dependency::parse(name, vers, source_id, config));
-            let deps = try!(source.query(&dep, config));
+            let deps = try!(source.query(&dep));
             match deps.iter().map(|p| p.package_id()).max() {
                 Some(pkgid) => {
-                    let pkg = try!(source.download(pkgid, config));
+                    let pkg = try!(source.download(pkgid));
                     Ok((pkg, Box::new(source)))
                 }
                 None => {

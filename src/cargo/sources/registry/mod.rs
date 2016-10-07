@@ -317,18 +317,18 @@ impl<'cfg> RegistrySource<'cfg> {
 }
 
 impl<'cfg> Registry for RegistrySource<'cfg> {
-    fn query(&mut self, dep: &Dependency, config: &Config) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         // If this is a precise dependency, then it came from a lockfile and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
         if dep.source_id().precise().is_some() && !self.updated {
-            if try!(self.index.query(dep, config)).is_empty() {
+            if try!(self.index.query(dep)).is_empty() {
                 try!(self.do_update());
             }
         }
 
-        self.index.query(dep, config)
+        self.index.query(dep)
     }
 
     fn supports_checksums(&self) -> bool {
@@ -351,15 +351,15 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, package: &PackageId, config: &Config) -> CargoResult<Package> {
-        let hash = try!(self.index.hash(package, config));
+    fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
+        let hash = try!(self.index.hash(package));
         let path = try!(self.ops.download(package, &hash));
         let path = try!(self.unpack_package(package, &path).chain_error(|| {
             internal(format!("failed to unpack package `{}`", package))
         }));
         let mut src = PathSource::new(&path, &self.source_id, self.config);
         try!(src.update());
-        src.download(package, config)
+        src.download(package)
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

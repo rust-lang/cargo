@@ -9,7 +9,7 @@ pub fn fetch<'a>(ws: &Workspace<'a>) -> CargoResult<(Resolve, PackageSet<'a>)> {
     let resolve = try!(ops::resolve_ws(&mut registry, ws));
     let packages = get_resolved_packages(&resolve, registry);
     for id in resolve.iter() {
-        try!(packages.get(id, ws.config()));
+        try!(packages.get(id));
     }
     Ok((resolve, packages))
 }
