@@ -114,10 +114,10 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Registry for GitSource<'cfg> {
-    fn query(&mut self, dep: &Dependency, config: &Config) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let src = self.path_source.as_mut()
                       .expect("BUG: update() must be called before query()");
-        src.query(dep, config)
+        src.query(dep)
     }
 }
 
@@ -175,12 +175,12 @@ impl<'cfg> Source for GitSource<'cfg> {
         self.path_source.as_mut().unwrap().update()
     }
 
-    fn download(&mut self, id: &PackageId, config: &Config) -> CargoResult<Package> {
+    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
         trace!("getting packages for package id `{}` from `{:?}`", id,
                self.remote);
         self.path_source.as_mut()
                         .expect("BUG: update() must be called before get()")
-                        .download(id, config)
+                        .download(id)
     }
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {

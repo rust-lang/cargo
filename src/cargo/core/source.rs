@@ -27,7 +27,7 @@ pub trait Source: Registry {
 
     /// The download method fetches the full package for each name and
     /// version specified.
-    fn download(&mut self, package: &PackageId, config: &Config) -> CargoResult<Package>;
+    fn download(&mut self, package: &PackageId) -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
@@ -57,8 +57,8 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
         (**self).update()
     }
 
-    fn download(&mut self, id: &PackageId, config: &Config) -> CargoResult<Package> {
-        (**self).download(id, config)
+    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
+        (**self).download(id)
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

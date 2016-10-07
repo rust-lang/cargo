@@ -10,7 +10,7 @@ use sources::config::SourceConfigMap;
 /// See also `core::Source`.
 pub trait Registry {
     /// Attempt to find the packages that match a dependency request.
-    fn query(&mut self, name: &Dependency, config: &Config) -> CargoResult<Vec<Summary>>;
+    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>>;
 
     /// Returns whether or not this registry will return summaries with
     /// checksums listed.
@@ -22,22 +22,22 @@ pub trait Registry {
 }
 
 impl Registry for Vec<Summary> {
-    fn query(&mut self, dep: &Dependency, _config: &Config) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         Ok(self.iter().filter(|summary| dep.matches(*summary))
                .cloned().collect())
     }
 }
 
 impl Registry for Vec<Package> {
-    fn query(&mut self, dep: &Dependency, _config: &Config) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         Ok(self.iter().filter(|pkg| dep.matches(pkg.summary()))
                .map(|pkg| pkg.summary().clone()).collect())
     }
 }
 
 impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
-    fn query(&mut self, name: &Dependency, config: &Config) -> CargoResult<Vec<Summary>> {
-        (**self).query(name, config)
+    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
+        (**self).query(name)
     }
 }
 

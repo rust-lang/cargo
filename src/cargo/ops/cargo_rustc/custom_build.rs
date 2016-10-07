@@ -413,7 +413,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
         if !unit.target.is_custom_build() && unit.pkg.has_custom_build() {
             add_to_link(&mut ret, unit.pkg.package_id(), unit.kind);
         }
-        for unit in try!(cx.dep_targets(unit, cx.config)).iter() {
+        for unit in try!(cx.dep_targets(unit)).iter() {
             let dep_scripts = try!(build(out, cx, unit));
 
             if unit.target.for_host() {

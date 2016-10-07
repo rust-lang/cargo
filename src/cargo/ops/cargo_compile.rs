@@ -190,7 +190,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     };
 
     let to_builds = try!(pkgids.iter().map(|id| {
-        packages.get(id, config)
+        packages.get(id)
     }).collect::<CargoResult<Vec<_>>>());
 
     let mut general_targets = Vec::new();

@@ -323,12 +323,12 @@ impl<'a> Key<'a> {
     fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>)
                           -> CargoResult<Vec<Key<'a>>> {
         let unit = Unit {
-            pkg: try!(cx.get_package(self.pkg, cx.config)),
+            pkg: try!(cx.get_package(self.pkg)),
             target: self.target,
             profile: self.profile,
             kind: self.kind,
         };
-        let targets = try!(cx.dep_targets(&unit, cx.config));
+        let targets = try!(cx.dep_targets(&unit));
         Ok(targets.iter().filter_map(|unit| {
             // Binaries aren't actually needed to *compile* tests, just to run
             // them, so we don't include this dependency edge in the job graph.
