@@ -35,7 +35,6 @@ $(function() {
             var toggles = $('button.dropdown.active, a.dropdown.active');
             toggles.toggleClass('active').siblings('ul').toggleClass('open');
 
-            return false;
         }
     });
 });
