@@ -1,19 +1,31 @@
 environment:
   CFG_DISABLE_CROSS_TESTS: 1
   matrix:
-  - MSVC: 1
+  - TARGET: i686-pc-windows-msvc
+    MSVC: 1
     BITS: 32
-    TARGET: i686-pc-windows-msvc
     ARCH: x86
-  - MSVC: 1
+  - TARGET: x86_64-pc-windows-msvc
+    MSVC: 1
     BITS: 64
-    TARGET: x86_64-pc-windows-msvc
     ARCH: amd64
+  - TARGET: x86_64-pc-windows-gnu
+    ARCH: amd64
+    BITS: 64
+  - TARGET: i686-pc-windows-gnu
+    ARCH: x86
+    BITS: 32
+    MINGW_ARCHIVE: i686-4.9.2-release-win32-dwarf-rt_v4-rev4.7z
+    MINGW_URL: https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/4.9.2/threads-win32/dwarf/i686-4.9.2-release-win32-dwarf-rt_v4-rev4.7z/download
+    MINGW_DIR: mingw32
 
 install:
+  - IF "%MSVC%"=="" set PATH=C:\msys64\mingw%BITS%\bin;C:\msys64\usr\bin;%PATH%
+  - if defined MINGW_ARCHIVE appveyor DownloadFile "%MINGW_URL%" -FileName "%MINGW_ARCHIVE%"
+  - if defined MINGW_ARCHIVE 7z x -y "%MINGW_ARCHIVE%" > nul
+  - if defined MINGW_ARCHIVE set PATH=%CD%\%MINGW_DIR%\bin;C:\msys64\usr\bin;%PATH%
   - python src/etc/install-deps.py
   - python src/etc/dl-snapshot.py %TARGET%
-  - call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" %ARCH%
   - SET PATH=%PATH%;%cd%/rustc/bin
   - SET PATH=%PATH%;%cd%/target/snapshot/bin
   - rustc -V
@@ -23,7 +35,3 @@ build: false
 
 test_script:
   - cargo test
-
-branches:
-  only:
-    - master
