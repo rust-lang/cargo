@@ -28,21 +28,9 @@ env:
 
 matrix:
   include:
-    # OSX 32 and 64 for stable, beta, nightly
+    # OSX is only 32 and 64 stable
     - os: osx
       rust: stable
-      before_install:
-        - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
-        - export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
-      env: TARGET=x86_64-apple-darwin
-    - os: osx
-      rust: beta
-      before_install:
-        - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
-        - export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
-      env: TARGET=x86_64-apple-darwin
-    - os: osx
-      rust: nightly
       before_install:
         - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
         - export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
@@ -53,32 +41,16 @@ matrix:
         - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
         - export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
       env: TARGET=i686-apple-darwin
-    - os: osx
-      rust: beta
-      before_install:
-        - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
-        - export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
-      env: TARGET=i686-apple-darwin
-    - os: osx
-      rust: nightly
-      before_install:
-        - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
-        - export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
-      env: TARGET=i686-apple-darwin
-    # Linux 32 & 64 for stable, beta, nightly
+    # Linux tests stable on 32 and stable,beta,nightly on 64
     - env: TARGET=x86_64-unknown-linux-gnu
       rust: stable
     - env: TARGET=i686-unknown-linux-gnu
       rust: stable
     - env: TARGET=x86_64-unknown-linux-gnu
       rust: beta
-    - env: TARGET=i686-unknown-linux-gnu
-      rust: beta
     - env: TARGET=x86_64-unknown-linux-gnu
       rust: nightly
-    - env: TARGET=i686-unknown-linux-gnu
-      rust: nightly
-    # Crosses are only 64-bit and on stable
+    # Crosses test only on stable
     - env: TARGET=arm-unknown-linux-gnueabi
       rust: stable
     - env: TARGET=arm-unknown-linux-gnueabihf
