@@ -9,11 +9,10 @@ use term::color::YELLOW;
 
 use core::{PackageId, Target, Profile};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
-use util::{CargoResult, profile, internal};
+use util::{CargoResult, ProcessBuilder, profile, internal};
 
 use super::{Context, Kind, Unit};
 use super::job::Job;
-use super::command::CommandPrototype;
 
 /// A management structure of the entire dependency graph to compile.
 ///
@@ -64,7 +63,7 @@ enum Message {
 }
 
 impl<'a> JobState<'a> {
-    pub fn running(&self, cmd: &CommandPrototype) {
+    pub fn running(&self, cmd: &ProcessBuilder) {
         let _ = self.tx.send((self.key, Message::Run(cmd.to_string())));
     }
 
