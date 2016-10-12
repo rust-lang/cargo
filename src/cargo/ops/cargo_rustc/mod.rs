@@ -10,19 +10,17 @@ use rustc_serialize::json;
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::shell::ColorConfig;
-use util::{self, CargoResult, human, machine_message};
+use util::{self, CargoResult, ProcessBuilder, human, machine_message};
 use util::{Config, internal, ChainError, profile, join_paths, short_hash};
 
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
 
-pub use self::compilation::Compilation;
+pub use self::compilation::{Compilation, CommandType};
 pub use self::context::{Context, Unit};
-pub use self::command::{CommandPrototype, CommandType};
 pub use self::layout::{Layout, LayoutProxy};
 pub use self::custom_build::{BuildOutput, BuildMap, BuildScripts};
 
-mod command;
 mod compilation;
 mod context;
 mod custom_build;
@@ -270,9 +268,8 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         }
 
         state.running(&rustc);
-        let process_builder = rustc.into_process_builder();
         try!(if json_errors {
-            process_builder.exec_with_streaming(
+            rustc.exec_with_streaming(
                 &mut |line| if !line.is_empty() {
                     Err(internal(&format!("compiler stdout is not empty: `{}`", line)))
                 } else {
@@ -293,7 +290,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                 },
             ).map(|_| ())
         } else {
-            process_builder.exec()
+            rustc.exec()
         }.chain_error(|| {
             human(format!("Could not compile `{}`.", name))
         }));
@@ -359,7 +356,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
 
     // Add all relevant -L and -l flags from dependencies (now calculated and
     // present in `state`) to the command provided
-    fn add_native_deps(rustc: &mut CommandPrototype,
+    fn add_native_deps(rustc: &mut ProcessBuilder,
                        build_state: &BuildMap,
                        build_scripts: &BuildScripts,
                        pass_l_flag: bool,
@@ -394,7 +391,7 @@ fn load_build_deps(cx: &Context, unit: &Unit) -> Option<Arc<BuildScripts>> {
 // For all plugin dependencies, add their -L paths (now calculated and
 // present in `state`) to the dynamic library load path for the command to
 // execute.
-fn add_plugin_deps(rustc: &mut CommandPrototype,
+fn add_plugin_deps(rustc: &mut ProcessBuilder,
                    build_state: &BuildMap,
                    build_scripts: &BuildScripts)
                    -> CargoResult<()> {
@@ -417,7 +414,7 @@ fn add_plugin_deps(rustc: &mut CommandPrototype,
 
 fn prepare_rustc(cx: &Context,
                  crate_types: Vec<&str>,
-                 unit: &Unit) -> CargoResult<CommandPrototype> {
+                 unit: &Unit) -> CargoResult<ProcessBuilder> {
     let mut base = try!(process(CommandType::Rustc, unit.pkg, cx));
     build_base_args(cx, &mut base, unit, &crate_types);
     build_plugin_args(&mut base, cx, unit);
@@ -474,7 +471,7 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
             }
         }
         state.running(&rustdoc);
-        rustdoc.into_process_builder().exec().chain_error(|| {
+        rustdoc.exec().chain_error(|| {
             human(format!("Could not document `{}`.", name))
         })
     }))
@@ -502,7 +499,7 @@ fn root_path(cx: &Context, unit: &Unit) -> PathBuf {
 }
 
 fn build_base_args(cx: &Context,
-                   cmd: &mut CommandPrototype,
+                   cmd: &mut ProcessBuilder,
                    unit: &Unit,
                    crate_types: &[&str]) {
     let Profile {
@@ -616,8 +613,8 @@ fn build_base_args(cx: &Context,
 }
 
 
-fn build_plugin_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit) {
-    fn opt(cmd: &mut CommandPrototype, key: &str, prefix: &str,
+fn build_plugin_args(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit) {
+    fn opt(cmd: &mut ProcessBuilder, key: &str, prefix: &str,
            val: Option<&OsStr>)  {
         if let Some(val) = val {
             let mut joined = OsString::from(prefix);
@@ -637,7 +634,7 @@ fn build_plugin_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit) {
     opt(cmd, "-C", "linker=", cx.linker(unit.kind).map(|s| s.as_ref()));
 }
 
-fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
+fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
                    -> CargoResult<()> {
     let layout = cx.layout(unit);
     cmd.arg("-L").arg(&{
@@ -658,7 +655,7 @@ fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
 
     return Ok(());
 
-    fn link_to(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
+    fn link_to(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
                -> CargoResult<()> {
         for (filename, linkable) in try!(cx.target_filenames(unit)) {
             if !linkable {
@@ -677,7 +674,7 @@ fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
 }
 
 pub fn process(cmd: CommandType, pkg: &Package,
-               cx: &Context) -> CargoResult<CommandPrototype> {
+               cx: &Context) -> CargoResult<ProcessBuilder> {
     // When invoking a tool, we need the *host* deps directory in the dynamic
     // library search path for plugins and such which have dynamic dependencies.
     let mut search_path = util::dylib_path();
