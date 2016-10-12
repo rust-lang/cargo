@@ -10,7 +10,7 @@ use util::{internal, ChainError, profile, paths};
 
 use super::job::Work;
 use super::{fingerprint, Kind, Context, Unit};
-use super::CommandType;
+use super::compilation::CommandType;
 
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug, Hash)]
@@ -98,30 +98,30 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // package's library profile.
     let profile = cx.lib_profile(unit.pkg.package_id());
     let to_exec = to_exec.into_os_string();
-    let mut p = try!(super::process(CommandType::Host(to_exec), unit.pkg, cx));
-    p.env("OUT_DIR", &build_output)
-     .env("CARGO_MANIFEST_DIR", unit.pkg.root())
-     .env("NUM_JOBS", &cx.jobs().to_string())
-     .env("TARGET", &match unit.kind {
-         Kind::Host => cx.host_triple(),
-         Kind::Target => cx.target_triple(),
-     })
-     .env("DEBUG", &profile.debuginfo.to_string())
-     .env("OPT_LEVEL", &profile.opt_level)
-     .env("PROFILE", if cx.build_config.release {"release"} else {"debug"})
-     .env("HOST", cx.host_triple())
-     .env("RUSTC", &try!(cx.config.rustc()).path)
-     .env("RUSTDOC", &*try!(cx.config.rustdoc()));
+    let mut cmd = try!(super::process(CommandType::Host(to_exec), unit.pkg, cx));
+    cmd.env("OUT_DIR", &build_output)
+       .env("CARGO_MANIFEST_DIR", unit.pkg.root())
+       .env("NUM_JOBS", &cx.jobs().to_string())
+       .env("TARGET", &match unit.kind {
+           Kind::Host => cx.host_triple(),
+           Kind::Target => cx.target_triple(),
+       })
+       .env("DEBUG", &profile.debuginfo.to_string())
+       .env("OPT_LEVEL", &profile.opt_level)
+       .env("PROFILE", if cx.build_config.release { "release" } else { "debug" })
+       .env("HOST", cx.host_triple())
+       .env("RUSTC", &try!(cx.config.rustc()).path)
+       .env("RUSTDOC", &*try!(cx.config.rustdoc()));
 
-     if let Some(links) = unit.pkg.manifest().links(){
-        p.env("CARGO_MANIFEST_LINKS", links);
-     }
+    if let Some(links) = unit.pkg.manifest().links() {
+        cmd.env("CARGO_MANIFEST_LINKS", links);
+    }
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
     if let Some(features) = cx.resolve.features(unit.pkg.package_id()) {
         for feat in features.iter() {
-            p.env(&format!("CARGO_FEATURE_{}", super::envify(feat)), "1");
+            cmd.env(&format!("CARGO_FEATURE_{}", super::envify(feat)), "1");
         }
     }
 
@@ -192,19 +192,18 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                 }));
                 let data = &state.metadata;
                 for &(ref key, ref value) in data.iter() {
-                    p.env(&format!("DEP_{}_{}", super::envify(&name),
-                                   super::envify(key)), value);
+                    cmd.env(&format!("DEP_{}_{}", super::envify(&name),
+                                     super::envify(key)), value);
                 }
             }
             if let Some(build_scripts) = build_scripts {
-                try!(super::add_plugin_deps(&mut p, &build_state,
+                try!(super::add_plugin_deps(&mut cmd, &build_state,
                                             &build_scripts));
             }
         }
 
         // And now finally, run the build command itself!
-        state.running(&p);
-        let cmd = p.into_process_builder();
+        state.running(&cmd);
         let output = try!(cmd.exec_with_streaming(
             &mut |out_line| { state.stdout(out_line); Ok(()) },
             &mut |err_line| { state.stderr(err_line); Ok(()) },

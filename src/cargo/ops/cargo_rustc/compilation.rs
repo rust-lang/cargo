@@ -1,12 +1,10 @@
 use std::collections::{HashMap, HashSet};
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 use semver::Version;
 
 use core::{PackageId, Package, Target};
-use util::{self, CargoResult, Config};
-
-use super::{CommandType, CommandPrototype};
+use util::{self, CargoResult, Config, ProcessBuilder, process};
 
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
@@ -49,6 +47,18 @@ pub struct Compilation<'cfg> {
     config: &'cfg Config,
 }
 
+#[derive(Clone, Debug)]
+pub enum CommandType {
+    Rustc,
+    Rustdoc,
+
+    /// The command is to be executed for the target architecture.
+    Target(OsString),
+
+    /// The command is to be executed for the host architecture.
+    Host(OsString),
+}
+
 impl<'cfg> Compilation<'cfg> {
     pub fn new(config: &'cfg Config) -> Compilation<'cfg> {
         Compilation {
@@ -67,25 +77,25 @@ impl<'cfg> Compilation<'cfg> {
     }
 
     /// See `process`.
-    pub fn rustc_process(&self, pkg: &Package) -> CargoResult<CommandPrototype> {
+    pub fn rustc_process(&self, pkg: &Package) -> CargoResult<ProcessBuilder> {
         self.process(CommandType::Rustc, pkg)
     }
 
     /// See `process`.
     pub fn rustdoc_process(&self, pkg: &Package)
-                           -> CargoResult<CommandPrototype> {
+                           -> CargoResult<ProcessBuilder> {
         self.process(CommandType::Rustdoc, pkg)
     }
 
     /// See `process`.
     pub fn target_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
-                                               -> CargoResult<CommandPrototype> {
+                                           -> CargoResult<ProcessBuilder> {
         self.process(CommandType::Target(cmd.as_ref().to_os_string()), pkg)
     }
 
     /// See `process`.
     pub fn host_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
-                                             -> CargoResult<CommandPrototype> {
+                                         -> CargoResult<ProcessBuilder> {
         self.process(CommandType::Host(cmd.as_ref().to_os_string()), pkg)
     }
 
@@ -95,7 +105,7 @@ impl<'cfg> Compilation<'cfg> {
     /// The package argument is also used to configure environment variables as
     /// well as the working directory of the child process.
     pub fn process(&self, cmd: CommandType, pkg: &Package)
-                   -> CargoResult<CommandPrototype> {
+                   -> CargoResult<ProcessBuilder> {
         let mut search_path = vec![];
 
         // Add -L arguments, after stripping off prefixes like "native=" or "framework=".
@@ -121,7 +131,12 @@ impl<'cfg> Compilation<'cfg> {
         search_path.extend(util::dylib_path().into_iter());
         let search_path = try!(util::join_paths(&search_path,
                                                 util::dylib_path_envvar()));
-        let mut cmd = try!(CommandPrototype::new(cmd, self.config));
+        let mut cmd = match cmd {
+            CommandType::Rustc => try!(self.config.rustc()).process(),
+            CommandType::Rustdoc => process(&*try!(self.config.rustdoc())),
+            CommandType::Target(ref s) |
+            CommandType::Host(ref s) => process(s),
+        };
         cmd.env(util::dylib_path_envvar(), &search_path);
         if let Some(env) = self.extra_env.get(pkg.package_id()) {
             for &(ref k, ref v) in env {
