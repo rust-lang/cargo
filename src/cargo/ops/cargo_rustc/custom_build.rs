@@ -10,7 +10,6 @@ use util::{internal, ChainError, profile, paths};
 
 use super::job::Work;
 use super::{fingerprint, Kind, Context, Unit};
-use super::compilation::CommandType;
 
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug, Hash)]
@@ -98,7 +97,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // package's library profile.
     let profile = cx.lib_profile(unit.pkg.package_id());
     let to_exec = to_exec.into_os_string();
-    let mut cmd = try!(super::process(CommandType::Host(to_exec), unit.pkg, cx));
+    let mut cmd = try!(cx.compilation.host_process(to_exec, unit.pkg));
     cmd.env("OUT_DIR", &build_output)
        .env("CARGO_MANIFEST_DIR", unit.pkg.root())
        .env("NUM_JOBS", &cx.jobs().to_string())

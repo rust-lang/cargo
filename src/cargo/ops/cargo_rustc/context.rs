@@ -110,6 +110,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => {}
         }
 
+        self.compilation.plugins_dylib_path = self.host.deps().to_path_buf();
+
         let layout = self.target.as_ref().unwrap_or(&self.host);
         self.compilation.root_output = layout.dest().to_path_buf();
         self.compilation.deps_output = layout.deps().to_path_buf();
@@ -278,11 +280,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                                  .unwrap_or(&self.host),
                                              primary),
         }
-    }
-
-    /// Returns the path for plugin/dylib dependencies
-    pub fn host_dylib_path(&self) -> &Path {
-        self.host.deps()
     }
 
     /// Returns the appropriate output directory for the specified package and
