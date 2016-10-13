@@ -128,7 +128,7 @@ fn run_doc_tests(options: &TestOptions,
     for (package, tests) in libs {
         for (lib, name, crate_name) in tests {
             try!(config.shell().status("Doc-tests", name));
-            let mut p = try!(compilation.rustdoc_process(package));
+            let mut p = try!(compilation.rustdoc_process(package, None));
             p.arg("--test").arg(lib)
              .arg("--crate-name").arg(&crate_name);
 
