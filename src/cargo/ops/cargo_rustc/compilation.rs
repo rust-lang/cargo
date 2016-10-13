@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use semver::Version;
 
 use core::{PackageId, Package, Target};
@@ -33,6 +33,10 @@ pub struct Compilation<'cfg> {
     /// Output directory for rust dependencies
     pub deps_output: PathBuf,
 
+    /// Library search path for compiler plugins and build scripts
+    /// which have dynamic dependencies.
+    pub plugins_dylib_path: PathBuf,
+
     /// Extra environment variables that were passed to compilations and should
     /// be passed to future invocations of programs.
     pub extra_env: HashMap<PackageId, Vec<(String, String)>>,
@@ -54,6 +58,7 @@ impl<'cfg> Compilation<'cfg> {
             native_dirs: HashSet::new(),  // TODO: deprecated, remove
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
+            plugins_dylib_path: PathBuf::from("/"),
             tests: Vec::new(),
             binaries: Vec::new(),
             extra_env: HashMap::new(),
@@ -65,27 +70,25 @@ impl<'cfg> Compilation<'cfg> {
     }
 
     /// See `process`.
-    pub fn rustc_process(&self, pkg: &Package, host_dylib_path: &Path)
-                         -> CargoResult<ProcessBuilder> {
-        self.fill_env(try!(self.config.rustc()).process(), pkg, Some(host_dylib_path))
+    pub fn rustc_process(&self, pkg: &Package) -> CargoResult<ProcessBuilder> {
+        self.fill_env(try!(self.config.rustc()).process(), pkg, true)
     }
 
     /// See `process`.
-    pub fn rustdoc_process(&self, pkg: &Package, host_dylib_path: Option<&Path>)
-                           -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(&*try!(self.config.rustdoc())), pkg, host_dylib_path)
+    pub fn rustdoc_process(&self, pkg: &Package) -> CargoResult<ProcessBuilder> {
+        self.fill_env(process(&*try!(self.config.rustdoc())), pkg, true)
+    }
+
+    /// See `process`.
+    pub fn host_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
+                                         -> CargoResult<ProcessBuilder> {
+        self.fill_env(process(cmd), pkg, true)
     }
 
     /// See `process`.
     pub fn target_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
                                            -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(cmd), pkg, None)
-    }
-
-    /// See `process`.
-    pub fn host_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package, host_dylib_path: &Path)
-                                         -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(cmd), pkg, Some(host_dylib_path))
+        self.fill_env(process(cmd), pkg, false)
     }
 
     /// Prepares a new process with an appropriate environment to run against
@@ -93,13 +96,11 @@ impl<'cfg> Compilation<'cfg> {
     ///
     /// The package argument is also used to configure environment variables as
     /// well as the working directory of the child process.
-    fn fill_env(&self, mut cmd: ProcessBuilder, pkg: &Package, host_dylib_path: Option<&Path>)
+    fn fill_env(&self, mut cmd: ProcessBuilder, pkg: &Package, is_host: bool)
                 -> CargoResult<ProcessBuilder> {
 
-        let mut search_path = if let Some(host_dylib_path) = host_dylib_path {
-            // When invoking a tool, we need the *host* deps directory in the dynamic
-            // library search path for plugins and such which have dynamic dependencies.
-            vec![host_dylib_path.to_path_buf()]
+        let mut search_path = if is_host {
+            vec![self.plugins_dylib_path.clone()]
         } else {
             let mut search_path = vec![];
 
