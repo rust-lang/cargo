@@ -16,7 +16,7 @@ use util::{Config, internal, ChainError, profile, join_paths, short_hash};
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
 
-pub use self::compilation::{Compilation, CommandType};
+pub use self::compilation::Compilation;
 pub use self::context::{Context, Unit};
 pub use self::layout::{Layout, LayoutProxy};
 pub use self::custom_build::{BuildOutput, BuildMap, BuildScripts};
@@ -415,7 +415,7 @@ fn add_plugin_deps(rustc: &mut ProcessBuilder,
 fn prepare_rustc(cx: &Context,
                  crate_types: Vec<&str>,
                  unit: &Unit) -> CargoResult<ProcessBuilder> {
-    let mut base = try!(process(CommandType::Rustc, unit.pkg, cx));
+    let mut base = try!(cx.compilation.rustc_process(unit.pkg));
     build_base_args(cx, &mut base, unit, &crate_types);
     build_plugin_args(&mut base, cx, unit);
     try!(build_deps_args(&mut base, cx, unit));
@@ -424,7 +424,7 @@ fn prepare_rustc(cx: &Context,
 
 
 fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
-    let mut rustdoc = try!(process(CommandType::Rustdoc, unit.pkg, cx));
+    let mut rustdoc = try!(cx.compilation.rustdoc_process(unit.pkg));
     rustdoc.arg(&root_path(cx, unit))
            .cwd(cx.config.cwd())
            .arg("--crate-name").arg(&unit.target.crate_name());
@@ -671,21 +671,6 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
         }
         Ok(())
     }
-}
-
-pub fn process(cmd: CommandType, pkg: &Package,
-               cx: &Context) -> CargoResult<ProcessBuilder> {
-    // When invoking a tool, we need the *host* deps directory in the dynamic
-    // library search path for plugins and such which have dynamic dependencies.
-    let mut search_path = util::dylib_path();
-    search_path.push(cx.host_dylib_path().to_path_buf());
-
-    // We want to use the same environment and such as normal processes, but we
-    // want to override the dylib search path with the one we just calculated.
-    let search_path = try!(join_paths(&search_path, util::dylib_path_envvar()));
-    let mut cmd = try!(cx.compilation.process(cmd, pkg));
-    cmd.env(util::dylib_path_envvar(), &search_path);
-    Ok(cmd)
 }
 
 fn envify(s: &str) -> String {
