@@ -415,7 +415,7 @@ fn add_plugin_deps(rustc: &mut ProcessBuilder,
 fn prepare_rustc(cx: &Context,
                  crate_types: Vec<&str>,
                  unit: &Unit) -> CargoResult<ProcessBuilder> {
-    let mut base = try!(cx.compilation.rustc_process(unit.pkg, cx.host_dylib_path()));
+    let mut base = try!(cx.compilation.rustc_process(unit.pkg));
     build_base_args(cx, &mut base, unit, &crate_types);
     build_plugin_args(&mut base, cx, unit);
     try!(build_deps_args(&mut base, cx, unit));
@@ -424,7 +424,7 @@ fn prepare_rustc(cx: &Context,
 
 
 fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
-    let mut rustdoc = try!(cx.compilation.rustdoc_process(unit.pkg, Some(cx.host_dylib_path())));
+    let mut rustdoc = try!(cx.compilation.rustdoc_process(unit.pkg));
     rustdoc.arg(&root_path(cx, unit))
            .cwd(cx.config.cwd())
            .arg("--crate-name").arg(&unit.target.crate_name());

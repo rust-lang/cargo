@@ -97,7 +97,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // package's library profile.
     let profile = cx.lib_profile(unit.pkg.package_id());
     let to_exec = to_exec.into_os_string();
-    let mut cmd = try!(cx.compilation.host_process(to_exec, unit.pkg, cx.host_dylib_path()));
+    let mut cmd = try!(cx.compilation.host_process(to_exec, unit.pkg));
     cmd.env("OUT_DIR", &build_output)
        .env("CARGO_MANIFEST_DIR", unit.pkg.root())
        .env("NUM_JOBS", &cx.jobs().to_string())
