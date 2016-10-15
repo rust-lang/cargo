@@ -306,7 +306,7 @@ fn acquire(config: &Config,
             let mut buf: libc::statfs = mem::zeroed();
             let r = libc::statfs(path.as_ptr(), &mut buf);
 
-            r == 0 && buf.f_type == libc::NFS_SUPER_MAGIC
+            r == 0 && buf.f_type as u32 == libc::NFS_SUPER_MAGIC as u32
         }
     }
 
