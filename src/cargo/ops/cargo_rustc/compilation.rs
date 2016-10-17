@@ -76,7 +76,7 @@ impl<'cfg> Compilation<'cfg> {
 
     /// See `process`.
     pub fn rustdoc_process(&self, pkg: &Package) -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(&*try!(self.config.rustdoc())), pkg, true)
+        self.fill_env(process(&*try!(self.config.rustdoc())), pkg, false)
     }
 
     /// See `process`.
