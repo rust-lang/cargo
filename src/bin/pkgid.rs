@@ -11,6 +11,7 @@ pub struct Options {
     flag_manifest_path: Option<String>,
     flag_frozen: bool,
     flag_locked: bool,
+    flag_package: Option<String>,
     arg_spec: Option<String>,
 }
 
@@ -22,6 +23,7 @@ Usage:
 
 Options:
     -h, --help               Print this message
+    -p SPEC, --package SPEC  Argument to get the package id specifier for
     --manifest-path PATH     Path to the manifest to the package to clean
     -v, --verbose ...        Use verbose output
     -q, --quiet              No output printed to stdout
@@ -60,7 +62,14 @@ pub fn execute(options: Options,
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path.clone(), config.cwd()));
     let ws = try!(Workspace::new(&root, config));
 
-    let spec = options.arg_spec.as_ref().map(|s| &s[..]);
+    let spec = if options.arg_spec.is_some() {
+        options.arg_spec
+    } else if options.flag_package.is_some() {
+        options.flag_package
+    } else {
+        None
+    };
+    let spec = spec.as_ref().map(|s| &s[..]);
     let spec = try!(ops::pkgid(&ws, spec));
     println!("{}", spec);
     Ok(None)
