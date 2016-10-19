@@ -123,21 +123,13 @@ impl<'cfg> Registry for GitSource<'cfg> {
 
 impl<'cfg> Source for GitSource<'cfg> {
     fn update(&mut self) -> CargoResult<()> {
-        let lock = try!(self.config.lock_git());
+        let lock = try!(self.config.git_path()
+            .open_rw(".cargo-lock-git", self.config, "the git checkouts"));
 
         let db_path = lock.parent().join("db").join(&self.ident);
 
-        let reference_path = match self.source_id.git_reference() {
-            Some(&GitReference::Branch(ref s)) |
-            Some(&GitReference::Tag(ref s)) |
-            Some(&GitReference::Rev(ref s)) => s,
-            None => panic!("not a git source"),
-        };
-        let checkout_path = lock.parent().join("checkouts")
-            .join(&self.ident).join(reference_path);
-
         // Resolve our reference to an actual revision, and check if the
-        // databaes already has that revision. If it does, we just load a
+        // database already has that revision. If it does, we just load a
         // database pinned at that revision, and if we don't we issue an update
         // to try to find the revision.
         let actual_rev = self.remote.rev_for(&db_path, &self.reference);
@@ -157,9 +149,14 @@ impl<'cfg> Source for GitSource<'cfg> {
             (try!(self.remote.db_at(&db_path)), actual_rev.unwrap())
         };
 
+        let checkout_path = lock.parent().join("checkouts")
+            .join(&self.ident).join(actual_rev.to_string());
+
         // Copy the database to the checkout location. After this we could drop
         // the lock on the database as we no longer needed it, but we leave it
         // in scope so the destructors here won't tamper with too much.
+        // Checkout is immutable, so we don't need to protect it with a lock once
+        // it is created.
         try!(repo.copy_to(actual_rev.clone(), &checkout_path, &self.config));
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
@@ -167,9 +164,6 @@ impl<'cfg> Source for GitSource<'cfg> {
                                                     &source_id,
                                                     self.config);
 
-        // Cache the information we just learned, and crucially also cache the
-        // lock on the checkout location. We wouldn't want someone else to come
-        // swipe our checkout location to another revision while we're using it!
         self.path_source = Some(path_source);
         self.rev = Some(actual_rev);
         self.path_source.as_mut().unwrap().update()
