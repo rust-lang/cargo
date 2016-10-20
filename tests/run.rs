@@ -126,14 +126,18 @@ fn exit_code() {
             fn main() { std::process::exit(2); }
         "#);
 
-    assert_that(p.cargo_process("run"),
-                execs().with_status(2)
-                       .with_stderr("\
+    let mut output = String::from("\
 [COMPILING] foo v0.0.1 (file[..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
+");
+    if !cfg!(unix) {
+        output.push_str("\
 [ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
-"));
+");
+    }
+    assert_that(p.cargo_process("run"),
+                execs().with_status(2).with_stderr(output));
 }
 
 #[test]
@@ -149,15 +153,20 @@ fn exit_code_verbose() {
             fn main() { std::process::exit(2); }
         "#);
 
-    assert_that(p.cargo_process("run").arg("-v"),
-                execs().with_status(2)
-                       .with_stderr("\
+    let mut output = String::from("\
 [COMPILING] foo v0.0.1 (file[..])
 [RUNNING] `rustc [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
+");
+    if !cfg!(unix) {
+        output.push_str("\
 [ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
-"));
+");
+    }
+
+    assert_that(p.cargo_process("run").arg("-v"),
+                execs().with_status(2).with_stderr(output));
 }
 
 #[test]
