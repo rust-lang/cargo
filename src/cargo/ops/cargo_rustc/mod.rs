@@ -557,7 +557,9 @@ fn build_base_args(cx: &mut Context,
     let prefer_dynamic = (unit.target.for_host() &&
                           !unit.target.is_custom_build()) ||
                          (crate_types.contains(&"dylib") &&
-                          unit.pkg.package_id() != &cx.current_package);
+                          cx.current_package.as_ref().map_or(false, |p| {
+                              *p != *unit.pkg.package_id()
+                          }));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
