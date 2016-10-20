@@ -89,6 +89,22 @@ impl ProcessBuilder {
         }
     }
 
+    #[cfg(unix)]
+    pub fn exec_replace(&self) -> Result<(), ProcessError> {
+        use std::os::unix::process::CommandExt;
+
+        let mut command = self.build_command();
+        let error = command.exec();
+        Err(process_error(&format!("could not execute process `{}`",
+                                   self.debug_string()),
+                          Some(Box::new(error)), None, None))
+    }
+
+    #[cfg(windows)]
+    pub fn exec_replace(&self) -> Result<(), ProcessError> {
+        self.exec()
+    }
+
     pub fn exec_with_output(&self) -> Result<Output, ProcessError> {
         let mut command = self.build_command();
 

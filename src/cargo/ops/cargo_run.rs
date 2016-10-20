@@ -52,5 +52,5 @@ pub fn run(ws: &Workspace,
     process.args(args).cwd(config.cwd());
 
     try!(config.shell().status("Running", process.to_string()));
-    Ok(process.exec().err())
+    Ok(process.exec_replace().err())
 }
