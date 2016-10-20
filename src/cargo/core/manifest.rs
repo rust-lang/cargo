@@ -185,7 +185,8 @@ impl Encodable for Target {
 }
 
 impl Manifest {
-    pub fn new(summary: Summary, targets: Vec<Target>,
+    pub fn new(summary: Summary,
+               targets: Vec<Target>,
                exclude: Vec<String>,
                include: Vec<String>,
                links: Option<String>,
