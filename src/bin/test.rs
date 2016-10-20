@@ -1,7 +1,7 @@
 use cargo::core::Workspace;
-use cargo::ops::{self, MessageFormat};
+use cargo::ops::{self, MessageFormat, Packages};
 use cargo::util::{CliResult, CliError, Human, human, Config};
-use cargo::util::important_paths::{find_root_manifest_for_wd};
+use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -28,6 +28,7 @@ pub struct Options {
     flag_no_fail_fast: bool,
     flag_frozen: bool,
     flag_locked: bool,
+    flag_all: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -46,6 +47,7 @@ Options:
     --bench NAME                 Test only the specified benchmark target
     --no-run                     Compile, but don't run tests
     -p SPEC, --package SPEC ...  Package to run tests for
+    --all                        Test all packages in the workspace
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --release                    Build artifacts in release mode, with optimizations
     --features FEATURES          Space-separated list of features to also build
@@ -71,6 +73,9 @@ If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be tested. If it is not given, then the
 current package is tested. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
+
+All packages in the workspace are tested if the `--all` flag is supplied. The
+`--all` flag may be supplied in the presence of a virtual manifest.
 
 The --jobs argument affects the building of the test executable but does
 not affect how many jobs are used when running the tests.
@@ -111,6 +116,12 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                          &options.flag_bench);
     }
 
+    let spec = if options.flag_all {
+        Packages::All
+    } else {
+        Packages::Packages(&options.flag_package)
+    };
+
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
         no_fail_fast: options.flag_no_fail_fast,
@@ -122,7 +133,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             features: &options.flag_features,
             all_features: options.flag_all_features,
             no_default_features: options.flag_no_default_features,
-            spec: &options.flag_package,
+            spec: spec,
             release: options.flag_release,
             mode: mode,
             filter: filter,
@@ -139,7 +150,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
                 Some(i) => CliError::new(human("test failed"), i),
-                None => CliError::new(Box::new(Human(err)), 101)
+                None => CliError::new(Box::new(Human(err)), 101),
             })
         }
     }

@@ -22,6 +22,7 @@
 //!       previously compiled dependency
 //!
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -47,8 +48,8 @@ pub struct CompileOptions<'a> {
     pub all_features: bool,
     /// Flag if the default feature should be built for the root package
     pub no_default_features: bool,
-    /// Root package to build (if None it's the current one)
-    pub spec: &'a [String],
+    /// Root package to build (if empty it's the current one)
+    pub spec: Packages<'a>,
     /// Filter to apply to the root package to select which targets will be
     /// built.
     pub filter: CompileFilter<'a>,
@@ -79,6 +80,12 @@ pub enum MessageFormat {
     Json
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Packages<'a> {
+    All,
+    Packages(&'a [String]),
+}
+
 pub enum CompileFilter<'a> {
     Everything,
     Only {
@@ -92,8 +99,10 @@ pub enum CompileFilter<'a> {
 
 pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
                    -> CargoResult<ops::Compilation<'a>> {
-    for key in ws.current()?.manifest().warnings().iter() {
-        options.config.shell().warn(key)?
+    if let Some(root_package) = ws.current_opt() {
+        for key in root_package.manifest().warnings().iter() {
+            options.config.shell().warn(key)?
+        }
     }
     compile_ws(ws, None, options)
 }
@@ -112,8 +121,9 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
     let mut registry = PackageRegistry::new(ws.config())?;
 
     if let Some(source) = source {
-        registry.add_preloaded(ws.current()?.package_id().source_id(),
-                               source);
+        if let Some(root_package) = ws.current_opt() {
+            registry.add_preloaded(root_package.package_id().source_id(), source);
+        }
     }
 
     // First, resolve the root_package's *listed* dependencies, as well as
@@ -152,7 +162,6 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                       source: Option<Box<Source + 'a>>,
                       options: &CompileOptions<'a>)
                       -> CargoResult<ops::Compilation<'a>> {
-    let root_package = ws.current()?;
     let CompileOptions { config, jobs, target, spec, features,
                          all_features, no_default_features,
                          release, mode, message_format,
@@ -166,8 +175,19 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         bail!("jobs must be at least 1")
     }
 
+    let spec: Cow<'a, [String]> = match spec {
+        Packages::Packages(spec) => spec.into(),
+        Packages::All => ws.members()
+                           .map(|package| {
+                               let package_id = package.package_id();
+                               PackageIdSpec::from_package_id(package_id).to_string()
+                            })
+                           .collect()
+    };
+
     let profiles = ws.profiles();
     if spec.len() == 0 {
+        let root_package = ws.current()?;
         generate_targets(root_package, profiles, mode, filter, release)?;
     }
 
@@ -184,10 +204,11 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
 
     let mut pkgids = Vec::new();
     if spec.len() > 0 {
-        for p in spec {
+        for p in spec.iter() {
             pkgids.push(resolve_with_overrides.query(&p)?);
         }
     } else {
+        let root_package = ws.current()?;
         pkgids.push(root_package.package_id());
     };
 
