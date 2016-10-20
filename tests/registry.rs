@@ -1,9 +1,11 @@
 #[macro_use]
 extern crate cargotest;
 extern crate hamcrest;
+extern crate url;
 
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::path::PathBuf;
 
 use cargotest::cargo_process;
 use cargotest::support::git;
@@ -11,6 +13,10 @@ use cargotest::support::paths::{self, CargoPathExt};
 use cargotest::support::registry::{self, Package};
 use cargotest::support::{project, execs};
 use hamcrest::assert_that;
+use url::Url;
+
+fn registry_path() -> PathBuf { paths::root().join("registry") }
+fn registry() -> Url { Url::from_file_path(&*registry_path()).ok().unwrap() }
 
 #[test]
 fn simple() {
@@ -609,7 +615,9 @@ fn bad_license_file() {
         .file("src/main.rs", r#"
             fn main() {}
         "#);
-    assert_that(p.cargo_process("publish").arg("-v"),
+    assert_that(p.cargo_process("publish")
+                 .arg("-v")
+                 .arg("--host").arg(registry().to_string()),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [ERROR] the license file `foo` does not exist"));
@@ -1339,4 +1347,38 @@ this warning.
 [COMPILING] [..]
 [FINISHED] [..]
 "));
+}
+
+#[test]
+fn toml_lies_but_index_is_truth() {
+    Package::new("foo", "0.2.0").publish();
+    Package::new("bar", "0.3.0")
+            .dep("foo", "0.2.0")
+			.file("Cargo.toml", r#"
+				[project]
+                name = "bar"
+                version = "0.3.0"
+                authors = []
+
+                [dependencies]
+                foo = "0.1.0"
+			"#)
+            .file("src/lib.rs", "extern crate foo;")
+			.publish();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            bar = "0.3"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build").arg("-v"),
+                execs().with_status(0));
 }

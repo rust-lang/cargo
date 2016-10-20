@@ -359,7 +359,19 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         }));
         let mut src = PathSource::new(&path, &self.source_id, self.config);
         try!(src.update());
-        src.download(package)
+        let pkg = try!(src.download(package));
+
+        // Unfortunately the index and the actual Cargo.toml in the index can
+        // differ due to historical Cargo bugs. To paper over these we trash the
+        // *summary* loaded from the Cargo.toml we just downloaded with the one
+        // we loaded from the index.
+        let summaries = try!(self.index.summaries(package.name()));
+        let summary = summaries.iter().map(|s| &s.0).find(|s| {
+            s.package_id() == package
+        }).expect("summary not found");
+        let mut manifest = pkg.manifest().clone();
+        manifest.set_summary(summary.clone());
+        Ok(Package::new(manifest, pkg.manifest_path()))
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
