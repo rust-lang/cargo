@@ -77,6 +77,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     //    to the previously resolved version if the dependency listed
     //    still matches the locked version.
     if let Some(r) = previous {
+        trace!("previous: {:?}", r);
         for node in r.iter().filter(|p| keep(p, to_avoid, &to_avoid_sources)) {
             let deps = r.deps_not_replaced(node)
                         .filter(|p| keep(p, to_avoid, &to_avoid_sources))

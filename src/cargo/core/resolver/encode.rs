@@ -185,8 +185,10 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
     fn build(pkg: &Package,
              config: &Config,
              ret: &mut HashMap<String, SourceId>) {
+        let replace = pkg.manifest().replace();
         let deps = pkg.dependencies()
                       .iter()
+                      .chain(replace.iter().map(|p| &p.1))
                       .filter(|d| !ret.contains_key(d.name()))
                       .map(|d| d.source_id())
                       .filter(|id| id.is_path())
