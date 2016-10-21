@@ -165,6 +165,10 @@ impl<'cfg> PackageRegistry<'cfg> {
     }
 
     pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {
+        trace!("register_lock: {}", id);
+        for dep in deps.iter() {
+            trace!("\t-> {}", dep);
+        }
         let sub_map = self.locked.entry(id.source_id().clone())
                                  .or_insert(HashMap::new());
         let sub_vec = sub_map.entry(id.name().to_string())
@@ -224,12 +228,17 @@ impl<'cfg> PackageRegistry<'cfg> {
             vec.iter().find(|&&(ref id, _)| id == summary.package_id())
         });
 
+        trace!("locking summary of {}", summary.package_id());
+
         // Lock the summary's id if possible
         let summary = match pair {
             Some(&(ref precise, _)) => summary.override_id(precise.clone()),
             None => summary,
         };
         summary.map_dependencies(|dep| {
+            trace!("\t{}/{}/{}", dep.name(), dep.version_req(),
+                   dep.source_id());
+
             // If we've got a known set of overrides for this summary, then
             // one of a few cases can arise:
             //
@@ -252,6 +261,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             if let Some(&(_, ref locked_deps)) = pair {
                 let locked = locked_deps.iter().find(|id| dep.matches_id(id));
                 if let Some(locked) = locked {
+                    trace!("\tfirst hit on {}", locked);
                     return dep.lock_to(locked)
                 }
             }
@@ -265,8 +275,14 @@ impl<'cfg> PackageRegistry<'cfg> {
                 vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
             });
             match v {
-                Some(&(ref id, _)) => dep.lock_to(id),
-                None => dep
+                Some(&(ref id, _)) => {
+                    trace!("\tsecond hit on {}", id);
+                    dep.lock_to(id)
+                }
+                None => {
+                    trace!("\tremaining unlocked");
+                    dep
+                }
             }
         })
     }
