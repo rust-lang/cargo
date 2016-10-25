@@ -2374,3 +2374,15 @@ fn no_warn_about_package_metadata() {
                        .with_stderr("[..] foo v0.0.1 ([..])\n\
                        [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]\n"));
 }
+
+#[test]
+fn cargo_build_empty_target() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo_process("build").arg("--target").arg(""),
+                execs().with_status(101)
+                .with_stderr_contains("[..] target was empty"));
+}

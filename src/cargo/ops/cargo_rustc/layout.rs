@@ -50,7 +50,7 @@ use std::io;
 use std::path::{PathBuf, Path};
 
 use core::{Package, Workspace};
-use util::{Config, FileLock, CargoResult, Filesystem};
+use util::{Config, FileLock, CargoResult, Filesystem, human};
 use util::hex::short_hash;
 use super::Unit;
 
@@ -78,7 +78,8 @@ impl Layout {
         // the target triple as a Path and then just use the file stem as the
         // component for the directory name.
         if let Some(triple) = triple {
-            path.push(Path::new(triple).file_stem().unwrap());
+            path.push(try!(Path::new(triple).file_stem()
+                           .ok_or(human(format!("target was empty")))));
         }
         path.push(dest);
         Layout::at(ws.config(), path)
