@@ -49,9 +49,8 @@ use std::fs;
 use std::io;
 use std::path::{PathBuf, Path};
 
-use core::{Package, Workspace};
+use core::{Package, Metadata, Workspace};
 use util::{Config, FileLock, CargoResult, Filesystem};
-use util::hex::short_hash;
 use super::Unit;
 
 pub struct Layout {
@@ -141,7 +140,8 @@ impl Layout {
     }
 
     fn pkg_dir(&self, pkg: &Package) -> String {
-        format!("{}-{}", pkg.name(), short_hash(pkg))
+        let Metadata { extra_filename, .. } = pkg.generate_metadata();
+        format!("{}{}", pkg.name(), extra_filename)
     }
 }
 
