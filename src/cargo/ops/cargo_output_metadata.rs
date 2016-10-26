@@ -45,7 +45,7 @@ fn metadata_full(ws: &Workspace,
                  opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     let deps = try!(ops::resolve_dependencies(ws,
                                               None,
-                                              opt.features.clone(),
+                                              &opt.features,
                                               opt.all_features,
                                               opt.no_default_features,
                                               &[]));

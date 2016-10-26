@@ -429,3 +429,23 @@ fn carg_metadata_bad_version() {
                 execs().with_status(101)
     .with_stderr("[ERROR] metadata version 2 not supported, only 1 is currently supported"));
 }
+
+#[test]
+fn multiple_features() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [features]
+            a = []
+            b = []
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("metadata")
+                 .arg("--features").arg("a b"),
+                execs().with_status(0));
+}
