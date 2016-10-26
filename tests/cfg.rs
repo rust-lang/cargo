@@ -200,8 +200,8 @@ fn works_through_the_registry() {
 
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0")
-            .target_dep("foo", "0.1.0", "'cfg(unix)'")
-            .target_dep("foo", "0.1.0", "'cfg(windows)'")
+            .target_dep("foo", "0.1.0", "cfg(unix)")
+            .target_dep("foo", "0.1.0", "cfg(windows)")
             .publish();
 
     let p = project("a")

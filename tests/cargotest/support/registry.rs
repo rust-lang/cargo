@@ -141,7 +141,7 @@ impl Package {
             map.insert("name".to_string(), dep.name.to_json());
             map.insert("req".to_string(), dep.vers.to_json());
             map.insert("features".to_string(), dep.features.to_json());
-            map.insert("default_features".to_string(), false.to_json());
+            map.insert("default_features".to_string(), true.to_json());
             map.insert("target".to_string(), dep.target.to_json());
             map.insert("optional".to_string(), false.to_json());
             map.insert("kind".to_string(), dep.kind.to_json());
@@ -211,7 +211,7 @@ impl Package {
         for dep in self.deps.iter() {
             let target = match dep.target {
                 None => String::new(),
-                Some(ref s) => format!("target.{}.", s),
+                Some(ref s) => format!("target.'{}'.", s),
             };
             let kind = match &dep.kind[..] {
                 "build" => "build-",
