@@ -608,7 +608,7 @@ pub fn shell_writes<T: fmt::Display>(string: T) -> ShellWrites {
 }
 
 pub trait Tap {
-    fn tap<F: FnOnce(&mut Self)>(mut self, callback: F) -> Self;
+    fn tap<F: FnOnce(&mut Self)>(self, callback: F) -> Self;
 }
 
 impl<T> Tap for T {
