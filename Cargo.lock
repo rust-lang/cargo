@@ -7,7 +7,7 @@ dependencies = [
  "cargotest 0.1.0",
  "crates-io 0.4.0",
  "crossbeam 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "curl 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "curl 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt 0.6.82 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "filetime 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -106,7 +106,7 @@ dependencies = [
 name = "crates-io"
 version = "0.4.0"
 dependencies = [
- "curl 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "curl 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -118,10 +118,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "curl"
-version = "0.3.7"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "curl-sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "curl-sys 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-sys 0.7.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -129,7 +129,7 @@ dependencies = [
 
 [[package]]
 name = "curl-sys"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "gcc 0.3.35 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -217,7 +217,7 @@ name = "git2-curl"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "curl 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "curl 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "git2 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -658,8 +658,8 @@ dependencies = [
 "checksum cfg-if 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "de1e760d7b6535af4241fca8bd8adf68e2e7edacc6b29f5d399050c5e48cf88c"
 "checksum cmake 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "dfcf5bcece56ef953b8ea042509e9dcbdfe97820b7e20d86beb53df30ed94978"
 "checksum crossbeam 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)" = "fb974f835e90390c5f9dfac00f05b06dc117299f5ea4e85fbc7bb443af4911cc"
-"checksum curl 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)" = "f0ae0143e62b183e072d8344a1c30b6281c2b2f2b4d8407d2d8adb95652112c3"
-"checksum curl-sys 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "4ae8698d4d2bc4b8182a11f4a5298fa03d2127c29e95dbae538d0cf003141818"
+"checksum curl 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "faf54d927c752b092d3e99ea227d9c7c9b4a3e885a3368ac9bfa28958f215100"
+"checksum curl-sys 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "4f198d10378a3bc1f1b0e3bc3a2de5c9bb9e08938460dec57ba6667d9a65fbc3"
 "checksum docopt 0.6.82 (registry+https://github.com/rust-lang/crates.io-index)" = "8f20016093b4e545dccf6ad4a01099de0b695f9bc99b08210e68f6425db2d37d"
 "checksum env_logger 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "82dcb9ceed3868a03b335657b85a159736c961900f7e7747d3b0b97b9ccb5ccb"
 "checksum filetime 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "5363ab8e4139b8568a6237db5248646e5a8a2f89bd5ccb02092182b11fd3e922"
