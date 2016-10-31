@@ -2262,3 +2262,73 @@ fn panic_abort_multiple() {
                  .arg("-p").arg("a"),
                 execs().with_status(0));
 }
+
+#[test]
+fn pass_correct_cfgs_flags_to_rustdoc() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [features]
+            default = ["a/default"]
+            nightly = ["a/nightly"]
+
+            [dependencies.a]
+            path = "libs/a"
+            default-features = false
+        "#)
+        .file("src/lib.rs", r#"
+            #[cfg(test)]
+            mod tests {
+                #[test]
+                fn it_works() {
+                  assert!(true);
+                }
+            }
+        "#)
+        .file("libs/a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+            authors = []
+
+            [features]
+            default = ["serde_codegen"]
+            nightly = ["serde_derive"]
+
+            [dependencies]
+            serde_derive = { version = "0.8", optional = true }
+
+            [build-dependencies]
+            serde_codegen = { version = "0.8", optional = true }
+        "#)
+        .file("libs/a/src/lib.rs", r#"
+            #[cfg(feature = "serde_derive")]
+            const MSG: &'static str = "This is safe";
+
+            #[cfg(feature = "serde_codegen")]
+            const MSG: &'static str = "This is risky";
+
+            pub fn get() -> &'static str {
+                MSG
+            }
+        "#);
+
+    assert_that(p.cargo_process("test")
+                .arg("--package").arg("a")
+                .arg("--verbose"),
+                execs().with_status(0)
+                       .with_stderr_contains("\
+[DOCTEST] a
+[RUNNING] `rustdoc --test [..]--cfg feature=\\\"serde_codegen\\\"[..]`"));
+
+    assert_that(p.cargo_process("test")
+                .arg("--verbose"),
+                execs().with_status(0)
+                       .with_stderr_contains("\
+[DOCTEST] foo
+[RUNNING] `rustdoc --test [..]--cfg feature=\\\"a\\\"[..]`"));
+}
