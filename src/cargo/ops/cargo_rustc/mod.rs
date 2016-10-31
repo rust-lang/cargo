@@ -143,11 +143,9 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         }
 
         if let Some(feats) = cx.resolve.features(&unit.pkg.package_id()) {
-            for feat in feats.iter() {
-                cx.compilation.cfgs.entry(unit.pkg.package_id().clone())
-                    .or_insert(HashSet::new())
-                    .insert(format!("feature=\"{}\"", feat));
-            }
+            cx.compilation.cfgs.entry(unit.pkg.package_id().clone())
+                .or_insert(HashSet::new())
+                .extend(feats.iter().map(|feat| format!("feature=\"{}\"", feat)));
         }
     }
 
