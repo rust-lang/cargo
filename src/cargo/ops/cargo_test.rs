@@ -145,8 +145,10 @@ fn run_doc_tests(options: &TestOptions,
                 p.arg("--test-args").arg(&test_args.join(" "));
             }
 
-            for cfg in compilation.cfgs.iter() {
-                p.arg("--cfg").arg(cfg);
+            if let Some(cfgs) = compilation.cfgs.get(&package.package_id()) {
+                for cfg in cfgs.iter() {
+                    p.arg("--cfg").arg(cfg);
+                }
             }
 
             for (_, libs) in compilation.libraries.iter() {

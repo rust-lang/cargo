@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
@@ -81,7 +81,6 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         })
     }).collect::<Vec<_>>();
 
-    let root = try!(ws.current());
     let mut cx = try!(Context::new(ws, resolve, packages, config,
                                    build_config, profiles));
 
@@ -142,19 +141,21 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                 cx.compilation.libraries.insert(pkgid.clone(), v);
             }
         }
-    }
 
-    let root_pkg = root.package_id();
-    if let Some(feats) = cx.resolve.features(root_pkg) {
-        cx.compilation.cfgs.extend(feats.iter().map(|feat| {
-            format!("feature=\"{}\"", feat)
-        }));
+        if let Some(feats) = cx.resolve.features(&unit.pkg.package_id()) {
+            for feat in feats.iter() {
+                cx.compilation.cfgs.entry(unit.pkg.package_id().clone())
+                    .or_insert(HashSet::new())
+                    .insert(format!("feature=\"{}\"", feat));
+            }
+        }
     }
 
     for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
-        if pkg == root_pkg {
-            cx.compilation.cfgs.extend(output.cfgs.iter().cloned());
-        }
+        cx.compilation.cfgs.entry(pkg.clone())
+            .or_insert(HashSet::new())
+            .extend(output.cfgs.iter().cloned());
+
         for dir in output.library_paths.iter() {
             cx.compilation.native_dirs.insert(dir.clone());
         }
