@@ -5,7 +5,7 @@ use std::str;
 use std::sync::{Mutex, Arc};
 
 use core::PackageId;
-use util::{CargoResult, Human, Freshness};
+use util::{CargoResult, Human, Freshness, Cfg};
 use util::{internal, ChainError, profile, paths};
 
 use super::job::Work;
@@ -121,6 +121,26 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     if let Some(features) = cx.resolve.features(unit.pkg.package_id()) {
         for feat in features.iter() {
             cmd.env(&format!("CARGO_FEATURE_{}", super::envify(feat)), "1");
+        }
+    }
+
+    let mut cfg_map = HashMap::new();
+    for cfg in cx.cfg(unit.kind) {
+        match *cfg {
+            Cfg::Name(ref n) => { cfg_map.insert(n.clone(), None); }
+            Cfg::KeyPair(ref k, ref v) => {
+                match *cfg_map.entry(k.clone()).or_insert(Some(Vec::new())) {
+                    Some(ref mut values) => values.push(v.clone()),
+                    None => { /* ... */ }
+                }
+            }
+        }
+    }
+    for (k, v) in cfg_map {
+        let k = format!("CARGO_CFG_{}", super::envify(&k));
+        match v {
+            Some(list) => { cmd.env(&k, list.join(",")); }
+            None => { cmd.env(&k, ""); }
         }
     }
 

@@ -678,6 +678,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.target_config(kind).ar.as_ref().map(|s| s.as_ref())
     }
 
+    /// Get the list of cfg printed out from the compiler for the specified kind
+    pub fn cfg(&self, kind: Kind) -> &[Cfg] {
+        let info = match kind {
+            Kind::Host => &self.host_info,
+            Kind::Target => &self.target_info,
+        };
+        info.cfg.as_ref().map(|s| &s[..]).unwrap_or(&[])
+    }
+
     /// Get the target configuration for a particular host or target
     fn target_config(&self, kind: Kind) -> &TargetConfig {
         match kind {
