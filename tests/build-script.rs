@@ -2259,3 +2259,30 @@ fn rustc_and_rustdoc_set_correctly() {
     assert_that(build.cargo_process("bench"),
                 execs().with_status(0));
 }
+
+#[test]
+fn cfg_env_vars_available() {
+    let build = project("builder")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "builder"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", r#"
+            use std::env;
+
+            fn main() {
+                let fam = env::var("CARGO_CFG_TARGET_FAMILY").unwrap();
+                if cfg!(unix) {
+                    assert_eq!(fam, "unix");
+                } else {
+                    assert_eq!(fam, "windows");
+                }
+            }
+        "#);
+    assert_that(build.cargo_process("bench"),
+                execs().with_status(0));
+}
