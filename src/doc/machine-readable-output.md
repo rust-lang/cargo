@@ -7,7 +7,7 @@ Cargo can output information about project and build in JSON format.
 You can use `cargo metadata` command to get information about project structure
 and dependencies. The output of the command looks like this:
 
-```
+```text
 {
   // Integer version number of the format.
   "version": integer,
@@ -59,7 +59,7 @@ without waiting for the whole build to finish.
 
 The message format looks like this:
 
-```
+```text
 {
   // Type of the message.
   "reason": "compiler-message",
