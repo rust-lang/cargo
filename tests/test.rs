@@ -2273,11 +2273,11 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
             authors = []
 
             [features]
-            default = ["a/default"]
-            nightly = ["a/nightly"]
+            default = ["feature_a/default"]
+            nightly = ["feature_a/nightly"]
 
-            [dependencies.a]
-            path = "libs/a"
+            [dependencies.feature_a]
+            path = "libs/feature_a"
             default-features = false
         "#)
         .file("src/lib.rs", r#"
@@ -2289,9 +2289,9 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
                 }
             }
         "#)
-        .file("libs/a/Cargo.toml", r#"
+        .file("libs/feature_a/Cargo.toml", r#"
             [package]
-            name = "a"
+            name = "feature_a"
             version = "0.1.0"
             authors = []
 
@@ -2305,7 +2305,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
             [build-dependencies]
             serde_codegen = { version = "0.8", optional = true }
         "#)
-        .file("libs/a/src/lib.rs", r#"
+        .file("libs/feature_a/src/lib.rs", r#"
             #[cfg(feature = "serde_derive")]
             const MSG: &'static str = "This is safe";
 
@@ -2318,17 +2318,17 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
         "#);
 
     assert_that(p.cargo_process("test")
-                .arg("--package").arg("a")
+                .arg("--package").arg("feature_a")
                 .arg("--verbose"),
                 execs().with_status(0)
                        .with_stderr_contains("\
-[DOCTEST] a
-[RUNNING] `rustdoc --test [..]--cfg feature=\\\"serde_codegen\\\"[..]`"));
+[DOCTEST] feature_a
+[RUNNING] `rustdoc --test [..]serde_codegen[..]`"));
 
     assert_that(p.cargo_process("test")
                 .arg("--verbose"),
                 execs().with_status(0)
                        .with_stderr_contains("\
 [DOCTEST] foo
-[RUNNING] `rustdoc --test [..]--cfg feature=\\\"a\\\"[..]`"));
+[RUNNING] `rustdoc --test [..]feature_a[..]`"));
 }
