@@ -187,3 +187,71 @@ fn top_level_overrides_deps() {
                     prefix = env::consts::DLL_PREFIX,
                     suffix = env::consts::DLL_SUFFIX)));
 }
+
+#[test]
+fn profile_in_non_root_manifest_triggers_a_warning() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["bar"]
+
+            [profile.dev]
+            debug = false
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+            workspace = ".."
+
+            [profile.dev]
+            opt-level = 1
+        "#)
+        .file("bar/src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo_process("build").cwd(p.root().join("bar")).arg("-v"),
+                execs().with_status(0).with_stderr("\
+[WARNING] profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   [..]
+workspace: [..]
+[COMPILING] bar v0.1.0 ([..])
+[RUNNING] `rustc [..]`
+[FINISHED] debug [unoptimized] target(s) in [..]"));
+}
+
+#[test]
+fn profile_in_virtual_manifest_works() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["bar"]
+
+            [profile.dev]
+            opt-level = 1
+            debug = false
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+            workspace = ".."
+        "#)
+        .file("bar/src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo_process("build").cwd(p.root().join("bar")).arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] bar v0.1.0 ([..])
+[RUNNING] `rustc [..]`
+[FINISHED] debug [optimized] target(s) in [..]"));
+}

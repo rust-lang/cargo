@@ -169,7 +169,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         bail!("jobs must be at least 1")
     }
 
-    let profiles = root_package.manifest().profiles();
+    let profiles = ws.profiles();
     if spec.len() == 0 {
         try!(generate_targets(root_package, profiles, mode, filter, release));
     }
