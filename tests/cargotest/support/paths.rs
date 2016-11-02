@@ -58,7 +58,17 @@ pub fn home() -> PathBuf {
 pub trait CargoPathExt {
     fn rm_rf(&self);
     fn mkdir_p(&self);
-    fn move_into_the_past(&self);
+
+    fn move_into_the_past(&self) {
+        self.move_in_time(|sec, nsec| (sec - 3600, nsec))
+    }
+
+    fn move_into_the_future(&self) {
+        self.move_in_time(|sec, nsec| (sec + 3600, nsec))
+    }
+
+    fn move_in_time<F>(&self, F)
+        where F: Fn(u64, u32) -> (u64, u32);
 }
 
 impl CargoPathExt for Path {
@@ -91,31 +101,37 @@ impl CargoPathExt for Path {
         })
     }
 
-    fn move_into_the_past(&self) {
+    fn move_in_time<F>(&self, travel_amount: F)
+        where F: Fn(u64, u32) -> ((u64, u32)),
+    {
         if self.is_file() {
-            time_travel(self);
+            time_travel(self, &travel_amount);
         } else {
-            recurse(self, &self.join("target"));
+            recurse(self, &self.join("target"), &travel_amount);
         }
 
-        fn recurse(p: &Path, bad: &Path) {
+        fn recurse<F>(p: &Path, bad: &Path, travel_amount: &F)
+            where F: Fn(u64, u32) -> ((u64, u32)),
+        {
             if p.is_file() {
-                time_travel(p)
+                time_travel(p, travel_amount)
             } else if !p.starts_with(bad) {
                 for f in t!(fs::read_dir(p)) {
                     let f = t!(f).path();
-                    recurse(&f, bad);
+                    recurse(&f, bad, travel_amount);
                 }
             }
         }
 
-        fn time_travel(path: &Path) {
+        fn time_travel<F>(path: &Path, travel_amount: &F)
+            where F: Fn(u64, u32) -> ((u64, u32)),
+        {
             let stat = t!(path.metadata());
 
             let mtime = FileTime::from_last_modification_time(&stat);
-            let newtime = mtime.seconds_relative_to_1970() - 3600;
-            let nanos = mtime.nanoseconds();
-            let newtime = FileTime::from_seconds_since_1970(newtime, nanos);
+
+            let (sec, nsec) = travel_amount(mtime.seconds_relative_to_1970(), mtime.nanoseconds());
+            let newtime = FileTime::from_seconds_since_1970(sec, nsec);
 
             // Sadly change_file_times has a failure mode where a readonly file
             // cannot have its times changed on windows.
