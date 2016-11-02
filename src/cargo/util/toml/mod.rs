@@ -17,6 +17,8 @@ use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
 use util::{self, CargoResult, human, ToUrl, ToSemver, ChainError, Config};
 
+mod implicit_deps;
+
 /// Representation of the projects file layout.
 ///
 /// This structure is used to hold references to all project files that are relevant to cargo.
@@ -223,6 +225,7 @@ pub struct DetailedTomlDependency {
     branch: Option<String>,
     tag: Option<String>,
     rev: Option<String>,
+    stdlib: Option<bool>,
     features: Option<Vec<String>>,
     optional: Option<bool>,
     default_features: Option<bool>,
@@ -297,6 +300,7 @@ pub struct TomlProject {
     include: Option<Vec<String>>,
     publish: Option<bool>,
     workspace: Option<String>,
+    implicit_dependencies: Option<bool>,
 
     // package metadata
     description: Option<String>,
@@ -577,43 +581,132 @@ impl TomlManifest {
                 layout: &layout,
             };
 
-            fn process_dependencies(
+            fn process_deps(
                 cx: &mut Context,
                 new_deps: Option<&HashMap<String, TomlDependency>>,
+                allow_explicit_stdlib: bool,
+                keep_stdlib_deps: bool,
                 kind: Option<Kind>)
-                -> CargoResult<()>
+                -> CargoResult<bool>
             {
-                let dependencies = match new_deps {
-                    Some(ref dependencies) => dependencies,
-                    None => return Ok(())
-                };
-                for (n, v) in dependencies.iter() {
-                    let dep = try!(v.to_dependency(n, cx, kind));
-                    cx.deps.push(dep);
+                let mut has_explicit_stdlib = false;
+
+                for (n, v) in new_deps.iter().flat_map(|t| *t) {
+                    let detailed = v.elaborate();
+                    let is_stdlib = match detailed.stdlib {
+                        None => false,
+                        Some(true) => {
+                            has_explicit_stdlib |= true;
+                            if !allow_explicit_stdlib {
+                                bail!(
+                                    "dependency {} cannot have `stdlib = true`",
+                                    n);
+                            }
+                            true
+                        }
+                        Some(false) => bail!(
+                            "`stdlib = false` is not allowed. \
+                             Just remove the field from dependency {}.",
+                            n),
+                    };
+                    let dep = try!(detailed.to_dependency(n, cx, kind));
+                    // We still do everything up to here for basic error
+                    // checking of stdlib deps
+                    if if is_stdlib { keep_stdlib_deps } else { true } {
+                        cx.deps.push(dep);
+                    }
                 }
 
-                Ok(())
+                Ok(has_explicit_stdlib)
             }
 
+            let keep_stdlib_deps = match
+                try!(config.get_bool("keep-stdlib-dependencies"))
+            {
+                None    => false,
+                Some(b) => {
+                    cx.warnings.push(
+                        "the `keep-stdlib-dependencies` config key is unstable"
+                            .to_string());
+                    b.val
+                },
+            };
+
             // Collect the deps
-            try!(process_dependencies(&mut cx, self.dependencies.as_ref(),
-                                      None));
-            try!(process_dependencies(&mut cx, self.dev_dependencies.as_ref(),
-                                      Some(Kind::Development)));
-            try!(process_dependencies(&mut cx, self.build_dependencies.as_ref(),
-                                      Some(Kind::Build)));
+            let mut explicit_primary = try!(process_deps(
+                &mut cx, self.dependencies.as_ref(),
+                true, keep_stdlib_deps, None));
+            let mut explicit_dev = try!(process_deps(
+                &mut cx, self.dev_dependencies.as_ref(),
+                false, keep_stdlib_deps, Some(Kind::Development)));
+            let mut explicit_build = try!(process_deps(
+                &mut cx, self.build_dependencies.as_ref(),
+                false, keep_stdlib_deps, Some(Kind::Build)));
 
             for (name, platform) in self.target.iter().flat_map(|t| t) {
                 cx.platform = Some(try!(name.parse()));
-                try!(process_dependencies(&mut cx,
-                                          platform.dependencies.as_ref(),
-                                          None));
-                try!(process_dependencies(&mut cx,
-                                          platform.build_dependencies.as_ref(),
-                                          Some(Kind::Build)));
-                try!(process_dependencies(&mut cx,
-                                          platform.dev_dependencies.as_ref(),
-                                          Some(Kind::Development)));
+                explicit_primary |= try!(process_deps(
+                    &mut cx, platform.dependencies.as_ref(),
+                    true, keep_stdlib_deps, None));
+                explicit_dev |= try!(process_deps(
+                    &mut cx, platform.build_dependencies.as_ref(),
+                    false, keep_stdlib_deps, Some(Kind::Build)));
+                explicit_build |= try!(process_deps(
+                    &mut cx, platform.dev_dependencies.as_ref(),
+                    false, keep_stdlib_deps, Some(Kind::Development)));
+            }
+
+            if explicit_primary || explicit_dev || explicit_build {
+                cx.warnings.push("explicit dependencies are unstable".to_string());
+            }
+
+            if project.implicit_dependencies.is_some() {
+                cx.warnings.push(
+                    "the implicit-dependencies flag is unstable \
+                     (and furthermore is not currently planned on being stabilized)."
+                        .to_string());
+            }
+
+            // Based on "implicit_dependencies" flag and actual usage of
+            // explicit stdlib dependencies
+            let implicit_primary = match (explicit_primary,
+                                          project.implicit_dependencies)
+            {
+                (true, Some(true)) => bail!(
+                    "cannot use explicit stdlib deps when implicit deps \
+                     were explicitly enabled."),
+                // With explicit deps, and flag not "yes", resolve "no"
+                (true, _)  => false,
+                // With no explcit deps and no flag, resolve "yes" for
+                // backwards-compat
+                (false, None) => true,
+                // With no explcit deps and the flag, obey the flag
+                (false, Some(x)) => x,
+            };
+
+            // Add implicit deps
+            cx.platform = None;
+
+            if try!(config.get_table("custom-implicit-stdlib-dependencies")).is_some() {
+                cx.warnings.push(
+                    "the `custom-implicit-stdlib-dependencies` config key is unstable"
+                        .to_string());
+            }
+
+            if implicit_primary {
+                try!(process_deps(
+                    &mut cx, Some(&try!(implicit_deps::primary(config))),
+                    true, keep_stdlib_deps, None));
+            }
+            if !explicit_dev {
+                try!(process_deps(
+                    &mut cx, Some(&try!(implicit_deps::dev(config))),
+                    true, keep_stdlib_deps, Some(Kind::Development)));
+            }
+            if !explicit_build {
+                try!(process_deps(
+                    &mut cx, Some(&try!(implicit_deps::build(config))),
+                    true, keep_stdlib_deps, Some(Kind::Build)));
             }
 
             replace = try!(self.replace(&mut cx));
@@ -746,16 +839,20 @@ impl TomlManifest {
                               spec))
             }));
 
-            let version_specified = match *replacement {
-                TomlDependency::Detailed(ref d) => d.version.is_some(),
-                TomlDependency::Simple(..) => true,
-            };
-            if version_specified {
+            let replacement = replacement.elaborate();
+
+            if replacement.version.is_some() {
                 bail!("replacements cannot specify a version \
                        requirement, but found one for `{}`", spec);
             }
 
-            let dep = try!(replacement.to_dependency(spec.name(), cx, None));
+            if let Some(true) = replacement.stdlib {
+                bail!("replacements cannot be standard library packages, \
+                       but found one for `{}`", spec);
+            }
+
+            let dep = try!(replacement
+                           .to_dependency(spec.name(), cx, None));
             let dep = {
                 let version = try!(spec.version().chain_error(|| {
                     human(format!("replacements must specify a version \
@@ -797,21 +894,25 @@ fn unique_build_targets(targets: &[Target], layout: &Layout) -> Result<(), Strin
 }
 
 impl TomlDependency {
-    fn to_dependency(&self,
-                     name: &str,
-                     cx: &mut Context,
-                     kind: Option<Kind>)
-                     -> CargoResult<Dependency> {
-        let details = match *self {
+    fn elaborate(&self) -> DetailedTomlDependency {
+        match *self {
             TomlDependency::Simple(ref version) => DetailedTomlDependency {
                 version: Some(version.clone()),
                 .. Default::default()
             },
             TomlDependency::Detailed(ref details) => details.clone(),
-        };
+        }
+    }
+}
 
-        if details.version.is_none() && details.path.is_none() &&
-           details.git.is_none() {
+impl DetailedTomlDependency {
+    fn to_dependency(self,
+                     name: &str,
+                     cx: &mut Context,
+                     kind: Option<Kind>)
+                     -> CargoResult<Dependency> {
+        if self.version.is_none() && self.path.is_none() &&
+           self.git.is_none() {
             let msg = format!("dependency ({}) specified without \
                                providing a local path, Git repository, or \
                                version to use. This will be considered an \
@@ -819,11 +920,11 @@ impl TomlDependency {
             cx.warnings.push(msg);
         }
 
-        if details.git.is_none() {
+        if self.git.is_none() {
             let git_only_keys = [
-                (&details.branch, "branch"),
-                (&details.tag, "tag"),
-                (&details.rev, "rev")
+                (&self.branch, "branch"),
+                (&self.tag, "tag"),
+                (&self.rev, "rev")
             ];
 
             for &(key, key_name) in git_only_keys.iter() {
@@ -836,16 +937,22 @@ impl TomlDependency {
             }
         }
 
-        let new_source_id = match (details.git.as_ref(), details.path.as_ref()) {
-            (Some(git), maybe_path) => {
-                if maybe_path.is_some() {
-                    let msg = format!("dependency ({}) specification is ambiguous. \
-                                       Only one of `git` or `path` is allowed. \
-                                       This will be considered an error in future versions", name);
-                    cx.warnings.push(msg)
+        let one_source_message = format!(
+            "dependency ({}) specification is ambiguous. \
+             Only one of `git` or `path` or `stdlib = true` is allowed. \
+             This will be considered an error in future versions",
+            name);
+
+        let new_source_id = match (self.git.as_ref(),
+                                   self.path.as_ref(),
+                                   self.stdlib)
+        {
+            (Some(git), maybe_path, maybe_stdlib) => {
+                if maybe_path.is_some() || (maybe_stdlib == Some(true)) {
+                    cx.warnings.push(one_source_message)
                 }
 
-                let n_details = [&details.branch, &details.tag, &details.rev]
+                let n_details = [&self.branch, &self.tag, &self.rev]
                     .iter()
                     .filter(|d| d.is_some())
                     .count();
@@ -857,14 +964,18 @@ impl TomlDependency {
                     cx.warnings.push(msg)
                 }
 
-                let reference = details.branch.clone().map(GitReference::Branch)
-                    .or_else(|| details.tag.clone().map(GitReference::Tag))
-                    .or_else(|| details.rev.clone().map(GitReference::Rev))
+                let reference = self.branch.clone().map(GitReference::Branch)
+                    .or_else(|| self.tag.clone().map(GitReference::Tag))
+                    .or_else(|| self.rev.clone().map(GitReference::Rev))
                     .unwrap_or_else(|| GitReference::Branch("master".to_string()));
                 let loc = try!(git.to_url());
                 SourceId::for_git(&loc, reference)
             },
-            (None, Some(path)) => {
+            (None, Some(path), maybe_stdlib) => {
+                if maybe_stdlib == Some(true) {
+                    cx.warnings.push(one_source_message)
+                }
+
                 cx.nested_paths.push(PathBuf::from(path));
                 // If the source id for the package we're parsing is a path
                 // source, then we normalize the path here to get rid of
@@ -882,10 +993,11 @@ impl TomlDependency {
                     cx.source_id.clone()
                 }
             },
-            (None, None) => try!(SourceId::crates_io(cx.config)),
+            (None, None, Some(true)) => try!(SourceId::compiler(cx.config)),
+            (None, None, _) => try!(SourceId::crates_io(cx.config)),
         };
 
-        let version = details.version.as_ref().map(|v| &v[..]);
+        let version = self.version.as_ref().map(|v| &v[..]);
         let mut dep = match cx.pkgid {
             Some(id) => {
                 try!(DependencyInner::parse(name, version, &new_source_id,
@@ -893,9 +1005,9 @@ impl TomlDependency {
             }
             None => try!(DependencyInner::parse(name, version, &new_source_id, None)),
         };
-        dep = dep.set_features(details.features.unwrap_or(Vec::new()))
-                 .set_default_features(details.default_features.unwrap_or(true))
-                 .set_optional(details.optional.unwrap_or(false))
+        dep = dep.set_features(self.features.unwrap_or(Vec::new()))
+                 .set_default_features(self.default_features.unwrap_or(true))
+                 .set_optional(self.optional.unwrap_or(false))
                  .set_platform(cx.platform.clone());
         if let Some(kind) = kind {
             dep = dep.set_kind(kind);
