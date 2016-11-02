@@ -370,3 +370,68 @@ fn same_build_dir_cached_packages() {
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
 }
+
+#[test]
+fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
+    let p = project("backwards_in_time")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "backwards_in_time"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
+
+    p.root().move_into_the_past();
+    p.root().join("target").move_into_the_past();
+
+    assert_that(p.cargo("build").env("RUST_LOG", ""),
+                execs().with_status(0).with_stdout("").with_stderr(""));
+}
+
+#[test]
+fn rebuild_if_build_artifacts_move_forward_in_time() {
+    let p = project("forwards_in_time")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "forwards_in_time"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
+
+    p.root().move_into_the_future();
+    p.root().join("target").move_into_the_future();
+
+    assert_that(p.cargo("build").env("RUST_LOG", ""),
+                execs().with_status(0).with_stdout("").with_stderr("\
+[COMPILING] a v0.0.1 ([..])
+[COMPILING] forwards_in_time v0.0.1 ([..])
+"));
+}
