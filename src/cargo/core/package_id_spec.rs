@@ -110,6 +110,10 @@ impl PackageIdSpec {
     pub fn version(&self) -> Option<&Version> { self.version.as_ref() }
     pub fn url(&self) -> Option<&Url> { self.url.as_ref() }
 
+    pub fn set_url(&mut self, url: Url) {
+        self.url = Some(url);
+    }
+
     pub fn matches(&self, package_id: &PackageId) -> bool {
         if self.name() != package_id.name() { return false }
 
