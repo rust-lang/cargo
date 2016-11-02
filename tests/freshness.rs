@@ -396,10 +396,11 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
                 execs().with_status(0));
 
     p.root().move_into_the_past();
-    p.root().join("target").move_into_the_past();
 
-    assert_that(p.cargo("build").env("RUST_LOG", ""),
-                execs().with_status(0).with_stdout("").with_stderr(""));
+    assert_that(p.cargo("build"),
+                execs().with_status(0).with_stdout("").with_stderr("\
+[FINISHED] [..]
+"));
 }
 
 #[test]
@@ -427,11 +428,11 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
                 execs().with_status(0));
 
     p.root().move_into_the_future();
-    p.root().join("target").move_into_the_future();
 
     assert_that(p.cargo("build").env("RUST_LOG", ""),
                 execs().with_status(0).with_stdout("").with_stderr("\
 [COMPILING] a v0.0.1 ([..])
 [COMPILING] forwards_in_time v0.0.1 ([..])
+[FINISHED] [..]
 "));
 }
