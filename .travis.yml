@@ -1,11 +1,10 @@
 language: rust
-rust:
-  - stable
-  - beta
-  - nightly
 sudo: false
+install:
+  - curl https://static.rust-lang.org/rustup.sh | sh -s -- --add-target=$TARGET --disable-sudo -y --prefix=`rustc --print sysroot`
+
 script:
-  - ./configure --prefix=$HOME/cargo-install --disable-cross-tests --disable-optimize
+  - ./configure --prefix=$HOME/cargo-install --disable-cross-tests --disable-optimize --target=$TARGET
   - make
   - make test
   - make distcheck
@@ -29,11 +28,43 @@ env:
 
 matrix:
   include:
+    # OSX is only 32 and 64 stable
     - os: osx
       rust: stable
       before_install:
         - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
         - export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
+      env: TARGET=x86_64-apple-darwin
+    - os: osx
+      rust: stable
+      before_install:
+        - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
+        - export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
+      env: TARGET=i686-apple-darwin
+    # Linux tests stable on 32 and stable,beta,nightly on 64
+    - env: TARGET=x86_64-unknown-linux-gnu
+      rust: stable
+    - env: TARGET=i686-unknown-linux-gnu
+      rust: stable
+    - env: TARGET=x86_64-unknown-linux-gnu
+      rust: beta
+    - env: TARGET=x86_64-unknown-linux-gnu
+      rust: nightly
+    # Crosses test only on stable
+    - env: TARGET=arm-unknown-linux-gnueabi
+      rust: stable
+    - env: TARGET=arm-unknown-linux-gnueabihf
+      rust: stable
+    - env: TARGET=armv7-unknown-linux-gnueabihf
+      rust: stable
+    - env: TARGET=aarch64-unknown-linux-gnu
+      rust: stable
+    - env: TARGET=x86_64-unknown-freebsd
+      rust: stable
+    - env: TARGET=x86_64-unknown-netbsd
+      rust: stable
+    - env: TARGET=i686-unknown-freebsd
+      rust: stable
 
 branches:
   only:
