@@ -245,7 +245,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         let _p = profile::start("compiling");
         let mut build_config = try!(scrape_build_config(config, jobs, target));
         build_config.release = release;
-        build_config.test = mode == CompileMode::Test;
+        build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
         build_config.json_errors = message_format == MessageFormat::Json;
         if let CompileMode::Doc { deps } = mode {
             build_config.doc_all = deps;
