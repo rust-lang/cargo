@@ -15,6 +15,7 @@ use core::{EitherManifest, VirtualManifest};
 use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use core::package_id::Metadata;
+use sources::CRATES_IO;
 use util::{self, CargoResult, human, ToUrl, ToSemver, ChainError, Config};
 
 /// Representation of the projects file layout.
@@ -740,11 +741,14 @@ impl TomlManifest {
                -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
         let mut replace = Vec::new();
         for (spec, replacement) in self.replace.iter().flat_map(|x| x) {
-            let spec = try!(PackageIdSpec::parse(spec).chain_error(|| {
+            let mut spec = try!(PackageIdSpec::parse(spec).chain_error(|| {
                 human(format!("replacements must specify a valid semver \
                                version to replace, but `{}` does not",
                               spec))
             }));
+            if spec.url().is_none() {
+                spec.set_url(CRATES_IO.parse().unwrap());
+            }
 
             let version_specified = match *replacement {
                 TomlDependency::Detailed(ref d) => d.version.is_some(),
