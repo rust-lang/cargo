@@ -1239,6 +1239,10 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
                    profiles.and_then(|p| p.doc.as_ref())),
         custom_build: Profile::default_custom_build(),
     };
+    // The test/bench targets cannot have panic=abort because they'll all get
+    // compiled with --test which requires the unwind runtime currently
+    profiles.test.panic = None;
+    profiles.bench.panic = None;
     profiles.test_deps.panic = None;
     profiles.bench_deps.panic = None;
     return profiles;
