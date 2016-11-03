@@ -775,3 +775,103 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
 [FINISHED] [..]
 "));
 }
+
+#[test]
+fn override_an_override() {
+    Package::new("chrono", "0.2.0").dep("serde", "< 0.9").publish();
+    Package::new("serde", "0.7.0")
+        .file("src/lib.rs", "pub fn serde07() {}")
+        .publish();
+    Package::new("serde", "0.8.0")
+        .file("src/lib.rs", "pub fn serde08() {}")
+        .publish();
+
+    let p = project("local")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            chrono = "0.2"
+            serde = "0.8"
+
+            [replace]
+            "chrono:0.2.0" = { path = "chrono" }
+            "serde:0.8.0" = { path = "serde" }
+        "#)
+        .file("Cargo.lock", r#"
+            [root]
+            name = "local"
+            version = "0.0.1"
+            dependencies = [
+             "chrono 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+             "serde 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+            ]
+
+            [[package]]
+            name = "chrono"
+            version = "0.2.0"
+            source = "registry+https://github.com/rust-lang/crates.io-index"
+            replace = "chrono 0.2.0"
+
+            [[package]]
+            name = "chrono"
+            version = "0.2.0"
+            dependencies = [
+             "serde 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+            ]
+
+            [[package]]
+            name = "serde"
+            version = "0.7.0"
+            source = "registry+https://github.com/rust-lang/crates.io-index"
+
+            [[package]]
+            name = "serde"
+            version = "0.8.0"
+            source = "registry+https://github.com/rust-lang/crates.io-index"
+            replace = "serde 0.8.0"
+
+            [[package]]
+            name = "serde"
+            version = "0.8.0"
+        "#)
+        .file("src/lib.rs", "
+            extern crate chrono;
+            extern crate serde;
+
+            pub fn local() {
+                chrono::chrono();
+                serde::serde08_override();
+            }
+        ")
+        .file("chrono/Cargo.toml", r#"
+            [package]
+            name = "chrono"
+            version = "0.2.0"
+            authors = []
+
+            [dependencies]
+            serde = "< 0.9"
+        "#)
+        .file("chrono/src/lib.rs", "
+            extern crate serde;
+            pub fn chrono() {
+                serde::serde07();
+            }
+        ")
+        .file("serde/Cargo.toml", r#"
+            [package]
+            name = "serde"
+            version = "0.8.0"
+            authors = []
+        "#)
+        .file("serde/src/lib.rs", "
+            pub fn serde08_override() {}
+        ");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+}

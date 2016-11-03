@@ -864,6 +864,7 @@ impl<'a> Context<'a> {
                 None => return Ok(Candidate { summary: summary, replace: None }),
                 Some(replacement) => replacement,
             };
+            debug!("found an override for {} {}", dep.name(), dep.version_req());
 
             let mut summaries = try!(registry.query(dep)).into_iter();
             let s = try!(summaries.next().chain_error(|| {
@@ -901,6 +902,10 @@ impl<'a> Context<'a> {
                 bail!("overlapping replacement specifications found:\n\n  \
                        * {}\n  * {}\n\nboth specifications match: {}",
                       matched_spec, spec, summary.package_id());
+            }
+
+            for dep in summary.dependencies() {
+                debug!("\t{} => {}", dep.name(), dep.version_req());
             }
 
             Ok(Candidate { summary: summary, replace: replace })
