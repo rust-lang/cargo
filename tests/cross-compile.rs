@@ -473,8 +473,8 @@ fn cross_tests() {
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[..]{triple}[..]bar-[..]
-[RUNNING] target[..]{triple}[..]foo-[..]", foo = p.url(), triple = target))
+[RUNNING] target[..]{triple}[..]bar-[..][EXE]
+[RUNNING] target[..]{triple}[..]foo-[..][EXE]", foo = p.url(), triple = target))
                        .with_stdout("
 running 1 test
 test test ... ok
@@ -511,7 +511,7 @@ fn no_cross_doctests() {
     let host_output = format!("\
 [COMPILING] foo v0.0.0 ({foo})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[..]foo-[..]
+[RUNNING] target[..]foo-[..][EXE]
 [DOCTEST] foo
 ", foo = p.url());
 
@@ -533,7 +533,7 @@ fn no_cross_doctests() {
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[..]{triple}[..]foo-[..]
+[RUNNING] target[..]{triple}[..]foo-[..][EXE]
 ", foo = p.url(), triple = target)));
 }
 
@@ -674,7 +674,7 @@ fn build_script_needed_for_host_and_target() {
 [RUNNING] `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`",
     dir = p.root().display()))
                        .with_stderr_contains(&format!("\
-[RUNNING] `{dir}[..]target[..]build[..]d1-[..]build-script-build`",
+[RUNNING] `{dir}[..]target[..]build[..]d1-[..]build-script-build[EXE]`",
     dir = p.root().display()))
                        .with_stderr_contains("\
 [RUNNING] `rustc d1[..]src[..]lib.rs [..]`")
@@ -800,7 +800,7 @@ fn plugin_build_script_right_arch() {
                        .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc build.rs [..]`
-[RUNNING] `[..]build-script-build[..]`
+[RUNNING] `[..]build-script-build[EXE]`
 [RUNNING] `rustc src[..]lib.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
@@ -852,7 +852,7 @@ fn build_script_with_platform_specific_dependencies() {
 [RUNNING] `rustc d1[..]src[..]lib.rs [..]`
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc build.rs [..]`
-[RUNNING] `{dir}[..]target[..]build[..]foo-[..]build-script-build`
+[RUNNING] `{dir}[..]target[..]build[..]foo-[..]build-script-build[EXE]`
 [RUNNING] `rustc src[..]lib.rs [..] --target {target} [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.root().display(), target = target)));
