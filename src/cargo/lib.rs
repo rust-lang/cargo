@@ -224,7 +224,7 @@ fn handle_cause<E, EKind>(cargo_err: E, shell: &mut MultiShell) -> bool
     //the borrow's actual lifetime for purposes of downcasting and
     //inspecting the error chain
     unsafe fn extend_lifetime(r: &Error) -> &(Error + 'static) {
-        std::mem::transmute::<&Error, &Error>(r)    
+        std::mem::transmute::<&Error, &Error>(r)
     }
 
     let verbose = shell.get_verbose();
