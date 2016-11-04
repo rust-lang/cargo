@@ -1369,8 +1369,8 @@ fn cfg_test() {
 [RUNNING] [..] --cfg foo[..]
 [RUNNING] [..] --cfg foo[..]
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..]foo-[..][EXE]
-[RUNNING] [..]test-[..][EXE]
+[RUNNING] `[..]foo-[..][EXE]`
+[RUNNING] `[..]test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]", dir = p.url()))
                        .with_stdout("
@@ -1486,8 +1486,8 @@ fn cfg_override_test() {
 [RUNNING] `[..]`
 [RUNNING] `[..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..]foo-[..][EXE]
-[RUNNING] [..]test-[..][EXE]
+[RUNNING] `[..]foo-[..][EXE]`
+[RUNNING] `[..]test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]", dir = p.url()))
                        .with_stdout("
