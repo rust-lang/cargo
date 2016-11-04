@@ -722,8 +722,8 @@ fn bench_dylib() {
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] [..]target[..]release[..]bench-[..][EXE]
-[RUNNING] [..]target[..]release[..]foo-[..][EXE]", dir = p.url()))
+[RUNNING] `[..]target[..]release[..]bench-[..][EXE] --bench`
+[RUNNING] `[..]target[..]release[..]foo-[..][EXE] --bench`", dir = p.url()))
                        .with_stdout("
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
@@ -744,8 +744,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 [FRESH] bar v0.0.1 ({dir}/bar)
 [FRESH] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] [..]target[..]release[..]bench-[..][EXE]
-[RUNNING] [..]target[..]release[..]foo-[..][EXE]", dir = p.url()))
+[RUNNING] `[..]target[..]release[..]bench-[..][EXE] --bench`
+[RUNNING] `[..]target[..]release[..]foo-[..][EXE] --bench`", dir = p.url()))
                        .with_stdout("
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
