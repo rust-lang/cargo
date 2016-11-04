@@ -726,6 +726,7 @@ impl TomlManifest {
             platform: None,
             layout: layout,
         }));
+        let profiles = build_profiles(&self.profile);
         let workspace_config = match self.workspace {
             Some(ref config) => {
                 WorkspaceConfig::Root { members: config.members.clone() }
@@ -734,7 +735,7 @@ impl TomlManifest {
                 bail!("virtual manifests must be configured with [workspace]");
             }
         };
-        Ok((VirtualManifest::new(replace, workspace_config), nested_paths))
+        Ok((VirtualManifest::new(replace, workspace_config, profiles), nested_paths))
     }
 
     fn replace(&self, cx: &mut Context)

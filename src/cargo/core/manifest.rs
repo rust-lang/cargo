@@ -33,6 +33,7 @@ pub struct Manifest {
 pub struct VirtualManifest {
     replace: Vec<(PackageIdSpec, Dependency)>,
     workspace: WorkspaceConfig,
+    profiles: Profiles,
 }
 
 /// General metadata about a package which is just blindly uploaded to the
@@ -139,7 +140,7 @@ pub struct Profile {
     pub panic: Option<String>,
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct Profiles {
     pub release: Profile,
     pub dev: Profile,
@@ -250,10 +251,12 @@ impl Manifest {
 
 impl VirtualManifest {
     pub fn new(replace: Vec<(PackageIdSpec, Dependency)>,
-               workspace: WorkspaceConfig) -> VirtualManifest {
+               workspace: WorkspaceConfig,
+               profiles: Profiles) -> VirtualManifest {
         VirtualManifest {
             replace: replace,
             workspace: workspace,
+            profiles: profiles,
         }
     }
 
@@ -263,6 +266,10 @@ impl VirtualManifest {
 
     pub fn workspace_config(&self) -> &WorkspaceConfig {
         &self.workspace
+    }
+
+    pub fn profiles(&self) -> &Profiles {
+        &self.profiles
     }
 }
 
