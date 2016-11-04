@@ -6,7 +6,6 @@ use cargotest::support::{project, execs};
 use hamcrest::assert_that;
 
 #[test]
-#[ignore]
 fn noop() {
     if !is_nightly() {
         return;
@@ -63,7 +62,6 @@ fn noop() {
 }
 
 #[test]
-#[ignore]
 fn impl_and_derive() {
     if !is_nightly() {
         return;
@@ -148,7 +146,6 @@ fn impl_and_derive() {
 }
 
 #[test]
-#[ignore]
 fn plugin_and_proc_macro() {
     if !is_nightly() {
         return;
