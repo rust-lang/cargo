@@ -672,6 +672,7 @@ fn substitute_macros(input: &str) -> String {
         ("[INSTALLING]",  "  Installing"),
         ("[REPLACING]",   "   Replacing"),
         ("[UNPACKING]",   "   Unpacking"),
+        ("[EXE]", if cfg!(windows) {".exe"} else {""}),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in macros.iter() {
