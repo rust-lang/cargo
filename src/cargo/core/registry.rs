@@ -291,9 +291,13 @@ impl<'cfg> PackageRegistry<'cfg> {
                          override_summary: &Summary,
                          real_summary: &Summary) -> CargoResult<()> {
         let real = real_summary.package_id();
-        let map = self.locked.get(real.source_id()).chain_error(|| {
-            human(format!("failed to find lock source of {}", real))
-        })?;
+        // If we don't have a locked variant then things are going quite wrong
+        // at this point, but we've already emitted a warning, so don't worry
+        // about it.
+        let map = match self.locked.get(real.source_id()) {
+            Some(map) => map,
+            None => return Ok(()),
+        };
         let list = map.get(real.name()).chain_error(|| {
             human(format!("failed to find lock name of {}", real))
         })?;
