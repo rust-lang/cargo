@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::slice;
 
 use core::{Package, VirtualManifest, EitherManifest, SourceId};
-use core::{PackageIdSpec, Dependency};
+use core::{PackageIdSpec, Dependency, Profile, Profiles};
 use ops;
 use util::{Config, CargoResult, Filesystem, human};
 use util::paths;
@@ -160,6 +160,14 @@ impl<'cfg> Workspace<'cfg> {
     /// Returns the `Config` this workspace is associated with.
     pub fn config(&self) -> &'cfg Config {
         self.config
+    }
+
+    pub fn profiles(&self) -> &Profiles {
+        let root = self.root_manifest.as_ref().unwrap_or(&self.current_manifest);
+        match *self.packages.get(root) {
+            MaybePackage::Package(ref p) => p.manifest().profiles(),
+            MaybePackage::Virtual(ref m) => m.profiles(),
+        }
     }
 
     /// Returns the root path of this workspace.
@@ -430,6 +438,33 @@ impl<'cfg> Workspace<'cfg> {
                   self.current_manifest.display(),
                   root.display(),
                   extra);
+        }
+
+        if let Some(ref root_manifest) = self.root_manifest {
+            let default_profiles = Profiles {
+                release: Profile::default_release(),
+                dev: Profile::default_dev(),
+                test: Profile::default_test(),
+                test_deps: Profile::default_dev(),
+                bench: Profile::default_bench(),
+                bench_deps: Profile::default_release(),
+                doc: Profile::default_doc(),
+                custom_build: Profile::default_custom_build(),
+            };
+
+            for pkg in self.members().filter(|p| p.manifest_path() != root_manifest) {
+                if pkg.manifest().profiles() != &default_profiles {
+                    let message = &format!("profiles for the non root package will be ignored, \
+                                            specify profiles at the workspace root:\n\
+                                            package:   {}\n\
+                                            workspace: {}",
+                                           pkg.manifest_path().display(),
+                                           root_manifest.display());
+
+                    //TODO: remove `Eq` bound from `Profiles` when the warning is removed.
+                    try!(self.config.shell().warn(&message));
+                }
+            }
         }
 
         Ok(())
