@@ -1,21 +1,19 @@
 extern crate cargotest;
 extern crate hamcrest;
 
-use std::path::MAIN_SEPARATOR as SEP;
-
 use cargotest::support::{basic_bin_manifest, execs, project, ProjectBuilder};
 use hamcrest::{assert_that};
 
 fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
     format!("\
 [COMPILING] {name} v{version} ({url})
-[RUNNING] `rustc src{sep}lib.rs --crate-name {name} --crate-type lib -g \
+[RUNNING] `rustc src[/]lib.rs --crate-name {name} --crate-type lib -g \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+        -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP,
+",
             dir = p.root().display(), url = p.url(),
             name = "foo", version = "0.0.1")
 }
