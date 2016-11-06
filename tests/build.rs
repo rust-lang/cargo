@@ -98,7 +98,7 @@ fn cargo_compile_with_invalid_manifest3() {
 
 Caused by:
   could not parse input as TOML\n\
-src[..]Cargo.toml:1:5-1:6 expected a value\n\n"))
+src[/]Cargo.toml:1:5-1:6 expected a value\n\n"))
 }
 
 #[test]
@@ -1051,13 +1051,13 @@ fn lto_build() {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[..]main.rs --crate-name test --crate-type bin \
+[RUNNING] `rustc src[/]main.rs --crate-name test --crate-type bin \
         -C opt-level=3 \
         -C lto \
         -C metadata=[..] \
-        --out-dir {dir}[..]target[..]release \
+        --out-dir {dir}[/]target[/]release \
         --emit=dep-info,link \
-        -L dependency={dir}[..]target[..]release[..]deps`
+        -L dependency={dir}[/]target[/]release[/]deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
 dir = p.root().display(),
@@ -1080,11 +1080,11 @@ fn verbose_build() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib -g \
+[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib -g \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}[..]target[..]debug[..]deps`
+        -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
 dir = p.root().display(),
@@ -1107,12 +1107,12 @@ fn verbose_release_build() {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}[..]target[..]release[..]deps`
+        -L dependency={dir}[/]target[/]release[/]deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
 dir = p.root().display(),
@@ -1150,23 +1150,22 @@ fn verbose_release_build_deps() {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url}/foo)
-[RUNNING] `rustc foo[..]src[..]lib.rs --crate-name foo \
+[RUNNING] `rustc foo[/]src[/]lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}[..]target[..]release[..]deps`
+        -L dependency={dir}[/]target[/]release[/]deps`
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[..]lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}[..]target[..]release[..]deps \
-        --extern foo={dir}[..]target[..]release[..]deps[..]\
-                     {prefix}foo{suffix} \
-        --extern foo={dir}[..]target[..]release[..]deps[..]libfoo.rlib`
+        -L dependency={dir}[/]target[/]release[/]deps \
+        --extern foo={dir}[/]target[/]release[/]deps[/]{prefix}foo{suffix} \
+        --extern foo={dir}[/]target[/]release[/]deps[/]libfoo.rlib`
 [FINISHED] release [optimized] target(s) in [..]
 ",
                     dir = p.root().display(),
@@ -2266,7 +2265,7 @@ fn explicit_color_config_is_propagated_to_rustc() {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--color").arg("always"),
                 execs().with_status(0).with_stderr_contains(
-                    "[..]rustc src[..]lib.rs --color always[..]"));
+                    "[..]rustc src[/]lib.rs --color always[..]"));
 
     assert_that(p.cargo_process("build").arg("-v").arg("--color").arg("never"),
                 execs().with_status(0).with_stderr("\

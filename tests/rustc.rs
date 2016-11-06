@@ -101,7 +101,7 @@ fn build_main_and_allow_unstable_options() {
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}{sep}target{sep}debug{sep}deps \
-        --extern {name}={dir}{sep}target[..]lib{name}.rlib`
+        --extern {name}={dir}{sep}target[/]debug[/]deps[/]lib{name}.rlib`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", sep = SEP,
             dir = p.root().display(), url = p.url(),

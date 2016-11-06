@@ -229,8 +229,8 @@ fn specify_name() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[RUNNING] `rustc src[..]lib.rs [..]`
-[RUNNING] `rustc src[..]a.rs [..]`
+[RUNNING] `rustc src[/]lib.rs [..]`
+[RUNNING] `rustc src[/]bin[/]a.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target{sep}debug{sep}a[EXE]`", dir = path2url(p.root()), sep = SEP))
                        .with_stdout("\
@@ -241,7 +241,7 @@ hello a.rs
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc src[..]b.rs [..]`
+[RUNNING] `rustc src[/]bin[/]b.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target{sep}debug{sep}b[EXE]`", sep = SEP))
                        .with_stdout("\
