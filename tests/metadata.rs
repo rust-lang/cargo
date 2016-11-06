@@ -27,7 +27,7 @@ fn cargo_metadata_simple() {
                             "bin"
                         ],
                         "name": "foo",
-                        "src_path": "src[..]foo.rs"
+                        "src_path": "src[/]foo.rs"
                     }
                 ],
                 "features": {},
@@ -212,11 +212,11 @@ fn workspace_metadata() {
                     {
                         "kind": [ "lib" ],
                         "name": "bar",
-                        "src_path": "[..]bar[..]src[..]lib.rs"
+                        "src_path": "[..]bar[/]src[/]lib.rs"
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]bar[..]Cargo.toml"
+                "manifest_path": "[..]bar[/]Cargo.toml"
             },
             {
                 "name": "baz",
@@ -230,11 +230,11 @@ fn workspace_metadata() {
                     {
                         "kind": [ "lib" ],
                         "name": "baz",
-                        "src_path": "[..]baz[..]src[..]lib.rs"
+                        "src_path": "[..]baz[/]src[/]lib.rs"
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]baz[..]Cargo.toml"
+                "manifest_path": "[..]baz[/]Cargo.toml"
             }
         ],
         "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
@@ -283,11 +283,11 @@ fn workspace_metadata_no_deps() {
                     {
                         "kind": [ "lib" ],
                         "name": "bar",
-                        "src_path": "[..]bar[..]src[..]lib.rs"
+                        "src_path": "[..]bar[/]src[/]lib.rs"
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]bar[..]Cargo.toml"
+                "manifest_path": "[..]bar[/]Cargo.toml"
             },
             {
                 "name": "baz",
@@ -301,11 +301,11 @@ fn workspace_metadata_no_deps() {
                     {
                         "kind": [ "lib" ],
                         "name": "baz",
-                        "src_path": "[..]baz[..]src[..]lib.rs"
+                        "src_path": "[..]baz[/]src[/]lib.rs"
                     }
                 ],
                 "features": {},
-                "manifest_path": "[..]baz[..]Cargo.toml"
+                "manifest_path": "[..]baz[/]Cargo.toml"
             }
         ],
         "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
@@ -341,7 +341,7 @@ const MANIFEST_OUTPUT: &'static str=
         "targets":[{
             "kind":["bin"],
             "name":"foo",
-            "src_path":"src[..]foo.rs"
+            "src_path":"src[/]foo.rs"
         }],
         "features":{},
         "manifest_path":"[..]Cargo.toml"
