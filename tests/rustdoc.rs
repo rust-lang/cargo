@@ -1,8 +1,6 @@
 extern crate cargotest;
 extern crate hamcrest;
 
-use std::path::MAIN_SEPARATOR as SEP;
-
 use cargotest::support::{execs, project};
 use hamcrest::{assert_that};
 
@@ -22,12 +20,11 @@ fn rustdoc_simple() {
                 .with_status(0)
                 .with_stderr(format!("\
 [DOCUMENTING] foo v0.0.1 ({url})
-[RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \
-        -o {dir}{sep}target{sep}doc \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+[RUNNING] `rustdoc src[/]lib.rs --crate-name foo \
+        -o {dir}[/]target[/]doc \
+        -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP,
-            dir = p.root().display(), url = p.url())));
+", dir = p.root().display(), url = p.url())));
 }
 
 #[test]
@@ -46,13 +43,12 @@ fn rustdoc_args() {
                 .with_status(0)
                 .with_stderr(format!("\
 [DOCUMENTING] foo v0.0.1 ({url})
-[RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \
-        -o {dir}{sep}target{sep}doc \
+[RUNNING] `rustdoc src[/]lib.rs --crate-name foo \
+        -o {dir}[/]target[/]doc \
         --no-defaults \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+        -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP,
-            dir = p.root().display(), url = p.url())));
+", dir = p.root().display(), url = p.url())));
 }
 
 
@@ -90,16 +86,15 @@ fn rustdoc_foo_with_bar_dependency() {
                 .with_status(0)
                 .with_stderr(format!("\
 [COMPILING] bar v0.0.1 ([..])
-[RUNNING] `rustc [..]bar{sep}src{sep}lib.rs [..]`
+[RUNNING] `rustc [..]bar[/]src[/]lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ({url})
-[RUNNING] `rustdoc src{sep}lib.rs --crate-name foo \
-        -o {dir}{sep}target{sep}doc \
+[RUNNING] `rustdoc src[/]lib.rs --crate-name foo \
+        -o {dir}[/]target[/]doc \
         --no-defaults \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps \
+        -L dependency={dir}[/]target[/]debug[/]deps \
         --extern [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP,
-            dir = foo.root().display(), url = foo.url())));
+", dir = foo.root().display(), url = foo.url())));
 }
 
 #[test]
@@ -138,13 +133,12 @@ fn rustdoc_only_bar_dependency() {
                 .with_status(0)
                 .with_stderr(format!("\
 [DOCUMENTING] bar v0.0.1 ([..])
-[RUNNING] `rustdoc [..]bar{sep}src{sep}lib.rs --crate-name bar \
-        -o {dir}{sep}target{sep}doc \
+[RUNNING] `rustdoc [..]bar[/]src[/]lib.rs --crate-name bar \
+        -o {dir}[/]target[/]doc \
         --no-defaults \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+        -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP,
-            dir = foo.root().display())));
+", dir = foo.root().display())));
 }
 
 
