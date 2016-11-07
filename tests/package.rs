@@ -48,7 +48,7 @@ See [..]
     assert_that(p.cargo("package").arg("-l"),
                 execs().with_status(0).with_stdout("\
 Cargo.toml
-src[..]main.rs
+src[/]main.rs
 "));
     assert_that(p.cargo("package"),
                 execs().with_status(0).with_stdout(""));

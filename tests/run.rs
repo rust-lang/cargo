@@ -2,8 +2,6 @@ extern crate cargo;
 extern crate cargotest;
 extern crate hamcrest;
 
-use std::path::MAIN_SEPARATOR as SEP;
-
 use cargo::util::paths::dylib_path_envvar;
 use cargotest::support::{project, execs, path2url};
 use hamcrest::{assert_that, existing_file};
@@ -26,7 +24,7 @@ fn simple() {
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target{sep}debug{sep}foo[EXE]`", dir = path2url(p.root()), sep = SEP))
+[RUNNING] `target[/]debug[/]foo[EXE]`", dir = path2url(p.root())))
                        .with_stdout("\
 hello
 "));
@@ -229,21 +227,21 @@ fn specify_name() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[RUNNING] `rustc src[..]lib.rs [..]`
-[RUNNING] `rustc src[..]a.rs [..]`
+[RUNNING] `rustc src[/]lib.rs [..]`
+[RUNNING] `rustc src[/]bin[/]a.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target{sep}debug{sep}a[EXE]`", dir = path2url(p.root()), sep = SEP))
+[RUNNING] `target[/]debug[/]a[EXE]`", dir = path2url(p.root())))
                        .with_stdout("\
 hello a.rs
 "));
 
     assert_that(p.cargo("run").arg("--bin").arg("b").arg("-v"),
                 execs().with_status(0)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc src[..]b.rs [..]`
+[RUNNING] `rustc src[/]bin[/]b.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target{sep}debug{sep}b[EXE]`", sep = SEP))
+[RUNNING] `target[/]debug[/]b[EXE]`")
                        .with_stdout("\
 hello b.rs
 "));
@@ -271,7 +269,7 @@ fn run_example() {
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target{sep}debug{sep}examples{sep}a[EXE]`", dir = path2url(p.root()), sep = SEP))
+[RUNNING] `target[/]debug[/]examples[/]a[EXE]`", dir = path2url(p.root())))
                        .with_stdout("\
 example
 "));
@@ -364,7 +362,7 @@ fn one_bin_multiple_examples() {
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target{sep}debug{sep}main[EXE]`", dir = path2url(p.root()), sep = SEP))
+[RUNNING] `target[/]debug[/]main[EXE]`", dir = path2url(p.root())))
                        .with_stdout("\
 hello main.rs
 "));
@@ -418,26 +416,26 @@ fn example_with_release_flag() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
-[RUNNING] `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
+[RUNNING] `rustc bar[/]src[/]bar.rs --crate-name bar --crate-type lib \
         -C opt-level=3 \
         -C metadata=[..] \
-        --out-dir {dir}{sep}target{sep}release{sep}deps \
+        --out-dir {dir}[/]target[/]release[/]deps \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}release{sep}deps`
+        -L dependency={dir}[/]target[/]release[/]deps`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc examples{sep}a.rs --crate-name a --crate-type bin \
+[RUNNING] `rustc examples[/]a.rs --crate-name a --crate-type bin \
         -C opt-level=3 \
         -C metadata=[..] \
-        --out-dir {dir}{sep}target{sep}release{sep}examples \
+        --out-dir {dir}[/]target[/]release[/]examples \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}release{sep}deps \
-         --extern bar={dir}{sep}target{sep}release{sep}deps{sep}libbar.rlib`
+        -L dependency={dir}[/]target[/]release[/]deps \
+         --extern bar={dir}[/]target[/]release[/]deps[/]libbar.rlib`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `target{sep}release{sep}examples{sep}a[EXE]`
+[RUNNING] `target[/]release[/]examples[/]a[EXE]`
 ",
         dir = p.root().display(),
         url = path2url(p.root()),
-        sep = SEP))
+        ))
                        .with_stdout("\
 fast1
 fast2"));
@@ -446,26 +444,26 @@ fast2"));
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
-[RUNNING] `rustc bar{sep}src{sep}bar.rs --crate-name bar --crate-type lib \
+[RUNNING] `rustc bar[/]src[/]bar.rs --crate-name bar --crate-type lib \
         -g \
         -C metadata=[..] \
-        --out-dir {dir}{sep}target{sep}debug{sep}deps \
+        --out-dir {dir}[/]target[/]debug[/]deps \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+        -L dependency={dir}[/]target[/]debug[/]deps`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc examples{sep}a.rs --crate-name a --crate-type bin \
+[RUNNING] `rustc examples[/]a.rs --crate-name a --crate-type bin \
         -g \
         -C metadata=[..] \
-        --out-dir {dir}{sep}target{sep}debug{sep}examples \
+        --out-dir {dir}[/]target[/]debug[/]examples \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps \
-         --extern bar={dir}{sep}target{sep}debug{sep}deps{sep}libbar.rlib`
+        -L dependency={dir}[/]target[/]debug[/]deps \
+         --extern bar={dir}[/]target[/]debug[/]deps[/]libbar.rlib`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target{sep}debug{sep}examples{sep}a[EXE]`
+[RUNNING] `target[/]debug[/]examples[/]a[EXE]`
 ",
         dir = p.root().display(),
         url = path2url(p.root()),
-        sep = SEP))
+        ))
                        .with_stdout("\
 slow1
 slow2"));
@@ -520,10 +518,10 @@ fn release_works() {
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `target{sep}release{sep}foo[EXE]`
+[RUNNING] `target[/]release[/]foo[EXE]`
 ",
         dir = path2url(p.root()),
-        sep = SEP)));
+        )));
     assert_that(&p.release_bin("foo"), existing_file());
 }
 
@@ -589,9 +587,9 @@ fn run_from_executable_folder() {
 
     assert_that(p.cargo("run").cwd(cwd),
                 execs().with_status(0)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]\n\
-[RUNNING] `.{sep}foo[EXE]`", sep = SEP))
+[RUNNING] `.[/]foo[EXE]`")
                        .with_stdout("\
 hello
 "));

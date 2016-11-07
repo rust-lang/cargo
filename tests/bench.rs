@@ -43,7 +43,7 @@ fn cargo_bench_simple() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.5.0 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]foo-[..][EXE]", p.url()))
+[RUNNING] target[/]release[/]foo-[..][EXE]", p.url()))
                        .with_stdout("
 running 1 test
 test bench_hello ... bench: [..] 0 ns/iter (+/- 0)
@@ -78,7 +78,7 @@ fn bench_tarname() {
                .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]bin2-[..][EXE]
+[RUNNING] target[/]release[/]bin2-[..][EXE]
 ", dir = prj.url()))
                .with_stdout("
 running 1 test
@@ -105,9 +105,9 @@ fn cargo_bench_verbose() {
     assert_that(p.cargo_process("bench").arg("-v").arg("hello"),
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.5.0 ({url})
-[RUNNING] `rustc src[..]foo.rs [..]`
+[RUNNING] `rustc src[/]foo.rs [..]`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `[..]target[..]release[..]foo-[..][EXE] hello --bench`", url = p.url()))
+[RUNNING] `[..]target[/]release[/]foo-[..][EXE] hello --bench`", url = p.url()))
                        .with_stdout("
 running 1 test
 test bench_hello ... bench: [..] 0 ns/iter (+/- 0)
@@ -190,10 +190,10 @@ test bench_hello ... ")
                        .with_stderr_contains(format!("\
 [COMPILING] foo v0.5.0 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]foo-[..][EXE]
+[RUNNING] target[/]release[/]foo-[..][EXE]
 thread '[..]' panicked at 'assertion failed: \
     `(left == right)` (left: \
-    `\"hello\"`, right: `\"nope\"`)', src[..]foo.rs:14
+    `\"hello\"`, right: `\"nope\"`)', src[/]foo.rs:14
 [..]
 ", p.url()))
                        .with_status(101));
@@ -243,8 +243,8 @@ fn bench_with_lib_dep() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]baz-[..][EXE]
-[RUNNING] target[..]release[..]foo-[..][EXE]", p.url()))
+[RUNNING] target[/]release[/]baz-[..][EXE]
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
                        .with_stdout("
 running 1 test
 test bin_bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -307,7 +307,7 @@ fn bench_with_deep_lib_dep() {
 [COMPILING] foo v0.0.1 ([..])
 [COMPILING] bar v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]deps[..]bar-[..][EXE]", dir = p.url()))
+[RUNNING] target[/]release[/]deps[/]bar-[..][EXE]", dir = p.url()))
                        .with_stdout("
 running 1 test
 test bar_bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -353,8 +353,8 @@ fn external_bench_explicit() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]bench-[..][EXE]
-[RUNNING] target[..]release[..]foo-[..][EXE]", p.url()))
+[RUNNING] target[/]release[/]bench-[..][EXE]
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
                        .with_stdout("
 running 1 test
 test external_bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -403,8 +403,8 @@ fn external_bench_implicit() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]external-[..][EXE]
-[RUNNING] target[..]release[..]foo-[..][EXE]", p.url()))
+[RUNNING] target[/]release[/]external-[..][EXE]
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
                        .with_stdout("
 running 1 test
 test external_bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -464,7 +464,7 @@ fn pass_through_command_line() {
                 .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]foo-[..][EXE]", dir = p.url()))
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", dir = p.url()))
                 .with_stdout("
 running 1 test
 test bar ... bench: [..] 0 ns/iter (+/- 0)
@@ -476,7 +476,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
     assert_that(p.cargo("bench").arg("foo"),
                 execs().with_status(0)
                        .with_stderr("[FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]foo-[..][EXE]")
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
                        .with_stdout("
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
@@ -546,8 +546,8 @@ fn lib_bin_same_name() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]foo-[..][EXE]
-[RUNNING] target[..]release[..]foo-[..][EXE]", p.url()))
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
+[RUNNING] target[/]release[/]foo-[..][EXE]", p.url()))
                        .with_stdout("
 running 1 test
 test [..] ... bench: [..] 0 ns/iter (+/- 0)
@@ -600,8 +600,8 @@ fn lib_with_standard_name() {
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]bench-[..][EXE]
-[RUNNING] target[..]release[..]syntax-[..][EXE]", dir = p.url()))
+[RUNNING] target[/]release[/]bench-[..][EXE]
+[RUNNING] target[/]release[/]deps[/]syntax-[..][EXE]", dir = p.url()))
                        .with_stdout("
 running 1 test
 test bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -652,7 +652,7 @@ fn lib_with_standard_name2() {
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]syntax-[..][EXE]", dir = p.url()))
+[RUNNING] target[/]release[/]syntax-[..][EXE]", dir = p.url()))
                        .with_stdout("
 running 1 test
 test bench ... bench: [..] 0 ns/iter (+/- 0)
@@ -722,8 +722,8 @@ fn bench_dylib() {
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `[..]target[..]release[..]bench-[..][EXE] --bench`
-[RUNNING] `[..]target[..]release[..]foo-[..][EXE] --bench`", dir = p.url()))
+[RUNNING] `[..]target[/]release[/]bench-[..][EXE] --bench`
+[RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE] --bench`", dir = p.url()))
                        .with_stdout("
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
@@ -744,8 +744,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 [FRESH] bar v0.0.1 ({dir}/bar)
 [FRESH] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `[..]target[..]release[..]bench-[..][EXE] --bench`
-[RUNNING] `[..]target[..]release[..]foo-[..][EXE] --bench`", dir = p.url()))
+[RUNNING] `[..]target[/]release[/]bench-[..][EXE] --bench`
+[RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE] --bench`", dir = p.url()))
                        .with_stdout("
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
@@ -786,7 +786,7 @@ fn bench_twice_with_build_cmd() {
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]foo-[..][EXE]", dir = p.url()))
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", dir = p.url()))
                        .with_stdout("
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
@@ -798,7 +798,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
     assert_that(p.cargo("bench"),
                 execs().with_status(0)
                        .with_stderr("[FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[..]release[..]foo-[..][EXE]")
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
                        .with_stdout("
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
@@ -871,8 +871,8 @@ fn bench_with_examples() {
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `{dir}[..]target[..]release[..]testb1-[..][EXE] --bench`
-[RUNNING] `{dir}[..]target[..]release[..]testbench-[..][EXE] --bench`",
+[RUNNING] `{dir}[/]target[/]release[/]testb1-[..][EXE] --bench`
+[RUNNING] `{dir}[/]target[/]release[/]deps[/]testbench-[..][EXE] --bench`",
                 dir = p.root().display(), url = p.url()))
                        .with_stdout("
 running 1 test
@@ -920,7 +920,7 @@ fn test_a_bench() {
                        .with_stderr("\
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[..]debug[..]b-[..][EXE]")
+[RUNNING] target[/]debug[/]b-[..][EXE]")
                        .with_stdout("
 running 1 test
 test foo ... ok
@@ -1030,7 +1030,7 @@ fn test_bench_multiple_packages() {
     assert_that(p.cargo_process("bench").arg("-p").arg("bar").arg("-p").arg("baz"),
                 execs().with_status(0)
                        .with_stderr_contains("\
-[RUNNING] target[..]release[..]bbaz-[..][EXE]")
+[RUNNING] target[/]release[/]deps[/]bbaz-[..][EXE]")
                        .with_stdout_contains("
 running 1 test
 test bench_baz ... bench:           0 ns/iter (+/- 0)
@@ -1038,7 +1038,7 @@ test bench_baz ... bench:           0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 ")
                        .with_stderr_contains("\
-[RUNNING] target[..]release[..]bbar-[..][EXE]")
+[RUNNING] target[/]release[/]deps[/]bbar-[..][EXE]")
                        .with_stdout_contains("
 running 1 test
 test bench_bar ... bench:           0 ns/iter (+/- 0)

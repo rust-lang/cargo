@@ -1,8 +1,6 @@
 extern crate cargotest;
 extern crate hamcrest;
 
-use std::path::MAIN_SEPARATOR as SEP;
-
 use cargotest::support::{execs, project};
 use hamcrest::assert_that;
 
@@ -29,14 +27,13 @@ fn build_lib_for_foo() {
                 .with_status(0)
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
+[RUNNING] `rustc src[/]lib.rs --crate-name foo --crate-type lib -g \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+        -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP,
-            dir = p.root().display(), url = p.url())));
+", dir = p.root().display(), url = p.url())));
 }
 
 #[test]
@@ -59,15 +56,14 @@ fn lib() {
                 .with_status(0)
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
+[RUNNING] `rustc src[/]lib.rs --crate-name foo --crate-type lib -g \
         -C debug-assertions=off \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+        -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP,
-            dir = p.root().display(), url = p.url())))
+", dir = p.root().display(), url = p.url())))
 }
 
 #[test]
@@ -90,20 +86,20 @@ fn build_main_and_allow_unstable_options() {
                 .with_status(0)
                 .with_stderr(&format!("\
 [COMPILING] {name} v{version} ({url})
-[RUNNING] `rustc src{sep}lib.rs --crate-name {name} --crate-type lib -g \
+[RUNNING] `rustc src[/]lib.rs --crate-name {name} --crate-type lib -g \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
-[RUNNING] `rustc src{sep}main.rs --crate-name {name} --crate-type bin -g \
+        -L dependency={dir}[/]target[/]debug[/]deps`
+[RUNNING] `rustc src[/]main.rs --crate-name {name} --crate-type bin -g \
         -C debug-assertions \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps \
-        --extern {name}={dir}{sep}target[..]lib{name}.rlib`
+        -L dependency={dir}[/]target[/]debug[/]deps \
+        --extern {name}={dir}[/]target[/]debug[/]deps[/]lib{name}.rlib`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP,
+",
             dir = p.root().display(), url = p.url(),
             name = "foo", version = "0.0.1")));
 }
@@ -155,13 +151,13 @@ fn build_with_args_to_one_of_multiple_binaries() {
                 .with_status(0)
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
+[RUNNING] `rustc src[/]lib.rs --crate-name foo --crate-type lib -g \
         -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc src{sep}bin{sep}bar.rs --crate-name bar --crate-type bin -g \
+[RUNNING] `rustc src[/]bin[/]bar.rs --crate-name bar --crate-type bin -g \
         -C debug-assertions [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP, url = p.url())));
+", url = p.url())));
 }
 
 #[test]
@@ -211,13 +207,13 @@ fn build_with_args_to_one_of_multiple_tests() {
                 .with_status(0)
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc src{sep}lib.rs --crate-name foo --crate-type lib -g \
+[RUNNING] `rustc src[/]lib.rs --crate-name foo --crate-type lib -g \
         -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc tests{sep}bar.rs --crate-name bar -g \
+[RUNNING] `rustc tests[/]bar.rs --crate-name bar -g \
         -C debug-assertions [..]--test[..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-", sep = SEP, url = p.url())));
+", url = p.url())));
 }
 
 #[test]
@@ -259,8 +255,7 @@ fn build_foo_with_bar_dependency() {
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `[..] -g -C debug-assertions [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-",
-                url = foo.url())));
+", url = foo.url())));
 }
 
 #[test]
