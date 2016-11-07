@@ -351,7 +351,7 @@ impl Execs {
                  description: &str, extra: &[u8],
                  partial: bool) -> ham::MatchResult {
         let out = match expected {
-            Some(out) => substitute_macros(out),
+            Some(out) => out,
             None => return ham::success(),
         };
         let actual = match str::from_utf8(actual) {
@@ -432,6 +432,7 @@ impl Execs {
 }
 
 pub fn lines_match(expected: &str, mut actual: &str) -> bool {
+    let expected = substitute_macros(expected);
     for (i, part) in expected.split("[..]").enumerate() {
         match actual.find(part) {
             Some(j) => {
@@ -673,6 +674,7 @@ fn substitute_macros(input: &str) -> String {
         ("[REPLACING]",   "   Replacing"),
         ("[UNPACKING]",   "   Unpacking"),
         ("[EXE]", if cfg!(windows) {".exe"} else {""}),
+        ("[/]", if cfg!(windows) {"\\"} else {"/"}),
     ];
     let mut result = input.to_owned();
     for &(pat, subst) in macros.iter() {

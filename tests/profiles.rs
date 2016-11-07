@@ -2,7 +2,6 @@ extern crate cargotest;
 extern crate hamcrest;
 
 use std::env;
-use std::path::MAIN_SEPARATOR as SEP;
 
 use cargotest::is_nightly;
 use cargotest::support::{project, execs};
@@ -28,16 +27,16 @@ fn profile_overrides() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src{sep}lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -C debug-assertions=on \
         -C metadata=[..] \
         -C rpath \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+        -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] debug [optimized] target(s) in [..]
-", sep = SEP,
+",
 dir = p.root().display(),
 url = p.url(),
 )));
@@ -61,14 +60,14 @@ fn opt_level_override_0() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src{sep}lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
         -g \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+        -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] [..] target(s) in [..]
-", sep = SEP,
+",
 dir = p.root().display(),
 url = p.url()
 )));
@@ -91,16 +90,16 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src{sep}lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
         -C opt-level={level} \
         -g \
         -C debug-assertions=on \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}debug{sep}deps`
+        -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] [..] target(s) in [..]
-", sep = SEP,
+",
 dir = p.root().display(),
 url = p.url(),
 level = rustc_level
@@ -160,30 +159,29 @@ fn top_level_overrides_deps() {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url}/foo)
-[RUNNING] `rustc foo{sep}src{sep}lib.rs --crate-name foo \
+[RUNNING] `rustc foo[/]src[/]lib.rs --crate-name foo \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=1 \
         -g \
         -C metadata=[..] \
-        --out-dir {dir}{sep}target{sep}release{sep}deps \
+        --out-dir {dir}[/]target[/]release[/]deps \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}release{sep}deps`
+        -L dependency={dir}[/]target[/]release[/]deps`
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src{sep}lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
         -C opt-level=1 \
         -g \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
-        -L dependency={dir}{sep}target{sep}release{sep}deps \
-        --extern foo={dir}{sep}target{sep}release{sep}deps{sep}\
+        -L dependency={dir}[/]target[/]release[/]deps \
+        --extern foo={dir}[/]target[/]release[/]deps[/]\
                      {prefix}foo[..]{suffix} \
-        --extern foo={dir}{sep}target{sep}release{sep}deps{sep}libfoo.rlib`
+        --extern foo={dir}[/]target[/]release[/]deps[/]libfoo.rlib`
 [FINISHED] release [optimized + debuginfo] target(s) in [..]
 ",
                     dir = p.root().display(),
                     url = p.url(),
-                    sep = SEP,
                     prefix = env::consts::DLL_PREFIX,
                     suffix = env::consts::DLL_SUFFIX)));
 }
