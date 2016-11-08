@@ -116,6 +116,19 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                 -> CargoResult<FileLock> {
         let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
         let path = Path::new(&filename);
+
+        // Attempt to open an read-only copy first to avoid an exclusive write
+        // lock and also work with read-only filesystems. Note that we check the
+        // length of the file like below to handle interrupted downloads.
+        //
+        // If this fails then we fall through to the exclusive path where we may
+        // have to redownload the file.
+        if let Ok(dst) = self.cache_path.open_ro(path, self.config, &filename) {
+            let meta = try!(dst.file().metadata());
+            if meta.len() > 0 {
+                return Ok(dst)
+            }
+        }
         let mut dst = try!(self.cache_path.open_rw(path, self.config, &filename));
         let meta = try!(dst.file().metadata());
         if meta.len() > 0 {
