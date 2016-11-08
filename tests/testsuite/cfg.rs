@@ -253,9 +253,11 @@ fn ignore_version_from_other_platform() {
 
             [target.'cfg({})'.dependencies]
             bar = "0.1.0"
+            baz = {{ git = "https://github.com/rust-lang/libc", rev = "89ddad83ff8ec43437fdd0fae72cc23e8247208a" }}
 
             [target.'cfg({})'.dependencies]
             bar = "0.2.0"
+            baz = {{ git = "https://github.com/rust-lang/libc", rev = "b3676593f6930c32d947c59e210789bbfcb30960" }}
         "#,
                 this_family, other_family
             ),
