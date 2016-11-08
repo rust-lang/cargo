@@ -11,7 +11,7 @@ bufstream = "0.1"
 cargo = { path = "../.." }
 filetime = "0.1"
 flate2 = "0.2"
-git2 = "0.4"
+git2 = "0.5"
 hamcrest = "0.1"
 kernel32-sys = "0.2"
 libc = "0.2"
