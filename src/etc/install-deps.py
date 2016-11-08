@@ -55,18 +55,11 @@ else:
 
 rust_date = open('src/rustversion.txt').read().strip()
 url = 'https://static.rust-lang.org/dist/' + rust_date
-cargo_url = 'https://static.rust-lang.org/cargo-dist/2016-03-21'
 
 
 def install_via_tarballs():
     if os.path.isdir("rustc-install"):
         shutil.rmtree("rustc-install")
-
-    # Download cargo
-    host_fname = 'cargo-nightly-' + host + '.tar.gz'
-    download.get(cargo_url + '/' + host_fname, host_fname)
-    download.unpack(host_fname, "rustc-install", quiet=True, strip=2)
-    os.remove(host_fname)
 
     # Download the compiler
     host_fname = 'rustc-nightly-' + host + '.tar.gz'

@@ -270,7 +270,9 @@ need_cmd date
 need_cmd tr
 need_cmd sed
 need_cmd cmake
-need_cmd make
+if [ "${OS}" != "Windows_NT" ]; then
+    need_cmd curl
+fi
 
 CFG_SRC_DIR="$(cd $(dirname $0) && pwd)/"
 CFG_BUILD_DIR="$(pwd)/"
@@ -307,20 +309,20 @@ opt cross-tests 1 "run cross-compilation tests"
 valopt prefix "/usr/local" "set installation prefix"
 valopt local-rust-root "" "set prefix for local rust binary"
 
-if [ ! -z "${CFG_LOCAL_RUST_ROOT}" ]; then
-    export LD_LIBRARY_PATH="${CFG_LOCAL_RUST_ROOT}/lib:$LD_LIBRARY_PATH"
-    export DYLD_LIBRARY_PATH="${CFG_LOCAL_RUST_ROOT}/lib:$DYLD_LIBRARY_PATH"
-    export PATH="${CFG_LOCAL_RUST_ROOT}/bin:$PATH"
-fi
-
-valopt cargo "cargo" "cargo to bootstrap from"
-valopt rustc "rustc" "rustc to compile with"
-valopt rustdoc "rustdoc" "rustdoc to document with"
-
 if [ $HELP -eq 0 ]; then
-    probe_need CFG_CARGO $CFG_CARGO
-    probe_need CFG_RUSTC $CFG_RUSTC
-    probe_need CFG_RUSTDOC $CFG_RUSTDOC
+    if [ ! -z "${CFG_LOCAL_RUST_ROOT}" ]; then
+        export LD_LIBRARY_PATH="${CFG_LOCAL_RUST_ROOT}/lib:$LD_LIBRARY_PATH"
+        export DYLD_LIBRARY_PATH="${CFG_LOCAL_RUST_ROOT}/lib:$DYLD_LIBRARY_PATH"
+        LRV=`${CFG_LOCAL_RUST_ROOT}/bin/rustc --version`
+        if [ $? -eq 0 ]; then
+            step_msg "using rustc at: ${CFG_LOCAL_RUST_ROOT} with version: $LRV"
+        else
+            err "failed to run rustc at: ${CFG_LOCAL_RUST_ROOT}"
+        fi
+        CFG_RUSTC="${CFG_LOCAL_RUST_ROOT}/bin/rustc"
+    else
+        probe_need CFG_RUSTC        rustc
+    fi
     DEFAULT_BUILD=$("${CFG_RUSTC}" -vV | grep 'host: ' | sed 's/host: //')
 fi
 
@@ -335,6 +337,7 @@ valopt infodir "${CFG_PREFIX}/share/info" "install additional info"
 valopt docdir "${CFG_PREFIX}/share/doc/cargo" "install extra docs"
 valopt mandir "${CFG_PREFIX}/share/man" "install man pages in PATH"
 valopt libdir "${CFG_PREFIX}/lib" "install libraries"
+valopt local-cargo "" "local cargo to bootstrap from"
 
 if [ $HELP -eq 1 ]
 then
@@ -351,8 +354,15 @@ fi
 
 step_msg "looking for build programs"
 
+probe_need CFG_CURLORWGET  curl wget
+probe_need CFG_PYTHON      python2.7 python2 python
 probe_need CFG_CC          cc gcc clang
-probe GIT git
+
+if [ ! -z "${CFG_LOCAL_RUST_ROOT}" ]; then
+    CFG_RUSTDOC="${CFG_LOCAL_RUST_ROOT}/bin/rustdoc"
+else
+    probe_need CFG_RUSTDOC        rustdoc
+fi
 
 # a little post-processing of various config values
 CFG_PREFIX=${CFG_PREFIX%/}
@@ -386,7 +396,6 @@ if [ "$CFG_SRC_DIR" != "$CFG_BUILD_DIR" ]; then
 fi
 
 if [ ! -z "$CFG_ENABLE_NIGHTLY" ]; then
-    need_cmd curl
     if [ ! -f .cargo/config ]; then
         mkdir -p .cargo
         cat > .cargo/config <<-EOF
@@ -440,8 +449,6 @@ putvar CFG_MANDIR
 putvar CFG_LIBDIR
 putvar CFG_RUSTC
 putvar CFG_RUSTDOC
-putvar CFG_CARGO
-putvar CFG_GIT
 
 msg
 copy_if_changed ${CFG_SRC_DIR}Makefile.in ./Makefile
