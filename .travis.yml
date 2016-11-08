@@ -98,7 +98,6 @@ matrix:
     - rust: stable
 
 before_script:
-  - pip install 'travis-cargo<0.2' --user && export PATH=$HOME/.local/bin:$PATH
   - curl https://static.rust-lang.org/rustup.sh |
     sh -s -- --add-target=$TARGET --disable-sudo -y --prefix=`rustc --print sysroot`
   - if [ ! -z "$ALT" ]; then
@@ -111,8 +110,13 @@ script:
     else
         src/ci/docker/run.sh $IMAGE $TARGET;
     fi
-after_success:
-  - travis-cargo --only nightly doc-upload
+after_success: |
+  [ $TRAVIS_BRANCH = master ] &&
+  [ $TRAVIS_PULL_REQUEST = false ] &&
+  [ $(uname -s) = Linux ] &&
+  pip install ghp-import --user $USER &&
+  $HOME/.local/bin/ghp-import -n target/doc &&
+  git push -qf https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
 
 env:
   global:
