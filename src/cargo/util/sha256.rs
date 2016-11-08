@@ -7,13 +7,14 @@ mod imp {
     extern crate openssl;
 
     use std::io::Write;
-    use self::openssl::crypto::hash::{Hasher, Type};
+    use self::openssl::hash::{Hasher, MessageDigest};
 
     pub struct Sha256(Hasher);
 
     impl Sha256 {
         pub fn new() -> Sha256 {
-            Sha256(Hasher::new(Type::SHA256))
+            let hasher = Hasher::new(MessageDigest::sha256()).unwrap();
+            Sha256(hasher)
         }
 
         pub fn update(&mut self, bytes: &[u8]) {
@@ -22,7 +23,8 @@ mod imp {
 
         pub fn finish(&mut self) -> [u8; 32] {
             let mut ret = [0u8; 32];
-            ret.copy_from_slice(&self.0.finish()[..]);
+            let data = self.0.finish().unwrap();
+            ret.copy_from_slice(&data[..]);
             ret
         }
     }
