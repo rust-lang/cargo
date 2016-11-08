@@ -7,13 +7,13 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::env;
 
-use cargo::util::ProcessBuilder;
+use cargo::util::{process, ProcessBuilder};
 use cargotest::support::{execs, paths, cargo_dir};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 use tempdir::TempDir;
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut p = cargotest::process(&cargo_dir().join("cargo"));
+    let mut p = process(&cargo_dir().join("cargo"));
     p.arg(s).cwd(&paths::root()).env("HOME", &paths::home());
     return p;
 }
