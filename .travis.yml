@@ -25,6 +25,7 @@ matrix:
            MACOSX_DEPLOYMENT_TARGET=10.7
       os: osx
       before_install:
+        - export OPENSSL_DIR=`brew --prefix openssl`
         - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
         - export OPENSSL_LIB_DIR=`brew --prefix openssl`/include
     - env: TARGET=i686-apple-darwin
@@ -33,6 +34,7 @@ matrix:
            CFG_DISABLE_CROSS_TESTS=1
       os: osx
       before_install:
+        - export OPENSSL_DIR=`brew --prefix openssl`
         - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
         - export OPENSSL_LIB_DIR=`brew --prefix openssl`/include
 
