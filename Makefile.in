@@ -252,14 +252,8 @@ target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
 # variables read by various build scripts to find openssl
 cargo-$(1): export OPENSSL_STATIC := 1
 cargo-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
-cargo-$(1): export OPENSSL_ROOT_DIR := $$(OPENSSL_INSTALL_$(1))
-cargo-$(1): export OPENSSL_LIB_DIR := $$(OPENSSL_INSTALL_$(1))/lib
-cargo-$(1): export OPENSSL_INCLUDE_DIR := $$(OPENSSL_INSTALL_$(1))/include
 test-unit-$(1): export OPENSSL_STATIC := 1
 test-unit-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
-test-unit-$(1): export OPENSSL_ROOT_DIR := $$(OPENSSL_INSTALL_$(1))
-test-unit-$(1): export OPENSSL_LIB_DIR := $$(OPENSSL_INSTALL_$(1))/lib
-test-unit-$(1): export OPENSSL_INCLUDE_DIR := $$(OPENSSL_INSTALL_$(1))/include
 
 # build libz statically into the cargo we're producing
 cargo-$(1): export LIBZ_SYS_STATIC := 1

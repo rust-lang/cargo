@@ -127,7 +127,10 @@ fn https_something_happens() {
     let a = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = a.local_addr().unwrap();
     let t = thread::spawn(move|| {
-        drop(a.accept().unwrap());
+        let mut s = a.accept().unwrap().0;
+        drop(s.write(b"1234"));
+        drop(s.shutdown(std::net::Shutdown::Write));
+        drop(s.read(&mut [0; 16]));
     });
 
     let p = project("foo")
@@ -164,7 +167,7 @@ Caused by:
             // just not verify the error message here.
             "[..]"
         } else {
-            "[[..]] SSL error: [..]"
+            "[..] SSL error: [..]"
         })));
 
     t.join().ok().unwrap();

@@ -24,19 +24,12 @@ matrix:
            MAKE_TARGETS="test distcheck doc install uninstall"
            MACOSX_DEPLOYMENT_TARGET=10.7
       os: osx
-      before_install:
-        - export OPENSSL_DIR=`brew --prefix openssl`
-        - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
-        - export OPENSSL_LIB_DIR=`brew --prefix openssl`/include
     - env: TARGET=i686-apple-darwin
            MAKE_TARGETS=test
            MACOSX_DEPLOYMENT_TARGET=10.7
            CFG_DISABLE_CROSS_TESTS=1
       os: osx
-      before_install:
-        - export OPENSSL_DIR=`brew --prefix openssl`
-        - export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
-        - export OPENSSL_LIB_DIR=`brew --prefix openssl`/include
+      install: brew uninstall openssl && brew install openssl --universal --without-test
 
     # stable musl target, tested
     - env: TARGET=x86_64-unknown-linux-musl
@@ -129,6 +122,11 @@ notifications:
   email:
     on_success: never
 
+branches:
+  only:
+  - master
+  - auto-cargo
+
 before_deploy:
   - mkdir -p deploy/$TRAVIS_COMMIT
   - cp target/$TARGET/release/dist/cargo-nightly-$TARGET.tar.gz
@@ -142,9 +140,9 @@ deploy:
     upload_dir: cargo-master
     acl: public_read
     region: us-west-1
-    access_key_id: AKIAJYHGN72KKCN4DFBQ
+    access_key_id: AKIAIWZDM2B2IJOWBGTA
     secret_access_key:
-      secure: wKKDMYBVTdWLuc7+ffpjTqJs1EdM2pXpV6keUfZGv9RLRta+esh/r/cgc+UQ7+m9JHAliH8eWhlMm5ws6WDgkTvM0PTdqWBgwd24BRbAitsXX2kWfi9WgAeSJVSkIJdZ999TRpRIJu7Zc+1++fbfdD/tDv5XBirQGOJv1HynVWY=
+      secure: NB9b/MhIDiv8OtNiN/sHaFgA3xG2fa7MGuQQKJNj80ktvgByzDm5UPNyNeoYx9SmJ3jOWobgcPVaoUd2S+6XgO3bMBqm7sM/oMeE0KdqToh6+V2bKfyRF2U5fm697LEGepPIBYqMLDg4nr/dbknbKltzp6dAfJRyy22Nb721zPQ=
     on:
       branch: auto-cargo
       condition: $DEPLOY = 1
