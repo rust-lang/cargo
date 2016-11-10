@@ -2364,3 +2364,37 @@ fn test_release_ignore_panic() {
     println!("bench");
     assert_that(p.cargo("bench").arg("-v"), execs().with_status(0));
 }
+
+#[test]
+fn test_many_with_features() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+
+            [features]
+            foo = []
+
+            [workspace]
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("test").arg("-v")
+                 .arg("-p").arg("a")
+                 .arg("-p").arg("foo")
+                 .arg("--features").arg("foo"),
+                execs().with_status(0));
+}
