@@ -144,7 +144,7 @@ deploy:
     secret_access_key:
       secure: wKKDMYBVTdWLuc7+ffpjTqJs1EdM2pXpV6keUfZGv9RLRta+esh/r/cgc+UQ7+m9JHAliH8eWhlMm5ws6WDgkTvM0PTdqWBgwd24BRbAitsXX2kWfi9WgAeSJVSkIJdZ999TRpRIJu7Zc+1++fbfdD/tDv5XBirQGOJv1HynVWY=
     on:
-      branch: auto
+      branch: auto-cargo
       condition: $DEPLOY = 1
 
 cache:
