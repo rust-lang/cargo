@@ -68,4 +68,4 @@ deploy:
     artifact: cargo
     folder: cargo-master
     on:
-      branch: auto
+      branch: auto-cargo
