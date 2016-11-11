@@ -44,12 +44,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn config(&self) -> CargoResult<Option<RegistryConfig>> {
-        let lock = try!(self.index_path.open_ro(Path::new(INDEX_LOCK),
+        let lock = self.index_path.open_ro(Path::new(INDEX_LOCK),
                                                 self.config,
-                                                "the registry index"));
+                                                "the registry index")?;
         let path = lock.path().parent().unwrap();
-        let contents = try!(paths::read(&path.join("config.json")));
-        let config = try!(json::decode(&contents));
+        let contents = paths::read(&path.join("config.json"))?;
+        let config = json::decode(&contents)?;
         Ok(Some(config))
     }
 
@@ -60,29 +60,29 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         //
         // This way if there's a problem the error gets printed before we even
         // hit the index, which may not actually read this configuration.
-        try!(ops::http_handle(self.config));
+        ops::http_handle(self.config)?;
 
         // Then we actually update the index
-        try!(self.index_path.create_dir());
-        let lock = try!(self.index_path.open_rw(Path::new(INDEX_LOCK),
+        self.index_path.create_dir()?;
+        let lock = self.index_path.open_rw(Path::new(INDEX_LOCK),
                                                 self.config,
-                                                "the registry index"));
+                                                "the registry index")?;
         let path = lock.path().parent().unwrap();
 
-        try!(self.config.shell().status("Updating",
-             format!("registry `{}`", self.source_id.url())));
+        self.config.shell().status("Updating",
+             format!("registry `{}`", self.source_id.url()))?;
 
-        let repo = try!(git2::Repository::open(path).or_else(|_| {
+        let repo = git2::Repository::open(path).or_else(|_| {
             let _ = lock.remove_siblings();
             git2::Repository::init(path)
-        }));
+        })?;
 
         if self.source_id.url().host_str() == Some("github.com") {
             if let Ok(oid) = repo.refname_to_id("refs/heads/master") {
                 let handle = match self.handle {
                     Some(ref mut handle) => handle,
                     None => {
-                        self.handle = Some(try!(ops::http_handle(self.config)));
+                        self.handle = Some(ops::http_handle(self.config)?);
                         self.handle.as_mut().unwrap()
                     }
                 };
@@ -99,16 +99,16 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let url = self.source_id.url().to_string();
         let refspec = "refs/heads/*:refs/remotes/origin/*";
 
-        try!(git::fetch(&repo, &url, refspec, &self.config).chain_error(|| {
+        git::fetch(&repo, &url, refspec, &self.config).chain_error(|| {
             human(format!("failed to fetch `{}`", url))
-        }));
+        })?;
 
         // git reset --hard origin/master
         let reference = "refs/remotes/origin/master";
-        let oid = try!(repo.refname_to_id(reference));
+        let oid = repo.refname_to_id(reference)?;
         trace!("[{}] updating to rev {}", self.source_id, oid);
-        let object = try!(repo.find_object(oid, None));
-        try!(repo.reset(&object, git2::ResetType::Hard, None));
+        let object = repo.find_object(oid, None)?;
+        repo.reset(&object, git2::ResetType::Hard, None)?;
         Ok(())
     }
 
@@ -124,20 +124,20 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         // If this fails then we fall through to the exclusive path where we may
         // have to redownload the file.
         if let Ok(dst) = self.cache_path.open_ro(path, self.config, &filename) {
-            let meta = try!(dst.file().metadata());
+            let meta = dst.file().metadata()?;
             if meta.len() > 0 {
                 return Ok(dst)
             }
         }
-        let mut dst = try!(self.cache_path.open_rw(path, self.config, &filename));
-        let meta = try!(dst.file().metadata());
+        let mut dst = self.cache_path.open_rw(path, self.config, &filename)?;
+        let meta = dst.file().metadata()?;
         if meta.len() > 0 {
             return Ok(dst)
         }
-        try!(self.config.shell().status("Downloading", pkg));
+        self.config.shell().status("Downloading", pkg)?;
 
-        let config = try!(self.config()).unwrap();
-        let mut url = try!(config.dl.to_url());
+        let config = self.config()?.unwrap();
+        let mut url = config.dl.to_url()?;
         url.path_segments_mut().unwrap()
             .push(pkg.name())
             .push(&pkg.version().to_string())
@@ -146,30 +146,30 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let handle = match self.handle {
             Some(ref mut handle) => handle,
             None => {
-                self.handle = Some(try!(ops::http_handle(self.config)));
+                self.handle = Some(ops::http_handle(self.config)?);
                 self.handle.as_mut().unwrap()
             }
         };
         // TODO: don't download into memory, but ensure that if we ctrl-c a
         //       download we should resume either from the start or the middle
         //       on the next time
-        try!(handle.get(true));
-        try!(handle.url(&url.to_string()));
-        try!(handle.follow_location(true));
+        handle.get(true)?;
+        handle.url(&url.to_string())?;
+        handle.follow_location(true)?;
         let mut state = Sha256::new();
         let mut body = Vec::new();
         {
             let mut handle = handle.transfer();
-            try!(handle.write_function(|buf| {
+            handle.write_function(|buf| {
                 state.update(buf);
                 body.extend_from_slice(buf);
                 Ok(buf.len())
-            }));
-            try!(network::with_retry(self.config, || {
+            })?;
+            network::with_retry(self.config, || {
                 handle.perform()
-            }))
+            })?
         }
-        let code = try!(handle.response_code());
+        let code = handle.response_code()?;
         if code != 200 && code != 0 {
             bail!("failed to get 200 response from `{}`, got {}", url, code)
         }
@@ -179,8 +179,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             bail!("failed to verify the checksum of `{}`", pkg)
         }
 
-        try!(dst.write_all(&body));
-        try!(dst.seek(SeekFrom::Start(0)));
+        dst.write_all(&body)?;
+        dst.seek(SeekFrom::Start(0))?;
         Ok(dst)
     }
 }

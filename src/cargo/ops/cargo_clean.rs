@@ -28,26 +28,26 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         return rm_rf(&target_dir);
     }
 
-    let mut registry = try!(PackageRegistry::new(opts.config));
-    let resolve = try!(ops::resolve_ws(&mut registry, ws));
+    let mut registry = PackageRegistry::new(opts.config)?;
+    let resolve = ops::resolve_ws(&mut registry, ws)?;
     let packages = ops::get_resolved_packages(&resolve, registry);
 
     let profiles = ws.profiles();
-    let host_triple = try!(opts.config.rustc()).host.clone();
-    let mut cx = try!(Context::new(ws, &resolve, &packages, opts.config,
+    let host_triple = opts.config.rustc()?.host.clone();
+    let mut cx = Context::new(ws, &resolve, &packages, opts.config,
                                    BuildConfig {
                                        host_triple: host_triple,
                                        requested_target: opts.target.map(|s| s.to_owned()),
                                        release: opts.release,
                                        ..BuildConfig::default()
                                    },
-                                   profiles));
+                                   profiles)?;
     let mut units = Vec::new();
 
     for spec in opts.spec {
         // Translate the spec to a Package
-        let pkgid = try!(resolve.query(spec));
-        let pkg = try!(packages.get(&pkgid));
+        let pkgid = resolve.query(spec)?;
+        let pkg = packages.get(&pkgid)?;
 
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {
@@ -70,16 +70,16 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         }
     }
 
-    try!(cx.probe_target_info(&units));
+    cx.probe_target_info(&units)?;
 
     for unit in units.iter() {
         let layout = cx.layout(unit);
-        try!(rm_rf(&layout.proxy().fingerprint(&unit.pkg)));
-        try!(rm_rf(&layout.build(&unit.pkg)));
+        rm_rf(&layout.proxy().fingerprint(&unit.pkg))?;
+        rm_rf(&layout.build(&unit.pkg))?;
 
         let root = cx.out_dir(&unit);
-        for (filename, _) in try!(cx.target_filenames(&unit)) {
-            try!(rm_rf(&root.join(&filename)));
+        for (filename, _) in cx.target_filenames(&unit)? {
+            rm_rf(&root.join(&filename))?;
         }
     }
 
@@ -89,13 +89,13 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
 fn rm_rf(path: &Path) -> CargoResult<()> {
     let m = fs::metadata(path);
     if m.as_ref().map(|s| s.is_dir()).unwrap_or(false) {
-        try!(fs::remove_dir_all(path).chain_error(|| {
+        fs::remove_dir_all(path).chain_error(|| {
             human("could not remove build directory")
-        }));
+        })?;
     } else if m.is_ok() {
-        try!(fs::remove_file(path).chain_error(|| {
+        fs::remove_file(path).chain_error(|| {
             human("failed to remove build artifact")
-        }));
+        })?;
     }
     Ok(())
 }

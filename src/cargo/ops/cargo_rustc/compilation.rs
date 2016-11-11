@@ -71,12 +71,12 @@ impl<'cfg> Compilation<'cfg> {
 
     /// See `process`.
     pub fn rustc_process(&self, pkg: &Package) -> CargoResult<ProcessBuilder> {
-        self.fill_env(try!(self.config.rustc()).process(), pkg, true)
+        self.fill_env(self.config.rustc()?.process(), pkg, true)
     }
 
     /// See `process`.
     pub fn rustdoc_process(&self, pkg: &Package) -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(&*try!(self.config.rustdoc())), pkg, false)
+        self.fill_env(process(&*self.config.rustdoc()?), pkg, false)
     }
 
     /// See `process`.
@@ -128,7 +128,7 @@ impl<'cfg> Compilation<'cfg> {
         };
 
         search_path.extend(util::dylib_path().into_iter());
-        let search_path = try!(join_paths(&search_path, util::dylib_path_envvar()));
+        let search_path = join_paths(&search_path, util::dylib_path_envvar())?;
 
         cmd.env(util::dylib_path_envvar(), &search_path);
         if let Some(env) = self.extra_env.get(pkg.package_id()) {

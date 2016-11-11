@@ -44,20 +44,20 @@ and its format, see the `cargo help pkgid` command.
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-clean; args={:?}", env::args().collect::<Vec<_>>());
-    try!(config.configure(options.flag_verbose,
+    config.configure(options.flag_verbose,
                           options.flag_quiet,
                           &options.flag_color,
                           options.flag_frozen,
-                          options.flag_locked));
+                          options.flag_locked)?;
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     let opts = ops::CleanOptions {
         config: config,
         spec: &options.flag_package,
         target: options.flag_target.as_ref().map(|s| &s[..]),
         release: options.flag_release,
     };
-    let ws = try!(Workspace::new(&root, config));
-    try!(ops::clean(&ws, &opts));
+    let ws = Workspace::new(&root, config)?;
+    ops::clean(&ws, &opts)?;
     Ok(None)
 }

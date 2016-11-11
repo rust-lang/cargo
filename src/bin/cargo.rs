@@ -116,11 +116,11 @@ each_subcommand!(declare_mod);
   on this top-level information.
 */
 fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(flags.flag_verbose,
+    config.configure(flags.flag_verbose,
                           flags.flag_quiet,
                           &flags.flag_color,
                           flags.flag_frozen,
-                          flags.flag_locked));
+                          flags.flag_locked)?;
 
     init_git_transports(config);
     let _token = cargo::util::job::setup();
@@ -139,8 +139,8 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     }
 
     if let Some(ref code) = flags.flag_explain {
-        let mut procss = try!(config.rustc()).process();
-        try!(procss.arg("--explain").arg(code).exec().map_err(human));
+        let mut procss = config.rustc()?.process();
+        procss.arg("--explain").arg(code).exec().map_err(human)?;
         return Ok(None)
     }
 
@@ -189,7 +189,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         return Ok(None)
     }
 
-    let alias_list = try!(aliased_command(&config, &args[1]));
+    let alias_list = aliased_command(&config, &args[1])?;
     let args = match alias_list {
         Some(alias_command) => {
             let chain = args.iter().take(1)
@@ -205,7 +205,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         }
         None => args,
     };
-    try!(execute_subcommand(config, &args[1], &args));
+    execute_subcommand(config, &args[1], &args)?;
     Ok(None)
 }
 
@@ -239,7 +239,7 @@ fn aliased_command(config: &Config, command: &String) -> CargoResult<Option<Vec<
             }
         },
         Err(_) => {
-            let value = try!(config.get_list(&alias_name));
+            let value = config.get_list(&alias_name)?;
             if let Some(record) = value {
                 let alias_commands: Vec<String> = record.val.iter()
                                 .map(|s| s.0.to_string()).collect();

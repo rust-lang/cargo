@@ -28,10 +28,10 @@ Options:
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<Package>> {
     debug!("executing; cmd=cargo-read-manifest; args={:?}",
            env::args().collect::<Vec<_>>());
-    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
+    config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..]))?;
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
-    let pkg = try!(Package::for_path(&root, config));
+    let pkg = Package::for_path(&root, config)?;
     Ok(Some(pkg))
 }

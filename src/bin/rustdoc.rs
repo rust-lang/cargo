@@ -71,14 +71,14 @@ the `cargo help pkgid` command.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
+    config.configure(options.flag_verbose,
                           options.flag_quiet,
                           &options.flag_color,
                           options.flag_frozen,
-                          options.flag_locked));
+                          options.flag_locked)?;
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path,
-                                              config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path,
+                                              config.cwd())?;
 
     let doc_opts = ops::DocOptions {
         open_result: options.flag_open,
@@ -103,8 +103,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         },
     };
 
-    let ws = try!(Workspace::new(&root, config));
-    try!(ops::doc(&ws, &doc_opts));
+    let ws = Workspace::new(&root, config)?;
+    ops::doc(&ws, &doc_opts)?;
 
     Ok(None)
 }

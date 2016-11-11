@@ -43,11 +43,11 @@ Options:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
+    config.configure(options.flag_verbose,
                           options.flag_quiet,
                           &options.flag_color,
                           options.flag_frozen,
-                          options.flag_locked));
+                          options.flag_locked)?;
     let Options {
         flag_token: token,
         flag_host: host,
@@ -59,9 +59,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         ..
     } = options;
 
-    let root = try!(find_root_manifest_for_wd(flag_manifest_path.clone(), config.cwd()));
-    let ws = try!(Workspace::new(&root, config));
-    try!(ops::publish(&ws, &ops::PublishOpts {
+    let root = find_root_manifest_for_wd(flag_manifest_path.clone(), config.cwd())?;
+    let ws = Workspace::new(&root, config)?;
+    ops::publish(&ws, &ops::PublishOpts {
         config: config,
         token: token,
         index: host,
@@ -69,6 +69,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         allow_dirty: allow_dirty,
         jobs: jobs,
         dry_run: dry_run,
-    }));
+    })?;
     Ok(None)
 }

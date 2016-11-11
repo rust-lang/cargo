@@ -95,11 +95,11 @@ The `--list` option will list all installed packages (and their versions).
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
+    config.configure(options.flag_verbose,
                           options.flag_quiet,
                           &options.flag_color,
                           options.flag_frozen,
-                          options.flag_locked));
+                          options.flag_locked)?;
 
     let compile_opts = ops::CompileOptions {
         config: config,
@@ -119,7 +119,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     };
 
     let source = if let Some(url) = options.flag_git {
-        let url = try!(url.to_url());
+        let url = url.to_url()?;
         let gitref = if let Some(branch) = options.flag_branch {
             GitReference::Branch(branch)
         } else if let Some(tag) = options.flag_tag {
@@ -131,11 +131,11 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         };
         SourceId::for_git(&url, gitref)
     } else if let Some(path) = options.flag_path {
-        try!(SourceId::for_path(&config.cwd().join(path)))
+        SourceId::for_path(&config.cwd().join(path))?
     } else if options.arg_crate == None {
-        try!(SourceId::for_path(&config.cwd()))
+        SourceId::for_path(&config.cwd())?
     } else {
-        try!(SourceId::crates_io(config))
+        SourceId::crates_io(config)?
     };
 
     let krate = options.arg_crate.as_ref().map(|s| &s[..]);
@@ -143,9 +143,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = options.flag_root.as_ref().map(|s| &s[..]);
 
     if options.flag_list {
-        try!(ops::install_list(root, config));
+        ops::install_list(root, config)?;
     } else {
-        try!(ops::install(root, krate, &source, vers, &compile_opts, options.flag_force));
+        ops::install(root, krate, &source, vers, &compile_opts, options.flag_force)?;
     }
     Ok(None)
 }

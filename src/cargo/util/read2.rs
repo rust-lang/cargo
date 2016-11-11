@@ -62,11 +62,11 @@ mod imp {
                     }
                 }
             };
-            if !out_done && try!(handle(out_pipe.read_to_end(&mut out))) {
+            if !out_done && handle(out_pipe.read_to_end(&mut out))? {
                 out_done = true;
             }
             data(true, &mut out, out_done);
-            if !err_done && try!(handle(err_pipe.read_to_end(&mut err))) {
+            if !err_done && handle(err_pipe.read_to_end(&mut err))? {
                 err_done = true;
             }
             data(false, &mut err, err_done);
@@ -116,29 +116,29 @@ mod imp {
         let mut out = Vec::new();
         let mut err = Vec::new();
 
-        let port = try!(CompletionPort::new(1));
-        try!(port.add_handle(0, &out_pipe));
-        try!(port.add_handle(1, &err_pipe));
+        let port = CompletionPort::new(1)?;
+        port.add_handle(0, &out_pipe)?;
+        port.add_handle(1, &err_pipe)?;
 
         unsafe {
             let mut out_pipe = Pipe::new(out_pipe, &mut out);
             let mut err_pipe = Pipe::new(err_pipe, &mut err);
 
-            try!(out_pipe.read());
-            try!(err_pipe.read());
+            out_pipe.read()?;
+            err_pipe.read()?;
 
             let mut status = [CompletionStatus::zero(), CompletionStatus::zero()];
 
             while !out_pipe.done || !err_pipe.done {
-                for status in try!(port.get_many(&mut status, None)) {
+                for status in port.get_many(&mut status, None)? {
                     if status.token() == 0 {
                         out_pipe.complete(status);
                         data(true, out_pipe.dst, out_pipe.done);
-                        try!(out_pipe.read());
+                        out_pipe.read()?;
                     } else {
                         err_pipe.complete(status);
                         data(false, err_pipe.dst, err_pipe.done);
-                        try!(err_pipe.read());
+                        err_pipe.read()?;
                     }
                 }
             }

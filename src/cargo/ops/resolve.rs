@@ -13,14 +13,14 @@ use util::CargoResult;
 /// lockfile.
 pub fn resolve_ws(registry: &mut PackageRegistry, ws: &Workspace)
                    -> CargoResult<Resolve> {
-    let prev = try!(ops::load_pkg_lockfile(ws));
-    let resolve = try!(resolve_with_previous(registry, ws,
+    let prev = ops::load_pkg_lockfile(ws)?;
+    let resolve = resolve_with_previous(registry, ws,
                                              Method::Everything,
-                                             prev.as_ref(), None, &[]));
+                                             prev.as_ref(), None, &[])?;
 
     // Avoid writing a lockfile if we are `cargo install`ing a non local package.
     if ws.current_opt().map(|pkg| pkg.package_id().source_id().is_path()).unwrap_or(true) {
-        try!(ops::write_pkg_lockfile(ws, &resolve));
+        ops::write_pkg_lockfile(ws, &resolve)?;
     }
     Ok(resolve)
 }
@@ -88,8 +88,8 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
 
     let mut summaries = Vec::new();
     for member in ws.members() {
-        try!(registry.add_sources(&[member.package_id().source_id()
-                                          .clone()]));
+        registry.add_sources(&[member.package_id().source_id()
+                                          .clone()])?;
         let method_to_resolve = match method {
             // When everything for a workspace we want to be sure to resolve all
             // members in the workspace, so propagate the `Method::Everything`.
@@ -154,9 +154,9 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => root_replace.to_vec(),
     };
 
-    let mut resolved = try!(resolver::resolve(&summaries, &replace, registry));
+    let mut resolved = resolver::resolve(&summaries, &replace, registry)?;
     if let Some(previous) = previous {
-        try!(resolved.merge_from(previous));
+        resolved.merge_from(previous)?;
     }
     return Ok(resolved);
 

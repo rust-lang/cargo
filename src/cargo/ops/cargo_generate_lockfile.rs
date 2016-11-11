@@ -16,11 +16,11 @@ pub struct UpdateOptions<'a> {
 }
 
 pub fn generate_lockfile(ws: &Workspace) -> CargoResult<()> {
-    let mut registry = try!(PackageRegistry::new(ws.config()));
-    let resolve = try!(ops::resolve_with_previous(&mut registry, ws,
+    let mut registry = PackageRegistry::new(ws.config())?;
+    let resolve = ops::resolve_with_previous(&mut registry, ws,
                                                   Method::Everything,
-                                                  None, None, &[]));
-    try!(ops::write_pkg_lockfile(ws, &resolve));
+                                                  None, None, &[])?;
+    ops::write_pkg_lockfile(ws, &resolve)?;
     Ok(())
 }
 
@@ -35,11 +35,11 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
         bail!("you can't generate a lockfile for an empty workspace.")
     }
 
-    let previous_resolve = match try!(ops::load_pkg_lockfile(ws)) {
+    let previous_resolve = match ops::load_pkg_lockfile(ws)? {
         Some(resolve) => resolve,
         None => return generate_lockfile(ws),
     };
-    let mut registry = try!(PackageRegistry::new(opts.config));
+    let mut registry = PackageRegistry::new(opts.config)?;
     let mut to_avoid = HashSet::new();
 
     if opts.to_update.is_empty() {
@@ -47,7 +47,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
     } else {
         let mut sources = Vec::new();
         for name in opts.to_update {
-            let dep = try!(previous_resolve.query(name));
+            let dep = previous_resolve.query(name)?;
             if opts.aggressive {
                 fill_with_deps(&previous_resolve, dep, &mut to_avoid,
                                &mut HashSet::new());
@@ -71,15 +71,15 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
                 });
             }
         }
-        try!(registry.add_sources(&sources));
+        registry.add_sources(&sources)?;
     }
 
-    let resolve = try!(ops::resolve_with_previous(&mut registry,
+    let resolve = ops::resolve_with_previous(&mut registry,
                                                   ws,
                                                   Method::Everything,
                                                   Some(&previous_resolve),
                                                   Some(&to_avoid),
-                                                  &[]));
+                                                  &[])?;
 
     // Summarize what is changing for the user.
     let print_change = |status: &str, msg: String| {
@@ -93,18 +93,18 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
             } else {
                 format!("{} -> v{}", removed[0], added[0].version())
             };
-            try!(print_change("Updating", msg));
+            print_change("Updating", msg)?;
         } else {
             for package in removed.iter() {
-                try!(print_change("Removing", format!("{}", package)));
+                print_change("Removing", format!("{}", package))?;
             }
             for package in added.iter() {
-                try!(print_change("Adding", format!("{}", package)));
+                print_change("Adding", format!("{}", package))?;
             }
         }
     }
 
-    try!(ops::write_pkg_lockfile(&ws, &resolve));
+    ops::write_pkg_lockfile(&ws, &resolve)?;
     return Ok(());
 
     fn fill_with_deps<'a>(resolve: &'a Resolve, dep: &'a PackageId,
