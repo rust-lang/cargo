@@ -34,11 +34,11 @@ Options:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
+    config.configure(options.flag_verbose,
                           options.flag_quiet,
                           &options.flag_color,
                           options.flag_frozen,
-                          options.flag_locked));
+                          options.flag_locked)?;
     let Options {
         flag_host: host,
         flag_limit: limit,
@@ -46,6 +46,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         ..
     } = options;
 
-    try!(ops::search(&query.join("+"), config, host, cmp::min(100, limit.unwrap_or(10)) as u8));
+    ops::search(&query.join("+"), config, host, cmp::min(100, limit.unwrap_or(10)) as u8)?;
     Ok(None)
 }

@@ -24,13 +24,13 @@ pub struct ProjectLocation {
 
 pub fn execute(flags: LocateProjectFlags,
                config: &Config) -> CliResult<Option<ProjectLocation>> {
-    let root = try!(find_root_manifest_for_wd(flags.flag_manifest_path, config.cwd()));
+    let root = find_root_manifest_for_wd(flags.flag_manifest_path, config.cwd())?;
 
-    let string = try!(root.to_str()
+    let string = root.to_str()
                       .chain_error(|| human("Your project path contains \
                                              characters not representable in \
                                              Unicode"))
-                      .map_err(|e| CliError::new(e, 1)));
+                      .map_err(|e| CliError::new(e, 1))?;
 
     Ok(Some(ProjectLocation { root: string.to_string() }))
 }

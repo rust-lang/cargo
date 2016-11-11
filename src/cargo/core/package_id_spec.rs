@@ -29,7 +29,7 @@ impl PackageIdSpec {
         let mut parts = spec.splitn(2, ':');
         let name = parts.next().unwrap();
         let version = match parts.next() {
-            Some(version) => Some(try!(Version::parse(version).map_err(human))),
+            Some(version) => Some(Version::parse(version).map_err(human)?),
             None => None,
         };
         for ch in name.chars() {
@@ -47,9 +47,9 @@ impl PackageIdSpec {
     pub fn query_str<'a, I>(spec: &str, i: I) -> CargoResult<&'a PackageId>
         where I: IntoIterator<Item=&'a PackageId>
     {
-        let spec = try!(PackageIdSpec::parse(spec).chain_error(|| {
+        let spec = PackageIdSpec::parse(spec).chain_error(|| {
             human(format!("invalid package id specification: `{}`", spec))
-        }));
+        })?;
         spec.query(i)
     }
 
@@ -68,20 +68,20 @@ impl PackageIdSpec {
         let frag = url.fragment().map(|s| s.to_owned());
         url.set_fragment(None);
         let (name, version) = {
-            let mut path = try!(url.path_segments().chain_error(|| {
+            let mut path = url.path_segments().chain_error(|| {
                 human(format!("pkgid urls must have a path: {}", url))
-            }));
-            let path_name = try!(path.next_back().chain_error(|| {
+            })?;
+            let path_name = path.next_back().chain_error(|| {
                 human(format!("pkgid urls must have at least one path \
                                component: {}", url))
-            }));
+            })?;
             match frag {
                 Some(fragment) => {
                     let mut parts = fragment.splitn(2, ':');
                     let name_or_version = parts.next().unwrap();
                     match parts.next() {
                         Some(part) => {
-                            let version = try!(part.to_semver().map_err(human));
+                            let version = part.to_semver().map_err(human)?;
                             (name_or_version.to_string(), Some(version))
                         }
                         None => {
@@ -89,8 +89,8 @@ impl PackageIdSpec {
                                               .is_alphabetic() {
                                 (name_or_version.to_string(), None)
                             } else {
-                                let version = try!(name_or_version.to_semver()
-                                                                  .map_err(human));
+                                let version = name_or_version.to_semver()
+                                                                  .map_err(human)?;
                                 (path_name.to_string(), Some(version))
                             }
                         }
@@ -180,20 +180,20 @@ impl fmt::Display for PackageIdSpec {
         match self.url {
             Some(ref url) => {
                 if url.scheme() == "cargo" {
-                    try!(write!(f, "{}{}", url.host().unwrap(), url.path()));
+                    write!(f, "{}{}", url.host().unwrap(), url.path())?;
                 } else {
-                    try!(write!(f, "{}", url));
+                    write!(f, "{}", url)?;
                 }
                 if url.path_segments().unwrap().next_back().unwrap() != &self.name {
                     printed_name = true;
-                    try!(write!(f, "#{}", self.name));
+                    write!(f, "#{}", self.name)?;
                 }
             }
-            None => { printed_name = true; try!(write!(f, "{}", self.name)) }
+            None => { printed_name = true; write!(f, "{}", self.name)? }
         }
         match self.version {
             Some(ref v) => {
-                try!(write!(f, "{}{}", if printed_name {":"} else {"#"}, v));
+                write!(f, "{}{}", if printed_name {":"} else {"#"}, v)?;
             }
             None => {}
         }

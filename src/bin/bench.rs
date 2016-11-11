@@ -71,12 +71,12 @@ Compilation can be customized with the `bench` profile in the manifest.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
-    try!(config.configure(options.flag_verbose,
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
+    config.configure(options.flag_verbose,
                           options.flag_quiet,
                           &options.flag_color,
                           options.flag_frozen,
-                          options.flag_locked));
+                          options.flag_locked)?;
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
         no_fail_fast: false,
@@ -102,8 +102,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         },
     };
 
-    let ws = try!(Workspace::new(&root, config));
-    let err = try!(ops::run_benches(&ws, &ops, &options.arg_args));
+    let ws = Workspace::new(&root, config)?;
+    let err = ops::run_benches(&ws, &ops, &options.arg_args)?;
     match err {
         None => Ok(None),
         Some(err) => {

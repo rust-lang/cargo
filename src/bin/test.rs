@@ -89,13 +89,13 @@ To get the list of all options available for the test binaries use this:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
+    config.configure(options.flag_verbose,
                           options.flag_quiet,
                           &options.flag_color,
                           options.flag_frozen,
-                          options.flag_locked));
+                          options.flag_locked)?;
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
     let empty = Vec::new();
     let (mode, filter);
@@ -132,8 +132,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         },
     };
 
-    let ws = try!(Workspace::new(&root, config));
-    let err = try!(ops::run_tests(&ws, &ops, &options.arg_args));
+    let ws = Workspace::new(&root, config)?;
+    let err = ops::run_tests(&ws, &ops, &options.arg_args)?;
     match err {
         None => Ok(None),
         Some(err) => {

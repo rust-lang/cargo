@@ -43,12 +43,12 @@ Options:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<ExportInfo>> {
-    try!(config.configure(options.flag_verbose,
+    config.configure(options.flag_verbose,
                           options.flag_quiet,
                           &options.flag_color,
                           options.flag_frozen,
-                          options.flag_locked));
-    let manifest = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+                          options.flag_locked)?;
+    let manifest = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
     let options = OutputMetadataOptions {
         features: options.flag_features,
@@ -58,7 +58,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<ExportInfo
         version: options.flag_format_version,
     };
 
-    let ws = try!(Workspace::new(&manifest, config));
-    let result = try!(output_metadata(&ws, &options));
+    let ws = Workspace::new(&manifest, config)?;
+    let result = output_metadata(&ws, &options)?;
     Ok(Some(result))
 }

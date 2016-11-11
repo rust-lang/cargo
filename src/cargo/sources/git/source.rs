@@ -50,7 +50,7 @@ impl<'cfg> GitSource<'cfg> {
 
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         if self.path_source.is_none() {
-            try!(self.update());
+            self.update()?;
         }
         self.path_source.as_mut().unwrap().read_packages()
     }
@@ -104,7 +104,7 @@ pub fn canonicalize_url(url: &Url) -> Url {
 
 impl<'cfg> Debug for GitSource<'cfg> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "git repo at {}", self.remote.url()));
+        write!(f, "git repo at {}", self.remote.url())?;
 
         match self.reference.to_ref_string() {
             Some(s) => write!(f, " ({})", s),
@@ -123,8 +123,8 @@ impl<'cfg> Registry for GitSource<'cfg> {
 
 impl<'cfg> Source for GitSource<'cfg> {
     fn update(&mut self) -> CargoResult<()> {
-        let lock = try!(self.config.git_path()
-            .open_rw(".cargo-lock-git", self.config, "the git checkouts"));
+        let lock = self.config.git_path()
+            .open_rw(".cargo-lock-git", self.config, "the git checkouts")?;
 
         let db_path = lock.parent().join("db").join(&self.ident);
 
@@ -137,16 +137,16 @@ impl<'cfg> Source for GitSource<'cfg> {
                             self.source_id.precise().is_none();
 
         let (repo, actual_rev) = if should_update {
-            try!(self.config.shell().status("Updating",
-                format!("git repository `{}`", self.remote.url())));
+            self.config.shell().status("Updating",
+                format!("git repository `{}`", self.remote.url()))?;
 
             trace!("updating git source `{:?}`", self.remote);
 
-            let repo = try!(self.remote.checkout(&db_path, &self.config));
-            let rev = try!(repo.rev_for(&self.reference));
+            let repo = self.remote.checkout(&db_path, &self.config)?;
+            let rev = repo.rev_for(&self.reference)?;
             (repo, rev)
         } else {
-            (try!(self.remote.db_at(&db_path)), actual_rev.unwrap())
+            (self.remote.db_at(&db_path)?, actual_rev.unwrap())
         };
 
         let checkout_path = lock.parent().join("checkouts")
@@ -157,7 +157,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         // in scope so the destructors here won't tamper with too much.
         // Checkout is immutable, so we don't need to protect it with a lock once
         // it is created.
-        try!(repo.copy_to(actual_rev.clone(), &checkout_path, &self.config));
+        repo.copy_to(actual_rev.clone(), &checkout_path, &self.config)?;
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
         let path_source = PathSource::new_recursive(&checkout_path,

@@ -76,14 +76,14 @@ processes spawned by Cargo, use the $RUSTFLAGS environment variable or the
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-rustc; args={:?}",
            env::args().collect::<Vec<_>>());
-    try!(config.configure(options.flag_verbose,
+    config.configure(options.flag_verbose,
                           options.flag_quiet,
                           &options.flag_color,
                           options.flag_frozen,
-                          options.flag_locked));
+                          options.flag_locked)?;
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path,
-                                              config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path,
+                                              config.cwd())?;
     let mode = match options.flag_profile.as_ref().map(|t| &t[..]) {
         Some("dev") | None => CompileMode::Build,
         Some("test") => CompileMode::Test,
@@ -115,8 +115,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target_rustc_args: options.arg_opts.as_ref().map(|a| &a[..]),
     };
 
-    let ws = try!(Workspace::new(&root, config));
-    try!(ops::compile(&ws, &opts));
+    let ws = Workspace::new(&root, config)?;
+    ops::compile(&ws, &opts)?;
     Ok(None)
 }
 

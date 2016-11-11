@@ -62,15 +62,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
 
         let dest = if build_config.release { "release" } else { "debug" };
-        let host_layout = try!(Layout::new(ws, None, &dest));
+        let host_layout = Layout::new(ws, None, &dest)?;
         let target_layout = match build_config.requested_target.as_ref() {
             Some(target) => {
-                Some(try!(Layout::new(ws, Some(&target), &dest)))
+                Some(Layout::new(ws, Some(&target), &dest)?)
             }
             None => None,
         };
 
-        let current_package = try!(ws.current()).package_id().clone();
+        let current_package = ws.current()?.package_id().clone();
         Ok(Context {
             host: host_layout,
             target: target_layout,
@@ -98,14 +98,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn prepare(&mut self) -> CargoResult<()> {
         let _p = profile::start("preparing layout");
 
-        try!(self.host.prepare().chain_error(|| {
+        self.host.prepare().chain_error(|| {
             internal(format!("couldn't prepare build directories"))
-        }));
+        })?;
         match self.target {
             Some(ref mut target) => {
-                try!(target.prepare().chain_error(|| {
+                target.prepare().chain_error(|| {
                     internal(format!("couldn't prepare build directories"))
-                }));
+                })?;
             }
             None => {}
         }
@@ -128,13 +128,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         crate_types.insert("bin".to_string());
         crate_types.insert("rlib".to_string());
         for unit in units {
-            try!(self.visit_crate_type(unit, &mut crate_types));
+            self.visit_crate_type(unit, &mut crate_types)?;
         }
-        try!(self.probe_target_info_kind(&crate_types, Kind::Target));
+        self.probe_target_info_kind(&crate_types, Kind::Target)?;
         if self.requested_target().is_none() {
             self.host_info = self.target_info.clone();
         } else {
-            try!(self.probe_target_info_kind(&crate_types, Kind::Host));
+            self.probe_target_info_kind(&crate_types, Kind::Host)?;
         }
         Ok(())
     }
@@ -152,8 +152,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }));
         }
-        for dep in try!(self.dep_targets(&unit)) {
-            try!(self.visit_crate_type(&dep, crate_types));
+        for dep in self.dep_targets(&unit)? {
+            self.visit_crate_type(&dep, crate_types)?;
         }
         Ok(())
     }
@@ -162,11 +162,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                               crate_types: &BTreeSet<String>,
                               kind: Kind)
                               -> CargoResult<()> {
-        let rustflags = try!(env_args(self.config,
+        let rustflags = env_args(self.config,
                                       &self.build_config,
                                       kind,
-                                      "RUSTFLAGS"));
-        let mut process = try!(self.config.rustc()).process();
+                                      "RUSTFLAGS")?;
+        let mut process = self.config.rustc()?.process();
         process.arg("-")
                .arg("--crate-name").arg("_")
                .arg("--print=file-names")
@@ -184,13 +184,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         with_cfg.arg("--print=cfg");
 
         let mut has_cfg = true;
-        let output = try!(with_cfg.exec_with_output().or_else(|_| {
+        let output = with_cfg.exec_with_output().or_else(|_| {
             has_cfg = false;
             process.exec_with_output()
         }).chain_error(|| {
             human(format!("failed to run `rustc` to learn about \
                            target-specific information"))
-        }));
+        })?;
 
         let error = str::from_utf8(&output.stderr).unwrap();
         let output = str::from_utf8(&output.stdout).unwrap();
@@ -245,9 +245,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                     -> CargoResult<()> {
         let mut visited = HashSet::new();
         for unit in units {
-            try!(self.walk_used_in_plugin_map(unit,
+            self.walk_used_in_plugin_map(unit,
                                               unit.target.for_host(),
-                                              &mut visited));
+                                              &mut visited)?;
         }
         Ok(())
     }
@@ -263,10 +263,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         if is_plugin {
             self.used_in_plugin.insert(*unit);
         }
-        for unit in try!(self.dep_targets(unit)) {
-            try!(self.walk_used_in_plugin_map(&unit,
+        for unit in self.dep_targets(unit)? {
+            self.walk_used_in_plugin_map(&unit,
                                               is_plugin || unit.target.for_host(),
-                                              visited));
+                                              visited)?;
         }
         Ok(())
     }
@@ -407,14 +407,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 TargetKind::CustomBuild |
                 TargetKind::Bench |
                 TargetKind::Test => {
-                    try!(add("bin", false));
+                    add("bin", false)?;
                 }
                 TargetKind::Lib(..) if unit.profile.test => {
-                    try!(add("bin", false));
+                    add("bin", false)?;
                 }
                 TargetKind::Lib(ref libs) => {
                     for lib in libs {
-                        try!(add(lib.crate_type(), lib.linkable()));
+                        add(lib.crate_type(), lib.linkable())?;
                     }
                 }
             }
@@ -443,7 +443,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         let id = unit.pkg.package_id();
         let deps = self.resolve.deps(id);
-        let mut ret = try!(deps.filter(|dep| {
+        let mut ret = deps.filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name() && d.version_req().matches(dep.version())
             }).any(|d| {
@@ -494,7 +494,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
                 Err(e) => Some(Err(e))
             }
-        }).collect::<CargoResult<Vec<_>>>());
+        }).collect::<CargoResult<Vec<_>>>()?;
 
         // If this target is a build script, then what we've collected so far is
         // all we need. If this isn't a build script, then it depends on the
@@ -555,7 +555,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             profile: &self.profiles.dev,
             ..*unit
         };
-        let deps = try!(self.dep_targets(&tmp));
+        let deps = self.dep_targets(&tmp)?;
         Ok(deps.iter().filter_map(|unit| {
             if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
                 return None
@@ -589,7 +589,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // the documentation of the library being built.
         let mut ret = Vec::new();
         for dep in deps {
-            let dep = try!(dep);
+            let dep = dep?;
             let lib = match dep.targets().iter().find(|t| t.is_lib()) {
                 Some(lib) => lib,
                 None => continue,
@@ -779,14 +779,14 @@ fn env_args(config: &Config,
     // Then the target.*.rustflags value
     let target = build_config.requested_target.as_ref().unwrap_or(&build_config.host_triple);
     let key = format!("target.{}.{}", target, name);
-    if let Some(args) = try!(config.get_list(&key)) {
+    if let Some(args) = config.get_list(&key)? {
         let args = args.val.into_iter().map(|a| a.0);
         return Ok(args.collect());
     }
 
     // Then the build.rustflags value
     let key = format!("build.{}", name);
-    if let Some(args) = try!(config.get_list(&key)) {
+    if let Some(args) = config.get_list(&key)? {
         let args = args.val.into_iter().map(|a| a.0);
         return Ok(args.collect());
     }

@@ -14,19 +14,19 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
     }
 
     let root = Filesystem::new(ws.root().to_path_buf());
-    let mut f = try!(root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file"));
+    let mut f = root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file")?;
 
     let mut s = String::new();
-    try!(f.read_to_string(&mut s).chain_error(|| {
+    f.read_to_string(&mut s).chain_error(|| {
         human(format!("failed to read file: {}", f.path().display()))
-    }));
+    })?;
 
     (|| {
-        let table = try!(cargo_toml::parse(&s, f.path(), ws.config()));
+        let table = cargo_toml::parse(&s, f.path(), ws.config())?;
         let table = toml::Value::Table(table);
         let mut d = toml::Decoder::new(table);
-        let v: resolver::EncodableResolve = try!(Decodable::decode(&mut d));
-        Ok(Some(try!(v.into_resolve(ws))))
+        let v: resolver::EncodableResolve = Decodable::decode(&mut d)?;
+        Ok(Some(v.into_resolve(ws)?))
     }).chain_error(|| {
         human(format!("failed to parse lock file at: {}", f.path().display()))
     })
@@ -38,7 +38,7 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
     let orig = ws_root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file");
     let orig = orig.and_then(|mut f| {
         let mut s = String::new();
-        try!(f.read_to_string(&mut s));
+        f.read_to_string(&mut s)?;
         Ok(s)
     });
 
@@ -102,8 +102,8 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
 
     // Ok, if that didn't work just write it out
     ws_root.open_rw("Cargo.lock", ws.config(), "Cargo.lock file").and_then(|mut f| {
-        try!(f.file().set_len(0));
-        try!(f.write_all(out.as_bytes()));
+        f.file().set_len(0)?;
+        f.write_all(out.as_bytes())?;
         Ok(())
     }).chain_error(|| {
         human(format!("failed to write {}",

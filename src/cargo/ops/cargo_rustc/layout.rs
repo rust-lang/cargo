@@ -78,8 +78,8 @@ impl Layout {
         // the target triple as a Path and then just use the file stem as the
         // component for the directory name.
         if let Some(triple) = triple {
-            path.push(try!(Path::new(triple).file_stem()
-                           .ok_or(human(format!("target was empty")))));
+            path.push(Path::new(triple).file_stem()
+                           .ok_or(human(format!("target was empty")))?);
         }
         path.push(dest);
         Layout::at(ws.config(), path)
@@ -89,7 +89,7 @@ impl Layout {
         // For now we don't do any more finer-grained locking on the artifact
         // directory, so just lock the entire thing for the duration of this
         // compile.
-        let lock = try!(root.open_rw(".cargo-lock", config, "build directory"));
+        let lock = root.open_rw(".cargo-lock", config, "build directory")?;
         let root = root.into_path_unlocked();
 
         Ok(Layout {
@@ -105,20 +105,20 @@ impl Layout {
 
     pub fn prepare(&mut self) -> io::Result<()> {
         if fs::metadata(&self.root).is_err() {
-            try!(fs::create_dir_all(&self.root));
+            fs::create_dir_all(&self.root)?;
         }
 
-        try!(mkdir(&self.deps));
-        try!(mkdir(&self.native));
-        try!(mkdir(&self.fingerprint));
-        try!(mkdir(&self.examples));
-        try!(mkdir(&self.build));
+        mkdir(&self.deps)?;
+        mkdir(&self.native)?;
+        mkdir(&self.fingerprint)?;
+        mkdir(&self.examples)?;
+        mkdir(&self.build)?;
 
         return Ok(());
 
         fn mkdir(dir: &Path) -> io::Result<()> {
             if fs::metadata(&dir).is_err() {
-                try!(fs::create_dir(dir));
+                fs::create_dir(dir)?;
             }
             Ok(())
         }

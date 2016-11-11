@@ -50,16 +50,16 @@ impl FileLock {
     /// needs to be cleared out as it may be corrupt.
     pub fn remove_siblings(&self) -> io::Result<()> {
         let path = self.path();
-        for entry in try!(path.parent().unwrap().read_dir()) {
-            let entry = try!(entry);
+        for entry in path.parent().unwrap().read_dir()? {
+            let entry = entry?;
             if Some(&entry.file_name()[..]) == path.file_name() {
                 continue
             }
-            let kind = try!(entry.file_type());
+            let kind = entry.file_type()?;
             if kind.is_dir() {
-                try!(fs::remove_dir_all(entry.path()));
+                fs::remove_dir_all(entry.path())?;
             } else {
-                try!(fs::remove_file(entry.path()));
+                fs::remove_file(entry.path())?;
             }
         }
         Ok(())
@@ -204,26 +204,26 @@ impl Filesystem {
         // If we want an exclusive lock then if we fail because of NotFound it's
         // likely because an intermediate directory didn't exist, so try to
         // create the directory and then continue.
-        let f = try!(opts.open(&path).or_else(|e| {
+        let f = opts.open(&path).or_else(|e| {
             if e.kind() == io::ErrorKind::NotFound && state == State::Exclusive {
-                try!(create_dir_all(path.parent().unwrap()));
+                create_dir_all(path.parent().unwrap())?;
                 opts.open(&path)
             } else {
                 Err(e)
             }
         }).chain_error(|| {
             human(format!("failed to open: {}", path.display()))
-        }));
+        })?;
         match state {
             State::Exclusive => {
-                try!(acquire(config, msg, &path,
+                acquire(config, msg, &path,
                              &|| f.try_lock_exclusive(),
-                             &|| f.lock_exclusive()));
+                             &|| f.lock_exclusive())?;
             }
             State::Shared => {
-                try!(acquire(config, msg, &path,
+                acquire(config, msg, &path,
                              &|| f.try_lock_shared(),
-                             &|| f.lock_shared()));
+                             &|| f.lock_shared())?;
             }
             State::Unlocked => {}
 
@@ -285,7 +285,7 @@ fn acquire(config: &Config,
         }
     }
     let msg = format!("waiting for file lock on {}", msg);
-    try!(config.shell().err().say_status("Blocking", &msg, CYAN, true));
+    config.shell().err().say_status("Blocking", &msg, CYAN, true)?;
 
     return block().chain_error(|| {
         human(format!("failed to lock file: {}", path.display()))

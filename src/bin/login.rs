@@ -35,31 +35,31 @@ Options:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
+    config.configure(options.flag_verbose,
                           options.flag_quiet,
                           &options.flag_color,
                           options.flag_frozen,
-                          options.flag_locked));
+                          options.flag_locked)?;
     let token = match options.arg_token.clone() {
         Some(token) => token,
         None => {
-            let src = try!(SourceId::crates_io(config));
+            let src = SourceId::crates_io(config)?;
             let mut src = RegistrySource::remote(&src, config);
-            try!(src.update());
-            let config = try!(src.config()).unwrap();
+            src.update()?;
+            let config = src.config()?.unwrap();
             let host = options.flag_host.clone().unwrap_or(config.api);
             println!("please visit {}me and paste the API Token below", host);
             let mut line = String::new();
             let input = io::stdin();
-            try!(input.lock().read_line(&mut line).chain_error(|| {
+            input.lock().read_line(&mut line).chain_error(|| {
                 human("failed to read stdin")
-            }));
+            })?;
             line
         }
     };
 
     let token = token.trim().to_string();
-    try!(ops::registry_login(config, token));
+    ops::registry_login(config, token)?;
     Ok(None)
 }
 

@@ -69,13 +69,13 @@ the --release flag will use the `release` profile instead.
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-build; args={:?}",
            env::args().collect::<Vec<_>>());
-    try!(config.configure(options.flag_verbose,
+    config.configure(options.flag_verbose,
                           options.flag_quiet,
                           &options.flag_color,
                           options.flag_frozen,
-                          options.flag_locked));
+                          options.flag_locked)?;
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
     let opts = CompileOptions {
         config: config,
@@ -97,7 +97,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target_rustc_args: None,
     };
 
-    let ws = try!(Workspace::new(&root, config));
-    try!(ops::compile(&ws, &opts));
+    let ws = Workspace::new(&root, config)?;
+    ops::compile(&ws, &opts)?;
     Ok(None)
 }
