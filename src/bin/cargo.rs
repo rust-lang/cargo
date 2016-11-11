@@ -117,10 +117,10 @@ each_subcommand!(declare_mod);
 */
 fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     config.configure(flags.flag_verbose,
-                          flags.flag_quiet,
-                          &flags.flag_color,
-                          flags.flag_frozen,
-                          flags.flag_locked)?;
+                     flags.flag_quiet,
+                     &flags.flag_color,
+                     flags.flag_frozen,
+                     flags.flag_locked)?;
 
     init_git_transports(config);
     let _token = cargo::util::job::setup();

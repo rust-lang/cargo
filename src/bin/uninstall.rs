@@ -39,10 +39,10 @@ only uninstall particular binaries.
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked)?;
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
 
     let root = options.flag_root.as_ref().map(|s| &s[..]);
     ops::uninstall(root, &options.arg_spec, &options.flag_bin, config)?;

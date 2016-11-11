@@ -102,10 +102,10 @@ pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
 pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
     (|| -> CargoResult<()> {
         let mut f = OpenOptions::new()
-                            .write(true)
-                            .append(true)
-                            .create(true)
-                            .open(path)?;
+                                 .write(true)
+                                 .append(true)
+                                 .create(true)
+                                 .open(path)?;
 
         f.write_all(contents)?;
         Ok(())

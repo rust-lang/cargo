@@ -42,10 +42,10 @@ Options:
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-new; args={:?}", env::args().collect::<Vec<_>>());
     config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked)?;
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
 
     let Options { flag_bin, flag_lib, arg_path, flag_name, flag_vcs, .. } = options;
 
@@ -59,9 +59,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     ops::new(opts, config)?;
 
     config.shell().status("Created", format!("{} `{}` project",
-                                                   if opts_lib { "library" }
-                                                   else {"binary (application)"},
-                                                   arg_path))?;
+                                             if opts_lib { "library" }
+                                             else {"binary (application)"},
+                                             arg_path))?;
 
     Ok(None)
 }

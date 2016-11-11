@@ -61,8 +61,8 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
                 -> CargoResult<FileLock> {
         let crate_file = format!("{}-{}.crate", pkg.name(), pkg.version());
         let mut crate_file = self.root.open_ro(&crate_file,
-                                                    self.config,
-                                                    "crate file")?;
+                                               self.config,
+                                               "crate file")?;
 
         // If we've already got an unpacked version of this crate, then skip the
         // checksum below as it is in theory already verified.

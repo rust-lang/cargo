@@ -205,7 +205,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
         (Some(args), _) => {
             let targets = generate_targets(to_builds[0], profiles,
-                                                mode, filter, release)?;
+                                           mode, filter, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -219,7 +219,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
         (None, Some(args)) => {
             let targets = generate_targets(to_builds[0], profiles,
-                                                mode, filter, release)?;
+                                           mode, filter, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -234,7 +234,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         (None, None) => {
             for &to_build in to_builds.iter() {
                 let targets = generate_targets(to_build, profiles, mode,
-                                                    filter, release)?;
+                                               filter, release)?;
                 package_targets.push((to_build, targets));
             }
         }
@@ -257,12 +257,12 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
 
         ops::compile_targets(ws,
-                                  &package_targets,
-                                  &packages,
-                                  &resolve_with_overrides,
-                                  config,
-                                  build_config,
-                                  profiles)?
+                             &package_targets,
+                             &packages,
+                             &resolve_with_overrides,
+                             config,
+                             build_config,
+                             profiles)?
     };
 
     ret.to_doc_test = to_builds.iter().map(|&p| p.clone()).collect();

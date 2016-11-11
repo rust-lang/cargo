@@ -217,13 +217,13 @@ impl Filesystem {
         match state {
             State::Exclusive => {
                 acquire(config, msg, &path,
-                             &|| f.try_lock_exclusive(),
-                             &|| f.lock_exclusive())?;
+                        &|| f.try_lock_exclusive(),
+                        &|| f.lock_exclusive())?;
             }
             State::Shared => {
                 acquire(config, msg, &path,
-                             &|| f.try_lock_shared(),
-                             &|| f.lock_shared())?;
+                        &|| f.try_lock_shared(),
+                        &|| f.lock_shared())?;
             }
             State::Unlocked => {}
 

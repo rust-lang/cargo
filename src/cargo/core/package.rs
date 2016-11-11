@@ -74,7 +74,7 @@ impl Package {
         let path = manifest_path.parent().unwrap();
         let source_id = SourceId::for_path(path)?;
         let (pkg, _) = ops::read_package(&manifest_path, &source_id,
-                                              config)?;
+                                         config)?;
         Ok(pkg)
     }
 

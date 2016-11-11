@@ -18,8 +18,8 @@ pub struct UpdateOptions<'a> {
 pub fn generate_lockfile(ws: &Workspace) -> CargoResult<()> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let resolve = ops::resolve_with_previous(&mut registry, ws,
-                                                  Method::Everything,
-                                                  None, None, &[])?;
+                                             Method::Everything,
+                                             None, None, &[])?;
     ops::write_pkg_lockfile(ws, &resolve)?;
     Ok(())
 }
