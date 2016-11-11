@@ -57,7 +57,7 @@ pub fn install(root: Option<&str>,
     let map = SourceConfigMap::new(config)?;
     let (pkg, source) = if source_id.is_git() {
         select_pkg(GitSource::new(source_id, config), source_id,
-                        krate, vers, &mut |git| git.read_packages())?
+                   krate, vers, &mut |git| git.read_packages())?
     } else if source_id.is_path() {
         let path = source_id.url().to_file_path().ok()
                             .expect("path sources must have a valid path");
@@ -68,14 +68,14 @@ pub fn install(root: Option<&str>,
                            specify an alternate source", path.display()))
         })?;
         select_pkg(PathSource::new(&path, source_id, config),
-                        source_id, krate, vers,
-                        &mut |path| path.read_packages())?
+                   source_id, krate, vers,
+                   &mut |path| path.read_packages())?
     } else {
         select_pkg(map.load(source_id)?,
-                        source_id, krate, vers,
-                        &mut |_| Err(human("must specify a crate to install from \
-                                            crates.io, or use --path or --git to \
-                                            specify alternate source")))?
+                   source_id, krate, vers,
+                   &mut |_| Err(human("must specify a crate to install from \
+                                       crates.io, or use --path or --git to \
+                                       specify alternate source")))?
     };
 
 

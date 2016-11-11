@@ -39,10 +39,10 @@ Options:
 
 pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
     config.configure(args.flag_verbose,
-                          args.flag_quiet,
-                          &args.flag_color,
-                          args.flag_frozen,
-                          args.flag_locked)?;
+                     args.flag_quiet,
+                     &args.flag_color,
+                     args.flag_frozen,
+                     args.flag_locked)?;
 
     let mut contents = String::new();
     let filename = args.flag_manifest_path.unwrap_or("Cargo.toml".into());

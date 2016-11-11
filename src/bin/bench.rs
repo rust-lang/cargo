@@ -73,10 +73,10 @@ Compilation can be customized with the `bench` profile in the manifest.
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked)?;
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
         no_fail_fast: false,

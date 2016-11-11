@@ -78,8 +78,7 @@ impl Layout {
         // the target triple as a Path and then just use the file stem as the
         // component for the directory name.
         if let Some(triple) = triple {
-            path.push(Path::new(triple).file_stem()
-                           .ok_or(human(format!("target was empty")))?);
+            path.push(Path::new(triple).file_stem().ok_or(human(format!("target was empty")))?);
         }
         path.push(dest);
         Layout::at(ws.config(), path)

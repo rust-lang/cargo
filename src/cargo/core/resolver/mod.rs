@@ -451,7 +451,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         let summary = Rc::new(summary.clone());
         let candidate = Candidate { summary: summary, replace: None };
         remaining_deps.extend(activate(&mut cx, registry, None, candidate,
-                                            method)?);
+                                       method)?);
     }
 
     // Main resolution loop, this is the workhorse of the resolution algorithm.
@@ -559,7 +559,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
                candidate.summary.version());
         remaining_deps.extend(activate(&mut cx, registry, Some(&parent),
-                                            candidate, &method)?);
+                              candidate, &method)?);
     }
 
     Ok(cx)
@@ -713,7 +713,7 @@ fn build_features(s: &Summary, method: &Method)
             }
             for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
                 add_feature(s, dep.name(), &mut deps, &mut used,
-                                 &mut visited)?;
+                            &mut visited)?;
             }
         }
         Method::Required { features: requested_features, .. } =>  {
@@ -727,7 +727,7 @@ fn build_features(s: &Summary, method: &Method)
         Method::Required { uses_default_features: true, .. } => {
             if s.features().get("default").is_some() {
                 add_feature(s, "default", &mut deps, &mut used,
-                                 &mut visited)?;
+                            &mut visited)?;
             }
         }
         Method::Required { uses_default_features: false, .. } => {}
@@ -989,10 +989,10 @@ fn check_cycles(resolve: &Resolve,
     for pkg in all_packages {
         if !checked.contains(pkg) {
             visit(resolve,
-                       pkg,
-                       &summaries,
-                       &mut HashSet::new(),
-                       &mut checked)?
+                  pkg,
+                  &summaries,
+                  &mut HashSet::new(),
+                  &mut checked)?
         }
     }
     return Ok(());

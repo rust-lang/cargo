@@ -45,8 +45,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
     fn config(&self) -> CargoResult<Option<RegistryConfig>> {
         let lock = self.index_path.open_ro(Path::new(INDEX_LOCK),
-                                                self.config,
-                                                "the registry index")?;
+                                           self.config,
+                                           "the registry index")?;
         let path = lock.path().parent().unwrap();
         let contents = paths::read(&path.join("config.json"))?;
         let config = json::decode(&contents)?;
@@ -65,8 +65,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         // Then we actually update the index
         self.index_path.create_dir()?;
         let lock = self.index_path.open_rw(Path::new(INDEX_LOCK),
-                                                self.config,
-                                                "the registry index")?;
+                                           self.config,
+                                           "the registry index")?;
         let path = lock.path().parent().unwrap();
 
         self.config.shell().status("Updating",

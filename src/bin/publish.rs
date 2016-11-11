@@ -44,10 +44,10 @@ Options:
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked)?;
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
     let Options {
         flag_token: token,
         flag_host: host,

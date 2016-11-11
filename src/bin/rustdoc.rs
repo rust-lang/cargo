@@ -72,13 +72,13 @@ the `cargo help pkgid` command.
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked)?;
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path,
-                                              config.cwd())?;
+                                         config.cwd())?;
 
     let doc_opts = ops::DocOptions {
         open_result: options.flag_open,

@@ -483,7 +483,7 @@ impl<'cfg> Packages<'cfg> {
             Entry::Vacant(v) => {
                 let source_id = SourceId::for_path(key)?;
                 let pair = ops::read_manifest(&manifest_path, &source_id,
-                                                   self.config)?;
+                                              self.config)?;
                 let (manifest, _nested_paths) = pair;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {

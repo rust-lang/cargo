@@ -47,11 +47,11 @@ fn metadata_full(ws: &Workspace,
         PackageIdSpec::from_package_id(pkg.package_id())
     }).collect::<Vec<_>>();
     let deps = ops::resolve_dependencies(ws,
-                                              None,
-                                              &opt.features,
-                                              opt.all_features,
-                                              opt.no_default_features,
-                                              &specs)?;
+                                         None,
+                                         &opt.features,
+                                         opt.all_features,
+                                         opt.no_default_features,
+                                         &specs)?;
     let (packages, resolve) = deps;
 
     let packages = try!(packages.package_ids()
