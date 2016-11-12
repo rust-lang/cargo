@@ -190,7 +190,11 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         } else {
             try!(rustc(cx, unit))
         };
-        let dirty = work.then(dirty);
+        let link_work1 = try!(link_targets(cx, unit));
+        let link_work2 = try!(link_targets(cx, unit));
+        // Need to link targets on both the dirty and fresh
+        let dirty = work.then(link_work1).then(dirty);
+        let fresh = link_work2.then(fresh);
         (dirty, fresh, freshness)
     };
     try!(jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness));
@@ -318,36 +322,6 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
             try!(fingerprint::append_current_dir(&dep_info_loc, &cwd));
         }
 
-        // If we're a "root crate", e.g. the target of this compilation, then we
-        // hard link our outputs out of the `deps` directory into the directory
-        // above. This means that `cargo build` will produce binaries in
-        // `target/debug` which one probably expects.
-        for (src, link_dst, _linkable) in filenames {
-            // This may have been a `cargo rustc` command which changes the
-            // output, so the source may not actually exist.
-            debug!("Thinking about linking {} to {:?}", src.display(), link_dst);
-            if !src.exists() || link_dst.is_none() {
-                continue
-            }
-            let dst = link_dst.unwrap();
-
-            debug!("linking {} to {}", src.display(), dst.display());
-            if dst.exists() {
-                try!(fs::remove_file(&dst).chain_error(|| {
-                    human(format!("failed to remove: {}", dst.display()))
-                }));
-            }
-            try!(fs::hard_link(&src, &dst)
-                 .or_else(|err| {
-                     debug!("hard link failed {}. falling back to fs::copy", err);
-                     fs::copy(&src, &dst).map(|_| ())
-                 })
-                 .chain_error(|| {
-                     human(format!("failed to link or copy `{}` to `{}`",
-                                   src.display(), dst.display()))
-            }));
-        }
-
         Ok(())
     }));
 
@@ -379,6 +353,44 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         }
         Ok(())
     }
+}
+
+/// Link the compiled target (often of form foo-{metadata_hash}) to the
+/// final target. This must happen during both "Fresh" and "Compile"
+fn link_targets(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
+    let filenames = try!(cx.target_filenames(unit));
+    Ok(Work::new(move |_| {
+        // If we're a "root crate", e.g. the target of this compilation, then we
+        // hard link our outputs out of the `deps` directory into the directory
+        // above. This means that `cargo build` will produce binaries in
+        // `target/debug` which one probably expects.
+        for (src, link_dst, _linkable) in filenames {
+            // This may have been a `cargo rustc` command which changes the
+            // output, so the source may not actually exist.
+            debug!("Thinking about linking {} to {:?}", src.display(), link_dst);
+            if !src.exists() || link_dst.is_none() {
+                continue
+            }
+            let dst = link_dst.unwrap();
+
+            debug!("linking {} to {}", src.display(), dst.display());
+            if dst.exists() {
+                try!(fs::remove_file(&dst).chain_error(|| {
+                    human(format!("failed to remove: {}", dst.display()))
+                }));
+            }
+            try!(fs::hard_link(&src, &dst)
+                 .or_else(|err| {
+                     debug!("hard link failed {}. falling back to fs::copy", err);
+                     fs::copy(&src, &dst).map(|_| ())
+                 })
+                 .chain_error(|| {
+                     human(format!("failed to link or copy `{}` to `{}`",
+                                   src.display(), dst.display()))
+            }));
+        }
+        Ok(())
+    }))
 }
 
 fn load_build_deps(cx: &Context, unit: &Unit) -> Option<Arc<BuildScripts>> {

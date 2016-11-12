@@ -361,7 +361,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
     }
 
-    /// Returns the file stem for a given target/profile combo
+    /// Returns the file stem for a given target/profile combo (with metadata)
     pub fn file_stem(&self, unit: &Unit) -> String {
         match self.target_metadata(unit) {
             Some(ref metadata) => format!("{}{}", unit.target.crate_name(),
@@ -370,6 +370,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
     }
 
+    /// Returns the bin stem for a given target (without metadata)
     fn bin_stem(&self, unit: &Unit) -> String {
         if unit.target.allows_underscores() {
             unit.target.name().to_string()
@@ -378,6 +379,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
     }
 
+    /// Returns a tuple with the directory and name of the hard link we expect
+    /// our target to be copied to. Eg, file_stem may be out_dir/deps/foo-abcdef
+    /// and link_stem would be out_dir/foo
+    /// This function returns it in two parts so the caller can add prefix/suffis
+    /// to filename separately
+
+    /// Returns an Option because in some cases we don't want to link
+    /// (eg a dependent lib)
     pub fn link_stem(&self, unit: &Unit) -> Option<(PathBuf, String)> {
         let src_dir = self.out_dir(unit);
         let bin_stem = self.bin_stem(unit);
