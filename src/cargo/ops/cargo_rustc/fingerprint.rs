@@ -83,9 +83,9 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                                .join("index.html").exists();
     } else {
         for (src, link_dst, _) in try!(cx.target_filenames(unit)) {
-            missing_outputs |= fs::metadata(&src).is_err();
+            missing_outputs |= !src.exists();
             if let Some(link_dst) = link_dst {
-                missing_outputs |= fs::metadata(link_dst).is_err();
+                missing_outputs |= !link_dst.exists();
             }
         }
     }
@@ -654,12 +654,10 @@ fn mtime_if_fresh<I>(output: &Path, paths: I) -> Option<FileTime>
 }
 
 fn filename(cx: &Context, unit: &Unit) -> String {
-    // If there exists a link stem, we have to use that since multiple target filenames
-    // may hardlink to the same target stem. If there's no link, we can use the original
-    // file_stem (which can include a suffix)
-    let file_stem = cx.link_stem(unit)
-        .map(|(_path, stem)| stem)
-        .unwrap_or_else(|| cx.file_stem(unit));
+    // file_stem includes metadata hash. Thus we have a different
+    // fingerprint for every metadata hash version. This works because
+    // even if the package is fresh, we'll still link the fresh target
+    let file_stem = cx.file_stem(unit);
     let kind = match *unit.target.kind() {
         TargetKind::Lib(..) => "lib",
         TargetKind::Bin => "bin",

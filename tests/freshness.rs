@@ -172,17 +172,11 @@ fn changing_lib_features_caches_targets() {
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
-    /* Targets should be cached from the first build
-       XXX Sadly these cannot be cached since the "symlink" step is
-           not separate from the "compile" step. Packages which link
-           to top level binaries eg (deps/foo-abc123 -> foo) are forced
-           to do an extra recompile here.
-    */
+    /* Targets should be cached from the first build */
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
@@ -193,7 +187,6 @@ fn changing_lib_features_caches_targets() {
     assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(0)
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
@@ -231,24 +224,17 @@ fn changing_profiles_caches_targets() {
 [DOCTEST] foo
 "));
 
-    /* Targets should be cached from the first build
-       XXX Sadly these cannot be cached since the "symlink" step is
-           not separate from the "compile" step. Packages which link
-           to top level binaries eg (deps/foo-abc123 -> foo) are forced
-           to do an extra recompile here.
-    */
+    /* Targets should be cached from the first build */
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("test").arg("foo"),
                 execs().with_status(0)
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
 [DOCTEST] foo
@@ -423,18 +409,12 @@ fn changing_bin_features_caches_targets() {
 [RUNNING] `target[/]debug[/]foo[EXE]`
 "));
 
-    /* Targets should be cached from the first build
-       XXX Sadly these cannot be cached since the "symlink" step is
-           not separate from the "compile" step. Packages which link
-           to top level binaries eg (deps/foo-abc123 -> foo) are forced
-           to do an extra recompile here.
-    */
+    /* Targets should be cached from the first build */
 
     assert_that(p.cargo("run"),
                 execs().with_status(0)
                        .with_stdout("feature off")
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`
 "));
@@ -443,7 +423,6 @@ fn changing_bin_features_caches_targets() {
                 execs().with_status(0)
                        .with_stdout("feature on")
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`
 "));
