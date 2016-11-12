@@ -597,15 +597,21 @@ impl TomlManifest {
             }
 
             // Collect the deps
-            process_dependencies(&mut cx, self.dependencies.as_ref(), None)?;
-            process_dependencies(&mut cx, self.dev_dependencies.as_ref(), Some(Kind::Development))?;
-            process_dependencies(&mut cx, self.build_dependencies.as_ref(), Some(Kind::Build))?;
+            process_dependencies(&mut cx, self.dependencies.as_ref(),
+                                 None)?;
+            process_dependencies(&mut cx, self.dev_dependencies.as_ref(),
+                                 Some(Kind::Development))?;
+            process_dependencies(&mut cx, self.build_dependencies.as_ref(),
+                                 Some(Kind::Build))?;
 
             for (name, platform) in self.target.iter().flat_map(|t| t) {
                 cx.platform = Some(name.parse()?);
-                process_dependencies(&mut cx, platform.dependencies.as_ref(), None)?;
-                process_dependencies(&mut cx, platform.build_dependencies.as_ref(), Some(Kind::Build))?;
-                process_dependencies(&mut cx, platform.dev_dependencies.as_ref(), Some(Kind::Development))?;
+                process_dependencies(&mut cx, platform.dependencies.as_ref(),
+                                     None)?;
+                process_dependencies(&mut cx, platform.build_dependencies.as_ref(),
+                                     Some(Kind::Build))?;
+                process_dependencies(&mut cx, platform.dev_dependencies.as_ref(),
+                                     Some(Kind::Development))?;
             }
 
             replace = self.replace(&mut cx)?;

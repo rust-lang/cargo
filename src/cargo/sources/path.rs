@@ -94,8 +94,18 @@ impl<'cfg> PathSource<'cfg> {
                 human(format!("could not parse pattern `{}`: {}", p, e))
             })
         };
-        let exclude = pkg.manifest().exclude().iter().map(|p| parse(p)).collect::<Result<Vec<_>, _>>()?;
-        let include = pkg.manifest().include().iter().map(|p| parse(p)).collect::<Result<Vec<_>, _>>()?;
+
+        let exclude = pkg.manifest()
+                         .exclude()
+                         .iter()
+                         .map(|p| parse(p))
+                         .collect::<Result<Vec<_>, _>>()?;
+
+        let include = pkg.manifest()
+                         .include()
+                         .iter()
+                         .map(|p| parse(p))
+                         .collect::<Result<Vec<_>, _>>()?;
 
         let mut filter = |p: &Path| {
             let relative_path = util::without_prefix(p, &root).unwrap();
