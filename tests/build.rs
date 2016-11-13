@@ -820,7 +820,7 @@ suffix = env::consts::DLL_SUFFIX,
     // If you set the env-var, then we expect metadata on libbar
     assert_that(p.cargo_process("build").arg("-v").env("__CARGO_DEFAULT_LIB_METADATA", "1"),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] bar v0.0.1 ({url}[/]bar)
+[COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc bar[/]src[/]lib.rs --crate-name bar --crate-type dylib \
         -C prefer-dynamic -g \
         -C metadata=[..] \
