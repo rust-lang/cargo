@@ -792,7 +792,7 @@ fn cargo_default_env_metadata_env_var() {
     // No metadata on libbar since it's a dylib path dependency
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
-[COMPILING] bar v0.0.1 ({url}[/]bar)
+[COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc bar[/]src[/]lib.rs --crate-name bar --crate-type dylib \
         -C prefer-dynamic -g \
         -C metadata=[..] \
