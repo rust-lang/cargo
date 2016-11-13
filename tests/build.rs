@@ -806,11 +806,13 @@ fn cargo_default_env_metadata_env_var() {
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps \
-        --extern bar={dir}[/]target[/]debug[/]deps[/]libbar.dylib`
+        --extern bar={dir}[/]target[/]debug[/]deps[/]{prefix}bar{suffix}`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
 dir = p.root().display(),
 url = p.url(),
+prefix = env::consts::DLL_PREFIX,
+suffix = env::consts::DLL_SUFFIX,
 )));
 
     assert_that(p.cargo_process("clean"), execs().with_status(0));
@@ -832,11 +834,13 @@ url = p.url(),
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps \
-        --extern bar={dir}[/]target[/]debug[/]deps[/]libbar-[..].dylib`
+        --extern bar={dir}[/]target[/]debug[/]deps[/]{prefix}bar-[..]{suffix}`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
 dir = p.root().display(),
 url = p.url(),
+prefix = env::consts::DLL_PREFIX,
+suffix = env::consts::DLL_SUFFIX,
 )));
 }
 
