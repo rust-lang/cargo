@@ -308,11 +308,31 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Get the metadata for a target in a specific profile
+    /// We build to the path: "{filename}-{target_metadata}"
+    /// We use a linking step to link/copy to a predictable filename
+    /// like `target/debug/libfoo.{a,so,rlib}` and such.
     pub fn target_metadata(&self, unit: &Unit) -> Option<Metadata> {
         // No metadata for dylibs because of a couple issues
         // - OSX encodes the dylib name in the executable
         // - Windows rustc multiple files of which we can't easily link all of them
-        if !unit.profile.test && unit.target.is_dylib() {
+        //
+        // Two expeptions
+        // 1) Upstream dependencies (we aren't exporting + need to resolve name conflict)
+        // 2) __CARGO_DEFAULT_LIB_METADATA env var
+        //
+        // Note, though, that the compiler's build system at least wants
+        // path dependencies (eg libstd) to have hashes in filenames. To account for
+        // that we have an extra hack here which reads the
+        // `__CARGO_DEFAULT_METADATA` environment variable and creates a
+        // hash in the filename if that's present.
+        //
+        // This environment variable should not be relied on! It's
+        // just here for rustbuild. We need a more principled method
+        // doing this eventually.
+        if !unit.profile.test &&
+            unit.target.is_dylib() &&
+            unit.pkg.package_id().source_id().is_path() &&
+            !env::var("__CARGO_DEFAULT_LIB_METADATA").is_ok() {
             return None;
         }
 
