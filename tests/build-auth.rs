@@ -41,7 +41,7 @@ fn http_auth_offered() {
         assert_eq!(req, vec![
             "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
             "Accept: */*",
-            "User-Agent: git/1.0 (libgit2 0.23.0)",
+            "User-Agent: git/1.0 (libgit2 0.24.0)",
         ].into_iter().map(|s| s.to_string()).collect());
         drop(s);
 
@@ -56,7 +56,7 @@ fn http_auth_offered() {
             "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
             "Authorization: Basic Zm9vOmJhcg==",
             "Accept: */*",
-            "User-Agent: git/1.0 (libgit2 0.23.0)",
+            "User-Agent: git/1.0 (libgit2 0.24.0)",
         ].into_iter().map(|s| s.to_string()).collect());
     });
 
@@ -127,7 +127,10 @@ fn https_something_happens() {
     let a = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = a.local_addr().unwrap();
     let t = thread::spawn(move|| {
-        drop(a.accept().unwrap());
+        let mut s = a.accept().unwrap().0;
+        drop(s.write(b"1234"));
+        drop(s.shutdown(std::net::Shutdown::Write));
+        drop(s.read(&mut [0; 16]));
     });
 
     let p = project("foo")
@@ -164,7 +167,7 @@ Caused by:
             // just not verify the error message here.
             "[..]"
         } else {
-            "[[..]] SSL error: [..]"
+            "[..] SSL error: [..]"
         })));
 
     t.join().ok().unwrap();
