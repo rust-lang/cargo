@@ -52,6 +52,11 @@ after_test:
   - copy target\%TARGET%\release\dist\cargo-nightly-%TARGET%.tar.gz
          %APPVEYOR_REPO_COMMIT%
 
+branches:
+  only:
+  - master
+  - auto-cargo
+
 artifacts:
   - path: $(APPVEYOR_REPO_COMMIT)\cargo-nightly-$(TARGET).tar.gz
     name: cargo
@@ -59,9 +64,9 @@ artifacts:
 deploy:
   - provider: S3
     skip_cleanup: true
-    access_key_id: AKIAIIBSE766REJRCHEA
+    access_key_id: AKIAIWZDM2B2IJOWBGTA
     secret_access_key:
-      secure: S3MCw/gXyWBuq8cW+eFQjbfjccxrH1koYqQxsYDvCDkM7D2PLqd88yv8lND7dVt0
+      secure: hyH54di5NyNdV+jjntM1dRN/NeUgDidwZmwcg4/UKpdJqGf1AAwYb2ulXYK67CXA
     bucket: rust-lang-cargo-dev
     set_public: true
     region: us-west-1
