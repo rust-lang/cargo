@@ -315,15 +315,15 @@ impl Execs {
     }
 
     fn match_stdout(&self, actual: &Output) -> ham::MatchResult {
-        try!(self.match_std(self.expect_stdout.as_ref(), &actual.stdout,
-                            "stdout", &actual.stderr, false));
+        self.match_std(self.expect_stdout.as_ref(), &actual.stdout,
+                       "stdout", &actual.stderr, false)?;
         for expect in self.expect_stdout_contains.iter() {
-            try!(self.match_std(Some(expect), &actual.stdout, "stdout",
-                                &actual.stderr, true));
+            self.match_std(Some(expect), &actual.stdout, "stdout",
+                           &actual.stderr, true)?;
         }
         for expect in self.expect_stderr_contains.iter() {
-            try!(self.match_std(Some(expect), &actual.stderr, "stderr",
-                                &actual.stdout, true));
+            self.match_std(Some(expect), &actual.stderr, "stderr",
+                           &actual.stdout, true)?;
         }
 
         if let Some(ref objects) = self.expect_json {
@@ -336,7 +336,7 @@ impl Execs {
                                    objects.len(), lines.len()));
             }
             for (obj, line) in objects.iter().zip(lines) {
-                try!(self.match_json(obj, line));
+                self.match_json(obj, line)?;
             }
         }
         Ok(())
@@ -366,24 +366,29 @@ impl Execs {
         let mut a = actual.lines();
         let e = out.lines();
 
-        let diffs = if partial {
-            let mut min = self.diff_lines(a.clone(), e.clone(), partial);
+        if partial {
+            let mut diffs = self.diff_lines(a.clone(), e.clone(), partial);
             while let Some(..) = a.next() {
                 let a = self.diff_lines(a.clone(), e.clone(), partial);
-                if a.len() < min.len() {
-                    min = a;
+                if a.len() < diffs.len() {
+                    diffs = a;
                 }
             }
-            min
+            ham::expect(diffs.is_empty(),
+                        format!("expected to find:\n\
+                                 {}\n\n\
+                                 did not find in output:\n\
+                                 {}", out,
+                                 actual))
         } else {
-            self.diff_lines(a, e, partial)
-        };
-        ham::expect(diffs.is_empty(),
-                    format!("differences:\n\
-                            {}\n\n\
-                            other output:\n\
-                            `{}`", diffs.join("\n"),
-                            String::from_utf8_lossy(extra)))
+            let diffs = self.diff_lines(a, e, partial);
+            ham::expect(diffs.is_empty(),
+                        format!("differences:\n\
+                                {}\n\n\
+                                other output:\n\
+                                `{}`", diffs.join("\n"),
+                                String::from_utf8_lossy(extra)))
+        }
 
     }
 

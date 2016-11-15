@@ -36,21 +36,21 @@ impl Encodable for PackageId {
 
 impl Decodable for PackageId {
     fn decode<D: Decoder>(d: &mut D) -> Result<PackageId, D::Error> {
-        let string: String = try!(Decodable::decode(d));
+        let string: String = Decodable::decode(d)?;
         let regex = Regex::new(r"^([^ ]+) ([^ ]+) \(([^\)]+)\)$").unwrap();
-        let captures = try!(regex.captures(&string).ok_or_else(|| {
+        let captures = regex.captures(&string).ok_or_else(|| {
             d.error("invalid serialized PackageId")
-        }));
+        })?;
 
         let name = captures.at(1).unwrap();
         let version = captures.at(2).unwrap();
         let url = captures.at(3).unwrap();
-        let version = try!(semver::Version::parse(version).map_err(|_| {
+        let version = semver::Version::parse(version).map_err(|_| {
             d.error("invalid version")
-        }));
-        let source_id = try!(SourceId::from_url(url).map_err(|e| {
+        })?;
+        let source_id = SourceId::from_url(url).map_err(|e| {
             d.error(&e.to_string())
-        }));
+        })?;
 
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
@@ -127,7 +127,7 @@ pub struct Metadata {
 impl PackageId {
     pub fn new<T: ToSemver>(name: &str, version: T,
                              sid: &SourceId) -> CargoResult<PackageId> {
-        let v = try!(version.to_semver().map_err(PackageIdError::InvalidVersion));
+        let v = version.to_semver().map_err(PackageIdError::InvalidVersion)?;
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
                 name: name.to_string(),
@@ -179,10 +179,10 @@ impl Metadata {
 
 impl fmt::Display for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        try!(write!(f, "{} v{}", self.inner.name, self.inner.version));
+        write!(f, "{} v{}", self.inner.name, self.inner.version)?;
 
         if !self.inner.source_id.is_default_registry() {
-            try!(write!(f, " ({})", self.inner.source_id));
+            write!(f, " ({})", self.inner.source_id)?;
         }
 
         Ok(())

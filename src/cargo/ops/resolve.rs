@@ -13,14 +13,14 @@ use util::CargoResult;
 /// lockfile.
 pub fn resolve_ws(registry: &mut PackageRegistry, ws: &Workspace)
                    -> CargoResult<Resolve> {
-    let prev = try!(ops::load_pkg_lockfile(ws));
-    let resolve = try!(resolve_with_previous(registry, ws,
-                                             Method::Everything,
-                                             prev.as_ref(), None, &[]));
+    let prev = ops::load_pkg_lockfile(ws)?;
+    let resolve = resolve_with_previous(registry, ws,
+                                        Method::Everything,
+                                        prev.as_ref(), None, &[])?;
 
     // Avoid writing a lockfile if we are `cargo install`ing a non local package.
     if ws.current_opt().map(|pkg| pkg.package_id().source_id().is_path()).unwrap_or(true) {
-        try!(ops::write_pkg_lockfile(ws, &resolve));
+        ops::write_pkg_lockfile(ws, &resolve)?;
     }
     Ok(resolve)
 }
@@ -88,26 +88,51 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
 
     let mut summaries = Vec::new();
     for member in ws.members() {
-        try!(registry.add_sources(&[member.package_id().source_id()
-                                          .clone()]));
+        registry.add_sources(&[member.package_id().source_id().clone()])?;
+        let method_to_resolve = match method {
+            // When everything for a workspace we want to be sure to resolve all
+            // members in the workspace, so propagate the `Method::Everything`.
+            Method::Everything => Method::Everything,
 
-        // If we're resolving everything then we include all members of the
-        // workspace. If we want a specific set of requirements and we're
-        // compiling only a single workspace crate then resolve only it. This
-        // case should only happen after we have a previous resolution, however,
-        // so assert that the previous exists.
-        if let Method::Required { .. } = method {
-            assert!(previous.is_some());
-            if let Some(current) = ws.current_opt() {
-                if member.package_id() != current.package_id() &&
-                   !specs.iter().any(|spec| spec.matches(member.package_id())) {
-                    continue;
+            // If we're not resolving everything though then the workspace is
+            // already resolved and now we're drilling down from that to the
+            // exact crate graph we're going to build. Here we don't necessarily
+            // want to keep around all workspace crates as they may not all be
+            // built/tested.
+            //
+            // Additionally, the `method` specified represents command line
+            // flags, which really only matters for the current package
+            // (determined by the cwd). If other packages are specified (via
+            // `-p`) then the command line flags like features don't apply to
+            // them.
+            //
+            // As a result, if this `member` is the current member of the
+            // workspace, then we use `method` specified. Otherwise we use a
+            // base method with no features specified but using default features
+            // for any other packages specified with `-p`.
+            Method::Required { dev_deps, .. } => {
+                assert!(previous.is_some());
+                let base = Method::Required {
+                    dev_deps: dev_deps,
+                    features: &[],
+                    uses_default_features: true,
+                };
+                let member_id = member.package_id();
+                match ws.current_opt() {
+                    Some(current) if member_id == current.package_id() => method,
+                    _ => {
+                        if specs.iter().any(|spec| spec.matches(member_id)) {
+                            base
+                        } else {
+                            continue
+                        }
+                    }
                 }
             }
-        }
+        };
 
         let summary = registry.lock(member.summary().clone());
-        summaries.push((summary, method));
+        summaries.push((summary, method_to_resolve));
     }
 
     let root_replace = ws.root_replace();
@@ -128,9 +153,9 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => root_replace.to_vec(),
     };
 
-    let mut resolved = try!(resolver::resolve(&summaries, &replace, registry));
+    let mut resolved = resolver::resolve(&summaries, &replace, registry)?;
     if let Some(previous) = previous {
-        try!(resolved.merge_from(previous));
+        resolved.merge_from(previous)?;
     }
     return Ok(resolved);
 

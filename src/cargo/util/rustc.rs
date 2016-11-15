@@ -25,20 +25,20 @@ impl Rustc {
 
         let (cap_lints, output) = match first.exec_with_output() {
             Ok(output) => (true, output),
-            Err(..) => (false, try!(cmd.exec_with_output())),
+            Err(..) => (false, cmd.exec_with_output()?),
         };
 
-        let verbose_version = try!(String::from_utf8(output.stdout).map_err(|_| {
+        let verbose_version = String::from_utf8(output.stdout).map_err(|_| {
             internal("rustc -v didn't return utf8 output")
-        }));
+        })?;
 
         let host = {
             let triple = verbose_version.lines().find(|l| {
                 l.starts_with("host: ")
             }).map(|l| &l[6..]);
-            let triple = try!(triple.chain_error(|| {
+            let triple = triple.chain_error(|| {
                 internal("rustc -v didn't have a line for `host:`")
-            }));
+            })?;
             triple.to_string()
         };
 

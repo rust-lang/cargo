@@ -13,6 +13,6 @@ name = "crates_io"
 path = "lib.rs"
 
 [dependencies]
-curl = "0.3"
+curl = "0.4"
 url = "1.0"
 rustc-serialize = "0.3"

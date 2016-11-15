@@ -1,37 +1,76 @@
 environment:
-  CFG_DISABLE_CROSS_TESTS: 1
   matrix:
-  - TARGET: i686-pc-windows-msvc
-    MSVC: 1
-    BITS: 32
-    ARCH: x86
-  - TARGET: x86_64-pc-windows-msvc
-    MSVC: 1
-    BITS: 64
-    ARCH: amd64
   - TARGET: x86_64-pc-windows-gnu
     ARCH: amd64
     BITS: 64
+    CFG_DISABLE_CROSS_TESTS: 1
+    MAKE_TARGETS: test-unit-x86_64-pc-windows-gnu
   - TARGET: i686-pc-windows-gnu
     ARCH: x86
     BITS: 32
     MINGW_URL: https://s3.amazonaws.com/rust-lang-ci
     MINGW_ARCHIVE: i686-4.9.2-release-win32-dwarf-rt_v4-rev4.7z
     MINGW_DIR: mingw32
+    CFG_DISABLE_CROSS_TESTS: 1
+    MAKE_TARGETS: test-unit-i686-pc-windows-gnu
+  - TARGET: i686-pc-windows-msvc
+    BITS: 32
+    ARCH: x86
+    MAKE_TARGETS: test-unit-i686-pc-windows-msvc
+    CFG_DISABLE_CROSS_TESTS: 1
+  - TARGET: x86_64-pc-windows-msvc
+    OTHER_TARGET: i686-pc-windows-msvc
+    BITS: 64
+    ARCH: amd64
+    MAKE_TARGETS: test-unit-x86_64-pc-windows-msvc
 
 install:
-  - IF "%MSVC%"=="" set PATH=C:\msys64\mingw%BITS%\bin;C:\msys64\usr\bin;%PATH%
+  - set PATH=C:\msys64\mingw%BITS%\bin;C:\msys64\usr\bin;%PATH%
   - if defined MINGW_URL appveyor DownloadFile %MINGW_URL%/%MINGW_ARCHIVE%
   - if defined MINGW_URL 7z x -y %MINGW_ARCHIVE% > nul
   - if defined MINGW_URL set PATH=%CD%\%MINGW_DIR%\bin;C:\msys64\usr\bin;%PATH%
-  - python src/etc/install-deps.py
-  - python src/etc/dl-snapshot.py %TARGET%
-  - SET PATH=%PATH%;%cd%/rustc/bin
-  - SET PATH=%PATH%;%cd%/target/snapshot/bin
+  - curl -sSf -o rustup-init.exe https://win.rustup.rs/
+  - rustup-init.exe -y --default-host x86_64-pc-windows-msvc
+  - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
+  - if NOT "%TARGET%" == "x86_64-pc-windows-msvc" rustup target add %TARGET%
+  - if defined OTHER_TARGET rustup target add %OTHER_TARGET%
   - rustc -V
   - cargo -V
+  - git submodule update --init
 
 build: false
 
 test_script:
-  - cargo test
+  - sh src/ci/run.sh %TARGET%
+
+cache:
+  - target
+  - C:\Users\appveyor\.cargo\registry
+
+after_test:
+  - mkdir %APPVEYOR_REPO_COMMIT%
+  - copy target\%TARGET%\release\dist\cargo-nightly-%TARGET%.tar.gz
+         %APPVEYOR_REPO_COMMIT%
+
+branches:
+  only:
+  - master
+  - auto-cargo
+
+artifacts:
+  - path: $(APPVEYOR_REPO_COMMIT)\cargo-nightly-$(TARGET).tar.gz
+    name: cargo
+
+deploy:
+  - provider: S3
+    skip_cleanup: true
+    access_key_id: AKIAIWZDM2B2IJOWBGTA
+    secret_access_key:
+      secure: hyH54di5NyNdV+jjntM1dRN/NeUgDidwZmwcg4/UKpdJqGf1AAwYb2ulXYK67CXA
+    bucket: rust-lang-cargo-dev
+    set_public: true
+    region: us-west-1
+    artifact: cargo
+    folder: cargo-master
+    on:
+      branch: auto-cargo

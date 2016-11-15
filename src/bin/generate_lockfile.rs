@@ -33,14 +33,14 @@ Options:
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-generate-lockfile; args={:?}", env::args().collect::<Vec<_>>());
-    try!(config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked));
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    config.configure(options.flag_verbose,
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
-    let ws = try!(Workspace::new(&root, config));
-    try!(ops::generate_lockfile(&ws));
+    let ws = Workspace::new(&root, config)?;
+    ops::generate_lockfile(&ws)?;
     Ok(None)
 }

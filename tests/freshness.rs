@@ -443,15 +443,16 @@ fn rebuild_tests_if_lib_changes() {
             #[test]
             fn test() { foo::foo(); }
         "#);
+    p.build();
 
-    assert_that(p.cargo_process("build"),
+    p.root().move_into_the_past();
+
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
     assert_that(p.cargo("test"),
                 execs().with_status(0));
 
     File::create(&p.root().join("src/lib.rs")).unwrap();
-    p.root().move_into_the_past();
-    p.root().join("target").move_into_the_past();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
