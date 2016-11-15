@@ -395,6 +395,13 @@ impl Target {
         }
     }
 
+    pub fn is_dylib(&self) -> bool {
+        match self.kind {
+            TargetKind::Lib(ref libs) => libs.iter().any(|l| *l == LibKind::Dylib),
+            _ => false
+        }
+    }
+
     pub fn linkable(&self) -> bool {
         match self.kind {
             TargetKind::Lib(ref kinds) => {

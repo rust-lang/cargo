@@ -308,12 +308,62 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Get the metadata for a target in a specific profile
+    /// We build to the path: "{filename}-{target_metadata}"
+    /// We use a linking step to link/copy to a predictable filename
+    /// like `target/debug/libfoo.{a,so,rlib}` and such.
     pub fn target_metadata(&self, unit: &Unit) -> Option<Metadata> {
-        let metadata = unit.target.metadata();
+        // No metadata for dylibs because of a couple issues
+        // - OSX encodes the dylib name in the executable
+        // - Windows rustc multiple files of which we can't easily link all of them
+        //
+        // Two expeptions
+        // 1) Upstream dependencies (we aren't exporting + need to resolve name conflict)
+        // 2) __CARGO_DEFAULT_LIB_METADATA env var
+        //
+        // Note, though, that the compiler's build system at least wants
+        // path dependencies (eg libstd) to have hashes in filenames. To account for
+        // that we have an extra hack here which reads the
+        // `__CARGO_DEFAULT_METADATA` environment variable and creates a
+        // hash in the filename if that's present.
+        //
+        // This environment variable should not be relied on! It's
+        // just here for rustbuild. We need a more principled method
+        // doing this eventually.
+        if !unit.profile.test &&
+            unit.target.is_dylib() &&
+            unit.pkg.package_id().source_id().is_path() &&
+            !env::var("__CARGO_DEFAULT_LIB_METADATA").is_ok() {
+            return None;
+        }
+
+        let metadata = unit.target.metadata().cloned().map(|mut m| {
+            if let Some(features) = self.resolve.features(unit.pkg.package_id()) {
+                let mut feat_vec: Vec<&String> = features.iter().collect();
+                feat_vec.sort();
+                for feat in feat_vec {
+                    m.mix(feat);
+                }
+            }
+            m.mix(unit.profile);
+            m
+        });
+        let mut pkg_metadata = {
+            let mut m = unit.pkg.generate_metadata();
+            if let Some(features) = self.resolve.features(unit.pkg.package_id()) {
+                let mut feat_vec: Vec<&String> = features.iter().collect();
+                feat_vec.sort();
+                for feat in feat_vec {
+                    m.mix(feat);
+                }
+            }
+            m.mix(unit.profile);
+            m
+        };
+
         if unit.target.is_lib() && unit.profile.test {
             // Libs and their tests are built in parallel, so we need to make
             // sure that their metadata is different.
-            metadata.cloned().map(|mut m| {
+            metadata.map(|mut m| {
                 m.mix(&"test");
                 m
             })
@@ -321,58 +371,81 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             // Make sure that the name of this test executable doesn't
             // conflict with a library that has the same name and is
             // being tested
-            let mut metadata = unit.pkg.generate_metadata();
-            metadata.mix(&format!("bin-{}", unit.target.name()));
-            Some(metadata)
+            pkg_metadata.mix(&format!("bin-{}", unit.target.name()));
+            Some(pkg_metadata)
         } else if unit.pkg.package_id().source_id().is_path() &&
                   !unit.profile.test {
-            // If we're not building a unit test but we're building a path
-            // dependency, then we're likely compiling the "current package" or
-            // some package in a workspace. In this situation we pass no
-            // metadata by default so we'll have predictable
-            // file names like `target/debug/libfoo.{a,so,rlib}` and such.
-            //
-            // Note, though, that the compiler's build system at least wants
-            // path dependencies to have hashes in filenames. To account for
-            // that we have an extra hack here which reads the
-            // `__CARGO_DEFAULT_METADATA` environment variable and creates a
-            // hash in the filename if that's present.
-            //
-            // This environment variable should not be relied on! It's basically
-            // just here for rustbuild. We need a more principled method of
-            // doing this eventually.
-            if unit.target.is_lib() {
-                env::var("__CARGO_DEFAULT_LIB_METADATA").ok().map(|meta| {
-                    let mut metadata = unit.pkg.generate_metadata();
-                    metadata.mix(&meta);
-                    metadata
-                })
-            } else {
-                None
-            }
+            Some(pkg_metadata)
         } else {
-            metadata.cloned()
+            metadata
         }
     }
 
-    /// Returns the file stem for a given target/profile combo
+    /// Returns the file stem for a given target/profile combo (with metadata)
     pub fn file_stem(&self, unit: &Unit) -> String {
         match self.target_metadata(unit) {
             Some(ref metadata) => format!("{}{}", unit.target.crate_name(),
                                           metadata.extra_filename),
-            None if unit.target.allows_underscores() => {
-                unit.target.name().to_string()
+            None => self.bin_stem(unit),
+        }
+    }
+
+    /// Returns the bin stem for a given target (without metadata)
+    fn bin_stem(&self, unit: &Unit) -> String {
+        if unit.target.allows_underscores() {
+            unit.target.name().to_string()
+        } else {
+            unit.target.crate_name()
+        }
+    }
+
+    /// Returns a tuple with the directory and name of the hard link we expect
+    /// our target to be copied to. Eg, file_stem may be out_dir/deps/foo-abcdef
+    /// and link_stem would be out_dir/foo
+    /// This function returns it in two parts so the caller can add prefix/suffis
+    /// to filename separately
+
+    /// Returns an Option because in some cases we don't want to link
+    /// (eg a dependent lib)
+    pub fn link_stem(&self, unit: &Unit) -> Option<(PathBuf, String)> {
+        let src_dir = self.out_dir(unit);
+        let bin_stem = self.bin_stem(unit);
+        let file_stem = self.file_stem(unit);
+
+        // We currently only lift files up from the `deps` directory. If
+        // it was compiled into something like `example/` or `doc/` then
+        // we don't want to link it up.
+        if src_dir.ends_with("deps") {
+            // Don't lift up library dependencies
+            if unit.pkg.package_id() != &self.current_package && !unit.target.is_bin() {
+                None
+            } else {
+                Some((
+                    src_dir.parent().unwrap().to_owned(),
+                    if unit.profile.test {file_stem} else {bin_stem},
+                ))
             }
-            None => unit.target.crate_name(),
+        } else if bin_stem == file_stem {
+            None
+        } else if src_dir.ends_with("examples") {
+            Some((src_dir, bin_stem))
+        } else if src_dir.parent().unwrap().ends_with("build") {
+            Some((src_dir, bin_stem))
+        } else {
+            None
         }
     }
 
     /// Return the filenames that the given target for the given profile will
-    /// generate, along with whether you can link against that file (e.g. it's a
-    /// library).
+    /// generate as a list of 3-tuples (filename, link_dst, linkable)
+    /// filename: filename rustc compiles to. (Often has metadata suffix).
+    /// link_dst: Optional file to link/copy the result to (without metadata suffix)
+    /// linkable: Whether possible to link against file (eg it's a library)
     pub fn target_filenames(&self, unit: &Unit)
-                            -> CargoResult<Vec<(String, bool)>> {
+                            -> CargoResult<Vec<(PathBuf, Option<PathBuf>, bool)>> {
+        let out_dir = self.out_dir(unit);
         let stem = self.file_stem(unit);
+        let link_stem = self.link_stem(unit);
         let info = if unit.target.for_host() {
             &self.host_info
         } else {
@@ -386,8 +459,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 let crate_type = if crate_type == "lib" {"rlib"} else {crate_type};
                 match info.crate_types.get(crate_type) {
                     Some(&Some((ref prefix, ref suffix))) => {
-                        ret.push((format!("{}{}{}", prefix, stem, suffix),
-                                  linkable));
+                        let filename = out_dir.join(format!("{}{}{}", prefix, stem, suffix));
+                        let link_dst = link_stem.clone().map(|(ld, ls)| {
+                            ld.join(format!("{}{}{}", prefix, ls, suffix))
+                        });
+                        ret.push((filename, link_dst, linkable));
                         Ok(())
                     }
                     // not supported, don't worry about it
@@ -429,6 +505,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                    support any of the output crate types",
                   unit.pkg, self.target_triple());
         }
+        info!("Target filenames: {:?}", ret);
         Ok(ret)
     }
 
