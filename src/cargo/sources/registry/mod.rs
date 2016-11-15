@@ -288,7 +288,7 @@ impl<'cfg> RegistrySource<'cfg> {
                       -> CargoResult<PathBuf> {
         let dst = self.src_path.join(&format!("{}-{}", pkg.name(),
                                               pkg.version()));
-        try!(dst.create_dir());
+        dst.create_dir()?;
         // Note that we've already got the `tarball` locked above, and that
         // implies a lock on the unpacked destination as well, so this access
         // via `into_path_unlocked` should be ok.
@@ -298,15 +298,15 @@ impl<'cfg> RegistrySource<'cfg> {
             return Ok(dst)
         }
 
-        let gz = try!(GzDecoder::new(tarball.file()));
+        let gz = GzDecoder::new(tarball.file())?;
         let mut tar = Archive::new(gz);
-        try!(tar.unpack(dst.parent().unwrap()));
-        try!(File::create(&ok));
+        tar.unpack(dst.parent().unwrap())?;
+        File::create(&ok)?;
         Ok(dst)
     }
 
     fn do_update(&mut self) -> CargoResult<()> {
-        try!(self.ops.update_index());
+        self.ops.update_index()?;
         let path = self.ops.index_path();
         self.index = index::RegistryIndex::new(&self.source_id,
                                                path,
@@ -323,8 +323,8 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
         if dep.source_id().precise().is_some() && !self.updated {
-            if try!(self.index.query(dep)).is_empty() {
-                try!(self.do_update());
+            if self.index.query(dep)?.is_empty() {
+                self.do_update()?;
             }
         }
 
@@ -346,26 +346,26 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // `Some("locked")` as other `Some` values indicate a `cargo update
         // --precise` request
         if self.source_id.precise() != Some("locked") {
-            try!(self.do_update());
+            self.do_update()?;
         }
         Ok(())
     }
 
     fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
-        let hash = try!(self.index.hash(package));
-        let path = try!(self.ops.download(package, &hash));
-        let path = try!(self.unpack_package(package, &path).chain_error(|| {
+        let hash = self.index.hash(package)?;
+        let path = self.ops.download(package, &hash)?;
+        let path = self.unpack_package(package, &path).chain_error(|| {
             internal(format!("failed to unpack package `{}`", package))
-        }));
+        })?;
         let mut src = PathSource::new(&path, &self.source_id, self.config);
-        try!(src.update());
-        let pkg = try!(src.download(package));
+        src.update()?;
+        let pkg = src.download(package)?;
 
         // Unfortunately the index and the actual Cargo.toml in the index can
         // differ due to historical Cargo bugs. To paper over these we trash the
         // *summary* loaded from the Cargo.toml we just downloaded with the one
         // we loaded from the index.
-        let summaries = try!(self.index.summaries(package.name()));
+        let summaries = self.index.summaries(package.name())?;
         let summary = summaries.iter().map(|s| &s.0).find(|s| {
             s.package_id() == package
         }).expect("summary not found");

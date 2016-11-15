@@ -38,7 +38,7 @@ impl Work {
 
     pub fn then(self, next: Work) -> Work {
         Work::new(move |state| {
-            try!(self.call(state));
+            self.call(state)?;
             next.call(state)
         })
     }

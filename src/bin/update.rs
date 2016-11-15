@@ -59,12 +59,12 @@ For more information about package id specifications, see `cargo help pkgid`.
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-update; args={:?}", env::args().collect::<Vec<_>>());
-    try!(config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked));
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    config.configure(options.flag_verbose,
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
     let update_opts = ops::UpdateOptions {
         aggressive: options.flag_aggressive,
@@ -73,7 +73,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         config: config,
     };
 
-    let ws = try!(Workspace::new(&root, config));
-    try!(ops::update_lockfile(&ws, &update_opts));
+    let ws = Workspace::new(&root, config)?;
+    ops::update_lockfile(&ws, &update_opts)?;
     Ok(None)
 }

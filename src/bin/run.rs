@@ -58,13 +58,13 @@ the ones before go to Cargo.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked));
+    config.configure(options.flag_verbose,
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
 
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
     let (mut examples, mut bins) = (Vec::new(), Vec::new());
     if let Some(s) = options.flag_bin {
@@ -97,8 +97,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target_rustc_args: None,
     };
 
-    let ws = try!(Workspace::new(&root, config));
-    match try!(ops::run(&ws, &compile_opts, &options.arg_args)) {
+    let ws = Workspace::new(&root, config)?;
+    match ops::run(&ws, &compile_opts, &options.arg_args)? {
         None => Ok(None),
         Some(err) => {
             // If we never actually spawned the process then that sounds pretty

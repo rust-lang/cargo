@@ -82,7 +82,7 @@ impl<'cfg> Workspace<'cfg> {
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, config: &'cfg Config)
                -> CargoResult<Workspace<'cfg>> {
-        let target_dir = try!(config.target_dir());
+        let target_dir = config.target_dir()?;
 
         let mut ws = Workspace {
             config: config,
@@ -95,9 +95,9 @@ impl<'cfg> Workspace<'cfg> {
             target_dir: target_dir,
             members: Vec::new(),
         };
-        ws.root_manifest = try!(ws.find_root(manifest_path));
-        try!(ws.find_members());
-        try!(ws.validate());
+        ws.root_manifest = ws.find_root(manifest_path)?;
+        ws.find_members()?;
+        ws.validate()?;
         Ok(ws)
     }
 
@@ -130,7 +130,7 @@ impl<'cfg> Workspace<'cfg> {
             ws.target_dir = if let Some(dir) = target_dir {
                 Some(dir)
             } else {
-                try!(ws.config.target_dir())
+                ws.config.target_dir()?
             };
             ws.members.push(ws.current_manifest.clone());
         }
@@ -221,7 +221,7 @@ impl<'cfg> Workspace<'cfg> {
     fn find_root(&mut self, manifest_path: &Path)
                  -> CargoResult<Option<PathBuf>> {
         {
-            let current = try!(self.packages.load(&manifest_path));
+            let current = self.packages.load(&manifest_path)?;
             match *current.workspace_config() {
                 WorkspaceConfig::Root { .. } => {
                     debug!("find_root - is root {}", manifest_path.display());
@@ -274,7 +274,7 @@ impl<'cfg> Workspace<'cfg> {
             }
         };
         let members = {
-            let root = try!(self.packages.load(&root_manifest));
+            let root = self.packages.load(&root_manifest)?;
             match *root.workspace_config() {
                 WorkspaceConfig::Root { ref members } => members.clone(),
                 _ => bail!("root of a workspace inferred but wasn't a root: {}",
@@ -286,7 +286,7 @@ impl<'cfg> Workspace<'cfg> {
             let root = root_manifest.parent().unwrap();
             for path in list {
                 let manifest_path = root.join(path).join("Cargo.toml");
-                try!(self.find_path_deps(&manifest_path));
+                self.find_path_deps(&manifest_path)?;
             }
         }
 
@@ -302,7 +302,7 @@ impl<'cfg> Workspace<'cfg> {
         self.members.push(manifest_path.to_path_buf());
 
         let candidates = {
-            let pkg = match *try!(self.packages.load(manifest_path)) {
+            let pkg = match *self.packages.load(manifest_path)? {
                 MaybePackage::Package(ref p) => p,
                 MaybePackage::Virtual(_) => return Ok(()),
             };
@@ -315,7 +315,7 @@ impl<'cfg> Workspace<'cfg> {
                .collect::<Vec<_>>()
         };
         for candidate in candidates {
-            try!(self.find_path_deps(&candidate));
+            self.find_path_deps(&candidate)?;
         }
         Ok(())
     }
@@ -373,7 +373,7 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         for member in self.members.clone() {
-            let root = try!(self.find_root(&member));
+            let root = self.find_root(&member)?;
             if root == self.root_manifest {
                 continue
             }
@@ -462,7 +462,7 @@ impl<'cfg> Workspace<'cfg> {
                                            root_manifest.display());
 
                     //TODO: remove `Eq` bound from `Profiles` when the warning is removed.
-                    try!(self.config.shell().warn(&message));
+                    self.config.shell().warn(&message)?;
                 }
             }
         }
@@ -481,9 +481,9 @@ impl<'cfg> Packages<'cfg> {
         match self.packages.entry(key.to_path_buf()) {
             Entry::Occupied(e) => Ok(e.into_mut()),
             Entry::Vacant(v) => {
-                let source_id = try!(SourceId::for_path(key));
-                let pair = try!(ops::read_manifest(&manifest_path, &source_id,
-                                                   self.config));
+                let source_id = SourceId::for_path(key)?;
+                let pair = ops::read_manifest(&manifest_path, &source_id,
+                                              self.config)?;
                 let (manifest, _nested_paths) = pair;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {

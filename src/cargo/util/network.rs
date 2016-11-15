@@ -14,14 +14,14 @@ pub fn with_retry<T, E, F>(config: &Config, mut callback: F) -> CargoResult<T>
     where F: FnMut() -> Result<T, E>,
           E: errors::NetworkError
 {
-    let mut remaining = try!(config.net_retry());
+    let mut remaining = config.net_retry()?;
     loop {
         match callback() {
             Ok(ret) => return Ok(ret),
             Err(ref e) if e.maybe_spurious() && remaining > 0 => {
                 let msg = format!("spurious network error ({} tries \
                           remaining): {}", remaining, e);
-                try!(config.shell().warn(msg));
+                config.shell().warn(msg)?;
                 remaining -= 1;
             }
             Err(e) => return Err(Box::new(e)),

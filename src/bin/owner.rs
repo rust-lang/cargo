@@ -45,11 +45,11 @@ and troubleshooting.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked));
+    config.configure(options.flag_verbose,
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
     let opts = ops::OwnersOptions {
         krate: options.arg_crate,
         token: options.flag_token,
@@ -58,7 +58,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         to_remove: options.flag_remove,
         list: options.flag_list,
     };
-    try!(ops::modify_owners(config, &opts));
+    ops::modify_owners(config, &opts)?;
     Ok(None)
 }
 
