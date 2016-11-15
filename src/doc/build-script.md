@@ -81,7 +81,7 @@ crate is built:
   out in crates.io crates are not emitted by default.
 
 Any other element is a user-defined metadata that will be passed to
-dependencies. More information about this can be found in the [`links`][links]
+dependents. More information about this can be found in the [`links`][links]
 section.
 
 [links]: #the-links-manifest-key
@@ -252,9 +252,7 @@ This is where the real magic happens. The library is using the rustc-defined
 the generated file (`hello.rs`) into the crate’s compilation.
 
 Using the structure shown here, crates can include any number of generated files
-from the build script itself. We’ve also seen a brief example of how a build
-script can use a crate as a dependency purely for the build process and not for
-the crate itself at runtime.
+from the build script itself.
 
 # Case study: Building some native code
 
@@ -399,6 +397,9 @@ fn main() {
 And there we go! This should complete our example of building some C code from a
 Cargo package using the build script itself. This also shows why using a build
 dependency can be crucial in many situations and even much more concise!
+
+We’ve also seen a brief example of how a build script can use a crate as a
+dependency purely for the build process and not for the crate itself at runtime.
 
 # Case study: Linking to system libraries
 
