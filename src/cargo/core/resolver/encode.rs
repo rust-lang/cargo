@@ -52,7 +52,7 @@ impl EncodableResolve {
                     // We failed to find a local package in the workspace.
                     // It must have been removed and should be ignored.
                     None => continue,
-                    Some(source) => try!(PackageId::new(&pkg.name, &pkg.version, source))
+                    Some(source) => PackageId::new(&pkg.name, &pkg.version, source)?
                 };
 
                 assert!(live_pkgs.insert(enc_id, (id, pkg)).is_none())
@@ -88,7 +88,7 @@ impl EncodableResolve {
                 };
 
                 for edge in deps.iter() {
-                    if let Some(to_depend_on) = try!(lookup_id(edge)) {
+                    if let Some(to_depend_on) = lookup_id(edge)? {
                         g.link(id.clone(), to_depend_on);
                     }
                 }
@@ -101,7 +101,7 @@ impl EncodableResolve {
             for &(ref id, ref pkg) in live_pkgs.values() {
                 if let Some(ref replace) = pkg.replace {
                     assert!(pkg.dependencies.is_none());
-                    if let Some(replace_id) = try!(lookup_id(replace)) {
+                    if let Some(replace_id) = lookup_id(replace)? {
                         replacements.insert(id.clone(), replace_id);
                     }
                 }
@@ -132,9 +132,9 @@ impl EncodableResolve {
         for (k, v) in metadata.iter().filter(|p| p.0.starts_with(prefix)) {
             to_remove.push(k.to_string());
             let k = &k[prefix.len()..];
-            let enc_id: EncodablePackageId = try!(k.parse().chain_error(|| {
+            let enc_id: EncodablePackageId = k.parse().chain_error(|| {
                 internal("invalid encoding of checksum in lockfile")
-            }));
+            })?;
             let id = match lookup_id(&enc_id) {
                 Ok(Some(id)) => id,
                 _ => continue,
@@ -222,9 +222,9 @@ pub struct EncodablePackageId {
 
 impl fmt::Display for EncodablePackageId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "{} {}", self.name, self.version));
+        write!(f, "{} {}", self.name, self.version)?;
         if let Some(ref s) = self.source {
-            try!(write!(f, " ({})", s.to_url()));
+            write!(f, " ({})", s.to_url())?;
         }
         Ok(())
     }
@@ -235,15 +235,15 @@ impl FromStr for EncodablePackageId {
 
     fn from_str(s: &str) -> CargoResult<EncodablePackageId> {
         let regex = Regex::new(r"^([^ ]+) ([^ ]+)(?: \(([^\)]+)\))?$").unwrap();
-        let captures = try!(regex.captures(s).ok_or_else(|| {
+        let captures = regex.captures(s).ok_or_else(|| {
             internal("invalid serialized PackageId")
-        }));
+        })?;
 
         let name = captures.at(1).unwrap();
         let version = captures.at(2).unwrap();
 
         let source_id = match captures.at(3) {
-            Some(s) => Some(try!(SourceId::from_url(s))),
+            Some(s) => Some(SourceId::from_url(s)?),
             None => None,
         };
 

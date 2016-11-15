@@ -100,7 +100,7 @@ impl<'a> JobQueue<'a> {
                          job: Job,
                          fresh: Freshness) -> CargoResult<()> {
         let key = Key::new(unit);
-        let deps = try!(key.dependencies(cx));
+        let deps = key.dependencies(cx)?;
         self.queue.queue(Fresh, key, Vec::new(), &deps).push((job, fresh));
         *self.counts.entry(key.pkg).or_insert(0) += 1;
         Ok(())
@@ -141,7 +141,7 @@ impl<'a> JobQueue<'a> {
             while error.is_none() && self.active < self.jobs {
                 if !queue.is_empty() {
                     let (key, job, fresh) = queue.remove(0);
-                    try!(self.run(key, fresh, job, cx.config, scope));
+                    self.run(key, fresh, job, cx.config, scope)?;
                 } else if let Some((fresh, key, jobs)) = self.queue.dequeue() {
                     let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f)| {
                         f.combine(fresh)
@@ -165,28 +165,28 @@ impl<'a> JobQueue<'a> {
 
             match msg {
                 Message::Run(cmd) => {
-                    try!(cx.config.shell().verbose(|c| c.status("Running", &cmd)));
+                    cx.config.shell().verbose(|c| c.status("Running", &cmd))?;
                 }
                 Message::Stdout(out) => {
                     if cx.config.extra_verbose() {
-                        try!(writeln!(cx.config.shell().out(), "{}", out));
+                        writeln!(cx.config.shell().out(), "{}", out)?;
                     }
                 }
                 Message::Stderr(err) => {
                     if cx.config.extra_verbose() {
-                        try!(writeln!(cx.config.shell().err(), "{}", err));
+                        writeln!(cx.config.shell().err(), "{}", err)?;
                     }
                 }
                 Message::Finish(result) => {
                     info!("end: {:?}", key);
                     self.active -= 1;
                     match result {
-                        Ok(()) => try!(self.finish(key, cx)),
+                        Ok(()) => self.finish(key, cx)?,
                         Err(e) => {
                             if self.active > 0 {
-                                try!(cx.config.shell().say(
+                                cx.config.shell().say(
                                             "Build failed, waiting for other \
-                                             jobs to finish...", YELLOW));
+                                             jobs to finish...", YELLOW)?;
                             }
                             if error.is_none() {
                                 error = Some(e);
@@ -210,10 +210,10 @@ impl<'a> JobQueue<'a> {
                                    duration.subsec_nanos() / 10000000);
         if self.queue.is_empty() {
             if !self.is_doc_all {
-                try!(cx.config.shell().status("Finished", format!("{} [{}] target(s) in {}",
+                cx.config.shell().status("Finished", format!("{} [{}] target(s) in {}",
                                                                   build_type,
                                                                   opt_type,
-                                                                  time_elapsed)));
+                                                                  time_elapsed))?;
             }
             Ok(())
         } else if let Some(e) = error {
@@ -247,7 +247,7 @@ impl<'a> JobQueue<'a> {
         });
 
         // Print out some nice progress information
-        try!(self.note_working_on(config, &key, fresh));
+        self.note_working_on(config, &key, fresh)?;
 
         Ok(())
     }
@@ -257,7 +257,7 @@ impl<'a> JobQueue<'a> {
             let output = cx.build_state.outputs.lock().unwrap();
             if let Some(output) = output.get(&(key.pkg.clone(), key.kind)) {
                 for warning in output.warnings.iter() {
-                    try!(cx.config.shell().warn(warning));
+                    cx.config.shell().warn(warning)?;
                 }
             }
         }
@@ -293,15 +293,15 @@ impl<'a> JobQueue<'a> {
             Dirty => {
                 if key.profile.doc {
                     self.documented.insert(key.pkg);
-                    try!(config.shell().status("Documenting", key.pkg));
+                    config.shell().status("Documenting", key.pkg)?;
                 } else {
                     self.compiled.insert(key.pkg);
-                    try!(config.shell().status("Compiling", key.pkg));
+                    config.shell().status("Compiling", key.pkg)?;
                 }
             }
             Fresh if self.counts[key.pkg] == 0 => {
                 self.compiled.insert(key.pkg);
-                try!(config.shell().verbose(|c| c.status("Fresh", key.pkg)));
+                config.shell().verbose(|c| c.status("Fresh", key.pkg))?;
             }
             Fresh => {}
         }
@@ -322,12 +322,12 @@ impl<'a> Key<'a> {
     fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>)
                           -> CargoResult<Vec<Key<'a>>> {
         let unit = Unit {
-            pkg: try!(cx.get_package(self.pkg)),
+            pkg: cx.get_package(self.pkg)?,
             target: self.target,
             profile: self.profile,
             kind: self.kind,
         };
-        let targets = try!(cx.dep_targets(&unit));
+        let targets = cx.dep_targets(&unit)?;
         Ok(targets.iter().filter_map(|unit| {
             // Binaries aren't actually needed to *compile* tests, just to run
             // them, so we don't include this dependency edge in the job graph.

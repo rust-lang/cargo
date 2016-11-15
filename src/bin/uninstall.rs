@@ -38,14 +38,14 @@ only uninstall particular binaries.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked));
+    config.configure(options.flag_verbose,
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
 
     let root = options.flag_root.as_ref().map(|s| &s[..]);
-    try!(ops::uninstall(root, &options.arg_spec, &options.flag_bin, config));
+    ops::uninstall(root, &options.arg_spec, &options.flag_bin, config)?;
     Ok(None)
 }
 

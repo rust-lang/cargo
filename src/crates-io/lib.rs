@@ -127,35 +127,35 @@ impl Registry {
     }
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = try!(json::encode(&OwnersReq { users: owners }));
-        let body = try!(self.put(format!("/crates/{}/owners", krate),
-                                 body.as_bytes()));
-        assert!(try!(json::decode::<R>(&body)).ok);
+        let body = json::encode(&OwnersReq { users: owners })?;
+        let body = self.put(format!("/crates/{}/owners", krate),
+                                 body.as_bytes())?;
+        assert!(json::decode::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = try!(json::encode(&OwnersReq { users: owners }));
-        let body = try!(self.delete(format!("/crates/{}/owners", krate),
-                                    Some(body.as_bytes())));
-        assert!(try!(json::decode::<R>(&body)).ok);
+        let body = json::encode(&OwnersReq { users: owners })?;
+        let body = self.delete(format!("/crates/{}/owners", krate),
+                                    Some(body.as_bytes()))?;
+        assert!(json::decode::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn list_owners(&mut self, krate: &str) -> Result<Vec<User>> {
-        let body = try!(self.get(format!("/crates/{}/owners", krate)));
-        Ok(try!(json::decode::<Users>(&body)).users)
+        let body = self.get(format!("/crates/{}/owners", krate))?;
+        Ok(json::decode::<Users>(&body)?.users)
     }
 
     pub fn publish(&mut self, krate: &NewCrate, tarball: &File) -> Result<()> {
-        let json = try!(json::encode(krate));
+        let json = json::encode(krate)?;
         // Prepare the body. The format of the upload request is:
         //
         //      <le u32 of json>
         //      <json request> (metadata for the package)
         //      <le u32 of tarball>
         //      <source tarball>
-        let stat = try!(tarball.metadata().map_err(Error::Io));
+        let stat = tarball.metadata().map_err(Error::Io)?;
         let header = {
             let mut w = Vec::new();
             w.extend([
@@ -182,57 +182,57 @@ impl Registry {
             Some(s) => s,
             None => return Err(Error::TokenMissing),
         };
-        try!(self.handle.put(true));
-        try!(self.handle.url(&url));
-        try!(self.handle.in_filesize(size as u64));
+        self.handle.put(true)?;
+        self.handle.url(&url)?;
+        self.handle.in_filesize(size as u64)?;
         let mut headers = List::new();
-        try!(headers.append("Accept: application/json"));
-        try!(headers.append(&format!("Authorization: {}", token)));
-        try!(self.handle.http_headers(headers));
+        headers.append("Accept: application/json")?;
+        headers.append(&format!("Authorization: {}", token))?;
+        self.handle.http_headers(headers)?;
 
-        let _body = try!(handle(&mut self.handle, &mut |buf| {
+        let _body = handle(&mut self.handle, &mut |buf| {
             body.read(buf).unwrap_or(0)
-        }));
+        })?;
         Ok(())
     }
 
     pub fn search(&mut self, query: &str, limit: u8) -> Result<(Vec<Crate>, u32)> {
         let formated_query = percent_encode(query.as_bytes(), QUERY_ENCODE_SET);
-        let body = try!(self.req(
+        let body = self.req(
             format!("/crates?q={}&per_page={}", formated_query, limit),
             None, Auth::Unauthorized
-        ));
+        )?;
 
-        let crates = try!(json::decode::<Crates>(&body));
+        let crates = json::decode::<Crates>(&body)?;
         Ok((crates.crates, crates.meta.total))
     }
 
     pub fn yank(&mut self, krate: &str, version: &str) -> Result<()> {
-        let body = try!(self.delete(format!("/crates/{}/{}/yank", krate, version),
-                                    None));
-        assert!(try!(json::decode::<R>(&body)).ok);
+        let body = self.delete(format!("/crates/{}/{}/yank", krate, version),
+                                    None)?;
+        assert!(json::decode::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
-        let body = try!(self.put(format!("/crates/{}/{}/unyank", krate, version),
-                                 &[]));
-        assert!(try!(json::decode::<R>(&body)).ok);
+        let body = self.put(format!("/crates/{}/{}/unyank", krate, version),
+                                 &[])?;
+        assert!(json::decode::<R>(&body)?.ok);
         Ok(())
     }
 
     fn put(&mut self, path: String, b: &[u8]) -> Result<String> {
-        try!(self.handle.put(true));
+        self.handle.put(true)?;
         self.req(path, Some(b), Auth::Authorized)
     }
 
     fn get(&mut self, path: String) -> Result<String> {
-        try!(self.handle.get(true));
+        self.handle.get(true)?;
         self.req(path, None, Auth::Authorized)
     }
 
     fn delete(&mut self, path: String, b: Option<&[u8]>) -> Result<String> {
-        try!(self.handle.custom_request("DELETE"));
+        self.handle.custom_request("DELETE")?;
         self.req(path, b, Auth::Authorized)
     }
 
@@ -240,23 +240,23 @@ impl Registry {
            path: String,
            body: Option<&[u8]>,
            authorized: Auth) -> Result<String> {
-        try!(self.handle.url(&format!("{}/api/v1{}", self.host, path)));
+        self.handle.url(&format!("{}/api/v1{}", self.host, path))?;
         let mut headers = List::new();
-        try!(headers.append("Accept: application/json"));
-        try!(headers.append("Content-Type: application/json"));
+        headers.append("Accept: application/json")?;
+        headers.append("Content-Type: application/json")?;
 
         if authorized == Auth::Authorized {
             let token = match self.token.as_ref() {
                 Some(s) => s,
                 None => return Err(Error::TokenMissing),
             };
-            try!(headers.append(&format!("Authorization: {}", token)));
+            headers.append(&format!("Authorization: {}", token))?;
         }
-        try!(self.handle.http_headers(headers));
+        self.handle.http_headers(headers)?;
         match body {
             Some(mut body) => {
-                try!(self.handle.upload(true));
-                try!(self.handle.in_filesize(body.len() as u64));
+                self.handle.upload(true)?;
+                self.handle.in_filesize(body.len() as u64)?;
                 handle(&mut self.handle, &mut |buf| body.read(buf).unwrap_or(0))
             }
             None => handle(&mut self.handle, &mut |_| 0),
@@ -270,19 +270,19 @@ fn handle(handle: &mut Easy,
     let mut body = Vec::new();
     {
         let mut handle = handle.transfer();
-        try!(handle.read_function(|buf| Ok(read(buf))));
-        try!(handle.write_function(|data| {
+        handle.read_function(|buf| Ok(read(buf)))?;
+        handle.write_function(|data| {
             body.extend_from_slice(data);
             Ok(data.len())
-        }));
-        try!(handle.header_function(|data| {
+        })?;
+        handle.header_function(|data| {
             headers.push(String::from_utf8_lossy(data).into_owned());
             true
-        }));
-        try!(handle.perform());
+        })?;
+        handle.perform()?;
     }
 
-    match try!(handle.response_code()) {
+    match handle.response_code()? {
         0 => {} // file upload url sometimes
         200 => {}
         403 => return Err(Error::Unauthorized),
@@ -310,13 +310,13 @@ impl fmt::Display for Error {
             Error::NonUtf8Body => write!(f, "response body was not utf-8"),
             Error::Curl(ref err) => write!(f, "http error: {}", err),
             Error::NotOkResponse(code, ref headers, ref body) => {
-                try!(writeln!(f, "failed to get a 200 OK response, got {}", code));
-                try!(writeln!(f, "headers:"));
+                writeln!(f, "failed to get a 200 OK response, got {}", code)?;
+                writeln!(f, "headers:")?;
                 for header in headers {
-                    try!(writeln!(f, "    {}", header));
+                    writeln!(f, "    {}", header)?;
                 }
-                try!(writeln!(f, "body:"));
-                try!(writeln!(f, "{}", String::from_utf8_lossy(body)));
+                writeln!(f, "body:")?;
+                writeln!(f, "{}", String::from_utf8_lossy(body))?;
                 Ok(())
             }
             Error::Api(ref errs) => {

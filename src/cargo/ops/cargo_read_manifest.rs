@@ -11,7 +11,7 @@ use util::toml::Layout;
 pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
                      -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     trace!("read_package; path={}; source-id={}", path.display(), source_id);
-    let contents = try!(paths::read(path));
+    let contents = paths::read(path)?;
 
     let layout = Layout::from_project_path(path.parent().unwrap());
     let root = layout.root.clone();
@@ -24,7 +24,7 @@ pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
 pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
                     -> CargoResult<(Package, Vec<PathBuf>)> {
     trace!("read_package; path={}; source-id={}", path.display(), source_id);
-    let (manifest, nested) = try!(read_manifest(path, source_id, config));
+    let (manifest, nested) = read_manifest(path, source_id, config)?;
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => {
@@ -43,7 +43,7 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
 
     trace!("looking for root package: {}, source_id={}", path.display(), source_id);
 
-    try!(walk(path, &mut |dir| {
+    walk(path, &mut |dir| {
         trace!("looking for child package: {}", dir.display());
 
         // Don't recurse into hidden/dot directories unless we're at the toplevel
@@ -66,11 +66,11 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
         }
 
         if has_manifest(dir) {
-            try!(read_nested_packages(dir, &mut all_packages, source_id, config,
-                                      &mut visited));
+            read_nested_packages(dir, &mut all_packages, source_id, config,
+                                      &mut visited)?;
         }
         Ok(true)
-    }));
+    })?;
 
     if all_packages.is_empty() {
         Err(human(format!("Could not find Cargo.toml in `{}`", path.display())))
@@ -81,7 +81,7 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
 
 fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>)
         -> CargoResult<()> {
-    if !try!(callback(path)) {
+    if !callback(path)? {
         trace!("not processing {}", path.display());
         return Ok(())
     }
@@ -100,9 +100,9 @@ fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>)
         }
     };
     for dir in dirs {
-        let dir = try!(dir);
-        if try!(dir.file_type()).is_dir() {
-            try!(walk(&dir.path(), callback));
+        let dir = dir?;
+        if dir.file_type()?.is_dir() {
+            walk(&dir.path(), callback)?;
         }
     }
     Ok(())
@@ -119,9 +119,9 @@ fn read_nested_packages(path: &Path,
                         visited: &mut HashSet<PathBuf>) -> CargoResult<()> {
     if !visited.insert(path.to_path_buf()) { return Ok(()) }
 
-    let manifest_path = try!(find_project_manifest_exact(path, "Cargo.toml"));
+    let manifest_path = find_project_manifest_exact(path, "Cargo.toml")?;
 
-    let (manifest, nested) = try!(read_manifest(&manifest_path, source_id, config));
+    let (manifest, nested) = read_manifest(&manifest_path, source_id, config)?;
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => return Ok(()),
@@ -147,8 +147,8 @@ fn read_nested_packages(path: &Path,
     if !source_id.is_registry() {
         for p in nested.iter() {
             let path = util::normalize_path(&path.join(p));
-            try!(read_nested_packages(&path, all_packages, source_id,
-                                      config, visited));
+            read_nested_packages(&path, all_packages, source_id,
+                                      config, visited)?;
         }
     }
 

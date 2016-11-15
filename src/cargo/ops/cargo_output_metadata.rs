@@ -46,12 +46,12 @@ fn metadata_full(ws: &Workspace,
     let specs = ws.members().map(|pkg| {
         PackageIdSpec::from_package_id(pkg.package_id())
     }).collect::<Vec<_>>();
-    let deps = try!(ops::resolve_dependencies(ws,
-                                              None,
-                                              &opt.features,
-                                              opt.all_features,
-                                              opt.no_default_features,
-                                              &specs));
+    let deps = ops::resolve_dependencies(ws,
+                                         None,
+                                         &opt.features,
+                                         opt.all_features,
+                                         opt.no_default_features,
+                                         &specs)?;
     let (packages, resolve) = deps;
 
     let packages = try!(packages.package_ids()

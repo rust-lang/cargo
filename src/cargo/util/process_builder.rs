@@ -18,10 +18,10 @@ pub struct ProcessBuilder {
 
 impl fmt::Display for ProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "`{}", self.program.to_string_lossy()));
+        write!(f, "`{}", self.program.to_string_lossy())?;
 
         for arg in self.args.iter() {
-            try!(write!(f, " {}", escape(arg.to_string_lossy())));
+            write!(f, " {}", escape(arg.to_string_lossy()))?;
         }
 
         write!(f, "`")
@@ -74,11 +74,11 @@ impl ProcessBuilder {
 
     pub fn exec(&self) -> Result<(), ProcessError> {
         let mut command = self.build_command();
-        let exit = try!(command.status().map_err(|e| {
+        let exit = command.status().map_err(|e| {
             process_error(&format!("could not execute process `{}`",
                                    self.debug_string()),
                           Some(Box::new(e)), None, None)
-        }));
+        })?;
 
         if exit.success() {
             Ok(())
@@ -108,11 +108,11 @@ impl ProcessBuilder {
     pub fn exec_with_output(&self) -> Result<Output, ProcessError> {
         let mut command = self.build_command();
 
-        let output = try!(command.output().map_err(|e| {
+        let output = command.output().map_err(|e| {
             process_error(&format!("could not execute process `{}`",
                                    self.debug_string()),
                           Some(Box::new(e)), None, None)
-        }));
+        })?;
 
         if output.status.success() {
             Ok(output)
@@ -136,11 +136,11 @@ impl ProcessBuilder {
             .stdin(Stdio::null());
 
         let mut callback_error = None;
-        let status = try!((|| {
-            let mut child = try!(cmd.spawn());
+        let status = (|| {
+            let mut child = cmd.spawn()?;
             let out = child.stdout.take().unwrap();
             let err = child.stderr.take().unwrap();
-            try!(read2(out, err, &mut |is_out, data, eof| {
+            read2(out, err, &mut |is_out, data, eof| {
                 let idx = if eof {
                     data.len()
                 } else {
@@ -164,13 +164,13 @@ impl ProcessBuilder {
                         callback_error = Some(e);
                     }
                 }
-            }));
+            })?;
             child.wait()
         })().map_err(|e| {
             process_error(&format!("could not execute process `{}`",
                                    self.debug_string()),
                           Some(Box::new(e)), None, None)
-        }));
+        })?;
         let output = Output {
             stdout: stdout,
             stderr: stderr,

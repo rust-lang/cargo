@@ -81,15 +81,15 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         })
     }).collect::<Vec<_>>();
 
-    let mut cx = try!(Context::new(ws, resolve, packages, config,
-                                   build_config, profiles));
+    let mut cx = Context::new(ws, resolve, packages, config,
+                                   build_config, profiles)?;
 
     let mut queue = JobQueue::new(&cx);
 
-    try!(cx.prepare());
-    try!(cx.probe_target_info(&units));
-    try!(cx.build_used_in_plugin_map(&units));
-    try!(custom_build::build_map(&mut cx, &units));
+    cx.prepare()?;
+    cx.probe_target_info(&units)?;
+    cx.build_used_in_plugin_map(&units)?;
+    custom_build::build_map(&mut cx, &units)?;
 
     for unit in units.iter() {
         // Build up a list of pending jobs, each of which represent
@@ -97,11 +97,11 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         // part of this, that's all done next as part of the `execute`
         // function which will run everything in order with proper
         // parallelism.
-        try!(compile(&mut cx, &mut queue, unit));
+        compile(&mut cx, &mut queue, unit)?;
     }
 
     // Now that we've figured out everything that we're going to do, do it!
-    try!(queue.execute(&mut cx));
+    queue.execute(&mut cx)?;
 
     for unit in units.iter() {
         let out_dir = cx.layout(unit).build_out(unit.pkg)
@@ -110,7 +110,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
           .or_insert(Vec::new())
           .push(("OUT_DIR".to_string(), out_dir));
 
-        for (filename, _linkable) in try!(cx.target_filenames(unit)) {
+        for (filename, _linkable) in cx.target_filenames(unit)? {
             let dst = cx.out_dir(unit).join(filename);
             if unit.profile.test {
                 cx.compilation.tests.push((unit.pkg.clone(),
@@ -126,7 +126,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             if !unit.target.is_lib() { continue }
 
             // Include immediate lib deps as well
-            for unit in try!(cx.dep_targets(unit)).iter() {
+            for unit in cx.dep_targets(unit)?.iter() {
                 let pkgid = unit.pkg.package_id();
                 if !unit.target.is_lib() { continue }
                 if unit.profile.doc { continue }
@@ -134,7 +134,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                     continue
                 }
 
-                let v = try!(cx.target_filenames(unit));
+                let v = cx.target_filenames(unit)?;
                 let v = v.into_iter().map(|(f, _)| {
                     (unit.target.clone(), cx.out_dir(unit).join(f))
                 }).collect::<Vec<_>>();
@@ -173,39 +173,39 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     // we've got everything constructed.
     let p = profile::start(format!("preparing: {}/{}", unit.pkg,
                                    unit.target.name()));
-    try!(fingerprint::prepare_init(cx, unit));
-    try!(cx.links.validate(unit));
+    fingerprint::prepare_init(cx, unit)?;
+    cx.links.validate(unit)?;
 
     let (dirty, fresh, freshness) = if unit.profile.run_custom_build {
-        try!(custom_build::prepare(cx, unit))
+        custom_build::prepare(cx, unit)?
     } else {
-        let (freshness, dirty, fresh) = try!(fingerprint::prepare_target(cx,
-                                                                         unit));
+        let (freshness, dirty, fresh) = fingerprint::prepare_target(cx,
+                                                                         unit)?;
         let work = if unit.profile.doc {
-            try!(rustdoc(cx, unit))
+            rustdoc(cx, unit)?
         } else {
-            try!(rustc(cx, unit))
+            rustc(cx, unit)?
         };
         let dirty = work.then(dirty);
         (dirty, fresh, freshness)
     };
-    try!(jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness));
+    jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness)?;
     drop(p);
 
     // Be sure to compile all dependencies of this target as well.
-    for unit in try!(cx.dep_targets(unit)).iter() {
-        try!(compile(cx, jobs, unit));
+    for unit in cx.dep_targets(unit)?.iter() {
+        compile(cx, jobs, unit)?;
     }
     Ok(())
 }
 
 fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let crate_types = unit.target.rustc_crate_types();
-    let mut rustc = try!(prepare_rustc(cx, crate_types, unit));
+    let mut rustc = prepare_rustc(cx, crate_types, unit)?;
 
     let name = unit.pkg.name().to_string();
     if !cx.show_warnings(unit.pkg.package_id()) {
-        if try!(cx.config.rustc()).cap_lints {
+        if cx.config.rustc()?.cap_lints {
             rustc.arg("--cap-lints").arg("allow");
         } else {
             rustc.arg("-Awarnings");
@@ -213,7 +213,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     }
     let has_custom_args = unit.profile.rustc_args.is_some();
 
-    let filenames = try!(cx.target_filenames(unit));
+    let filenames = cx.target_filenames(unit)?;
     let root = cx.out_dir(unit);
 
     // Prepare the native lib state (extra -L and -l flags)
@@ -238,7 +238,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
     let cwd = cx.config.cwd().to_path_buf();
 
-    rustc.args(&try!(cx.rustflags_args(unit)));
+    rustc.args(&cx.rustflags_args(unit)?);
     let json_errors = cx.build_config.json_errors;
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
@@ -250,9 +250,9 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         // located somewhere in there.
         if let Some(build_deps) = build_deps {
             let build_state = build_state.outputs.lock().unwrap();
-            try!(add_native_deps(&mut rustc, &build_state, &build_deps,
-                                 pass_l_flag, &current_id));
-            try!(add_plugin_deps(&mut rustc, &build_state, &build_deps));
+            add_native_deps(&mut rustc, &build_state, &build_deps,
+                                 pass_l_flag, &current_id)?;
+            add_plugin_deps(&mut rustc, &build_state, &build_deps)?;
         }
 
         // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
@@ -260,14 +260,14 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         for &(ref filename, _linkable) in filenames.iter() {
             let dst = root.join(filename);
             if fs::metadata(&dst).is_ok() {
-                try!(fs::remove_file(&dst).chain_error(|| {
+                fs::remove_file(&dst).chain_error(|| {
                     human(format!("Could not remove file: {}.", dst.display()))
-                }));
+                })?;
             }
         }
 
         state.running(&rustc);
-        try!(if json_errors {
+        if json_errors {
             rustc.exec_with_streaming(
                 &mut |line| if !line.is_empty() {
                     Err(internal(&format!("compiler stdout is not empty: `{}`", line)))
@@ -275,9 +275,9 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                     Ok(())
                 },
                 &mut |line| {
-                    let compiler_message = try!(json::Json::from_str(line).map_err(|_| {
+                    let compiler_message = json::Json::from_str(line).map_err(|_| {
                         internal(&format!("compiler produced invalid json: `{}`", line))
-                    }));
+                    })?;
 
                     machine_message::FromCompiler::new(
                         &package_id,
@@ -292,7 +292,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
             rustc.exec()
         }.chain_error(|| {
             human(format!("Could not compile `{}`.", name))
-        }));
+        })?;
 
         if do_rename && real_name != crate_name {
             let dst = root.join(&filenames[0].0);
@@ -300,18 +300,18 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                                             .to_str().unwrap()
                                             .replace(&real_name, &crate_name));
             if !has_custom_args || src.exists() {
-                try!(fs::rename(&src, &dst).chain_error(|| {
+                fs::rename(&src, &dst).chain_error(|| {
                     internal(format!("could not rename crate {:?}", src))
-                }));
+                })?;
             }
         }
 
         if !has_custom_args || fs::metadata(&rustc_dep_info_loc).is_ok() {
-            try!(fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_error(|| {
+            fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_error(|| {
                 internal(format!("could not rename dep info: {:?}",
                               rustc_dep_info_loc))
-            }));
-            try!(fingerprint::append_current_dir(&dep_info_loc, &cwd));
+            })?;
+            fingerprint::append_current_dir(&dep_info_loc, &cwd)?;
         }
 
         // If we're a "root crate", e.g. the target of this compilation, then we
@@ -337,16 +337,16 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                 let dst = src_dir.parent().unwrap()
                                  .join(src.file_name().unwrap());
                 if dst.exists() {
-                    try!(fs::remove_file(&dst).chain_error(|| {
+                    fs::remove_file(&dst).chain_error(|| {
                         human(format!("failed to remove: {}", dst.display()))
-                    }));
+                    })?;
                 }
-                try!(fs::hard_link(&src, &dst)
+                fs::hard_link(&src, &dst)
                      .or_else(|_| fs::copy(&src, &dst).map(|_| ()))
                      .chain_error(|| {
                          human(format!("failed to link or copy `{}` to `{}`",
                                        src.display(), dst.display()))
-                }));
+                })?;
             }
         }
 
@@ -361,10 +361,10 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                        pass_l_flag: bool,
                        current_id: &PackageId) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
-            let output = try!(build_state.get(key).chain_error(|| {
+            let output = build_state.get(key).chain_error(|| {
                 internal(format!("couldn't find build state for {}/{:?}",
                                  key.0, key.1))
-            }));
+            })?;
             for path in output.library_paths.iter() {
                 rustc.arg("-L").arg(path);
             }
@@ -399,14 +399,14 @@ fn add_plugin_deps(rustc: &mut ProcessBuilder,
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for id in build_scripts.plugins.iter() {
         let key = (id.clone(), Kind::Host);
-        let output = try!(build_state.get(&key).chain_error(|| {
+        let output = build_state.get(&key).chain_error(|| {
             internal(format!("couldn't find libs for plugin dep {}", id))
-        }));
+        })?;
         for path in output.library_paths.iter() {
             search_path.push(path.clone());
         }
     }
-    let search_path = try!(join_paths(&search_path, var));
+    let search_path = join_paths(&search_path, var)?;
     rustc.env(var, &search_path);
     Ok(())
 }
@@ -414,16 +414,16 @@ fn add_plugin_deps(rustc: &mut ProcessBuilder,
 fn prepare_rustc(cx: &Context,
                  crate_types: Vec<&str>,
                  unit: &Unit) -> CargoResult<ProcessBuilder> {
-    let mut base = try!(cx.compilation.rustc_process(unit.pkg));
+    let mut base = cx.compilation.rustc_process(unit.pkg)?;
     build_base_args(cx, &mut base, unit, &crate_types);
     build_plugin_args(&mut base, cx, unit);
-    try!(build_deps_args(&mut base, cx, unit));
+    build_deps_args(&mut base, cx, unit)?;
     Ok(base)
 }
 
 
 fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
-    let mut rustdoc = try!(cx.compilation.rustdoc_process(unit.pkg));
+    let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg)?;
     rustdoc.arg(&root_path(cx, unit))
            .cwd(cx.config.cwd())
            .arg("--crate-name").arg(&unit.target.crate_name());
@@ -439,7 +439,7 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     // Create the documentation directory ahead of time as rustdoc currently has
     // a bug where concurrent invocations will race to create this directory if
     // it doesn't already exist.
-    try!(fs::create_dir_all(&doc_dir));
+    fs::create_dir_all(&doc_dir)?;
 
     rustdoc.arg("-o").arg(doc_dir);
 
@@ -453,13 +453,13 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         rustdoc.args(args);
     }
 
-    try!(build_deps_args(&mut rustdoc, cx, unit));
+    build_deps_args(&mut rustdoc, cx, unit)?;
 
     if unit.pkg.has_custom_build() {
         rustdoc.env("OUT_DIR", &cx.layout(unit).build_out(unit.pkg));
     }
 
-    rustdoc.args(&try!(cx.rustdocflags_args(unit)));
+    rustdoc.args(&cx.rustdocflags_args(unit)?);
 
     let name = unit.pkg.name().to_string();
     let build_state = cx.build_state.clone();
@@ -648,9 +648,9 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
         cmd.env("OUT_DIR", &layout.build_out(unit.pkg));
     }
 
-    for unit in try!(cx.dep_targets(unit)).iter() {
+    for unit in cx.dep_targets(unit)?.iter() {
         if unit.target.linkable() && !unit.profile.doc {
-            try!(link_to(cmd, cx, unit));
+            link_to(cmd, cx, unit)?;
         }
     }
 
@@ -658,7 +658,7 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
 
     fn link_to(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
                -> CargoResult<()> {
-        for (filename, linkable) in try!(cx.target_filenames(unit)) {
+        for (filename, linkable) in cx.target_filenames(unit)? {
             if !linkable {
                 continue
             }

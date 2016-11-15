@@ -91,7 +91,7 @@ enum Kind {
 
 impl<'cfg> PackageRegistry<'cfg> {
     pub fn new(config: &'cfg Config) -> CargoResult<PackageRegistry<'cfg>> {
-        let source_config = try!(SourceConfigMap::new(config));
+        let source_config = SourceConfigMap::new(config)?;
         Ok(PackageRegistry {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
@@ -138,13 +138,13 @@ impl<'cfg> PackageRegistry<'cfg> {
             }
         }
 
-        try!(self.load(namespace, kind));
+        self.load(namespace, kind)?;
         Ok(())
     }
 
     pub fn add_sources(&mut self, ids: &[SourceId]) -> CargoResult<()> {
         for id in ids.iter() {
-            try!(self.ensure_loaded(id, Kind::Locked));
+            self.ensure_loaded(id, Kind::Locked)?;
         }
         Ok(())
     }
@@ -178,7 +178,7 @@ impl<'cfg> PackageRegistry<'cfg> {
 
     fn load(&mut self, source_id: &SourceId, kind: Kind) -> CargoResult<()> {
         (|| {
-            let source = try!(self.source_config.load(source_id));
+            let source = self.source_config.load(source_id)?;
 
             if kind == Kind::Override {
                 self.overrides.push(source_id.clone());
@@ -196,7 +196,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.name(), s);
-            let mut results = try!(src.query(&dep));
+            let mut results = src.query(&dep)?;
             if results.len() > 0 {
                 return Ok(Some(results.remove(0)))
             }
@@ -291,17 +291,17 @@ impl<'cfg> PackageRegistry<'cfg> {
                          override_summary: &Summary,
                          real_summary: &Summary) -> CargoResult<()> {
         let real = real_summary.package_id();
-        let map = try!(self.locked.get(real.source_id()).chain_error(|| {
+        let map = self.locked.get(real.source_id()).chain_error(|| {
             human(format!("failed to find lock source of {}", real))
-        }));
-        let list = try!(map.get(real.name()).chain_error(|| {
+        })?;
+        let list = map.get(real.name()).chain_error(|| {
             human(format!("failed to find lock name of {}", real))
-        }));
-        let &(_, ref real_deps) = try!(list.iter().find(|&&(ref id, _)| {
+        })?;
+        let &(_, ref real_deps) = list.iter().find(|&&(ref id, _)| {
             real == id
         }).chain_error(|| {
             human(format!("failed to find lock version of {}", real))
-        }));
+        })?;
         let mut real_deps = real_deps.clone();
 
         let boilerplate = "\
@@ -327,7 +327,7 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
                 dependencies; the dependency on `{}` was either added or\n\
                 modified to not match the previously resolved version\n\n\
                 {}", override_summary.package_id().name(), dep.name(), boilerplate);
-            try!(self.source_config.config().shell().warn(&msg));
+            self.source_config.config().shell().warn(&msg)?;
             return Ok(())
         }
 
@@ -336,7 +336,7 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
                 path override for crate `{}` has altered the original list of
                 dependencies; the dependency on `{}` was removed\n\n
                 {}", override_summary.package_id().name(), id.name(), boilerplate);
-            try!(self.source_config.config().shell().warn(&msg));
+            self.source_config.config().shell().warn(&msg)?;
             return Ok(())
         }
 
@@ -347,14 +347,14 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
 impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         // Ensure the requested source_id is loaded
-        try!(self.ensure_loaded(dep.source_id(), Kind::Normal).chain_error(|| {
+        self.ensure_loaded(dep.source_id(), Kind::Normal).chain_error(|| {
             human(format!("failed to load source for a dependency \
                            on `{}`", dep.name()))
-        }));
+        })?;
 
-        let override_summary = try!(self.query_overrides(&dep));
+        let override_summary = self.query_overrides(&dep)?;
         let real_summaries = match self.sources.get_mut(dep.source_id()) {
-            Some(src) => Some(try!(src.query(&dep))),
+            Some(src) => Some(src.query(&dep)?),
             None => None,
         };
 
@@ -363,7 +363,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                 if summaries.len() != 1 {
                     bail!("found an override with a non-locked list");
                 }
-                try!(self.warn_bad_override(&candidate, &summaries[0]));
+                self.warn_bad_override(&candidate, &summaries[0])?;
                 vec![candidate]
             }
             (Some(_), None) => bail!("override found but no real ones"),
