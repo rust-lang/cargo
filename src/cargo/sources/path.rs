@@ -56,7 +56,7 @@ impl<'cfg> PathSource<'cfg> {
     pub fn root_package(&mut self) -> CargoResult<Package> {
         trace!("root_package; source={:?}", self);
 
-        try!(self.update());
+        self.update()?;
 
         match self.packages.iter().find(|p| p.root() == &*self.path) {
             Some(pkg) => Ok(pkg.clone()),
@@ -71,8 +71,8 @@ impl<'cfg> PathSource<'cfg> {
             ops::read_packages(&self.path, &self.id, self.config)
         } else {
             let path = self.path.join("Cargo.toml");
-            let (pkg, _) = try!(ops::read_package(&path, &self.id,
-                                                  self.config));
+            let (pkg, _) = ops::read_package(&path, &self.id,
+                                                  self.config)?;
             Ok(vec![pkg])
         }
     }
@@ -94,10 +94,18 @@ impl<'cfg> PathSource<'cfg> {
                 human(format!("could not parse pattern `{}`: {}", p, e))
             })
         };
-        let exclude = try!(pkg.manifest().exclude().iter()
-                              .map(|p| parse(p)).collect::<Result<Vec<_>, _>>());
-        let include = try!(pkg.manifest().include().iter()
-                              .map(|p| parse(p)).collect::<Result<Vec<_>, _>>());
+
+        let exclude = pkg.manifest()
+                         .exclude()
+                         .iter()
+                         .map(|p| parse(p))
+                         .collect::<Result<Vec<_>, _>>()?;
+
+        let include = pkg.manifest()
+                         .include()
+                         .iter()
+                         .map(|p| parse(p))
+                         .collect::<Result<Vec<_>, _>>()?;
 
         let mut filter = |p: &Path| {
             let relative_path = util::without_prefix(p, &root).unwrap();
@@ -122,7 +130,7 @@ impl<'cfg> PathSource<'cfg> {
                 // check to see if we are indeed part of the index. If not, then
                 // this is likely an unrelated git repo, so keep going.
                 if let Ok(repo) = git2::Repository::open(cur) {
-                    let index = try!(repo.index());
+                    let index = repo.index()?;
                     let path = util::without_prefix(root, cur)
                                     .unwrap().join("Cargo.toml");
                     if index.get_path(&path, 0).is_some() {
@@ -146,10 +154,10 @@ impl<'cfg> PathSource<'cfg> {
                       filter: &mut FnMut(&Path) -> bool)
                       -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
-        let index = try!(repo.index());
-        let root = try!(repo.workdir().chain_error(|| {
+        let index = repo.index()?;
+        let root = repo.workdir().chain_error(|| {
             internal_error("Can't list files on a bare repository.", "")
-        }));
+        })?;
         let pkg_path = pkg.root();
 
         let mut ret = Vec::<PathBuf>::new();
@@ -171,7 +179,7 @@ impl<'cfg> PathSource<'cfg> {
         if let Some(suffix) = util::without_prefix(pkg_path, &root) {
             opts.pathspec(suffix);
         }
-        let statuses = try!(repo.statuses(Some(&mut opts)));
+        let statuses = repo.statuses(Some(&mut opts))?;
         let untracked = statuses.iter().filter_map(|entry| {
             match entry.status() {
                 git2::STATUS_WT_NEW => Some((join(&root, entry.path_bytes()), None)),
@@ -182,7 +190,7 @@ impl<'cfg> PathSource<'cfg> {
         let mut subpackages_found = Vec::new();
 
         'outer: for (file_path, is_dir) in index_files.chain(untracked) {
-            let file_path = try!(file_path);
+            let file_path = file_path?;
 
             // Filter out files blatantly outside this package. This is helped a
             // bit obove via the `pathspec` function call, but we need to filter
@@ -223,20 +231,20 @@ impl<'cfg> PathSource<'cfg> {
             if is_dir.unwrap_or_else(|| file_path.is_dir()) {
                 warn!("  found submodule {}", file_path.display());
                 let rel = util::without_prefix(&file_path, &root).unwrap();
-                let rel = try!(rel.to_str().chain_error(|| {
+                let rel = rel.to_str().chain_error(|| {
                     human(format!("invalid utf-8 filename: {}", rel.display()))
-                }));
+                })?;
                 // Git submodules are currently only named through `/` path
                 // separators, explicitly not `\` which windows uses. Who knew?
                 let rel = rel.replace(r"\", "/");
                 match repo.find_submodule(&rel).and_then(|s| s.open()) {
                     Ok(repo) => {
-                        let files = try!(self.list_files_git(pkg, repo, filter));
+                        let files = self.list_files_git(pkg, repo, filter)?;
                         ret.extend(files.into_iter());
                     }
                     Err(..) => {
-                        try!(PathSource::walk(&file_path, &mut ret, false,
-                                              filter));
+                        PathSource::walk(&file_path, &mut ret, false,
+                                              filter)?;
                     }
                 }
             } else if (*filter)(&file_path) {
@@ -267,7 +275,7 @@ impl<'cfg> PathSource<'cfg> {
     fn list_files_walk(&self, pkg: &Package, filter: &mut FnMut(&Path) -> bool)
                        -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
-        try!(PathSource::walk(pkg.root(), &mut ret, true, filter));
+        PathSource::walk(pkg.root(), &mut ret, true, filter)?;
         Ok(ret)
     }
 
@@ -284,8 +292,8 @@ impl<'cfg> PathSource<'cfg> {
         if !is_root && fs::metadata(&path.join("Cargo.toml")).is_ok() {
             return Ok(())
         }
-        for dir in try!(fs::read_dir(path)) {
-            let dir = try!(dir).path();
+        for dir in fs::read_dir(path)? {
+            let dir = dir?.path();
             let name = dir.file_name().and_then(|s| s.to_str());
             // Skip dotfile directories
             if name.map(|s| s.starts_with('.')) == Some(true) {
@@ -297,7 +305,7 @@ impl<'cfg> PathSource<'cfg> {
                     _ => {}
                 }
             }
-            try!(PathSource::walk(&dir, ret, false, filter));
+            PathSource::walk(&dir, ret, false, filter)?;
         }
         Ok(())
     }
@@ -318,7 +326,7 @@ impl<'cfg> Registry for PathSource<'cfg> {
 impl<'cfg> Source for PathSource<'cfg> {
     fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
-            let packages = try!(self.read_packages());
+            let packages = self.read_packages()?;
             self.packages.extend(packages.into_iter());
             self.updated = true;
         }
@@ -342,7 +350,7 @@ impl<'cfg> Source for PathSource<'cfg> {
 
         let mut max = FileTime::zero();
         let mut max_path = PathBuf::from("");
-        for file in try!(self.list_files(pkg)) {
+        for file in self.list_files(pkg)? {
             // An fs::stat error here is either because path is a
             // broken symlink, a permissions error, or a race
             // condition where this path was rm'ed - either way,

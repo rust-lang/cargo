@@ -1,15 +1,10 @@
-CFG_RELEASE_NUM=0.14.0
+CFG_RELEASE_NUM=0.15.0
 CFG_RELEASE_LABEL=
 
 OPENSSL_VERS=1.0.2j
 OPENSSL_SHA256=e7aff292be21c259c6af26469c7a9b3ba26e9abaaffd325e3dccc9785256c431
 
 include config.mk
-
-ifneq ($(CFG_LOCAL_RUST_ROOT),)
-export LD_LIBRARY_PATH := $(CFG_LOCAL_RUST_ROOT)/lib:$(LD_LIBRARY_PATH)
-export DYLD_LIBRARY_PATH := $(CFG_LOCAL_RUST_ROOT)/lib:$(DYLD_LIBRARY_PATH)
-endif
 
 export PATH := $(dir $(CFG_RUSTC)):$(PATH)
 
@@ -84,44 +79,45 @@ $(foreach target,$(CFG_TARGET),$(eval $(call DIST_TARGET,$(target))))
 ifdef CFG_LOCAL_CARGO
 CARGO := $(CFG_LOCAL_CARGO)
 else
-CARGO := $(TARGET_ROOT)/snapshot/bin/cargo$(X)
+CARGO := $(CFG_CARGO)
 endif
 
 all: $(foreach target,$(CFG_TARGET),cargo-$(target))
 
 define CARGO_TARGET
-cargo-$(1): $$(CARGO) target/openssl/$(1).stamp
+cargo-$(1): target/openssl/$(1).stamp
 	$$(CFG_RUSTC) -V
 	$$(CARGO) --version
 	$$(CARGO) build --target $(1) \
 		--manifest-path $(S)Cargo.toml \
 		$$(OPT_FLAG) $$(CARGOFLAGS) $$(VERBOSE_FLAG) $$(ARGS)
 
-test-unit-$(1): $$(CARGO)
-	@mkdir -p target/$(1)/cit
-	$$(CARGO) test --target $(1) $$(CARGOFLAGS) $$(VERBOSE_FLAG) $$(only)
+test-unit-$(1): target/openssl/$(1).stamp cargo-$(1)
+	@mkdir -p $$(CFG_BUILD_DIR)/target/$(1)/cit
+	$$(CARGO) test --target $(1) \
+		--manifest-path $(S)Cargo.toml \
+		$$(OPT_FLAG) $$(CARGOFLAGS) $$(VERBOSE_FLAG) $$(only)
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call CARGO_TARGET,$(target))))
-
-$(TARGET_ROOT)/snapshot/bin/cargo$(X): $(S)src/snapshots.txt
-	$(CFG_PYTHON) $(S)src/etc/dl-snapshot.py $(CFG_BUILD)
-	touch $@
-
 
 # === Tests
 
 test: style no-exes $(foreach target,$(CFG_TARGET),test-unit-$(target))
 
 style:
-	sh tests/check-style.sh
+	(cd $(S) && sh tests/check-style.sh)
 
+ifeq ($(CFG_GIT),)
 no-exes:
-	find $$(git ls-files) -type f \
+else
+no-exes:
+	(cd $(S) && find $$($(CFG_GIT) ls-files) -type f \
 		\( -perm -u+x -or -perm -g+x -or -perm -o+x \) \
 		-not -name configure -not -name '*.sh' -not -name '*.rs' \
 		-not -name '*.py' -not -wholename "*/rust-installer/*" | \
 		grep '.*' \
-		&& exit 1 || exit 0
+		&& exit 1 || exit 0)
+endif
 
 # === Misc
 
@@ -143,9 +139,9 @@ DOC_OPTS := --markdown-no-toc \
 		--markdown-css stylesheets/normalize.css \
 		--markdown-css stylesheets/all.css \
 		--markdown-css stylesheets/prism.css \
-		--html-in-header src/doc/html-headers.html \
-		--html-before-content src/doc/header.html \
-		--html-after-content src/doc/footer.html
+		--html-in-header $(S)src/doc/html-headers.html \
+		--html-before-content $(S)src/doc/header.html \
+		--html-after-content $(S)src/doc/footer.html
 ASSETS := CNAME images/noise.png images/forkme.png images/Cargo-Logo-Small.png \
 	stylesheets/all.css stylesheets/normalize.css javascripts/prism.js \
 	javascripts/all.js stylesheets/prism.css images/circle-with-i.png \
@@ -156,14 +152,19 @@ doc: $(foreach doc,$(DOCS),target/doc/$(doc).html) \
 	$(foreach asset,$(ASSETS),target/doc/$(asset)) \
 	target/doc/cargo/index.html
 
-target/doc/cargo/index.html:
-	$(CARGO) doc --no-deps
+target/doc/cargo/index.html: target/openssl/$(CFG_BUILD).stamp cargo-$(CFG_BUILD)
+	$(CARGO) doc --no-deps --target $(CFG_BUILD) \
+		--manifest-path $(S)Cargo.toml $(OPT_FLAG)
 
-$(DOC_DIR)/%.html: src/doc/%.md src/doc/html-headers.html src/doc/header.html src/doc/footer.html
+$(DOC_DIR)/%.html: \
+		$(S)src/doc/%.md \
+		$(S)src/doc/html-headers.html \
+		$(S)src/doc/header.html \
+		$(S)src/doc/footer.html
 	@mkdir -p $(@D)
 	$(CFG_RUSTDOC) $< -o $(@D) $(DOC_OPTS)
 
-$(DOC_DIR)/%: src/doc/%
+$(DOC_DIR)/%: $(S)src/doc/%
 	@mkdir -p $(@D)
 	cp $< $@
 
@@ -173,6 +174,7 @@ OPENSSL_OS_arm-unknown-linux-gnueabihf := linux-armv4
 OPENSSL_OS_armv7-unknown-linux-gnueabihf := linux-armv4
 OPENSSL_OS_i686-unknown-freebsd := BSD-x86-elf
 OPENSSL_OS_i686-unknown-linux-gnu := linux-elf
+OPENSSL_OS_i686-unknown-linux-musl := linux-elf
 OPENSSL_OS_mips-unknown-linux-gnu := linux-mips32
 OPENSSL_OS_mipsel-unknown-linux-gnu := linux-mips32
 OPENSSL_OS_mips64-unknown-linux-gnuabi64 := linux64-mips64
@@ -192,6 +194,7 @@ OPENSSL_AR_arm-unknown-linux-gnueabihf := arm-linux-gnueabihf-ar
 OPENSSL_AR_armv7-unknown-linux-gnueabihf := armv7-linux-gnueabihf-ar
 OPENSSL_AR_i686-unknown-freebsd := i686-unknown-freebsd10-ar
 OPENSSL_AR_i686-unknown-linux-gnu := ar
+OPENSSL_AR_i686-unknown-linux-musl := ar
 OPENSSL_AR_mips-unknown-linux-gnu := mips-linux-gnu-ar
 OPENSSL_AR_mips64-unknown-linux-gnuabi64 := mips64-linux-gnuabi64-ar
 OPENSSL_AR_mips64el-unknown-linux-gnuabi64 := mips64el-linux-gnuabi64-ar
@@ -210,6 +213,7 @@ OPENSSL_CC_arm-unknown-linux-gnueabihf := arm-linux-gnueabihf-gcc
 OPENSSL_CC_armv7-unknown-linux-gnueabihf := armv7-linux-gnueabihf-gcc
 OPENSSL_CC_i686-unknown-freebsd := i686-unknown-freebsd10-gcc
 OPENSSL_CC_i686-unknown-linux-gnu := gcc
+OPENSSL_CC_i686-unknown-linux-musl := musl-gcc
 OPENSSL_CC_mips-unknown-linux-gnu := mips-linux-gnu-gcc
 OPENSSL_CC_mips64-unknown-linux-gnuabi64 := mips64-linux-gnuabi64-gcc
 OPENSSL_CC_mips64el-unknown-linux-gnuabi64 := mips64el-linux-gnuabi64-gcc
@@ -225,6 +229,7 @@ OPENSSL_CC_x86_64-unknown-netbsd := x86_64-unknown-netbsd-gcc
 
 SETARCH_i686-unknown-linux-gnu := setarch i386
 OPENSSL_CFLAGS_i686-unknown-linux-gnu := -m32
+OPENSSL_CFLAGS_i686-unknown-linux-musl := -m32
 
 define BUILD_OPENSSL
 ifdef OPENSSL_OS_$(1)
@@ -246,13 +251,9 @@ target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
 
 # variables read by various build scripts to find openssl
 cargo-$(1): export OPENSSL_STATIC := 1
-cargo-$(1): export OPENSSL_ROOT_DIR := $$(OPENSSL_INSTALL_$(1))
-cargo-$(1): export OPENSSL_LIB_DIR := $$(OPENSSL_INSTALL_$(1))/lib
-cargo-$(1): export OPENSSL_INCLUDE_DIR := $$(OPENSSL_INSTALL_$(1))/include
+cargo-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
 test-unit-$(1): export OPENSSL_STATIC := 1
-test-unit-$(1): export OPENSSL_ROOT_DIR := $$(OPENSSL_INSTALL_$(1))
-test-unit-$(1): export OPENSSL_LIB_DIR := $$(OPENSSL_INSTALL_$(1))/lib
-test-unit-$(1): export OPENSSL_INCLUDE_DIR := $$(OPENSSL_INSTALL_$(1))/include
+test-unit-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
 
 # build libz statically into the cargo we're producing
 cargo-$(1): export LIBZ_SYS_STATIC := 1

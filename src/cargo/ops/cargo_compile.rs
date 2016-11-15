@@ -92,8 +92,8 @@ pub enum CompileFilter<'a> {
 
 pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
                    -> CargoResult<ops::Compilation<'a>> {
-    for key in try!(ws.current()).manifest().warnings().iter() {
-        try!(options.config.shell().warn(key))
+    for key in ws.current()?.manifest().warnings().iter() {
+        options.config.shell().warn(key)?
     }
     compile_ws(ws, None, options)
 }
@@ -103,29 +103,29 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
                                 features: &[String],
                                 all_features: bool,
                                 no_default_features: bool,
-                                spec: &'a [String])
+                                specs: &[PackageIdSpec])
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
     let features = features.iter().flat_map(|s| {
         s.split_whitespace()
     }).map(|s| s.to_string()).collect::<Vec<String>>();
 
-    let mut registry = try!(PackageRegistry::new(ws.config()));
+    let mut registry = PackageRegistry::new(ws.config())?;
 
     if let Some(source) = source {
-        registry.add_preloaded(try!(ws.current()).package_id().source_id(),
+        registry.add_preloaded(ws.current()?.package_id().source_id(),
                                source);
     }
 
     // First, resolve the root_package's *listed* dependencies, as well as
     // downloading and updating all remotes and such.
-    let resolve = try!(ops::resolve_ws(&mut registry, ws));
+    let resolve = ops::resolve_ws(&mut registry, ws)?;
 
     // Second, resolve with precisely what we're doing. Filter out
     // transitive dependencies if necessary, specify features, handle
     // overrides, etc.
     let _p = profile::start("resolving w/ overrides...");
 
-    try!(add_overrides(&mut registry, ws));
+    add_overrides(&mut registry, ws)?;
 
     let method = if all_features {
         Method::Everything
@@ -137,13 +137,10 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
         }
     };
 
-    let specs = try!(spec.iter().map(|p| PackageIdSpec::parse(p))
-                                .collect::<CargoResult<Vec<_>>>());
-
     let resolved_with_overrides =
-            try!(ops::resolve_with_previous(&mut registry, ws,
+            ops::resolve_with_previous(&mut registry, ws,
                                             method, Some(&resolve), None,
-                                            &specs));
+                                            specs)?;
 
     let packages = ops::get_resolved_packages(&resolved_with_overrides,
                                               registry);
@@ -155,7 +152,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                       source: Option<Box<Source + 'a>>,
                       options: &CompileOptions<'a>)
                       -> CargoResult<ops::Compilation<'a>> {
-    let root_package = try!(ws.current());
+    let root_package = ws.current()?;
     let CompileOptions { config, jobs, target, spec, features,
                          all_features, no_default_features,
                          release, mode, message_format,
@@ -171,24 +168,32 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
 
     let profiles = ws.profiles();
     if spec.len() == 0 {
-        try!(generate_targets(root_package, profiles, mode, filter, release));
+        generate_targets(root_package, profiles, mode, filter, release)?;
     }
 
-    let (packages, resolve_with_overrides) =
-        try!(resolve_dependencies(ws, source, features, all_features, no_default_features, spec));
+    let specs = spec.iter().map(|p| PackageIdSpec::parse(p))
+                                .collect::<CargoResult<Vec<_>>>()?;
+
+    let pair = resolve_dependencies(ws,
+                                         source,
+                                         features,
+                                         all_features,
+                                         no_default_features,
+                                         &specs)?;
+    let (packages, resolve_with_overrides) = pair;
 
     let mut pkgids = Vec::new();
     if spec.len() > 0 {
         for p in spec {
-            pkgids.push(try!(resolve_with_overrides.query(&p)));
+            pkgids.push(resolve_with_overrides.query(&p)?);
         }
     } else {
         pkgids.push(root_package.package_id());
     };
 
-    let to_builds = try!(pkgids.iter().map(|id| {
+    let to_builds = pkgids.iter().map(|id| {
         packages.get(id)
-    }).collect::<CargoResult<Vec<_>>>());
+    }).collect::<CargoResult<Vec<_>>>()?;
 
     let mut general_targets = Vec::new();
     let mut package_targets = Vec::new();
@@ -199,8 +204,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
             panic!("`rustc` and `rustdoc` should not accept multiple `-p` flags")
         }
         (Some(args), _) => {
-            let targets = try!(generate_targets(to_builds[0], profiles,
-                                                mode, filter, release));
+            let targets = generate_targets(to_builds[0], profiles,
+                                           mode, filter, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -213,8 +218,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
             }
         }
         (None, Some(args)) => {
-            let targets = try!(generate_targets(to_builds[0], profiles,
-                                                mode, filter, release));
+            let targets = generate_targets(to_builds[0], profiles,
+                                           mode, filter, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -228,8 +233,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
         (None, None) => {
             for &to_build in to_builds.iter() {
-                let targets = try!(generate_targets(to_build, profiles, mode,
-                                                    filter, release));
+                let targets = generate_targets(to_build, profiles, mode,
+                                               filter, release)?;
                 package_targets.push((to_build, targets));
             }
         }
@@ -243,7 +248,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
 
     let mut ret = {
         let _p = profile::start("compiling");
-        let mut build_config = try!(scrape_build_config(config, jobs, target));
+        let mut build_config = scrape_build_config(config, jobs, target)?;
         build_config.release = release;
         build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
         build_config.json_errors = message_format == MessageFormat::Json;
@@ -251,13 +256,13 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
             build_config.doc_all = deps;
         }
 
-        try!(ops::compile_targets(ws,
-                                  &package_targets,
-                                  &packages,
-                                  &resolve_with_overrides,
-                                  config,
-                                  build_config,
-                                  profiles))
+        ops::compile_targets(ws,
+                             &package_targets,
+                             &packages,
+                             &resolve_with_overrides,
+                             config,
+                             build_config,
+                             profiles)?
     };
 
     ret.to_doc_test = to_builds.iter().map(|&p| p.clone()).collect();
@@ -392,10 +397,10 @@ fn generate_targets<'a>(pkg: &'a Package,
                     }
                     Ok(())
                 };
-                try!(find(bins, "bin", TargetKind::Bin, profile));
-                try!(find(examples, "example", TargetKind::Example, build));
-                try!(find(tests, "test", TargetKind::Test, test));
-                try!(find(benches, "bench", TargetKind::Bench, &profiles.bench));
+                find(bins, "bin", TargetKind::Bin, profile)?;
+                find(examples, "example", TargetKind::Example, build)?;
+                find(tests, "test", TargetKind::Test, test)?;
+                find(benches, "bench", TargetKind::Bench, &profiles.bench)?;
             }
             Ok(targets)
         }
@@ -406,7 +411,7 @@ fn generate_targets<'a>(pkg: &'a Package,
 /// have been configured.
 fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
                      ws: &Workspace<'a>) -> CargoResult<()> {
-    let paths = match try!(ws.config().get_list("paths")) {
+    let paths = match ws.config().get_list("paths")? {
         Some(list) => list,
         None => return Ok(())
     };
@@ -419,13 +424,13 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
     });
 
     for (path, definition) in paths {
-        let id = try!(SourceId::for_path(&path));
+        let id = SourceId::for_path(&path)?;
         let mut source = PathSource::new_recursive(&path, &id, ws.config());
-        try!(source.update().chain_error(|| {
+        source.update().chain_error(|| {
             human(format!("failed to update path override `{}` \
                            (defined in `{}`)", path.display(),
                           definition.display()))
-        }));
+        })?;
         registry.add_override(&id, Box::new(source));
     }
     Ok(())
@@ -443,7 +448,7 @@ fn scrape_build_config(config: &Config,
                        jobs: Option<u32>,
                        target: Option<String>)
                        -> CargoResult<ops::BuildConfig> {
-    let cfg_jobs = match try!(config.get_i64("build.jobs")) {
+    let cfg_jobs = match config.get_i64("build.jobs")? {
         Some(v) => {
             if v.val <= 0 {
                 bail!("build.jobs must be positive, but found {} in {}",
@@ -458,17 +463,17 @@ fn scrape_build_config(config: &Config,
         None => None,
     };
     let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
-    let cfg_target = try!(config.get_string("build.target")).map(|s| s.val);
+    let cfg_target = config.get_string("build.target")?.map(|s| s.val);
     let target = target.or(cfg_target);
     let mut base = ops::BuildConfig {
-        host_triple: try!(config.rustc()).host.clone(),
+        host_triple: config.rustc()?.host.clone(),
         requested_target: target.clone(),
         jobs: jobs,
         ..Default::default()
     };
-    base.host = try!(scrape_target_config(config, &base.host_triple));
+    base.host = scrape_target_config(config, &base.host_triple)?;
     base.target = match target.as_ref() {
-        Some(triple) => try!(scrape_target_config(config, &triple)),
+        Some(triple) => scrape_target_config(config, &triple)?,
         None => base.host.clone(),
     };
     Ok(base)
@@ -479,11 +484,11 @@ fn scrape_target_config(config: &Config, triple: &str)
 
     let key = format!("target.{}", triple);
     let mut ret = ops::TargetConfig {
-        ar: try!(config.get_path(&format!("{}.ar", key))).map(|v| v.val),
-        linker: try!(config.get_path(&format!("{}.linker", key))).map(|v| v.val),
+        ar: config.get_path(&format!("{}.ar", key))?.map(|v| v.val),
+        linker: config.get_path(&format!("{}.linker", key))?.map(|v| v.val),
         overrides: HashMap::new(),
     };
-    let table = match try!(config.get_table(&key)) {
+    let table = match config.get_table(&key)? {
         Some(table) => table.val,
         None => return Ok(ret),
     };
@@ -500,36 +505,36 @@ fn scrape_target_config(config: &Config, triple: &str)
             rerun_if_changed: Vec::new(),
             warnings: Vec::new(),
         };
-        for (k, value) in try!(value.table(&lib_name)).0 {
+        for (k, value) in value.table(&lib_name)?.0 {
             let key = format!("{}.{}", key, k);
             match &k[..] {
                 "rustc-flags" => {
-                    let (flags, definition) = try!(value.string(&k));
+                    let (flags, definition) = value.string(&k)?;
                     let whence = format!("in `{}` (in {})", key,
                                          definition.display());
-                    let (paths, links) = try!(
+                    let (paths, links) = 
                         BuildOutput::parse_rustc_flags(&flags, &whence)
-                    );
+                    ?;
                     output.library_paths.extend(paths);
                     output.library_links.extend(links);
                 }
                 "rustc-link-lib" => {
-                    let list = try!(value.list(&k));
+                    let list = value.list(&k)?;
                     output.library_links.extend(list.iter()
                                                     .map(|v| v.0.clone()));
                 }
                 "rustc-link-search" => {
-                    let list = try!(value.list(&k));
+                    let list = value.list(&k)?;
                     output.library_paths.extend(list.iter().map(|v| {
                         PathBuf::from(&v.0)
                     }));
                 }
                 "rustc-cfg" => {
-                    let list = try!(value.list(&k));
+                    let list = value.list(&k)?;
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 _ => {
-                    let val = try!(value.string(&k)).0;
+                    let val = value.string(&k)?.0;
                     output.metadata.push((k.clone(), val.to_string()));
                 }
             }

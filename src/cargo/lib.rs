@@ -67,7 +67,7 @@ pub fn call_main_without_stdin<T, V>(
             options_first: bool) -> CliResult<Option<V>>
     where V: Encodable, T: Decodable
 {
-    let flags = try!(flags_from_args::<T>(usage, args, options_first));
+    let flags = flags_from_args::<T>(usage, args, options_first)?;
     exec(flags, config)
 }
 
@@ -77,7 +77,7 @@ fn process<V, F>(mut callback: F)
 {
     let mut config = None;
     let result = (|| {
-        config = Some(try!(Config::default()));
+        config = Some(Config::default()?);
         let args: Vec<_> = try!(env::args_os().map(|s| {
             s.into_string().map_err(|s| {
                 human(format!("invalid unicode in argument: {:?}", s))

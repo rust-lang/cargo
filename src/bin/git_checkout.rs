@@ -30,21 +30,21 @@ Options:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked));
+    config.configure(options.flag_verbose,
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
     let Options { flag_url: url, flag_reference: reference, .. } = options;
 
-    let url = try!(url.to_url());
+    let url = url.to_url()?;
 
     let reference = GitReference::Branch(reference.clone());
     let source_id = SourceId::for_git(&url, reference);
 
     let mut source = GitSource::new(&source_id, config);
 
-    try!(source.update());
+    source.update()?;
 
     Ok(None)
 }

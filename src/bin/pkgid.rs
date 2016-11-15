@@ -54,13 +54,13 @@ Example Package IDs
 
 pub fn execute(options: Options,
                config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked));
-    let root = try!(find_root_manifest_for_wd(options.flag_manifest_path.clone(), config.cwd()));
-    let ws = try!(Workspace::new(&root, config));
+    config.configure(options.flag_verbose,
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
+    let root = find_root_manifest_for_wd(options.flag_manifest_path.clone(), config.cwd())?;
+    let ws = Workspace::new(&root, config)?;
 
     let spec = if options.arg_spec.is_some() {
         options.arg_spec
@@ -70,7 +70,7 @@ pub fn execute(options: Options,
         None
     };
     let spec = spec.as_ref().map(|s| &s[..]);
-    let spec = try!(ops::pkgid(&ws, spec));
+    let spec = ops::pkgid(&ws, spec)?;
     println!("{}", spec);
     Ok(None)
 }

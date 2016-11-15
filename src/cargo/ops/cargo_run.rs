@@ -8,7 +8,7 @@ pub fn run(ws: &Workspace,
            options: &ops::CompileOptions,
            args: &[String]) -> CargoResult<Option<ProcessError>> {
     let config = ws.config();
-    let root = try!(ws.current());
+    let root = ws.current()?;
 
     let mut bins = root.manifest().targets().iter().filter(|a| {
         !a.is_lib() && !a.is_custom_build() && match options.filter {
@@ -40,7 +40,7 @@ pub fn run(ws: &Workspace,
         }
     }
 
-    let compile = try!(ops::compile(ws, options));
+    let compile = ops::compile(ws, options)?;
     let exe = &compile.binaries[0];
     let exe = match util::without_prefix(&exe, config.cwd()) {
         Some(path) if path.file_name() == Some(path.as_os_str())
@@ -48,9 +48,9 @@ pub fn run(ws: &Workspace,
         Some(path) => path.to_path_buf(),
         None => exe.to_path_buf(),
     };
-    let mut process = try!(compile.target_process(exe, &root));
+    let mut process = compile.target_process(exe, &root)?;
     process.args(args).cwd(config.cwd());
 
-    try!(config.shell().status("Running", process.to_string()));
+    config.shell().status("Running", process.to_string())?;
     Ok(process.exec_replace().err())
 }

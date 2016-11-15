@@ -58,7 +58,7 @@ impl<T> LazyCell<T> {
         where F: FnOnce() -> Result<T, Error>
     {
         if self.borrow().is_none() {
-            if let Err(_) = self.fill(try!(init())) {
+            if let Err(_) = self.fill(init()?) {
                 unreachable!();
             }
         }

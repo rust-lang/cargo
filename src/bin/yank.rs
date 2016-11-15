@@ -43,17 +43,17 @@ crates to be locked to any yanked version.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
-    try!(config.configure(options.flag_verbose,
-                          options.flag_quiet,
-                          &options.flag_color,
-                          options.flag_frozen,
-                          options.flag_locked));
-    try!(ops::yank(config,
-                   options.arg_crate,
-                   options.flag_vers,
-                   options.flag_token,
-                   options.flag_index,
-                   options.flag_undo));
+    config.configure(options.flag_verbose,
+                     options.flag_quiet,
+                     &options.flag_color,
+                     options.flag_frozen,
+                     options.flag_locked)?;
+    ops::yank(config,
+              options.arg_crate,
+              options.flag_vers,
+              options.flag_token,
+              options.flag_index,
+              options.flag_undo)?;
     Ok(None)
 }
 

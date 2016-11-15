@@ -59,34 +59,34 @@ impl<'cfg> Registry for DirectorySource<'cfg> {
 impl<'cfg> Source for DirectorySource<'cfg> {
     fn update(&mut self) -> CargoResult<()> {
         self.packages.clear();
-        let entries = try!(self.root.read_dir().chain_error(|| {
+        let entries = self.root.read_dir().chain_error(|| {
             human(format!("failed to read root of directory source: {}",
                           self.root.display()))
-        }));
+        })?;
 
         for entry in entries {
-            let entry = try!(entry);
+            let entry = entry?;
             let path = entry.path();
             let mut src = PathSource::new(&path,
                                           &self.id,
                                           self.config);
-            try!(src.update());
-            let pkg = try!(src.root_package());
+            src.update()?;
+            let pkg = src.root_package()?;
 
             let cksum_file = path.join(".cargo-checksum.json");
-            let cksum = try!(paths::read(&path.join(cksum_file)).chain_error(|| {
+            let cksum = paths::read(&path.join(cksum_file)).chain_error(|| {
                 human(format!("failed to load checksum `.cargo-checksum.json` \
                                of {} v{}",
                               pkg.package_id().name(),
                               pkg.package_id().version()))
 
-            }));
-            let cksum: Checksum = try!(json::decode(&cksum).chain_error(|| {
+            })?;
+            let cksum: Checksum = json::decode(&cksum).chain_error(|| {
                 human(format!("failed to decode `.cargo-checksum.json` of \
                                {} v{}",
                               pkg.package_id().name(),
                               pkg.package_id().version()))
-            }));
+            })?;
 
             let mut manifest = pkg.manifest().clone();
             let summary = manifest.summary().clone();
@@ -120,10 +120,10 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             let mut h = Sha256::new();
             let file = pkg.root().join(file);
 
-            try!((|| -> CargoResult<()> {
-                let mut f = try!(File::open(&file));
+            (|| -> CargoResult<()> {
+                let mut f = File::open(&file)?;
                 loop {
-                    match try!(f.read(&mut buf)) {
+                    match f.read(&mut buf)? {
                         0 => return Ok(()),
                         n => h.update(&buf[..n]),
                     }
@@ -131,7 +131,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             }).chain_error(|| {
                 human(format!("failed to calculate checksum of: {}",
                               file.display()))
-            }));
+            })?;
 
             let actual = h.finish().to_hex();
             if &*actual != cksum {
