@@ -98,11 +98,6 @@ pub enum Method<'a> {
     },
 }
 
-// Err(..) == standard transient error (e.g. I/O error)
-// Ok(Err(..)) == resolve error, but is human readable
-// Ok(Ok(..)) == success in resolving
-type ResolveResult<'a> = CargoResult<CargoResult<Box<Context<'a>>>>;
-
 // Information about the dependencies for a crate, a tuple of:
 //
 // (dependency info, candidates, features activated)
