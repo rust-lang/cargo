@@ -1,8 +1,8 @@
 use rustc_serialize::{Encodable, Encoder};
 
 use core::resolver::Resolve;
-use core::{Package, PackageId, PackageIdSpec, Workspace};
-use ops;
+use core::{Package, PackageId, Workspace};
+use ops::{self, Packages};
 use util::CargoResult;
 
 const VERSION: u32 = 1;
@@ -43,16 +43,13 @@ fn metadata_no_deps(ws: &Workspace,
 
 fn metadata_full(ws: &Workspace,
                  opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
-    let specs = ws.members().map(|pkg| {
-        PackageIdSpec::from_package_id(pkg.package_id())
-    }).collect::<Vec<_>>();
     let deps = ops::resolve_dependencies(ws,
                                          None,
                                          &opt.features,
                                          opt.all_features,
                                          opt.no_default_features,
-                                         &specs)?;
-    let (packages, resolve) = deps;
+                                         &Packages::All)?;
+    let (_, packages, resolve) = deps;
 
     let packages = try!(packages.package_ids()
                                 .map(|i| packages.get(i).map(|p| p.clone()))
