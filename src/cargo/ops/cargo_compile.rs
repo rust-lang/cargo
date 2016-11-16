@@ -69,6 +69,7 @@ pub struct CompileOptions<'a> {
 pub enum CompileMode {
     Test,
     Build,
+    Check,
     Bench,
     Doc { deps: bool },
 }
@@ -188,13 +189,13 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
 
     let profiles = ws.profiles();
 
-    let resolve = resolve_dependencies(ws,
-                                       source,
-                                       features,
-                                       all_features,
-                                       no_default_features,
-                                       &spec)?;
-    let (spec, packages, resolve_with_overrides) = resolve;
+    let pair = resolve_dependencies(ws,
+                                    source,
+                                    features,
+                                    all_features,
+                                    no_default_features,
+                                    &specs)?;
+    let (packages, resolve_with_overrides) = pair;
 
     let mut pkgids = Vec::new();
     if spec.len() > 0 {
@@ -335,6 +336,7 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileMode::Test => test,
         CompileMode::Bench => &profiles.bench,
         CompileMode::Build => build,
+        CompileMode::Check => &profiles.check,
         CompileMode::Doc { .. } => &profiles.doc,
     };
     match *filter {
@@ -366,7 +368,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                     }
                     Ok(base)
                 }
-                CompileMode::Build => {
+                CompileMode::Build | CompileMode::Check => {
                     Ok(pkg.targets().iter().filter(|t| {
                         t.is_bin() || t.is_lib()
                     }).map(|t| (t, profile)).collect())

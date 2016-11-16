@@ -52,7 +52,7 @@ pub struct TargetConfig {
     pub overrides: HashMap<String, BuildOutput>,
 }
 
-pub type PackagesToBuild<'a> = [(&'a Package, Vec<(&'a Target,&'a Profile)>)];
+pub type PackagesToBuild<'a> = [(&'a Package, Vec<(&'a Target, &'a Profile)>)];
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
@@ -203,6 +203,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     for unit in cx.dep_targets(unit)?.iter() {
         compile(cx, jobs, unit)?;
     }
+
     Ok(())
 }
 
@@ -270,11 +271,20 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
 
         // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
         //                              this manually
-        for &(ref dst, ref _link_dst, _linkable) in filenames.iter() {
-            if fs::metadata(&dst).is_ok() {
-                fs::remove_file(&dst).chain_error(|| {
-                    human(format!("Could not remove file: {}.", dst.display()))
-                })?;
+        for &(ref filename, ref _link_dst, _linkable) in filenames.iter() {
+            let mut dsts = vec![root.join(filename)];
+            // If there is both an rmeta and rlib, rustc will prefer to use the
+            // rlib, even if it is older. Therefore, we must delete the rlib to
+            // force using the new rmeta.
+            if dsts[0].extension() == Some(&OsStr::new("rmeta")) {
+                dsts.push(root.join(filename).with_extension("rlib"));
+            }
+            for dst in &dsts {
+                if fs::metadata(dst).is_ok() {
+                    fs::remove_file(dst).chain_error(|| {
+                        human(format!("Could not remove file: {}.", dst.display()))
+                    })?;
+                }
             }
         }
 
@@ -528,7 +538,7 @@ fn build_base_args(cx: &mut Context,
     let Profile {
         ref opt_level, lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, rpath, test, doc: _doc, run_custom_build,
-        ref panic, rustdoc_args: _,
+        ref panic, rustdoc_args: _, check,
     } = *unit.profile;
     assert!(!run_custom_build);
 
@@ -548,7 +558,9 @@ fn build_base_args(cx: &mut Context,
         cmd.arg("--error-format").arg("json");
     }
 
-    if !test {
+    if check {
+        cmd.arg("--crate-type").arg("metadata");
+    } else if !test {
         for crate_type in crate_types.iter() {
             cmd.arg("--crate-type").arg(crate_type);
         }
