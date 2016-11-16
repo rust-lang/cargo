@@ -171,10 +171,8 @@ impl<'a> LayoutProxy<'a> {
             self.build(unit.pkg)
         } else if unit.target.is_example() {
             self.examples().to_path_buf()
-        } else if unit.target.is_lib() {
-            self.deps().to_path_buf()
         } else {
-            self.root().to_path_buf()
+            self.deps().to_path_buf()
         }
     }
 

@@ -1141,7 +1141,8 @@ fn build_script_with_dynamic_native_dependency() {
             #[no_mangle]
             pub extern fn foo() {}
         "#);
-    assert_that(build.cargo_process("build"),
+    assert_that(build.cargo_process("build").arg("-v")
+                .env("RUST_LOG", "cargo::ops::cargo_rustc"),
                 execs().with_status(0));
 
     let foo = project("foo")
@@ -1186,7 +1187,8 @@ fn build_script_with_dynamic_native_dependency() {
             }
         "#);
 
-    assert_that(foo.cargo_process("build").env("SRC", build.root()),
+    assert_that(foo.cargo_process("build").arg("-v").env("SRC", build.root())
+                .env("RUST_LOG", "cargo::ops::cargo_rustc"),
                 execs().with_status(0));
 }
 

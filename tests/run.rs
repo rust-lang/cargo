@@ -429,7 +429,7 @@ fn example_with_release_flag() {
         --out-dir {dir}[/]target[/]release[/]examples \
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps \
-         --extern bar={dir}[/]target[/]release[/]deps[/]libbar.rlib`
+         --extern bar={dir}[/]target[/]release[/]deps[/]libbar-[..].rlib`
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `target[/]release[/]examples[/]a[EXE]`
 ",
@@ -457,7 +457,7 @@ fast2"));
         --out-dir {dir}[/]target[/]debug[/]examples \
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps \
-         --extern bar={dir}[/]target[/]debug[/]deps[/]libbar.rlib`
+         --extern bar={dir}[/]target[/]debug[/]deps[/]libbar-[..].rlib`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]examples[/]a[EXE]`
 ",

@@ -49,7 +49,7 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let _p = profile::start(format!("fingerprint: {} / {}",
                                     unit.pkg.package_id(), unit.target.name()));
     let new = dir(cx, unit);
-    let loc = new.join(&filename(unit));
+    let loc = new.join(&filename(cx, unit));
 
     debug!("fingerprint at: {}", loc.display());
 
@@ -82,8 +82,11 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         missing_outputs = !root.join(unit.target.crate_name())
                                .join("index.html").exists();
     } else {
-        for (filename, _) in cx.target_filenames(unit)? {
-            missing_outputs |= fs::metadata(root.join(filename)).is_err();
+        for (src, link_dst, _) in cx.target_filenames(unit)? {
+            missing_outputs |= !src.exists();
+            if let Some(link_dst) = link_dst {
+                missing_outputs |= !link_dst.exists();
+            }
         }
     }
 
@@ -529,7 +532,7 @@ pub fn dir(cx: &Context, unit: &Unit) -> PathBuf {
 
 /// Returns the (old, new) location for the dep info file of a target.
 pub fn dep_info_loc(cx: &Context, unit: &Unit) -> PathBuf {
-    dir(cx, unit).join(&format!("dep-{}", filename(unit)))
+    dir(cx, unit).join(&format!("dep-{}", filename(cx, unit)))
 }
 
 fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint)
@@ -650,7 +653,11 @@ fn mtime_if_fresh<I>(output: &Path, paths: I) -> Option<FileTime>
     }
 }
 
-fn filename(unit: &Unit) -> String {
+fn filename(cx: &Context, unit: &Unit) -> String {
+    // file_stem includes metadata hash. Thus we have a different
+    // fingerprint for every metadata hash version. This works because
+    // even if the package is fresh, we'll still link the fresh target
+    let file_stem = cx.file_stem(unit);
     let kind = match *unit.target.kind() {
         TargetKind::Lib(..) => "lib",
         TargetKind::Bin => "bin",
@@ -666,7 +673,7 @@ fn filename(unit: &Unit) -> String {
     } else {
         ""
     };
-    format!("{}{}-{}", flavor, kind, unit.target.name())
+    format!("{}{}-{}", flavor, kind, file_stem)
 }
 
 // The dep-info files emitted by the compiler all have their listed paths
