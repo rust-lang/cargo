@@ -51,6 +51,7 @@ Options:
 
 Some common cargo commands are (see all commands with --list):
     build       Compile the current project
+    check       Analyze the current project and report errors, but don't build object files
     clean       Remove the target directory
     doc         Build this project's and its dependencies' documentation
     new         Create a new cargo project
@@ -75,6 +76,7 @@ macro_rules! each_subcommand{
     ($mac:ident) => {
         $mac!(bench);
         $mac!(build);
+        $mac!(check);
         $mac!(clean);
         $mac!(doc);
         $mac!(fetch);

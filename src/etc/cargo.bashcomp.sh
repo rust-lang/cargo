@@ -24,6 +24,7 @@ _cargo()
 	local opt___nocmd="$opt_common -V --version --list"
 	local opt__bench="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --no-run"
 	local opt__build="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --release"
+    local opt__check="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --example"
 	local opt__clean="$opt_common $opt_pkg $opt_mani --target --release"
 	local opt__doc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --open --no-deps --release"
 	local opt__fetch="$opt_common $opt_mani"

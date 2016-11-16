@@ -20,7 +20,7 @@ use super::layout::Layout;
 use super::links::Links;
 use super::{Kind, Compilation, BuildConfig};
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 pub struct Unit<'a> {
     pub pkg: &'a Package,
     pub target: &'a Target,
@@ -70,9 +70,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let dest = if build_config.release { "release" } else { "debug" };
         let host_layout = Layout::new(ws, None, &dest)?;
         let target_layout = match build_config.requested_target.as_ref() {
-            Some(target) => {
-                Some(Layout::new(ws, Some(&target), &dest)?)
-            }
+            Some(target) => Some(Layout::new(ws, Some(&target), dest)?),
             None => None,
         };
 
@@ -148,6 +146,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         unit: &Unit<'a>,
                         crate_types: &mut BTreeSet<String>)
                         -> CargoResult<()> {
+        if unit.profile.check {
+            crate_types.insert("metadata".to_string());
+        }
         for target in unit.pkg.manifest().targets() {
             crate_types.extend(target.rustc_crate_types().iter().map(|s| {
                 if *s == "lib" {
@@ -207,6 +208,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     line.contains(crate_type)
             });
             if not_supported {
+                if crate_type == "metadata" {
+                    bail!("compiler does not support `--crate-type metadata`, \
+                           cannot run `cargo check`.");
+                }
                 map.insert(crate_type.to_string(), None);
                 continue
             }
@@ -251,8 +256,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut visited = HashSet::new();
         for unit in units {
             self.walk_used_in_plugin_map(unit,
-                                              unit.target.for_host(),
-                                              &mut visited)?;
+                                         unit.target.for_host(),
+                                         &mut visited)?;
         }
         Ok(())
     }
@@ -270,8 +275,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
         for unit in self.dep_targets(unit)? {
             self.walk_used_in_plugin_map(&unit,
-                                              is_plugin || unit.target.for_host(),
-                                              visited)?;
+                                         is_plugin || unit.target.for_host(),
+                                         visited)?;
         }
         Ok(())
     }
@@ -509,20 +514,25 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     }
                 }
             };
-            match *unit.target.kind() {
-                TargetKind::Example |
-                TargetKind::Bin |
-                TargetKind::CustomBuild |
-                TargetKind::Bench |
-                TargetKind::Test => {
-                    add("bin", false)?;
-                }
-                TargetKind::Lib(..) if unit.profile.test => {
-                    add("bin", false)?;
-                }
-                TargetKind::Lib(ref libs) => {
-                    for lib in libs {
-                        add(lib.crate_type(), lib.linkable())?;
+
+            if unit.profile.check {
+                add("metadata", true)?;
+            } else {
+                match *unit.target.kind() {
+                    TargetKind::Example |
+                    TargetKind::Bin |
+                    TargetKind::CustomBuild |
+                    TargetKind::Bench |
+                    TargetKind::Test => {
+                        add("bin", false)?;
+                    }
+                    TargetKind::Lib(..) if unit.profile.test => {
+                        add("bin", false)?;
+                    }
+                    TargetKind::Lib(ref libs) => {
+                        for lib in libs {
+                            add(lib.crate_type(), lib.linkable())?;
+                        }
                     }
                 }
             }
@@ -593,12 +603,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             match self.get_package(id) {
                 Ok(pkg) => {
                     pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                        Ok(Unit {
+                        let profile = if unit.profile.check &&
+                                         !t.is_custom_build()
+                                         && !t.for_host() {
+                            &self.profiles.check
+                        } else {
+                            self.lib_profile()
+                        };
+                        let unit = Unit {
                             pkg: pkg,
                             target: t,
-                            profile: self.lib_profile(),
+                            profile: profile,
                             kind: unit.kind.for_target(t),
-                        })
+                        };
+                        Ok(unit)
                     })
                 }
                 Err(e) => Some(Err(e))
