@@ -29,9 +29,9 @@ pub struct Unit<'a> {
 }
 
 pub struct Context<'a, 'cfg: 'a> {
+    pub ws: &'a Workspace<'cfg>,
     pub config: &'cfg Config,
     pub resolve: &'a Resolve,
-    pub current_package: Option<PackageId>,
     pub compilation: Compilation<'cfg>,
     pub packages: &'a PackageSet<'cfg>,
     pub build_state: Arc<BuildState>,
@@ -60,7 +60,7 @@ struct TargetInfo {
 pub struct Metadata(u64);
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
-    pub fn new(ws: &Workspace<'cfg>,
+    pub fn new(ws: &'a Workspace<'cfg>,
                resolve: &'a Resolve,
                packages: &'a PackageSet<'cfg>,
                config: &'cfg Config,
@@ -76,12 +76,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => None,
         };
 
-        let current_package = ws.current_opt().map(Package::package_id).cloned();
         Ok(Context {
+            ws: ws,
             host: host_layout,
             target: target_layout,
             resolve: resolve,
-            current_package: current_package,
             packages: packages,
             config: config,
             target_info: TargetInfo::default(),
@@ -450,8 +449,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // we don't want to link it up.
         if src_dir.ends_with("deps") {
             // Don't lift up library dependencies
-            if self.current_package.as_ref().map_or(false, |p| unit.pkg.package_id() != p)
-                && !unit.target.is_bin() {
+            if self.ws.current_opt().map_or(false, |p| unit.pkg.package_id() != p.package_id())
+                    && !unit.target.is_bin() {
                 None
             } else {
                 Some((
@@ -837,7 +836,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn show_warnings(&self, pkg: &PackageId) -> bool {
-        self.current_package.as_ref().map_or(false, |p| *pkg == *p)
+        self.ws.current_opt().map_or(false, |p| *pkg == *p.package_id())
             || pkg.source_id().is_path()
             || self.config.extra_verbose()
     }
