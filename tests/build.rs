@@ -417,6 +417,8 @@ fn cargo_compile_with_nested_deps_inferred() {
         .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
+    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
     assert_that(
       process(&p.bin("foo")),
@@ -476,6 +478,8 @@ fn cargo_compile_with_nested_deps_correct_bin() {
         .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
+    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
     assert_that(
       process(&p.bin("foo")),
@@ -544,6 +548,8 @@ fn cargo_compile_with_nested_deps_shorthand() {
         .unwrap();
 
     assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
+    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
     assert_that(
       process(&p.bin("foo")),
@@ -612,6 +618,8 @@ fn cargo_compile_with_nested_deps_longhand() {
     assert_that(p.cargo_process("build"), execs());
 
     assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
+    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
     assert_that(process(&p.bin("foo")),
                 execs().with_stdout("test passed\n"));
@@ -752,6 +760,88 @@ fn ignores_carriage_return_in_lockfile() {
     File::create(&lockfile).unwrap().write_all(lock.as_bytes()).unwrap();
     assert_that(p.cargo("build"),
                 execs().with_status(0));
+}
+
+#[test]
+fn cargo_default_env_metadata_env_var() {
+    // Ensure that path dep + dylib + env_var get metadata
+    // (even though path_dep + dylib should not)
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/lib.rs", "// hi")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "bar"
+            crate_type = ["dylib"]
+        "#)
+        .file("bar/src/lib.rs", "// hello");
+
+    // No metadata on libbar since it's a dylib path dependency
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0).with_stderr(&format!("\
+[COMPILING] bar v0.0.1 ({url}/bar)
+[RUNNING] `rustc bar[/]src[/]lib.rs --crate-name bar --crate-type dylib \
+        -C prefer-dynamic -g \
+        -C metadata=[..] \
+        --out-dir [..] \
+        --emit=dep-info,link \
+        -L dependency={dir}[/]target[/]debug[/]deps`
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc src[/]lib.rs --crate-name foo --crate-type lib -g \
+        -C metadata=[..] \
+        -C extra-filename=[..] \
+        --out-dir [..] \
+        --emit=dep-info,link \
+        -L dependency={dir}[/]target[/]debug[/]deps \
+        --extern bar={dir}[/]target[/]debug[/]deps[/]{prefix}bar{suffix}`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+",
+dir = p.root().display(),
+url = p.url(),
+prefix = env::consts::DLL_PREFIX,
+suffix = env::consts::DLL_SUFFIX,
+)));
+
+    assert_that(p.cargo_process("clean"), execs().with_status(0));
+
+    // If you set the env-var, then we expect metadata on libbar
+    assert_that(p.cargo_process("build").arg("-v").env("__CARGO_DEFAULT_LIB_METADATA", "1"),
+                execs().with_status(0).with_stderr(&format!("\
+[COMPILING] bar v0.0.1 ({url}/bar)
+[RUNNING] `rustc bar[/]src[/]lib.rs --crate-name bar --crate-type dylib \
+        -C prefer-dynamic -g \
+        -C metadata=[..] \
+        --out-dir [..] \
+        --emit=dep-info,link \
+        -L dependency={dir}[/]target[/]debug[/]deps`
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc src[/]lib.rs --crate-name foo --crate-type lib -g \
+        -C metadata=[..] \
+        -C extra-filename=[..] \
+        --out-dir [..] \
+        --emit=dep-info,link \
+        -L dependency={dir}[/]target[/]debug[/]deps \
+        --extern bar={dir}[/]target[/]debug[/]deps[/]{prefix}bar-[..]{suffix}`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+",
+dir = p.root().display(),
+url = p.url(),
+prefix = env::consts::DLL_PREFIX,
+suffix = env::consts::DLL_SUFFIX,
+)));
 }
 
 #[test]
@@ -1055,7 +1145,7 @@ fn lto_build() {
         -C opt-level=3 \
         -C lto \
         -C metadata=[..] \
-        --out-dir {dir}[/]target[/]release \
+        --out-dir {dir}[/]target[/]release[/]deps \
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps`
 [FINISHED] release [optimized] target(s) in [..]
@@ -1789,6 +1879,7 @@ fn example_bin_same_name() {
         .unwrap();
 
     assert_that(&p.bin("foo"), is_not(existing_file()));
+    // We expect a file of the form bin/foo-{metadata_hash}
     assert_that(&p.bin("examples/foo"), existing_file());
 
     p.cargo("test").arg("--no-run").arg("-v")
@@ -1796,6 +1887,7 @@ fn example_bin_same_name() {
                    .unwrap();
 
     assert_that(&p.bin("foo"), is_not(existing_file()));
+    // We expect a file of the form bin/foo-{metadata_hash}
     assert_that(&p.bin("examples/foo"), existing_file());
 }
 
@@ -2162,9 +2254,9 @@ fn build_multiple_packages() {
     assert_that(process(&p.bin("foo")),
                 execs().with_stdout("i am foo\n"));
 
-    let d1_path = &p.build_dir().join("debug").join("deps")
+    let d1_path = &p.build_dir().join("debug")
                                 .join(format!("d1{}", env::consts::EXE_SUFFIX));
-    let d2_path = &p.build_dir().join("debug").join("deps")
+    let d2_path = &p.build_dir().join("debug")
                                 .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
     assert_that(d1_path, existing_file());

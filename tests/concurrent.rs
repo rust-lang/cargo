@@ -343,7 +343,9 @@ fn same_project() {
 
 // Make sure that if Cargo dies while holding a lock that it's released and the
 // next Cargo to come in will take over cleanly.
+// older win versions don't support job objects, so skip test there
 #[test]
+#[cfg_attr(target_os = "windows", ignore)]
 fn killing_cargo_releases_the_lock() {
     let p = project("foo")
         .file("Cargo.toml", r#"

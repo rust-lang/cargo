@@ -77,9 +77,11 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         rm_rf(&layout.proxy().fingerprint(&unit.pkg))?;
         rm_rf(&layout.build(&unit.pkg))?;
 
-        let root = cx.out_dir(&unit);
-        for (filename, _) in cx.target_filenames(&unit)? {
-            rm_rf(&root.join(&filename))?;
+        for (src, link_dst, _) in cx.target_filenames(&unit)? {
+            rm_rf(&src)?;
+            if let Some(dst) = link_dst {
+                rm_rf(&dst)?;
+            }
         }
     }
 

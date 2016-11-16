@@ -97,7 +97,7 @@ fn build_main_and_allow_unstable_options() {
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps \
-        --extern {name}={dir}[/]target[/]debug[/]deps[/]lib{name}.rlib`
+        --extern {name}={dir}[/]target[/]debug[/]deps[/]lib{name}-[..].rlib`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.root().display(), url = p.url(),
