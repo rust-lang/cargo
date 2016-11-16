@@ -22,7 +22,6 @@
 //!       previously compiled dependency
 //!
 
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -112,8 +111,8 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
                                 features: &[String],
                                 all_features: bool,
                                 no_default_features: bool,
-                                specs: &[PackageIdSpec])
-                                -> CargoResult<(PackageSet<'a>, Resolve)> {
+                                specs: &Packages<'a>)
+                                -> CargoResult<(Vec<PackageIdSpec>, PackageSet<'a>, Resolve)> {
     let features = features.iter().flat_map(|s| {
         s.split_whitespace()
     }).map(|s| s.to_string()).collect::<Vec<String>>();
@@ -147,15 +146,27 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
         }
     };
 
+    let specs = match *specs {
+        Packages::All => {
+            ws.members()
+                .map(Package::package_id)
+                .map(PackageIdSpec::from_package_id)
+                .collect()
+        },
+        Packages::Packages(packages) => {
+            packages.iter().map(|p| PackageIdSpec::parse(&p)).collect::<CargoResult<Vec<_>>>()?
+        }
+    };
+
     let resolved_with_overrides =
             ops::resolve_with_previous(&mut registry, ws,
                                             method, Some(&resolve), None,
-                                            specs)?;
+                                            &specs)?;
 
     let packages = ops::get_resolved_packages(&resolved_with_overrides,
                                               registry);
 
-    Ok((packages, resolved_with_overrides))
+    Ok((specs, packages, resolved_with_overrides))
 }
 
 pub fn compile_ws<'a>(ws: &Workspace<'a>,
@@ -175,40 +186,24 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         bail!("jobs must be at least 1")
     }
 
-    let spec: Cow<'a, [String]> = match spec {
-        Packages::Packages(spec) => spec.into(),
-        Packages::All => ws.members()
-                           .map(|package| {
-                               let package_id = package.package_id();
-                               PackageIdSpec::from_package_id(package_id).to_string()
-                            })
-                           .collect()
-    };
-
     let profiles = ws.profiles();
-    if spec.len() == 0 {
-        let root_package = ws.current()?;
-        generate_targets(root_package, profiles, mode, filter, release)?;
-    }
 
-    let specs = spec.iter().map(|p| PackageIdSpec::parse(p))
-                                .collect::<CargoResult<Vec<_>>>()?;
-
-    let pair = resolve_dependencies(ws,
+    let resolve = resolve_dependencies(ws,
                                          source,
                                          features,
                                          all_features,
                                          no_default_features,
-                                         &specs)?;
-    let (packages, resolve_with_overrides) = pair;
+                                         &spec)?;
+    let (spec, packages, resolve_with_overrides) = resolve;
 
     let mut pkgids = Vec::new();
     if spec.len() > 0 {
         for p in spec.iter() {
-            pkgids.push(resolve_with_overrides.query(&p)?);
+            pkgids.push(resolve_with_overrides.query(&p.to_string())?);
         }
     } else {
         let root_package = ws.current()?;
+        generate_targets(root_package, profiles, mode, filter, release)?;
         pkgids.push(root_package.package_id());
     };
 
