@@ -345,7 +345,7 @@ fn same_project() {
 // next Cargo to come in will take over cleanly.
 // older win versions don't support job objects, so skip test there
 #[test]
-#[cfg_attr(target_env = "msvc", ignore)]
+#[cfg_attr(target_env = "windows", ignore)]
 fn killing_cargo_releases_the_lock() {
     let p = project("foo")
         .file("Cargo.toml", r#"
