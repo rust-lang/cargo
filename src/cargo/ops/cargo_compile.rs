@@ -98,8 +98,8 @@ pub enum CompileFilter<'a> {
 
 pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
                    -> CargoResult<ops::Compilation<'a>> {
-    if let Some(root_package) = ws.current_opt() {
-        for key in root_package.manifest().warnings().iter() {
+    for member in ws.members() {
+        for key in member.manifest().warnings().iter() {
             options.config.shell().warn(key)?
         }
     }
