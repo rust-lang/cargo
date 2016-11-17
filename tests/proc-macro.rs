@@ -49,8 +49,8 @@ fn noop() {
             use proc_macro::TokenStream;
 
             #[proc_macro_derive(Noop)]
-            pub fn noop(input: TokenStream) -> TokenStream {
-                input
+            pub fn noop(_input: TokenStream) -> TokenStream {
+                "".parse().unwrap()
             }
         "#);
     noop.build();
@@ -87,8 +87,8 @@ fn impl_and_derive() {
                 fn impl_by_transmogrify(&self) -> bool;
             }
 
-            #[derive(Transmogrify)]
-            struct X;
+            #[derive(Transmogrify, Debug)]
+            struct X { success: bool }
 
             fn main() {
                 let x = X::new();
@@ -115,8 +115,6 @@ fn impl_and_derive() {
             #[proc_macro_derive(Transmogrify)]
             #[doc(hidden)]
             pub fn transmogrify(input: TokenStream) -> TokenStream {
-                assert_eq!(input.to_string(), "struct X;\n");
-
                 "
                     impl X {
                         fn new() -> Self {
@@ -128,11 +126,6 @@ fn impl_and_derive() {
                         fn impl_by_transmogrify(&self) -> bool {
                             true
                         }
-                    }
-
-                    #[derive(Debug)]
-                    struct X {
-                        success: bool,
                     }
                 ".parse().unwrap()
             }
