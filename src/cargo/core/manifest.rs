@@ -47,6 +47,7 @@ pub struct VirtualManifest {
 pub struct ManifestMetadata {
     pub authors: Vec<String>,
     pub keywords: Vec<String>,
+    pub categories: Vec<String>,
     pub license: Option<String>,
     pub license_file: Option<String>,
     pub description: Option<String>,    // not markdown
