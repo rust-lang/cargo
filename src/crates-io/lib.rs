@@ -78,6 +78,7 @@ pub struct NewCrate {
     pub homepage: Option<String>,
     pub readme: Option<String>,
     pub keywords: Vec<String>,
+    pub categories: Vec<String>,
     pub license: Option<String>,
     pub license_file: Option<String>,
     pub repository: Option<String>,
