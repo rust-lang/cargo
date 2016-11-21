@@ -6,7 +6,6 @@ use rustc_serialize::{Encoder, Encodable};
 
 use core::{Dependency, PackageId, Summary, SourceId, PackageIdSpec};
 use core::WorkspaceConfig;
-use core::package_id::Metadata;
 
 pub enum EitherManifest {
     Real(Manifest),
@@ -159,7 +158,6 @@ pub struct Target {
     kind: TargetKind,
     name: String,
     src_path: PathBuf,
-    metadata: Option<Metadata>,
     tested: bool,
     benched: bool,
     doc: bool,
@@ -279,7 +277,6 @@ impl Target {
             kind: TargetKind::Bin,
             name: String::new(),
             src_path: PathBuf::new(),
-            metadata: None,
             doc: false,
             doctest: false,
             harness: true,
@@ -289,40 +286,35 @@ impl Target {
         }
     }
 
-    pub fn lib_target(name: &str, crate_targets: Vec<LibKind>,
-                      src_path: &Path,
-                      metadata: Metadata) -> Target {
+    pub fn lib_target(name: &str,
+                      crate_targets: Vec<LibKind>,
+                      src_path: &Path) -> Target {
         Target {
             kind: TargetKind::Lib(crate_targets),
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
-            metadata: Some(metadata),
             doctest: true,
             doc: true,
             ..Target::blank()
         }
     }
 
-    pub fn bin_target(name: &str, src_path: &Path,
-                      metadata: Option<Metadata>) -> Target {
+    pub fn bin_target(name: &str, src_path: &Path) -> Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
-            metadata: metadata,
             doc: true,
             ..Target::blank()
         }
     }
 
     /// Builds a `Target` corresponding to the `build = "build.rs"` entry.
-    pub fn custom_build_target(name: &str, src_path: &Path,
-                               metadata: Option<Metadata>) -> Target {
+    pub fn custom_build_target(name: &str, src_path: &Path) -> Target {
         Target {
             kind: TargetKind::CustomBuild,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
-            metadata: metadata,
             for_host: true,
             benched: false,
             tested: false,
@@ -340,25 +332,21 @@ impl Target {
         }
     }
 
-    pub fn test_target(name: &str, src_path: &Path,
-                       metadata: Metadata) -> Target {
+    pub fn test_target(name: &str, src_path: &Path) -> Target {
         Target {
             kind: TargetKind::Test,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
-            metadata: Some(metadata),
             benched: false,
             ..Target::blank()
         }
     }
 
-    pub fn bench_target(name: &str, src_path: &Path,
-                        metadata: Metadata) -> Target {
+    pub fn bench_target(name: &str, src_path: &Path) -> Target {
         Target {
             kind: TargetKind::Bench,
             name: name.to_string(),
             src_path: src_path.to_path_buf(),
-            metadata: Some(metadata),
             tested: false,
             ..Target::blank()
         }
@@ -367,7 +355,6 @@ impl Target {
     pub fn name(&self) -> &str { &self.name }
     pub fn crate_name(&self) -> String { self.name.replace("-", "_") }
     pub fn src_path(&self) -> &Path { &self.src_path }
-    pub fn metadata(&self) -> Option<&Metadata> { self.metadata.as_ref() }
     pub fn kind(&self) -> &TargetKind { &self.kind }
     pub fn tested(&self) -> bool { self.tested }
     pub fn harness(&self) -> bool { self.harness }

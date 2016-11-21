@@ -421,7 +421,7 @@ fn add_plugin_deps(rustc: &mut ProcessBuilder,
     Ok(())
 }
 
-fn prepare_rustc(cx: &Context,
+fn prepare_rustc(cx: &mut Context,
                  crate_types: Vec<&str>,
                  unit: &Unit) -> CargoResult<ProcessBuilder> {
     let mut base = cx.compilation.rustc_process(unit.pkg)?;
@@ -509,7 +509,7 @@ fn root_path(cx: &Context, unit: &Unit) -> PathBuf {
     }
 }
 
-fn build_base_args(cx: &Context,
+fn build_base_args(cx: &mut Context,
                    cmd: &mut ProcessBuilder,
                    unit: &Unit,
                    crate_types: &[&str]) {
@@ -610,8 +610,8 @@ fn build_base_args(cx: &Context,
 
     match cx.target_metadata(unit) {
         Some(m) => {
-            cmd.arg("-C").arg(&format!("metadata={}", m.metadata));
-            cmd.arg("-C").arg(&format!("extra-filename={}", m.extra_filename));
+            cmd.arg("-C").arg(&format!("metadata={}", m));
+            cmd.arg("-C").arg(&format!("extra-filename=-{}", m));
         }
         None => {
             cmd.arg("-C").arg(&format!("metadata={}", short_hash(unit.pkg)));
@@ -645,17 +645,16 @@ fn build_plugin_args(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit) {
     opt(cmd, "-C", "linker=", cx.linker(unit.kind).map(|s| s.as_ref()));
 }
 
-fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
+fn build_deps_args(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit)
                    -> CargoResult<()> {
-    let layout = cx.layout(unit);
     cmd.arg("-L").arg(&{
         let mut deps = OsString::from("dependency=");
-        deps.push(layout.deps());
+        deps.push(cx.layout(unit).deps());
         deps
     });
 
     if unit.pkg.has_custom_build() {
-        cmd.env("OUT_DIR", &layout.build_out(unit.pkg));
+        cmd.env("OUT_DIR", &cx.layout(unit).build_out(unit.pkg));
     }
 
     for unit in cx.dep_targets(unit)?.iter() {
@@ -666,7 +665,7 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
 
     return Ok(());
 
-    fn link_to(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit)
+    fn link_to(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit)
                -> CargoResult<()> {
         for (dst, _link_dst, linkable) in cx.target_filenames(unit)? {
             if !linkable {
