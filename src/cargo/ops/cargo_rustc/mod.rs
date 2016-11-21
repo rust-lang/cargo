@@ -18,7 +18,6 @@ use self::job_queue::JobQueue;
 
 pub use self::compilation::Compilation;
 pub use self::context::{Context, Unit};
-pub use self::layout::{Layout, LayoutProxy};
 pub use self::custom_build::{BuildOutput, BuildMap, BuildScripts};
 
 mod compilation;
@@ -104,12 +103,6 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
     queue.execute(&mut cx)?;
 
     for unit in units.iter() {
-        let out_dir = cx.layout(unit).build_out(unit.pkg)
-                        .display().to_string();
-        cx.compilation.extra_env.entry(unit.pkg.package_id().clone())
-          .or_insert(Vec::new())
-          .push(("OUT_DIR".to_string(), out_dir));
-
         for (dst, link_dst, _linkable) in cx.target_filenames(unit)? {
             let bindst = match link_dst {
                 Some(link_dst) => link_dst,
@@ -131,6 +124,13 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
 
             // Include immediate lib deps as well
             for unit in cx.dep_targets(unit)?.iter() {
+                if unit.profile.run_custom_build {
+                    let out_dir = cx.build_script_out_dir(unit).display().to_string();
+                    cx.compilation.extra_env.entry(unit.pkg.package_id().clone())
+                      .or_insert(Vec::new())
+                      .push(("OUT_DIR".to_string(), out_dir));
+                }
+
                 let pkgid = unit.pkg.package_id();
                 if !unit.target.is_lib() { continue }
                 if unit.profile.doc { continue }
@@ -183,8 +183,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     let (dirty, fresh, freshness) = if unit.profile.run_custom_build {
         custom_build::prepare(cx, unit)?
     } else {
-        let (freshness, dirty, fresh) = fingerprint::prepare_target(cx,
-                                                                         unit)?;
+        let (freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
         let work = if unit.profile.doc {
             rustdoc(cx, unit)?
         } else {
@@ -465,10 +464,6 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
 
     build_deps_args(&mut rustdoc, cx, unit)?;
 
-    if unit.pkg.has_custom_build() {
-        rustdoc.env("OUT_DIR", &cx.layout(unit).build_out(unit.pkg));
-    }
-
     rustdoc.args(&cx.rustdocflags_args(unit)?);
 
     let name = unit.pkg.name().to_string();
@@ -624,7 +619,7 @@ fn build_base_args(cx: &mut Context,
 }
 
 
-fn build_plugin_args(cmd: &mut ProcessBuilder, cx: &Context, unit: &Unit) {
+fn build_plugin_args(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit) {
     fn opt(cmd: &mut ProcessBuilder, key: &str, prefix: &str,
            val: Option<&OsStr>)  {
         if let Some(val) = val {
@@ -649,15 +644,14 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit)
                    -> CargoResult<()> {
     cmd.arg("-L").arg(&{
         let mut deps = OsString::from("dependency=");
-        deps.push(cx.layout(unit).deps());
+        deps.push(cx.deps_dir(unit));
         deps
     });
 
-    if unit.pkg.has_custom_build() {
-        cmd.env("OUT_DIR", &cx.layout(unit).build_out(unit.pkg));
-    }
-
     for unit in cx.dep_targets(unit)?.iter() {
+        if unit.profile.run_custom_build {
+            cmd.env("OUT_DIR", &cx.build_script_out_dir(unit));
+        }
         if unit.target.linkable() && !unit.profile.doc {
             link_to(cmd, cx, unit)?;
         }

@@ -82,11 +82,12 @@ pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
 
 fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                         -> CargoResult<(Work, Work)> {
-    let host_unit = Unit { kind: Kind::Host, ..*unit };
-    let (script_output, build_output) = {
-        (cx.layout(&host_unit).build(unit.pkg),
-         cx.layout(unit).build_out(unit.pkg))
-    };
+    let dependencies = cx.dep_run_custom_build(unit)?;
+    let build_script_unit = dependencies.iter().find(|d| {
+        !d.profile.run_custom_build && d.target.is_custom_build()
+    }).expect("running a script not depending on an actual script");
+    let script_output = cx.build_script_dir(build_script_unit);
+    let build_output = cx.build_script_out_dir(unit);
 
     // Building the command to execute
     let to_exec = script_output.join(unit.target.name());
@@ -150,7 +151,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // This information will be used at build-time later on to figure out which
     // sorts of variables need to be discovered at that time.
     let lib_deps = {
-        cx.dep_run_custom_build(unit)?.iter().filter_map(|unit| {
+        dependencies.iter().filter_map(|unit| {
             if unit.profile.run_custom_build {
                 Some((unit.pkg.manifest().links().unwrap().to_string(),
                       unit.pkg.package_id().clone()))
@@ -177,8 +178,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     };
     cx.build_explicit_deps.insert(*unit, (output_file.clone(), rerun_if_changed));
 
-    fs::create_dir_all(&cx.layout(&host_unit).build(unit.pkg))?;
-    fs::create_dir_all(&cx.layout(unit).build(unit.pkg))?;
+    fs::create_dir_all(&script_output)?;
+    fs::create_dir_all(&build_output)?;
 
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
@@ -336,9 +337,8 @@ impl BuildOutput {
 
             match key {
                 "rustc-flags" => {
-                    let (libs, links) = 
-                        BuildOutput::parse_rustc_flags(value, &whence)
-                    ?;
+                    let (libs, links) =
+                        BuildOutput::parse_rustc_flags(value, &whence)?;
                     library_links.extend(links.into_iter());
                     library_paths.extend(libs.into_iter());
                 }
