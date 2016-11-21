@@ -232,6 +232,12 @@ OPENSSL_CFLAGS_i686-unknown-linux-gnu := -m32
 OPENSSL_CFLAGS_i686-unknown-linux-musl := -m32
 
 define BUILD_OPENSSL
+
+ifdef CFG_ENABLE_NIGHTLY
+cargo-$(1): export OPENSSL_STATIC := 1
+test-unit-$(1): export OPENSSL_STATIC := 1
+endif
+
 ifdef OPENSSL_OS_$(1)
 ifdef CFG_ENABLE_NIGHTLY
 OPENSSL_INSTALL_$(1) := $$(CFG_BUILD_DIR)/target/openssl/$(1)-install
@@ -250,9 +256,7 @@ target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
 	touch $$@
 
 # variables read by various build scripts to find openssl
-cargo-$(1): export OPENSSL_STATIC := 1
 cargo-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
-test-unit-$(1): export OPENSSL_STATIC := 1
 test-unit-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
 
 # build libz statically into the cargo we're producing
