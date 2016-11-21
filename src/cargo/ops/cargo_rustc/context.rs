@@ -11,12 +11,12 @@ use std::sync::Arc;
 use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, Profiles, Dependency, Workspace};
 use core::dependency::Kind as DepKind;
-use util::{CargoResult, ChainError, internal, Config, profile, Cfg, human};
+use util::{self, CargoResult, ChainError, internal, Config, profile, Cfg, human};
 
 use super::TargetConfig;
 use super::custom_build::{BuildState, BuildScripts};
 use super::fingerprint::Fingerprint;
-use super::layout::{Layout, LayoutProxy};
+use super::layout::Layout;
 use super::links::Links;
 use super::{Kind, Compilation, BuildConfig};
 
@@ -278,23 +278,61 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Returns the appropriate directory layout for either a plugin or not.
-    pub fn layout(&self, unit: &Unit) -> LayoutProxy {
-        let primary = unit.pkg.package_id() == &self.current_package;
-        match unit.kind {
-            Kind::Host => LayoutProxy::new(&self.host, primary),
-            Kind::Target => LayoutProxy::new(self.target.as_ref()
-                                                 .unwrap_or(&self.host),
-                                             primary),
+    fn layout(&self, kind: Kind) -> &Layout {
+        match kind {
+            Kind::Host => &self.host,
+            Kind::Target => self.target.as_ref().unwrap_or(&self.host)
         }
+    }
+
+    /// Returns the directories where Rust crate dependencies are found for the
+    /// specified unit.
+    pub fn deps_dir(&self, unit: &Unit) -> &Path {
+        self.layout(unit.kind).deps()
+    }
+
+    /// Returns the directory for the specified unit where fingerprint
+    /// information is stored.
+    pub fn fingerprint_dir(&mut self, unit: &Unit) -> PathBuf {
+        let dir = self.pkg_dir(unit);
+        self.layout(unit.kind).fingerprint().join(dir)
+    }
+
+    /// Returns the appropriate directory layout for either a plugin or not.
+    pub fn build_script_dir(&mut self, unit: &Unit) -> PathBuf {
+        assert!(unit.target.is_custom_build());
+        assert!(!unit.profile.run_custom_build);
+        let dir = self.pkg_dir(unit);
+        self.layout(Kind::Host).build().join(dir)
+    }
+
+    /// Returns the appropriate directory layout for either a plugin or not.
+    pub fn build_script_out_dir(&mut self, unit: &Unit) -> PathBuf {
+        assert!(unit.target.is_custom_build());
+        assert!(unit.profile.run_custom_build);
+        let dir = self.pkg_dir(unit);
+        self.layout(unit.kind).build().join(dir).join("out")
     }
 
     /// Returns the appropriate output directory for the specified package and
     /// target.
-    pub fn out_dir(&self, unit: &Unit) -> PathBuf {
+    pub fn out_dir(&mut self, unit: &Unit) -> PathBuf {
         if unit.profile.doc {
-            self.layout(unit).doc_root()
+            self.layout(unit.kind).root().parent().unwrap().join("doc")
+        } else if unit.target.is_custom_build() {
+            self.build_script_dir(unit)
+        } else if unit.target.is_example() {
+            self.layout(unit.kind).examples().to_path_buf()
         } else {
-            self.layout(unit).out_dir(unit)
+            self.deps_dir(unit).to_path_buf()
+        }
+    }
+
+    fn pkg_dir(&mut self, unit: &Unit) -> String {
+        let name = unit.pkg.package_id().name();
+        match self.target_metadata(unit) {
+            Some(meta) => format!("{}-{}", name, meta),
+            None => format!("{}-{}", name, util::short_hash(unit.pkg)),
         }
     }
 
