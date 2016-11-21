@@ -531,7 +531,7 @@ pub fn dir(cx: &Context, unit: &Unit) -> PathBuf {
 }
 
 /// Returns the (old, new) location for the dep info file of a target.
-pub fn dep_info_loc(cx: &Context, unit: &Unit) -> PathBuf {
+pub fn dep_info_loc(cx: &mut Context, unit: &Unit) -> PathBuf {
     dir(cx, unit).join(&format!("dep-{}", filename(cx, unit)))
 }
 
@@ -653,7 +653,7 @@ fn mtime_if_fresh<I>(output: &Path, paths: I) -> Option<FileTime>
     }
 }
 
-fn filename(cx: &Context, unit: &Unit) -> String {
+fn filename(cx: &mut Context, unit: &Unit) -> String {
     // file_stem includes metadata hash. Thus we have a different
     // fingerprint for every metadata hash version. This works because
     // even if the package is fresh, we'll still link the fresh target

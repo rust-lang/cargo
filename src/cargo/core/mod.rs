@@ -2,7 +2,7 @@ pub use self::dependency::{Dependency, DependencyInner};
 pub use self::manifest::{Manifest, Target, TargetKind, Profile, LibKind, Profiles};
 pub use self::manifest::{EitherManifest, VirtualManifest};
 pub use self::package::{Package, PackageSet};
-pub use self::package_id::{PackageId, Metadata};
+pub use self::package_id::PackageId;
 pub use self::package_id_spec::PackageIdSpec;
 pub use self::registry::Registry;
 pub use self::resolver::Resolve;

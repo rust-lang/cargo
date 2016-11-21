@@ -73,9 +73,8 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     cx.probe_target_info(&units)?;
 
     for unit in units.iter() {
-        let layout = cx.layout(unit);
-        rm_rf(&layout.proxy().fingerprint(&unit.pkg))?;
-        rm_rf(&layout.build(&unit.pkg))?;
+        rm_rf(&cx.layout(unit).proxy().fingerprint(&unit.pkg))?;
+        rm_rf(&cx.layout(unit).build(&unit.pkg))?;
 
         for (src, link_dst, _) in cx.target_filenames(&unit)? {
             rm_rf(&src)?;
