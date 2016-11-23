@@ -231,16 +231,19 @@ SETARCH_i686-unknown-linux-gnu := setarch i386
 OPENSSL_CFLAGS_i686-unknown-linux-gnu := -m32
 OPENSSL_CFLAGS_i686-unknown-linux-musl := -m32
 
+LIPO_FAMILY_i686-apple-darwin := i386
+LIPO_FAMILY_x86_64-apple-darwin := x86_64
+
 define BUILD_OPENSSL
 
 ifdef CFG_ENABLE_NIGHTLY
+
 cargo-$(1): export OPENSSL_STATIC := 1
 test-unit-$(1): export OPENSSL_STATIC := 1
-endif
+
+OPENSSL_INSTALL_$(1) := $$(CFG_BUILD_DIR)/target/openssl/$(1)-install
 
 ifdef OPENSSL_OS_$(1)
-ifdef CFG_ENABLE_NIGHTLY
-OPENSSL_INSTALL_$(1) := $$(CFG_BUILD_DIR)/target/openssl/$(1)-install
 
 target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
 		| target/openssl/
@@ -261,12 +264,39 @@ test-unit-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
 
 # build libz statically into the cargo we're producing
 cargo-$(1): export LIBZ_SYS_STATIC := 1
-else
+
+else ifdef LIPO_FAMILY_$(1)
+
+target/openssl/$(1).stamp:
+	@echo installing from `brew --prefix openssl`
+	@rm -rf $$(OPENSSL_INSTALL_$(1))
+	mkdir -p $$(OPENSSL_INSTALL_$(1))/lib
+	cp -r `brew --prefix openssl`/include $$(OPENSSL_INSTALL_$(1))/include
+	cp -r `brew --prefix openssl`/lib/pkgconfig $$(OPENSSL_INSTALL_$(1))/lib/pkgconfig
+	lipo -output $$(OPENSSL_INSTALL_$(1))/lib/libssl.a \
+		-extract_family $$(LIPO_FAMILY_$(1)) \
+		`brew --prefix openssl`/lib/libssl.a || \
+		cp `brew --prefix openssl`/lib/libssl.a \
+			$$(OPENSSL_INSTALL_$(1))/lib/libssl.a
+	lipo -output $$(OPENSSL_INSTALL_$(1))/lib/libcrypto.a \
+		-extract_family $$(LIPO_FAMILY_$(1)) \
+		`brew --prefix openssl`/lib/libcrypto.a || \
+		cp `brew --prefix openssl`/lib/libcrypto.a \
+			$$(OPENSSL_INSTALL_$(1))/lib/libcrypto.a
+	touch $$@
+
+cargo-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
+test-unit-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
+
+else # !OPENSSL_OS_$(1) && !OSX
+target/openssl/$(1).stamp:
+
+endif
+
+else # !CFG_ENABLE_NIGHTLY
 target/openssl/$(1).stamp:
 endif
-else
-target/openssl/$(1).stamp:
-endif
+
 endef
 
 $(foreach target,$(CFG_TARGET),$(eval $(call BUILD_OPENSSL,$(target))))
