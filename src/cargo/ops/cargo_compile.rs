@@ -251,7 +251,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         let mut build_config = scrape_build_config(config, jobs, target)?;
         build_config.release = release;
         build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
-        build_config.json_errors = message_format == MessageFormat::Json;
+        build_config.json_messages = message_format == MessageFormat::Json;
         if let CompileMode::Doc { deps } = mode {
             build_config.doc_all = deps;
         }
@@ -512,7 +512,7 @@ fn scrape_target_config(config: &Config, triple: &str)
                     let (flags, definition) = value.string(&k)?;
                     let whence = format!("in `{}` (in {})", key,
                                          definition.display());
-                    let (paths, links) = 
+                    let (paths, links) =
                         BuildOutput::parse_rustc_flags(&flags, &whence)
                     ?;
                     output.library_paths.extend(paths);
