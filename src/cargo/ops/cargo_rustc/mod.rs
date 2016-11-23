@@ -42,7 +42,7 @@ pub struct BuildConfig {
     pub release: bool,
     pub test: bool,
     pub doc_all: bool,
-    pub json_errors: bool,
+    pub json_messages: bool,
 }
 
 #[derive(Clone, Default)]
@@ -246,9 +246,15 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let cwd = cx.config.cwd().to_path_buf();
 
     rustc.args(&cx.rustflags_args(unit)?);
-    let json_errors = cx.build_config.json_errors;
+    let json_messages = cx.build_config.json_messages;
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
+    let profile = unit.profile.clone();
+    let features = cx.resolve.features(unit.pkg.package_id())
+                     .into_iter()
+                     .flat_map(|i| i)
+                     .map(|s| s.to_string())
+                     .collect::<Vec<_>>();
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
@@ -273,7 +279,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         }
 
         state.running(&rustc);
-        if json_errors {
+        if json_messages {
             rustc.exec_with_streaming(
                 &mut |line| if !line.is_empty() {
                     Err(internal(&format!("compiler stdout is not empty: `{}`", line)))
@@ -285,12 +291,11 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                         internal(&format!("compiler produced invalid json: `{}`", line))
                     })?;
 
-                    machine_message::FromCompiler::new(
-                        &package_id,
-                        &target,
-                        compiler_message
-                    ).emit();
-
+                    machine_message::emit(machine_message::FromCompiler {
+                        package_id: &package_id,
+                        target: &target,
+                        message: compiler_message,
+                    });
                     Ok(())
                 },
             ).map(|_| ())
@@ -319,6 +324,18 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                               rustc_dep_info_loc))
             })?;
             fingerprint::append_current_dir(&dep_info_loc, &cwd)?;
+        }
+
+        if json_messages {
+            machine_message::emit(machine_message::Artifact {
+                package_id: &package_id,
+                target: &target,
+                profile: &profile,
+                features: features,
+                filenames: filenames.iter().map(|&(ref src, _, _)| {
+                    src.display().to_string()
+                }).collect(),
+            });
         }
 
         Ok(())
@@ -527,7 +544,7 @@ fn build_base_args(cx: &mut Context,
         cmd.arg("--color").arg(&color_config.to_string());
     }
 
-    if cx.build_config.json_errors {
+    if cx.build_config.json_messages {
         cmd.arg("--error-format").arg("json");
     }
 
