@@ -445,16 +445,15 @@ fn rebuild_tests_if_lib_changes() {
         "#);
     p.build();
 
-    p.root().move_into_the_past();
-
     assert_that(p.cargo("build"),
                 execs().with_status(0));
     assert_that(p.cargo("test"),
                 execs().with_status(0));
 
+    sleep_ms(1000);
     File::create(&p.root().join("src/lib.rs")).unwrap();
 
-    assert_that(p.cargo("build"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
     assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(101));
