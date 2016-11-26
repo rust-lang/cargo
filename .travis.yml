@@ -29,7 +29,6 @@ matrix:
            MACOSX_DEPLOYMENT_TARGET=10.7
            CFG_DISABLE_CROSS_TESTS=1
       os: osx
-      install: brew uninstall openssl && brew install openssl --universal --without-test
 
     # stable musl target, tested
     - env: TARGET=x86_64-unknown-linux-musl
