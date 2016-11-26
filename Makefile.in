@@ -172,17 +172,19 @@ OPENSSL_OS_aarch64-unknown-linux-gnu := linux-aarch64
 OPENSSL_OS_arm-unknown-linux-gnueabi := linux-armv4
 OPENSSL_OS_arm-unknown-linux-gnueabihf := linux-armv4
 OPENSSL_OS_armv7-unknown-linux-gnueabihf := linux-armv4
+OPENSSL_OS_i686-apple-darwin := darwin-i386-cc
 OPENSSL_OS_i686-unknown-freebsd := BSD-x86-elf
 OPENSSL_OS_i686-unknown-linux-gnu := linux-elf
 OPENSSL_OS_i686-unknown-linux-musl := linux-elf
 OPENSSL_OS_mips-unknown-linux-gnu := linux-mips32
-OPENSSL_OS_mipsel-unknown-linux-gnu := linux-mips32
 OPENSSL_OS_mips64-unknown-linux-gnuabi64 := linux64-mips64
 OPENSSL_OS_mips64el-unknown-linux-gnuabi64 := linux64-mips64
+OPENSSL_OS_mipsel-unknown-linux-gnu := linux-mips32
 OPENSSL_OS_powerpc-unknown-linux-gnu := linux-ppc
 OPENSSL_OS_powerpc64-unknown-linux-gnu := linux-ppc64
 OPENSSL_OS_powerpc64le-unknown-linux-gnu := linux-ppc64le
 OPENSSL_OS_s390x-unknown-linux-gnu := linux64-s390x
+OPENSSL_OS_x86_64-apple-darwin := darwin64-x86_64-cc
 OPENSSL_OS_x86_64-unknown-freebsd := BSD-x86_64
 OPENSSL_OS_x86_64-unknown-linux-gnu := linux-x86_64
 OPENSSL_OS_x86_64-unknown-linux-musl := linux-x86_64
@@ -192,6 +194,7 @@ OPENSSL_AR_aarch64-unknown-linux-gnu := aarch64-linux-gnu-ar
 OPENSSL_AR_arm-unknown-linux-gnueabi := arm-linux-gnueabi-ar
 OPENSSL_AR_arm-unknown-linux-gnueabihf := arm-linux-gnueabihf-ar
 OPENSSL_AR_armv7-unknown-linux-gnueabihf := armv7-linux-gnueabihf-ar
+OPENSSL_AR_i686-apple-darwin := ar
 OPENSSL_AR_i686-unknown-freebsd := i686-unknown-freebsd10-ar
 OPENSSL_AR_i686-unknown-linux-gnu := ar
 OPENSSL_AR_i686-unknown-linux-musl := ar
@@ -203,6 +206,7 @@ OPENSSL_AR_powerpc-unknown-linux-gnu := powerpc-linux-gnu-ar
 OPENSSL_AR_powerpc64-unknown-linux-gnu := powerpc64-linux-gnu-ar
 OPENSSL_AR_powerpc64le-unknown-linux-gnu := powerpc64le-linux-gnu-ar
 OPENSSL_AR_s390x-unknown-linux-gnu := s390x-linux-gnu-ar
+OPENSSL_AR_x86_64-apple-darwin := ar
 OPENSSL_AR_x86_64-unknown-freebsd := x86_64-unknown-freebsd10-ar
 OPENSSL_AR_x86_64-unknown-linux-gnu := ar
 OPENSSL_AR_x86_64-unknown-linux-musl := ar
@@ -211,6 +215,7 @@ OPENSSL_CC_aarch64-unknown-linux-gnu := aarch64-linux-gnu-gcc
 OPENSSL_CC_arm-unknown-linux-gnueabi := arm-linux-gnueabi-gcc
 OPENSSL_CC_arm-unknown-linux-gnueabihf := arm-linux-gnueabihf-gcc
 OPENSSL_CC_armv7-unknown-linux-gnueabihf := armv7-linux-gnueabihf-gcc
+OPENSSL_CC_i686-apple-darwin := clang
 OPENSSL_CC_i686-unknown-freebsd := i686-unknown-freebsd10-gcc
 OPENSSL_CC_i686-unknown-linux-gnu := gcc
 OPENSSL_CC_i686-unknown-linux-musl := musl-gcc
@@ -222,17 +227,16 @@ OPENSSL_CC_powerpc-unknown-linux-gnu := powerpc-linux-gnu-gcc
 OPENSSL_CC_powerpc64-unknown-linux-gnu := powerpc64-linux-gnu-gcc-5
 OPENSSL_CC_powerpc64le-unknown-linux-gnu := powerpc64le-linux-gnu-gcc
 OPENSSL_CC_s390x-unknown-linux-gnu := s390x-linux-gnu-gcc
+OPENSSL_CC_x86_64-apple-darwin := clang
 OPENSSL_CC_x86_64-unknown-freebsd := x86_64-unknown-freebsd10-gcc
 OPENSSL_CC_x86_64-unknown-linux-gnu := gcc
 OPENSSL_CC_x86_64-unknown-linux-musl := musl-gcc
 OPENSSL_CC_x86_64-unknown-netbsd := x86_64-unknown-netbsd-gcc
 
 SETARCH_i686-unknown-linux-gnu := setarch i386
+OPENSSL_CFLAGS_i686-apple-darwin := -m32
 OPENSSL_CFLAGS_i686-unknown-linux-gnu := -m32
 OPENSSL_CFLAGS_i686-unknown-linux-musl := -m32
-
-LIPO_FAMILY_i686-apple-darwin := i386
-LIPO_FAMILY_x86_64-apple-darwin := x86_64
 
 define BUILD_OPENSSL
 
@@ -265,30 +269,7 @@ test-unit-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
 # build libz statically into the cargo we're producing
 cargo-$(1): export LIBZ_SYS_STATIC := 1
 
-else ifdef LIPO_FAMILY_$(1)
-
-target/openssl/$(1).stamp:
-	@echo installing from `brew --prefix openssl`
-	@rm -rf $$(OPENSSL_INSTALL_$(1))
-	mkdir -p $$(OPENSSL_INSTALL_$(1))/lib
-	cp -r `brew --prefix openssl`/include $$(OPENSSL_INSTALL_$(1))/include
-	cp -r `brew --prefix openssl`/lib/pkgconfig $$(OPENSSL_INSTALL_$(1))/lib/pkgconfig
-	lipo -output $$(OPENSSL_INSTALL_$(1))/lib/libssl.a \
-		-extract_family $$(LIPO_FAMILY_$(1)) \
-		`brew --prefix openssl`/lib/libssl.a || \
-		cp `brew --prefix openssl`/lib/libssl.a \
-			$$(OPENSSL_INSTALL_$(1))/lib/libssl.a
-	lipo -output $$(OPENSSL_INSTALL_$(1))/lib/libcrypto.a \
-		-extract_family $$(LIPO_FAMILY_$(1)) \
-		`brew --prefix openssl`/lib/libcrypto.a || \
-		cp `brew --prefix openssl`/lib/libcrypto.a \
-			$$(OPENSSL_INSTALL_$(1))/lib/libcrypto.a
-	touch $$@
-
-cargo-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
-test-unit-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
-
-else # !OPENSSL_OS_$(1) && !OSX
+else # !OPENSSL_OS_$(1)
 target/openssl/$(1).stamp:
 
 endif
@@ -301,10 +282,17 @@ endef
 
 $(foreach target,$(CFG_TARGET),$(eval $(call BUILD_OPENSSL,$(target))))
 
+ifeq ($(shell uname),Darwin)
+SHASUM := shasum -a 256
+else
+SHASUM := sha256sum
+endif
+
 target/openssl/openssl-$(OPENSSL_VERS).tar.gz: | target/openssl/
-	curl -o $(@) https://www.openssl.org/source/openssl-$(OPENSSL_VERS).tar.gz
-	sha256sum $(@) > $(@).sha256
+	curl -o $(@).tmp https://www.openssl.org/source/openssl-$(OPENSSL_VERS).tar.gz
+	$(SHASUM) $(@).tmp > $(@).sha256
 	test $(OPENSSL_SHA256) = `cut -d ' ' -f 1 $(@).sha256`
+	mv $(@).tmp $(@)
 
 target/openssl/:
 	mkdir -p $(@)
