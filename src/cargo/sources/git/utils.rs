@@ -19,6 +19,14 @@ impl fmt::Display for GitRevision {
     }
 }
 
+pub struct GitShortID(git2::Buf);
+
+impl GitShortID {
+    pub fn as_str(&self) -> &str {
+        self.0.as_str().unwrap()
+    }
+}
+
 /// GitRemote represents a remote repository. It gets cloned into a local
 /// GitDatabase.
 #[derive(PartialEq,Clone,Debug)]
@@ -213,6 +221,11 @@ impl GitDatabase {
             }
         };
         Ok(GitRevision(id))
+    }
+
+    pub fn to_short_id(&self, revision: GitRevision) -> CargoResult<GitShortID> {
+        let obj = self.repo.find_object(revision.0, None)?;
+        Ok(GitShortID(obj.short_id()?))
     }
 
     pub fn has_ref(&self, reference: &str) -> CargoResult<()> {
