@@ -172,26 +172,28 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
     }).collect::<Vec<_>>();
 
     let mut ret = HashMap::new();
+    let mut visited = HashSet::new();
     for member in members.iter() {
         ret.insert(member.package_id().name().to_string(),
                    member.package_id().source_id().clone());
+        visited.insert(member.package_id().source_id().clone());
     }
     for member in members.iter() {
-        build(member, ws.config(), &mut ret);
+        build(member, ws.config(), &mut ret, &mut visited);
     }
 
     return ret;
 
     fn build(pkg: &Package,
              config: &Config,
-             ret: &mut HashMap<String, SourceId>) {
+             ret: &mut HashMap<String, SourceId>,
+             visited: &mut HashSet<SourceId>) {
         let replace = pkg.manifest().replace();
         let deps = pkg.dependencies()
                       .iter()
                       .chain(replace.iter().map(|p| &p.1))
-                      .filter(|d| !ret.contains_key(d.name()))
                       .map(|d| d.source_id())
-                      .filter(|id| id.is_path())
+                      .filter(|id| !visited.contains(id) && id.is_path())
                       .filter_map(|id| id.url().to_file_path().ok())
                       .map(|path| path.join("Cargo.toml"))
                       .filter_map(|path| Package::for_path(&path, config).ok())
@@ -199,7 +201,8 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
         for pkg in deps {
             ret.insert(pkg.name().to_string(),
                        pkg.package_id().source_id().clone());
-            build(&pkg, config, ret);
+            visited.insert(pkg.package_id().source_id().clone());
+            build(&pkg, config, ret, visited);
         }
     }
 }
