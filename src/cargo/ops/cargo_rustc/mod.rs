@@ -648,6 +648,16 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit)
         deps
     });
 
+    // Be sure that the host path is also listed. This'll ensure that proc-macro
+    // dependencies are correctly found (for reexported macros).
+    if let Kind::Target = unit.kind {
+        cmd.arg("-L").arg(&{
+            let mut deps = OsString::from("dependency=");
+            deps.push(cx.host_deps());
+            deps
+        });
+    }
+
     for unit in cx.dep_targets(unit)?.iter() {
         if unit.profile.run_custom_build {
             cmd.env("OUT_DIR", &cx.build_script_out_dir(unit));

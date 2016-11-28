@@ -314,6 +314,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.layout(unit.kind).build().join(dir).join("out")
     }
 
+    pub fn host_deps(&self) -> &Path {
+        self.host.deps()
+    }
+
     /// Returns the appropriate output directory for the specified package and
     /// target.
     pub fn out_dir(&mut self, unit: &Unit) -> PathBuf {
