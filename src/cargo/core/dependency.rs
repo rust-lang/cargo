@@ -11,7 +11,7 @@ use util::{CargoError, CargoResult, Cfg, CfgExpr, ChainError, human, Config};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
-#[derive(PartialEq, Clone ,Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Dependency {
     inner: Rc<DependencyInner>,
 }
