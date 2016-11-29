@@ -17,10 +17,28 @@ if [ -z "$SRC" ]; then
     SRC=.
 fi
 
+BRANCH=$TRAVIS_BRANCH
+if [ "$BRANCH" = "" ]; then
+    BRANCH=$APPVEYOR_BRANCH
+fi
+
+if [ "$BRANCH" = "stable" ]; then
+    CHANNEL=stable
+elif [ "$BRANCH" = "beta" ]; then
+    CHANNEL=beta
+elif [ "$BRANCH" = "master" ]; then
+    CHANNEL=nightly
+elif [ "$BRANCH" = "auto-cargo" ]; then
+    CHANNEL=nightly
+else
+    CHANNEL=dev
+fi
+
 $SRC/configure \
     --prefix=/tmp/obj/install \
     --target=$TARGET \
-    --enable-nightly
+    --release-channel=$CHANNEL \
+    --enable-build-openssl
 
 make cargo-$TARGET
 make dist-$TARGET

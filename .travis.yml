@@ -57,13 +57,13 @@ matrix:
            IMAGE=cross
     - env: TARGET=mips64-unknown-linux-gnuabi64
            IMAGE=cross
-      rust: nightly
+      rust: beta
     - env: TARGET=mips64el-unknown-linux-gnuabi64
            IMAGE=cross
-      rust: nightly
+      rust: beta
     - env: TARGET=s390x-unknown-linux-gnu
            IMAGE=cross
-      rust: nightly
+      rust: beta
     - env: TARGET=powerpc-unknown-linux-gnu
            IMAGE=cross
       rust: beta
@@ -86,7 +86,7 @@ matrix:
            IMAGE=dist
            MAKE_TARGETS="test distcheck doc install uninstall"
            DEPLOY=0
-      rust: nightly
+      rust: nightly-2016-11-26
 
   exclude:
     - rust: stable
@@ -125,10 +125,12 @@ branches:
   only:
   - master
   - auto-cargo
+  - beta
+  - stable
 
 before_deploy:
   - mkdir -p deploy/$TRAVIS_COMMIT
-  - cp target/$TARGET/release/dist/cargo-nightly-$TARGET.tar.gz
+  - cp target/$TARGET/release/dist/cargo-*-$TARGET.tar.gz
     deploy/$TRAVIS_COMMIT
 
 deploy:

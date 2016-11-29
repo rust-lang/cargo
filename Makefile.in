@@ -8,13 +8,20 @@ include config.mk
 
 export PATH := $(dir $(CFG_RUSTC)):$(PATH)
 
-ifdef CFG_ENABLE_NIGHTLY
-CFG_RELEASE=$(CFG_RELEASE_NUM)$(CFG_RELEASE_LABEL)-nightly
-CFG_PACKAGE_VERS = nightly
-else
-CFG_RELEASE=$(CFG_RELEASE_NUM)$(CFG_RELEASE_LABEL)
-CFG_PACKAGE_VERS=$(CFG_RELEASE)
+ifeq ($(CFG_RELEASE_CHANNEL),stable)
+CFG_RELEASE=$(CFG_RELEASE_NUM)
+CFG_PACKAGE_VERS=$(CFG_RELEASE_NUM)
+else ifeq ($(CFG_RELEASE_CHANNEL),beta)
+CFG_RELEASE=$(CFG_RELEASE_NUM)-beta$(CFG_PRERELEASE_VERSION)
+CFG_PACKAGE_VERS=beta
+else ifeq ($(CFG_RELEASE_CHANNEL),nightly)
+CFG_RELEASE=$(CFG_RELEASE_NUM)-nightly
+CFG_PACKAGE_VERS=nightly
+else ifeq ($(CFG_RELEASE_CHANNEL),dev)
+CFG_RELEASE=$(CFG_RELEASE_NUM)-dev
+CFG_PACKAGE_VERS=$(CFG_RELEASE_NUM)-dev
 endif
+
 CFG_BUILD_DATE = $(shell date +%F)
 
 ifeq ($(wildcard .git),)
@@ -240,7 +247,7 @@ OPENSSL_CFLAGS_i686-unknown-linux-musl := -m32
 
 define BUILD_OPENSSL
 
-ifdef CFG_ENABLE_NIGHTLY
+ifdef CFG_ENABLE_BUILD_OPENSSL
 
 cargo-$(1): export OPENSSL_STATIC := 1
 test-unit-$(1): export OPENSSL_STATIC := 1
@@ -274,7 +281,7 @@ target/openssl/$(1).stamp:
 
 endif
 
-else # !CFG_ENABLE_NIGHTLY
+else # !CFG_ENABLE_BUILD_OPENSSL
 target/openssl/$(1).stamp:
 endif
 
