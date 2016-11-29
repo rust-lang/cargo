@@ -793,14 +793,14 @@ fn cargo_default_env_metadata_env_var() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
-[RUNNING] `rustc bar[/]src[/]lib.rs --crate-name bar --crate-type dylib \
+[RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type dylib \
         -C prefer-dynamic -g \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc src[/]lib.rs --crate-name foo --crate-type lib -g \
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib -g \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
@@ -821,14 +821,14 @@ suffix = env::consts::DLL_SUFFIX,
     assert_that(p.cargo_process("build").arg("-v").env("__CARGO_DEFAULT_LIB_METADATA", "1"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
-[RUNNING] `rustc bar[/]src[/]lib.rs --crate-name bar --crate-type dylib \
+[RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type dylib \
         -C prefer-dynamic -g \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc src[/]lib.rs --crate-name foo --crate-type lib -g \
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib -g \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
@@ -1141,7 +1141,7 @@ fn lto_build() {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[/]main.rs --crate-name test --crate-type bin \
+[RUNNING] `rustc --crate-name test src[/]main.rs --crate-type bin \
         -C opt-level=3 \
         -C lto \
         -C metadata=[..] \
@@ -1170,7 +1170,7 @@ fn verbose_build() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib -g \
+[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib -g \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \
@@ -1197,7 +1197,7 @@ fn verbose_release_build() {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
@@ -1240,7 +1240,7 @@ fn verbose_release_build_deps() {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url}/foo)
-[RUNNING] `rustc foo[/]src[/]lib.rs --crate-name foo \
+[RUNNING] `rustc --crate-name foo foo[/]src[/]lib.rs \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=3 \
         -C metadata=[..] \
@@ -1248,7 +1248,7 @@ fn verbose_release_build_deps() {
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps`
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
@@ -2357,7 +2357,7 @@ fn explicit_color_config_is_propagated_to_rustc() {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--color").arg("always"),
                 execs().with_status(0).with_stderr_contains(
-                    "[..]rustc src[/]lib.rs --color always[..]"));
+                    "[..]rustc [..] src[/]lib.rs --color always[..]"));
 
     assert_that(p.cargo_process("build").arg("-v").arg("--color").arg("never"),
                 execs().with_status(0).with_stderr("\

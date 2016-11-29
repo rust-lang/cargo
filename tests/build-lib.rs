@@ -7,7 +7,7 @@ use hamcrest::{assert_that};
 fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
     format!("\
 [COMPILING] {name} v{version} ({url})
-[RUNNING] `rustc src[/]lib.rs --crate-name {name} --crate-type lib -g \
+[RUNNING] `rustc --crate-name {name} src[/]lib.rs --crate-type lib -g \
         -C metadata=[..] \
         --out-dir [..] \
         --emit=dep-info,link \

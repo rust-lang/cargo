@@ -434,9 +434,9 @@ fn prepare_rustc(cx: &Context,
 
 fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg)?;
-    rustdoc.arg(&root_path(cx, unit))
+    rustdoc.arg("--crate-name").arg(&unit.target.crate_name())
            .cwd(cx.config.cwd())
-           .arg("--crate-name").arg(&unit.target.crate_name());
+           .arg(&root_path(cx, unit));
 
     if unit.kind != Kind::Host {
         if let Some(target) = cx.requested_target() {
@@ -523,6 +523,8 @@ fn build_base_args(cx: &Context,
     // Move to cwd so the root_path() passed below is actually correct
     cmd.cwd(cx.config.cwd());
 
+    cmd.arg("--crate-name").arg(&unit.target.crate_name());
+
     cmd.arg(&root_path(cx, unit));
 
     let color_config = cx.config.shell().color_config();
@@ -533,8 +535,6 @@ fn build_base_args(cx: &Context,
     if cx.build_config.json_errors {
         cmd.arg("--error-format").arg("json");
     }
-
-    cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
     if !test {
         for crate_type in crate_types.iter() {
