@@ -133,7 +133,7 @@ fn transmit(config: &Config,
         return Ok(());
     }
 
-    registry.publish(&NewCrate {
+    let publish = registry.publish(&NewCrate {
         name: pkg.name().to_string(),
         vers: pkg.version().to_string(),
         deps: deps,
@@ -148,9 +148,22 @@ fn transmit(config: &Config,
         repository: repository.clone(),
         license: license.clone(),
         license_file: license_file.clone(),
-    }, tarball).map_err(|e| {
-        human(e.to_string())
-    })
+    }, tarball);
+
+    match publish {
+        Ok(invalid_categories) => {
+            if !invalid_categories.is_empty() {
+                let msg = format!("\
+                    the following are not valid category slugs and were \
+                    ignored: {}. Please see https://crates.io/category_slugs \
+                    for the list of all category slugs. \
+                    ", invalid_categories.join(", "));
+                config.shell().warn(&msg)?;
+            }
+            Ok(())
+        },
+        Err(e) => Err(human(e.to_string())),
+    }
 }
 
 pub fn registry_configuration(config: &Config) -> CargoResult<RegistryConfig> {
