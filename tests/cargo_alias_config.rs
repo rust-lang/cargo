@@ -55,7 +55,7 @@ fn alias_config() {
     assert_that(p.cargo_process("b-cargo-test").arg("-v"),
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]
-[RUNNING] `rustc [..] --crate-name foo [..]"));
+[RUNNING] `rustc --crate-name foo [..]"));
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn alias_list_test() {
     assert_that(p.cargo_process("b-cargo-test").arg("-v"),
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]").
-                with_stderr_contains("[RUNNING] `rustc [..] --crate-name [..]")
+                with_stderr_contains("[RUNNING] `rustc --crate-name [..]")
                 );
 }
 
@@ -92,7 +92,7 @@ fn alias_with_flags_config() {
     assert_that(p.cargo_process("b-cargo-test").arg("-v"),
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]").
-                with_stderr_contains("[RUNNING] `rustc [..] --crate-name foo [..]")
+                with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]")
                 );
 }
 
