@@ -202,7 +202,11 @@ impl Registry {
             body.read(buf).unwrap_or(0)
         })?;
         // Can't derive RustcDecodable because JSON has a key named "crate" :(
-        let response = Json::from_str(&body)?;
+        let response = if body.len() > 0 {
+            Json::from_str(&body)?
+        } else {
+            Json::from_str("{}")?
+        };
         let invalid_categories: Vec<String> =
             response
                 .find_path(&["warnings", "invalid_categories"])
