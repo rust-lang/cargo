@@ -49,16 +49,17 @@ cache:
 
 after_test:
   - mkdir %APPVEYOR_REPO_COMMIT%
-  - copy target\%TARGET%\release\dist\cargo-nightly-%TARGET%.tar.gz
-         %APPVEYOR_REPO_COMMIT%
+  - ps: Get-ChildItem -Path target\${env:TARGET}\release\dist -Filter '*.tar.gz' | Move-Item -Destination ${env:APPVEYOR_REPO_COMMIT}
 
 branches:
   only:
   - master
   - auto-cargo
+  - beta
+  - stable
 
 artifacts:
-  - path: $(APPVEYOR_REPO_COMMIT)\cargo-nightly-$(TARGET).tar.gz
+  - path: $(APPVEYOR_REPO_COMMIT)\cargo-*-$(TARGET).tar.gz
     name: cargo
 
 deploy:
