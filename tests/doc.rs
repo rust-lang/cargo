@@ -445,7 +445,7 @@ fn doc_release() {
                 execs().with_status(0)
                        .with_stderr("\
 [DOCUMENTING] foo v0.0.1 ([..])
-[RUNNING] `rustdoc src[/]lib.rs [..]`
+[RUNNING] `rustdoc [..] src[/]lib.rs [..]`
 "));
 }
 
