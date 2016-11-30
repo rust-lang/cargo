@@ -1,12 +1,10 @@
 environment:
   matrix:
   - TARGET: x86_64-pc-windows-gnu
-    ARCH: amd64
     BITS: 64
     CFG_DISABLE_CROSS_TESTS: 1
     MAKE_TARGETS: test-unit-x86_64-pc-windows-gnu
   - TARGET: i686-pc-windows-gnu
-    ARCH: x86
     BITS: 32
     MINGW_URL: https://s3.amazonaws.com/rust-lang-ci
     MINGW_ARCHIVE: i686-4.9.2-release-win32-dwarf-rt_v4-rev4.7z
@@ -15,13 +13,12 @@ environment:
     MAKE_TARGETS: test-unit-i686-pc-windows-gnu
   - TARGET: i686-pc-windows-msvc
     BITS: 32
-    ARCH: x86
     MAKE_TARGETS: test-unit-i686-pc-windows-msvc
     CFG_DISABLE_CROSS_TESTS: 1
+    ALLOW_PR: 1
   - TARGET: x86_64-pc-windows-msvc
     OTHER_TARGET: i686-pc-windows-msvc
     BITS: 64
-    ARCH: amd64
     MAKE_TARGETS: test-unit-x86_64-pc-windows-msvc
 
 install:
@@ -38,6 +35,8 @@ install:
   - cargo -V
   - git submodule update --init
 
+clone_depth: 1
+
 build: false
 
 test_script:
@@ -48,15 +47,12 @@ cache:
   - C:\Users\appveyor\.cargo\registry
 
 after_test:
-  - mkdir %APPVEYOR_REPO_COMMIT%
+  - ps: New-Item -Path "${env:APPVEYOR_REPO_COMMIT}" -ItemType "directory"
+  - ps: New-Item -Path "target" -ItemType "directory" -Force
+  - ps: New-Item -Path "target/${env:TARGET}" -ItemType "directory" -Force
+  - ps: New-Item -Path "target/${env:TARGET}/release" -ItemType "directory" -Force
+  - ps: New-Item -Path "target/${env:TARGET}/release/dist" -ItemType "directory" -Force
   - ps: Get-ChildItem -Path target\${env:TARGET}\release\dist -Filter '*.tar.gz' | Move-Item -Destination ${env:APPVEYOR_REPO_COMMIT}
-
-branches:
-  only:
-  - master
-  - auto-cargo
-  - beta
-  - stable
 
 artifacts:
   - path: $(APPVEYOR_REPO_COMMIT)\cargo-*-$(TARGET).tar.gz
