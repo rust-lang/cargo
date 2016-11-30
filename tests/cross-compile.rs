@@ -804,9 +804,9 @@ fn plugin_build_script_right_arch() {
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc build.rs [..]`
+[RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..][/]build-script-build`
-[RUNNING] `rustc src[/]lib.rs [..]`
+[RUNNING] `rustc [..] src[/]lib.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
