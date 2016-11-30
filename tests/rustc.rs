@@ -294,7 +294,7 @@ fn build_only_bar_dependency() {
                 .with_status(0)
                 .with_stderr("\
 [COMPILING] bar v0.1.0 ([..])
-[RUNNING] `[..]--crate-name bar --crate-type lib [..] -C debug-assertions [..]`
+[RUNNING] `rustc --crate-name bar [..] --crate-type lib [..] -C debug-assertions [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
