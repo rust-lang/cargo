@@ -227,8 +227,8 @@ fn specify_name() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[RUNNING] `rustc src[/]lib.rs [..]`
-[RUNNING] `rustc src[/]bin[/]a.rs [..]`
+[RUNNING] `rustc [..] src[/]lib.rs [..]`
+[RUNNING] `rustc [..] src[/]bin[/]a.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]a[EXE]`", dir = path2url(p.root())))
                        .with_stdout("\
@@ -239,7 +239,7 @@ hello a.rs
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc src[/]bin[/]b.rs [..]`
+[RUNNING] `rustc [..] src[/]bin[/]b.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]b[EXE]`")
                        .with_stdout("\
@@ -416,14 +416,14 @@ fn example_with_release_flag() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
-[RUNNING] `rustc bar[/]src[/]bar.rs --crate-name bar --crate-type lib \
+[RUNNING] `rustc --crate-name bar bar[/]src[/]bar.rs --crate-type lib \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]release[/]deps \
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc examples[/]a.rs --crate-name a --crate-type bin \
+[RUNNING] `rustc --crate-name a examples[/]a.rs  --crate-type bin \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]release[/]examples \
@@ -444,14 +444,14 @@ fast2"));
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
-[RUNNING] `rustc bar[/]src[/]bar.rs --crate-name bar --crate-type lib \
+[RUNNING] `rustc --crate-name bar bar[/]src[/]bar.rs --crate-type lib \
         -g \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]debug[/]deps \
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc examples[/]a.rs --crate-name a --crate-type bin \
+[RUNNING] `rustc --crate-name a examples[/]a.rs --crate-type bin \
         -g \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]debug[/]examples \
