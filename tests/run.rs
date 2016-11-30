@@ -423,7 +423,7 @@ fn example_with_release_flag() {
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name a examples[/]a.rs  --crate-type bin \
+[RUNNING] `rustc --crate-name a examples[/]a.rs --crate-type bin \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]release[/]examples \
