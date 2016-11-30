@@ -158,17 +158,17 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         handle.follow_location(true)?;
         let mut state = Sha256::new();
         let mut body = Vec::new();
-        {
+        network::with_retry(self.config, || {
+            state = Sha256::new();
+            body = Vec::new();
             let mut handle = handle.transfer();
             handle.write_function(|buf| {
                 state.update(buf);
                 body.extend_from_slice(buf);
                 Ok(buf.len())
             })?;
-            network::with_retry(self.config, || {
-                handle.perform()
-            })?
-        }
+            handle.perform()
+        })?;
         let code = handle.response_code()?;
         if code != 200 && code != 0 {
             bail!("failed to get 200 response from `{}`, got {}", url, code)
