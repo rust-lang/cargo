@@ -6,6 +6,9 @@ os: linux
 services:
   - docker
 
+git:
+  depth: 1
+
 matrix:
   include:
     # stable linux builds, tested
@@ -13,6 +16,7 @@ matrix:
            ALT=i686-unknown-linux-gnu
            IMAGE=dist
            MAKE_TARGETS="test distcheck doc install uninstall"
+           ALLOW_PR=1
     - env: TARGET=i686-unknown-linux-gnu
            IMAGE=dist
            MAKE_TARGETS=test-unit-i686-unknown-linux-gnu
@@ -99,11 +103,15 @@ before_script:
       sh -s -- --add-target=$ALT --disable-sudo -y --prefix=`rustc --print sysroot`;
     fi
 script:
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then
-        SRC=. src/ci/run.sh $TARGET;
-    else
-        src/ci/docker/run.sh $IMAGE $TARGET;
-    fi
+  - >
+      if [ "$ALLOW_PR" = "" ] && [ "$TRAVIS_BRANCH" != "auto-cargo" ]; then
+          echo skipping, not a full build;
+      elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
+          SRC=. src/ci/run.sh $TARGET;
+      else
+          src/ci/docker/run.sh $IMAGE $TARGET;
+      fi
+
 after_success: |
   [ $TRAVIS_BRANCH = master ] &&
   [ $TRAVIS_PULL_REQUEST = false ] &&
@@ -120,13 +128,6 @@ env:
 notifications:
   email:
     on_success: never
-
-branches:
-  only:
-  - master
-  - auto-cargo
-  - beta
-  - stable
 
 before_deploy:
   - mkdir -p deploy/$TRAVIS_COMMIT
