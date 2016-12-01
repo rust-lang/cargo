@@ -65,7 +65,7 @@ pub struct CompileOptions<'a> {
     pub target_rustc_args: Option<&'a [String]>,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum CompileMode {
     Test,
     Build,
