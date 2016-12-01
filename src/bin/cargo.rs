@@ -291,8 +291,7 @@ fn execute_subcommand(config: &Config,
     }
 }
 
-/// List all runnable commands. find_command should always succeed
-/// if given one of returned command.
+/// List all runnable commands
 fn list_commands(config: &Config) -> BTreeSet<String> {
     let prefix = "cargo-";
     let suffix = env::consts::EXE_SUFFIX;
