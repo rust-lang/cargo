@@ -128,7 +128,7 @@ fn cargo_test_verbose() {
     assert_that(p.cargo_process("test").arg("-v").arg("hello"),
                 execs().with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({url})
-[RUNNING] `rustc src[/]foo.rs [..]`
+[RUNNING] `rustc [..] src[/]foo.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target[/]debug[/]deps[/]foo-[..][EXE] hello`", url = p.url()))
                        .with_stdout("
@@ -1587,7 +1587,7 @@ fn example_with_dev_dep() {
 [..]
 [..]
 [..]
-[RUNNING] `rustc [..] --crate-name ex [..] --extern a=[..]`
+[RUNNING] `rustc --crate-name ex [..] --extern a=[..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
@@ -2058,8 +2058,8 @@ fn bin_does_not_rebuild_tests() {
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc src[/]main.rs [..]`
-[RUNNING] `rustc src[/]main.rs [..]`
+[RUNNING] `rustc [..] src[/]main.rs [..]`
+[RUNNING] `rustc [..] src[/]main.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
@@ -2120,8 +2120,8 @@ fn selective_test_optional_dep() {
                  .arg("--features").arg("a").arg("-p").arg("a"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] a v0.0.1 ([..])
-[RUNNING] `rustc a[/]src[/]lib.rs [..]`
-[RUNNING] `rustc a[/]src[/]lib.rs [..]`
+[RUNNING] `rustc [..] a[/]src[/]lib.rs [..]`
+[RUNNING] `rustc [..] a[/]src[/]lib.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
