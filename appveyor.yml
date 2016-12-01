@@ -64,10 +64,10 @@ deploy:
     access_key_id: AKIAIWZDM2B2IJOWBGTA
     secret_access_key:
       secure: hyH54di5NyNdV+jjntM1dRN/NeUgDidwZmwcg4/UKpdJqGf1AAwYb2ulXYK67CXA
-    bucket: rust-lang-cargo-dev
+    bucket: rust-lang-ci
     set_public: true
-    region: us-west-1
+    region: us-east-1
     artifact: cargo
-    folder: cargo-master
+    folder: cargo-builds
     on:
       branch: auto-cargo
