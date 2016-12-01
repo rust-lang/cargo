@@ -85,12 +85,6 @@ matrix:
            MAKE_TARGETS="test distcheck doc install uninstall"
            DEPLOY=0
       rust: beta
-    - env: TARGET=x86_64-unknown-linux-gnu
-           ALT=i686-unknown-linux-gnu
-           IMAGE=dist
-           MAKE_TARGETS="test distcheck doc install uninstall"
-           DEPLOY=0
-      rust: nightly-2016-11-26
 
   exclude:
     - rust: stable
