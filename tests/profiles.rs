@@ -27,7 +27,7 @@ fn profile_overrides() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
         -C opt-level=1 \
         -C debug-assertions=on \
         -C metadata=[..] \
@@ -60,7 +60,7 @@ fn opt_level_override_0() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
         -g \
         -C metadata=[..] \
         --out-dir [..] \
@@ -90,7 +90,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
         -C opt-level={level} \
         -g \
         -C debug-assertions=on \
@@ -159,7 +159,7 @@ fn top_level_overrides_deps() {
     assert_that(p.cargo_process("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url}/foo)
-[RUNNING] `rustc foo[/]src[/]lib.rs --crate-name foo \
+[RUNNING] `rustc --crate-name foo foo[/]src[/]lib.rs \
         --crate-type dylib --crate-type rlib -C prefer-dynamic \
         -C opt-level=1 \
         -g \
@@ -168,7 +168,7 @@ fn top_level_overrides_deps() {
         --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps`
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc src[/]lib.rs --crate-name test --crate-type lib \
+[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
         -C opt-level=1 \
         -g \
         -C metadata=[..] \

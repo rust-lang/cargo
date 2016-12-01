@@ -357,7 +357,7 @@ fn linker_and_ar() {
                 execs().with_status(101)
                        .with_stderr_contains(&format!("\
 [COMPILING] foo v0.5.0 ({url})
-[RUNNING] `rustc src[/]foo.rs --crate-name foo --crate-type bin -g \
+[RUNNING] `rustc --crate-name foo src[/]foo.rs --crate-type bin -g \
     -C metadata=[..] \
     --out-dir {dir}[/]target[/]{target}[/]debug[/]deps \
     --emit=dep-info,link \
@@ -604,9 +604,9 @@ fn cross_with_a_build_script() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 (file://[..])
-[RUNNING] `rustc build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]foo-[..]`
+[RUNNING] `rustc [..] build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]foo-[..]`
 [RUNNING] `{dir}[/]target[/]debug[/]build[/]foo-[..][/]build-script-build`
-[RUNNING] `rustc src[/]main.rs [..] --target {target} [..]`
+[RUNNING] `rustc [..] src[/]main.rs [..] --target {target} [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", target = target,
    dir = p.root().display())));
@@ -676,25 +676,25 @@ fn build_script_needed_for_host_and_target() {
                        .with_stderr_contains(&format!("\
 [COMPILING] d1 v0.0.0 ({url}/d1)", url = p.url()))
                        .with_stderr_contains(&format!("\
-[RUNNING] `rustc d1[/]build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]d1-[..]`",
+[RUNNING] `rustc [..] d1[/]build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]d1-[..]`",
     dir = p.root().display()))
                        .with_stderr_contains(&format!("\
 [RUNNING] `{dir}[/]target[/]debug[/]build[/]d1-[..][/]build-script-build`",
     dir = p.root().display()))
                        .with_stderr_contains("\
-[RUNNING] `rustc d1[/]src[/]lib.rs [..]`")
+[RUNNING] `rustc [..] d1[/]src[/]lib.rs [..]`")
                        .with_stderr_contains(&format!("\
 [COMPILING] d2 v0.0.0 ({url}/d2)", url = p.url()))
                        .with_stderr_contains(&format!("\
-[RUNNING] `rustc d2[/]src[/]lib.rs [..] \
+[RUNNING] `rustc [..] d2[/]src[/]lib.rs [..] \
            -L /path/to/{host}`", host = host))
                        .with_stderr_contains(&format!("\
 [COMPILING] foo v0.0.0 ({url})", url = p.url()))
                        .with_stderr_contains(&format!("\
-[RUNNING] `rustc build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]foo-[..] \
+[RUNNING] `rustc [..] build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]foo-[..] \
            -L /path/to/{host}`", dir = p.root().display(), host = host))
                        .with_stderr_contains(&format!("\
-[RUNNING] `rustc src[/]main.rs [..] --target {target} [..] \
+[RUNNING] `rustc [..] src[/]main.rs [..] --target {target} [..] \
            -L /path/to/{target}`", target = target)));
 }
 
@@ -804,9 +804,9 @@ fn plugin_build_script_right_arch() {
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc build.rs [..]`
+[RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..][/]build-script-build`
-[RUNNING] `rustc src[/]lib.rs [..]`
+[RUNNING] `rustc [..] src[/]lib.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
 }
@@ -852,13 +852,13 @@ fn build_script_with_platform_specific_dependencies() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] d2 v0.0.0 ([..])
-[RUNNING] `rustc d2[/]src[/]lib.rs [..]`
+[RUNNING] `rustc [..] d2[/]src[/]lib.rs [..]`
 [COMPILING] d1 v0.0.0 ([..])
-[RUNNING] `rustc d1[/]src[/]lib.rs [..]`
+[RUNNING] `rustc [..] d1[/]src[/]lib.rs [..]`
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc build.rs [..]`
+[RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `{dir}[/]target[/]debug[/]build[/]foo-[..][/]build-script-build`
-[RUNNING] `rustc src[/]lib.rs [..] --target {target} [..]`
+[RUNNING] `rustc [..] src[/]lib.rs [..] --target {target} [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.root().display(), target = target)));
 }

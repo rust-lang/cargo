@@ -20,7 +20,7 @@ fn rustdoc_simple() {
                 .with_status(0)
                 .with_stderr(format!("\
 [DOCUMENTING] foo v0.0.1 ({url})
-[RUNNING] `rustdoc src[/]lib.rs --crate-name foo \
+[RUNNING] `rustdoc --crate-name foo src[/]lib.rs \
         -o {dir}[/]target[/]doc \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
@@ -43,7 +43,7 @@ fn rustdoc_args() {
                 .with_status(0)
                 .with_stderr(format!("\
 [DOCUMENTING] foo v0.0.1 ({url})
-[RUNNING] `rustdoc src[/]lib.rs --crate-name foo \
+[RUNNING] `rustdoc --crate-name foo src[/]lib.rs \
         -o {dir}[/]target[/]doc \
         --no-defaults \
         -L dependency={dir}[/]target[/]debug[/]deps`
@@ -88,7 +88,7 @@ fn rustdoc_foo_with_bar_dependency() {
 [COMPILING] bar v0.0.1 ([..])
 [RUNNING] `rustc [..]bar[/]src[/]lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ({url})
-[RUNNING] `rustdoc src[/]lib.rs --crate-name foo \
+[RUNNING] `rustdoc --crate-name foo src[/]lib.rs \
         -o {dir}[/]target[/]doc \
         --no-defaults \
         -L dependency={dir}[/]target[/]debug[/]deps \
@@ -133,7 +133,7 @@ fn rustdoc_only_bar_dependency() {
                 .with_status(0)
                 .with_stderr(format!("\
 [DOCUMENTING] bar v0.0.1 ([..])
-[RUNNING] `rustdoc [..]bar[/]src[/]lib.rs --crate-name bar \
+[RUNNING] `rustdoc --crate-name bar [..]bar[/]src[/]lib.rs \
         -o {dir}[/]target[/]doc \
         --no-defaults \
         -L dependency={dir}[/]target[/]debug[/]deps`
