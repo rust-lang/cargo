@@ -866,6 +866,8 @@ fn env_args(config: &Config,
     if let Some(args) = config.get_list(&key)? {
         let args = args.val.into_iter().map(|a| a.0);
         return Ok(args.collect());
+    } else if let Some(arg) = config.get_string(&key)? {
+        return Ok(arg.val.split(' ').map(str::to_string).collect());
     }
 
     Ok(Vec::new())
