@@ -174,13 +174,17 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                       "RUSTFLAGS")?;
         let mut process = self.config.rustc()?.process();
         process.arg("-")
-               .arg("--crate-name").arg("_")
+               .arg("--crate-name").arg("___")
                .arg("--print=file-names")
                .args(&rustflags)
                .env_remove("RUST_LOG");
 
         for crate_type in crate_types {
-            process.arg("--crate-type").arg(crate_type);
+            // Here and below we'll skip the metadata crate-type because it is
+            // not supported by older compilers. We'll do this one manually.
+            if crate_type != "metadata" {
+                process.arg("--crate-type").arg(crate_type);
+            }
         }
         if kind == Kind::Target {
             process.arg("--target").arg(&self.target_triple());
@@ -204,31 +208,37 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut map = HashMap::new();
         for crate_type in crate_types {
             let not_supported = error.lines().any(|line| {
-                line.contains("unsupported crate type") &&
-                    line.contains(crate_type)
+                (line.contains("unsupported crate type") ||
+                 line.contains("unknown crate type")) &&
+                line.contains(crate_type)
             });
             if not_supported {
-                if crate_type == "metadata" {
-                    bail!("compiler does not support `--crate-type metadata`, \
-                           cannot run `cargo check`.");
-                }
                 map.insert(crate_type.to_string(), None);
-                continue
+                continue;
+            }
+            if crate_type == "metadata" {
+                continue;
             }
             let line = match lines.next() {
                 Some(line) => line,
                 None => bail!("malformed output when learning about \
                                target-specific information from rustc"),
             };
-            let mut parts = line.trim().split('_');
+            let mut parts = line.trim().split("___");
             let prefix = parts.next().unwrap();
             let suffix = match parts.next() {
                 Some(part) => part,
                 None => bail!("output of --print=file-names has changed in \
                                the compiler, cannot parse"),
             };
-            map.insert(crate_type.to_string(),
-                       Some((prefix.to_string(), suffix.to_string())));
+
+            map.insert(crate_type.to_string(), Some((prefix.to_string(), suffix.to_string())));
+        }
+ 
+        // Manually handle the metadata case. If it is not supported by the
+        // compiler we'll error out elsewhere.
+        if crate_types.contains("metadata") {
+            map.insert("metadata".to_string(), Some(("lib".to_owned(), ".rmeta".to_owned())));
         }
 
         let cfg = if has_cfg {
