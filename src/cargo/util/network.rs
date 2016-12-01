@@ -2,14 +2,17 @@ use util::{CargoResult, Config, errors};
 
 /// Wrapper method for network call retry logic.
 ///
-/// Retry counts provided by Config object 'net.retry'. Config shell outputs
+/// Retry counts provided by Config object `net.retry`. Config shell outputs
 /// a warning on per retry.
 ///
 /// Closure must return a CargoResult.
 ///
-/// Example:
+/// # Examples
+///
+/// ```ignore
 /// use util::network;
 /// cargo_result = network.with_retry(&config, || something.download());
+/// ```
 pub fn with_retry<T, E, F>(config: &Config, mut callback: F) -> CargoResult<T>
     where F: FnMut() -> Result<T, E>,
           E: errors::NetworkError
