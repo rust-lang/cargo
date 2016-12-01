@@ -37,6 +37,9 @@ exec docker run \
   --env SRC=/checkout \
   --env CARGO_HOME=/cargo \
   --env TRAVIS_BRANCH=$TRAVIS_BRANCH \
+  --env TRAVIS_PULL_REQUEST_BRANCH=$TRAVIS_PULL_REQUEST_BRANCH \
+  --env ALLOW_PR=$ALLOW_PR \
+  --env CI=$CI \
   --volume "$HOME/.cargo:/cargo" \
   --volume `rustc --print sysroot`:/rust:ro \
   --volume `pwd`/target:/tmp/target \
