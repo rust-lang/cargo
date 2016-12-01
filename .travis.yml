@@ -136,12 +136,12 @@ before_deploy:
 
 deploy:
   - provider: s3
-    bucket: rust-lang-cargo-dev
+    bucket: rust-lang-ci
     skip_cleanup: true
     local_dir: deploy
-    upload_dir: cargo-master
+    upload_dir: cargo-builds
     acl: public_read
-    region: us-west-1
+    region: us-east-1
     access_key_id: AKIAIWZDM2B2IJOWBGTA
     secret_access_key:
       secure: NB9b/MhIDiv8OtNiN/sHaFgA3xG2fa7MGuQQKJNj80ktvgByzDm5UPNyNeoYx9SmJ3jOWobgcPVaoUd2S+6XgO3bMBqm7sM/oMeE0KdqToh6+V2bKfyRF2U5fm697LEGepPIBYqMLDg4nr/dbknbKltzp6dAfJRyy22Nb721zPQ=
