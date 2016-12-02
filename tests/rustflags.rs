@@ -949,3 +949,91 @@ fn target_rustflags_precedence() {
     assert_that(p.cargo("bench"),
                 execs().with_status(101));
 }
+
+#[test]
+fn target_rustflags_string_and_array_form1() {
+    let p1 = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [build]
+            rustflags = ["--cfg", "foo"]
+            "#);
+    p1.build();
+
+    assert_that(p1.cargo("build").arg("-v"),
+        execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg foo[..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    let p2 = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [build]
+            rustflags = "--cfg foo"
+            "#);
+    p2.build();
+
+    assert_that(p2.cargo("build").arg("-v"),
+        execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg foo[..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
+
+}
+
+#[test]
+fn target_rustflags_string_and_array_form2() {
+    let p1 = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file(".cargo/config", &format!(r#"
+            [target.{}]
+            rustflags = ["--cfg", "foo"]
+        "#, rustc_host()))
+        .file("src/lib.rs", "");
+    p1.build();
+
+    assert_that(p1.cargo("build").arg("-v"),
+        execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg foo[..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    let p2 = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file(".cargo/config", &format!(r#"
+            [target.{}]
+            rustflags = "--cfg foo"
+        "#, rustc_host()))
+        .file("src/lib.rs", "");
+    p2.build();
+
+    assert_that(p2.cargo("build").arg("-v"),
+        execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg foo[..]`
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+"));
+
+}
