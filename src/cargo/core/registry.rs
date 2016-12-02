@@ -290,23 +290,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     fn warn_bad_override(&self,
                          override_summary: &Summary,
                          real_summary: &Summary) -> CargoResult<()> {
-        let real = real_summary.package_id();
-        // If we don't have a locked variant then things are going quite wrong
-        // at this point, but we've already emitted a warning, so don't worry
-        // about it.
-        let map = match self.locked.get(real.source_id()) {
-            Some(map) => map,
-            None => return Ok(()),
-        };
-        let list = map.get(real.name()).chain_error(|| {
-            human(format!("failed to find lock name of {}", real))
-        })?;
-        let &(_, ref real_deps) = list.iter().find(|&&(ref id, _)| {
-            real == id
-        }).chain_error(|| {
-            human(format!("failed to find lock version of {}", real))
-        })?;
-        let mut real_deps = real_deps.clone();
+        let mut real_deps = real_summary.dependencies().iter().collect::<Vec<_>>();
 
         let boilerplate = "\
 This is currently allowed but is known to produce buggy behavior with spurious
@@ -322,7 +306,7 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
 ";
 
         for dep in override_summary.dependencies() {
-            if let Some(i) = real_deps.iter().position(|id| dep.matches_id(id)) {
+            if let Some(i) = real_deps.iter().position(|d| dep == *d) {
                 real_deps.remove(i);
                 continue
             }
