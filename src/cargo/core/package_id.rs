@@ -9,7 +9,7 @@ use regex::Regex;
 use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 use semver;
 
-use util::{CargoResult, CargoError, short_hash, ToSemver};
+use util::{CargoResult, CargoError, ToSemver};
 use core::source::SourceId;
 
 /// Identifier for a specific version of a package in a specific source.
@@ -118,12 +118,6 @@ impl From<PackageIdError> for Box<CargoError> {
     fn from(t: PackageIdError) -> Box<CargoError> { Box::new(t) }
 }
 
-#[derive(PartialEq, Eq, Hash, Clone, RustcEncodable, Debug)]
-pub struct Metadata {
-    pub metadata: String,
-    pub extra_filename: String
-}
-
 impl PackageId {
     pub fn new<T: ToSemver>(name: &str, version: T,
                              sid: &SourceId) -> CargoResult<PackageId> {
@@ -140,13 +134,6 @@ impl PackageId {
     pub fn name(&self) -> &str { &self.inner.name }
     pub fn version(&self) -> &semver::Version { &self.inner.version }
     pub fn source_id(&self) -> &SourceId { &self.inner.source_id }
-
-    pub fn generate_metadata(&self) -> Metadata {
-        let metadata = short_hash(self);
-        let extra_filename = format!("-{}", metadata);
-
-        Metadata { metadata: metadata, extra_filename: extra_filename }
-    }
 
     pub fn with_precise(&self, precise: Option<String>) -> PackageId {
         PackageId {
@@ -166,14 +153,6 @@ impl PackageId {
                 source_id: source.clone(),
             }),
         }
-    }
-}
-
-impl Metadata {
-    pub fn mix<T: Hash>(&mut self, t: &T) {
-        let new_metadata = short_hash(&(&self.metadata, t));
-        self.extra_filename = format!("-{}", new_metadata);
-        self.metadata = new_metadata;
     }
 }
 
