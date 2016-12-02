@@ -856,36 +856,16 @@ fn env_args(config: &Config,
     // Then the target.*.rustflags value
     let target = build_config.requested_target.as_ref().unwrap_or(&build_config.host_triple);
     let key = format!("target.{}.{}", target, name);
-    let list = config.get_list(&key);
-    if let Ok(Some(args)) = list {
-        let args = args.val.into_iter().map(|a| a.0);
+    if let Some(args) = config.get_list_or_split_string(&key)? {
+        let args = args.val.into_iter();
         return Ok(args.collect());
-    }
-    let string = config.get_string(&key);
-    if let Ok(Some(arg)) = string {
-        return Ok(arg.val.split(' ').map(str::to_string).collect());
-    }
-    if list.is_err() && string.is_err() {
-        if let Some(value) = config.values()?.get(&key) {
-            return config.expected("list or string", &key, value.clone());
-        }
     }
 
     // Then the build.rustflags value
     let key = format!("build.{}", name);
-    let list = config.get_list(&key);
-    if let Ok(Some(args)) = list {
-        let args = args.val.into_iter().map(|a| a.0);
+    if let Some(args) = config.get_list_or_split_string(&key)? {
+        let args = args.val.into_iter();
         return Ok(args.collect());
-    }
-    let string = config.get_string(&key);
-    if let Ok(Some(arg)) = string {
-        return Ok(arg.val.split(' ').map(str::to_string).collect());
-    }
-    if list.is_err() && string.is_err() {
-        if let Some(value) = config.values()?.get(&key) {
-            return config.expected("list or string", &key, value.clone());
-        }
     }
 
     Ok(Vec::new())
