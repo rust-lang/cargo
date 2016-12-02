@@ -363,7 +363,8 @@ fn linker_and_ar() {
     --emit=dep-info,link \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
-    -L dependency={dir}[/]target[/]{target}[/]debug[/]deps`
+    -L dependency={dir}[/]target[/]{target}[/]debug[/]deps \
+    -L dependency={dir}[/]target[/]debug[/]deps`
 ",
                             dir = p.root().display(),
                             url = p.url(),
