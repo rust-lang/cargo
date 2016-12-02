@@ -1013,3 +1013,93 @@ fn replace_to_path_dep() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0));
 }
+
+#[test]
+fn paths_ok_with_optional() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project("local")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = { path = "foo" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            bar = { version = "0.1", optional = true }
+        "#)
+        .file("foo/src/lib.rs", "")
+        .file("foo2/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            bar = { version = "0.1", optional = true }
+        "#)
+        .file("foo2/src/lib.rs", "")
+        .file(".cargo/config", r#"
+            paths = ["foo2"]
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.1.0 ([..]foo2)
+[COMPILING] local v0.0.1 ([..])
+[FINISHED] [..]
+"));
+}
+
+#[test]
+fn paths_add_optional_bad() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project("local")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = { path = "foo" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", "")
+        .file("foo2/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            bar = { version = "0.1", optional = true }
+        "#)
+        .file("foo2/src/lib.rs", "")
+        .file(".cargo/config", r#"
+            paths = ["foo2"]
+        "#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0).with_stderr_contains("\
+warning: path override for crate `foo` has altered the original list of
+dependencies; the dependency on `bar` was either added or\
+"));
+}
