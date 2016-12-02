@@ -836,9 +836,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn show_warnings(&self, pkg: &PackageId) -> bool {
-        self.ws.current_opt().map_or(false, |p| *pkg == *p.package_id())
-            || pkg.source_id().is_path()
-            || self.config.extra_verbose()
+        pkg.source_id().is_path() || self.config.extra_verbose()
     }
 }
 
