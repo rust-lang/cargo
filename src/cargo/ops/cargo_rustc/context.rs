@@ -597,7 +597,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         Ok(Unit {
                             pkg: pkg,
                             target: t,
-                            profile: self.lib_profile(id),
+                            profile: self.lib_profile(),
                             kind: unit.kind.for_target(t),
                         })
                     })
@@ -630,7 +630,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 Unit {
                     pkg: unit.pkg,
                     target: t,
-                    profile: self.lib_profile(id),
+                    profile: self.lib_profile(),
                     kind: unit.kind.for_target(t),
                 }
             }));
@@ -707,7 +707,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             ret.push(Unit {
                 pkg: dep,
                 target: lib,
-                profile: self.lib_profile(dep.package_id()),
+                profile: self.lib_profile(),
                 kind: unit.kind.for_target(lib),
             });
             if self.build_config.doc_all {
@@ -753,7 +753,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Unit {
                 pkg: unit.pkg,
                 target: t,
-                profile: self.lib_profile(unit.pkg.package_id()),
+                profile: self.lib_profile(),
                 kind: unit.kind.for_target(t),
             }
         })
@@ -808,7 +808,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Number of jobs specified for this build
     pub fn jobs(&self) -> u32 { self.build_config.jobs }
 
-    pub fn lib_profile(&self, _pkg: &PackageId) -> &'a Profile {
+    pub fn lib_profile(&self) -> &'a Profile {
         let (normal, test) = if self.build_config.release {
             (&self.profiles.release, &self.profiles.bench_deps)
         } else {
@@ -821,10 +821,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
     }
 
-    pub fn build_script_profile(&self, pkg: &PackageId) -> &'a Profile {
+    pub fn build_script_profile(&self, _pkg: &PackageId) -> &'a Profile {
         // TODO: should build scripts always be built with the same library
         //       profile? How is this controlled at the CLI layer?
-        self.lib_profile(pkg)
+        self.lib_profile()
     }
 
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
