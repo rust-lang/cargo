@@ -997,11 +997,12 @@ fn target_rustflags_string_and_array_form1() {
 #[test]
 fn target_rustflags_string_and_array_form2() {
     let p1 = project("foo")
-        .file("Cargo.toml", &format!(r#"
+        .file("Cargo.toml", r#"
             [package]
             name = "foo"
             version = "0.0.1"
-
+        "#)
+        .file(".cargo/config", &format!(r#"
             [target.{}]
             rustflags = ["--cfg", "foo"]
         "#, rustc_host()))
@@ -1016,11 +1017,12 @@ fn target_rustflags_string_and_array_form2() {
 "));
 
     let p2 = project("foo")
-        .file("Cargo.toml", &format!(r#"
+        .file("Cargo.toml", r#"
             [package]
             name = "foo"
             version = "0.0.1"
-
+        "#)
+        .file(".cargo/config", &format!(r#"
             [target.{}]
             rustflags = "--cfg foo"
         "#, rustc_host()))
