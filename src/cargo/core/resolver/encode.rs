@@ -286,12 +286,11 @@ impl<'a, 'cfg> Encodable for WorkspaceResolve<'a, 'cfg> {
         }).map(Package::package_id);
 
         let encodable = ids.iter().filter_map(|&id| {
-            match root {
-                Some(ref root) if !(self.use_root_key && *root == id) => {
-                    Some(encodable_resolve_node(id, self.resolve))
-                },
-                _ => None,
+            if self.use_root_key && root.unwrap() == id {
+                return None
             }
+
+            Some(encodable_resolve_node(id, self.resolve))
         }).collect::<Vec<_>>();
 
         let mut metadata = self.resolve.metadata.clone();
