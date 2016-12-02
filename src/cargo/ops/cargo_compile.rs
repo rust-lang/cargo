@@ -199,7 +199,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     let mut pkgids = Vec::new();
     if spec.len() > 0 {
         for p in spec.iter() {
-            pkgids.push(resolve_with_overrides.query(&p.to_string())?);
+            pkgids.push(p.query(resolve_with_overrides.iter())?);
         }
     } else {
         let root_package = ws.current()?;
