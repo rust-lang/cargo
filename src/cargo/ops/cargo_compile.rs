@@ -152,7 +152,7 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
                 .map(Package::package_id)
                 .map(PackageIdSpec::from_package_id)
                 .collect()
-        },
+        }
         Packages::Packages(packages) => {
             packages.iter().map(|p| PackageIdSpec::parse(&p)).collect::<CargoResult<Vec<_>>>()?
         }
@@ -189,11 +189,11 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     let profiles = ws.profiles();
 
     let resolve = resolve_dependencies(ws,
-                                         source,
-                                         features,
-                                         all_features,
-                                         no_default_features,
-                                         &spec)?;
+                                       source,
+                                       features,
+                                       all_features,
+                                       no_default_features,
+                                       &spec)?;
     let (spec, packages, resolve_with_overrides) = resolve;
 
     let mut pkgids = Vec::new();
