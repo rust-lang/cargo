@@ -73,11 +73,17 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     cx.probe_target_info(&units)?;
 
     for unit in units.iter() {
-        let layout = cx.layout(unit);
-        rm_rf(&layout.proxy().fingerprint(&unit.pkg))?;
-        rm_rf(&layout.build(&unit.pkg))?;
+        rm_rf(&cx.fingerprint_dir(unit))?;
+        if unit.target.is_custom_build() {
+            if unit.profile.run_custom_build {
+                rm_rf(&cx.build_script_out_dir(unit))?;
+            } else {
+                rm_rf(&cx.build_script_dir(unit))?;
+            }
+            continue
+        }
 
-        for (src, link_dst, _) in cx.target_filenames(&unit)? {
+        for (src, link_dst, _) in cx.target_filenames(unit)? {
             rm_rf(&src)?;
             if let Some(dst) = link_dst {
                 rm_rf(&dst)?;

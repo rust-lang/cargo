@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use semver::Version;
 
 use core::{Dependency, Manifest, PackageId, SourceId, Target, TargetKind};
-use core::{Summary, Metadata, SourceMap};
+use core::{Summary, SourceMap};
 use ops;
 use util::{CargoResult, Config, LazyCell, ChainError, internal, human, lev_distance};
 use rustc_serialize::{Encoder,Encodable};
@@ -92,10 +92,6 @@ impl Package {
 
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())
-    }
-
-    pub fn generate_metadata(&self) -> Metadata {
-        self.package_id().generate_metadata()
     }
 
     pub fn find_closest_target(&self, target: &str, kind: TargetKind) -> Option<&Target> {

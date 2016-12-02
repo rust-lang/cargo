@@ -2288,3 +2288,49 @@ fn cfg_env_vars_available() {
     assert_that(build.cargo_process("bench"),
                 execs().with_status(0));
 }
+
+#[test]
+fn switch_features_rerun() {
+    let build = project("builder")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "builder"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+
+            [features]
+            foo = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {
+                println!(include_str!(concat!(env!("OUT_DIR"), "/output")));
+            }
+        "#)
+        .file("build.rs", r#"
+            use std::env;
+            use std::fs::File;
+            use std::io::Write;
+            use std::path::Path;
+
+            fn main() {
+                let out_dir = env::var_os("OUT_DIR").unwrap();
+                let out_dir = Path::new(&out_dir).join("output");
+                let mut f = File::create(&out_dir).unwrap();
+
+                if env::var_os("CARGO_FEATURE_FOO").is_some() {
+                    f.write_all(b"foo").unwrap();
+                } else {
+                    f.write_all(b"bar").unwrap();
+                }
+            }
+        "#);
+    build.build();
+
+    assert_that(build.cargo("run").arg("-v").arg("--features=foo"),
+                execs().with_status(0).with_stdout("foo\n"));
+    assert_that(build.cargo("run").arg("-v"),
+                execs().with_status(0).with_stdout("bar\n"));
+    assert_that(build.cargo("run").arg("-v").arg("--features=foo"),
+                execs().with_status(0).with_stdout("foo\n"));
+}
