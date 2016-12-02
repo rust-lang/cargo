@@ -17,10 +17,41 @@ if [ -z "$SRC" ]; then
     SRC=.
 fi
 
+BRANCH=$TRAVIS_BRANCH
+if [ "$BRANCH" = "" ]; then
+    BRANCH=$APPVEYOR_REPO_BRANCH
+fi
+
+if [ "$BRANCH" = "stable" ]; then
+    CHANNEL=stable
+elif [ "$BRANCH" = "beta" ]; then
+    CHANNEL=beta
+elif [ "$BRANCH" = "master" ]; then
+    CHANNEL=nightly
+elif [ "$BRANCH" = "auto-cargo" ]; then
+    CHANNEL=nightly
+else
+    CHANNEL=dev
+fi
+
+# We want to only run tests in a few situations:
+#
+# * All tests on the auto-cargo branch
+# * One test on PRs
+# * Any tests done locally
+#
+# This means that here if we're on CI, then we skip tests if it's not the right
+# branch or if we're not configured to run a test on PRs
+if [ -n "$CI" ] && [ "$BRANCH" != "auto-cargo" ] && [ "$ALLOW_PR" = "" ]; then
+    echo no build necessary, skipping
+    exit 0
+fi
+
 $SRC/configure \
     --prefix=/tmp/obj/install \
     --target=$TARGET \
-    --enable-nightly
+    --release-channel=$CHANNEL \
+    --enable-build-openssl
 
 make cargo-$TARGET
 make dist-$TARGET

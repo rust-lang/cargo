@@ -32,6 +32,9 @@ fn init() {
 fn global_root() -> PathBuf {
     let mut path = t!(env::current_exe());
     path.pop(); // chop off exe name
+    if path.ends_with("deps") {
+        path.pop();
+    }
     path.pop(); // chop off 'debug'
 
     // If `cargo test` is run manually then our path looks like

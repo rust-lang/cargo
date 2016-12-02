@@ -8,13 +8,20 @@ include config.mk
 
 export PATH := $(dir $(CFG_RUSTC)):$(PATH)
 
-ifdef CFG_ENABLE_NIGHTLY
-CFG_RELEASE=$(CFG_RELEASE_NUM)$(CFG_RELEASE_LABEL)-nightly
-CFG_PACKAGE_VERS = nightly
-else
-CFG_RELEASE=$(CFG_RELEASE_NUM)$(CFG_RELEASE_LABEL)
-CFG_PACKAGE_VERS=$(CFG_RELEASE)
+ifeq ($(CFG_RELEASE_CHANNEL),stable)
+CFG_RELEASE=$(CFG_RELEASE_NUM)
+CFG_PACKAGE_VERS=$(CFG_RELEASE_NUM)
+else ifeq ($(CFG_RELEASE_CHANNEL),beta)
+CFG_RELEASE=$(CFG_RELEASE_NUM)-beta$(CFG_PRERELEASE_VERSION)
+CFG_PACKAGE_VERS=beta
+else ifeq ($(CFG_RELEASE_CHANNEL),nightly)
+CFG_RELEASE=$(CFG_RELEASE_NUM)-nightly
+CFG_PACKAGE_VERS=nightly
+else ifeq ($(CFG_RELEASE_CHANNEL),dev)
+CFG_RELEASE=$(CFG_RELEASE_NUM)-dev
+CFG_PACKAGE_VERS=$(CFG_RELEASE_NUM)-dev
 endif
+
 CFG_BUILD_DATE = $(shell date +%F)
 
 ifeq ($(wildcard .git),)
@@ -96,7 +103,8 @@ test-unit-$(1): target/openssl/$(1).stamp cargo-$(1)
 	@mkdir -p $$(CFG_BUILD_DIR)/target/$(1)/cit
 	$$(CARGO) test --target $(1) \
 		--manifest-path $(S)Cargo.toml \
-		$$(OPT_FLAG) $$(CARGOFLAGS) $$(VERBOSE_FLAG) $$(only)
+		$$(OPT_FLAG) $$(CARGOFLAGS) $$(VERBOSE_FLAG) $$(only) -- \
+		--quiet
 endef
 $(foreach target,$(CFG_TARGET),$(eval $(call CARGO_TARGET,$(target))))
 
@@ -172,17 +180,19 @@ OPENSSL_OS_aarch64-unknown-linux-gnu := linux-aarch64
 OPENSSL_OS_arm-unknown-linux-gnueabi := linux-armv4
 OPENSSL_OS_arm-unknown-linux-gnueabihf := linux-armv4
 OPENSSL_OS_armv7-unknown-linux-gnueabihf := linux-armv4
+OPENSSL_OS_i686-apple-darwin := darwin-i386-cc
 OPENSSL_OS_i686-unknown-freebsd := BSD-x86-elf
 OPENSSL_OS_i686-unknown-linux-gnu := linux-elf
 OPENSSL_OS_i686-unknown-linux-musl := linux-elf
 OPENSSL_OS_mips-unknown-linux-gnu := linux-mips32
-OPENSSL_OS_mipsel-unknown-linux-gnu := linux-mips32
 OPENSSL_OS_mips64-unknown-linux-gnuabi64 := linux64-mips64
 OPENSSL_OS_mips64el-unknown-linux-gnuabi64 := linux64-mips64
+OPENSSL_OS_mipsel-unknown-linux-gnu := linux-mips32
 OPENSSL_OS_powerpc-unknown-linux-gnu := linux-ppc
 OPENSSL_OS_powerpc64-unknown-linux-gnu := linux-ppc64
 OPENSSL_OS_powerpc64le-unknown-linux-gnu := linux-ppc64le
 OPENSSL_OS_s390x-unknown-linux-gnu := linux64-s390x
+OPENSSL_OS_x86_64-apple-darwin := darwin64-x86_64-cc
 OPENSSL_OS_x86_64-unknown-freebsd := BSD-x86_64
 OPENSSL_OS_x86_64-unknown-linux-gnu := linux-x86_64
 OPENSSL_OS_x86_64-unknown-linux-musl := linux-x86_64
@@ -192,6 +202,7 @@ OPENSSL_AR_aarch64-unknown-linux-gnu := aarch64-linux-gnu-ar
 OPENSSL_AR_arm-unknown-linux-gnueabi := arm-linux-gnueabi-ar
 OPENSSL_AR_arm-unknown-linux-gnueabihf := arm-linux-gnueabihf-ar
 OPENSSL_AR_armv7-unknown-linux-gnueabihf := armv7-linux-gnueabihf-ar
+OPENSSL_AR_i686-apple-darwin := ar
 OPENSSL_AR_i686-unknown-freebsd := i686-unknown-freebsd10-ar
 OPENSSL_AR_i686-unknown-linux-gnu := ar
 OPENSSL_AR_i686-unknown-linux-musl := ar
@@ -203,6 +214,7 @@ OPENSSL_AR_powerpc-unknown-linux-gnu := powerpc-linux-gnu-ar
 OPENSSL_AR_powerpc64-unknown-linux-gnu := powerpc64-linux-gnu-ar
 OPENSSL_AR_powerpc64le-unknown-linux-gnu := powerpc64le-linux-gnu-ar
 OPENSSL_AR_s390x-unknown-linux-gnu := s390x-linux-gnu-ar
+OPENSSL_AR_x86_64-apple-darwin := ar
 OPENSSL_AR_x86_64-unknown-freebsd := x86_64-unknown-freebsd10-ar
 OPENSSL_AR_x86_64-unknown-linux-gnu := ar
 OPENSSL_AR_x86_64-unknown-linux-musl := ar
@@ -211,6 +223,7 @@ OPENSSL_CC_aarch64-unknown-linux-gnu := aarch64-linux-gnu-gcc
 OPENSSL_CC_arm-unknown-linux-gnueabi := arm-linux-gnueabi-gcc
 OPENSSL_CC_arm-unknown-linux-gnueabihf := arm-linux-gnueabihf-gcc
 OPENSSL_CC_armv7-unknown-linux-gnueabihf := armv7-linux-gnueabihf-gcc
+OPENSSL_CC_i686-apple-darwin := clang
 OPENSSL_CC_i686-unknown-freebsd := i686-unknown-freebsd10-gcc
 OPENSSL_CC_i686-unknown-linux-gnu := gcc
 OPENSSL_CC_i686-unknown-linux-musl := musl-gcc
@@ -222,19 +235,27 @@ OPENSSL_CC_powerpc-unknown-linux-gnu := powerpc-linux-gnu-gcc
 OPENSSL_CC_powerpc64-unknown-linux-gnu := powerpc64-linux-gnu-gcc-5
 OPENSSL_CC_powerpc64le-unknown-linux-gnu := powerpc64le-linux-gnu-gcc
 OPENSSL_CC_s390x-unknown-linux-gnu := s390x-linux-gnu-gcc
+OPENSSL_CC_x86_64-apple-darwin := clang
 OPENSSL_CC_x86_64-unknown-freebsd := x86_64-unknown-freebsd10-gcc
 OPENSSL_CC_x86_64-unknown-linux-gnu := gcc
 OPENSSL_CC_x86_64-unknown-linux-musl := musl-gcc
 OPENSSL_CC_x86_64-unknown-netbsd := x86_64-unknown-netbsd-gcc
 
 SETARCH_i686-unknown-linux-gnu := setarch i386
+OPENSSL_CFLAGS_i686-apple-darwin := -m32
 OPENSSL_CFLAGS_i686-unknown-linux-gnu := -m32
 OPENSSL_CFLAGS_i686-unknown-linux-musl := -m32
 
 define BUILD_OPENSSL
-ifdef OPENSSL_OS_$(1)
-ifdef CFG_ENABLE_NIGHTLY
+
+ifdef CFG_ENABLE_BUILD_OPENSSL
+
+cargo-$(1): export OPENSSL_STATIC := 1
+test-unit-$(1): export OPENSSL_STATIC := 1
+
 OPENSSL_INSTALL_$(1) := $$(CFG_BUILD_DIR)/target/openssl/$(1)-install
+
+ifdef OPENSSL_OS_$(1)
 
 target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
 		| target/openssl/
@@ -250,27 +271,36 @@ target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
 	touch $$@
 
 # variables read by various build scripts to find openssl
-cargo-$(1): export OPENSSL_STATIC := 1
 cargo-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
-test-unit-$(1): export OPENSSL_STATIC := 1
 test-unit-$(1): export OPENSSL_DIR := $$(OPENSSL_INSTALL_$(1))
 
 # build libz statically into the cargo we're producing
 cargo-$(1): export LIBZ_SYS_STATIC := 1
-else
+
+else # !OPENSSL_OS_$(1)
+target/openssl/$(1).stamp:
+
+endif
+
+else # !CFG_ENABLE_BUILD_OPENSSL
 target/openssl/$(1).stamp:
 endif
-else
-target/openssl/$(1).stamp:
-endif
+
 endef
 
 $(foreach target,$(CFG_TARGET),$(eval $(call BUILD_OPENSSL,$(target))))
 
+ifeq ($(shell uname),Darwin)
+SHASUM := shasum -a 256
+else
+SHASUM := sha256sum
+endif
+
 target/openssl/openssl-$(OPENSSL_VERS).tar.gz: | target/openssl/
-	curl -o $(@) https://www.openssl.org/source/openssl-$(OPENSSL_VERS).tar.gz
-	sha256sum $(@) > $(@).sha256
+	curl -o $(@).tmp https://www.openssl.org/source/openssl-$(OPENSSL_VERS).tar.gz
+	$(SHASUM) $(@).tmp > $(@).sha256
 	test $(OPENSSL_SHA256) = `cut -d ' ' -f 1 $(@).sha256`
+	mv $(@).tmp $(@)
 
 target/openssl/:
 	mkdir -p $(@)

@@ -235,8 +235,13 @@ impl<T, E: fmt::Display> ErrMsg<T> for Result<T, E> {
 // Path to cargo executables
 pub fn cargo_dir() -> PathBuf {
     env::var_os("CARGO_BIN_PATH").map(PathBuf::from).or_else(|| {
-        env::current_exe().ok().as_ref().and_then(|s| s.parent())
-            .map(|s| s.to_path_buf())
+        env::current_exe().ok().map(|mut s| {
+            s.pop(); // chop off exe name
+            if s.ends_with("deps") {
+                s.pop();
+            }
+            s
+        })
     }).unwrap_or_else(|| {
         panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test")
     })

@@ -6,6 +6,9 @@ os: linux
 services:
   - docker
 
+git:
+  depth: 1
+
 matrix:
   include:
     # stable linux builds, tested
@@ -13,6 +16,7 @@ matrix:
            ALT=i686-unknown-linux-gnu
            IMAGE=dist
            MAKE_TARGETS="test distcheck doc install uninstall"
+           ALLOW_PR=1
     - env: TARGET=i686-unknown-linux-gnu
            IMAGE=dist
            MAKE_TARGETS=test-unit-i686-unknown-linux-gnu
@@ -29,7 +33,6 @@ matrix:
            MACOSX_DEPLOYMENT_TARGET=10.7
            CFG_DISABLE_CROSS_TESTS=1
       os: osx
-      install: brew uninstall openssl && brew install openssl --universal --without-test
 
     # stable musl target, tested
     - env: TARGET=x86_64-unknown-linux-musl
@@ -58,13 +61,13 @@ matrix:
            IMAGE=cross
     - env: TARGET=mips64-unknown-linux-gnuabi64
            IMAGE=cross
-      rust: nightly
+      rust: beta
     - env: TARGET=mips64el-unknown-linux-gnuabi64
            IMAGE=cross
-      rust: nightly
+      rust: beta
     - env: TARGET=s390x-unknown-linux-gnu
            IMAGE=cross
-      rust: nightly
+      rust: beta
     - env: TARGET=powerpc-unknown-linux-gnu
            IMAGE=cross
       rust: beta
@@ -82,12 +85,6 @@ matrix:
            MAKE_TARGETS="test distcheck doc install uninstall"
            DEPLOY=0
       rust: beta
-    - env: TARGET=x86_64-unknown-linux-gnu
-           ALT=i686-unknown-linux-gnu
-           IMAGE=dist
-           MAKE_TARGETS="test distcheck doc install uninstall"
-           DEPLOY=0
-      rust: nightly
 
   exclude:
     - rust: stable
@@ -100,11 +97,15 @@ before_script:
       sh -s -- --add-target=$ALT --disable-sudo -y --prefix=`rustc --print sysroot`;
     fi
 script:
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then
-        SRC=. src/ci/run.sh $TARGET;
-    else
-        src/ci/docker/run.sh $IMAGE $TARGET;
-    fi
+  - >
+      if [ "$ALLOW_PR" = "" ] && [ "$TRAVIS_BRANCH" != "auto-cargo" ]; then
+          echo skipping, not a full build;
+      elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
+          SRC=. src/ci/run.sh $TARGET;
+      else
+          src/ci/docker/run.sh $IMAGE $TARGET;
+      fi
+
 after_success: |
   [ $TRAVIS_BRANCH = master ] &&
   [ $TRAVIS_PULL_REQUEST = false ] &&
@@ -122,24 +123,19 @@ notifications:
   email:
     on_success: never
 
-branches:
-  only:
-  - master
-  - auto-cargo
-
 before_deploy:
   - mkdir -p deploy/$TRAVIS_COMMIT
-  - cp target/$TARGET/release/dist/cargo-nightly-$TARGET.tar.gz
+  - cp target/$TARGET/release/dist/cargo-*-$TARGET.tar.gz
     deploy/$TRAVIS_COMMIT
 
 deploy:
   - provider: s3
-    bucket: rust-lang-cargo-dev
+    bucket: rust-lang-ci
     skip_cleanup: true
     local_dir: deploy
-    upload_dir: cargo-master
+    upload_dir: cargo-builds
     acl: public_read
-    region: us-west-1
+    region: us-east-1
     access_key_id: AKIAIWZDM2B2IJOWBGTA
     secret_access_key:
       secure: NB9b/MhIDiv8OtNiN/sHaFgA3xG2fa7MGuQQKJNj80ktvgByzDm5UPNyNeoYx9SmJ3jOWobgcPVaoUd2S+6XgO3bMBqm7sM/oMeE0KdqToh6+V2bKfyRF2U5fm697LEGepPIBYqMLDg4nr/dbknbKltzp6dAfJRyy22Nb721zPQ=
