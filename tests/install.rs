@@ -87,7 +87,7 @@ fn bad_version() {
     assert_that(cargo_process("install").arg("foo").arg("--vers=0.2.0"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
-[ERROR] could not find `foo` in `registry [..]` with version `0.2.0`
+[ERROR] could not find `foo` in `registry [..]` with version `=0.2.0`
 "));
 }
 
@@ -825,4 +825,28 @@ fn use_path_workspace() {
     assert_that(p.cargo("install"), execs().with_status(0));
     let lock2 = p.read_lockfile();
     assert!(lock == lock2, "different lockfiles");
+}
+
+#[test]
+fn vers_precise() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    assert_that(cargo_process("install").arg("foo").arg("--vers").arg("0.1.1"),
+                execs().with_status(0).with_stderr_contains("\
+[DOWNLOADING] foo v0.1.1 (registry [..])
+"));
+}
+
+#[test]
+fn legacy_version_requirement() {
+    pkg("foo", "0.1.1");
+
+    assert_that(cargo_process("install").arg("foo").arg("--vers").arg("0.1"),
+                execs().with_status(0).with_stderr_contains("\
+warning: the `--vers` provided, `0.1`, is not a valid semver version
+
+historically Cargo treated this as a semver version requirement accidentally
+and will continue to do so, but this behavior will be removed eventually
+"));
 }
