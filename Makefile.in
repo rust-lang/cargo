@@ -266,7 +266,7 @@ target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
 	 AR=$$(OPENSSL_AR_$(1)) \
 	 $$(SETARCH_$(1)) ./Configure --prefix=$$(OPENSSL_INSTALL_$(1)) \
 	   no-dso $$(OPENSSL_OS_$(1)) -fPIC $$(OPENSSL_CFLAGS_$(1))&& \
-	 $(MAKE) -j10 && \
+	 $(MAKE) -j1 && \
 	 $(MAKE) install)
 	touch $$@
 
