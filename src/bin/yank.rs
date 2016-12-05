@@ -27,7 +27,7 @@ Options:
     --undo              Undo a yank, putting a version back into the index
     --index INDEX       Registry index to yank from
     --token TOKEN       API token to use when authenticating
-    -v, --verbose ...   Use verbose output
+    -v, --verbose ...   Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
     --frozen            Require Cargo.lock and cache are up to date

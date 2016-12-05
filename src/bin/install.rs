@@ -57,7 +57,7 @@ Build and install options:
     --bin NAME                Only install the binary NAME
     --example EXAMPLE         Install the example EXAMPLE instead of binaries
     --root DIR                Directory to install packages into
-    -v, --verbose ...         Use verbose output
+    -v, --verbose ...         Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet               Less output printed to stdout
     --color WHEN              Coloring: auto, always, never
     --frozen                  Require Cargo.lock and cache are up to date

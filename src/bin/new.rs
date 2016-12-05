@@ -32,7 +32,7 @@ Options:
     --bin               Use a binary (application) template
     --lib               Use a library template
     --name NAME         Set the resulting package name
-    -v, --verbose ...   Use verbose output
+    -v, --verbose ...   Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
     --frozen            Require Cargo.lock and cache are up to date

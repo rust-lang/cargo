@@ -35,7 +35,7 @@ Options:
     --manifest-path PATH       Path to the manifest
     --format-version VERSION   Format version [default: 1]
                                Valid values: 1
-    -v, --verbose ...          Use verbose output
+    -v, --verbose ...          Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet                No output printed to stdout
     --color WHEN               Coloring: auto, always, never
     --frozen                   Require Cargo.lock and cache are up to date
