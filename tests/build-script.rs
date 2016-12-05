@@ -2369,7 +2369,7 @@ fn assume_build_script_when_build_rs_present() {
 }
 
 #[test]
-fn if_build_set_to_false_dont_tread_build_rs_as_build_script() {
+fn if_build_set_to_false_dont_treat_build_rs_as_build_script() {
     let p = project("builder")
         .file("Cargo.toml", r#"
             [package]
