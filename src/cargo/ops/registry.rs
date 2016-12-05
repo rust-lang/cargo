@@ -151,13 +151,13 @@ fn transmit(config: &Config,
     }, tarball);
 
     match publish {
-        Ok(invalid_categories) => {
-            if !invalid_categories.is_empty() {
+        Ok(warnings) => {
+            if !warnings.invalid_categories.is_empty() {
                 let msg = format!("\
                     the following are not valid category slugs and were \
                     ignored: {}. Please see https://crates.io/category_slugs \
                     for the list of all category slugs. \
-                    ", invalid_categories.join(", "));
+                    ", warnings.invalid_categories.join(", "));
                 config.shell().warn(&msg)?;
             }
             Ok(())

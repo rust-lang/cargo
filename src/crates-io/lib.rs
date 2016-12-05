@@ -111,6 +111,10 @@ pub struct User {
     pub name: Option<String>,
 }
 
+pub struct Warnings {
+    pub invalid_categories: Vec<String>,
+}
+
 #[derive(RustcDecodable)] struct R { ok: bool }
 #[derive(RustcDecodable)] struct ApiErrorList { errors: Vec<ApiError> }
 #[derive(RustcDecodable)] struct ApiError { detail: String }
@@ -155,7 +159,7 @@ impl Registry {
     }
 
     pub fn publish(&mut self, krate: &NewCrate, tarball: &File)
-                   -> Result<Vec<String>> {
+                   -> Result<Warnings> {
         let json = json::encode(krate)?;
         // Prepare the body. The format of the upload request is:
         //
@@ -215,7 +219,7 @@ impl Registry {
                     x.iter().flat_map(Json::as_string).map(Into::into).collect()
                 })
                 .unwrap_or_else(Vec::new);
-        Ok(invalid_categories)
+        Ok(Warnings { invalid_categories: invalid_categories })
     }
 
     pub fn search(&mut self, query: &str, limit: u8) -> Result<(Vec<Crate>, u32)> {
