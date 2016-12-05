@@ -32,7 +32,7 @@ Options:
     --allow-dirty           Allow dirty working directories to be packaged
     --manifest-path PATH    Path to the manifest to compile
     -j N, --jobs N          Number of parallel jobs, defaults to # of CPUs
-    -v, --verbose ...       Use verbose output
+    -v, --verbose ...       Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet             No output printed to stdout
     --color WHEN            Coloring: auto, always, never
     --frozen                Require Cargo.lock and cache are up to date
