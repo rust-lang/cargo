@@ -546,11 +546,7 @@ impl TomlManifest {
         }
 
         // processing the custom build script
-        let manifest_file = util::important_paths::find_root_manifest_for_wd(None, &layout.root)
-                                 .chain_error(|| human("Could not find root manifest location"))?;
-        let base_dir = manifest_file.parent()
-                                    .ok_or(human("Could not get parent directory of manifest"))?;
-        let new_build = self.maybe_custom_build(&project.build, &base_dir);
+        let new_build = self.maybe_custom_build(&project.build, &layout.root);
 
         // Get targets
         let targets = normalize(&lib,
