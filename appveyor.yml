@@ -53,9 +53,10 @@ after_test:
   - ps: New-Item -Path "target/${env:TARGET}/release" -ItemType "directory" -Force
   - ps: New-Item -Path "target/${env:TARGET}/release/dist" -ItemType "directory" -Force
   - ps: Get-ChildItem -Path target\${env:TARGET}\release\dist -Filter '*.tar.gz' | Move-Item -Destination ${env:APPVEYOR_REPO_COMMIT}
+  - ps: Get-FileHash .\${env:APPVEYOR_REPO_COMMIT}\* | ForEach-Object {[io.file]::WriteAllText($_.Path + ".sha256", $_.Hash.ToLower() + "`n")}
 
 artifacts:
-  - path: $(APPVEYOR_REPO_COMMIT)\cargo-*-$(TARGET).tar.gz
+  - path: $(APPVEYOR_REPO_COMMIT)\cargo-*
     name: cargo
 
 deploy:
