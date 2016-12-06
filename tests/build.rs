@@ -2412,6 +2412,20 @@ fn compiler_json_error_format() {
     }
 
     {
+        "reason":"compiler-artifact",
+        "profile": {
+            "debug_assertions": true,
+            "debuginfo": true,
+            "opt_level": "0",
+            "test": false
+        },
+        "features": [],
+        "package_id":"bar 0.5.0 ([..])",
+        "target":{"kind":["lib"],"name":"bar","src_path":"[..]lib.rs"},
+        "filenames":["[..].rlib"]
+    }
+
+    {
         "reason":"compiler-message",
         "package_id":"foo 0.5.0 ([..])",
         "target":{"kind":["bin"],"name":"foo","src_path":"[..]main.rs"},
@@ -2425,6 +2439,20 @@ fn compiler_json_error_format() {
                 "text":[{"highlight_end":23,"highlight_start":17,"text":"[..]"}]
             }]
         }
+    }
+
+    {
+        "reason":"compiler-artifact",
+        "package_id":"foo 0.5.0 ([..])",
+        "target":{"kind":["bin"],"name":"foo","src_path":"[..]main.rs"},
+        "profile": {
+            "debug_assertions": true,
+            "debuginfo": true,
+            "opt_level": "0",
+            "test": false
+        },
+        "features": [],
+        "filenames": ["[..]"]
     }
 "#));
 }

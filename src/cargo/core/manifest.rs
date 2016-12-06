@@ -123,7 +123,7 @@ impl Encodable for TargetKind {
     }
 }
 
-#[derive(RustcEncodable, RustcDecodable, Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Profile {
     pub opt_level: String,
     pub lto: bool,
@@ -137,6 +137,25 @@ pub struct Profile {
     pub doc: bool,
     pub run_custom_build: bool,
     pub panic: Option<String>,
+}
+
+#[derive(RustcEncodable)]
+struct SerializedProfile<'a> {
+    opt_level: &'a str,
+    debuginfo: bool,
+    debug_assertions: bool,
+    test: bool,
+}
+
+impl Encodable for Profile {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        SerializedProfile {
+            opt_level: &self.opt_level,
+            debuginfo: self.debuginfo,
+            debug_assertions: self.debug_assertions,
+            test: self.test,
+        }.encode(s)
+    }
 }
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
