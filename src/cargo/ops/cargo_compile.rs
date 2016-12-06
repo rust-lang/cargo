@@ -27,7 +27,7 @@ use std::path::PathBuf;
 
 use core::{Source, Package, Target};
 use core::{Profile, TargetKind, Profiles, Workspace, PackageIdSpec};
-use ops::{self, BuildOutput};
+use ops::{self, BuildOutput, Executor, DefaultExecutor};
 use util::config::Config;
 use util::{CargoResult, profile};
 
@@ -113,18 +113,26 @@ pub enum CompileFilter<'a> {
 
 pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
                    -> CargoResult<ops::Compilation<'a>> {
+    compile_with_exec(ws, options, &mut DefaultExecutor)
+}
+
+pub fn compile_with_exec<'a, E: Executor>(ws: &Workspace<'a>,
+                                          options: &CompileOptions<'a>, 
+                                          exec: &mut E)
+                                          -> CargoResult<ops::Compilation<'a>> {
     for member in ws.members() {
         for key in member.manifest().warnings().iter() {
             options.config.shell().warn(key)?
         }
     }
-    compile_ws(ws, None, options)
+    compile_ws(ws, None, options, exec)
 }
 
-pub fn compile_ws<'a>(ws: &Workspace<'a>,
-                      source: Option<Box<Source + 'a>>,
-                      options: &CompileOptions<'a>)
-                      -> CargoResult<ops::Compilation<'a>> {
+pub fn compile_ws<'a, E: Executor>(ws: &Workspace<'a>,
+                                   source: Option<Box<Source + 'a>>,
+                                   options: &CompileOptions<'a>,
+                                   exec: &mut E)
+                                   -> CargoResult<ops::Compilation<'a>> {
     let CompileOptions { config, jobs, target, spec, features,
                          all_features, no_default_features,
                          release, mode, message_format,
@@ -231,7 +239,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                              &resolve_with_overrides,
                              config,
                              build_config,
-                             profiles)?
+                             profiles,
+                             exec)?
     };
 
     ret.to_doc_test = to_builds.iter().map(|&p| p.clone()).collect();
