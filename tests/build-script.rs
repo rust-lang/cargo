@@ -2345,8 +2345,12 @@ fn assume_build_script_when_build_rs_present() {
             authors = []
         "#)
         .file("src/main.rs", r#"
+            use std::path::Path;
             fn main() {
-                println!(include_str!(concat!(env!("OUT_DIR"), "/output")));
+                let f = env!("OUT_DIR");
+                assert!(
+                    ! Path::new(f).join("output").exists()
+                );
             }
         "#)
         .file("build.rs", r#"
@@ -2365,7 +2369,14 @@ fn assume_build_script_when_build_rs_present() {
     p.build();
 
     assert_that(p.cargo("run").arg("-v"),
-                execs().with_status(0).with_stdout("foo\n"));
+                execs().with_status(0).with_stderr("\
+warning: `build.rs` files in the same directory as your `Cargo.toml` will soon be treated \
+as build scripts. Add `build = false` to your `Cargo.toml` to prevent this
+   Compiling builder v0.0.1 ([..])
+     Running [..]
+    Finished [..]
+     Running [..]
+"));
 }
 
 #[test]
