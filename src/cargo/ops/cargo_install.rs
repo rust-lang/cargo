@@ -13,7 +13,7 @@ use toml;
 
 use core::{SourceId, Source, Package, Dependency, PackageIdSpec};
 use core::{PackageId, Workspace};
-use ops::{self, CompileFilter};
+use ops::{self, CompileFilter, DefaultExecutor};
 use sources::{GitSource, PathSource, SourceConfigMap};
 use util::{CargoResult, ChainError, Config, human, internal};
 use util::{Filesystem, FileLock};
@@ -106,7 +106,7 @@ pub fn install(root: Option<&str>,
         check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
     }
 
-    let compile = ops::compile_ws(&ws, Some(source), opts).chain_error(|| {
+    let compile = ops::compile_ws(&ws, Some(source), opts, &mut DefaultExecutor).chain_error(|| {
         if let Some(td) = td_opt.take() {
             // preserve the temporary directory, so the user can inspect it
             td.into_path();

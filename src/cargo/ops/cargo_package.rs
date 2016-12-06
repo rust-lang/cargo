@@ -11,7 +11,7 @@ use tar::{Archive, Builder, Header};
 use core::{SourceId, Package, PackageId, Workspace, Source};
 use sources::PathSource;
 use util::{self, CargoResult, human, internal, ChainError, Config, FileLock};
-use ops;
+use ops::{self, DefaultExecutor};
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
@@ -298,7 +298,7 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
         mode: ops::CompileMode::Build,
         target_rustdoc_args: None,
         target_rustc_args: None,
-    })?;
+    }, &mut DefaultExecutor)?;
 
     Ok(())
 }
