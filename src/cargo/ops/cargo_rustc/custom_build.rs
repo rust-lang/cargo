@@ -7,6 +7,7 @@ use std::sync::{Mutex, Arc};
 use core::PackageId;
 use util::{CargoResult, Human, Freshness, Cfg};
 use util::{internal, ChainError, profile, paths};
+use util::machine_message;
 
 use super::job::Work;
 use super::{fingerprint, Kind, Context, Unit};
@@ -168,6 +169,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                output_file.clone());
     let build_scripts = super::load_build_deps(cx, unit);
     let kind = unit.kind;
+    let json_messages = cx.build_config.json_messages;
 
     // Check to see if the build script as already run, and if it has keep
     // track of whether it has told us about some explicit dependencies
@@ -242,6 +244,19 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         // state informing what variables were discovered via our script as
         // well.
         let parsed_output = BuildOutput::parse(&output.stdout, &pkg_name)?;
+
+        if json_messages {
+            let library_paths = parsed_output.library_paths.iter().map(|l| {
+                l.display().to_string()
+            }).collect::<Vec<_>>();
+            machine_message::emit(machine_message::BuildScript {
+                package_id: &id,
+                linked_libs: &parsed_output.library_links,
+                linked_paths: &library_paths,
+                cfgs: &parsed_output.cfgs,
+            });
+        }
+
         build_state.insert(id, kind, parsed_output);
         Ok(())
     });
