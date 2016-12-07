@@ -286,12 +286,18 @@ pub struct TomlProfile {
     panic: Option<String>,
 }
 
+#[derive(RustcDecodable, Clone, Debug)]
+pub enum StringOrBool {
+    String(String),
+    Bool(bool),
+}
+
 #[derive(RustcDecodable)]
 pub struct TomlProject {
     name: String,
     version: TomlVersion,
     authors: Vec<String>,
-    build: Option<String>,
+    build: Option<StringOrBool>,
     links: Option<String>,
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
@@ -540,7 +546,7 @@ impl TomlManifest {
         }
 
         // processing the custom build script
-        let new_build = project.build.as_ref().map(PathBuf::from);
+        let new_build = self.maybe_custom_build(&project.build, &layout.root, &mut warnings);
 
         // Get targets
         let targets = normalize(&lib,
@@ -766,6 +772,34 @@ impl TomlManifest {
             replace.push((spec, dep));
         }
         Ok(replace)
+    }
+
+    fn maybe_custom_build(&self,
+                          build: &Option<StringOrBool>,
+                          project_dir: &Path,
+                          warnings: &mut Vec<String>)
+                          -> Option<PathBuf> {
+        let build_rs = project_dir.join("build.rs");
+        match *build {
+            Some(StringOrBool::Bool(false)) => None,        // explicitly no build script
+            Some(StringOrBool::Bool(true)) => Some(build_rs.into()),
+            Some(StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
+            None => {
+                match fs::metadata(&build_rs) {
+                    // Enable this after the warning has been visible for some time
+                    // Ok(ref e) if e.is_file() => Some(build_rs.into()),
+                    Ok(ref e) if e.is_file() => {
+                        warnings.push("`build.rs` files in the same directory \
+                                       as your `Cargo.toml` will soon be treated \
+                                       as build scripts. Add `build = false` to \
+                                       your `Cargo.toml` to prevent this".into());
+                        None
+                    },
+                    Ok(_) => None,
+                    Err(_) => None,
+                }
+            }
+        }
     }
 }
 
