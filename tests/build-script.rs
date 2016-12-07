@@ -2334,3 +2334,85 @@ fn switch_features_rerun() {
     assert_that(build.cargo("run").arg("-v").arg("--features=foo"),
                 execs().with_status(0).with_stdout("foo\n"));
 }
+
+#[test]
+fn assume_build_script_when_build_rs_present() {
+    let p = project("builder")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "builder"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            use std::path::Path;
+            fn main() {
+                let f = env!("OUT_DIR");
+                assert!(
+                    ! Path::new(f).join("output").exists()
+                );
+            }
+        "#)
+        .file("build.rs", r#"
+            use std::env;
+            use std::fs::File;
+            use std::io::Write;
+            use std::path::Path;
+
+            fn main() {
+                let out_dir = env::var_os("OUT_DIR").unwrap();
+                let out_dir = Path::new(&out_dir).join("output");
+                let mut f = File::create(&out_dir).unwrap();
+                f.write_all(b"foo").unwrap();
+            }
+        "#);
+    p.build();
+
+    assert_that(p.cargo("run").arg("-v"),
+                execs().with_status(0).with_stderr("\
+warning: `build.rs` files in the same directory as your `Cargo.toml` will soon be treated \
+as build scripts. Add `build = false` to your `Cargo.toml` to prevent this
+   Compiling builder v0.0.1 ([..])
+     Running [..]
+    Finished [..]
+     Running [..]
+"));
+}
+
+#[test]
+fn if_build_set_to_false_dont_treat_build_rs_as_build_script() {
+    let p = project("builder")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "builder"
+            version = "0.0.1"
+            authors = []
+            build = false
+        "#)
+        .file("src/main.rs", r#"
+            use std::path::Path;
+            fn main() {
+                let f = env!("OUT_DIR");
+                assert!(
+                    ! Path::new(f).join("output").exists()
+                )
+            }
+        "#)
+        .file("build.rs", r#"
+            use std::env;
+            use std::fs::File;
+            use std::io::Write;
+            use std::path::Path;
+
+            fn main() {
+                let out_dir = env::var_os("OUT_DIR").unwrap();
+                let out_dir = Path::new(&out_dir).join("output");
+                let mut f = File::create(&out_dir).unwrap();
+                f.write_all(b"foo").unwrap();
+            }
+        "#);
+    p.build();
+
+    assert_that(p.cargo("run").arg("-v"),
+                execs().with_status(0));
+}
