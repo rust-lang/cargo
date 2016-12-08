@@ -283,10 +283,10 @@ impl<'a, 'cfg> Encodable for WorkspaceResolve<'a, 'cfg> {
 
         let root = self.ws.members().max_by_key(|member| {
             member.name()
-        }).unwrap().package_id();
+        }).map(Package::package_id);
 
         let encodable = ids.iter().filter_map(|&id| {
-            if self.use_root_key && root == id {
+            if self.use_root_key && root.unwrap() == id {
                 return None
             }
 
@@ -307,10 +307,9 @@ impl<'a, 'cfg> Encodable for WorkspaceResolve<'a, 'cfg> {
 
         let metadata = if metadata.len() == 0 {None} else {Some(metadata)};
 
-        let root = if self.use_root_key {
-            Some(encodable_resolve_node(&root, self.resolve))
-        } else {
-            None
+        let root = match root {
+            Some(root) if self.use_root_key => Some(encodable_resolve_node(&root, self.resolve)),
+            _ => None,
         };
         EncodableResolve {
             package: Some(encodable),

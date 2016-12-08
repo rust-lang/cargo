@@ -1,5 +1,5 @@
 use cargo::core::Workspace;
-use cargo::ops::{self, MessageFormat};
+use cargo::ops::{self, MessageFormat, Packages};
 use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
@@ -80,7 +80,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
             features: &options.flag_features,
             all_features: options.flag_all_features,
             no_default_features: options.flag_no_default_features,
-            spec: &options.flag_package,
+            spec: Packages::Packages(&options.flag_package),
             filter: ops::CompileFilter::new(options.flag_lib,
                                             &options.flag_bin,
                                             &empty,

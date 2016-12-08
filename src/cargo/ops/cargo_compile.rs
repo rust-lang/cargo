@@ -47,8 +47,8 @@ pub struct CompileOptions<'a> {
     pub all_features: bool,
     /// Flag if the default feature should be built for the root package
     pub no_default_features: bool,
-    /// Root package to build (if None it's the current one)
-    pub spec: &'a [String],
+    /// Root package to build (if empty it's the current one)
+    pub spec: Packages<'a>,
     /// Filter to apply to the root package to select which targets will be
     /// built.
     pub filter: CompileFilter<'a>,
@@ -79,6 +79,12 @@ pub enum MessageFormat {
     Json
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Packages<'a> {
+    All,
+    Packages(&'a [String]),
+}
+
 pub enum CompileFilter<'a> {
     Everything,
     Only {
@@ -92,8 +98,10 @@ pub enum CompileFilter<'a> {
 
 pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
                    -> CargoResult<ops::Compilation<'a>> {
-    for key in ws.current()?.manifest().warnings().iter() {
-        options.config.shell().warn(key)?
+    for member in ws.members() {
+        for key in member.manifest().warnings().iter() {
+            options.config.shell().warn(key)?
+        }
     }
     compile_ws(ws, None, options)
 }
@@ -103,8 +111,8 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
                                 features: &[String],
                                 all_features: bool,
                                 no_default_features: bool,
-                                specs: &[PackageIdSpec])
-                                -> CargoResult<(PackageSet<'a>, Resolve)> {
+                                specs: &Packages<'a>)
+                                -> CargoResult<(Vec<PackageIdSpec>, PackageSet<'a>, Resolve)> {
     let features = features.iter().flat_map(|s| {
         s.split_whitespace()
     }).map(|s| s.to_string()).collect::<Vec<String>>();
@@ -112,8 +120,9 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
     let mut registry = PackageRegistry::new(ws.config())?;
 
     if let Some(source) = source {
-        registry.add_preloaded(ws.current()?.package_id().source_id(),
-                               source);
+        if let Some(root_package) = ws.current_opt() {
+            registry.add_preloaded(root_package.package_id().source_id(), source);
+        }
     }
 
     // First, resolve the root_package's *listed* dependencies, as well as
@@ -137,22 +146,33 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
         }
     };
 
+    let specs = match *specs {
+        Packages::All => {
+            ws.members()
+                .map(Package::package_id)
+                .map(PackageIdSpec::from_package_id)
+                .collect()
+        }
+        Packages::Packages(packages) => {
+            packages.iter().map(|p| PackageIdSpec::parse(&p)).collect::<CargoResult<Vec<_>>>()?
+        }
+    };
+
     let resolved_with_overrides =
             ops::resolve_with_previous(&mut registry, ws,
                                             method, Some(&resolve), None,
-                                            specs)?;
+                                            &specs)?;
 
     let packages = ops::get_resolved_packages(&resolved_with_overrides,
                                               registry);
 
-    Ok((packages, resolved_with_overrides))
+    Ok((specs, packages, resolved_with_overrides))
 }
 
 pub fn compile_ws<'a>(ws: &Workspace<'a>,
                       source: Option<Box<Source + 'a>>,
                       options: &CompileOptions<'a>)
                       -> CargoResult<ops::Compilation<'a>> {
-    let root_package = ws.current()?;
     let CompileOptions { config, jobs, target, spec, features,
                          all_features, no_default_features,
                          release, mode, message_format,
@@ -167,27 +187,23 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     }
 
     let profiles = ws.profiles();
-    if spec.len() == 0 {
-        generate_targets(root_package, profiles, mode, filter, release)?;
-    }
 
-    let specs = spec.iter().map(|p| PackageIdSpec::parse(p))
-                                .collect::<CargoResult<Vec<_>>>()?;
-
-    let pair = resolve_dependencies(ws,
-                                         source,
-                                         features,
-                                         all_features,
-                                         no_default_features,
-                                         &specs)?;
-    let (packages, resolve_with_overrides) = pair;
+    let resolve = resolve_dependencies(ws,
+                                       source,
+                                       features,
+                                       all_features,
+                                       no_default_features,
+                                       &spec)?;
+    let (spec, packages, resolve_with_overrides) = resolve;
 
     let mut pkgids = Vec::new();
     if spec.len() > 0 {
-        for p in spec {
-            pkgids.push(resolve_with_overrides.query(&p)?);
+        for p in spec.iter() {
+            pkgids.push(p.query(resolve_with_overrides.iter())?);
         }
     } else {
+        let root_package = ws.current()?;
+        generate_targets(root_package, profiles, mode, filter, release)?;
         pkgids.push(root_package.package_id());
     };
 

@@ -291,7 +291,7 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
         features: &[],
         no_default_features: false,
         all_features: false,
-        spec: &[],
+        spec: ops::Packages::Packages(&[]),
         filter: ops::CompileFilter::Everything,
         release: false,
         message_format: ops::MessageFormat::Human,

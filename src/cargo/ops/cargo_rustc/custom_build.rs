@@ -97,7 +97,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // environment variables. Note that the profile-related environment
     // variables are not set with this the build script's profile but rather the
     // package's library profile.
-    let profile = cx.lib_profile(unit.pkg.package_id());
+    let profile = cx.lib_profile();
     let to_exec = to_exec.into_os_string();
     let mut cmd = cx.compilation.host_process(to_exec, unit.pkg)?;
     cmd.env("OUT_DIR", &build_output)

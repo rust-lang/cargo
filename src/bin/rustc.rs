@@ -1,7 +1,7 @@
 use std::env;
 
 use cargo::core::Workspace;
-use cargo::ops::{self, CompileOptions, CompileMode, MessageFormat};
+use cargo::ops::{self, CompileOptions, CompileMode, MessageFormat, Packages};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 use cargo::util::{CliResult, CliError, Config, human};
 
@@ -95,6 +95,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         }
     };
 
+    let spec = options.flag_package.map_or_else(Vec::new, |s| vec![s]);
+
     let opts = CompileOptions {
         config: config,
         jobs: options.flag_jobs,
@@ -102,7 +104,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         features: &options.flag_features,
         all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
-        spec: &options.flag_package.map_or(Vec::new(), |s| vec![s]),
+        spec: Packages::Packages(&spec),
         mode: mode,
         release: options.flag_release,
         filter: ops::CompileFilter::new(options.flag_lib,

@@ -15,9 +15,18 @@ pub struct DocOptions<'a> {
 pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     let package = ws.current()?;
 
+    let spec = match options.compile_opts.spec {
+        ops::Packages::Packages(packages) => packages,
+        _ => {
+            // This should not happen, because the `doc` binary is hard-coded to pass
+            // the `Packages::Packages` variant.
+            bail!("`cargo doc` does not support the `--all` flag")
+        },
+    };
+
     let mut lib_names = HashSet::new();
     let mut bin_names = HashSet::new();
-    if options.compile_opts.spec.is_empty() {
+    if spec.is_empty() {
         for target in package.targets().iter().filter(|t| t.documented()) {
             if target.is_lib() {
                 assert!(lib_names.insert(target.crate_name()));
@@ -37,10 +46,10 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     ops::compile(ws, &options.compile_opts)?;
 
     if options.open_result {
-        let name = if options.compile_opts.spec.len() > 1 {
+        let name = if spec.len() > 1 {
             bail!("Passing multiple packages and `open` is not supported")
-        } else if options.compile_opts.spec.len() == 1 {
-            PackageIdSpec::parse(&options.compile_opts.spec[0])?
+        } else if spec.len() == 1 {
+            PackageIdSpec::parse(&spec[0])?
                 .name()
                 .replace("-", "_")
         } else {
