@@ -29,9 +29,9 @@ pub struct Unit<'a> {
 }
 
 pub struct Context<'a, 'cfg: 'a> {
+    pub ws: &'a Workspace<'cfg>,
     pub config: &'cfg Config,
     pub resolve: &'a Resolve,
-    pub current_package: PackageId,
     pub compilation: Compilation<'cfg>,
     pub packages: &'a PackageSet<'cfg>,
     pub build_state: Arc<BuildState>,
@@ -60,7 +60,7 @@ struct TargetInfo {
 pub struct Metadata(u64);
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
-    pub fn new(ws: &Workspace<'cfg>,
+    pub fn new(ws: &'a Workspace<'cfg>,
                resolve: &'a Resolve,
                packages: &'a PackageSet<'cfg>,
                config: &'cfg Config,
@@ -76,12 +76,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => None,
         };
 
-        let current_package = ws.current()?.package_id().clone();
         Ok(Context {
+            ws: ws,
             host: host_layout,
             target: target_layout,
             resolve: resolve,
-            current_package: current_package,
             packages: packages,
             config: config,
             target_info: TargetInfo::default(),
@@ -450,7 +449,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // we don't want to link it up.
         if src_dir.ends_with("deps") {
             // Don't lift up library dependencies
-            if unit.pkg.package_id() != &self.current_package && !unit.target.is_bin() {
+            if self.ws.members().find(|&p| p != unit.pkg).is_some() && !unit.target.is_bin() {
                 None
             } else {
                 Some((
@@ -597,7 +596,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         Ok(Unit {
                             pkg: pkg,
                             target: t,
-                            profile: self.lib_profile(id),
+                            profile: self.lib_profile(),
                             kind: unit.kind.for_target(t),
                         })
                     })
@@ -630,7 +629,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 Unit {
                     pkg: unit.pkg,
                     target: t,
-                    profile: self.lib_profile(id),
+                    profile: self.lib_profile(),
                     kind: unit.kind.for_target(t),
                 }
             }));
@@ -707,7 +706,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             ret.push(Unit {
                 pkg: dep,
                 target: lib,
-                profile: self.lib_profile(dep.package_id()),
+                profile: self.lib_profile(),
                 kind: unit.kind.for_target(lib),
             });
             if self.build_config.doc_all {
@@ -753,7 +752,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Unit {
                 pkg: unit.pkg,
                 target: t,
-                profile: self.lib_profile(unit.pkg.package_id()),
+                profile: self.lib_profile(),
                 kind: unit.kind.for_target(t),
             }
         })
@@ -808,7 +807,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Number of jobs specified for this build
     pub fn jobs(&self) -> u32 { self.build_config.jobs }
 
-    pub fn lib_profile(&self, _pkg: &PackageId) -> &'a Profile {
+    pub fn lib_profile(&self) -> &'a Profile {
         let (normal, test) = if self.build_config.release {
             (&self.profiles.release, &self.profiles.bench_deps)
         } else {
@@ -821,10 +820,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
     }
 
-    pub fn build_script_profile(&self, pkg: &PackageId) -> &'a Profile {
+    pub fn build_script_profile(&self, _pkg: &PackageId) -> &'a Profile {
         // TODO: should build scripts always be built with the same library
         //       profile? How is this controlled at the CLI layer?
-        self.lib_profile(pkg)
+        self.lib_profile()
     }
 
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
@@ -836,8 +835,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn show_warnings(&self, pkg: &PackageId) -> bool {
-        pkg == &self.current_package || pkg.source_id().is_path() ||
-            self.config.extra_verbose()
+        pkg.source_id().is_path() || self.config.extra_verbose()
     }
 }
 
