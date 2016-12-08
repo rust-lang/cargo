@@ -449,8 +449,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // we don't want to link it up.
         if src_dir.ends_with("deps") {
             // Don't lift up library dependencies
-            if self.ws.current_opt().map_or(false, |p| unit.pkg.package_id() != p.package_id())
-                    && !unit.target.is_bin() {
+            if self.ws.members().find(|&p| p != unit.pkg).is_some() && !unit.target.is_bin() {
                 None
             } else {
                 Some((
