@@ -220,6 +220,7 @@ pub struct DetailedTomlDependency {
     version: Option<String>,
     path: Option<String>,
     git: Option<String>,
+    gh: Option<String>,
     branch: Option<String>,
     tag: Option<String>,
     rev: Option<String>,
@@ -833,13 +834,20 @@ impl TomlDependency {
                      cx: &mut Context,
                      kind: Option<Kind>)
                      -> CargoResult<Dependency> {
-        let details = match *self {
+        let mut details = match *self {
             TomlDependency::Simple(ref version) => DetailedTomlDependency {
                 version: Some(version.clone()),
                 .. Default::default()
             },
             TomlDependency::Detailed(ref details) => details.clone(),
         };
+
+        if details.gh.is_some() {
+            details.git = Some(format!("https://github.com/{}", details.gh.unwrap()));
+            details.gh = None;
+        }
+
+        let details = details;
 
         if details.version.is_none() && details.path.is_none() &&
            details.git.is_none() {
