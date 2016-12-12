@@ -163,6 +163,14 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
                                             method, Some(&resolve), None,
                                             &specs)?;
 
+    for &(ref replace_spec, _) in ws.root_replace() {
+        if !resolved_with_overrides.replacements().keys().any(|r| replace_spec.matches(r)) {
+            ws.config().shell().warn(
+                format!("package replacement is not used: {}", replace_spec)
+            )?
+        }
+    }
+
     let packages = ops::get_resolved_packages(&resolved_with_overrides,
                                               registry);
 

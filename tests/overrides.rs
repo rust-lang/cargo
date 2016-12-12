@@ -922,6 +922,7 @@ fn overriding_nonexistent_no_spurious() {
                 execs().with_status(0));
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
+[WARNING] package replacement is not used: [..]bar:0.1.0
 [FINISHED] [..]
 ").with_stdout(""));
 }
