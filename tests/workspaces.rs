@@ -625,6 +625,28 @@ fn virtual_works() {
 }
 
 #[test]
+fn explicit_package_argument_works_with_virtual_manifest() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["bar"]
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("bar/src/main.rs", "fn main() {}");
+    p.build();
+    assert_that(p.cargo("build").cwd(p.root()).args(&["--package", "bar"]),
+                execs().with_status(0));
+    assert_that(&p.root().join("Cargo.lock"), existing_file());
+    assert_that(&p.bin("bar"), existing_file());
+    assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
+}
+
+#[test]
 fn virtual_misconfigure() {
     let p = project("foo")
         .file("Cargo.toml", r#"
