@@ -30,7 +30,7 @@ Options:
     --aggressive                 Force updating all dependencies of <name> as well
     --precise PRECISE            Update a single dependency to exactly PRECISE
     --manifest-path PATH         Path to the crate's manifest
-    -v, --verbose ...            Use verbose output
+    -v, --verbose ...            Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
     --frozen                     Require Cargo.lock and cache are up to date

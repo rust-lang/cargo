@@ -14,7 +14,7 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    -v, --verbose            Use verbose output
+    -v, --verbose ...        Use verbose output (-vv very verbose/build.rs output)
     --color WHEN             Coloring: auto, always, never
 ";
 

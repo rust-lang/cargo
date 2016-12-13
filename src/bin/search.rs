@@ -25,7 +25,7 @@ Usage:
 Options:
     -h, --help               Print this message
     --host HOST              Host of a registry to search in
-    -v, --verbose ...        Use verbose output
+    -v, --verbose ...        Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
     --limit LIMIT            Limit the number of results (default: 10, max: 100)
