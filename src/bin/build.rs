@@ -49,7 +49,7 @@ Options:
     --no-default-features        Do not build the `default` feature
     --target TRIPLE              Build for the target triple
     --manifest-path PATH         Path to the manifest to compile
-    -v, --verbose ...            Use verbose output
+    -v, --verbose ...            Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
     --message-format FMT         Error format: human, json [default: human]

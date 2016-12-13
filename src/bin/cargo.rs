@@ -43,7 +43,7 @@ Options:
     -V, --version       Print version info and exit
     --list              List installed commands
     --explain CODE      Run `rustc --explain CODE`
-    -v, --verbose ...   Use verbose output
+    -v, --verbose ...   Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
     --frozen            Require Cargo.lock and cache are up to date

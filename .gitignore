@@ -9,3 +9,4 @@ src/registry/target
 src/registry/Cargo.lock
 rustc
 __pycache__
+.idea/
