@@ -84,7 +84,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         features: &options.flag_features,
         all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
-        spec: &options.flag_package,
+        spec: ops::Packages::Packages(&options.flag_package),
         mode: ops::CompileMode::Check,
         release: options.flag_release,
         filter: ops::CompileFilter::new(options.flag_lib,
