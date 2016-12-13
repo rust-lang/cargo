@@ -5,7 +5,7 @@ extern crate cargo;
 
 use std::collections::HashMap;
 
-use hamcrest::{assert_that, equal_to, contains};
+use hamcrest::{assert_that, equal_to, contains, not};
 
 use cargo::core::source::{SourceId, GitReference};
 use cargo::core::dependency::Kind::{self, Development};
@@ -235,6 +235,27 @@ fn resolving_with_specific_version() {
 
     assert_that(&res, contains(names(&[("root", "1.0.0"),
                                        ("foo", "1.0.1")])));
+}
+
+#[test]
+fn test_resolving_maximum_version_with_transitive_deps() {
+    let mut reg = registry(vec![
+        pkg!(("util", "1.2.2")),
+        pkg!(("util", "1.0.0")),
+        pkg!(("util", "1.1.1")),
+        pkg!("foo" => [dep_req("util", "1.0.0")]),
+        pkg!("bar" => [dep_req("util", ">=1.0.1")]),
+    ]);
+
+    let res = resolve(pkg_id("root"), vec![dep_req("foo", "1.0.0"), dep_req("bar", "1.0.0")],
+                      &mut reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.0"),
+                                       ("bar", "1.0.0"),
+                                       ("util", "1.2.2")])));
+    assert_that(&res, not(contains(names(&[("util", "1.0.1")]))));
+    assert_that(&res, not(contains(names(&[("util", "1.1.1")]))));
 }
 
 #[test]
