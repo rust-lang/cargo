@@ -26,7 +26,9 @@ install:
   - if defined MINGW_URL appveyor DownloadFile %MINGW_URL%/%MINGW_ARCHIVE%
   - if defined MINGW_URL 7z x -y %MINGW_ARCHIVE% > nul
   - if defined MINGW_URL set PATH=%CD%\%MINGW_DIR%\bin;C:\msys64\usr\bin;%PATH%
-  - curl -sSf -o rustup-init.exe https://win.rustup.rs/
+
+  # FIXME(#3394) use master rustup
+  - curl -sSfO https://static.rust-lang.org/rustup/archive/0.6.5/x86_64-pc-windows-msvc/rustup-init.exe
   - rustup-init.exe -y --default-host x86_64-pc-windows-msvc
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
   - if NOT "%TARGET%" == "x86_64-pc-windows-msvc" rustup target add %TARGET%
