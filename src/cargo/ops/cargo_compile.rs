@@ -189,13 +189,13 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
 
     let profiles = ws.profiles();
 
-    let pair = resolve_dependencies(ws,
-                                    source,
-                                    features,
-                                    all_features,
-                                    no_default_features,
-                                    &specs)?;
-    let (packages, resolve_with_overrides) = pair;
+    let resolve = resolve_dependencies(ws,
+                                       source,
+                                       features,
+                                       all_features,
+                                       no_default_features,
+                                       &spec)?;
+    let (spec, packages, resolve_with_overrides) = resolve;
 
     let mut pkgids = Vec::new();
     if spec.len() > 0 {
