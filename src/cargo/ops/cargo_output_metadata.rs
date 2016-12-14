@@ -43,17 +43,18 @@ fn metadata_no_deps(ws: &Workspace,
 
 fn metadata_full(ws: &Workspace,
                  opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+    let specs = Packages::All.into_package_id_specs(ws)?;
     let deps = ops::resolve_dependencies(ws,
                                          None,
                                          &opt.features,
                                          opt.all_features,
                                          opt.no_default_features,
-                                         &Packages::All)?;
-    let (_, packages, resolve) = deps;
+                                         &specs)?;
+    let (packages, resolve) = deps;
 
-    let packages = try!(packages.package_ids()
-                                .map(|i| packages.get(i).map(|p| p.clone()))
-                                .collect());
+    let packages = packages.package_ids()
+                           .map(|i| packages.get(i).map(|p| p.clone()))
+                           .collect::<CargoResult<Vec<_>>>()?;
 
     Ok(ExportInfo {
         packages: packages,
