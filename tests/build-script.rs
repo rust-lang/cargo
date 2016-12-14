@@ -2345,25 +2345,15 @@ fn assume_build_script_when_build_rs_present() {
             authors = []
         "#)
         .file("src/main.rs", r#"
-            use std::path::Path;
             fn main() {
-                let f = env!("OUT_DIR");
-                assert!(
-                    ! Path::new(f).join("output").exists()
-                );
+                if cfg!(foo) {
+                    panic!("the build script was run");
+                }
             }
         "#)
         .file("build.rs", r#"
-            use std::env;
-            use std::fs::File;
-            use std::io::Write;
-            use std::path::Path;
-
             fn main() {
-                let out_dir = env::var_os("OUT_DIR").unwrap();
-                let out_dir = Path::new(&out_dir).join("output");
-                let mut f = File::create(&out_dir).unwrap();
-                f.write_all(b"foo").unwrap();
+                println!("cargo:rustc-cfg=foo");
             }
         "#);
     p.build();
@@ -2390,25 +2380,15 @@ fn if_build_set_to_false_dont_treat_build_rs_as_build_script() {
             build = false
         "#)
         .file("src/main.rs", r#"
-            use std::path::Path;
             fn main() {
-                let f = env!("OUT_DIR");
-                assert!(
-                    ! Path::new(f).join("output").exists()
-                )
+                if cfg!(foo) {
+                    panic!("the build script was run");
+                }
             }
         "#)
         .file("build.rs", r#"
-            use std::env;
-            use std::fs::File;
-            use std::io::Write;
-            use std::path::Path;
-
             fn main() {
-                let out_dir = env::var_os("OUT_DIR").unwrap();
-                let out_dir = Path::new(&out_dir).join("output");
-                let mut f = File::create(&out_dir).unwrap();
-                f.write_all(b"foo").unwrap();
+                println!("cargo:rustc-cfg=foo");
             }
         "#);
     p.build();
