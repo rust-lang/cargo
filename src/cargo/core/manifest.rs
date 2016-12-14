@@ -71,7 +71,7 @@ impl LibKind {
             "lib" => LibKind::Lib,
             "rlib" => LibKind::Rlib,
             "dylib" => LibKind::Dylib,
-            "procc-macro" => LibKind::ProcMacro,
+            "proc-macro" => LibKind::ProcMacro,
             s => LibKind::Other(s.to_string()),
         }
     }
@@ -136,6 +136,7 @@ pub struct Profile {
     pub test: bool,
     pub doc: bool,
     pub run_custom_build: bool,
+    pub check: bool,
     pub panic: Option<String>,
 }
 
@@ -168,6 +169,7 @@ pub struct Profiles {
     pub bench_deps: Profile,
     pub doc: Profile,
     pub custom_build: Profile,
+    pub check: Profile,
 }
 
 /// Information about a binary, a library, an example, etc. that is part of the
@@ -531,6 +533,13 @@ impl Profile {
             ..Profile::default_dev()
         }
     }
+
+    pub fn default_check() -> Profile {
+        Profile {
+            check: true,
+            ..Profile::default_dev()
+        }
+    }
 }
 
 impl Default for Profile {
@@ -547,6 +556,7 @@ impl Default for Profile {
             test: false,
             doc: false,
             run_custom_build: false,
+            check: false,
             panic: None,
         }
     }
@@ -560,6 +570,8 @@ impl fmt::Display for Profile {
             write!(f, "Profile(doc)")
         } else if self.run_custom_build {
             write!(f, "Profile(run)")
+        } else if self.check {
+            write!(f, "Profile(check)")
         } else {
             write!(f, "Profile(build)")
         }

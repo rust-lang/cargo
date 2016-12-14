@@ -20,7 +20,7 @@ use super::layout::Layout;
 use super::links::Links;
 use super::{Kind, Compilation, BuildConfig};
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
 pub struct Unit<'a> {
     pub pkg: &'a Package,
     pub target: &'a Target,
@@ -70,9 +70,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let dest = if build_config.release { "release" } else { "debug" };
         let host_layout = Layout::new(ws, None, &dest)?;
         let target_layout = match build_config.requested_target.as_ref() {
-            Some(target) => {
-                Some(Layout::new(ws, Some(&target), &dest)?)
-            }
+            Some(target) => Some(Layout::new(ws, Some(&target), dest)?),
             None => None,
         };
 
@@ -148,6 +146,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         unit: &Unit<'a>,
                         crate_types: &mut BTreeSet<String>)
                         -> CargoResult<()> {
+        if unit.profile.check {
+            crate_types.insert("metadata".to_string());
+        }
         for target in unit.pkg.manifest().targets() {
             crate_types.extend(target.rustc_crate_types().iter().map(|s| {
                 if *s == "lib" {
@@ -173,13 +174,17 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                       "RUSTFLAGS")?;
         let mut process = self.config.rustc()?.process();
         process.arg("-")
-               .arg("--crate-name").arg("_")
+               .arg("--crate-name").arg("___")
                .arg("--print=file-names")
                .args(&rustflags)
                .env_remove("RUST_LOG");
 
         for crate_type in crate_types {
-            process.arg("--crate-type").arg(crate_type);
+            // Here and below we'll skip the metadata crate-type because it is
+            // not supported by older compilers. We'll do this one manually.
+            if crate_type != "metadata" {
+                process.arg("--crate-type").arg(crate_type);
+            }
         }
         if kind == Kind::Target {
             process.arg("--target").arg(&self.target_triple());
@@ -203,27 +208,37 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut map = HashMap::new();
         for crate_type in crate_types {
             let not_supported = error.lines().any(|line| {
-                line.contains("unsupported crate type") &&
-                    line.contains(crate_type)
+                (line.contains("unsupported crate type") ||
+                 line.contains("unknown crate type")) &&
+                line.contains(crate_type)
             });
             if not_supported {
                 map.insert(crate_type.to_string(), None);
-                continue
+                continue;
+            }
+            if crate_type == "metadata" {
+                continue;
             }
             let line = match lines.next() {
                 Some(line) => line,
                 None => bail!("malformed output when learning about \
                                target-specific information from rustc"),
             };
-            let mut parts = line.trim().split('_');
+            let mut parts = line.trim().split("___");
             let prefix = parts.next().unwrap();
             let suffix = match parts.next() {
                 Some(part) => part,
                 None => bail!("output of --print=file-names has changed in \
                                the compiler, cannot parse"),
             };
-            map.insert(crate_type.to_string(),
-                       Some((prefix.to_string(), suffix.to_string())));
+
+            map.insert(crate_type.to_string(), Some((prefix.to_string(), suffix.to_string())));
+        }
+ 
+        // Manually handle the metadata case. If it is not supported by the
+        // compiler we'll error out elsewhere.
+        if crate_types.contains("metadata") {
+            map.insert("metadata".to_string(), Some(("lib".to_owned(), ".rmeta".to_owned())));
         }
 
         let cfg = if has_cfg {
@@ -251,8 +266,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut visited = HashSet::new();
         for unit in units {
             self.walk_used_in_plugin_map(unit,
-                                              unit.target.for_host(),
-                                              &mut visited)?;
+                                         unit.target.for_host(),
+                                         &mut visited)?;
         }
         Ok(())
     }
@@ -270,8 +285,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
         for unit in self.dep_targets(unit)? {
             self.walk_used_in_plugin_map(&unit,
-                                              is_plugin || unit.target.for_host(),
-                                              visited)?;
+                                         is_plugin || unit.target.for_host(),
+                                         visited)?;
         }
         Ok(())
     }
@@ -509,20 +524,25 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     }
                 }
             };
-            match *unit.target.kind() {
-                TargetKind::Example |
-                TargetKind::Bin |
-                TargetKind::CustomBuild |
-                TargetKind::Bench |
-                TargetKind::Test => {
-                    add("bin", false)?;
-                }
-                TargetKind::Lib(..) if unit.profile.test => {
-                    add("bin", false)?;
-                }
-                TargetKind::Lib(ref libs) => {
-                    for lib in libs {
-                        add(lib.crate_type(), lib.linkable())?;
+
+            if unit.profile.check {
+                add("metadata", true)?;
+            } else {
+                match *unit.target.kind() {
+                    TargetKind::Example |
+                    TargetKind::Bin |
+                    TargetKind::CustomBuild |
+                    TargetKind::Bench |
+                    TargetKind::Test => {
+                        add("bin", false)?;
+                    }
+                    TargetKind::Lib(..) if unit.profile.test => {
+                        add("bin", false)?;
+                    }
+                    TargetKind::Lib(ref libs) => {
+                        for lib in libs {
+                            add(lib.crate_type(), lib.linkable())?;
+                        }
                     }
                 }
             }
@@ -593,12 +613,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             match self.get_package(id) {
                 Ok(pkg) => {
                     pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                        Ok(Unit {
+                        let profile = if unit.profile.check &&
+                                         !t.is_custom_build()
+                                         && !t.for_host() {
+                            &self.profiles.check
+                        } else {
+                            self.lib_profile()
+                        };
+                        let unit = Unit {
                             pkg: pkg,
                             target: t,
-                            profile: self.lib_profile(),
+                            profile: profile,
                             kind: unit.kind.for_target(t),
-                        })
+                        };
+                        Ok(unit)
                     })
                 }
                 Err(e) => Some(Err(e))
