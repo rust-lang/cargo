@@ -47,7 +47,7 @@ pub struct CompileOptions<'a> {
     pub all_features: bool,
     /// Flag if the default feature should be built for the root package
     pub no_default_features: bool,
-    /// Root package to build (if empty it's the current one)
+    /// A set of packages to build.
     pub spec: Packages<'a>,
     /// Filter to apply to the root package to select which targets will be
     /// built.
@@ -86,6 +86,23 @@ pub enum Packages<'a> {
     Packages(&'a [String]),
 }
 
+impl<'a> Packages<'a> {
+    pub fn into_package_id_specs(self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
+        let specs = match self {
+            Packages::All => {
+                ws.members()
+                    .map(Package::package_id)
+                    .map(PackageIdSpec::from_package_id)
+                    .collect()
+            }
+            Packages::Packages(packages) => {
+                packages.iter().map(|p| PackageIdSpec::parse(&p)).collect::<CargoResult<Vec<_>>>()?
+            }
+        };
+        Ok(specs)
+    }
+}
+
 pub enum CompileFilter<'a> {
     Everything,
     Only {
@@ -112,8 +129,8 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
                                 features: &[String],
                                 all_features: bool,
                                 no_default_features: bool,
-                                specs: &Packages<'a>)
-                                -> CargoResult<(Vec<PackageIdSpec>, PackageSet<'a>, Resolve)> {
+                                specs: &[PackageIdSpec])
+                                -> CargoResult<(PackageSet<'a>, Resolve)> {
     let features = features.iter().flat_map(|s| {
         s.split_whitespace()
     }).map(|s| s.to_string()).collect::<Vec<String>>();
@@ -147,18 +164,6 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
         }
     };
 
-    let specs = match *specs {
-        Packages::All => {
-            ws.members()
-                .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
-                .collect()
-        }
-        Packages::Packages(packages) => {
-            packages.iter().map(|p| PackageIdSpec::parse(&p)).collect::<CargoResult<Vec<_>>>()?
-        }
-    };
-
     let resolved_with_overrides =
             ops::resolve_with_previous(&mut registry, ws,
                                             method, Some(&resolve), None,
@@ -175,7 +180,7 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
     let packages = ops::get_resolved_packages(&resolved_with_overrides,
                                               registry);
 
-    Ok((specs, packages, resolved_with_overrides))
+    Ok((packages, resolved_with_overrides))
 }
 
 pub fn compile_ws<'a>(ws: &Workspace<'a>,
@@ -197,17 +202,18 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
 
     let profiles = ws.profiles();
 
+    let specs = spec.into_package_id_specs(ws)?;
     let resolve = resolve_dependencies(ws,
                                        source,
                                        features,
                                        all_features,
                                        no_default_features,
-                                       &spec)?;
-    let (spec, packages, resolve_with_overrides) = resolve;
+                                       &specs)?;
+    let (packages, resolve_with_overrides) = resolve;
 
     let mut pkgids = Vec::new();
-    if spec.len() > 0 {
-        for p in spec.iter() {
+    if specs.len() > 0 {
+        for p in specs.iter() {
             pkgids.push(p.query(resolve_with_overrides.iter())?);
         }
     } else {
