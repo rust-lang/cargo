@@ -70,6 +70,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
         let path = path.into_path_unlocked();
         if fs::metadata(&path).is_ok() {
             let mut shell = options.compile_opts.config.shell();
+            shell.status("Opening", path.display())?;
             match open_docs(&path) {
                 Ok(m) => shell.status("Launching", m)?,
                 Err(e) => {
@@ -111,15 +112,15 @@ fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
 #[cfg(target_os = "windows")]
 fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
     match Command::new("cmd").arg("/C").arg(path).status() {
-        Ok(_) => return Ok("cmd /C"),
-        Err(_) => return Err(vec!["cmd /C"]),
-    };
+        Ok(_) => Ok("cmd /C"),
+        Err(_) => Err(vec!["cmd /C"]),
+    }
 }
 
 #[cfg(target_os = "macos")]
 fn open_docs(path: &Path) -> Result<&'static str, Vec<&'static str>> {
     match Command::new("open").arg(path).status() {
-        Ok(_) => return Ok("open"),
-        Err(_) => return Err(vec!["open"]),
-    };
+        Ok(_) => Ok("open"),
+        Err(_) => Err(vec!["open"]),
+    }
 }
