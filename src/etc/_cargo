@@ -51,6 +51,23 @@ case $state in
                     '--color=:colorization option:(auto always never)' \
                     ;;
 
+            check)
+                _arguments \
+                    '--features=[space separated feature list]' \
+                    '--all-features[enable all available features]' \
+                    '(-h, --help)'{-h,--help}'[show help message]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
+                    "${command_scope_spec[@]}" \
+                    '--manifest-path=[path to manifest]: :_files -/' \
+                    '--no-default-features[do not check the default features]' \
+                    '(-p,--package)'{-p=,--package=}'[package to check]:packages:_get_package_names' \
+                    '--release=[check in release mode]' \
+                    '--target=[target triple]' \
+                    '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
+                    '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
+                    '--color=:colorization option:(auto always never)' \
+                    ;;
+
             clean)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
@@ -384,6 +401,7 @@ _cargo_cmds(){
 local -a commands;commands=(
 'bench:execute all benchmarks of a local package'
 'build:compile the current project'
+'check:check the current project without compiling'
 'clean:remove generated artifacts'
 'doc:build package documentation'
 'fetch:fetch package dependencies'

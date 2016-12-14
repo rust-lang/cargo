@@ -450,6 +450,7 @@ impl<'cfg> Workspace<'cfg> {
                 bench_deps: Profile::default_release(),
                 doc: Profile::default_doc(),
                 custom_build: Profile::default_custom_build(),
+                check: Profile::default_check(),
             };
 
             for pkg in self.members().filter(|p| p.manifest_path() != root_manifest) {

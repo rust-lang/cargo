@@ -65,10 +65,11 @@ pub struct CompileOptions<'a> {
     pub target_rustc_args: Option<&'a [String]>,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum CompileMode {
     Test,
     Build,
+    Check,
     Bench,
     Doc { deps: bool },
 }
@@ -343,6 +344,7 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileMode::Test => test,
         CompileMode::Bench => &profiles.bench,
         CompileMode::Build => build,
+        CompileMode::Check => &profiles.check,
         CompileMode::Doc { .. } => &profiles.doc,
     };
     match *filter {
@@ -374,7 +376,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                     }
                     Ok(base)
                 }
-                CompileMode::Build => {
+                CompileMode::Build | CompileMode::Check => {
                     Ok(pkg.targets().iter().filter(|t| {
                         t.is_bin() || t.is_lib()
                     }).map(|t| (t, profile)).collect())

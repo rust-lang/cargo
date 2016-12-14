@@ -54,10 +54,10 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
             for kind in [Kind::Host, Kind::Target].iter() {
                 let Profiles {
                     ref release, ref dev, ref test, ref bench, ref doc,
-                    ref custom_build, ref test_deps, ref bench_deps,
+                    ref custom_build, ref test_deps, ref bench_deps, ref check
                 } = *profiles;
                 let profiles = [release, dev, test, bench, doc, custom_build,
-                                test_deps, bench_deps];
+                                test_deps, bench_deps, check];
                 for profile in profiles.iter() {
                     units.push(Unit {
                         pkg: &pkg,
