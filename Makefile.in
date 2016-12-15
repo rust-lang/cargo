@@ -259,6 +259,7 @@ ifdef OPENSSL_OS_$(1)
 
 target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
 		| target/openssl/
+	rm -rf target/openssl/$(1)
 	mkdir -p target/openssl/$(1)
 	tar xf $$< -C target/openssl/$(1) --strip-components 1
 	(cd target/openssl/$(1) && \

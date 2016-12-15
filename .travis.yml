@@ -29,7 +29,7 @@ matrix:
            MACOSX_DEPLOYMENT_TARGET=10.7
       os: osx
     - env: TARGET=i686-apple-darwin
-           MAKE_TARGETS=test
+           MAKE_TARGETS=test-unit-i686-apple-darwin
            MACOSX_DEPLOYMENT_TARGET=10.7
            CFG_DISABLE_CROSS_TESTS=1
       os: osx
