@@ -24,11 +24,11 @@ endif
 
 CFG_BUILD_DATE = $(shell date +%F)
 
-ifeq ($(wildcard .git),)
+ifeq ($(wildcard $(CFG_SRC_DIR)/.git),)
 CFG_VERSION = $(CFG_RELEASE) (built $(CFG_BUILD_DATE))
 else
-CFG_VER_DATE = $(shell git log -1 --date=short --pretty=format:'%cd')
-CFG_VER_HASH = $(shell git rev-parse --short HEAD)
+CFG_VER_DATE = $(shell git --git-dir='$(CFG_SRC_DIR).git' log -1 --date=short --pretty=format:'%cd')
+CFG_VER_HASH = $(shell git --git-dir='$(CFG_SRC_DIR).git' rev-parse --short HEAD)
 CFG_VERSION = $(CFG_RELEASE) ($(CFG_VER_HASH) $(CFG_VER_DATE))
 endif
 PKG_NAME = cargo-$(CFG_PACKAGE_VERS)
@@ -259,6 +259,7 @@ ifdef OPENSSL_OS_$(1)
 
 target/openssl/$(1).stamp: target/openssl/openssl-$$(OPENSSL_VERS).tar.gz \
 		| target/openssl/
+	rm -rf target/openssl/$(1)
 	mkdir -p target/openssl/$(1)
 	tar xf $$< -C target/openssl/$(1) --strip-components 1
 	(cd target/openssl/$(1) && \
