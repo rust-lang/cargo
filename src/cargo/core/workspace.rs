@@ -242,8 +242,8 @@ impl<'cfg> Workspace<'cfg> {
         while let Some(path) = cur {
             let manifest = path.join("Cargo.toml");
             debug!("find_root - trying {}", manifest.display());
-            if let Ok(pkg) = self.packages.load(&manifest) {
-                match *pkg.workspace_config() {
+            if manifest.exists() {
+                match *self.packages.load(&manifest)?.workspace_config() {
                     WorkspaceConfig::Root { .. } => {
                         debug!("find_root - found");
                         return Ok(Some(manifest))
