@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
+use std::io::{self, Write};
 use std::path::{self, PathBuf};
 use std::sync::Arc;
 
@@ -297,15 +298,22 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                     Ok(())
                 },
                 &mut |line| {
-                    let compiler_message = json::Json::from_str(line).map_err(|_| {
-                        internal(&format!("compiler produced invalid json: `{}`", line))
-                    })?;
+                    // stderr from rustc can have a mix of JSON and non-JSON output
+                    if line.starts_with("{") {
+                        // Handle JSON lines
+                        let compiler_message = json::Json::from_str(line).map_err(|_| {
+                            internal(&format!("compiler produced invalid json: `{}`", line))
+                        })?;
 
-                    machine_message::emit(machine_message::FromCompiler {
-                        package_id: &package_id,
-                        target: &target,
-                        message: compiler_message,
-                    });
+                        machine_message::emit(machine_message::FromCompiler {
+                            package_id: &package_id,
+                            target: &target,
+                            message: compiler_message,
+                        });
+                    } else {
+                        // Forward non-JSON to stderr
+                        writeln!(io::stderr(), "{}", line)?;
+                    }
                     Ok(())
                 },
             ).map(|_| ())
