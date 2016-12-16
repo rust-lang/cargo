@@ -141,7 +141,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     let profiles = ws.profiles();
 
     let specs = spec.into_package_id_specs(ws)?;
-    let resolve = ops::resolve_dependencies(ws,
+    let resolve = ops::resolve_ws_precisely(ws,
                                             source,
                                             features,
                                             all_features,
