@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 
-use core::{PackageId, PackageIdSpec, SourceId, Workspace};
+use core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
 use core::registry::PackageRegistry;
 use core::resolver::{self, Resolve, Method};
+use sources::PathSource;
+use util::{profile, human, CargoResult, ChainError};
 use ops;
-use util::CargoResult;
 
 /// Resolve all dependencies for the specified `package` using the previous
 /// lockfile as a guide if present.
@@ -23,6 +24,65 @@ pub fn resolve_ws(registry: &mut PackageRegistry, ws: &Workspace)
         ops::write_pkg_lockfile(ws, &resolve)?;
     }
     Ok(resolve)
+}
+
+pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
+                                source: Option<Box<Source + 'a>>,
+                                features: &[String],
+                                all_features: bool,
+                                no_default_features: bool,
+                                specs: &[PackageIdSpec])
+                                -> CargoResult<(PackageSet<'a>, Resolve)> {
+    let features = features.iter().flat_map(|s| {
+        s.split_whitespace()
+    }).map(|s| s.to_string()).collect::<Vec<String>>();
+
+    let mut registry = PackageRegistry::new(ws.config())?;
+
+    if let Some(source) = source {
+        if let Some(root_package) = ws.current_opt() {
+            registry.add_preloaded(root_package.package_id().source_id(), source);
+        }
+    }
+
+    // First, resolve the root_package's *listed* dependencies, as well as
+    // downloading and updating all remotes and such.
+    let resolve = resolve_ws(&mut registry, ws)?;
+
+    // Second, resolve with precisely what we're doing. Filter out
+    // transitive dependencies if necessary, specify features, handle
+    // overrides, etc.
+    let _p = profile::start("resolving w/ overrides...");
+
+    add_overrides(&mut registry, ws)?;
+
+    let method = if all_features {
+        Method::Everything
+    } else {
+        Method::Required {
+            dev_deps: true, // TODO: remove this option?
+            features: &features,
+            uses_default_features: !no_default_features,
+        }
+    };
+
+    let resolved_with_overrides =
+    ops::resolve_with_previous(&mut registry, ws,
+                               method, Some(&resolve), None,
+                               &specs)?;
+
+    for &(ref replace_spec, _) in ws.root_replace() {
+        if !resolved_with_overrides.replacements().keys().any(|r| replace_spec.matches(r)) {
+            ws.config().shell().warn(
+                format!("package replacement is not used: {}", replace_spec)
+            )?
+        }
+    }
+
+    let packages = ops::get_resolved_packages(&resolved_with_overrides,
+                                              registry);
+
+    Ok((packages, resolved_with_overrides))
 }
 
 /// Resolve all dependencies for a package using an optional previous instance
@@ -168,4 +228,33 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             None => true,
         }
     }
+}
+
+/// Read the `paths` configuration variable to discover all path overrides that
+/// have been configured.
+fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
+                     ws: &Workspace<'a>) -> CargoResult<()> {
+    let paths = match ws.config().get_list("paths")? {
+        Some(list) => list,
+        None => return Ok(())
+    };
+
+    let paths = paths.val.iter().map(|&(ref s, ref p)| {
+        // The path listed next to the string is the config file in which the
+        // key was located, so we want to pop off the `.cargo/config` component
+        // to get the directory containing the `.cargo` folder.
+        (p.parent().unwrap().parent().unwrap().join(s), p)
+    });
+
+    for (path, definition) in paths {
+        let id = SourceId::for_path(&path)?;
+        let mut source = PathSource::new_recursive(&path, &id, ws.config());
+        source.update().chain_error(|| {
+            human(format!("failed to update path override `{}` \
+                           (defined in `{}`)", path.display(),
+                          definition.display()))
+        })?;
+        registry.add_override(&id, Box::new(source));
+    }
+    Ok(())
 }
