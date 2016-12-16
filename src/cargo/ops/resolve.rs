@@ -4,26 +4,19 @@ use core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
 use core::registry::PackageRegistry;
 use core::resolver::{self, Resolve, Method};
 use sources::PathSource;
-use util::{profile, human, CargoResult, ChainError};
 use ops;
+use util::{profile, human, CargoResult, ChainError};
 
 /// Resolve all dependencies for the specified `package` using the previous
 /// lockfile as a guide if present.
 ///
 /// This function will also write the result of resolution as a new
 /// lockfile.
-pub fn resolve_ws(registry: &mut PackageRegistry, ws: &Workspace)
-                   -> CargoResult<Resolve> {
-    let prev = ops::load_pkg_lockfile(ws)?;
-    let resolve = resolve_with_previous(registry, ws,
-                                        Method::Everything,
-                                        prev.as_ref(), None, &[])?;
-
-    // Avoid writing a lockfile if we are `cargo install`ing a non local package.
-    if ws.current_opt().map(|pkg| pkg.package_id().source_id().is_path()).unwrap_or(true) {
-        ops::write_pkg_lockfile(ws, &resolve)?;
-    }
-    Ok(resolve)
+pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
+    let mut registry = PackageRegistry::new(ws.config())?;
+    let resolve = resolve_with_registry(ws, &mut registry, true)?;
+    let packages = get_resolved_packages(&resolve, registry);
+    Ok((packages, resolve))
 }
 
 pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
@@ -39,15 +32,18 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
 
     let mut registry = PackageRegistry::new(ws.config())?;
 
+    let mut write_lockfile = true;
     if let Some(source) = source {
         if let Some(root_package) = ws.current_opt() {
+            // Avoid writing a lockfile if we are `cargo install`ing a non local package.
+            write_lockfile = false;
             registry.add_preloaded(root_package.package_id().source_id(), source);
         }
     }
 
     // First, resolve the root_package's *listed* dependencies, as well as
     // downloading and updating all remotes and such.
-    let resolve = resolve_ws(&mut registry, ws)?;
+    let resolve = resolve_with_registry(ws, &mut registry, write_lockfile)?;
 
     // Second, resolve with precisely what we're doing. Filter out
     // transitive dependencies if necessary, specify features, handle
@@ -79,11 +75,24 @@ pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
         }
     }
 
-    let packages = ops::get_resolved_packages(&resolved_with_overrides,
-                                              registry);
+    let packages = get_resolved_packages(&resolved_with_overrides, registry);
 
     Ok((packages, resolved_with_overrides))
 }
+
+fn resolve_with_registry(ws: &Workspace, registry: &mut PackageRegistry, write_lockfile: bool)
+                         -> CargoResult<Resolve> {
+    let prev = ops::load_pkg_lockfile(ws)?;
+    let resolve = resolve_with_previous(registry, ws,
+                                        Method::Everything,
+                                        prev.as_ref(), None, &[])?;
+
+    if write_lockfile {
+        ops::write_pkg_lockfile(ws, &resolve)?;
+    }
+    Ok(resolve)
+}
+
 
 /// Resolve all dependencies for a package using an optional previous instance
 /// of resolve to guide the resolution process.
@@ -258,3 +267,11 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
     }
     Ok(())
 }
+
+fn get_resolved_packages<'a>(resolve: &Resolve,
+                             registry: PackageRegistry<'a>)
+                             -> PackageSet<'a> {
+    let ids: Vec<PackageId> = resolve.iter().cloned().collect();
+    registry.get(&ids)
+}
+
