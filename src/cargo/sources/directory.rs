@@ -71,6 +71,16 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         for entry in entries {
             let entry = entry?;
             let path = entry.path();
+
+            // Ignore hidden/dot directories as they typically don't contain
+            // crates and otherwise may conflict with a VCS
+            // (rust-lang/cargo#3414).
+            if let Some(s) = path.file_name().and_then(|s| s.to_str()) {
+                if s.starts_with(".") {
+                    continue
+                }
+            }
+
             let mut src = PathSource::new(&path, &self.source_id, self.config);
             src.update()?;
             let pkg = src.root_package()?;
