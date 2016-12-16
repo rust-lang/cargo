@@ -7,7 +7,7 @@ use sources::PathSource;
 use ops;
 use util::{profile, human, CargoResult, ChainError};
 
-/// Resolve all dependencies for the specified `package` using the previous
+/// Resolve all dependencies for the workspace using the previous
 /// lockfile as a guide if present.
 ///
 /// This function will also write the result of resolution as a new
@@ -19,7 +19,9 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
     Ok((packages, resolve))
 }
 
-pub fn resolve_dependencies<'a>(ws: &Workspace<'a>,
+/// Resolves dependencies for some packages of the workspace,
+/// taking into account `paths` overrides and activated features.
+pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
                                 source: Option<Box<Source + 'a>>,
                                 features: &[String],
                                 all_features: bool,
