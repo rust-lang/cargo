@@ -263,6 +263,8 @@ pub struct Execs {
     expect_exit_code: Option<i32>,
     expect_stdout_contains: Vec<String>,
     expect_stderr_contains: Vec<String>,
+    expect_stdout_not_contains: Vec<String>,
+    expect_stderr_not_contains: Vec<String>,
     expect_json: Option<Vec<Json>>,
 }
 
@@ -289,6 +291,16 @@ impl Execs {
 
     pub fn with_stderr_contains<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stderr_contains.push(expected.to_string());
+        self
+    }
+
+    pub fn with_stdout_does_not_contain<S: ToString>(mut self, expected: S) -> Execs {
+        self.expect_stdout_not_contains.push(expected.to_string());
+        self
+    }
+
+    pub fn with_stderr_does_not_contain<S: ToString>(mut self, expected: S) -> Execs {
+        self.expect_stderr_not_contains.push(expected.to_string());
         self
     }
 
@@ -321,14 +333,22 @@ impl Execs {
 
     fn match_stdout(&self, actual: &Output) -> ham::MatchResult {
         self.match_std(self.expect_stdout.as_ref(), &actual.stdout,
-                       "stdout", &actual.stderr, false)?;
+                       "stdout", &actual.stderr, MatchKind::Exact)?;
         for expect in self.expect_stdout_contains.iter() {
             self.match_std(Some(expect), &actual.stdout, "stdout",
-                           &actual.stderr, true)?;
+                           &actual.stderr, MatchKind::Partial)?;
         }
         for expect in self.expect_stderr_contains.iter() {
             self.match_std(Some(expect), &actual.stderr, "stderr",
-                           &actual.stdout, true)?;
+                           &actual.stdout, MatchKind::Partial)?;
+        }
+        for expect in self.expect_stdout_not_contains.iter() {
+            self.match_std(Some(expect), &actual.stdout, "stdout",
+                           &actual.stderr, MatchKind::NotPresent)?;
+        }
+        for expect in self.expect_stderr_not_contains.iter() {
+            self.match_std(Some(expect), &actual.stderr, "stderr",
+                           &actual.stdout, MatchKind::NotPresent)?;
         }
 
         if let Some(ref objects) = self.expect_json {
@@ -349,12 +369,12 @@ impl Execs {
 
     fn match_stderr(&self, actual: &Output) -> ham::MatchResult {
         self.match_std(self.expect_stderr.as_ref(), &actual.stderr,
-                       "stderr", &actual.stdout, false)
+                       "stderr", &actual.stdout, MatchKind::Exact)
     }
 
     fn match_std(&self, expected: Option<&String>, actual: &[u8],
                  description: &str, extra: &[u8],
-                 partial: bool) -> ham::MatchResult {
+                 kind: MatchKind) -> ham::MatchResult {
         let out = match expected {
             Some(out) => out,
             None => return ham::success(),
@@ -368,33 +388,46 @@ impl Execs {
         let actual = actual.replace("\r", "");
         let actual = actual.replace("\t", "<tab>");
 
-        let mut a = actual.lines();
-        let e = out.lines();
+        match kind {
+            MatchKind::Exact => {
+                let a = actual.lines();
+                let e = out.lines();
 
-        if partial {
-            let mut diffs = self.diff_lines(a.clone(), e.clone(), partial);
-            while let Some(..) = a.next() {
-                let a = self.diff_lines(a.clone(), e.clone(), partial);
-                if a.len() < diffs.len() {
-                    diffs = a;
-                }
+                let diffs = self.diff_lines(a, e, false);
+                ham::expect(diffs.is_empty(),
+                            format!("differences:\n\
+                                    {}\n\n\
+                                    other output:\n\
+                                    `{}`", diffs.join("\n"),
+                                    String::from_utf8_lossy(extra)))
             }
-            ham::expect(diffs.is_empty(),
-                        format!("expected to find:\n\
-                                 {}\n\n\
-                                 did not find in output:\n\
-                                 {}", out,
-                                 actual))
-        } else {
-            let diffs = self.diff_lines(a, e, partial);
-            ham::expect(diffs.is_empty(),
-                        format!("differences:\n\
-                                {}\n\n\
-                                other output:\n\
-                                `{}`", diffs.join("\n"),
-                                String::from_utf8_lossy(extra)))
-        }
+            MatchKind::Partial => {
+                let mut a = actual.lines();
+                let e = out.lines();
 
+                let mut diffs = self.diff_lines(a.clone(), e.clone(), true);
+                while let Some(..) = a.next() {
+                    let a = self.diff_lines(a.clone(), e.clone(), true);
+                    if a.len() < diffs.len() {
+                        diffs = a;
+                    }
+                }
+                ham::expect(diffs.is_empty(),
+                            format!("expected to find:\n\
+                                     {}\n\n\
+                                     did not find in output:\n\
+                                     {}", out,
+                                     actual))
+            }
+            MatchKind::NotPresent => {
+                ham::expect(!actual.contains(out),
+                            format!("expected not to find:\n\
+                                     {}\n\n\
+                                     but found in output:\n\
+                                     {}", out,
+                                     actual))
+            }
+        }
     }
 
     fn match_json(&self, expected: &Json, line: &str) -> ham::MatchResult {
@@ -439,6 +472,13 @@ impl Execs {
             }
         }).collect()
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum MatchKind {
+    Exact,
+    Partial,
+    NotPresent,
 }
 
 pub fn lines_match(expected: &str, mut actual: &str) -> bool {
@@ -589,6 +629,8 @@ pub fn execs() -> Execs {
         expect_exit_code: None,
         expect_stdout_contains: Vec::new(),
         expect_stderr_contains: Vec::new(),
+        expect_stdout_not_contains: Vec::new(),
+        expect_stderr_not_contains: Vec::new(),
         expect_json: None,
     }
 }
