@@ -169,9 +169,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                               kind: Kind)
                               -> CargoResult<()> {
         let rustflags = env_args(self.config,
-                                      &self.build_config,
-                                      kind,
-                                      "RUSTFLAGS")?;
+                                 &self.build_config,
+                                 kind,
+                                 "RUSTFLAGS")?;
         let mut process = self.config.rustc()?.process();
         process.arg("-")
                .arg("--crate-name").arg("___")
@@ -613,17 +613,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             match self.get_package(id) {
                 Ok(pkg) => {
                     pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                        let profile = if unit.profile.check &&
-                                         !t.is_custom_build()
-                                         && !t.for_host() {
-                            &self.profiles.check
-                        } else {
-                            self.lib_profile()
-                        };
                         let unit = Unit {
                             pkg: pkg,
                             target: t,
-                            profile: profile,
+                            profile: self.lib_or_check_profile(unit, t),
                             kind: unit.kind.for_target(t),
                         };
                         Ok(unit)
@@ -780,7 +773,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Unit {
                 pkg: unit.pkg,
                 target: t,
-                profile: self.lib_profile(),
+                profile: self.lib_or_check_profile(unit, t),
                 kind: unit.kind.for_target(t),
             }
         })
@@ -845,6 +838,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             test
         } else {
             normal
+        }
+    }
+
+    pub fn lib_or_check_profile(&self, unit: &Unit, target: &Target) -> &'a Profile {
+        if unit.profile.check && !target.is_custom_build() && !target.for_host() {
+            &self.profiles.check
+        } else {
+            self.lib_profile()
         }
     }
 
