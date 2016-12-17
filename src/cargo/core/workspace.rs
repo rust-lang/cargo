@@ -40,6 +40,10 @@ pub struct Workspace<'cfg> {
     // paths. The packages themselves can be looked up through the `packages`
     // set above.
     members: Vec<PathBuf>,
+
+    // True, if this is a temporary workspace created for the purposes of
+    // cargo install or cargo package.
+    is_ephemeral: bool,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -94,6 +98,7 @@ impl<'cfg> Workspace<'cfg> {
             root_manifest: None,
             target_dir: target_dir,
             members: Vec::new(),
+            is_ephemeral: false,
         };
         ws.root_manifest = ws.find_root(manifest_path)?;
         ws.find_members()?;
@@ -110,8 +115,8 @@ impl<'cfg> Workspace<'cfg> {
     ///
     /// This is currently only used in niche situations like `cargo install` or
     /// `cargo package`.
-    pub fn one(package: Package, config: &'cfg Config, target_dir: Option<Filesystem>)
-               -> CargoResult<Workspace<'cfg>> {
+    pub fn ephemeral(package: Package, config: &'cfg Config, target_dir: Option<Filesystem>)
+                     -> CargoResult<Workspace<'cfg>> {
         let mut ws = Workspace {
             config: config,
             current_manifest: package.manifest_path().to_path_buf(),
@@ -122,6 +127,7 @@ impl<'cfg> Workspace<'cfg> {
             root_manifest: None,
             target_dir: None,
             members: Vec::new(),
+            is_ephemeral: true,
         };
         {
             let key = ws.current_manifest.parent().unwrap();
@@ -207,6 +213,10 @@ impl<'cfg> Workspace<'cfg> {
             ws: self,
             iter: self.members.iter(),
         }
+    }
+
+    pub fn is_ephemeral(&self) -> bool {
+        self.is_ephemeral
     }
 
     /// Finds the root of a workspace for the crate whose manifest is located

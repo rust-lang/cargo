@@ -14,7 +14,7 @@ use util::{profile, human, CargoResult, ChainError};
 /// lockfile.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
-    let resolve = resolve_with_registry(ws, &mut registry, true)?;
+    let resolve = resolve_with_registry(ws, &mut registry)?;
     let packages = get_resolved_packages(&resolve, registry);
     Ok((packages, resolve))
 }
@@ -33,17 +33,13 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     }).map(|s| s.to_string()).collect::<Vec<String>>();
 
     let mut registry = PackageRegistry::new(ws.config())?;
-
-    // Avoid writing a lockfile if we are `cargo install`ing a non local package.
-    let write_lockfile = source.is_none() || ws.current_opt().is_none();
-
     if let Some(source) = source {
         registry.add_preloaded(source);
     }
 
     // First, resolve the root_package's *listed* dependencies, as well as
     // downloading and updating all remotes and such.
-    let resolve = resolve_with_registry(ws, &mut registry, write_lockfile)?;
+    let resolve = resolve_with_registry(ws, &mut registry)?;
 
     // Second, resolve with precisely what we're doing. Filter out
     // transitive dependencies if necessary, specify features, handle
@@ -80,14 +76,14 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     Ok((packages, resolved_with_overrides))
 }
 
-fn resolve_with_registry(ws: &Workspace, registry: &mut PackageRegistry, write_lockfile: bool)
+fn resolve_with_registry(ws: &Workspace, registry: &mut PackageRegistry)
                          -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let resolve = resolve_with_previous(registry, ws,
                                         Method::Everything,
                                         prev.as_ref(), None, &[])?;
 
-    if write_lockfile {
+    if !ws.is_ephemeral() {
         ops::write_pkg_lockfile(ws, &resolve)?;
     }
     Ok(resolve)
