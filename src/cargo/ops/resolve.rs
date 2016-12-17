@@ -34,13 +34,11 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
 
     let mut registry = PackageRegistry::new(ws.config())?;
 
-    let mut write_lockfile = true;
+    // Avoid writing a lockfile if we are `cargo install`ing a non local package.
+    let write_lockfile = source.is_none() || ws.current_opt().is_none();
+
     if let Some(source) = source {
-        if let Some(root_package) = ws.current_opt() {
-            // Avoid writing a lockfile if we are `cargo install`ing a non local package.
-            write_lockfile = false;
-            registry.add_preloaded(root_package.package_id().source_id(), source);
-        }
+        registry.add_preloaded(source);
     }
 
     // First, resolve the root_package's *listed* dependencies, as well as
@@ -265,7 +263,7 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
                            (defined in `{}`)", path.display(),
                           definition.display()))
         })?;
-        registry.add_override(&id, Box::new(source));
+        registry.add_override(Box::new(source));
     }
     Ok(())
 }

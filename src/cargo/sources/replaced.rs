@@ -33,6 +33,10 @@ impl<'cfg> Registry for ReplacedSource<'cfg> {
 }
 
 impl<'cfg> Source for ReplacedSource<'cfg> {
+    fn source_id(&self) -> &SourceId {
+        &self.to_replace
+    }
+
     fn update(&mut self) -> CargoResult<()> {
         self.inner.update().chain_error(|| {
             human(format!("failed to update replaced source `{}`",

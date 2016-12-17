@@ -12,7 +12,7 @@ use util::{self, CargoResult, internal, internal_error, human, ChainError};
 use util::Config;
 
 pub struct PathSource<'cfg> {
-    id: SourceId,
+    source_id: SourceId,
     path: PathBuf,
     updated: bool,
     packages: Vec<Package>,
@@ -28,7 +28,7 @@ impl<'cfg> PathSource<'cfg> {
     pub fn new(path: &Path, id: &SourceId, config: &'cfg Config)
                -> PathSource<'cfg> {
         PathSource {
-            id: id.clone(),
+            source_id: id.clone(),
             path: path.to_path_buf(),
             updated: false,
             packages: Vec::new(),
@@ -68,11 +68,10 @@ impl<'cfg> PathSource<'cfg> {
         if self.updated {
             Ok(self.packages.clone())
         } else if self.recursive {
-            ops::read_packages(&self.path, &self.id, self.config)
+            ops::read_packages(&self.path, &self.source_id, self.config)
         } else {
             let path = self.path.join("Cargo.toml");
-            let (pkg, _) = ops::read_package(&path, &self.id,
-                                                  self.config)?;
+            let (pkg, _) = ops::read_package(&path, &self.source_id, self.config)?;
             Ok(vec![pkg])
         }
     }
@@ -324,6 +323,10 @@ impl<'cfg> Registry for PathSource<'cfg> {
 }
 
 impl<'cfg> Source for PathSource<'cfg> {
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
+    }
+
     fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
             let packages = self.read_packages()?;
