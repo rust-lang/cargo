@@ -153,8 +153,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         self.add_source(source, Kind::Locked);
     }
 
-    fn add_source(&mut self, source: Box<Source + 'cfg>,
-                  kind: Kind) {
+    fn add_source(&mut self, source: Box<Source + 'cfg>, kind: Kind) {
         let id = source.source_id().clone();
         self.sources.insert(source);
         self.source_ids.insert(id.clone(), (id, kind));
