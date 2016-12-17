@@ -20,6 +20,8 @@ use util::{human, Config, CargoResult, ToUrl};
 /// A Source finds and downloads remote packages based on names and
 /// versions.
 pub trait Source: Registry {
+    fn source_id(&self) -> &SourceId;
+
     /// The update method performs any network operations required to
     /// get the entire list of all names, versions and dependencies of
     /// packages managed by the Source.
@@ -53,6 +55,10 @@ pub trait Source: Registry {
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
+    fn source_id(&self) -> &SourceId {
+        (**self).source_id()
+    }
+
     fn update(&mut self) -> CargoResult<()> {
         (**self).update()
     }
@@ -505,8 +511,9 @@ impl<'src> SourceMap<'src> {
         self.get(pkg_id.source_id())
     }
 
-    pub fn insert(&mut self, id: &SourceId, source: Box<Source + 'src>) {
-        self.map.insert(id.clone(), source);
+    pub fn insert(&mut self, source: Box<Source + 'src>) {
+        let id = source.source_id().clone();
+        self.map.insert(id, source);
     }
 
     pub fn is_empty(&self) -> bool {
