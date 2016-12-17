@@ -212,3 +212,29 @@ fn build_check() {
     assert_that(foo.cargo_process("check"),
                 execs().with_status(0));
 }
+
+// Checks that where a project has both a lib and a bin, the lib is only checked
+// not built.
+#[test]
+fn issue_3418() {
+    if !is_nightly() {
+        return;
+    }
+
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}");
+    foo.build();
+
+    assert_that(foo.cargo_process("check").arg("-v"),
+                execs().with_status(0)
+                       .with_stderr_does_not_contain("--crate-type lib"));
+}
