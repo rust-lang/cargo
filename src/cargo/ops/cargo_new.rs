@@ -370,7 +370,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let path = opts.path;
     let name = opts.name;
     let cfg = global_config(config)?;
-    let mut ignore = "target\n".to_string();
+    let mut ignore = "/target\n".to_string();
     let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap(), config.cwd());
     if !opts.bin {
         ignore.push_str("Cargo.lock\n");
