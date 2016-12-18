@@ -16,8 +16,8 @@ use hamcrest::assert_that;
 // Test that HTTP auth is offered from `credential.helper`
 #[test]
 fn http_auth_offered() {
-    let a = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = a.local_addr().unwrap();
+    let server = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = server.local_addr().unwrap();
 
     fn headers(rdr: &mut BufRead) -> HashSet<String> {
         let valid = ["GET", "Authorization", "Accept", "User-Agent"];
@@ -31,9 +31,9 @@ fn http_auth_offered() {
     }
 
     let t = thread::spawn(move|| {
-        let mut s = BufStream::new(a.accept().unwrap().0);
-        let req = headers(&mut s);
-        s.write_all(b"\
+        let mut conn = BufStream::new(server.accept().unwrap().0);
+        let req = headers(&mut conn);
+        conn.write_all(b"\
             HTTP/1.1 401 Unauthorized\r\n\
             WWW-Authenticate: Basic realm=\"wheee\"\r\n
             \r\n\
@@ -43,11 +43,11 @@ fn http_auth_offered() {
             "Accept: */*",
             "User-Agent: git/1.0 (libgit2 0.24.0)",
         ].into_iter().map(|s| s.to_string()).collect());
-        drop(s);
+        drop(conn);
 
-        let mut s = BufStream::new(a.accept().unwrap().0);
-        let req = headers(&mut s);
-        s.write_all(b"\
+        let mut conn = BufStream::new(server.accept().unwrap().0);
+        let req = headers(&mut conn);
+        conn.write_all(b"\
             HTTP/1.1 401 Unauthorized\r\n\
             WWW-Authenticate: Basic realm=\"wheee\"\r\n
             \r\n\
@@ -124,13 +124,13 @@ To learn more, run the command again with --verbose.
 // Boy, sure would be nice to have a TLS implementation in rust!
 #[test]
 fn https_something_happens() {
-    let a = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = a.local_addr().unwrap();
+    let server = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = server.local_addr().unwrap();
     let t = thread::spawn(move|| {
-        let mut s = a.accept().unwrap().0;
-        drop(s.write(b"1234"));
-        drop(s.shutdown(std::net::Shutdown::Write));
-        drop(s.read(&mut [0; 16]));
+        let mut conn = server.accept().unwrap().0;
+        drop(conn.write(b"1234"));
+        drop(conn.shutdown(std::net::Shutdown::Write));
+        drop(conn.read(&mut [0; 16]));
     });
 
     let p = project("foo")
@@ -152,10 +152,8 @@ fn https_something_happens() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr_contains(&format!("\
 [UPDATING] git repository `https://{addr}/foo/bar`
-",
-        addr = addr,
-        ))
-                      .with_stderr_contains(&format!("\
+", addr = addr))
+                    .with_stderr_contains(&format!("\
 Caused by:
   {errmsg}
 ",
@@ -176,10 +174,10 @@ Caused by:
 // Boy, sure would be nice to have an SSH implementation in rust!
 #[test]
 fn ssh_something_happens() {
-    let a = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = a.local_addr().unwrap();
+    let server = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = server.local_addr().unwrap();
     let t = thread::spawn(move|| {
-        drop(a.accept().unwrap());
+        drop(server.accept().unwrap());
     });
 
     let p = project("foo")
@@ -197,10 +195,8 @@ fn ssh_something_happens() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr_contains(&format!("\
 [UPDATING] git repository `ssh://{addr}/foo/bar`
-",
-        addr = addr,
-        ))
-                      .with_stderr_contains("\
+", addr = addr))
+                    .with_stderr_contains("\
 Caused by:
   [[..]] Failed to start SSH session: Failed getting banner
 "));
