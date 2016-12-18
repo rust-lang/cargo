@@ -3,6 +3,7 @@ extern crate hamcrest;
 
 use cargotest::is_nightly;
 use cargotest::support::{execs, project};
+use cargotest::support::registry::Package;
 use hamcrest::assert_that;
 
 #[test]
@@ -237,4 +238,58 @@ fn issue_3418() {
     assert_that(foo.cargo_process("check").arg("-v"),
                 execs().with_status(0)
                        .with_stderr_does_not_contain("--crate-type lib"));
+}
+
+// Some weirdness that seems to be caused by a crate being built as well as
+// checked, but in this case with a proc macro too.
+#[test]
+fn issue_3419() {
+    if !is_nightly() {
+        return;
+    }
+
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            rustc-serialize = "*"
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate rustc_serialize;
+
+            use rustc_serialize::Decodable;
+
+            pub fn take<T: Decodable>() {}
+        "#)
+        .file("src/main.rs", r#"
+            extern crate rustc_serialize;
+
+            extern crate foo;
+
+            #[derive(RustcDecodable)]
+            pub struct Foo;
+
+            fn main() {
+                foo::take::<Foo>();
+            }
+        "#);
+
+    Package::new("rustc-serialize", "1.0.0")
+        .file("src/lib.rs",
+              r#"pub trait Decodable: Sized {
+                    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error>;
+                 }
+                 pub trait Decoder {
+                    type Error;
+                    fn read_struct<T, F>(&mut self, s_name: &str, len: usize, f: F)
+                                         -> Result<T, Self::Error>
+                    where F: FnOnce(&mut Self) -> Result<T, Self::Error>;
+                 } "#).publish();
+
+    assert_that(foo.cargo_process("check"),
+                execs().with_status(0));
 }
