@@ -2471,6 +2471,55 @@ r#"[ERROR] Could not match 'xml' with any of the allowed variants: ["Human", "Js
 }
 
 #[test]
+fn message_format_json_forward_stderr() {
+    if is_nightly() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() { let unused = 0; }");
+
+    assert_that(p.cargo_process("rustc").arg("--bin").arg("foo")
+                .arg("--message-format").arg("JSON").arg("--").arg("-Zno-trans"),
+                execs()
+                .with_stderr_contains("[WARNING] the option `Z` is unstable [..]")
+                .with_json(r#"
+    {
+        "reason":"compiler-message",
+        "package_id":"foo 0.5.0 ([..])",
+        "target":{"kind":["bin"],"name":"foo","src_path":"[..]"},
+        "message":{
+            "children":[],"code":null,"level":"warning","rendered":null,
+            "message":"unused variable: `unused`, #[warn(unused_variables)] on by default",
+            "spans":[{
+                "byte_end":22,"byte_start":16,"column_end":23,"column_start":17,"expansion":null,
+                "file_name":"[..]","is_primary":true,"label":null,"line_end":1,"line_start":1,
+                "suggested_replacement":null,
+                "text":[{
+                    "highlight_end":23,
+                    "highlight_start":17,
+                    "text":"fn main() { let unused = 0; }"
+                }]
+            }]
+        }
+    }
+
+    {
+        "reason":"compiler-artifact",
+        "package_id":"foo 0.5.0 ([..])",
+        "target":{"kind":["bin"],"name":"foo","src_path":"[..]"},
+        "profile":{
+            "debug_assertions":true,
+            "debuginfo":true,
+            "opt_level":"0",
+            "test":false
+        },
+        "features":[],
+        "filenames":["[..]"]
+    }
+"#));
+}
+
+#[test]
 fn no_warn_about_package_metadata() {
     let p = project("foo")
         .file("Cargo.toml", r#"
