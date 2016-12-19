@@ -337,6 +337,10 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
+    }
+
     fn update(&mut self) -> CargoResult<()> {
         // If we have an imprecise version then we don't know what we're going
         // to look for, so we always attempt to perform an update here.

@@ -13,7 +13,7 @@ use util::{CargoResult, human, ChainError, Config, Sha256};
 use util::paths;
 
 pub struct DirectorySource<'cfg> {
-    id: SourceId,
+    source_id: SourceId,
     root: PathBuf,
     packages: HashMap<PackageId, (Package, Checksum)>,
     config: &'cfg Config,
@@ -29,7 +29,7 @@ impl<'cfg> DirectorySource<'cfg> {
     pub fn new(path: &Path, id: &SourceId, config: &'cfg Config)
                -> DirectorySource<'cfg> {
         DirectorySource {
-            id: id.clone(),
+            source_id: id.clone(),
             root: path.to_path_buf(),
             config: config,
             packages: HashMap::new(),
@@ -57,6 +57,10 @@ impl<'cfg> Registry for DirectorySource<'cfg> {
 }
 
 impl<'cfg> Source for DirectorySource<'cfg> {
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
+    }
+
     fn update(&mut self) -> CargoResult<()> {
         self.packages.clear();
         let entries = self.root.read_dir().chain_error(|| {
@@ -67,9 +71,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         for entry in entries {
             let entry = entry?;
             let path = entry.path();
-            let mut src = PathSource::new(&path,
-                                          &self.id,
-                                          self.config);
+            let mut src = PathSource::new(&path, &self.source_id, self.config);
             src.update()?;
             let pkg = src.root_package()?;
 
