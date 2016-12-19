@@ -3,7 +3,6 @@ use std::fs;
 use std::path::Path;
 
 use core::{Profiles, Workspace};
-use core::registry::PackageRegistry;
 use util::{CargoResult, human, ChainError, Config};
 use ops::{self, Context, BuildConfig, Kind, Unit};
 
@@ -28,9 +27,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         return rm_rf(&target_dir);
     }
 
-    let mut registry = PackageRegistry::new(opts.config)?;
-    let resolve = ops::resolve_ws(&mut registry, ws)?;
-    let packages = ops::get_resolved_packages(&resolve, registry);
+    let (packages, resolve) = ops::resolve_ws(ws)?;
 
     let profiles = ws.profiles();
     let host_triple = opts.config.rustc()?.host.clone();

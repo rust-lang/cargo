@@ -122,6 +122,10 @@ impl<'cfg> Registry for GitSource<'cfg> {
 }
 
 impl<'cfg> Source for GitSource<'cfg> {
+    fn source_id(&self) -> &SourceId {
+        &self.source_id
+    }
+
     fn update(&mut self) -> CargoResult<()> {
         let lock = self.config.git_path()
             .open_rw(".cargo-lock-git", self.config, "the git checkouts")?;

@@ -57,7 +57,7 @@ pub fn install(root: Option<&str>,
     let root = resolve_root(root, config)?;
     let map = SourceConfigMap::new(config)?;
     let (pkg, source) = if source_id.is_git() {
-        select_pkg(GitSource::new(source_id, config), source_id,
+        select_pkg(GitSource::new(source_id, config),
                    krate, vers, config, &mut |git| git.read_packages())?
     } else if source_id.is_path() {
         let path = source_id.url().to_file_path().ok()
@@ -69,11 +69,10 @@ pub fn install(root: Option<&str>,
                            specify an alternate source", path.display()))
         })?;
         select_pkg(PathSource::new(&path, source_id, config),
-                   source_id, krate, vers, config,
-                   &mut |path| path.read_packages())?
+                   krate, vers, config, &mut |path| path.read_packages())?
     } else {
         select_pkg(map.load(source_id)?,
-                   source_id, krate, vers, config,
+                   krate, vers, config,
                    &mut |_| Err(human("must specify a crate to install from \
                                        crates.io, or use --path or --git to \
                                        specify alternate source")))?
@@ -92,7 +91,7 @@ pub fn install(root: Option<&str>,
     };
 
     let ws = match overidden_target_dir {
-        Some(dir) => Workspace::one(pkg, config, Some(dir))?,
+        Some(dir) => Workspace::ephemeral(pkg, config, Some(dir))?,
         None => Workspace::new(pkg.manifest_path(), config)?,
     };
     let pkg = ws.current()?;
@@ -249,7 +248,6 @@ pub fn install(root: Option<&str>,
 }
 
 fn select_pkg<'a, T>(mut source: T,
-                     source_id: &SourceId,
                      name: Option<&str>,
                      vers: Option<&str>,
                      config: &Config,
@@ -280,7 +278,7 @@ fn select_pkg<'a, T>(mut source: T,
                 None => None,
             };
             let vers = vers.as_ref().map(|s| &**s);
-            let dep = Dependency::parse_no_deprecated(name, vers, source_id)?;
+            let dep = Dependency::parse_no_deprecated(name, vers, source.source_id())?;
             let deps = source.query(&dep)?;
             match deps.iter().map(|p| p.package_id()).max() {
                 Some(pkgid) => {
@@ -291,7 +289,7 @@ fn select_pkg<'a, T>(mut source: T,
                     let vers_info = vers.map(|v| format!(" with version `{}`", v))
                                         .unwrap_or(String::new());
                     Err(human(format!("could not find `{}` in `{}`{}", name,
-                                      source_id, vers_info)))
+                                      source.source_id(), vers_info)))
                 }
             }
         }

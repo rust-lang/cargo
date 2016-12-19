@@ -1,29 +1,94 @@
 use std::collections::HashSet;
 
-use core::{PackageId, PackageIdSpec, SourceId, Workspace};
+use core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
 use core::registry::PackageRegistry;
 use core::resolver::{self, Resolve, Method};
+use sources::PathSource;
 use ops;
-use util::CargoResult;
+use util::{profile, human, CargoResult, ChainError};
 
-/// Resolve all dependencies for the specified `package` using the previous
+/// Resolve all dependencies for the workspace using the previous
 /// lockfile as a guide if present.
 ///
 /// This function will also write the result of resolution as a new
 /// lockfile.
-pub fn resolve_ws(registry: &mut PackageRegistry, ws: &Workspace)
-                   -> CargoResult<Resolve> {
+pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
+    let mut registry = PackageRegistry::new(ws.config())?;
+    let resolve = resolve_with_registry(ws, &mut registry)?;
+    let packages = get_resolved_packages(&resolve, registry);
+    Ok((packages, resolve))
+}
+
+/// Resolves dependencies for some packages of the workspace,
+/// taking into account `paths` overrides and activated features.
+pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
+                                source: Option<Box<Source + 'a>>,
+                                features: &[String],
+                                all_features: bool,
+                                no_default_features: bool,
+                                specs: &[PackageIdSpec])
+                                -> CargoResult<(PackageSet<'a>, Resolve)> {
+    let features = features.iter().flat_map(|s| {
+        s.split_whitespace()
+    }).map(|s| s.to_string()).collect::<Vec<String>>();
+
+    let mut registry = PackageRegistry::new(ws.config())?;
+    if let Some(source) = source {
+        registry.add_preloaded(source);
+    }
+
+    // First, resolve the root_package's *listed* dependencies, as well as
+    // downloading and updating all remotes and such.
+    let resolve = resolve_with_registry(ws, &mut registry)?;
+
+    // Second, resolve with precisely what we're doing. Filter out
+    // transitive dependencies if necessary, specify features, handle
+    // overrides, etc.
+    let _p = profile::start("resolving w/ overrides...");
+
+    add_overrides(&mut registry, ws)?;
+
+    let method = if all_features {
+        Method::Everything
+    } else {
+        Method::Required {
+            dev_deps: true, // TODO: remove this option?
+            features: &features,
+            uses_default_features: !no_default_features,
+        }
+    };
+
+    let resolved_with_overrides =
+    ops::resolve_with_previous(&mut registry, ws,
+                               method, Some(&resolve), None,
+                               &specs)?;
+
+    for &(ref replace_spec, _) in ws.root_replace() {
+        if !resolved_with_overrides.replacements().keys().any(|r| replace_spec.matches(r)) {
+            ws.config().shell().warn(
+                format!("package replacement is not used: {}", replace_spec)
+            )?
+        }
+    }
+
+    let packages = get_resolved_packages(&resolved_with_overrides, registry);
+
+    Ok((packages, resolved_with_overrides))
+}
+
+fn resolve_with_registry(ws: &Workspace, registry: &mut PackageRegistry)
+                         -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let resolve = resolve_with_previous(registry, ws,
                                         Method::Everything,
                                         prev.as_ref(), None, &[])?;
 
-    // Avoid writing a lockfile if we are `cargo install`ing a non local package.
-    if ws.current_opt().map(|pkg| pkg.package_id().source_id().is_path()).unwrap_or(true) {
+    if !ws.is_ephemeral() {
         ops::write_pkg_lockfile(ws, &resolve)?;
     }
     Ok(resolve)
 }
+
 
 /// Resolve all dependencies for a package using an optional previous instance
 /// of resolve to guide the resolution process.
@@ -169,3 +234,40 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         }
     }
 }
+
+/// Read the `paths` configuration variable to discover all path overrides that
+/// have been configured.
+fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
+                     ws: &Workspace<'a>) -> CargoResult<()> {
+    let paths = match ws.config().get_list("paths")? {
+        Some(list) => list,
+        None => return Ok(())
+    };
+
+    let paths = paths.val.iter().map(|&(ref s, ref p)| {
+        // The path listed next to the string is the config file in which the
+        // key was located, so we want to pop off the `.cargo/config` component
+        // to get the directory containing the `.cargo` folder.
+        (p.parent().unwrap().parent().unwrap().join(s), p)
+    });
+
+    for (path, definition) in paths {
+        let id = SourceId::for_path(&path)?;
+        let mut source = PathSource::new_recursive(&path, &id, ws.config());
+        source.update().chain_error(|| {
+            human(format!("failed to update path override `{}` \
+                           (defined in `{}`)", path.display(),
+                          definition.display()))
+        })?;
+        registry.add_override(Box::new(source));
+    }
+    Ok(())
+}
+
+fn get_resolved_packages<'a>(resolve: &Resolve,
+                             registry: PackageRegistry<'a>)
+                             -> PackageSet<'a> {
+    let ids: Vec<PackageId> = resolve.iter().cloned().collect();
+    registry.get(&ids)
+}
+
