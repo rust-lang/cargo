@@ -461,6 +461,7 @@ impl<'cfg> Workspace<'cfg> {
                 doc: Profile::default_doc(),
                 custom_build: Profile::default_custom_build(),
                 check: Profile::default_check(),
+                doctest: Profile::default_doctest(),
             };
 
             for pkg in self.members().filter(|p| p.manifest_path() != root_manifest) {

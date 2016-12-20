@@ -1253,6 +1253,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
         custom_build: Profile::default_custom_build(),
         check: merge(Profile::default_check(),
                      profiles.and_then(|p| p.dev.as_ref())),
+        doctest: Profile::default_doctest(),
     };
     // The test/bench targets cannot have panic=abort because they'll all get
     // compiled with --test which requires the unwind runtime currently

@@ -224,7 +224,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
             map.insert(crate_type.to_string(), Some((prefix.to_string(), suffix.to_string())));
         }
- 
+
         let cfg = if has_cfg {
             Some(try!(lines.map(Cfg::from_str).collect()))
         } else {
@@ -554,7 +554,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn dep_targets(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
         if unit.profile.run_custom_build {
             return self.dep_run_custom_build(unit)
-        } else if unit.profile.doc {
+        } else if unit.profile.doc && !unit.profile.test {
             return self.doc_deps(unit);
         }
 
@@ -626,7 +626,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // the library of the same package. The call to `resolve.deps` above
         // didn't include `pkg` in the return values, so we need to special case
         // it here and see if we need to push `(pkg, pkg_lib_target)`.
-        if unit.target.is_lib() {
+        if unit.target.is_lib() && !unit.profile.doc {
             return Ok(ret)
         }
         ret.extend(self.maybe_lib(unit));

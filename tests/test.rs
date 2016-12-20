@@ -2143,6 +2143,7 @@ fn only_test_docs() {
             }
 
             /// ```
+            /// foo::bar();
             /// println!("ok");
             /// ```
             pub fn bar() {
@@ -2523,4 +2524,36 @@ test a ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 "));
+}
+
+#[test]
+fn doctest_only_with_dev_dep() {
+    let p = project("workspace")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.1.0"
+
+            [dev-dependencies]
+            b = { path = "b" }
+        "#)
+        .file("src/lib.rs", r#"
+            /// ```
+            /// extern crate b;
+            ///
+            /// b::b();
+            /// ```
+            pub fn a() {}
+        "#)
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.1.0"
+        "#)
+        .file("b/src/lib.rs", r#"
+            pub fn b() {}
+        "#);
+
+    assert_that(p.cargo_process("test").arg("--doc").arg("-v"),
+                execs().with_status(0));
 }
