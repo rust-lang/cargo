@@ -13,6 +13,7 @@ use core::{Profile, Profiles, Workspace};
 use core::shell::ColorConfig;
 use util::{self, CargoResult, ProcessBuilder, human, machine_message};
 use util::{Config, internal, ChainError, profile, join_paths, short_hash};
+use util::Freshness;
 
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
@@ -183,6 +184,9 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
 
     let (dirty, fresh, freshness) = if unit.profile.run_custom_build {
         custom_build::prepare(cx, unit)?
+    } else if unit.profile.doc && unit.profile.test {
+        // we run these targets later, so this is just a noop for now
+        (Work::new(|_| Ok(())), Work::new(|_| Ok(())), Freshness::Fresh)
     } else {
         let (freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
         let work = if unit.profile.doc {

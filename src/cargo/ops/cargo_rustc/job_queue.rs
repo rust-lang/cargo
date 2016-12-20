@@ -292,8 +292,10 @@ impl<'a> JobQueue<'a> {
             // being a compiled package
             Dirty => {
                 if key.profile.doc {
-                    self.documented.insert(key.pkg);
-                    config.shell().status("Documenting", key.pkg)?;
+                    if !key.profile.test {
+                        self.documented.insert(key.pkg);
+                        config.shell().status("Documenting", key.pkg)?;
+                    }
                 } else {
                     self.compiled.insert(key.pkg);
                     config.shell().status("Compiling", key.pkg)?;
