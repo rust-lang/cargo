@@ -4,6 +4,7 @@ environment:
     BITS: 64
     CFG_DISABLE_CROSS_TESTS: 1
     MAKE_TARGETS: test-unit-x86_64-pc-windows-gnu
+    RUSTUP_TARGET: x86_64-pc-windows-msvc
   - TARGET: i686-pc-windows-gnu
     BITS: 32
     MINGW_URL: https://s3.amazonaws.com/rust-lang-ci
@@ -11,17 +12,20 @@ environment:
     MINGW_DIR: mingw32
     CFG_DISABLE_CROSS_TESTS: 1
     MAKE_TARGETS: test-unit-i686-pc-windows-gnu
+    RUSTUP_TARGET: x86_64-pc-windows-msvc
   - TARGET: i686-pc-windows-msvc
     BITS: 32
     MAKE_TARGETS: test-unit-i686-pc-windows-msvc
     CFG_DISABLE_CROSS_TESTS: 1
     ALLOW_PR: 1
     ARCH: x86
+    RUSTUP_TARGET: i686-pc-windows-msvc
   - TARGET: x86_64-pc-windows-msvc
-    OTHER_TARGET: i686-pc-windows-msvc
+    CFG_DISABLE_CROSS_TESTS: 1
     BITS: 64
     MAKE_TARGETS: test-unit-x86_64-pc-windows-msvc
     ARCH: amd64
+    RUSTUP_TARGET: x86_64-pc-windows-msvc
 
 install:
   - set PATH=C:\msys64\mingw%BITS%\bin;C:\msys64\usr\bin;%PATH%
@@ -33,10 +37,9 @@ install:
 
   # FIXME(#3394) use master rustup
   - curl -sSfO https://static.rust-lang.org/rustup/archive/0.6.5/x86_64-pc-windows-msvc/rustup-init.exe
-  - rustup-init.exe -y --default-host x86_64-pc-windows-msvc
+  - rustup-init.exe -y --default-host %RUSTUP_TARGET%
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
-  - if NOT "%TARGET%" == "x86_64-pc-windows-msvc" rustup target add %TARGET%
-  - if defined OTHER_TARGET rustup target add %OTHER_TARGET%
+  - if NOT "%TARGET%" == "%RUSTUP_TARGET%" rustup target add %TARGET%
   - rustc -V
   - cargo -V
   - git submodule update --init
