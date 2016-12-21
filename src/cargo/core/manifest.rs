@@ -293,11 +293,12 @@ impl VirtualManifest {
 }
 
 impl Target {
-    fn blank() -> Target {
+    fn with_path(src_path: PathBuf) -> Target {
+        assert!(src_path.is_absolute());
         Target {
             kind: TargetKind::Bin,
             name: String::new(),
-            src_path: PathBuf::new(),
+            src_path: src_path,
             doc: false,
             doctest: false,
             harness: true,
@@ -309,67 +310,61 @@ impl Target {
 
     pub fn lib_target(name: &str,
                       crate_targets: Vec<LibKind>,
-                      src_path: &Path) -> Target {
+                      src_path: PathBuf) -> Target {
         Target {
             kind: TargetKind::Lib(crate_targets),
             name: name.to_string(),
-            src_path: src_path.to_path_buf(),
             doctest: true,
             doc: true,
-            ..Target::blank()
+            ..Target::with_path(src_path)
         }
     }
 
-    pub fn bin_target(name: &str, src_path: &Path) -> Target {
+    pub fn bin_target(name: &str, src_path: PathBuf) -> Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
-            src_path: src_path.to_path_buf(),
             doc: true,
-            ..Target::blank()
+            ..Target::with_path(src_path)
         }
     }
 
     /// Builds a `Target` corresponding to the `build = "build.rs"` entry.
-    pub fn custom_build_target(name: &str, src_path: &Path) -> Target {
+    pub fn custom_build_target(name: &str, src_path: PathBuf) -> Target {
         Target {
             kind: TargetKind::CustomBuild,
             name: name.to_string(),
-            src_path: src_path.to_path_buf(),
             for_host: true,
             benched: false,
             tested: false,
-            ..Target::blank()
+            ..Target::with_path(src_path)
         }
     }
 
-    pub fn example_target(name: &str, src_path: &Path) -> Target {
+    pub fn example_target(name: &str, src_path: PathBuf) -> Target {
         Target {
             kind: TargetKind::Example,
             name: name.to_string(),
-            src_path: src_path.to_path_buf(),
             benched: false,
-            ..Target::blank()
+            ..Target::with_path(src_path)
         }
     }
 
-    pub fn test_target(name: &str, src_path: &Path) -> Target {
+    pub fn test_target(name: &str, src_path: PathBuf) -> Target {
         Target {
             kind: TargetKind::Test,
             name: name.to_string(),
-            src_path: src_path.to_path_buf(),
             benched: false,
-            ..Target::blank()
+            ..Target::with_path(src_path)
         }
     }
 
-    pub fn bench_target(name: &str, src_path: &Path) -> Target {
+    pub fn bench_target(name: &str, src_path: PathBuf) -> Target {
         Target {
             kind: TargetKind::Bench,
             name: name.to_string(),
-            src_path: src_path.to_path_buf(),
             tested: false,
-            ..Target::blank()
+            ..Target::with_path(src_path)
         }
     }
 
