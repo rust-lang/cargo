@@ -4,12 +4,7 @@ extern crate hamcrest;
 use cargotest::support::{project, execs, main_file, basic_bin_manifest};
 use hamcrest::{assert_that};
 
-fn remove_all_whitespace(s: &str) -> String {
-    s.split_whitespace().collect()
-}
-
-fn read_manifest_output() -> String {
-    remove_all_whitespace(r#"
+static MANIFEST_OUTPUT: &'static str = r#"
 {
     "name":"foo",
     "version":"0.5.0",
@@ -21,12 +16,11 @@ fn read_manifest_output() -> String {
     "targets":[{
         "kind":["bin"],
         "name":"foo",
-        "src_path":"src[..]foo.rs"
+        "src_path":"[..][/]foo[/]src[/]foo.rs"
     }],
     "features":{},
     "manifest_path":"[..]Cargo.toml"
-}"#)
-}
+}"#;
 
 #[test]
 fn cargo_read_manifest_path_to_cargo_toml_relative() {
@@ -38,7 +32,7 @@ fn cargo_read_manifest_path_to_cargo_toml_relative() {
                  .arg("--manifest-path").arg("foo/Cargo.toml")
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(0)
-                       .with_stdout(read_manifest_output()));
+                       .with_json(MANIFEST_OUTPUT));
 }
 
 #[test]
@@ -51,7 +45,7 @@ fn cargo_read_manifest_path_to_cargo_toml_absolute() {
                  .arg("--manifest-path").arg(p.root().join("Cargo.toml"))
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(0)
-                       .with_stdout(read_manifest_output()));
+                       .with_json(MANIFEST_OUTPUT));
 }
 
 #[test]
@@ -91,5 +85,5 @@ fn cargo_read_manifest_cwd() {
     assert_that(p.cargo_process("read-manifest")
                  .cwd(p.root()),
                 execs().with_status(0)
-                       .with_stdout(read_manifest_output()));
+                       .with_json(MANIFEST_OUTPUT));
 }

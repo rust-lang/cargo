@@ -29,6 +29,7 @@ pub struct Layout {
     examples: Vec<PathBuf>,
     tests: Vec<PathBuf>,
     benches: Vec<PathBuf>,
+
 }
 
 impl Layout {
@@ -549,7 +550,8 @@ impl TomlManifest {
         let new_build = self.maybe_custom_build(&project.build, &layout.root, &mut warnings);
 
         // Get targets
-        let targets = normalize(&lib,
+        let targets = normalize(&layout.root,
+                                &lib,
                                 &bins,
                                 new_build,
                                 &examples,
@@ -1090,7 +1092,8 @@ impl fmt::Debug for PathValue {
     }
 }
 
-fn normalize(lib: &Option<TomlLibTarget>,
+fn normalize(package_root: &Path,
+             lib: &Option<TomlLibTarget>,
              bins: &[TomlBinTarget],
              custom_build: Option<PathBuf>,
              examples: &[TomlExampleTarget],
@@ -1110,7 +1113,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
               });
     }
 
-    fn lib_target(dst: &mut Vec<Target>, l: &TomlLibTarget) {
+    let lib_target = |dst: &mut Vec<Target>, l: &TomlLibTarget| {
         let path = l.path.clone().unwrap_or(
             PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name())))
         );
@@ -1124,71 +1127,71 @@ fn normalize(lib: &Option<TomlLibTarget>,
         };
 
         let mut target = Target::lib_target(&l.name(), crate_types,
-                                            &path.to_path());
+                                            package_root.join(path.to_path()));
         configure(l, &mut target);
         dst.push(target);
-    }
+    };
 
-    fn bin_targets(dst: &mut Vec<Target>, bins: &[TomlBinTarget],
-                   default: &mut FnMut(&TomlBinTarget) -> PathBuf) {
+    let bin_targets = |dst: &mut Vec<Target>, bins: &[TomlBinTarget],
+                       default: &mut FnMut(&TomlBinTarget) -> PathBuf| {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
                 PathValue::Path(default(bin))
             });
-            let mut target = Target::bin_target(&bin.name(), &path.to_path());
+            let mut target = Target::bin_target(&bin.name(), package_root.join(path.to_path()));
             configure(bin, &mut target);
             dst.push(target);
         }
-    }
+    };
 
-    fn custom_build_target(dst: &mut Vec<Target>, cmd: &Path) {
+    let custom_build_target = |dst: &mut Vec<Target>, cmd: &Path| {
         let name = format!("build-script-{}",
                            cmd.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
 
-        dst.push(Target::custom_build_target(&name, cmd));
-    }
+        dst.push(Target::custom_build_target(&name, package_root.join(cmd)));
+    };
 
-    fn example_targets(dst: &mut Vec<Target>,
-                       examples: &[TomlExampleTarget],
-                       default: &mut FnMut(&TomlExampleTarget) -> PathBuf) {
+    let example_targets = |dst: &mut Vec<Target>,
+                           examples: &[TomlExampleTarget],
+                           default: &mut FnMut(&TomlExampleTarget) -> PathBuf| {
         for ex in examples.iter() {
             let path = ex.path.clone().unwrap_or_else(|| {
                 PathValue::Path(default(ex))
             });
 
-            let mut target = Target::example_target(&ex.name(), &path.to_path());
+            let mut target = Target::example_target(&ex.name(), package_root.join(path.to_path()));
             configure(ex, &mut target);
             dst.push(target);
         }
-    }
+    };
 
-    fn test_targets(dst: &mut Vec<Target>,
-                    tests: &[TomlTestTarget],
-                    default: &mut FnMut(&TomlTestTarget) -> PathBuf) {
+    let test_targets = |dst: &mut Vec<Target>,
+                        tests: &[TomlTestTarget],
+                        default: &mut FnMut(&TomlTestTarget) -> PathBuf| {
         for test in tests.iter() {
             let path = test.path.clone().unwrap_or_else(|| {
                 PathValue::Path(default(test))
             });
 
-            let mut target = Target::test_target(&test.name(), &path.to_path());
+            let mut target = Target::test_target(&test.name(), package_root.join(path.to_path()));
             configure(test, &mut target);
             dst.push(target);
         }
-    }
+    };
 
-    fn bench_targets(dst: &mut Vec<Target>,
-                     benches: &[TomlBenchTarget],
-                     default: &mut FnMut(&TomlBenchTarget) -> PathBuf) {
+    let bench_targets = |dst: &mut Vec<Target>,
+                         benches: &[TomlBenchTarget],
+                         default: &mut FnMut(&TomlBenchTarget) -> PathBuf| {
         for bench in benches.iter() {
             let path = bench.path.clone().unwrap_or_else(|| {
                 PathValue::Path(default(bench))
             });
 
-            let mut target = Target::bench_target(&bench.name(), &path.to_path());
+            let mut target = Target::bench_target(&bench.name(), package_root.join(path.to_path()));
             configure(bench, &mut target);
             dst.push(target);
         }
-    }
+    };
 
     let mut ret = Vec::new();
 

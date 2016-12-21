@@ -27,7 +27,7 @@ fn cargo_metadata_simple() {
                             "bin"
                         ],
                         "name": "foo",
-                        "src_path": "src[/]foo.rs"
+                        "src_path": "[..][/]foo[/]src[/]foo.rs"
                     }
                 ],
                 "features": {},
@@ -341,7 +341,7 @@ const MANIFEST_OUTPUT: &'static str=
         "targets":[{
             "kind":["bin"],
             "name":"foo",
-            "src_path":"src[/]foo.rs"
+            "src_path":"[..][/]foo[/]src[/]foo.rs"
         }],
         "features":{},
         "manifest_path":"[..]Cargo.toml"
