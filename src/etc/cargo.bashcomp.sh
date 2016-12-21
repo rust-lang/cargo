@@ -24,7 +24,7 @@ _cargo()
 	local opt___nocmd="$opt_common -V --version --list"
 	local opt__bench="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --no-run"
 	local opt__build="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --test --bench --example --release"
-    local opt__check="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --example"
+	local opt__check="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --lib --bin --example"
 	local opt__clean="$opt_common $opt_pkg $opt_mani --target --release"
 	local opt__doc="$opt_common $opt_pkg $opt_feat $opt_mani $opt_jobs --target --open --no-deps --release"
 	local opt__fetch="$opt_common $opt_mani"
@@ -113,55 +113,55 @@ _locate_manifest(){
 # command line options for completion
 _get_names_from_array()
 {
-    local manifest=$(_locate_manifest)
-    if [[ -z $manifest ]]; then
-        return 0
-    fi
+	local manifest=$(_locate_manifest)
+	if [[ -z $manifest ]]; then
+		return 0
+	fi
 
-    local last_line
-    local -a names
-    local in_block=false
-    local block_name=$1
-    while read line
-    do
-        if [[ $last_line == "[[$block_name]]" ]]; then
-            in_block=true
-        else
-            if [[ $last_line =~ .*\[\[.* ]]; then
-                in_block=false
-            fi
-        fi
+	local last_line
+	local -a names
+	local in_block=false
+	local block_name=$1
+	while read line
+	do
+		if [[ $last_line == "[[$block_name]]" ]]; then
+			in_block=true
+		else
+			if [[ $last_line =~ .*\[\[.* ]]; then
+				in_block=false
+			fi
+		fi
 
-        if [[ $in_block == true ]]; then
-            if [[ $line =~ .*name.*\= ]]; then
-                line=${line##*=}
-                line=${line%%\"}
-                line=${line##*\"}
-                names+=($line)
-            fi
-        fi
+		if [[ $in_block == true ]]; then
+			if [[ $line =~ .*name.*\= ]]; then
+				line=${line##*=}
+				line=${line%%\"}
+				line=${line##*\"}
+				names+=($line)
+			fi
+		fi
 
-        last_line=$line
-    done < $manifest
-    echo "${names[@]}"
+		last_line=$line
+	done < $manifest
+	echo "${names[@]}"
 }
 
 #Gets the bin names from the manifest file
 _bin_names()
 {
-    _get_names_from_array "bin"
+	_get_names_from_array "bin"
 }
 
 #Gets the test names from the manifest file
 _test_names()
 {
-    _get_names_from_array "test"
+	_get_names_from_array "test"
 }
 
 #Gets the bench names from the manifest file
 _benchmark_names()
 {
-    _get_names_from_array "bench"
+	_get_names_from_array "bench"
 }
 
 _get_examples(){
@@ -188,16 +188,16 @@ _get_targets(){
 	local FIND_PATHS=( "/" )
 	local FIND_PATH LINES LINE
 	while [[ "$CURRENT_PATH" != "/" ]]; do
-	    FIND_PATHS+=( "$CURRENT_PATH" )
-	    CURRENT_PATH=$(dirname $CURRENT_PATH)
+		FIND_PATHS+=( "$CURRENT_PATH" )
+		CURRENT_PATH=$(dirname $CURRENT_PATH)
 	done
 	for FIND_PATH in ${FIND_PATHS[@]}; do
-	    if [[ -f "$FIND_PATH"/.cargo/config ]]; then
+		if [[ -f "$FIND_PATH"/.cargo/config ]]; then
 		LINES=( `grep "$FIND_PATH"/.cargo/config -e "^\[target\."` )
 		for LINE in ${LINES[@]}; do
-		    TARGETS+=(`sed 's/^\[target\.\(.*\)\]$/\1/' <<< $LINE`)
+			TARGETS+=(`sed 's/^\[target\.\(.*\)\]$/\1/' <<< $LINE`)
 		done
-	    fi
+		fi
 	done
 	echo "${TARGETS[@]}"
 }
