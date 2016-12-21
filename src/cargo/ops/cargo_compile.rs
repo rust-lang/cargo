@@ -62,6 +62,29 @@ pub struct CompileOptions<'a> {
     pub target_rustc_args: Option<&'a [String]>,
 }
 
+impl<'a> CompileOptions<'a> {
+    pub fn with_default<F, T>(config: &Config, mode: CompileMode, f: F) -> T
+        where F: FnOnce(CompileOptions) -> T
+    {
+        let opts = CompileOptions {
+            config: config,
+            jobs: None,
+            target: None,
+            features: &[],
+            all_features: false,
+            no_default_features: false,
+            spec: ops::Packages::Packages(&[]),
+            mode: mode,
+            release: false,
+            filter: ops::CompileFilter::new(false, &[], &[], &[], &[]),
+            message_format: MessageFormat::Human,
+            target_rustdoc_args: None,
+            target_rustc_args: None,
+        };
+        f(opts)
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum CompileMode {
     Test,

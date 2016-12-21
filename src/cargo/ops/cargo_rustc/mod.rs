@@ -59,10 +59,26 @@ pub type PackagesToBuild<'a> = [(&'a Package, Vec<(&'a Target, &'a Profile)>)];
 /// directly, we'll use an Executor, giving clients an opportunity to intercept
 /// the build calls.
 pub trait Executor: Clone + Send + 'static {
-    fn init(&mut self, cx: &Context);
+    fn init(&mut self, _cx: &Context) {}
     /// If execution succeeds, the ContinueBuild value indicates whether Cargo
     /// should continue with the build process for this package.
-    fn exec(&self, cmd: ProcessBuilder, id: &PackageId) -> Result<ContinueBuild, ProcessError>;
+    fn exec(&self, cmd: ProcessBuilder, _id: &PackageId) -> Result<ContinueBuild, ProcessError> {
+        cmd.exec()?;
+        Ok(ContinueBuild::Continue)
+    }
+
+    fn exec_json<F1, F2>(&self,
+                         cmd: ProcessBuilder,
+                         _id: &PackageId,
+                         mut handle_stdout: F1,
+                         mut handle_srderr: F2)
+                         -> Result<ContinueBuild, ProcessError>
+        where F1: FnMut(&str) -> CargoResult<()>,
+              F2: FnMut(&str) -> CargoResult<()>,
+    {
+        cmd.exec_with_streaming(&mut handle_stdout, &mut handle_srderr)?;
+        Ok(ContinueBuild::Continue)        
+    }
 }
 
 /// A DefaultExecutorcalls rustc without doing anything else. It is Cargo's
@@ -70,14 +86,7 @@ pub trait Executor: Clone + Send + 'static {
 #[derive(Copy, Clone)]
 pub struct DefaultExecutor;
 
-impl Executor for DefaultExecutor {
-    fn init(&mut self, _cx: &Context) {}
-
-    fn exec(&self, cmd: ProcessBuilder, _id: &PackageId) -> Result<ContinueBuild, ProcessError> {
-        cmd.exec()?;
-        Ok(ContinueBuild::Continue)
-    }
-}
+impl Executor for DefaultExecutor {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContinueBuild {
@@ -327,13 +336,13 @@ fn rustc<E: Executor>(cx: &mut Context, unit: &Unit, exec: &mut E) -> CargoResul
 
         state.running(&rustc);
         let cont = if json_messages {
-            rustc.exec_with_streaming(
-                &mut |line| if !line.is_empty() {
+            exec.exec_json(rustc, &package_id,
+                |line| if !line.is_empty() {
                     Err(internal(&format!("compiler stdout is not empty: `{}`", line)))
                 } else {
                     Ok(())
                 },
-                &mut |line| {
+                |line| {
                     // stderr from rustc can have a mix of JSON and non-JSON output
                     if line.starts_with("{") {
                         // Handle JSON lines
@@ -351,11 +360,10 @@ fn rustc<E: Executor>(cx: &mut Context, unit: &Unit, exec: &mut E) -> CargoResul
                         writeln!(io::stderr(), "{}", line)?;
                     }
                     Ok(())
-                },
-            ).map(|_| ()).chain_error(|| {
+                }
+            ).chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
-            })?;
-            ContinueBuild::Continue
+            })?
         } else {
             exec.exec(rustc, &package_id).chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
