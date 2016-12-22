@@ -1101,3 +1101,31 @@ fn relative_path_for_member_works() {
     assert_that(p.cargo("build").cwd(p.root().join("foo")), execs().with_status(0));
     assert_that(p.cargo("build").cwd(p.root().join("bar")), execs().with_status(0));
 }
+
+#[test]
+fn path_dep_outside_workspace_is_not_member() {
+    let p = project("foo")
+        .file("ws/Cargo.toml", r#"
+            [project]
+            name = "ws"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            foo = { path = "../foo" }
+
+            [workspace]
+        "#)
+        .file("ws/src/lib.rs", r"extern crate foo;")
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build").cwd(p.root().join("ws")),
+                execs().with_status(0));
+}
