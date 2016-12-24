@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::io::Write;
@@ -24,7 +24,7 @@ pub struct JobQueue<'a> {
     queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness)>>,
     tx: Sender<(Key<'a>, Message)>,
     rx: Receiver<(Key<'a>, Message)>,
-    active: HashSet<&'a PackageId>,
+    active: BTreeSet<&'a PackageId>,
     pending: HashMap<Key<'a>, PendingBuild>,
     compiled: HashSet<&'a PackageId>,
     documented: HashSet<&'a PackageId>,
@@ -84,7 +84,7 @@ impl<'a> JobQueue<'a> {
             queue: DependencyQueue::new(),
             tx: tx,
             rx: rx,
-            active: HashSet::with_capacity(cx.jobs() as usize),
+            active: BTreeSet::new(),
             pending: HashMap::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
@@ -165,35 +165,39 @@ impl<'a> JobQueue<'a> {
 
             match msg {
                 Message::Run(cmd) => {
-                    cx.config.shell().verbose(|c| c.status("Running", &cmd))?;
+                    self.update_display(cx.config, |_| {
+                        Ok(cx.config.shell().verbose(|c| c.status("Running", &cmd))?)
+                    })?;
                 }
                 Message::Stdout(out) => {
                     if cx.config.extra_verbose() {
-                        writeln!(cx.config.shell().out(), "{}", out)?;
+                        self.update_display(cx.config, |_| {
+                            Ok(writeln!(cx.config.shell().out(), "{}", out)?)
+                        })?;
                     }
                 }
                 Message::Stderr(err) => {
                     if cx.config.extra_verbose() {
-                        writeln!(cx.config.shell().err(), "{}", err)?;
+                        self.update_display(cx.config, |_| {
+                            Ok(writeln!(cx.config.shell().err(), "{}", err)?)
+                        })?;
                     }
                 }
                 Message::Finish(result) => {
                     info!("end: {:?}", key);
-                    self.active.remove(key.pkg);
-                    println!("\x1B[{}A", self.active.len() + 2);
-                    print!("\x1B[K");
-                    cx.config.shell().status("Finished", key.pkg)?;
-                    for x in &self.active {
-                        print!("\x1B[K");
-                        cx.config.shell().status("Compiling", x)?;
-                    }
+                    self.update_display(cx.config, |active| {
+                        active.remove(key.pkg);
+                        cx.config.shell().status("Finished", key.pkg)
+                    })?;
                     match result {
                         Ok(()) => self.finish(key, cx)?,
                         Err(e) => {
                             if self.active.len() > 0 {
-                                cx.config.shell().say(
-                                            "Build failed, waiting for other \
-                                             jobs to finish...", YELLOW)?;
+                                self.update_display(cx.config, |_| {
+                                    Ok(cx.config.shell().say(
+                                                "Build failed, waiting for other \
+                                                 jobs to finish...", YELLOW)?)
+                                })?;
                             }
                             if error.is_none() {
                                 error = Some(e);
@@ -263,9 +267,12 @@ impl<'a> JobQueue<'a> {
         if key.profile.run_custom_build && cx.show_warnings(key.pkg) {
             let output = cx.build_state.outputs.lock().unwrap();
             if let Some(output) = output.get(&(key.pkg.clone(), key.kind)) {
-                for warning in output.warnings.iter() {
-                    cx.config.shell().warn(warning)?;
-                }
+                self.update_display(cx.config, |_| {
+                    for warning in output.warnings.iter() {
+                        cx.config.shell().warn(warning)?;
+                    }
+                    Ok(())
+                })?;
             }
         }
         let state = self.pending.get_mut(&key).unwrap();
@@ -311,6 +318,22 @@ impl<'a> JobQueue<'a> {
                 config.shell().verbose(|c| c.status("Fresh", key.pkg))?;
             }
             Fresh => {}
+        }
+        Ok(())
+    }
+
+    /// Cleans the display before printing the message.
+    fn update_display<F>(&mut self, config: &Config, f: F) -> CargoResult<()>
+        where F: FnOnce(&mut BTreeSet<&PackageId>) -> CargoResult<()>
+    {
+        println!("\x1B[{}A", self.active.len() + 1);
+
+        print!("\x1B[2K\x1B[100D");
+        f(&mut self.active)?;
+
+        for x in &self.active {
+            print!("\x1B[2K\x1B[100D");
+            config.shell().status("Compiling", x)?;
         }
         Ok(())
     }
