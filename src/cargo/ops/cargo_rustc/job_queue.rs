@@ -24,7 +24,7 @@ pub struct JobQueue<'a> {
     queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness)>>,
     tx: Sender<(Key<'a>, Message)>,
     rx: Receiver<(Key<'a>, Message)>,
-    active: usize,
+    active: HashSet<&'a PackageId>,
     pending: HashMap<Key<'a>, PendingBuild>,
     compiled: HashSet<&'a PackageId>,
     documented: HashSet<&'a PackageId>,
@@ -84,7 +84,7 @@ impl<'a> JobQueue<'a> {
             queue: DependencyQueue::new(),
             tx: tx,
             rx: rx,
-            active: 0,
+            active: HashSet::with_capacity(cx.jobs() as usize),
             pending: HashMap::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
@@ -138,7 +138,7 @@ impl<'a> JobQueue<'a> {
         let mut error = None;
         let start_time = Instant::now();
         loop {
-            while error.is_none() && self.active < self.jobs {
+            while error.is_none() && self.active.len() < self.jobs {
                 if !queue.is_empty() {
                     let (key, job, fresh) = queue.remove(0);
                     self.run(key, fresh, job, cx.config, scope)?;
@@ -157,7 +157,7 @@ impl<'a> JobQueue<'a> {
                     break
                 }
             }
-            if self.active == 0 {
+            if self.active.len() == 0 {
                 break
             }
 
@@ -179,11 +179,18 @@ impl<'a> JobQueue<'a> {
                 }
                 Message::Finish(result) => {
                     info!("end: {:?}", key);
-                    self.active -= 1;
+                    self.active.remove(key.pkg);
+                    println!("\x1B[{}A", self.active.len() + 2);
+                    print!("\x1B[K");
+                    cx.config.shell().status("Finished", key.pkg)?;
+                    for x in &self.active {
+                        print!("\x1B[K");
+                        cx.config.shell().status("Compiling", x)?;
+                    }
                     match result {
                         Ok(()) => self.finish(key, cx)?,
                         Err(e) => {
-                            if self.active > 0 {
+                            if self.active.len() > 0 {
                                 cx.config.shell().say(
                                             "Build failed, waiting for other \
                                              jobs to finish...", YELLOW)?;
@@ -234,7 +241,7 @@ impl<'a> JobQueue<'a> {
            scope: &Scope<'a>) -> CargoResult<()> {
         info!("start: {:?}", key);
 
-        self.active += 1;
+        self.active.insert(key.pkg);
         *self.counts.get_mut(key.pkg).unwrap() -= 1;
 
         let my_tx = self.tx.clone();
