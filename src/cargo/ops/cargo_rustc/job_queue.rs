@@ -28,13 +28,25 @@ pub struct JobQueue<'a> {
     ///
     /// We want to keep the insert order so that the jobs are sorted by start
     /// time.
-    active: VecDeque<&'a PackageId>,
+    active: VecDeque<(&'a PackageId, JobType)>,
     pending: HashMap<Key<'a>, PendingBuild>,
     compiled: HashSet<&'a PackageId>,
     documented: HashSet<&'a PackageId>,
     counts: HashMap<&'a PackageId, usize>,
     is_release: bool,
     is_doc_all: bool,
+}
+
+#[derive(Debug, Copy, Clone)]
+enum JobType {
+    Compiling,
+    Documenting,
+}
+
+impl fmt::Display for JobType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
 }
 
 /// A helper structure for metadata about the state of a building package.
@@ -189,8 +201,8 @@ impl<'a> JobQueue<'a> {
                 }
                 Message::Finish(result) => {
                     info!("end: {:?}", key);
-                    self.update_display(cx.config, |active| {
-                        active.retain(|x| *x != key.pkg);
+                    self.update_display(cx.config, |self_| {
+                        self_.active.retain(|x| x.0 != key.pkg);
                         cx.config.shell().status("Finished", key.pkg)
                     })?;
                     match result {
@@ -249,7 +261,6 @@ impl<'a> JobQueue<'a> {
            scope: &Scope<'a>) -> CargoResult<()> {
         info!("start: {:?}", key);
 
-        self.active.push_back(key.pkg);
         *self.counts.get_mut(key.pkg).unwrap() -= 1;
 
         let my_tx = self.tx.clone();
@@ -305,39 +316,42 @@ impl<'a> JobQueue<'a> {
             return Ok(())
         }
 
-        match fresh {
-            // Any dirty stage which runs at least one command gets printed as
-            // being a compiled package
-            Dirty => {
-                if key.profile.doc {
-                    self.documented.insert(key.pkg);
-                    config.shell().status("Documenting", key.pkg)?;
-                } else {
-                    self.compiled.insert(key.pkg);
-                    config.shell().status("Compiling", key.pkg)?;
+        self.update_display(config, |self_| {
+            Ok(match fresh {
+                // Any dirty stage which runs at least one command gets printed as
+                // being a compiled package
+                Dirty => {
+                    if key.profile.doc {
+                        self_.documented.insert(key.pkg);
+                        self_.active.push_back((key.pkg, JobType::Documenting));
+                    } else {
+                        self_.compiled.insert(key.pkg);
+                        self_.active.push_back((key.pkg, JobType::Compiling));
+                    }
                 }
-            }
-            Fresh if self.counts[key.pkg] == 0 => {
-                self.compiled.insert(key.pkg);
-                config.shell().verbose(|c| c.status("Fresh", key.pkg))?;
-            }
-            Fresh => {}
-        }
-        Ok(())
+                Fresh if self_.counts[key.pkg] == 0 => {
+                    self_.compiled.insert(key.pkg);
+                    config.shell().verbose(|c| c.status("Fresh", key.pkg))?;
+                }
+                Fresh => {}
+            })
+        })
     }
 
     /// Cleans the display before printing the message.
     fn update_display<F>(&mut self, config: &Config, f: F) -> CargoResult<()>
-        where F: FnOnce(&mut VecDeque<&PackageId>) -> CargoResult<()>
+        where F: FnOnce(&mut Self) -> CargoResult<()>
     {
+        // Move up n lines.
         println!("\x1B[{}A", self.active.len() + 1);
 
-        print!("\x1B[2K\x1B[100D");
-        f(&mut self.active)?;
+        // Clear line
+        print!("\x1B[100D\x1B[2K");
+        f(self)?;
 
-        for x in &self.active {
-            print!("\x1B[2K\x1B[100D");
-            config.shell().status("Compiling", x)?;
+        for &(pkg, job_type) in &self.active {
+            print!("\x1B[100D\x1B[2K");
+            config.shell().status(job_type, pkg)?;
         }
         Ok(())
     }
