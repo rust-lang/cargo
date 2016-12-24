@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{HashSet, VecDeque};
 use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::io::Write;
@@ -24,7 +24,11 @@ pub struct JobQueue<'a> {
     queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness)>>,
     tx: Sender<(Key<'a>, Message)>,
     rx: Receiver<(Key<'a>, Message)>,
-    active: BTreeSet<&'a PackageId>,
+    /// Packages currently compiling.
+    ///
+    /// We want to keep the insert order so that the jobs are sorted by start
+    /// time.
+    active: VecDeque<&'a PackageId>,
     pending: HashMap<Key<'a>, PendingBuild>,
     compiled: HashSet<&'a PackageId>,
     documented: HashSet<&'a PackageId>,
@@ -84,7 +88,7 @@ impl<'a> JobQueue<'a> {
             queue: DependencyQueue::new(),
             tx: tx,
             rx: rx,
-            active: BTreeSet::new(),
+            active: VecDeque::new(),
             pending: HashMap::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
@@ -186,7 +190,7 @@ impl<'a> JobQueue<'a> {
                 Message::Finish(result) => {
                     info!("end: {:?}", key);
                     self.update_display(cx.config, |active| {
-                        active.remove(key.pkg);
+                        active.retain(|x| *x != key.pkg);
                         cx.config.shell().status("Finished", key.pkg)
                     })?;
                     match result {
@@ -245,7 +249,7 @@ impl<'a> JobQueue<'a> {
            scope: &Scope<'a>) -> CargoResult<()> {
         info!("start: {:?}", key);
 
-        self.active.insert(key.pkg);
+        self.active.push_back(key.pkg);
         *self.counts.get_mut(key.pkg).unwrap() -= 1;
 
         let my_tx = self.tx.clone();
@@ -324,7 +328,7 @@ impl<'a> JobQueue<'a> {
 
     /// Cleans the display before printing the message.
     fn update_display<F>(&mut self, config: &Config, f: F) -> CargoResult<()>
-        where F: FnOnce(&mut BTreeSet<&PackageId>) -> CargoResult<()>
+        where F: FnOnce(&mut VecDeque<&PackageId>) -> CargoResult<()>
     {
         println!("\x1B[{}A", self.active.len() + 1);
 
