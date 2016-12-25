@@ -7,6 +7,9 @@ use hamcrest::assert_that;
 
 #[test]
 fn check_success() {
+    if !is_nightly() {
+        return
+    }
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -35,13 +38,15 @@ fn check_success() {
         "#);
     bar.build();
 
-    let expected = if is_nightly() { 0 } else { 101 };
     assert_that(foo.cargo_process("check"),
-                execs().with_status(expected));
+                execs().with_status(0));
 }
 
 #[test]
 fn check_fail() {
+    if !is_nightly() {
+        return
+    }
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -76,6 +81,9 @@ fn check_fail() {
 
 #[test]
 fn custom_derive() {
+    if !is_nightly() {
+        return
+    }
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -128,9 +136,8 @@ pub fn derive(_input: TokenStream) -> TokenStream {
 "#);
     bar.build();
 
-    let expected = if is_nightly() { 0 } else { 101 };
     assert_that(foo.cargo_process("check"),
-                execs().with_status(expected));
+                execs().with_status(0));
 }
 
 #[test]
