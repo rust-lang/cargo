@@ -35,6 +35,7 @@ Cargo requires the following tools and packages to build:
 * `curl` (on Unix)
 * `cmake`
 * OpenSSL headers (only for Unix, this is the `libssl-dev` package on ubuntu)
+* `cargo` and `rustc`
 
 First, you'll want to check out this repository
 
@@ -43,30 +44,19 @@ git clone --recursive https://github.com/rust-lang/cargo
 cd cargo
 ```
 
-If you already have `rustc` and `cargo` installed elsewhere, you can simply run
+With `cargo` already installed, you can simply run:
 
 ```
 cargo build --release
 ```
 
-Otherwise, if you have `rustc` installed and not Cargo, you can simply run:
+Otherwise, you can also use a more traditional approach:
 
 ```sh
 ./configure
 make
 make install
 ```
-
-If, however, you have neither `rustc` nor `cargo` previously installed you can
-run:
-
-```sh
-python -B src/etc/install-deps.py
-./configure --local-rust-root="$PWD"/rustc
-make
-make install
-```
-Note: if building for 32 bit systems run `BITS=32 python -B ..`
 
 More options can be discovered through `./configure`, such as compiling cargo
 for more than one target. For example, if you'd like to compile both 32 and 64
