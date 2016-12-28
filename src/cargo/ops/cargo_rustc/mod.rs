@@ -460,7 +460,6 @@ fn prepare_rustc(cx: &mut Context,
                  unit: &Unit) -> CargoResult<ProcessBuilder> {
     let mut base = cx.compilation.rustc_process(unit.pkg)?;
     build_base_args(cx, &mut base, unit, &crate_types);
-    build_plugin_args(&mut base, cx, unit);
     build_deps_args(&mut base, cx, unit)?;
     Ok(base)
 }
@@ -566,12 +565,16 @@ fn build_base_args(cx: &mut Context,
         cmd.arg("--error-format").arg("json");
     }
 
-    if check {
-        cmd.arg("--crate-type").arg("metadata");
-    } else if !test {
+    if !test {
         for crate_type in crate_types.iter() {
             cmd.arg("--crate-type").arg(crate_type);
         }
+    }
+
+    if check {
+        cmd.arg("--emit=dep-info,metadata");
+    } else {
+        cmd.arg("--emit=dep-info,link");
     }
 
     let prefer_dynamic = (unit.target.for_host() &&
@@ -653,10 +656,9 @@ fn build_base_args(cx: &mut Context,
     if rpath {
         cmd.arg("-C").arg("rpath");
     }
-}
 
+    cmd.arg("--out-dir").arg(&cx.out_dir(unit));
 
-fn build_plugin_args(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit) {
     fn opt(cmd: &mut ProcessBuilder, key: &str, prefix: &str,
            val: Option<&OsStr>)  {
         if let Some(val) = val {
@@ -666,9 +668,6 @@ fn build_plugin_args(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit) {
         }
     }
 
-    cmd.arg("--out-dir").arg(&cx.out_dir(unit));
-    cmd.arg("--emit=dep-info,link");
-
     if unit.kind == Kind::Target {
         opt(cmd, "--target", "", cx.requested_target().map(|s| s.as_ref()));
     }
@@ -676,6 +675,7 @@ fn build_plugin_args(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit) {
     opt(cmd, "-C", "ar=", cx.ar(unit.kind).map(|s| s.as_ref()));
     opt(cmd, "-C", "linker=", cx.linker(unit.kind).map(|s| s.as_ref()));
 }
+
 
 fn build_deps_args(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit)
                    -> CargoResult<()> {
