@@ -47,9 +47,11 @@ the source directory of the build script’s package.
 All the lines printed to stdout by a build script are written to a file like `target/debug/build/<pkg>/output` (the precise location may depend on your configuration). Any line that starts with `cargo:` is interpreted directly by Cargo. This line must be of the form `cargo:key=value`, like the examples below:
 
 ```notrust
+# specially recognized by Cargo
 cargo:rustc-link-lib=static=foo
 cargo:rustc-link-search=native=/path/to/foo
 cargo:rustc-cfg=foo
+# arbitrary user-defined metadata
 cargo:root=/path/to/foo
 cargo:libdir=/path/to/foo/lib
 cargo:include=/path/to/foo/include
@@ -58,15 +60,21 @@ cargo:include=/path/to/foo/include
 There are a few special keys that Cargo recognizes, some affecting how the
 crate is built:
 
-* `rustc-link-lib` indicates that the specified value should be passed to the
-  compiler as a `-l` flag.
-* `rustc-link-search` indicates the specified value should be passed to the
-  compiler as a `-L` flag.
-* `rustc-cfg` indicates that the specified directive will be passed as a `--cfg`
-  flag to the compiler. This is often useful for performing compile-time
+* `rustc-link-lib=[KIND=]NAME` indicates that the specified value is a library
+  name and should be passed to the compiler as a `-l` flag. The optional `KIND`
+  can be one of `static`, `dylib` (the default), or `framework`, see
+  `rustc --help` for more details.
+* `rustc-link-search=[KIND=]PATH` indicates the specified value is a library
+  search path and should be passed to the compiler as a `-L` flag. The optional
+  `KIND` can be one of `dependency`, `crate`, `native`, `framework` or `all`
+  (the default), see `rustc --help` for more details.
+* `rustc-flags=FLAGS` is a set of flags passed to the compiler, only `-l` and
+  `-L` flags are supported.
+* `rustc-cfg=FEATURE` indicates that the specified feature will be passed as a
+  `--cfg` flag to the compiler. This is often useful for performing compile-time
   detection of various features.
-* `rerun-if-changed` is a path to a file or directory which indicates that the
-  build script should be re-run if it changes (detected by a more-recent
+* `rerun-if-changed=PATH` is a path to a file or directory which indicates that
+  the build script should be re-run if it changes (detected by a more-recent
   last-modified timestamp on the file). Normally build scripts are re-run if
   any file inside the crate root changes, but this can be used to scope changes
   to just a small set of files. (If this path points to a directory the entire
@@ -74,11 +82,16 @@ crate is built:
   of the directory itself (which corresponds to some types of changes within the
   directory, depending on platform) will trigger a rebuild. To request a re-run
   on any changes within an entire directory, print a line for the directory and
-  another line for everything inside it, recursively.)
-* `warning` is a message that will be printed to the main console after a build
-  script has finished running. Warnings are only shown for path dependencies
-  (that is, those you're working on locally), so for example warnings printed
-  out in crates.io crates are not emitted by default.
+  another line for everything inside it, recursively.)  
+  Note that if the build script itself (or one of its dependencies) changes,
+  then it's rebuilt and rerun unconditionally, so
+  `cargo:rerun-if-changed=build.rs` is almost always redundant (unless you
+  want to ignore changes in all other files except for `build.rs`).
+
+* `warning=MESSAGE` is a message that will be printed to the main console after
+  a build script has finished running. Warnings are only shown for path
+  dependencies (that is, those you're working on locally), so for example
+  warnings printed out in crates.io crates are not emitted by default.
 
 Any other element is a user-defined metadata that will be passed to
 dependents. More information about this can be found in the [`links`][links]
