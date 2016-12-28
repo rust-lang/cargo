@@ -44,7 +44,7 @@ impl FromStr for Cfg {
         let mut p = Parser::new(s);
         let e = p.cfg()?;
         if p.t.next().is_some() {
-            bail!("malformed cfg value or key/value pair")
+            bail!("malformed cfg value or key/value pair: `{}`", s)
         }
         Ok(e)
     }
