@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::path::Path;
 use std::collections::BTreeMap;
+use std::fs::File;
 
 use rustc_serialize::{Decodable, Decoder};
 
@@ -10,10 +11,12 @@ use git2::Config as GitConfig;
 use term::color::BLACK;
 
 use core::Workspace;
-use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
+use util::{GitRepo, HgRepo, CargoResult, CargoError, human, ChainError, internal};
 use util::{Config, paths};
 
 use toml;
+
+const DEFAULT_TEMPLATE_STRING: &'static str = "[dependencies]";
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionControl { Git, Hg, NoVcs }
@@ -24,6 +27,7 @@ pub struct NewOptions<'a> {
     pub lib: bool,
     pub path: &'a str,
     pub name: Option<&'a str>,
+    pub template: Option<&'a str>,
 }
 
 struct SourceFileInformation {
@@ -38,6 +42,7 @@ struct MkOptions<'a> {
     name: &'a str,
     source_files: Vec<SourceFileInformation>,
     bin: bool,
+    template: &'a str,
 }
 
 impl Decodable for VersionControl {
@@ -59,7 +64,8 @@ impl<'a> NewOptions<'a> {
            bin: bool,
            lib: bool,
            path: &'a str,
-           name: Option<&'a str>) -> NewOptions<'a> {
+           name: Option<&'a str>,
+           template: Option<&'a str>) -> NewOptions<'a> {
 
         // default to lib
         let is_lib = if !bin {
@@ -75,6 +81,7 @@ impl<'a> NewOptions<'a> {
             lib: is_lib,
             path: path,
             name: name,
+            template: template
         }
     }
 }
@@ -254,6 +261,19 @@ fn plan_new_source_file(bin: bool, project_name: String) -> SourceFileInformatio
     }
 }
 
+
+/// Resolves the string to append to the Cargo.toml
+/// file by reading the file associated with that file name
+fn resolve_template_content(template: Option<&str>) -> Result<String, Box<CargoError>> {
+    use std::io::Read;
+
+    template.map_or(Ok(String::new()), |path| {
+        let mut s = String::from(DEFAULT_TEMPLATE_STRING);
+        File::open(path)?.read_to_string(&mut s)?;
+        Ok(s)
+    })
+}
+
 pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     let path = config.cwd().join(opts.path);
     if fs::metadata(&path).is_ok() {
@@ -268,12 +288,22 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     let name = get_name(&path, &opts, config)?;
     check_name(name)?;
 
+    //let template_string: Result<&str> = opts.template.map_or(Ok(&""), |path| {
+    //    File::open(path).map(|file| {
+    //        let s = String::new();
+    //        file.read_to_string(&mut s).map(|_| &s)
+    //    })
+    //});
+
+    let template_string = resolve_template_content(opts.template)?;
+
     let mkopts = MkOptions {
         version_control: opts.version_control,
         path: &path,
         name: name,
         source_files: vec![plan_new_source_file(opts.bin, name.to_string())],
         bin: opts.bin,
+        template: &template_string,
     };
 
     mk(config, &mkopts).chain_error(|| {
@@ -334,12 +364,16 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
         }
     }
 
+
+    let template_string = resolve_template_content(opts.template)?;
+
     let mkopts = MkOptions {
         version_control: version_control,
         path: &path,
         name: name,
         bin: src_paths_types.iter().any(|x|x.bin),
         source_files: src_paths_types,
+        template: &template_string,
     };
 
     mk(config, &mkopts).chain_error(|| {
@@ -444,8 +478,8 @@ name = "{}"
 version = "0.1.0"
 authors = [{}]
 
-[dependencies]
-{}"#, name, toml::Value::String(author), cargotoml_path_specifier).as_bytes())?;
+{}
+{}"#, name, toml::Value::String(author), opts.template, cargotoml_path_specifier).as_bytes())?;
 
 
     // Create all specified source files
