@@ -1,8 +1,9 @@
 use std::env;
 
+use cargo::core::Workspace;
 use cargo::ops::{self, CompileOptions, MessageFormat};
-use cargo::ops::with_check_ws;
 use cargo::util::{CliResult, Config};
+use cargo::util::important_paths::find_root_manifest_for_wd;
 
 pub const USAGE: &'static str = "
 Check a local package and all of its dependencies for errors
@@ -75,28 +76,29 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                      options.flag_frozen,
                      options.flag_locked)?;
 
-    with_check_ws(options.flag_manifest_path.clone(), config, |ws| {
-        let opts = CompileOptions {
-            config: config,
-            jobs: options.flag_jobs,
-            target: options.flag_target.as_ref().map(|t| &t[..]),
-            features: &options.flag_features,
-            all_features: options.flag_all_features,
-            no_default_features: options.flag_no_default_features,
-            spec: ops::Packages::Packages(&options.flag_package),
-            mode: ops::CompileMode::Check,
-            release: options.flag_release,
-            filter: ops::CompileFilter::new(options.flag_lib,
-                                            &options.flag_bin,
-                                            &options.flag_test,
-                                            &options.flag_example,
-                                            &options.flag_bench),
-            message_format: options.flag_message_format,
-            target_rustdoc_args: None,
-            target_rustc_args: None,
-        };
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
+    let ws = Workspace::new(&root, config)?;
 
-        ops::compile(ws, &opts)?;
-        Ok(None)
-    })
+    let opts = CompileOptions {
+        config: config,
+        jobs: options.flag_jobs,
+        target: options.flag_target.as_ref().map(|t| &t[..]),
+        features: &options.flag_features,
+        all_features: options.flag_all_features,
+        no_default_features: options.flag_no_default_features,
+        spec: ops::Packages::Packages(&options.flag_package),
+        mode: ops::CompileMode::Check,
+        release: options.flag_release,
+        filter: ops::CompileFilter::new(options.flag_lib,
+                                        &options.flag_bin,
+                                        &options.flag_test,
+                                        &options.flag_example,
+                                        &options.flag_bench),
+        message_format: options.flag_message_format,
+        target_rustdoc_args: None,
+        target_rustc_args: None,
+    };
+
+    ops::compile(&ws, &opts)?;
+    Ok(None)
 }
