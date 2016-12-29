@@ -11,22 +11,6 @@ Learn more at http://doc.crates.io/
 Cargo is distributed by default with Rust, so if you've got `rustc` installed
 locally you probably also have `cargo` installed locally.
 
-If, however, you would like to install Cargo from the nightly binaries that are
-generated, you may also do so! Note that these nightlies are not official
-binaries, so they are only provided in one format with one installation method.
-Each tarball below contains a top-level `install.sh` script to install Cargo.
-
-* [`x86_64-unknown-linux-gnu`](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-unknown-linux-gnu.tar.gz)
-* [`i686-unknown-linux-gnu`](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-unknown-linux-gnu.tar.gz)
-* [`x86_64-apple-darwin`](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-apple-darwin.tar.gz)
-* [`i686-apple-darwin`](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-apple-darwin.tar.gz)
-* [`x86_64-pc-windows-gnu`](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-pc-windows-gnu.tar.gz)
-* [`i686-pc-windows-gnu`](https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-windows-gnu.tar.gz)
-* [`x86_64-pc-windows-msvc`](https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-pc-windows-msvc.tar.gz)
-
-Note that if you're on Windows you will have to run the `install.sh` script from
-inside an MSYS shell, likely from a MinGW-64 installation.
-
 ## Compiling from Source
 
 Cargo requires the following tools and packages to build:
