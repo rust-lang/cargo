@@ -38,6 +38,7 @@ Options:
     --color WHEN        Coloring: auto, always, never
     --frozen            Require Cargo.lock and cache are up to date
     --locked            Require Cargo.lock is up to date
+    --template NAME     Specify a template for Cargo.toml
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
