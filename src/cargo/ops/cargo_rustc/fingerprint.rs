@@ -148,10 +148,15 @@ impl Fingerprint {
     fn update_local(&self) -> CargoResult<()> {
         match self.local {
             LocalFingerprint::MtimeBased(ref slot, ref path) => {
-                if let Ok(meta) = fs::metadata(path) {
-                    let mtime = FileTime::from_last_modification_time(&meta);
-                    *slot.0.lock().unwrap() = Some(mtime);
-                }
+                let meta = fs::metadata(path).chain_error(|| {
+                    internal(format!("failed to stat `{}`", path.display()))
+                })?;
+                let mtime = FileTime::from_last_modification_time(&meta);
+                *slot.0.lock().unwrap() = Some(mtime);
+                // if let Ok(meta) = fs::metadata(path) {
+                //     let mtime = FileTime::from_last_modification_time(&meta);
+                //     *slot.0.lock().unwrap() = Some(mtime);
+                // }
             }
             LocalFingerprint::Precalculated(..) => return Ok(())
         }

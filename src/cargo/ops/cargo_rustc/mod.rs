@@ -62,9 +62,9 @@ pub trait Executor: Send + Sync + 'static {
     fn init(&self, _cx: &Context) {}
     /// If execution succeeds, the ContinueBuild value indicates whether Cargo
     /// should continue with the build process for this package.
-    fn exec(&self, cmd: ProcessBuilder, _id: &PackageId) -> Result<ContinueBuild, ProcessError> {
+    fn exec(&self, cmd: ProcessBuilder, _id: &PackageId) -> Result<(), ProcessError> {
         cmd.exec()?;
-        Ok(ContinueBuild::Continue)
+        Ok(())
     }
 
     fn exec_json(&self,
@@ -72,9 +72,9 @@ pub trait Executor: Send + Sync + 'static {
                  _id: &PackageId,
                  handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
                  handle_srderr: &mut FnMut(&str) -> CargoResult<()>)
-                 -> Result<ContinueBuild, ProcessError> {
+                 -> Result<(), ProcessError> {
         cmd.exec_with_streaming(handle_stdout, handle_srderr)?;
-        Ok(ContinueBuild::Continue)        
+        Ok(())
     }
 }
 
@@ -84,12 +84,6 @@ pub trait Executor: Send + Sync + 'static {
 pub struct DefaultExecutor;
 
 impl Executor for DefaultExecutor {}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ContinueBuild {
-    Continue,
-    Stop,
-}
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
@@ -258,7 +252,6 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
             rustc.arg("-Awarnings");
         }
     }
-    let has_custom_args = unit.profile.rustc_args.is_some();
 
     let filenames = cx.target_filenames(unit)?;
     let root = cx.out_dir(unit);
@@ -332,7 +325,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
         }
 
         state.running(&rustc);
-        let cont = if json_messages {
+        if json_messages {
             exec.exec_json(rustc, &package_id,
                 &mut |line| if !line.is_empty() {
                     Err(internal(&format!("compiler stdout is not empty: `{}`", line)))
@@ -360,34 +353,32 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
                 }
             ).chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
-            })?
+            })?;
         } else {
             exec.exec(rustc, &package_id).chain_error(|| {
                 human(format!("Could not compile `{}`.", name))
-            })?
-        };
+            })?;
+        }
 
-        if cont == ContinueBuild::Continue {
-            if do_rename && real_name != crate_name {
-                let dst = &filenames[0].0;
-                let src = dst.with_file_name(dst.file_name().unwrap()
-                                                .to_str().unwrap()
-                                                .replace(&real_name, &crate_name));
-                if !has_custom_args || src.exists() {
-                    fs::rename(&src, &dst).chain_error(|| {
-                        internal(format!("could not rename crate {:?}", src))
-                    })?;
-                }
-            }
-
-            if !has_custom_args || fs::metadata(&rustc_dep_info_loc).is_ok() {
-                info!("Renaming dep_info {:?} to {:?}", rustc_dep_info_loc, dep_info_loc);
-                fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_error(|| {
-                    internal(format!("could not rename dep info: {:?}",
-                                  rustc_dep_info_loc))
+        if do_rename && real_name != crate_name {
+            let dst = &filenames[0].0;
+            let src = dst.with_file_name(dst.file_name().unwrap()
+                                            .to_str().unwrap()
+                                            .replace(&real_name, &crate_name));
+            if src.exists() {
+                fs::rename(&src, &dst).chain_error(|| {
+                    internal(format!("could not rename crate {:?}", src))
                 })?;
-                fingerprint::append_current_dir(&dep_info_loc, &cwd)?;
             }
+        }
+
+        if fs::metadata(&rustc_dep_info_loc).is_ok() {
+            info!("Renaming dep_info {:?} to {:?}", rustc_dep_info_loc, dep_info_loc);
+            fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_error(|| {
+                internal(format!("could not rename dep info: {:?}",
+                              rustc_dep_info_loc))
+            })?;
+            fingerprint::append_current_dir(&dep_info_loc, &cwd)?;
         }
 
         if json_messages {
