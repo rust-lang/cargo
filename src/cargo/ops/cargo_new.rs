@@ -288,13 +288,6 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     let name = get_name(&path, &opts, config)?;
     check_name(name)?;
 
-    //let template_string: Result<&str> = opts.template.map_or(Ok(&""), |path| {
-    //    File::open(path).map(|file| {
-    //        let s = String::new();
-    //        file.read_to_string(&mut s).map(|_| &s)
-    //    })
-    //});
-
     let template_string = resolve_template_content(opts.template)?;
 
     let mkopts = MkOptions {
