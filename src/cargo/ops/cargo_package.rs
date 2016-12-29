@@ -2,6 +2,7 @@ use std::fs::{self, File};
 use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::{self, Path};
+use std::sync::Arc;
 
 use flate2::read::GzDecoder;
 use flate2::{GzBuilder, Compression};
@@ -298,7 +299,7 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
         mode: ops::CompileMode::Build,
         target_rustdoc_args: None,
         target_rustc_args: None,
-    }, &mut DefaultExecutor)?;
+    }, Arc::new(DefaultExecutor))?;
 
     Ok(())
 }

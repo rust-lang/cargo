@@ -24,6 +24,7 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use core::{Source, Package, Target};
 use core::{Profile, TargetKind, Profiles, Workspace, PackageIdSpec};
@@ -63,10 +64,9 @@ pub struct CompileOptions<'a> {
 }
 
 impl<'a> CompileOptions<'a> {
-    pub fn with_default<F, T>(config: &Config, mode: CompileMode, f: F) -> T
-        where F: FnOnce(CompileOptions) -> T
+    pub fn default(config: &'a Config, mode: CompileMode) -> CompileOptions<'a>
     {
-        let opts = CompileOptions {
+        CompileOptions {
             config: config,
             jobs: None,
             target: None,
@@ -80,8 +80,7 @@ impl<'a> CompileOptions<'a> {
             message_format: MessageFormat::Human,
             target_rustdoc_args: None,
             target_rustc_args: None,
-        };
-        f(opts)
+        }
     }
 }
 
@@ -136,13 +135,13 @@ pub enum CompileFilter<'a> {
 
 pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
                    -> CargoResult<ops::Compilation<'a>> {
-    compile_with_exec(ws, options, &mut DefaultExecutor)
+    compile_with_exec(ws, options, Arc::new(DefaultExecutor))
 }
 
-pub fn compile_with_exec<'a, E: Executor>(ws: &Workspace<'a>,
-                                          options: &CompileOptions<'a>, 
-                                          exec: &mut E)
-                                          -> CargoResult<ops::Compilation<'a>> {
+pub fn compile_with_exec<'a>(ws: &Workspace<'a>,
+                             options: &CompileOptions<'a>, 
+                             exec: Arc<Executor>)
+                             -> CargoResult<ops::Compilation<'a>> {
     for member in ws.members() {
         for key in member.manifest().warnings().iter() {
             options.config.shell().warn(key)?
@@ -151,11 +150,11 @@ pub fn compile_with_exec<'a, E: Executor>(ws: &Workspace<'a>,
     compile_ws(ws, None, options, exec)
 }
 
-pub fn compile_ws<'a, E: Executor>(ws: &Workspace<'a>,
-                                   source: Option<Box<Source + 'a>>,
-                                   options: &CompileOptions<'a>,
-                                   exec: &mut E)
-                                   -> CargoResult<ops::Compilation<'a>> {
+pub fn compile_ws<'a>(ws: &Workspace<'a>,
+                      source: Option<Box<Source + 'a>>,
+                      options: &CompileOptions<'a>,
+                      exec: Arc<Executor>)
+                      -> CargoResult<ops::Compilation<'a>> {
     let CompileOptions { config, jobs, target, spec, features,
                          all_features, no_default_features,
                          release, mode, message_format,

@@ -1,4 +1,3 @@
-pub use self::cargo_check::with_check_ws;
 pub use self::cargo_clean::{clean, CleanOptions};
 pub use self::cargo_compile::{compile, compile_with_exec, compile_ws, CompileOptions};
 pub use self::cargo_compile::{CompileFilter, CompileMode, MessageFormat, Packages};
@@ -25,7 +24,6 @@ pub use self::cargo_pkgid::pkgid;
 pub use self::resolve::{resolve_ws, resolve_ws_precisely, resolve_with_previous};
 pub use self::cargo_output_metadata::{output_metadata, OutputMetadataOptions, ExportInfo};
 
-mod cargo_check;
 mod cargo_clean;
 mod cargo_compile;
 mod cargo_doc;

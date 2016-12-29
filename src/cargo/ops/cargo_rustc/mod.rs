@@ -58,8 +58,8 @@ pub type PackagesToBuild<'a> = [(&'a Package, Vec<(&'a Target, &'a Profile)>)];
 /// A glorified callback for executing calls to rustc. Rather than calling rustc
 /// directly, we'll use an Executor, giving clients an opportunity to intercept
 /// the build calls.
-pub trait Executor: Clone + Send + 'static {
-    fn init(&mut self, _cx: &Context) {}
+pub trait Executor: Send + Sync + 'static {
+    fn init(&self, _cx: &Context) {}
     /// If execution succeeds, the ContinueBuild value indicates whether Cargo
     /// should continue with the build process for this package.
     fn exec(&self, cmd: ProcessBuilder, _id: &PackageId) -> Result<ContinueBuild, ProcessError> {
@@ -67,21 +67,18 @@ pub trait Executor: Clone + Send + 'static {
         Ok(ContinueBuild::Continue)
     }
 
-    fn exec_json<F1, F2>(&self,
-                         cmd: ProcessBuilder,
-                         _id: &PackageId,
-                         mut handle_stdout: F1,
-                         mut handle_srderr: F2)
-                         -> Result<ContinueBuild, ProcessError>
-        where F1: FnMut(&str) -> CargoResult<()>,
-              F2: FnMut(&str) -> CargoResult<()>,
-    {
-        cmd.exec_with_streaming(&mut handle_stdout, &mut handle_srderr)?;
+    fn exec_json(&self,
+                 cmd: ProcessBuilder,
+                 _id: &PackageId,
+                 handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
+                 handle_srderr: &mut FnMut(&str) -> CargoResult<()>)
+                 -> Result<ContinueBuild, ProcessError> {
+        cmd.exec_with_streaming(handle_stdout, handle_srderr)?;
         Ok(ContinueBuild::Continue)        
     }
 }
 
-/// A DefaultExecutorcalls rustc without doing anything else. It is Cargo's
+/// A DefaultExecutor calls rustc without doing anything else. It is Cargo's
 /// default behaviour.
 #[derive(Copy, Clone)]
 pub struct DefaultExecutor;
@@ -96,15 +93,15 @@ pub enum ContinueBuild {
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
-pub fn compile_targets<'a, 'cfg: 'a, E: Executor>(ws: &Workspace<'cfg>,
-                                                  pkg_targets: &'a PackagesToBuild<'a>,
-                                                  packages: &'a PackageSet<'cfg>,
-                                                  resolve: &'a Resolve,
-                                                  config: &'cfg Config,
-                                                  build_config: BuildConfig,
-                                                  profiles: &'a Profiles, 
-                                                  exec: &mut E)
-                                                  -> CargoResult<Compilation<'cfg>> {
+pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
+                                     pkg_targets: &'a PackagesToBuild<'a>,
+                                     packages: &'a PackageSet<'cfg>,
+                                     resolve: &'a Resolve,
+                                     config: &'cfg Config,
+                                     build_config: BuildConfig,
+                                     profiles: &'a Profiles, 
+                                     exec: Arc<Executor>)
+                                     -> CargoResult<Compilation<'cfg>> {
     let units = pkg_targets.iter().flat_map(|&(pkg, ref targets)| {
         let default_kind = if build_config.requested_target.is_some() {
             Kind::Target
@@ -137,7 +134,7 @@ pub fn compile_targets<'a, 'cfg: 'a, E: Executor>(ws: &Workspace<'cfg>,
         // part of this, that's all done next as part of the `execute`
         // function which will run everything in order with proper
         // parallelism.
-        compile(&mut cx, &mut queue, unit, exec)?;
+        compile(&mut cx, &mut queue, unit, exec.clone())?;
     }
 
     // Now that we've figured out everything that we're going to do, do it!
@@ -207,10 +204,10 @@ pub fn compile_targets<'a, 'cfg: 'a, E: Executor>(ws: &Workspace<'cfg>,
     Ok(cx.compilation)
 }
 
-fn compile<'a, 'cfg: 'a, E: Executor>(cx: &mut Context<'a, 'cfg>,
-                                      jobs: &mut JobQueue<'a>,
-                                      unit: &Unit<'a>,
-                                      exec: &mut E) -> CargoResult<()> {
+fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
+                         jobs: &mut JobQueue<'a>,
+                         unit: &Unit<'a>,
+                         exec: Arc<Executor>) -> CargoResult<()> {
     if !cx.compiled.insert(*unit) {
         return Ok(())
     }
@@ -229,7 +226,7 @@ fn compile<'a, 'cfg: 'a, E: Executor>(cx: &mut Context<'a, 'cfg>,
         let work = if unit.profile.doc {
             rustdoc(cx, unit)?
         } else {
-            rustc(cx, unit, exec)?
+            rustc(cx, unit, exec.clone())?
         };
         let link_work1 = link_targets(cx, unit)?;
         let link_work2 = link_targets(cx, unit)?;
@@ -243,13 +240,13 @@ fn compile<'a, 'cfg: 'a, E: Executor>(cx: &mut Context<'a, 'cfg>,
 
     // Be sure to compile all dependencies of this target as well.
     for unit in cx.dep_targets(unit)?.iter() {
-        compile(cx, jobs, unit, exec)?;
+        compile(cx, jobs, unit, exec.clone())?;
     }
 
     Ok(())
 }
 
-fn rustc<E: Executor>(cx: &mut Context, unit: &Unit, exec: &mut E) -> CargoResult<Work> {
+fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work> {
     let crate_types = unit.target.rustc_crate_types();
     let mut rustc = prepare_rustc(cx, crate_types, unit)?;
 
@@ -337,12 +334,12 @@ fn rustc<E: Executor>(cx: &mut Context, unit: &Unit, exec: &mut E) -> CargoResul
         state.running(&rustc);
         let cont = if json_messages {
             exec.exec_json(rustc, &package_id,
-                |line| if !line.is_empty() {
+                &mut |line| if !line.is_empty() {
                     Err(internal(&format!("compiler stdout is not empty: `{}`", line)))
                 } else {
                     Ok(())
                 },
-                |line| {
+                &mut |line| {
                     // stderr from rustc can have a mix of JSON and non-JSON output
                     if line.starts_with("{") {
                         // Handle JSON lines
