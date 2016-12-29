@@ -89,7 +89,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
                 execs().with_stdout("test passed\n").with_status(0));
 
     println!("cleaning");
-    assert_that(p.cargo("clean"),
+    assert_that(p.cargo("clean").arg("-v"),
                 execs().with_stdout("").with_status(0));
     println!("building baz");
     assert_that(p.cargo("build").arg("-p").arg("baz"),
