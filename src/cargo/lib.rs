@@ -18,6 +18,7 @@ extern crate num_cpus;
 extern crate regex;
 extern crate rustc_serialize;
 extern crate semver;
+extern crate shell_escape;
 extern crate tar;
 extern crate tempdir;
 extern crate term;

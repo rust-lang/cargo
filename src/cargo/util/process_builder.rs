@@ -6,7 +6,7 @@ use std::path::Path;
 use std::process::{Command, Stdio, Output};
 
 use util::{CargoResult, ProcessError, process_error, read2};
-use util::shell_escape::escape;
+use shell_escape::escape;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct ProcessBuilder {

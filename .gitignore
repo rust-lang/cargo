@@ -10,3 +10,4 @@ src/registry/Cargo.lock
 rustc
 __pycache__
 .idea/
+*.iml
