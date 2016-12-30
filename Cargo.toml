@@ -39,6 +39,7 @@ psapi-sys = "0.1"
 regex = "0.1"
 rustc-serialize = "0.3"
 semver = "0.5.0"
+shell-escape = "0.1"
 tar = { version = "0.4", default-features = false }
 tempdir = "0.3"
 term = "0.4.4"
