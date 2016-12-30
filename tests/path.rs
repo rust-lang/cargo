@@ -979,3 +979,34 @@ location searched: [..]
 version required: *
 "));
 }
+
+#[test]
+fn workspace_produces_rlib() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "top"
+            version = "0.5.0"
+            authors = []
+
+            [workspace]
+
+            [dependencies]
+            foo = { path = "foo" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+
+    assert_that(&p.root().join("target/debug/libtop.rlib"), existing_file());
+    assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
+
+}
