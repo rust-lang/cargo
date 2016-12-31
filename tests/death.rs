@@ -3,9 +3,12 @@ extern crate kernel32;
 extern crate libc;
 extern crate winapi;
 
-use std::net::TcpListener;
+use std::fs;
 use std::io::{self, Read};
+use std::net::TcpListener;
 use std::process::{Stdio, Child};
+use std::thread;
+use std::time::Duration;
 
 use cargotest::support::project;
 
@@ -94,6 +97,30 @@ fn ctrl_c_kills_everyone() {
         Ok(n) => assert_eq!(n, 0),
         Err(e) => assert_eq!(e.kind(), io::ErrorKind::ConnectionReset),
     }
+
+    // Ok so what we just did was spawn cargo that spawned a build script, then
+    // we killed cargo in hopes of it killing the build script as well. If all
+    // went well the build script is now dead. On Windows, however, this is
+    // enforced with job objects which means that it may actually be in the
+    // *process* of being torn down at this point.
+    //
+    // Now on Windows we can't completely remove a file until all handles to it
+    // have been closed. Including those that represent running processes. So if
+    // we were to return here then there may still be an open reference to some
+    // file in the build directory. What we want to actually do is wait for the
+    // build script to *complete* exit. Take care of that by blowing away the
+    // build directory here, and panicking if we eventually spin too long
+    // without being able to.
+    for i in 0..10 {
+        match fs::remove_dir_all(&p.root().join("target")) {
+            Ok(()) => return,
+            Err(e) => println!("attempt {}: {}", i, e),
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+
+    panic!("couldn't remove build directory after a few tries, seems like \
+            we won't be able to!");
 }
 
 #[cfg(unix)]
