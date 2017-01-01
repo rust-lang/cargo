@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::path::{PathBuf, Path};
 
@@ -55,6 +56,7 @@ pub struct ManifestMetadata {
     pub homepage: Option<String>,       // url
     pub repository: Option<String>,     // url
     pub documentation: Option<String>,  // url
+    pub badges: HashMap<String, HashMap<String, String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
