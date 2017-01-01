@@ -89,6 +89,7 @@ pub struct NewCrate {
     pub license: Option<String>,
     pub license_file: Option<String>,
     pub repository: Option<String>,
+    pub badges: HashMap<String, HashMap<String, String>>,
 }
 
 #[derive(RustcEncodable)]
@@ -113,6 +114,7 @@ pub struct User {
 
 pub struct Warnings {
     pub invalid_categories: Vec<String>,
+    pub invalid_badges: Vec<String>,
 }
 
 #[derive(RustcDecodable)] struct R { ok: bool }
@@ -205,12 +207,14 @@ impl Registry {
         let body = handle(&mut self.handle, &mut |buf| {
             body.read(buf).unwrap_or(0)
         })?;
+
         // Can't derive RustcDecodable because JSON has a key named "crate" :(
         let response = if body.len() > 0 {
             Json::from_str(&body)?
         } else {
             Json::from_str("{}")?
         };
+
         let invalid_categories: Vec<String> =
             response
                 .find_path(&["warnings", "invalid_categories"])
@@ -219,7 +223,20 @@ impl Registry {
                     x.iter().flat_map(Json::as_string).map(Into::into).collect()
                 })
                 .unwrap_or_else(Vec::new);
-        Ok(Warnings { invalid_categories: invalid_categories })
+
+        let invalid_badges: Vec<String> =
+            response
+                .find_path(&["warnings", "invalid_badges"])
+                .and_then(Json::as_array)
+                .map(|x| {
+                    x.iter().flat_map(Json::as_string).map(Into::into).collect()
+                })
+                .unwrap_or_else(Vec::new);
+
+        Ok(Warnings {
+            invalid_categories: invalid_categories,
+            invalid_badges: invalid_badges,
+        })
     }
 
     pub fn search(&mut self, query: &str, limit: u8) -> Result<(Vec<Crate>, u32)> {
