@@ -12,6 +12,7 @@ use term::color::BLACK;
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
+use version;
 use core::source::Source;
 use core::{Package, SourceId, Workspace};
 use core::dependency::Kind;
@@ -196,6 +197,7 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     handle.connect_timeout(Duration::new(30, 0))?;
     handle.low_speed_limit(10 /* bytes per second */)?;
     handle.low_speed_time(Duration::new(30, 0))?;
+    handle.useragent(&version())?;
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
     }
