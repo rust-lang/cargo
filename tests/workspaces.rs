@@ -1074,3 +1074,30 @@ fn error_if_parent_cargo_toml_is_invalid() {
                        .with_stderr_contains("\
 [ERROR] failed to parse manifest at `[..]`"));
 }
+
+#[test]
+fn relative_path_for_member_works() {
+    let p = project("foo")
+        .file("foo/Cargo.toml", r#"
+        [project]
+        name = "foo"
+        version = "0.1.0"
+        authors = []
+
+        [workspace]
+        members = ["../bar"]
+    "#)
+        .file("foo/src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+        [project]
+        name = "bar"
+        version = "0.1.0"
+        authors = []
+        workspace = "../foo"
+    "#)
+        .file("bar/src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build").cwd(p.root().join("foo")), execs().with_status(0));
+    assert_that(p.cargo("build").cwd(p.root().join("bar")), execs().with_status(0));
+}
