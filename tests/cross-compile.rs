@@ -357,10 +357,10 @@ fn linker_and_ar() {
                 execs().with_status(101)
                        .with_stderr_contains(&format!("\
 [COMPILING] foo v0.5.0 ({url})
-[RUNNING] `rustc --crate-name foo src[/]foo.rs --crate-type bin -g \
+[RUNNING] `rustc --crate-name foo src[/]foo.rs --crate-type bin \
+    --emit=dep-info,link -g \
     -C metadata=[..] \
     --out-dir {dir}[/]target[/]{target}[/]debug[/]deps \
-    --emit=dep-info,link \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
     -L dependency={dir}[/]target[/]{target}[/]debug[/]deps \

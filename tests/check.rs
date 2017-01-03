@@ -244,7 +244,7 @@ fn issue_3418() {
 
     assert_that(foo.cargo_process("check").arg("-v"),
                 execs().with_status(0)
-                       .with_stderr_does_not_contain("--crate-type lib"));
+                       .with_stderr_contains("[..] --emit=dep-info,metadata [..]"));
 }
 
 // Some weirdness that seems to be caused by a crate being built as well as
