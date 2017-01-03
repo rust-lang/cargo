@@ -765,19 +765,22 @@ fn build_cmd_with_a_build_cmd() {
 [COMPILING] a v0.5.0 (file://[..])
 [RUNNING] `rustc [..] a[/]build.rs [..] --extern b=[..]`
 [RUNNING] `[..][/]a-[..][/]build-script-build`
-[RUNNING] `rustc --crate-name a [..]lib.rs --crate-type lib -g \
+[RUNNING] `rustc --crate-name a [..]lib.rs --crate-type lib \
+    --emit=dep-info,link -g \
     -C metadata=[..] \
-    --out-dir [..]target[/]debug[/]deps --emit=dep-info,link \
+    --out-dir [..]target[/]debug[/]deps \
     -L [..]target[/]debug[/]deps`
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc --crate-name build_script_build build.rs --crate-type bin \
-    -g -C metadata=[..] --out-dir [..] --emit=dep-info,link \
+    --emit=dep-info,link \
+    -g -C metadata=[..] --out-dir [..] \
     -L [..]target[/]debug[/]deps \
     --extern a=[..]liba[..].rlib`
 [RUNNING] `[..][/]foo-[..][/]build-script-build`
-[RUNNING] `rustc --crate-name foo [..]lib.rs --crate-type lib -g \
+[RUNNING] `rustc --crate-name foo [..]lib.rs --crate-type lib \
+    --emit=dep-info,link -g \
     -C metadata=[..] \
-    --out-dir [..] --emit=dep-info,link \
+    --out-dir [..] \
     -L [..]target[/]debug[/]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 "));
