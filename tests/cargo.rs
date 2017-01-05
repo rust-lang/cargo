@@ -181,6 +181,6 @@ fn cargo_help() {
 
 #[test]
 fn explain() {
-    assert_that(cargo_process().arg("--explain").arg("E0001"),
+    assert_that(cargo_process().arg("--explain").arg("E0002"),
                 execs().with_status(0));
 }
