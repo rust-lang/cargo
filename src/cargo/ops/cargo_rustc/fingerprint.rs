@@ -153,10 +153,6 @@ impl Fingerprint {
                 })?;
                 let mtime = FileTime::from_last_modification_time(&meta);
                 *slot.0.lock().unwrap() = Some(mtime);
-                // if let Ok(meta) = fs::metadata(path) {
-                //     let mtime = FileTime::from_last_modification_time(&meta);
-                //     *slot.0.lock().unwrap() = Some(mtime);
-                // }
             }
             LocalFingerprint::Precalculated(..) => return Ok(())
         }
