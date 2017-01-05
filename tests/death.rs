@@ -1,7 +1,5 @@
 extern crate cargotest;
-extern crate kernel32;
 extern crate libc;
-extern crate winapi;
 
 use std::fs;
 use std::io::{self, Read};
@@ -25,8 +23,8 @@ fn enabled() -> bool {
 // can succeed or not.
 #[cfg(windows)]
 fn enabled() -> bool {
-    use kernel32;
-    use winapi;
+    extern crate kernel32;
+    extern crate winapi;
     unsafe {
         // If we're not currently in a job, then we can definitely run these
         // tests.

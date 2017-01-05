@@ -17,7 +17,6 @@ name = "cargo"
 path = "src/cargo/lib.rs"
 
 [dependencies]
-advapi32-sys = "0.2"
 crates-io = { path = "src/crates-io", version = "0.6" }
 crossbeam = "0.2"
 curl = "0.4"
@@ -29,13 +28,10 @@ fs2 = "0.3"
 git2 = "0.6"
 git2-curl = "0.7"
 glob = "0.2"
-kernel32-sys = "0.2"
 libc = "0.2"
 libgit2-sys = "0.6"
 log = "0.3"
-miow = "0.1"
 num_cpus = "1.0"
-psapi-sys = "0.1"
 regex = "0.1"
 rustc-serialize = "0.3"
 semver = "0.5.0"
@@ -45,10 +41,16 @@ tempdir = "0.3"
 term = "0.4.4"
 toml = "0.2"
 url = "1.1"
-winapi = "0.2"
 
 [target.'cfg(unix)'.dependencies]
 openssl = "0.9"
+
+[target.'cfg(windows)'.dependencies]
+advapi32-sys = "0.2"
+kernel32-sys = "0.2"
+miow = "0.1"
+psapi-sys = "0.1"
+winapi = "0.2"
 
 [dev-dependencies]
 hamcrest = "0.1"
