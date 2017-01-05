@@ -47,7 +47,7 @@ impl Config {
             rustdoc: LazyCell::new(),
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
-            locked: Cell::new(false),   
+            locked: Cell::new(false),
         }
     }
 
