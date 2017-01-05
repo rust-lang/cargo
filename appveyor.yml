@@ -49,18 +49,16 @@ cache:
   - target
   - C:\Users\appveyor\.cargo\registry
 
-after_test:
-  - ps: New-Item -Path "${env:APPVEYOR_REPO_COMMIT}" -ItemType "directory"
-  - ps: New-Item -Path "target" -ItemType "directory" -Force
-  - ps: New-Item -Path "target/${env:TARGET}" -ItemType "directory" -Force
-  - ps: New-Item -Path "target/${env:TARGET}/release" -ItemType "directory" -Force
-  - ps: New-Item -Path "target/${env:TARGET}/release/dist" -ItemType "directory" -Force
-  - ps: Get-ChildItem -Path target\${env:TARGET}\release\dist -Filter '*.tar.gz' | Move-Item -Destination ${env:APPVEYOR_REPO_COMMIT}
-  - ps: Get-FileHash .\${env:APPVEYOR_REPO_COMMIT}\* | ForEach-Object {[io.file]::WriteAllText($_.Path + ".sha256", $_.Hash.ToLower() + "`n")}
-
-artifacts:
-  - path: $(APPVEYOR_REPO_COMMIT)\cargo-*
-    name: cargo
+before_deploy:
+  - ps: |
+        New-Item -Path deploy -ItemType directory
+        Get-ChildItem -Path target\${env:TARGET}\release\dist -Filter '*.tar.gz' | Move-Item -Destination deploy
+        Get-FileHash .\deploy\* | ForEach-Object {
+          [io.file]::WriteAllText($_.Path + ".sha256", $_.Hash.ToLower() + "`n")
+        }
+        Get-ChildItem -Path deploy | Foreach-Object {
+          Push-AppveyorArtifact $_.FullName -FileName ${env:APPVEYOR_REPO_COMMIT}/$_.BaseName
+        }
 
 deploy:
   - provider: S3
@@ -71,7 +69,7 @@ deploy:
     bucket: rust-lang-ci
     set_public: true
     region: us-east-1
-    artifact: cargo
     folder: cargo-builds
+    artifact: /.*\.(tar.gz|sha256)/
     on:
       branch: auto-cargo
