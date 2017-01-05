@@ -57,7 +57,7 @@ before_deploy:
           [io.file]::WriteAllText($_.Path + ".sha256", $_.Hash.ToLower() + "`n")
         }
         Get-ChildItem -Path deploy | Foreach-Object {
-          Push-AppveyorArtifact $_.FullName -FileName ${env:APPVEYOR_REPO_COMMIT}/$_.BaseName
+          Push-AppveyorArtifact $_.FullName -FileName ${env:APPVEYOR_REPO_COMMIT}/$_
         }
 
 deploy:
