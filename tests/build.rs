@@ -794,21 +794,20 @@ fn cargo_default_env_metadata_env_var() {
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type dylib \
+        --emit=dep-info,link \
         -C prefer-dynamic -g \
         -C metadata=[..] \
         --out-dir [..] \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib -g \
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
+        --emit=dep-info,link -g \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps \
         --extern bar={dir}[/]target[/]debug[/]deps[/]{prefix}bar{suffix}`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
-",
+[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]",
 dir = p.root().display(),
 url = p.url(),
 prefix = env::consts::DLL_PREFIX,
@@ -822,17 +821,17 @@ suffix = env::consts::DLL_SUFFIX,
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type dylib \
+        --emit=dep-info,link \
         -C prefer-dynamic -g \
         -C metadata=[..] \
         --out-dir [..] \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib -g \
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
+        --emit=dep-info,link -g \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps \
         --extern bar={dir}[/]target[/]debug[/]deps[/]{prefix}bar-[..]{suffix}`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
@@ -1142,11 +1141,11 @@ fn lto_build() {
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src[/]main.rs --crate-type bin \
+        --emit=dep-info,link \
         -C opt-level=3 \
         -C lto \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]release[/]deps \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
@@ -1170,10 +1169,10 @@ fn verbose_build() {
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
-[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib -g \
+[RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
+        --emit=dep-info,link -g \
         -C metadata=[..] \
         --out-dir [..] \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -1198,10 +1197,10 @@ fn verbose_release_build() {
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
+        --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps`
 [FINISHED] release [optimized] target(s) in [..]
 ",
@@ -1241,18 +1240,19 @@ fn verbose_release_build_deps() {
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url}/foo)
 [RUNNING] `rustc --crate-name foo foo[/]src[/]lib.rs \
-        --crate-type dylib --crate-type rlib -C prefer-dynamic \
+        --crate-type dylib --crate-type rlib \
+        --emit=dep-info,link \
+        -C prefer-dynamic \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps`
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
+        --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir [..] \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps \
         --extern foo={dir}[/]target[/]release[/]deps[/]{prefix}foo{suffix} \
         --extern foo={dir}[/]target[/]release[/]deps[/]libfoo.rlib`
