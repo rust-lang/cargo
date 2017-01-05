@@ -417,17 +417,17 @@ fn example_with_release_flag() {
                        .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]bar.rs --crate-type lib \
+        --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]release[/]deps \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps`
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name a examples[/]a.rs --crate-type bin \
+        --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]release[/]examples \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]release[/]deps \
          --extern bar={dir}[/]target[/]release[/]deps[/]libbar-[..].rlib`
 [FINISHED] release [optimized] target(s) in [..]
@@ -445,17 +445,17 @@ fast2"));
                        .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]bar.rs --crate-type lib \
+        --emit=dep-info,link \
         -g \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]debug[/]deps \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name a examples[/]a.rs --crate-type bin \
+        --emit=dep-info,link \
         -g \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]debug[/]examples \
-        --emit=dep-info,link \
         -L dependency={dir}[/]target[/]debug[/]deps \
          --extern bar={dir}[/]target[/]debug[/]deps[/]libbar-[..].rlib`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]

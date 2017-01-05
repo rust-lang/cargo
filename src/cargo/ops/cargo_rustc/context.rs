@@ -146,9 +146,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         unit: &Unit<'a>,
                         crate_types: &mut BTreeSet<String>)
                         -> CargoResult<()> {
-        if unit.profile.check {
-            crate_types.insert("metadata".to_string());
-        }
         for target in unit.pkg.manifest().targets() {
             crate_types.extend(target.rustc_crate_types().iter().map(|s| {
                 if *s == "lib" {
@@ -180,11 +177,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                .env_remove("RUST_LOG");
 
         for crate_type in crate_types {
-            // Here and below we'll skip the metadata crate-type because it is
-            // not supported by older compilers. We'll do this one manually.
-            if crate_type != "metadata" {
-                process.arg("--crate-type").arg(crate_type);
-            }
+            process.arg("--crate-type").arg(crate_type);
         }
         if kind == Kind::Target {
             process.arg("--target").arg(&self.target_triple());
@@ -216,9 +209,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 map.insert(crate_type.to_string(), None);
                 continue;
             }
-            if crate_type == "metadata" {
-                continue;
-            }
             let line = match lines.next() {
                 Some(line) => line,
                 None => bail!("malformed output when learning about \
@@ -235,12 +225,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             map.insert(crate_type.to_string(), Some((prefix.to_string(), suffix.to_string())));
         }
  
-        // Manually handle the metadata case. If it is not supported by the
-        // compiler we'll error out elsewhere.
-        if crate_types.contains("metadata") {
-            map.insert("metadata".to_string(), Some(("lib".to_owned(), ".rmeta".to_owned())));
-        }
-
         let cfg = if has_cfg {
             Some(try!(lines.map(Cfg::from_str).collect()))
         } else {
@@ -502,32 +486,36 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let mut ret = Vec::new();
         let mut unsupported = Vec::new();
         {
-            let mut add = |crate_type: &str, linkable: bool| -> CargoResult<()> {
-                let crate_type = if crate_type == "lib" {"rlib"} else {crate_type};
-                match info.crate_types.get(crate_type) {
-                    Some(&Some((ref prefix, ref suffix))) => {
-                        let filename = out_dir.join(format!("{}{}{}", prefix, stem, suffix));
-                        let link_dst = link_stem.clone().map(|(ld, ls)| {
-                            ld.join(format!("{}{}{}", prefix, ls, suffix))
-                        });
-                        ret.push((filename, link_dst, linkable));
-                        Ok(())
-                    }
-                    // not supported, don't worry about it
-                    Some(&None) => {
-                        unsupported.push(crate_type.to_string());
-                        Ok(())
-                    }
-                    None => {
-                        bail!("failed to learn about crate-type `{}` early on",
-                              crate_type)
-                    }
-                }
-            };
-
             if unit.profile.check {
-                add("metadata", true)?;
+                let filename = out_dir.join(format!("lib{}.rmeta", stem));
+                let link_dst = link_stem.clone().map(|(ld, ls)| {
+                    ld.join(format!("lib{}.rmeta", ls))
+                });
+                ret.push((filename, link_dst, true));
             } else {
+                let mut add = |crate_type: &str, linkable: bool| -> CargoResult<()> {
+                    let crate_type = if crate_type == "lib" {"rlib"} else {crate_type};
+                    match info.crate_types.get(crate_type) {
+                        Some(&Some((ref prefix, ref suffix))) => {
+                            let filename = out_dir.join(format!("{}{}{}", prefix, stem, suffix));
+                            let link_dst = link_stem.clone().map(|(ld, ls)| {
+                                ld.join(format!("{}{}{}", prefix, ls, suffix))
+                            });
+                            ret.push((filename, link_dst, linkable));
+                            Ok(())
+                        }
+                        // not supported, don't worry about it
+                        Some(&None) => {
+                            unsupported.push(crate_type.to_string());
+                            Ok(())
+                        }
+                        None => {
+                            bail!("failed to learn about crate-type `{}` early on",
+                                  crate_type)
+                        }
+                    }
+                };
+
                 match *unit.target.kind() {
                     TargetKind::Example |
                     TargetKind::Bin |
