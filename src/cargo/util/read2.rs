@@ -100,16 +100,6 @@ mod imp {
         done: bool,
     }
 
-    macro_rules! try {
-        ($e:expr) => (match $e {
-            Ok(e) => e,
-            Err(e) => {
-                println!("{} failed with {}", stringify!($e), e);
-                return Err(e)
-            }
-        })
-    }
-
     pub fn read2(out_pipe: ChildStdout,
                  err_pipe: ChildStderr,
                  mut data: &mut FnMut(bool, &mut Vec<u8>, bool)) -> io::Result<()> {
