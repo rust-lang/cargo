@@ -300,3 +300,86 @@ fn issue_3419() {
     assert_that(foo.cargo_process("check"),
                 execs().with_status(0));
 }
+
+// test `cargo rustc --profile check`
+#[test]
+fn rustc_check() {
+    if !is_nightly() {
+        return
+    }
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "../bar"
+        "#)
+        .file("src/main.rs", r#"
+            extern crate bar;
+            fn main() {
+                ::bar::baz();
+            }
+        "#);
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn baz() {}
+        "#);
+    bar.build();
+
+    assert_that(foo.cargo_process("rustc")
+                   .arg("--profile")
+                   .arg("check")
+                   .arg("--")
+                   .arg("--emit=metadata"),
+                execs().with_status(0));
+}
+
+#[test]
+fn rustc_check_err() {
+    if !is_nightly() {
+        return
+    }
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "../bar"
+        "#)
+        .file("src/main.rs", r#"
+            extern crate bar;
+            fn main() {
+                ::bar::qux();
+            }
+        "#);
+    let bar = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn baz() {}
+        "#);
+    bar.build();
+
+    assert_that(foo.cargo_process("rustc")
+                   .arg("--profile")
+                   .arg("check")
+                   .arg("--")
+                   .arg("--emit=metadata"),
+                execs().with_status(101));
+}

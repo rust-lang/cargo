@@ -1,10 +1,11 @@
 pub use self::cargo_clean::{clean, CleanOptions};
-pub use self::cargo_compile::{compile, compile_ws, CompileOptions};
+pub use self::cargo_compile::{compile, compile_with_exec, compile_ws, CompileOptions};
 pub use self::cargo_compile::{CompileFilter, CompileMode, MessageFormat, Packages};
 pub use self::cargo_read_manifest::{read_manifest,read_package,read_packages};
 pub use self::cargo_rustc::{compile_targets, Compilation, Kind, Unit};
 pub use self::cargo_rustc::Context;
 pub use self::cargo_rustc::{BuildOutput, BuildConfig, TargetConfig};
+pub use self::cargo_rustc::{Executor, DefaultExecutor};
 pub use self::cargo_run::run;
 pub use self::cargo_install::{install, install_list, uninstall};
 pub use self::cargo_new::{new, init, NewOptions, VersionControl};

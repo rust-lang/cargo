@@ -62,6 +62,18 @@ impl MultiShell {
         MultiShell { out: out, err: err, verbosity: verbosity }
     }
 
+    // Create a quiet, basic shell from supplied writers.
+    pub fn from_write(out: Box<Write + Send>, err: Box<Write + Send>) -> MultiShell {
+        let config = ShellConfig { color_config: ColorConfig::Never, tty: false };
+        let out = Shell { terminal: NoColor(out), config: config.clone() };
+        let err = Shell { terminal: NoColor(err), config: config };
+        MultiShell {
+            out: out,
+            err: err,
+            verbosity: Verbosity::Quiet,
+        }
+    }
+
     pub fn out(&mut self) -> &mut Shell {
         &mut self.out
     }

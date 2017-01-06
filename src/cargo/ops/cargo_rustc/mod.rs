@@ -11,7 +11,7 @@ use rustc_serialize::json;
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::shell::ColorConfig;
-use util::{self, CargoResult, ProcessBuilder, human, machine_message};
+use util::{self, CargoResult, ProcessBuilder, ProcessError, human, machine_message};
 use util::{Config, internal, ChainError, profile, join_paths, short_hash};
 
 use self::job::{Job, Work};
@@ -55,6 +55,36 @@ pub struct TargetConfig {
 
 pub type PackagesToBuild<'a> = [(&'a Package, Vec<(&'a Target, &'a Profile)>)];
 
+/// A glorified callback for executing calls to rustc. Rather than calling rustc
+/// directly, we'll use an Executor, giving clients an opportunity to intercept
+/// the build calls.
+pub trait Executor: Send + Sync + 'static {
+    fn init(&self, _cx: &Context) {}
+    /// If execution succeeds, the ContinueBuild value indicates whether Cargo
+    /// should continue with the build process for this package.
+    fn exec(&self, cmd: ProcessBuilder, _id: &PackageId) -> Result<(), ProcessError> {
+        cmd.exec()?;
+        Ok(())
+    }
+
+    fn exec_json(&self,
+                 cmd: ProcessBuilder,
+                 _id: &PackageId,
+                 handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
+                 handle_srderr: &mut FnMut(&str) -> CargoResult<()>)
+                 -> Result<(), ProcessError> {
+        cmd.exec_with_streaming(handle_stdout, handle_srderr)?;
+        Ok(())
+    }
+}
+
+/// A DefaultExecutor calls rustc without doing anything else. It is Cargo's
+/// default behaviour.
+#[derive(Copy, Clone)]
+pub struct DefaultExecutor;
+
+impl Executor for DefaultExecutor {}
+
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
 pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
@@ -63,7 +93,8 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                                      resolve: &'a Resolve,
                                      config: &'cfg Config,
                                      build_config: BuildConfig,
-                                     profiles: &'a Profiles)
+                                     profiles: &'a Profiles, 
+                                     exec: Arc<Executor>)
                                      -> CargoResult<Compilation<'cfg>> {
     let units = pkg_targets.iter().flat_map(|&(pkg, ref targets)| {
         let default_kind = if build_config.requested_target.is_some() {
@@ -97,7 +128,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         // part of this, that's all done next as part of the `execute`
         // function which will run everything in order with proper
         // parallelism.
-        compile(&mut cx, &mut queue, unit)?;
+        compile(&mut cx, &mut queue, unit, exec.clone())?;
     }
 
     // Now that we've figured out everything that we're going to do, do it!
@@ -169,7 +200,8 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
 
 fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
                          jobs: &mut JobQueue<'a>,
-                         unit: &Unit<'a>) -> CargoResult<()> {
+                         unit: &Unit<'a>,
+                         exec: Arc<Executor>) -> CargoResult<()> {
     if !cx.compiled.insert(*unit) {
         return Ok(())
     }
@@ -188,7 +220,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         let work = if unit.profile.doc {
             rustdoc(cx, unit)?
         } else {
-            rustc(cx, unit)?
+            rustc(cx, unit, exec.clone())?
         };
         let link_work1 = link_targets(cx, unit)?;
         let link_work2 = link_targets(cx, unit)?;
@@ -202,13 +234,13 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
 
     // Be sure to compile all dependencies of this target as well.
     for unit in cx.dep_targets(unit)?.iter() {
-        compile(cx, jobs, unit)?;
+        compile(cx, jobs, unit, exec.clone())?;
     }
 
     Ok(())
 }
 
-fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
+fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work> {
     let crate_types = unit.target.rustc_crate_types();
     let mut rustc = prepare_rustc(cx, crate_types, unit)?;
 
@@ -220,7 +252,6 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
             rustc.arg("-Awarnings");
         }
     }
-    let has_custom_args = unit.profile.rustc_args.is_some();
 
     let filenames = cx.target_filenames(unit)?;
     let root = cx.out_dir(unit);
@@ -257,6 +288,10 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                      .flat_map(|i| i)
                      .map(|s| s.to_string())
                      .collect::<Vec<_>>();
+
+    exec.init(cx);
+    let exec = exec.clone();
+
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
@@ -291,7 +326,7 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
 
         state.running(&rustc);
         if json_messages {
-            rustc.exec_with_streaming(
+            exec.exec_json(rustc, &package_id,
                 &mut |line| if !line.is_empty() {
                     Err(internal(&format!("compiler stdout is not empty: `{}`", line)))
                 } else {
@@ -315,27 +350,29 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                         writeln!(io::stderr(), "{}", line)?;
                     }
                     Ok(())
-                },
-            ).map(|_| ())
+                }
+            ).chain_error(|| {
+                human(format!("Could not compile `{}`.", name))
+            })?;
         } else {
-            rustc.exec()
-        }.chain_error(|| {
-            human(format!("Could not compile `{}`.", name))
-        })?;
+            exec.exec(rustc, &package_id).chain_error(|| {
+                human(format!("Could not compile `{}`.", name))
+            })?;
+        }
 
         if do_rename && real_name != crate_name {
             let dst = &filenames[0].0;
             let src = dst.with_file_name(dst.file_name().unwrap()
                                             .to_str().unwrap()
                                             .replace(&real_name, &crate_name));
-            if !has_custom_args || src.exists() {
+            if src.exists() {
                 fs::rename(&src, &dst).chain_error(|| {
                     internal(format!("could not rename crate {:?}", src))
                 })?;
             }
         }
 
-        if !has_custom_args || fs::metadata(&rustc_dep_info_loc).is_ok() {
+        if fs::metadata(&rustc_dep_info_loc).is_ok() {
             info!("Renaming dep_info {:?} to {:?}", rustc_dep_info_loc, dep_info_loc);
             fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_error(|| {
                 internal(format!("could not rename dep info: {:?}",

@@ -24,10 +24,11 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use core::{Source, Package, Target};
 use core::{Profile, TargetKind, Profiles, Workspace, PackageIdSpec};
-use ops::{self, BuildOutput};
+use ops::{self, BuildOutput, Executor, DefaultExecutor};
 use util::config::Config;
 use util::{CargoResult, profile};
 
@@ -60,6 +61,27 @@ pub struct CompileOptions<'a> {
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
     pub target_rustc_args: Option<&'a [String]>,
+}
+
+impl<'a> CompileOptions<'a> {
+    pub fn default(config: &'a Config, mode: CompileMode) -> CompileOptions<'a>
+    {
+        CompileOptions {
+            config: config,
+            jobs: None,
+            target: None,
+            features: &[],
+            all_features: false,
+            no_default_features: false,
+            spec: ops::Packages::Packages(&[]),
+            mode: mode,
+            release: false,
+            filter: ops::CompileFilter::new(false, &[], &[], &[], &[]),
+            message_format: MessageFormat::Human,
+            target_rustdoc_args: None,
+            target_rustc_args: None,
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -113,17 +135,25 @@ pub enum CompileFilter<'a> {
 
 pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
                    -> CargoResult<ops::Compilation<'a>> {
+    compile_with_exec(ws, options, Arc::new(DefaultExecutor))
+}
+
+pub fn compile_with_exec<'a>(ws: &Workspace<'a>,
+                             options: &CompileOptions<'a>, 
+                             exec: Arc<Executor>)
+                             -> CargoResult<ops::Compilation<'a>> {
     for member in ws.members() {
         for key in member.manifest().warnings().iter() {
             options.config.shell().warn(key)?
         }
     }
-    compile_ws(ws, None, options)
+    compile_ws(ws, None, options, exec)
 }
 
 pub fn compile_ws<'a>(ws: &Workspace<'a>,
                       source: Option<Box<Source + 'a>>,
-                      options: &CompileOptions<'a>)
+                      options: &CompileOptions<'a>,
+                      exec: Arc<Executor>)
                       -> CargoResult<ops::Compilation<'a>> {
     let CompileOptions { config, jobs, target, spec, features,
                          all_features, no_default_features,
@@ -231,7 +261,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                              &resolve_with_overrides,
                              config,
                              build_config,
-                             profiles)?
+                             profiles,
+                             exec)?
     };
 
     ret.to_doc_test = to_builds.iter().map(|&p| p.clone()).collect();

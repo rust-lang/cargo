@@ -2,6 +2,7 @@ use std::fs::{self, File};
 use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::{self, Path};
+use std::sync::Arc;
 
 use flate2::read::GzDecoder;
 use flate2::{GzBuilder, Compression};
@@ -11,7 +12,7 @@ use tar::{Archive, Builder, Header};
 use core::{SourceId, Package, PackageId, Workspace, Source};
 use sources::PathSource;
 use util::{self, CargoResult, human, internal, ChainError, Config, FileLock};
-use ops;
+use ops::{self, DefaultExecutor};
 
 pub struct PackageOpts<'cfg> {
     pub config: &'cfg Config,
@@ -298,7 +299,7 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
         mode: ops::CompileMode::Build,
         target_rustdoc_args: None,
         target_rustc_args: None,
-    })?;
+    }, Arc::new(DefaultExecutor))?;
 
     Ok(())
 }

@@ -635,7 +635,7 @@ impl fmt::Display for Definition {
     }
 }
 
-fn homedir(cwd: &Path) -> Option<PathBuf> {
+pub fn homedir(cwd: &Path) -> Option<PathBuf> {
     let cargo_home = env::var_os("CARGO_HOME").map(|home| {
         cwd.join(home)
     });

@@ -88,6 +88,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         Some("dev") | None => CompileMode::Build,
         Some("test") => CompileMode::Test,
         Some("bench") => CompileMode::Bench,
+        Some("check") => CompileMode::Check,
         Some(mode) => {
             let err = human(format!("unknown profile: `{}`, use dev,
                                      test, or bench", mode));
