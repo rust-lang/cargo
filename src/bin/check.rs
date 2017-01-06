@@ -2,31 +2,8 @@ use std::env;
 
 use cargo::core::Workspace;
 use cargo::ops::{self, CompileOptions, MessageFormat};
-use cargo::util::important_paths::{find_root_manifest_for_wd};
 use cargo::util::{CliResult, Config};
-
-#[derive(RustcDecodable)]
-pub struct Options {
-    flag_package: Vec<String>,
-    flag_jobs: Option<u32>,
-    flag_features: Vec<String>,
-    flag_all_features: bool,
-    flag_no_default_features: bool,
-    flag_target: Option<String>,
-    flag_manifest_path: Option<String>,
-    flag_verbose: u32,
-    flag_quiet: Option<bool>,
-    flag_color: Option<String>,
-    flag_message_format: MessageFormat,
-    flag_release: bool,
-    flag_lib: bool,
-    flag_bin: Vec<String>,
-    flag_example: Vec<String>,
-    flag_test: Vec<String>,
-    flag_bench: Vec<String>,
-    flag_locked: bool,
-    flag_frozen: bool,
-}
+use cargo::util::important_paths::find_root_manifest_for_wd;
 
 pub const USAGE: &'static str = "
 Check a local package and all of its dependencies for errors
@@ -66,9 +43,33 @@ the manifest. The default profile for this command is `dev`, but passing
 the --release flag will use the `release` profile instead.
 ";
 
+#[derive(RustcDecodable)]
+pub struct Options {
+    flag_package: Vec<String>,
+    flag_jobs: Option<u32>,
+    flag_features: Vec<String>,
+    flag_all_features: bool,
+    flag_no_default_features: bool,
+    flag_target: Option<String>,
+    flag_manifest_path: Option<String>,
+    flag_verbose: u32,
+    flag_quiet: Option<bool>,
+    flag_color: Option<String>,
+    flag_message_format: MessageFormat,
+    flag_release: bool,
+    flag_lib: bool,
+    flag_bin: Vec<String>,
+    flag_example: Vec<String>,
+    flag_test: Vec<String>,
+    flag_bench: Vec<String>,
+    flag_locked: bool,
+    flag_frozen: bool,
+}
+
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-check; args={:?}",
            env::args().collect::<Vec<_>>());
+
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -76,6 +77,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                      options.flag_locked)?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
+    let ws = Workspace::new(&root, config)?;
 
     let opts = CompileOptions {
         config: config,
@@ -97,7 +99,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         target_rustc_args: None,
     };
 
-    let ws = Workspace::new(&root, config)?;
     ops::compile(&ws, &opts)?;
     Ok(None)
 }
