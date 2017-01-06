@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use core::{PackageIdSpec, Workspace};
+use core::Workspace;
 use ops;
 use util::CargoResult;
 
@@ -13,32 +13,42 @@ pub struct DocOptions<'a> {
 }
 
 pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
-    let package = ws.current()?;
+    let specs = options.compile_opts.spec.into_package_id_specs(ws)?;
+    let resolve = ops::resolve_ws_precisely(ws,
+                                            None,
+                                            options.compile_opts.features,
+                                            options.compile_opts.all_features,
+                                            options.compile_opts.no_default_features,
+                                            &specs)?;
+    let (packages, resolve_with_overrides) = resolve;
 
-    let spec = match options.compile_opts.spec {
-        ops::Packages::Packages(packages) => packages,
-        _ => {
-            // This should not happen, because the `doc` binary is hard-coded to pass
-            // the `Packages::Packages` variant.
-            bail!("`cargo doc` does not support the `--all` flag")
-        },
+    let mut pkgs = Vec::new();
+    if specs.len() > 0 {
+        for p in specs.iter() {
+            pkgs.push(packages.get(p.query(resolve_with_overrides.iter())?)?);
+        }
+    } else {
+        let root_package = ws.current()?;
+        pkgs.push(root_package);
     };
 
     let mut lib_names = HashSet::new();
     let mut bin_names = HashSet::new();
-    if spec.is_empty() {
-        for target in package.targets().iter().filter(|t| t.documented()) {
-            if target.is_lib() {
-                assert!(lib_names.insert(target.crate_name()));
-            } else {
-                assert!(bin_names.insert(target.crate_name()));
+    if specs.is_empty() {
+        for package in &pkgs {
+            for target in package.targets().iter().filter(|t| t.documented()) {
+                if target.is_lib() {
+                    assert!(lib_names.insert(target.crate_name()));
+                } else {
+                    assert!(bin_names.insert(target.crate_name()));
+                }
             }
-        }
-        for bin in bin_names.iter() {
-            if lib_names.contains(bin) {
-                bail!("cannot document a package where a library and a binary \
-                       have the same name. Consider renaming one or marking \
-                       the target as `doc = false`")
+            for bin in bin_names.iter() {
+                if lib_names.contains(bin) {
+                    bail!("cannot document a package where a library and a binary \
+                           have the same name. Consider renaming one or marking \
+                           the target as `doc = false`")
+                }
             }
         }
     }
@@ -46,12 +56,10 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     ops::compile(ws, &options.compile_opts)?;
 
     if options.open_result {
-        let name = if spec.len() > 1 {
+        let name = if pkgs.len() > 1 {
             bail!("Passing multiple packages and `open` is not supported")
-        } else if spec.len() == 1 {
-            PackageIdSpec::parse(&spec[0])?
-                .name()
-                .replace("-", "_")
+        } else if pkgs.len() == 1 {
+            pkgs[0].name().replace("-", "_")
         } else {
             match lib_names.iter().chain(bin_names.iter()).nth(0) {
                 Some(s) => s.to_string(),
