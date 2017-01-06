@@ -505,6 +505,9 @@ fn scrape_target_config(config: &Config, triple: &str)
                     let list = value.list(&k)?;
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
+                "warning" | "rerun-if-changed" => {
+                    bail!("`{}` is not supported in build script overrides", k);
+                }
                 _ => {
                     let val = value.string(&k)?.0;
                     output.metadata.push((k.clone(), val.to_string()));
