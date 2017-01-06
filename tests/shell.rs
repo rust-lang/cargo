@@ -62,15 +62,19 @@ fn colored_shell() {
         shell.say("Hey Alex", color::RED).unwrap();
     });
     let buf = a.lock().unwrap().clone();
-    assert_that(&buf[..],
-                shell_writes(colored_output("Hey Alex\n",
-                                            color::RED).unwrap()));
+    let expected_output = if term.unwrap().supports_color() {
+        shell_writes(colored_output("Hey Alex\n", color::RED).unwrap())
+    } else {
+        shell_writes("Hey Alex\n")
+    };
+    assert_that(&buf[..], expected_output);
 }
 
 #[test]
 fn color_explicitly_enabled() {
     let term = TerminfoTerminal::new(Vec::new());
     if term.is_none() { return }
+    if !term.unwrap().supports_color() { return }
 
     let config = ShellConfig { color_config: Always, tty: false };
     let a = Arc::new(Mutex::new(Vec::new()));
