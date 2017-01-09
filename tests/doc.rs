@@ -6,6 +6,7 @@ use std::fs;
 
 use cargotest::{is_nightly, rustc_host};
 use cargotest::support::{project, execs, path2url};
+use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 #[test]
@@ -611,4 +612,101 @@ fn plugins_no_use_target() {
                  .arg("--target=x86_64-unknown-openbsd")
                  .arg("-v"),
                 execs().with_status(0));
+}
+
+#[test]
+fn doc_all_workspace() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [workspace]
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {}
+        "#);
+    p.build();
+
+    // The order in which bar is compiled or documented is not deterministic
+    assert_that(p.cargo_process("doc")
+                 .arg("--all"),
+                execs().with_status(0)
+                       .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+                       .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
+                       .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])"));
+}
+
+#[test]
+fn doc_all_virtual_manifest() {
+    let p = project("workspace")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo", "bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("foo/src/lib.rs", r#"
+            pub fn foo() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {}
+        "#);
+    p.build();
+
+    // The order in which foo and bar are documented is not guaranteed
+    assert_that(p.cargo_process("doc")
+                 .arg("--all"),
+                execs().with_status(0)
+                       .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+                       .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])"));
+}
+
+#[test]
+fn doc_all_member_dependency_same_name() {
+    let p = project("workspace")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["a"]
+        "#)
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.1.0"
+
+            [dependencies]
+            a = "0.1.0"
+        "#)
+        .file("a/src/lib.rs", r#"
+            pub fn a() {}
+        "#);
+    p.build();
+
+    Package::new("a", "0.1.0").publish();
+
+    assert_that(p.cargo_process("doc")
+                 .arg("--all"),
+                execs().with_status(0)
+                       .with_stderr_contains("[..] Updating registry `[..]`")
+                       .with_stderr_contains("[..] Documenting a v0.1.0 ([..])"));
 }
