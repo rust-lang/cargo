@@ -643,7 +643,8 @@ fn doc_all_workspace() {
     // The order in which bar is compiled or documented is not deterministic
     assert_that(p.cargo_process("doc")
                  .arg("--all"),
-                execs().with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+                execs().with_status(0)
+                       .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
                        .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
                        .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])"));
 }
@@ -676,7 +677,8 @@ fn doc_all_virtual_manifest() {
     // The order in which foo and bar are documented is not guaranteed
     assert_that(p.cargo_process("doc")
                  .arg("--all"),
-                execs().with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+                execs().with_status(0)
+                       .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
                        .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])"));
 }
 
@@ -704,6 +706,7 @@ fn doc_all_member_dependency_same_name() {
 
     assert_that(p.cargo_process("doc")
                  .arg("--all"),
-                execs().with_stderr_contains("[..] Updating registry `[..]`")
+                execs().with_status(0)
+                       .with_stderr_contains("[..] Updating registry `[..]`")
                        .with_stderr_contains("[..] Documenting a v0.1.0 ([..])"));
 }
