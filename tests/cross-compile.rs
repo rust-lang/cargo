@@ -31,7 +31,7 @@ fn disabled() -> bool {
     // It's not particularly common to have a cross-compilation setup, so
     // try to detect that before we fail a bunch of tests through no fault
     // of the user.
-    static mut CAN_RUN_CROSS_TESTS: bool = false;
+    static CAN_RUN_CROSS_TESTS: AtomicBool = ATOMIC_BOOL_INIT;
     static CHECK: Once = ONCE_INIT;
 
     let cross_target = alternate();
@@ -46,13 +46,11 @@ fn disabled() -> bool {
             .exec_with_output();
 
         if result.is_ok() {
-            unsafe {
-                CAN_RUN_CROSS_TESTS = true;
-            }
+            CAN_RUN_CROSS_TESTS.store(true, Ordering::SeqCst);
         }
     });
 
-    if unsafe { CAN_RUN_CROSS_TESTS } {
+    if CAN_RUN_CROSS_TESTS.load(Ordering::SeqCst) {
         // We were able to compile a simple project, so the user has the
         // necessary std:: bits installed.  Therefore, tests should not
         // be disabled.
