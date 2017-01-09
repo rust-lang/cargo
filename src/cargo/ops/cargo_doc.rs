@@ -34,21 +34,19 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
 
     let mut lib_names = HashSet::new();
     let mut bin_names = HashSet::new();
-    if specs.is_empty() {
-        for package in &pkgs {
-            for target in package.targets().iter().filter(|t| t.documented()) {
-                if target.is_lib() {
-                    assert!(lib_names.insert(target.crate_name()));
-                } else {
-                    assert!(bin_names.insert(target.crate_name()));
-                }
+    for package in &pkgs {
+        for target in package.targets().iter().filter(|t| t.documented()) {
+            if target.is_lib() {
+                assert!(lib_names.insert(target.crate_name()));
+            } else {
+                assert!(bin_names.insert(target.crate_name()));
             }
-            for bin in bin_names.iter() {
-                if lib_names.contains(bin) {
-                    bail!("cannot document a package where a library and a binary \
-                           have the same name. Consider renaming one or marking \
-                           the target as `doc = false`")
-                }
+        }
+        for bin in bin_names.iter() {
+            if lib_names.contains(bin) {
+                bail!("cannot document a package where a library and a binary \
+                       have the same name. Consider renaming one or marking \
+                       the target as `doc = false`")
             }
         }
     }
