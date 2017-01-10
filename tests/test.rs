@@ -31,14 +31,14 @@ fn cargo_test_simple() {
                 assert_eq!(hello(), "hello")
             }"#);
 
-    assert_that(p.cargo_process("build"), execs());
+    assert_that(p.cargo_process("build"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(process(&p.bin("foo")),
-                execs().with_stdout("hello\n"));
+                execs().with_status(0).with_stdout("hello\n"));
 
     assert_that(p.cargo("test"),
-                execs().with_stderr(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]", p.url()))
@@ -85,7 +85,7 @@ fn cargo_test_release() {
         .file("bar/src/lib.rs", "pub fn bar() {}");
 
     assert_that(p.cargo_process("test").arg("-v").arg("--release"),
-                execs().with_stderr(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [RUNNING] [..] -C opt-level=3 [..]
 [COMPILING] foo v0.1.0 ({dir})
@@ -127,7 +127,7 @@ fn cargo_test_verbose() {
         "#);
 
     assert_that(p.cargo_process("test").arg("-v").arg("hello"),
-                execs().with_stderr(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc [..] src[/]foo.rs [..]`
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
@@ -189,11 +189,11 @@ fn cargo_test_failing_test() {
                 assert_eq!(hello(), "nope")
             }"#);
 
-    assert_that(p.cargo_process("build"), execs());
+    assert_that(p.cargo_process("build"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(process(&p.bin("foo")),
-                execs().with_stdout("hello\n"));
+                execs().with_status(0).with_stdout("hello\n"));
 
     assert_that(p.cargo("test"),
                 execs().with_stderr(format!("\
@@ -256,7 +256,7 @@ fn test_with_lib_dep() {
         ");
 
     assert_that(p.cargo_process("test"),
-                execs().with_stderr(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]baz-[..][EXE]
@@ -372,7 +372,7 @@ fn external_test_explicit() {
         "#);
 
     assert_that(p.cargo_process("test"),
-                execs().with_stderr(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
@@ -421,7 +421,7 @@ fn external_test_implicit() {
         "#);
 
     assert_that(p.cargo_process("test"),
-                execs().with_stderr(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]external-[..][EXE]
@@ -565,7 +565,7 @@ fn lib_bin_same_name() {
         ");
 
     assert_that(p.cargo_process("test"),
-                execs().with_stderr(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
@@ -1744,7 +1744,7 @@ fn filter_no_doc_tests() {
         .file("tests/foo.rs", "");
 
     assert_that(p.cargo_process("test").arg("--test=foo"),
-                execs().with_stderr("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo[..][EXE]")
@@ -1778,7 +1778,7 @@ fn dylib_doctest() {
         "#);
 
     assert_that(p.cargo_process("test"),
-                execs().with_stderr("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
 [DOCTEST] foo")
@@ -1814,7 +1814,7 @@ fn dylib_doctest2() {
         "#);
 
     assert_that(p.cargo_process("test"),
-                execs().with_stdout(""));
+                execs().with_status(0).with_stdout(""));
 }
 
 #[test]
@@ -1847,7 +1847,7 @@ fn cyclic_dev_dep_doc_test() {
             extern crate foo;
         "#);
     assert_that(p.cargo_process("test"),
-                execs().with_stderr("\
+                execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [COMPILING] bar v0.0.1 ([..])
 [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
@@ -2430,7 +2430,7 @@ fn test_all_workspace() {
 
     assert_that(p.cargo_process("test")
                  .arg("--all"),
-                execs().with_stdout_contains("\
+                execs().with_status(0).with_stdout_contains("\
 running 1 test
 test foo_test ... ok
 
@@ -2475,7 +2475,7 @@ fn test_all_virtual_manifest() {
 
     assert_that(p.cargo_process("test")
                  .arg("--all"),
-                execs().with_stdout_contains("\
+                execs().with_status(0).with_stdout_contains("\
 running 1 test
 test b ... ok
 
@@ -2516,7 +2516,7 @@ fn test_all_member_dependency_same_name() {
 
     assert_that(p.cargo_process("test")
                  .arg("--all"),
-                execs().with_stdout_contains("\
+                execs().with_status(0).with_stdout_contains("\
 running 1 test
 test a ... ok
 
