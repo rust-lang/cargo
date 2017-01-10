@@ -22,11 +22,11 @@ fn cargo_compile_simple() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
 
-    assert_that(p.cargo_process("build"), execs());
+    assert_that(p.cargo_process("build"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(process(&p.bin("foo")),
-                execs().with_stdout("i am foo\n"));
+                execs().with_status(0).with_stdout("i am foo\n"));
 }
 
 #[test]
@@ -308,7 +308,7 @@ fn cargo_compile_with_warnings_in_the_root_package() {
         .file("src/foo.rs", "fn main() {} fn dead() {}");
 
     assert_that(p.cargo_process("build"),
-                execs().with_stderr_contains("\
+                execs().with_status(0).with_stderr_contains("\
 [..]function is never used: `dead`[..]
 "));
 }
@@ -354,7 +354,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
         "#);
 
     assert_that(p.cargo_process("build"),
-        execs().with_stderr_contains("\
+        execs().with_status(0).with_stderr_contains("\
 [..]function is never used: `dead`[..]
 "));
 
@@ -362,7 +362,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
 
     assert_that(
       process(&p.bin("foo")),
-      execs().with_stdout("test passed\n"));
+      execs().with_status(0).with_stdout("test passed\n"));
 }
 
 #[test]
@@ -423,7 +423,7 @@ fn cargo_compile_with_nested_deps_inferred() {
 
     assert_that(
       process(&p.bin("foo")),
-      execs().with_stdout("test passed\n"));
+      execs().with_status(0).with_stdout("test passed\n"));
 }
 
 #[test]
@@ -484,7 +484,7 @@ fn cargo_compile_with_nested_deps_correct_bin() {
 
     assert_that(
       process(&p.bin("foo")),
-      execs().with_stdout("test passed\n"));
+      execs().with_status(0).with_stdout("test passed\n"));
 }
 
 #[test]
@@ -554,7 +554,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
     assert_that(
       process(&p.bin("foo")),
-      execs().with_stdout("test passed\n"));
+      execs().with_status(0).with_stdout("test passed\n"));
 }
 
 #[test]
@@ -623,7 +623,7 @@ fn cargo_compile_with_nested_deps_longhand() {
     assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
     assert_that(process(&p.bin("foo")),
-                execs().with_stdout("test passed\n"));
+                execs().with_status(0).with_stdout("test passed\n"));
 }
 
 // Check that Cargo gives a sensible error if a dependency can't be found
@@ -878,6 +878,8 @@ fn crate_env_vars() {
 		 assert_eq!("foo", PKG_NAME);
 		 assert_eq!("http://example.com", HOMEPAGE);
 		 assert_eq!("This is foo", DESCRIPTION);
+                let s = format!("{}.{}.{}-{}", VERSION_MAJOR,
+                                VERSION_MINOR, VERSION_PATCH, VERSION_PRE);
 		 assert_eq!(s, VERSION);
             }
         "#)
@@ -897,8 +899,8 @@ fn crate_env_vars() {
 
     println!("bin");
     assert_that(process(&p.bin("foo")),
-                execs().with_stdout(&format!("0-5-1 @ alpha.1 in {}\n",
-                                            p.root().display())));
+                execs().with_status(0).with_stdout(&format!("0-5-1 @ alpha.1 in {}\n",
+                                                   p.root().display())));
 
     println!("test");
     assert_that(p.cargo("test").arg("-v"),
@@ -937,7 +939,7 @@ fn crate_authors_env_vars() {
 
     println!("bin");
     assert_that(process(&p.bin("foo")),
-                execs().with_stdout("wycats@example.com:neikos@example.com"));
+                execs().with_status(0).with_stdout("wycats@example.com:neikos@example.com"));
 
     println!("test");
     assert_that(p.cargo("test").arg("-v"),
@@ -1090,11 +1092,11 @@ fn ignore_broken_symlinks() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .symlink("Notafile", "bar");
 
-    assert_that(p.cargo_process("build"), execs());
+    assert_that(p.cargo_process("build"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(process(&p.bin("foo")),
-                execs().with_stdout("i am foo\n"));
+                execs().with_status(0).with_stdout("i am foo\n"));
 }
 
 #[test]
@@ -1302,9 +1304,9 @@ fn explicit_examples() {
 
     assert_that(p.cargo_process("test").arg("-v"), execs().with_status(0));
     assert_that(process(&p.bin("examples/hello")),
-                        execs().with_stdout("Hello, World!\n"));
+                        execs().with_status(0).with_stdout("Hello, World!\n"));
     assert_that(process(&p.bin("examples/goodbye")),
-                        execs().with_stdout("Goodbye, World!\n"));
+                        execs().with_status(0).with_stdout("Goodbye, World!\n"));
 }
 
 #[test]
@@ -1336,9 +1338,9 @@ fn implicit_examples() {
 
     assert_that(p.cargo_process("test"), execs().with_status(0));
     assert_that(process(&p.bin("examples/hello")),
-                execs().with_stdout("Hello, World!\n"));
+                execs().with_status(0).with_stdout("Hello, World!\n"));
     assert_that(process(&p.bin("examples/goodbye")),
-                execs().with_stdout("Goodbye, World!\n"));
+                execs().with_status(0).with_stdout("Goodbye, World!\n"));
 }
 
 #[test]
@@ -1357,7 +1359,7 @@ fn standard_build_no_ndebug() {
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
     assert_that(process(&p.bin("foo")),
-                execs().with_stdout("slow\n"));
+                execs().with_status(0).with_stdout("slow\n"));
 }
 
 #[test]
@@ -1377,7 +1379,7 @@ fn release_build_ndebug() {
     assert_that(p.cargo_process("build").arg("--release"),
                 execs().with_status(0));
     assert_that(process(&p.release_bin("foo")),
-                execs().with_stdout("fast\n"));
+                execs().with_status(0).with_stdout("fast\n"));
 }
 
 #[test]
@@ -1855,7 +1857,7 @@ fn cargo_platform_specific_dependency_wrong_platform() {
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(process(&p.bin("foo")),
-                execs());
+                execs().with_status(0));
 
     let loc = p.root().join("Cargo.lock");
     let mut lockfile = String::new();
@@ -2249,11 +2251,11 @@ fn build_multiple_packages() {
 
     assert_that(p.cargo_process("build").arg("-p").arg("d1").arg("-p").arg("d2")
                                         .arg("-p").arg("foo"),
-                execs());
+                execs().with_status(0));
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(process(&p.bin("foo")),
-                execs().with_stdout("i am foo\n"));
+                execs().with_status(0).with_stdout("i am foo\n"));
 
     let d1_path = &p.build_dir().join("debug")
                                 .join(format!("d1{}", env::consts::EXE_SUFFIX));
@@ -2261,11 +2263,11 @@ fn build_multiple_packages() {
                                 .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
     assert_that(d1_path, existing_file());
-    assert_that(process(d1_path), execs().with_stdout("d1"));
+    assert_that(process(d1_path), execs().with_status(0).with_stdout("d1"));
 
     assert_that(d2_path, existing_file());
     assert_that(process(d2_path),
-                execs().with_stdout("d2"));
+                execs().with_status(0).with_stdout("d2"));
 }
 
 #[test]
@@ -2395,7 +2397,7 @@ fn compiler_json_error_format() {
 
     assert_that(p.cargo_process("build").arg("-v")
                     .arg("--message-format").arg("json"),
-                execs().with_json(r#"
+                execs().with_status(0).with_json(r#"
     {
         "reason":"compiler-message",
         "package_id":"bar 0.5.0 ([..])",
@@ -2481,7 +2483,7 @@ fn message_format_json_forward_stderr() {
 
     assert_that(p.cargo_process("rustc").arg("--bin").arg("foo")
                 .arg("--message-format").arg("JSON").arg("--").arg("-Zno-trans"),
-                execs()
+                execs().with_status(0)
                 .with_stderr_contains("[WARNING] the option `Z` is unstable [..]")
                 .with_json(r#"
     {
@@ -2584,7 +2586,8 @@ fn build_all_workspace() {
 
     assert_that(p.cargo_process("build")
                  .arg("--all"),
-                execs().with_stderr("[..] Compiling bar v0.1.0 ([..])\n\
+                execs().with_status(0)
+                       .with_stderr("[..] Compiling bar v0.1.0 ([..])\n\
                        [..] Compiling foo v0.1.0 ([..])\n\
                        [..] Finished debug [unoptimized + debuginfo] target(s) in [..]\n"));
 }
@@ -2617,7 +2620,8 @@ fn build_all_virtual_manifest() {
     // The order in which foo and bar are built is not guaranteed
     assert_that(p.cargo_process("build")
                  .arg("--all"),
-                execs().with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
+                execs().with_status(0)
+                       .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
                        .with_stderr_contains("[..] Compiling foo v0.1.0 ([..])")
                        .with_stderr("[..] Compiling [..] v0.1.0 ([..])\n\
                        [..] Compiling [..] v0.1.0 ([..])\n\
@@ -2648,7 +2652,8 @@ fn build_all_member_dependency_same_name() {
 
     assert_that(p.cargo_process("build")
                  .arg("--all"),
-                execs().with_stderr("[..] Updating registry `[..]`\n\
+                execs().with_status(0)
+                       .with_stderr("[..] Updating registry `[..]`\n\
                        [..] Downloading a v0.1.0 ([..])\n\
                        [..] Compiling a v0.1.0\n\
                        [..] Compiling a v0.1.0 ([..])\n\
