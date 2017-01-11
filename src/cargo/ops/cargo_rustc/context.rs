@@ -48,6 +48,7 @@ pub struct Context<'a, 'cfg: 'a> {
     target_info: TargetInfo,
     host_info: TargetInfo,
     profiles: &'a Profiles,
+    incremental_enabled: bool,
 }
 
 #[derive(Clone, Default)]
@@ -74,6 +75,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => None,
         };
 
+        // Enable incremental builds if the user opts in. For now,
+        // this is an environment variable until things stabilize a
+        // bit more.
+        let incremental_enabled = env::var("CARGO_INCREMENTAL").is_ok();
+
         Ok(Context {
             ws: ws,
             host: host_layout,
@@ -93,6 +99,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             build_explicit_deps: HashMap::new(),
             links: Links::new(),
             used_in_plugin: HashSet::new(),
+            incremental_enabled: incremental_enabled,
         })
     }
 
@@ -841,6 +848,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // TODO: should build scripts always be built with the same library
         //       profile? How is this controlled at the CLI layer?
         self.lib_profile()
+    }
+
+    pub fn incremental_args(&self, _unit: &Unit) -> CargoResult<Vec<String>> {
+        if self.incremental_enabled {
+            Ok(vec![format!("-Zincremental={}", self.host.incremental().display())])
+        } else {
+            Ok(vec![])
+        }
     }
 
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
