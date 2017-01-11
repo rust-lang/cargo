@@ -660,6 +660,32 @@ pub fn shell_writes<T: fmt::Display>(string: T) -> ShellWrites {
     ShellWrites { expected: string.to_string() }
 }
 
+#[derive(Debug, Clone)]
+pub struct IsValidJson {}
+
+impl fmt::Display for IsValidJson {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "valid JSON")
+    }
+}
+
+impl<'a> ham::Matcher<&'a [u8]> for IsValidJson {
+    fn matches(&self, actual: &[u8]) -> ham::MatchResult {
+        let actual_str = match str::from_utf8(actual) {
+            Ok(s) => s,
+            Err(e) => { return Err(e.description().to_owned()); }
+        };
+        Json::from_str(actual_str)
+            .and(Ok(()))
+            .map_err(|e| e.description().to_owned())
+    }
+}
+
+pub fn is_valid_json() -> IsValidJson {
+    IsValidJson {}
+}
+
+
 pub trait Tap {
     fn tap<F: FnOnce(&mut Self)>(self, callback: F) -> Self;
 }
