@@ -850,9 +850,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.lib_profile()
     }
 
-    pub fn incremental_args(&self, _unit: &Unit) -> CargoResult<Vec<String>> {
+    pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
         if self.incremental_enabled {
-            Ok(vec![format!("-Zincremental={}", self.host.incremental().display())])
+            Ok(vec![format!("-Zincremental={}", self.layout(unit.kind).incremental().display())])
         } else {
             Ok(vec![])
         }
