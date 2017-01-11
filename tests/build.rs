@@ -45,6 +45,11 @@ fn cargo_compile_incremental() {
         p.cargo_process("build").arg("-v").env("CARGO_INCREMENTAL", "1"),
         execs().with_stderr_contains(
             "     Running `rustc [..] -Zincremental=[..]/target/debug/incremental`\n"));
+
+    assert_that(
+        p.cargo_process("test").arg("-v").env("CARGO_INCREMENTAL", "1"),
+        execs().with_stderr_contains(
+            "     Running `rustc [..] -Zincremental=[..]/target/debug/incremental`\n"));
 }
 
 #[test]
