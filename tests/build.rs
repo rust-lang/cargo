@@ -833,7 +833,7 @@ fn cargo_default_env_metadata_env_var() {
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps \
         --extern bar={dir}[/]target[/]debug[/]deps[/]{prefix}bar{suffix}`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
 dir = p.root().display(),
 url = p.url(),
 prefix = env::consts::DLL_PREFIX,
@@ -860,7 +860,7 @@ suffix = env::consts::DLL_SUFFIX,
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps \
         --extern bar={dir}[/]target[/]debug[/]deps[/]{prefix}bar-[..]{suffix}`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
 dir = p.root().display(),
 url = p.url(),
@@ -1051,7 +1051,7 @@ fn unused_keys() {
                        .with_stderr("\
 warning: unused manifest key: project.bulid
 [COMPILING] foo [..]
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     let mut p = project("bar");
@@ -1076,7 +1076,7 @@ warning: unused manifest key: project.bulid
                        .with_stderr("\
 warning: unused manifest key: lib.build
 [COMPILING] foo [..]
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -1202,7 +1202,7 @@ fn verbose_build() {
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
 dir = p.root().display(),
 url = p.url(),
@@ -1497,7 +1497,7 @@ fn lib_with_standard_name() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
                        dir = p.url())));
 }
@@ -1599,7 +1599,7 @@ fn freshness_ignores_excluded() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", url = foo.url())));
 
     // Smoke test to make sure it doesn't compile again
@@ -1648,7 +1648,7 @@ fn rebuild_preserves_out_dir() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", url = foo.url())));
 
     File::create(&foo.root().join("src/bar.rs")).unwrap();
@@ -1656,7 +1656,7 @@ fn rebuild_preserves_out_dir() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", url = foo.url())));
 }
 
@@ -2391,7 +2391,7 @@ fn explicit_color_config_is_propagated_to_rustc() {
                 execs().with_status(0).with_stderr("\
 [COMPILING] test v0.0.0 ([..])
 [RUNNING] `rustc [..] --color never [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -2568,7 +2568,7 @@ fn no_warn_about_package_metadata() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
                        .with_stderr("[..] foo v0.0.1 ([..])\n\
-                       [FINISHED] debug [unoptimized + debuginfo] target(s) in [..]\n"));
+                       [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n"));
 }
 
 #[test]
@@ -2614,7 +2614,7 @@ fn build_all_workspace() {
                 execs().with_status(0)
                        .with_stderr("[..] Compiling bar v0.1.0 ([..])\n\
                        [..] Compiling foo v0.1.0 ([..])\n\
-                       [..] Finished debug [unoptimized + debuginfo] target(s) in [..]\n"));
+                       [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
 }
 
 #[test]
@@ -2650,7 +2650,7 @@ fn build_all_virtual_manifest() {
                        .with_stderr_contains("[..] Compiling foo v0.1.0 ([..])")
                        .with_stderr("[..] Compiling [..] v0.1.0 ([..])\n\
                        [..] Compiling [..] v0.1.0 ([..])\n\
-                       [..] Finished debug [unoptimized + debuginfo] target(s) in [..]\n"));
+                       [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
 }
 
 #[test]
@@ -2682,6 +2682,6 @@ fn build_all_member_dependency_same_name() {
                        [..] Downloading a v0.1.0 ([..])\n\
                        [..] Compiling a v0.1.0\n\
                        [..] Compiling a v0.1.0 ([..])\n\
-                       [..] Finished debug [unoptimized + debuginfo] target(s) in [..]\n"));
+                       [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
 }
 

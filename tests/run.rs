@@ -23,7 +23,7 @@ fn simple() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`", dir = path2url(p.root())))
                        .with_stdout("\
 hello
@@ -126,7 +126,7 @@ fn exit_code() {
 
     let mut output = String::from("\
 [COMPILING] foo v0.0.1 (file[..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
 ");
     if !cfg!(unix) {
@@ -154,7 +154,7 @@ fn exit_code_verbose() {
     let mut output = String::from("\
 [COMPILING] foo v0.0.1 (file[..])
 [RUNNING] `rustc [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
 ");
     if !cfg!(unix) {
@@ -229,7 +229,7 @@ fn specify_name() {
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] `rustc [..] src[/]lib.rs [..]`
 [RUNNING] `rustc [..] src[/]bin[/]a.rs [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]a[EXE]`", dir = path2url(p.root())))
                        .with_stdout("\
 hello a.rs
@@ -240,7 +240,7 @@ hello a.rs
                        .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] src[/]bin[/]b.rs [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]b[EXE]`")
                        .with_stdout("\
 hello b.rs
@@ -268,7 +268,7 @@ fn run_example() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]examples[/]a[EXE]`", dir = path2url(p.root())))
                        .with_stdout("\
 example
@@ -361,7 +361,7 @@ fn one_bin_multiple_examples() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]main[EXE]`", dir = path2url(p.root())))
                        .with_stdout("\
 hello main.rs
@@ -458,7 +458,7 @@ fast2"));
         --out-dir {dir}[/]target[/]debug[/]examples \
         -L dependency={dir}[/]target[/]debug[/]deps \
          --extern bar={dir}[/]target[/]debug[/]deps[/]libbar-[..].rlib`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]examples[/]a[EXE]`
 ",
         dir = p.root().display(),
@@ -588,7 +588,7 @@ fn run_from_executable_folder() {
     assert_that(p.cargo("run").cwd(cwd),
                 execs().with_status(0)
                        .with_stderr("\
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]\n\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
 [RUNNING] `.[/]foo[EXE]`")
                        .with_stdout("\
 hello

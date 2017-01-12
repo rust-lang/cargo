@@ -197,7 +197,7 @@ impl<'a> JobQueue<'a> {
             }
         }
 
-        let build_type = if self.is_release { "release" } else { "debug" };
+        let build_type = if self.is_release { "release" } else { "dev" };
         let profile = cx.lib_profile();
         let mut opt_type = String::from(if profile.opt_level == "0" { "unoptimized" }
                                         else { "optimized" });
