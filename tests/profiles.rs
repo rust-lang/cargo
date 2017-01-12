@@ -35,7 +35,7 @@ fn profile_overrides() {
         -C rpath \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
-[FINISHED] debug [optimized] target(s) in [..]
+[FINISHED] dev [optimized] target(s) in [..]
 ",
 dir = p.root().display(),
 url = p.url(),
@@ -223,7 +223,7 @@ package:   [..]
 workspace: [..]
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc [..]`
-[FINISHED] debug [unoptimized] target(s) in [..]"));
+[FINISHED] dev [unoptimized] target(s) in [..]"));
 }
 
 #[test]
@@ -252,5 +252,5 @@ fn profile_in_virtual_manifest_works() {
                 execs().with_status(0).with_stderr("\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc [..]`
-[FINISHED] debug [optimized] target(s) in [..]"));
+[FINISHED] dev [optimized] target(s) in [..]"));
 }

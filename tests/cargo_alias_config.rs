@@ -112,6 +112,6 @@ fn cant_shadow_builtin() {
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }

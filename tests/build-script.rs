@@ -307,7 +307,7 @@ fn overrides_and_links() {
 [..]
 [..]
 [RUNNING] `rustc --crate-name foo [..] -L foo -L bar[..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -409,7 +409,7 @@ fn only_rerun_build_script() {
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `[..][/]build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -498,7 +498,7 @@ fn testing_and_such() {
 [RUNNING] `[..][/]build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..][/]foo-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]`")
@@ -529,7 +529,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`
 "));
 }
@@ -676,7 +676,7 @@ fn build_deps_simple() {
 [RUNNING] `rustc [..] build.rs [..] --extern a=[..]`
 [RUNNING] `[..][/]foo-[..][/]build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -782,7 +782,7 @@ fn build_cmd_with_a_build_cmd() {
     -C metadata=[..] \
     --out-dir [..] \
     -L [..]target[/]debug[/]deps`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -929,7 +929,7 @@ fn code_generation() {
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo`")
                        .with_stdout("\
 Hello, World!
@@ -1373,7 +1373,7 @@ fn cfg_test() {
 [RUNNING] [..] --cfg foo[..]
 [RUNNING] [..] --cfg foo[..]
 [RUNNING] [..] --cfg foo[..]
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..][/]foo-[..][EXE]`
 [RUNNING] `[..][/]test-[..][EXE]`
 [DOCTEST] foo
@@ -1490,7 +1490,7 @@ fn cfg_override_test() {
 [RUNNING] `[..]`
 [RUNNING] `[..]`
 [RUNNING] `[..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..][/]foo-[..][EXE]`
 [RUNNING] `[..][/]test-[..][EXE]`
 [DOCTEST] foo
@@ -1610,7 +1610,7 @@ fn flags_go_into_tests() {
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] src[/]lib.rs [..] -L test[..]`
 [RUNNING] `rustc [..] tests[/]foo.rs [..] -L test[..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..][/]foo-[..][EXE]`")
                        .with_stdout("
 running 0 tests
@@ -1625,7 +1625,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 [FRESH] a v0.5.0 ([..]
 [COMPILING] b v0.5.0 ([..]
 [RUNNING] `rustc [..] b[/]src[/]lib.rs [..] -L test[..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..][/]b-[..][EXE]`")
                        .with_stdout("
 running 0 tests
@@ -1695,7 +1695,7 @@ fn diamond_passes_args_only_once() {
 [RUNNING] `rustc [..]`
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `[..]rlib -L native=test`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -1725,7 +1725,7 @@ fn adding_an_override_invalidates() {
 [RUNNING] `rustc [..]`
 [RUNNING] `[..]`
 [RUNNING] `rustc [..] -L native=foo`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     File::create(p.root().join(".cargo/config")).unwrap().write_all(format!("
@@ -1737,7 +1737,7 @@ fn adding_an_override_invalidates() {
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=bar`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -1764,7 +1764,7 @@ fn changing_an_override_invalidates() {
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=foo`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     File::create(p.root().join(".cargo/config")).unwrap().write_all(format!("
@@ -1776,7 +1776,7 @@ fn changing_an_override_invalidates() {
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=bar`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -1809,7 +1809,7 @@ fn rebuild_only_on_explicit_paths() {
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..][/]build-script-build`
 [RUNNING] `rustc [..] src[/]lib.rs [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     sleep_ms(1000);
@@ -1823,14 +1823,14 @@ fn rebuild_only_on_explicit_paths() {
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..][/]build-script-build`
 [RUNNING] `rustc [..] src[/]lib.rs [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     println!("run with2");
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [FRESH] a v0.5.0 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     sleep_ms(1000);
@@ -1841,7 +1841,7 @@ fn rebuild_only_on_explicit_paths() {
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [FRESH] a v0.5.0 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     // but changing dependent files does
@@ -1852,7 +1852,7 @@ fn rebuild_only_on_explicit_paths() {
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..][/]build-script-build`
 [RUNNING] `rustc [..] src[/]lib.rs [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     // .. as does deleting a file
@@ -1863,7 +1863,7 @@ fn rebuild_only_on_explicit_paths() {
 [COMPILING] a v0.5.0 ([..])
 [RUNNING] `[..][/]build-script-build`
 [RUNNING] `rustc [..] src[/]lib.rs [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -2078,7 +2078,7 @@ fn warnings_emitted() {
 warning: foo
 warning: bar
 [RUNNING] `rustc [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -2124,7 +2124,7 @@ fn warnings_hidden_for_upstream() {
 [RUNNING] `rustc [..]`
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `rustc [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -2172,7 +2172,7 @@ warning: bar
 [RUNNING] `rustc [..]`
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `rustc [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -2207,7 +2207,7 @@ stdout
 [RUNNING] `[..]`
 stderr
 [RUNNING] `rustc [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 

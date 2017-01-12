@@ -919,7 +919,7 @@ fn test_a_bench() {
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.1.0 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]b-[..][EXE]")
                        .with_stdout("
 running 1 test
