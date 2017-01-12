@@ -276,12 +276,18 @@ impl Decodable for TomlOptLevel {
     }
 }
 
+#[derive(RustcDecodable, Clone)]
+pub enum U32OrBool {
+    U32(u32),
+    Bool(bool),
+}
+
 #[derive(RustcDecodable, Clone, Default)]
 pub struct TomlProfile {
     opt_level: Option<TomlOptLevel>,
     lto: Option<bool>,
     codegen_units: Option<u32>,
-    debug: Option<bool>,
+    debug: Option<U32OrBool>,
     debug_assertions: Option<bool>,
     rpath: Option<bool>,
     panic: Option<String>,
@@ -1265,11 +1271,17 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
 
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
         let &TomlProfile {
-            ref opt_level, lto, codegen_units, debug, debug_assertions, rpath,
+            ref opt_level, lto, codegen_units, ref debug, debug_assertions, rpath,
             ref panic
         } = match toml {
             Some(toml) => toml,
             None => return profile,
+        };
+        let debug = match *debug {
+            Some(U32OrBool::U32(debug)) => Some(Some(debug)),
+            Some(U32OrBool::Bool(true)) => Some(Some(2)),
+            Some(U32OrBool::Bool(false)) => Some(None),
+            None => None,
         };
         Profile {
             opt_level: opt_level.clone().unwrap_or(TomlOptLevel(profile.opt_level)).0,

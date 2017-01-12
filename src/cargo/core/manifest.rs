@@ -130,7 +130,7 @@ pub struct Profile {
     pub codegen_units: Option<u32>,    // None = use rustc default
     pub rustc_args: Option<Vec<String>>,
     pub rustdoc_args: Option<Vec<String>>,
-    pub debuginfo: bool,
+    pub debuginfo: Option<u32>,
     pub debug_assertions: bool,
     pub rpath: bool,
     pub test: bool,
@@ -143,7 +143,7 @@ pub struct Profile {
 #[derive(RustcEncodable)]
 struct SerializedProfile<'a> {
     opt_level: &'a str,
-    debuginfo: bool,
+    debuginfo: Option<u32>,
     debug_assertions: bool,
     test: bool,
 }
@@ -488,7 +488,7 @@ impl fmt::Display for Target {
 impl Profile {
     pub fn default_dev() -> Profile {
         Profile {
-            debuginfo: true,
+            debuginfo: Some(2),
             debug_assertions: true,
             ..Profile::default()
         }
@@ -497,7 +497,7 @@ impl Profile {
     pub fn default_release() -> Profile {
         Profile {
             opt_level: "3".to_string(),
-            debuginfo: false,
+            debuginfo: None,
             ..Profile::default()
         }
     }
@@ -554,7 +554,7 @@ impl Default for Profile {
             codegen_units: None,
             rustc_args: None,
             rustdoc_args: None,
-            debuginfo: false,
+            debuginfo: None,
             debug_assertions: false,
             rpath: false,
             test: false,

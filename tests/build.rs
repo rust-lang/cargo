@@ -821,13 +821,13 @@ fn cargo_default_env_metadata_env_var() {
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type dylib \
         --emit=dep-info,link \
-        -C prefer-dynamic -g \
+        -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -g \
+        --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
@@ -848,13 +848,13 @@ suffix = env::consts::DLL_SUFFIX,
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type dylib \
         --emit=dep-info,link \
-        -C prefer-dynamic -g \
+        -C prefer-dynamic -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -g \
+        --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         -C extra-filename=[..] \
         --out-dir [..] \
@@ -1198,7 +1198,7 @@ fn verbose_build() {
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -g \
+        --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
@@ -2443,7 +2443,7 @@ fn compiler_json_error_format() {
         "reason":"compiler-artifact",
         "profile": {
             "debug_assertions": true,
-            "debuginfo": true,
+            "debuginfo": 2,
             "opt_level": "0",
             "test": false
         },
@@ -2475,7 +2475,7 @@ fn compiler_json_error_format() {
         "target":{"kind":["bin"],"name":"foo","src_path":"[..]main.rs"},
         "profile": {
             "debug_assertions": true,
-            "debuginfo": true,
+            "debuginfo": 2,
             "opt_level": "0",
             "test": false
         },
@@ -2537,7 +2537,7 @@ fn message_format_json_forward_stderr() {
         "target":{"kind":["bin"],"name":"foo","src_path":"[..]"},
         "profile":{
             "debug_assertions":true,
-            "debuginfo":true,
+            "debuginfo":2,
             "opt_level":"0",
             "test":false
         },
