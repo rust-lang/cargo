@@ -11,7 +11,7 @@ use cargo::util::process;
 use cargotest::{is_nightly, rustc_host, sleep_ms};
 use cargotest::support::paths::{CargoPathExt,root};
 use cargotest::support::{ProjectBuilder};
-use cargotest::support::{project, execs, main_file, basic_bin_manifest};
+use cargotest::support::{project, execs, main_file, basic_bin_manifest, is_valid_json};
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file, is_not};
 use tempdir::TempDir;
@@ -2420,69 +2420,13 @@ fn compiler_json_error_format() {
         "#)
         .file("bar/src/lib.rs", r#"fn dead() {}"#);
 
-    assert_that(p.cargo_process("build").arg("-v")
-                    .arg("--message-format").arg("json"),
-                execs().with_status(0).with_json(r#"
-    {
-        "reason":"compiler-message",
-        "package_id":"bar 0.5.0 ([..])",
-        "target":{"kind":["lib"],"name":"bar","src_path":"[..]lib.rs"},
-        "message":{
-            "children":[],"code":null,"level":"warning","rendered":null,
-            "message":"function is never used: `dead`, #[warn(dead_code)] on by default",
-            "spans":[{
-                "byte_end":12,"byte_start":0,"column_end":13,"column_start":1,"expansion":null,
-                "file_name":"[..]","is_primary":true,"label":null,"line_end":1,"line_start":1,
-                "suggested_replacement":null,
-                "text":[{"highlight_end":13,"highlight_start":1,"text":"fn dead() {}"}]
-            }]
-        }
+    let output = p.cargo_process("build").arg("-v")
+        .arg("--message-format").arg("json").exec_with_output()
+        .expect("process should succeed").stdout;
+    let output_lines = output.split(|&c| c == ('\n' as u8)).filter(|l| l.len() != 0);
+    for line in output_lines {
+        assert_that(line, is_valid_json());
     }
-
-    {
-        "reason":"compiler-artifact",
-        "profile": {
-            "debug_assertions": true,
-            "debuginfo": true,
-            "opt_level": "0",
-            "test": false
-        },
-        "features": [],
-        "package_id":"bar 0.5.0 ([..])",
-        "target":{"kind":["lib"],"name":"bar","src_path":"[..]lib.rs"},
-        "filenames":["[..].rlib"]
-    }
-
-    {
-        "reason":"compiler-message",
-        "package_id":"foo 0.5.0 ([..])",
-        "target":{"kind":["bin"],"name":"foo","src_path":"[..]main.rs"},
-        "message":{
-            "children":[],"code":null,"level":"warning","rendered":null,
-            "message":"unused variable: `unused`, #[warn(unused_variables)] on by default",
-            "spans":[{
-                "byte_end":22,"byte_start":16,"column_end":23,"column_start":17,"expansion":null,
-                "file_name":"[..]","is_primary":true,"label":null,"line_end":1,"line_start":1,
-                "suggested_replacement":null,
-                "text":[{"highlight_end":23,"highlight_start":17,"text":"[..]"}]
-            }]
-        }
-    }
-
-    {
-        "reason":"compiler-artifact",
-        "package_id":"foo 0.5.0 ([..])",
-        "target":{"kind":["bin"],"name":"foo","src_path":"[..]main.rs"},
-        "profile": {
-            "debug_assertions": true,
-            "debuginfo": true,
-            "opt_level": "0",
-            "test": false
-        },
-        "features": [],
-        "filenames": ["[..]"]
-    }
-"#));
 }
 
 #[test]
@@ -2684,4 +2628,3 @@ fn build_all_member_dependency_same_name() {
                        [..] Compiling a v0.1.0 ([..])\n\
                        [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
 }
-
