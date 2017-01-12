@@ -231,7 +231,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
             map.insert(crate_type.to_string(), Some((prefix.to_string(), suffix.to_string())));
         }
- 
+
         let cfg = if has_cfg {
             Some(try!(lines.map(Cfg::from_str).collect()))
         } else {
@@ -455,7 +455,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // we don't want to link it up.
         if src_dir.ends_with("deps") {
             // Don't lift up library dependencies
-            if self.ws.members().find(|&p| p != unit.pkg).is_some() && !unit.target.is_bin() {
+            if self.ws.members().find(|&p| p == unit.pkg).is_none() &&
+               !unit.target.is_bin() {
                 None
             } else {
                 Some((
