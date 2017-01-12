@@ -432,7 +432,7 @@ fn linker_and_ar() {
                        .with_stderr_contains(&format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc --crate-name foo src[/]foo.rs --crate-type bin \
-    --emit=dep-info,link -g \
+    --emit=dep-info,link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir {dir}[/]target[/]{target}[/]debug[/]deps \
     --target {target} \
