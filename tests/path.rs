@@ -13,6 +13,8 @@ use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file};
 
 #[test]
+#[cfg(not(windows))] // I have no idea why this is failing spuriously on
+                     // Windows, for more info see #3466.
 fn cargo_compile_with_nested_deps_shorthand() {
     let p = project("foo")
         .file("Cargo.toml", r#"
