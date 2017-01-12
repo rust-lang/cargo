@@ -278,6 +278,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
     let cwd = cx.config.cwd().to_path_buf();
 
+    rustc.args(&cx.incremental_args(unit)?);
     rustc.args(&cx.rustflags_args(unit)?);
     let json_messages = cx.build_config.json_messages;
     let package_id = unit.pkg.package_id().clone();
