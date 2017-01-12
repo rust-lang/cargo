@@ -174,7 +174,7 @@ fn build_script() {
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]build-script-build`
 [RUNNING] `rustc [..] src[/]main.rs [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 

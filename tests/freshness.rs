@@ -26,7 +26,7 @@ fn modifying_and_moving() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = path2url(p.root()))));
 
     assert_that(p.cargo("build"),
@@ -39,7 +39,7 @@ fn modifying_and_moving() {
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = path2url(p.root()))));
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
@@ -68,7 +68,7 @@ fn modify_only_some_files() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = path2url(p.root()))));
     assert_that(p.cargo("test"),
                 execs().with_status(0));
@@ -87,7 +87,7 @@ fn modify_only_some_files() {
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = path2url(p.root()))));
     assert_that(&p.bin("foo"), existing_file());
 }
@@ -162,14 +162,14 @@ fn changing_lib_features_caches_targets() {
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     /* Targets should be cached from the first build */
@@ -177,7 +177,7 @@ fn changing_lib_features_caches_targets() {
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("build"),
@@ -187,7 +187,7 @@ fn changing_lib_features_caches_targets() {
     assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(0)
                        .with_stderr("\
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -212,14 +212,14 @@ fn changing_profiles_caches_targets() {
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
 [DOCTEST] foo
 "));
@@ -229,13 +229,13 @@ fn changing_profiles_caches_targets() {
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("test").arg("foo"),
                 execs().with_status(0)
                        .with_stderr("\
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
 [DOCTEST] foo
 "));
@@ -310,7 +310,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                        .with_stderr("\
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling a v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target[/]debug[/]a[EXE]`
 "));
     assert_that(p.cargo("clean").arg("-p").arg("a").cwd(p.root().join("a")),
@@ -320,7 +320,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                        .with_stdout("ftest off")
                        .with_stderr("\
 [..]Compiling a v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target[/]debug[/]a[EXE]`
 "));
 
@@ -331,7 +331,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                        .with_stderr("\
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling b v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target[/]debug[/]b[EXE]`
 "));
     assert_that(p.cargo("clean").arg("-p").arg("b").cwd(p.root().join("b")),
@@ -341,7 +341,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                        .with_stdout("ftest on")
                        .with_stderr("\
 [..]Compiling b v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target[/]debug[/]b[EXE]`
 "));
 
@@ -354,7 +354,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                        .with_stdout("ftest off")
                        .with_stderr("\
 [..]Compiling a v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target[/]debug[/]a[EXE]`
 "));
 
@@ -367,7 +367,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                        .with_stdout("ftest on")
                        .with_stderr("\
 [..]Compiling b v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target[/]debug[/]b[EXE]`
 "));
 }
@@ -396,7 +396,7 @@ fn changing_bin_features_caches_targets() {
                        .with_stdout("feature off")
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`
 "));
 
@@ -405,7 +405,7 @@ fn changing_bin_features_caches_targets() {
                        .with_stdout("feature on")
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`
 "));
 
@@ -415,7 +415,7 @@ fn changing_bin_features_caches_targets() {
                 execs().with_status(0)
                        .with_stdout("feature off")
                        .with_stderr("\
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`
 "));
 
@@ -423,7 +423,7 @@ fn changing_bin_features_caches_targets() {
                 execs().with_status(0)
                        .with_stdout("feature on")
                        .with_stderr("\
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo[EXE]`
 "));
 }
@@ -511,7 +511,7 @@ fn no_rebuild_transitive_target_deps() {
 [COMPILING] c v0.0.1 ([..])
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -606,12 +606,12 @@ fn same_build_dir_cached_packages() {
 [COMPILING] c v0.0.1 ({dir}/c)
 [COMPILING] b v0.0.1 ({dir}/b)
 [COMPILING] a1 v0.0.1 ({dir}/a1)
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
     assert_that(p.cargo("build").cwd(p.root().join("a2")),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] a2 v0.0.1 ({dir}/a2)
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
 }
 

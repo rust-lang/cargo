@@ -78,7 +78,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
                .with_stderr(&format!("[COMPILING] baz v0.5.0 ({}/bar/baz)\n\
                                      [COMPILING] bar v0.5.0 ({}/bar)\n\
                                      [COMPILING] foo v0.5.0 ({})\n\
-                                     [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                     [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                      in [..]\n",
                                     p.url(),
                                     p.url(),
@@ -96,7 +96,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
     assert_that(p.cargo("build").arg("-p").arg("baz"),
                 execs().with_status(0)
                        .with_stderr(&format!("[COMPILING] baz v0.5.0 ({}/bar/baz)\n\
-                                              [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                              [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                               in [..]\n",
                                             p.url())));
     println!("building foo");
@@ -105,7 +105,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
                 execs().with_status(0)
                        .with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
-                                             [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                             [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                              in [..]\n",
                                             p.url(),
                                             p.url())));
@@ -189,7 +189,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
                 execs().with_stderr("\
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]")
                        .with_stdout("
 running 0 tests
@@ -244,7 +244,7 @@ fn cargo_compile_with_transitive_dev_deps() {
     assert_that(p.cargo_process("build"),
         execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
                                      [COMPILING] foo v0.5.0 ({})\n\
-                                     [FINISHED] debug [unoptimized + debuginfo] target(s) in \
+                                     [FINISHED] dev [unoptimized + debuginfo] target(s) in \
                                      [..]\n",
                                     p.url(),
                                     p.url())));
@@ -292,7 +292,7 @@ fn no_rebuild_dependency() {
     assert_that(p.cargo_process("build"),
                 execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
-                                             [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                             [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                              in [..]\n",
                                             p.url(),
                                             p.url())));
@@ -305,7 +305,7 @@ fn no_rebuild_dependency() {
     assert_that(p.cargo("build"),
                 execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
-                                             [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                             [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                              in [..]\n",
                                             p.url(),
                                             p.url())));
@@ -364,7 +364,7 @@ fn deep_dependencies_trigger_rebuild() {
                 execs().with_stderr(&format!("[COMPILING] baz v0.5.0 ({}/baz)\n\
                                              [COMPILING] bar v0.5.0 ({}/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
-                                             [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                             [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                              in [..]\n",
                                             p.url(),
                                             p.url(),
@@ -384,7 +384,7 @@ fn deep_dependencies_trigger_rebuild() {
                 execs().with_stderr(&format!("[COMPILING] baz v0.5.0 ({}/baz)\n\
                                              [COMPILING] bar v0.5.0 ({}/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
-                                             [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                             [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                              in [..]\n",
                                             p.url(),
                                             p.url(),
@@ -399,7 +399,7 @@ fn deep_dependencies_trigger_rebuild() {
     assert_that(p.cargo("build"),
                 execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
-                                             [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                             [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                              in [..]\n",
                                             p.url(),
                                             p.url())));
@@ -460,7 +460,7 @@ fn no_rebuild_two_deps() {
                 execs().with_stderr(&format!("[COMPILING] baz v0.5.0 ({}/baz)\n\
                                              [COMPILING] bar v0.5.0 ({}/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
-                                             [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                             [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                              in [..]\n",
                                             p.url(),
                                             p.url(),
@@ -509,7 +509,7 @@ fn nested_deps_recompile() {
     assert_that(p.cargo_process("build"),
                 execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/src/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
-                                             [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                             [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                              in [..]\n",
                                             bar,
                                             p.url())));
@@ -522,7 +522,7 @@ fn nested_deps_recompile() {
     // This shouldn't recompile `bar`
     assert_that(p.cargo("build"),
                 execs().with_stderr(&format!("[COMPILING] foo v0.5.0 ({})\n\
-                                              [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                              [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                               in [..]\n",
                                             p.url())));
 }
@@ -728,7 +728,7 @@ fn path_dep_build_cmd() {
     assert_that(p.cargo("build"),
         execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
                                      [COMPILING] foo v0.5.0 ({})\n\
-                                     [FINISHED] debug [unoptimized + debuginfo] target(s) in \
+                                     [FINISHED] dev [unoptimized + debuginfo] target(s) in \
                                      [..]\n",
                                     p.url(),
                                     p.url())));
@@ -747,7 +747,7 @@ fn path_dep_build_cmd() {
     assert_that(p.cargo("build"),
         execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
                                      [COMPILING] foo v0.5.0 ({})\n\
-                                     [FINISHED] debug [unoptimized + debuginfo] target(s) in \
+                                     [FINISHED] dev [unoptimized + debuginfo] target(s) in \
                                      [..]\n",
                                     p.url(),
                                     p.url())));
@@ -789,7 +789,7 @@ fn dev_deps_no_rebuild_lib() {
                  .env("FOO", "bar"),
                 execs().with_status(0)
                        .with_stderr(&format!("[COMPILING] foo v0.5.0 ({})\n\
-                                              [FINISHED] debug [unoptimized + debuginfo] target(s) \
+                                              [FINISHED] dev [unoptimized + debuginfo] target(s) \
                                               in [..]\n",
                                               p.url())));
 
@@ -798,7 +798,7 @@ fn dev_deps_no_rebuild_lib() {
                        .with_stderr(&format!("\
 [COMPILING] [..] v0.5.0 ({url}[..])
 [COMPILING] [..] v0.5.0 ({url}[..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]", url = p.url()))
                        .with_stdout("
 running 0 tests
@@ -842,7 +842,7 @@ fn custom_target_no_rebuild() {
                        .with_stderr("\
 [COMPILING] a v0.5.0 ([..])
 [COMPILING] foo v0.5.0 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("build")
@@ -851,7 +851,7 @@ fn custom_target_no_rebuild() {
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] b v0.5.0 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -894,7 +894,7 @@ fn override_and_depend() {
 [COMPILING] a2 v0.5.0 ([..])
 [COMPILING] a1 v0.5.0 ([..])
 [COMPILING] b v0.5.0 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
