@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::io::Write;
@@ -24,13 +24,29 @@ pub struct JobQueue<'a> {
     queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness)>>,
     tx: Sender<(Key<'a>, Message)>,
     rx: Receiver<(Key<'a>, Message)>,
-    active: usize,
+    /// Packages currently compiling.
+    ///
+    /// We want to keep the insert order so that the jobs are sorted by start
+    /// time.
+    active: VecDeque<(&'a PackageId, JobType)>,
     pending: HashMap<Key<'a>, PendingBuild>,
     compiled: HashSet<&'a PackageId>,
     documented: HashSet<&'a PackageId>,
     counts: HashMap<&'a PackageId, usize>,
     is_release: bool,
     is_doc_all: bool,
+}
+
+#[derive(Debug, Copy, Clone)]
+enum JobType {
+    Compiling,
+    Documenting,
+}
+
+impl fmt::Display for JobType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
 }
 
 /// A helper structure for metadata about the state of a building package.
@@ -84,7 +100,7 @@ impl<'a> JobQueue<'a> {
             queue: DependencyQueue::new(),
             tx: tx,
             rx: rx,
-            active: 0,
+            active: VecDeque::new(),
             pending: HashMap::new(),
             compiled: HashSet::new(),
             documented: HashSet::new(),
@@ -138,7 +154,7 @@ impl<'a> JobQueue<'a> {
         let mut error = None;
         let start_time = Instant::now();
         loop {
-            while error.is_none() && self.active < self.jobs {
+            while error.is_none() && self.active.len() < self.jobs {
                 if !queue.is_empty() {
                     let (key, job, fresh) = queue.remove(0);
                     self.run(key, fresh, job, cx.config, scope)?;
@@ -157,7 +173,7 @@ impl<'a> JobQueue<'a> {
                     break
                 }
             }
-            if self.active == 0 {
+            if self.active.len() == 0 {
                 break
             }
 
@@ -165,28 +181,39 @@ impl<'a> JobQueue<'a> {
 
             match msg {
                 Message::Run(cmd) => {
-                    cx.config.shell().verbose(|c| c.status("Running", &cmd))?;
+                    self.update_display(cx.config, |_| {
+                        Ok(cx.config.shell().verbose(|c| c.status("Running", &cmd))?)
+                    })?;
                 }
                 Message::Stdout(out) => {
                     if cx.config.extra_verbose() {
-                        writeln!(cx.config.shell().out(), "{}", out)?;
+                        self.update_display(cx.config, |_| {
+                            Ok(writeln!(cx.config.shell().out(), "{}", out)?)
+                        })?;
                     }
                 }
                 Message::Stderr(err) => {
                     if cx.config.extra_verbose() {
-                        writeln!(cx.config.shell().err(), "{}", err)?;
+                        self.update_display(cx.config, |_| {
+                            Ok(writeln!(cx.config.shell().err(), "{}", err)?)
+                        })?;
                     }
                 }
                 Message::Finish(result) => {
                     info!("end: {:?}", key);
-                    self.active -= 1;
+                    self.update_display(cx.config, |self_| {
+                        self_.active.retain(|x| x.0 != key.pkg);
+                        cx.config.shell().status("Finished", key.pkg)
+                    })?;
                     match result {
                         Ok(()) => self.finish(key, cx)?,
                         Err(e) => {
-                            if self.active > 0 {
-                                cx.config.shell().say(
-                                            "Build failed, waiting for other \
-                                             jobs to finish...", YELLOW)?;
+                            if self.active.len() > 0 {
+                                self.update_display(cx.config, |_| {
+                                    Ok(cx.config.shell().say(
+                                                "Build failed, waiting for other \
+                                                 jobs to finish...", YELLOW)?)
+                                })?;
                             }
                             if error.is_none() {
                                 error = Some(e);
@@ -234,7 +261,6 @@ impl<'a> JobQueue<'a> {
            scope: &Scope<'a>) -> CargoResult<()> {
         info!("start: {:?}", key);
 
-        self.active += 1;
         *self.counts.get_mut(key.pkg).unwrap() -= 1;
 
         let my_tx = self.tx.clone();
@@ -256,9 +282,12 @@ impl<'a> JobQueue<'a> {
         if key.profile.run_custom_build && cx.show_warnings(key.pkg) {
             let output = cx.build_state.outputs.lock().unwrap();
             if let Some(output) = output.get(&(key.pkg.clone(), key.kind)) {
-                for warning in output.warnings.iter() {
-                    cx.config.shell().warn(warning)?;
-                }
+                self.update_display(cx.config, |_| {
+                    for warning in output.warnings.iter() {
+                        cx.config.shell().warn(warning)?;
+                    }
+                    Ok(())
+                })?;
             }
         }
         let state = self.pending.get_mut(&key).unwrap();
@@ -287,23 +316,42 @@ impl<'a> JobQueue<'a> {
             return Ok(())
         }
 
-        match fresh {
-            // Any dirty stage which runs at least one command gets printed as
-            // being a compiled package
-            Dirty => {
-                if key.profile.doc {
-                    self.documented.insert(key.pkg);
-                    config.shell().status("Documenting", key.pkg)?;
-                } else {
-                    self.compiled.insert(key.pkg);
-                    config.shell().status("Compiling", key.pkg)?;
+        self.update_display(config, |self_| {
+            Ok(match fresh {
+                // Any dirty stage which runs at least one command gets printed as
+                // being a compiled package
+                Dirty => {
+                    if key.profile.doc {
+                        self_.documented.insert(key.pkg);
+                        self_.active.push_back((key.pkg, JobType::Documenting));
+                    } else {
+                        self_.compiled.insert(key.pkg);
+                        self_.active.push_back((key.pkg, JobType::Compiling));
+                    }
                 }
-            }
-            Fresh if self.counts[key.pkg] == 0 => {
-                self.compiled.insert(key.pkg);
-                config.shell().verbose(|c| c.status("Fresh", key.pkg))?;
-            }
-            Fresh => {}
+                Fresh if self_.counts[key.pkg] == 0 => {
+                    self_.compiled.insert(key.pkg);
+                    config.shell().verbose(|c| c.status("Fresh", key.pkg))?;
+                }
+                Fresh => {}
+            })
+        })
+    }
+
+    /// Cleans the display before printing the message.
+    fn update_display<F>(&mut self, config: &Config, f: F) -> CargoResult<()>
+        where F: FnOnce(&mut Self) -> CargoResult<()>
+    {
+        // Move up n lines.
+        println!("\x1B[{}A", self.active.len() + 1);
+
+        // Clear line
+        print!("\x1B[100D\x1B[2K");
+        f(self)?;
+
+        for &(pkg, job_type) in &self.active {
+            print!("\x1B[100D\x1B[2K");
+            config.shell().status(job_type, pkg)?;
         }
         Ok(())
     }
