@@ -91,6 +91,7 @@ pub enum CompileMode {
     Check,
     Bench,
     Doc { deps: bool },
+    Doctest,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, RustcDecodable)]
@@ -321,6 +322,7 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileMode::Build => build,
         CompileMode::Check => &profiles.check,
         CompileMode::Doc { .. } => &profiles.doc,
+        CompileMode::Doctest => &profiles.doctest,
     };
     match *filter {
         CompileFilter::Everything => {
@@ -359,6 +361,15 @@ fn generate_targets<'a>(pkg: &'a Package,
                 CompileMode::Doc { .. } => {
                     Ok(pkg.targets().iter().filter(|t| t.documented())
                           .map(|t| (t, profile)).collect())
+                }
+                CompileMode::Doctest => {
+                    if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
+                        if t.doctested() {
+                            return Ok(vec![(t, profile)])
+                        }
+                    }
+
+                    Ok(Vec::new())
                 }
             }
         }
