@@ -170,6 +170,7 @@ pub struct Profiles {
     pub doc: Profile,
     pub custom_build: Profile,
     pub check: Profile,
+    pub doctest: Profile,
 }
 
 /// Information about a binary, a library, an example, etc. that is part of the
@@ -532,6 +533,14 @@ impl Profile {
     pub fn default_check() -> Profile {
         Profile {
             check: true,
+            ..Profile::default_dev()
+        }
+    }
+
+    pub fn default_doctest() -> Profile {
+        Profile {
+            doc: true,
+            test: true,
             ..Profile::default_dev()
         }
     }

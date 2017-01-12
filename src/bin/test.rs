@@ -105,7 +105,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let empty = Vec::new();
     let (mode, filter);
     if options.flag_doc {
-        mode = ops::CompileMode::Build;
+        mode = ops::CompileMode::Doctest;
         filter = ops::CompileFilter::new(true, &empty, &empty, &empty, &empty);
     } else {
         mode = ops::CompileMode::Test;
