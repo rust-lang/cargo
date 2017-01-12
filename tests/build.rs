@@ -29,6 +29,31 @@ fn cargo_compile_simple() {
                 execs().with_status(0).with_stdout("i am foo\n"));
 }
 
+/// Check that the `CARGO_INCREMENTAL` environment variable results in
+/// `rustc` getting `-Zincremental` passed to it.
+#[test]
+fn cargo_compile_incremental() {
+    if !is_nightly() {
+        return
+    }
+
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+
+    assert_that(
+        p.cargo_process("build").arg("-v").env("CARGO_INCREMENTAL", "1"),
+        execs().with_stderr_contains(
+            "[RUNNING] `rustc [..] -Zincremental=[..][/]target[/]debug[/]incremental`\n")
+            .with_status(0));
+
+    assert_that(
+        p.cargo_process("test").arg("-v").env("CARGO_INCREMENTAL", "1"),
+        execs().with_stderr_contains(
+            "[RUNNING] `rustc [..] -Zincremental=[..][/]target[/]debug[/]incremental`\n")
+               .with_status(0));
+}
+
 #[test]
 fn cargo_compile_manifest_path() {
     let p = project("foo")
