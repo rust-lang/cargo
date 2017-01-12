@@ -23,7 +23,7 @@ fn rustdoc_simple() {
 [RUNNING] `rustdoc --crate-name foo src[/]lib.rs \
         -o {dir}[/]target[/]doc \
         -L dependency={dir}[/]target[/]debug[/]deps`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.root().display(), url = p.url())));
 }
 
@@ -47,7 +47,7 @@ fn rustdoc_args() {
         -o {dir}[/]target[/]doc \
         --no-defaults \
         -L dependency={dir}[/]target[/]debug[/]deps`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.root().display(), url = p.url())));
 }
 
@@ -93,7 +93,7 @@ fn rustdoc_foo_with_bar_dependency() {
         --no-defaults \
         -L dependency={dir}[/]target[/]debug[/]deps \
         --extern [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = foo.root().display(), url = foo.url())));
 }
 
@@ -137,7 +137,7 @@ fn rustdoc_only_bar_dependency() {
         -o {dir}[/]target[/]doc \
         --no-defaults \
         -L dependency={dir}[/]target[/]debug[/]deps`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = foo.root().display())));
 }
 

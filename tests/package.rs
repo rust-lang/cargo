@@ -40,7 +40,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
     assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
@@ -87,7 +87,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
 
@@ -109,7 +109,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
 
@@ -131,7 +131,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
 }
@@ -204,7 +204,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
 }
@@ -401,7 +401,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] nested v0.0.1 ({dir})
 [VERIFYING] nested v0.0.1 ({dir})
 [COMPILING] nested v0.0.1 ({dir}[..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
     assert_that(&p.root().join("target/package/nested-0.0.1.crate"), existing_file());
@@ -491,7 +491,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
 [COMPILING] foo v0.0.1 ({dir}[..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
 

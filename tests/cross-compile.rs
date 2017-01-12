@@ -547,7 +547,7 @@ fn cross_tests() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]bar-[..][EXE]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]", foo = p.url(), triple = target))
                        .with_stdout("
@@ -585,7 +585,7 @@ fn no_cross_doctests() {
 
     let host_output = format!("\
 [COMPILING] foo v0.0.0 ({foo})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
 [DOCTEST] foo
 ", foo = p.url());
@@ -601,7 +601,7 @@ fn no_cross_doctests() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
 [DOCTEST] foo
 ", foo = p.url(), triple = target)));
@@ -612,7 +612,7 @@ fn no_cross_doctests() {
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
 ", foo = p.url(), triple = target)));
 }
@@ -682,7 +682,7 @@ fn cross_with_a_build_script() {
 [RUNNING] `rustc [..] build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]foo-[..]`
 [RUNNING] `{dir}[/]target[/]debug[/]build[/]foo-[..][/]build-script-build`
 [RUNNING] `rustc [..] src[/]main.rs [..] --target {target} [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", target = target,
    dir = p.root().display())));
 }
@@ -882,7 +882,7 @@ fn plugin_build_script_right_arch() {
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..][/]build-script-build`
 [RUNNING] `rustc [..] src[/]lib.rs [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -934,7 +934,7 @@ fn build_script_with_platform_specific_dependencies() {
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `{dir}[/]target[/]debug[/]build[/]foo-[..][/]build-script-build`
 [RUNNING] `rustc [..] src[/]lib.rs [..] --target {target} [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.root().display(), target = target)));
 }
 

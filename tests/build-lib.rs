@@ -12,7 +12,7 @@ fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.root().display(), url = p.url(),
             name = "foo", version = "0.0.1")
