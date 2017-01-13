@@ -446,14 +446,14 @@ fast2"));
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]bar.rs --crate-type lib \
         --emit=dep-info,link \
-        -g \
+        -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]debug[/]deps \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name a examples[/]a.rs --crate-type bin \
         --emit=dep-info,link \
-        -g \
+        -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]debug[/]examples \
         -L dependency={dir}[/]target[/]debug[/]deps \

@@ -201,7 +201,7 @@ impl<'a> JobQueue<'a> {
         let profile = cx.lib_profile();
         let mut opt_type = String::from(if profile.opt_level == "0" { "unoptimized" }
                                         else { "optimized" });
-        if profile.debuginfo {
+        if profile.debuginfo.is_some() {
             opt_type = opt_type + " + debuginfo";
         }
         let duration = start_time.elapsed();

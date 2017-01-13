@@ -94,7 +94,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                                      resolve: &'a Resolve,
                                      config: &'cfg Config,
                                      build_config: BuildConfig,
-                                     profiles: &'a Profiles, 
+                                     profiles: &'a Profiles,
                                      exec: Arc<Executor>)
                                      -> CargoResult<Compilation<'cfg>> {
     let units = pkg_targets.iter().flat_map(|&(pkg, ref targets)| {
@@ -659,8 +659,8 @@ fn build_base_args(cx: &mut Context,
         }
     }
 
-    if debuginfo {
-        cmd.arg("-g");
+    if let Some(debuginfo) = debuginfo {
+        cmd.arg("-C").arg(format!("debuginfo={}", debuginfo));
     }
 
     if let Some(ref args) = *rustc_args {
