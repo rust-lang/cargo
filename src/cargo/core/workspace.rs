@@ -230,6 +230,14 @@ impl<'cfg> Workspace<'cfg> {
     /// if some other transient error happens.
     fn find_root(&mut self, manifest_path: &Path)
                  -> CargoResult<Option<PathBuf>> {
+        fn read_root_pointer(member_manifest: &Path, root_link: &str) -> CargoResult<PathBuf> {
+            let path = member_manifest.parent().unwrap()
+                .join(root_link)
+                .join("Cargo.toml");
+            debug!("find_root - pointer {}", path.display());
+            return Ok(paths::normalize_path(&path))
+        };
+
         {
             let current = self.packages.load(&manifest_path)?;
             match *current.workspace_config() {
@@ -238,11 +246,7 @@ impl<'cfg> Workspace<'cfg> {
                     return Ok(Some(manifest_path.to_path_buf()))
                 }
                 WorkspaceConfig::Member { root: Some(ref path_to_root) } => {
-                    let path = manifest_path.parent().unwrap()
-                                            .join(path_to_root)
-                                            .join("Cargo.toml");
-                    debug!("find_root - pointer {}", path.display());
-                    return Ok(Some(paths::normalize_path(&path)))
+                    return Ok(Some(read_root_pointer(manifest_path, path_to_root)?))
                 }
                 WorkspaceConfig::Member { root: None } => {}
             }
@@ -257,6 +261,9 @@ impl<'cfg> Workspace<'cfg> {
                     WorkspaceConfig::Root { .. } => {
                         debug!("find_root - found");
                         return Ok(Some(manifest))
+                    }
+                    WorkspaceConfig::Member { root: Some(ref path_to_root) } => {
+                        return Ok(Some(read_root_pointer(&manifest, path_to_root)?))
                     }
                     WorkspaceConfig::Member { .. } => {}
                 }
