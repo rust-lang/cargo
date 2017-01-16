@@ -1196,6 +1196,7 @@ fn test_path_dependency_under_member() {
             [dependencies]
             foo = { path = "../foo" }
 
+            [workspace]
         "#)
         .file("ws/src/lib.rs", r"extern crate foo; pub fn f() { foo::f() }")
         .file("foo/Cargo.toml", r#"
