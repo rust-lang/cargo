@@ -30,7 +30,7 @@ fn pathless_tools() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", url = foo.url())))
 }
 
@@ -72,7 +72,7 @@ fn absolute_tools() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", url = foo.url(), ar = output.0, linker = output.1)))
 }
 
@@ -121,6 +121,6 @@ fn relative_tools() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", url = foo_url, ar = output.0, linker = output.1)))
 }

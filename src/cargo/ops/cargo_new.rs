@@ -135,6 +135,13 @@ fn check_name(name: &str) -> CargoResult<()> {
                name)
     }
 
+    if let Some(ref c) = name.chars().nth(0) {
+        if c.is_digit(10) {
+            bail!("Package names starting with a digit cannot be used as a crate name\n\
+               use --name to override crate name")
+        }
+    }
+
     for c in name.chars() {
         if c.is_alphanumeric() { continue }
         if c == '_' || c == '-' { continue }

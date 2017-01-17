@@ -304,15 +304,16 @@ impl<'cfg> Workspace<'cfg> {
     }
 
     fn find_path_deps(&mut self, manifest_path: &Path) -> CargoResult<()> {
-        if self.members.iter().any(|p| p == manifest_path) {
+        let manifest_path = paths::normalize_path(manifest_path);
+        if self.members.iter().any(|p| p == &manifest_path) {
             return Ok(())
         }
 
         debug!("find_members - {}", manifest_path.display());
-        self.members.push(manifest_path.to_path_buf());
+        self.members.push(manifest_path.clone());
 
         let candidates = {
-            let pkg = match *self.packages.load(manifest_path)? {
+            let pkg = match *self.packages.load(&manifest_path)? {
                 MaybePackage::Package(ref p) => p,
                 MaybePackage::Virtual(_) => return Ok(()),
             };
@@ -461,6 +462,7 @@ impl<'cfg> Workspace<'cfg> {
                 doc: Profile::default_doc(),
                 custom_build: Profile::default_custom_build(),
                 check: Profile::default_check(),
+                doctest: Profile::default_doctest(),
             };
 
             for pkg in self.members().filter(|p| p.manifest_path() != root_manifest) {

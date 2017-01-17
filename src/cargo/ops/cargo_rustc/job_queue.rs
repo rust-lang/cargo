@@ -197,11 +197,11 @@ impl<'a> JobQueue<'a> {
             }
         }
 
-        let build_type = if self.is_release { "release" } else { "debug" };
+        let build_type = if self.is_release { "release" } else { "dev" };
         let profile = cx.lib_profile();
         let mut opt_type = String::from(if profile.opt_level == "0" { "unoptimized" }
                                         else { "optimized" });
-        if profile.debuginfo {
+        if profile.debuginfo.is_some() {
             opt_type = opt_type + " + debuginfo";
         }
         let duration = start_time.elapsed();
@@ -292,8 +292,10 @@ impl<'a> JobQueue<'a> {
             // being a compiled package
             Dirty => {
                 if key.profile.doc {
-                    self.documented.insert(key.pkg);
-                    config.shell().status("Documenting", key.pkg)?;
+                    if !key.profile.test {
+                        self.documented.insert(key.pkg);
+                        config.shell().status("Documenting", key.pkg)?;
+                    }
                 } else {
                     self.compiled.insert(key.pkg);
                     config.shell().status("Compiling", key.pkg)?;

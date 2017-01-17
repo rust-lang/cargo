@@ -8,11 +8,11 @@ fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
     format!("\
 [COMPILING] {name} v{version} ({url})
 [RUNNING] `rustc --crate-name {name} src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -g \
+        --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.root().display(), url = p.url(),
             name = "foo", version = "0.0.1")

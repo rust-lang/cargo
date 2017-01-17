@@ -504,7 +504,7 @@ fn share_dependencies() {
 [DOWNLOADING] dep1 v0.1.3 ([..])
 [COMPILING] dep1 v0.1.3
 [COMPILING] foo v0.1.0 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -589,7 +589,7 @@ fn lock_works_for_everyone() {
 [DOWNLOADING] dep2 v0.1.0 ([..])
 [COMPILING] dep2 v0.1.0
 [COMPILING] foo v0.1.0 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("build").cwd(p.root().join("bar")),
@@ -598,7 +598,7 @@ fn lock_works_for_everyone() {
 [DOWNLOADING] dep1 v0.1.0 ([..])
 [COMPILING] dep1 v0.1.0
 [COMPILING] bar v0.1.0 ([..])
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -1073,4 +1073,31 @@ fn error_if_parent_cargo_toml_is_invalid() {
                 execs().with_status(101)
                        .with_stderr_contains("\
 [ERROR] failed to parse manifest at `[..]`"));
+}
+
+#[test]
+fn relative_path_for_member_works() {
+    let p = project("foo")
+        .file("foo/Cargo.toml", r#"
+        [project]
+        name = "foo"
+        version = "0.1.0"
+        authors = []
+
+        [workspace]
+        members = ["../bar"]
+    "#)
+        .file("foo/src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+        [project]
+        name = "bar"
+        version = "0.1.0"
+        authors = []
+        workspace = "../foo"
+    "#)
+        .file("bar/src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build").cwd(p.root().join("foo")), execs().with_status(0));
+    assert_that(p.cargo("build").cwd(p.root().join("bar")), execs().with_status(0));
 }

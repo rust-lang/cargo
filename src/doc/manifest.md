@@ -181,7 +181,8 @@ along with the defaults for each profile.
 # The development profile, used for `cargo build`.
 [profile.dev]
 opt-level = 0      # controls the `--opt-level` the compiler builds with
-debug = true       # controls whether the compiler passes `-g`
+debug = true       # controls whether the compiler passes `-C debuginfo`
+                   # a value of `true` is equivalent to `2`
 rpath = false      # controls whether the compiler passes `-C rpath`
 lto = false        # controls `-C lto` for binaries and staticlibs
 debug-assertions = true # controls whether debug assertions are enabled
@@ -202,7 +203,7 @@ panic = 'unwind'
 # The testing profile, used for `cargo test`.
 [profile.test]
 opt-level = 0
-debug = true
+debug = 2
 rpath = false
 lto = false
 debug-assertions = true
@@ -222,7 +223,7 @@ panic = 'unwind'
 # The documentation profile, used for `cargo doc`.
 [profile.doc]
 opt-level = 0
-debug = true
+debug = 2
 rpath = false
 lto = false
 debug-assertions = true

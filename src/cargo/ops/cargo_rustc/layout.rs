@@ -40,6 +40,10 @@
 //!         $pkg2/
 //!         $pkg3/
 //!
+//!     # Directory used to store incremental data for the compiler (when
+//!     # incremental is enabled.
+//!     incremental/
+//!
 //!     # Hidden directory that holds all of the fingerprint files for all
 //!     # packages
 //!     .fingerprint/
@@ -57,6 +61,7 @@ pub struct Layout {
     deps: PathBuf,
     native: PathBuf,
     build: PathBuf,
+    incremental: PathBuf,
     fingerprint: PathBuf,
     examples: PathBuf,
     _lock: FileLock,
@@ -88,6 +93,7 @@ impl Layout {
             deps: root.join("deps"),
             native: root.join("native"),
             build: root.join("build"),
+            incremental: root.join("incremental"),
             fingerprint: root.join(".fingerprint"),
             examples: root.join("examples"),
             root: root,
@@ -102,6 +108,7 @@ impl Layout {
 
         mkdir(&self.deps)?;
         mkdir(&self.native)?;
+        mkdir(&self.incremental)?;
         mkdir(&self.fingerprint)?;
         mkdir(&self.examples)?;
         mkdir(&self.build)?;
@@ -120,6 +127,7 @@ impl Layout {
     pub fn deps(&self) -> &Path { &self.deps }
     pub fn examples(&self) -> &Path { &self.examples }
     pub fn root(&self) -> &Path { &self.root }
+    pub fn incremental(&self) -> &Path { &self.incremental }
     pub fn fingerprint(&self) -> &Path { &self.fingerprint }
     pub fn build(&self) -> &Path { &self.build }
 }
