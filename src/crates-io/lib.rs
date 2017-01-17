@@ -10,7 +10,7 @@ use std::io::{self, Cursor};
 use std::result;
 
 use curl::easy::{Easy, List};
-use rustc_serialize::json;
+use rustc_serialize::json::{self, Json};
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
@@ -39,6 +39,7 @@ pub enum Error {
     NotFound,
     JsonEncodeError(json::EncoderError),
     JsonDecodeError(json::DecoderError),
+    JsonParseError(json::ParserError),
 }
 
 impl From<json::EncoderError> for Error {
@@ -50,6 +51,12 @@ impl From<json::EncoderError> for Error {
 impl From<json::DecoderError> for Error {
     fn from(err: json::DecoderError) -> Error {
         Error::JsonDecodeError(err)
+    }
+}
+
+impl From<json::ParserError> for Error {
+    fn from(err: json::ParserError) -> Error {
+        Error::JsonParseError(err)
     }
 }
 
@@ -78,6 +85,7 @@ pub struct NewCrate {
     pub homepage: Option<String>,
     pub readme: Option<String>,
     pub keywords: Vec<String>,
+    pub categories: Vec<String>,
     pub license: Option<String>,
     pub license_file: Option<String>,
     pub repository: Option<String>,
@@ -103,6 +111,10 @@ pub struct User {
     pub name: Option<String>,
 }
 
+pub struct Warnings {
+    pub invalid_categories: Vec<String>,
+}
+
 #[derive(RustcDecodable)] struct R { ok: bool }
 #[derive(RustcDecodable)] struct ApiErrorList { errors: Vec<ApiError> }
 #[derive(RustcDecodable)] struct ApiError { detail: String }
@@ -110,7 +122,6 @@ pub struct User {
 #[derive(RustcDecodable)] struct Users { users: Vec<User> }
 #[derive(RustcDecodable)] struct TotalCrates { total: u32 }
 #[derive(RustcDecodable)] struct Crates { crates: Vec<Crate>, meta: TotalCrates }
-
 impl Registry {
     pub fn new(host: String, token: Option<String>) -> Registry {
         Registry::new_handle(host, token, Easy::new())
@@ -147,7 +158,8 @@ impl Registry {
         Ok(json::decode::<Users>(&body)?.users)
     }
 
-    pub fn publish(&mut self, krate: &NewCrate, tarball: &File) -> Result<()> {
+    pub fn publish(&mut self, krate: &NewCrate, tarball: &File)
+                   -> Result<Warnings> {
         let json = json::encode(krate)?;
         // Prepare the body. The format of the upload request is:
         //
@@ -190,10 +202,24 @@ impl Registry {
         headers.append(&format!("Authorization: {}", token))?;
         self.handle.http_headers(headers)?;
 
-        let _body = handle(&mut self.handle, &mut |buf| {
+        let body = handle(&mut self.handle, &mut |buf| {
             body.read(buf).unwrap_or(0)
         })?;
-        Ok(())
+        // Can't derive RustcDecodable because JSON has a key named "crate" :(
+        let response = if body.len() > 0 {
+            Json::from_str(&body)?
+        } else {
+            Json::from_str("{}")?
+        };
+        let invalid_categories: Vec<String> =
+            response
+                .find_path(&["warnings", "invalid_categories"])
+                .and_then(Json::as_array)
+                .map(|x| {
+                    x.iter().flat_map(Json::as_string).map(Into::into).collect()
+                })
+                .unwrap_or_else(Vec::new);
+        Ok(Warnings { invalid_categories: invalid_categories })
     }
 
     pub fn search(&mut self, query: &str, limit: u8) -> Result<(Vec<Crate>, u32)> {
@@ -328,6 +354,7 @@ impl fmt::Display for Error {
             Error::NotFound => write!(f, "cannot find crate"),
             Error::JsonEncodeError(ref e) => write!(f, "json encode error: {}", e),
             Error::JsonDecodeError(ref e) => write!(f, "json decode error: {}", e),
+            Error::JsonParseError(ref e) => write!(f, "json parse error: {}", e),
         }
     }
 }

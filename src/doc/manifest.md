@@ -118,9 +118,15 @@ repository = "..."
 # contents of this file are stored and indexed in the registry.
 readme = "..."
 
-# This is a small list of keywords used to categorize and search for this
-# package.
+# This is a list of up to five keywords that describe this crate. Keywords
+# are searchable on crates.io, and you may choose any words that would
+# help someone find this crate.
 keywords = ["...", "..."]
+
+# This is a list of up to five categories where this crate would fit.
+# Categories are a fixed list available at crates.io/categories, and
+# they must match exactly.
+categories = ["...", "..."]
 
 # This is a string description of the license for this package. Currently
 # crates.io will validate the license provided against a whitelist of known
