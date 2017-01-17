@@ -113,6 +113,7 @@ fn transmit(config: &Config,
     let ManifestMetadata {
         ref authors, ref description, ref homepage, ref documentation,
         ref keywords, ref readme, ref repository, ref license, ref license_file,
+        ref categories,
     } = *manifest.metadata();
     let readme = match *readme {
         Some(ref readme) => Some(paths::read(&pkg.root().join(readme))?),
@@ -133,7 +134,7 @@ fn transmit(config: &Config,
         return Ok(());
     }
 
-    registry.publish(&NewCrate {
+    let publish = registry.publish(&NewCrate {
         name: pkg.name().to_string(),
         vers: pkg.version().to_string(),
         deps: deps,
@@ -143,13 +144,27 @@ fn transmit(config: &Config,
         homepage: homepage.clone(),
         documentation: documentation.clone(),
         keywords: keywords.clone(),
+        categories: categories.clone(),
         readme: readme,
         repository: repository.clone(),
         license: license.clone(),
         license_file: license_file.clone(),
-    }, tarball).map_err(|e| {
-        human(e.to_string())
-    })
+    }, tarball);
+
+    match publish {
+        Ok(warnings) => {
+            if !warnings.invalid_categories.is_empty() {
+                let msg = format!("\
+                    the following are not valid category slugs and were \
+                    ignored: {}. Please see https://crates.io/category_slugs \
+                    for the list of all category slugs. \
+                    ", warnings.invalid_categories.join(", "));
+                config.shell().warn(&msg)?;
+            }
+            Ok(())
+        },
+        Err(e) => Err(human(e.to_string())),
+    }
 }
 
 pub fn registry_configuration(config: &Config) -> CargoResult<RegistryConfig> {

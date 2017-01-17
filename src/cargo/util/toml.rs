@@ -317,6 +317,7 @@ pub struct TomlProject {
     documentation: Option<String>,
     readme: Option<String>,
     keywords: Option<Vec<String>>,
+    categories: Option<Vec<String>>,
     license: Option<String>,
     license_file: Option<String>,
     repository: Option<String>,
@@ -654,6 +655,7 @@ impl TomlManifest {
             license_file: project.license_file.clone(),
             repository: project.repository.clone(),
             keywords: project.keywords.clone().unwrap_or(Vec::new()),
+            categories: project.categories.clone().unwrap_or(Vec::new()),
         };
 
         let workspace_config = match (self.workspace.as_ref(),
