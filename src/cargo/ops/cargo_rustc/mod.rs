@@ -13,6 +13,7 @@ use core::{Profile, Profiles, Workspace};
 use core::shell::ColorConfig;
 use util::{self, CargoResult, ProcessBuilder, ProcessError, human, machine_message};
 use util::{Config, internal, ChainError, profile, join_paths, short_hash};
+use util::Freshness;
 
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
@@ -93,7 +94,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                                      resolve: &'a Resolve,
                                      config: &'cfg Config,
                                      build_config: BuildConfig,
-                                     profiles: &'a Profiles, 
+                                     profiles: &'a Profiles,
                                      exec: Arc<Executor>)
                                      -> CargoResult<Compilation<'cfg>> {
     let units = pkg_targets.iter().flat_map(|&(pkg, ref targets)| {
@@ -215,6 +216,9 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
 
     let (dirty, fresh, freshness) = if unit.profile.run_custom_build {
         custom_build::prepare(cx, unit)?
+    } else if unit.profile.doc && unit.profile.test {
+        // we run these targets later, so this is just a noop for now
+        (Work::new(|_| Ok(())), Work::new(|_| Ok(())), Freshness::Fresh)
     } else {
         let (freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
         let work = if unit.profile.doc {
@@ -278,6 +282,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
     let cwd = cx.config.cwd().to_path_buf();
 
+    rustc.args(&cx.incremental_args(unit)?);
     rustc.args(&cx.rustflags_args(unit)?);
     let json_messages = cx.build_config.json_messages;
     let package_id = unit.pkg.package_id().clone();
@@ -654,8 +659,8 @@ fn build_base_args(cx: &mut Context,
         }
     }
 
-    if debuginfo {
-        cmd.arg("-g");
+    if let Some(debuginfo) = debuginfo {
+        cmd.arg("-C").arg(format!("debuginfo={}", debuginfo));
     }
 
     if let Some(ref args) = *rustc_args {

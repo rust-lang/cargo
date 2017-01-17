@@ -28,11 +28,11 @@ fn build_lib_for_foo() {
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -g \
+        --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.root().display(), url = p.url())));
 }
 
@@ -57,12 +57,12 @@ fn lib() {
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -g \
+        --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions=off \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.root().display(), url = p.url())))
 }
 
@@ -87,18 +87,18 @@ fn build_main_and_allow_unstable_options() {
                 .with_stderr(&format!("\
 [COMPILING] {name} v{version} ({url})
 [RUNNING] `rustc --crate-name {name} src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -g \
+        --emit=dep-info,link -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [RUNNING] `rustc --crate-name {name} src[/]main.rs --crate-type bin \
-        --emit=dep-info,link -g \
+        --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency={dir}[/]target[/]debug[/]deps \
         --extern {name}={dir}[/]target[/]debug[/]deps[/]lib{name}-[..].rlib`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.root().display(), url = p.url(),
             name = "foo", version = "0.0.1")));
@@ -151,12 +151,12 @@ fn build_with_args_to_one_of_multiple_binaries() {
                 .with_status(0)
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link -g \
-        -C metadata=[..] \
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link \
+        -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar src[/]bin[/]bar.rs --crate-type bin --emit=dep-info,link -g \
-        -C debug-assertions [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `rustc --crate-name bar src[/]bin[/]bar.rs --crate-type bin --emit=dep-info,link \
+        -C debuginfo=2 -C debug-assertions [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", url = p.url())));
 }
 
@@ -207,12 +207,12 @@ fn build_with_args_to_one_of_multiple_tests() {
                 .with_status(0)
                 .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link -g \
-        -C metadata=[..] \
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link \
+        -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar tests[/]bar.rs --emit=dep-info,link -g \
+[RUNNING] `rustc --crate-name bar tests[/]bar.rs --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions [..]--test[..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", url = p.url())));
 }
 
@@ -251,10 +251,10 @@ fn build_foo_with_bar_dependency() {
                 .with_status(0)
                 .with_stderr(format!("\
 [COMPILING] bar v0.1.0 ([..])
-[RUNNING] `[..] -g [..]`
+[RUNNING] `[..] -C debuginfo=2 [..]`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `[..] -g -C debug-assertions [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..] -C debuginfo=2 -C debug-assertions [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", url = foo.url())));
 }
 
@@ -295,7 +295,7 @@ fn build_only_bar_dependency() {
                 .with_stderr("\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc --crate-name bar [..] --crate-type lib [..] -C debug-assertions [..]`
-[FINISHED] debug [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 

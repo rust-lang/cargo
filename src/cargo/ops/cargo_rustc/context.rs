@@ -48,6 +48,7 @@ pub struct Context<'a, 'cfg: 'a> {
     target_info: TargetInfo,
     host_info: TargetInfo,
     profiles: &'a Profiles,
+    incremental_enabled: bool,
 }
 
 #[derive(Clone, Default)]
@@ -74,6 +75,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => None,
         };
 
+        // Enable incremental builds if the user opts in. For now,
+        // this is an environment variable until things stabilize a
+        // bit more.
+        let incremental_enabled = env::var("CARGO_INCREMENTAL").is_ok();
+
         Ok(Context {
             ws: ws,
             host: host_layout,
@@ -93,6 +99,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             build_explicit_deps: HashMap::new(),
             links: Links::new(),
             used_in_plugin: HashSet::new(),
+            incremental_enabled: incremental_enabled,
         })
     }
 
@@ -225,7 +232,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
             map.insert(crate_type.to_string(), Some((prefix.to_string(), suffix.to_string())));
         }
- 
+
         let cfg = if has_cfg {
             Some(try!(lines.map(Cfg::from_str).collect()))
         } else {
@@ -449,7 +456,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // we don't want to link it up.
         if src_dir.ends_with("deps") {
             // Don't lift up library dependencies
-            if self.ws.members().find(|&p| p != unit.pkg).is_some() && !unit.target.is_bin() {
+            if self.ws.members().find(|&p| p == unit.pkg).is_none() &&
+               !unit.target.is_bin() {
                 None
             } else {
                 Some((
@@ -558,7 +566,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn dep_targets(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
         if unit.profile.run_custom_build {
             return self.dep_run_custom_build(unit)
-        } else if unit.profile.doc {
+        } else if unit.profile.doc && !unit.profile.test {
             return self.doc_deps(unit);
         }
 
@@ -630,7 +638,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // the library of the same package. The call to `resolve.deps` above
         // didn't include `pkg` in the return values, so we need to special case
         // it here and see if we need to push `(pkg, pkg_lib_target)`.
-        if unit.target.is_lib() {
+        if unit.target.is_lib() && !unit.profile.doc {
             return Ok(ret)
         }
         ret.extend(self.maybe_lib(unit));
@@ -845,6 +853,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // TODO: should build scripts always be built with the same library
         //       profile? How is this controlled at the CLI layer?
         self.lib_profile()
+    }
+
+    pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
+        if self.incremental_enabled {
+            Ok(vec![format!("-Zincremental={}", self.layout(unit.kind).incremental().display())])
+        } else {
+            Ok(vec![])
+        }
     }
 
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
