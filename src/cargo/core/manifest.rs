@@ -104,18 +104,21 @@ pub enum TargetKind {
     Bin,
     Test,
     Bench,
-    Example,
+    ExampleLib(Vec<LibKind>),
+    ExampleBin,
     CustomBuild,
 }
 
 impl Encodable for TargetKind {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         match *self {
-            TargetKind::Lib(ref kinds) => {
-                kinds.iter().map(|k| k.crate_type()).collect()
+            TargetKind::Lib(ref kinds) |
+            // TODO: I am not sure whether it should be encoded like a library or like an example
+            TargetKind::ExampleLib(ref kinds) => {
+                kinds.iter().map(LibKind::crate_type).collect()
             }
             TargetKind::Bin => vec!["bin"],
-            TargetKind::Example => vec!["example"],
+            TargetKind::ExampleBin => vec!["example"],
             TargetKind::Test => vec!["test"],
             TargetKind::CustomBuild => vec!["custom-build"],
             TargetKind::Bench => vec!["bench"],
@@ -341,9 +344,17 @@ impl Target {
         }
     }
 
-    pub fn example_target(name: &str, src_path: PathBuf) -> Target {
+    pub fn example_target(name: &str,
+                          crate_targets: Vec<LibKind>,
+                          src_path: PathBuf) -> Target {
+        let kind = if crate_targets.is_empty() {
+            TargetKind::ExampleBin
+        } else {
+            TargetKind::ExampleLib(crate_targets)
+        };
+
         Target {
-            kind: TargetKind::Example,
+            kind: kind,
             name: name.to_string(),
             benched: false,
             ..Target::with_path(src_path)
@@ -415,7 +426,15 @@ impl Target {
     }
 
     pub fn is_bin(&self) -> bool { self.kind == TargetKind::Bin }
-    pub fn is_example(&self) -> bool { self.kind == TargetKind::Example }
+
+    pub fn is_example(&self) -> bool {
+        match self.kind {
+            TargetKind::ExampleBin |
+            TargetKind::ExampleLib(..) => true,
+            _ => false
+        }
+    }
+
     pub fn is_test(&self) -> bool { self.kind == TargetKind::Test }
     pub fn is_bench(&self) -> bool { self.kind == TargetKind::Bench }
     pub fn is_custom_build(&self) -> bool { self.kind == TargetKind::CustomBuild }
@@ -423,13 +442,14 @@ impl Target {
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.
     pub fn rustc_crate_types(&self) -> Vec<&str> {
         match self.kind {
-            TargetKind::Lib(ref kinds) => {
-                kinds.iter().map(|kind| kind.crate_type()).collect()
-            },
+            TargetKind::Lib(ref kinds) |
+            TargetKind::ExampleLib(ref kinds) => {
+                kinds.iter().map(LibKind::crate_type).collect()
+            }
             TargetKind::CustomBuild |
             TargetKind::Bench |
             TargetKind::Test |
-            TargetKind::Example |
+            TargetKind::ExampleBin |
             TargetKind::Bin => vec!["bin"],
         }
     }
@@ -478,7 +498,8 @@ impl fmt::Display for Target {
             TargetKind::Bin => write!(f, "Target(bin: {})", self.name),
             TargetKind::Test => write!(f, "Target(test: {})", self.name),
             TargetKind::Bench => write!(f, "Target(bench: {})", self.name),
-            TargetKind::Example => write!(f, "Target(example: {})", self.name),
+            TargetKind::ExampleBin |
+            TargetKind::ExampleLib(..) => write!(f, "Target(example: {})", self.name),
             TargetKind::CustomBuild => write!(f, "Target(script)"),
         }
     }

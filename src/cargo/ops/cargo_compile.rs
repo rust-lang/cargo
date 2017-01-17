@@ -295,7 +295,8 @@ impl<'a> CompileFilter<'a> {
                     TargetKind::Bin => bins,
                     TargetKind::Test => tests,
                     TargetKind::Bench => benches,
-                    TargetKind::Example => examples,
+                    TargetKind::ExampleBin |
+                    TargetKind::ExampleLib(..) => examples,
                     TargetKind::Lib(..) => return lib,
                     TargetKind::CustomBuild => return false,
                 };
@@ -374,15 +375,15 @@ fn generate_targets<'a>(pkg: &'a Package,
             }
 
             {
-                let mut find = |names: &[String], desc, kind, profile| {
+                let mut find = |names: &[String], desc, is_expected_kind: fn(&Target) -> bool, profile| {
                     for name in names {
                         let target = pkg.targets().iter().find(|t| {
-                            t.name() == *name && *t.kind() == kind
+                            t.name() == *name && is_expected_kind(t)
                         });
                         let t = match target {
                             Some(t) => t,
                             None => {
-                                let suggestion = pkg.find_closest_target(name, kind);
+                                let suggestion = pkg.find_closest_target(name, is_expected_kind);
                                 match suggestion {
                                     Some(s) => {
                                         let suggested_name = s.name();
@@ -398,10 +399,10 @@ fn generate_targets<'a>(pkg: &'a Package,
                     }
                     Ok(())
                 };
-                find(bins, "bin", TargetKind::Bin, profile)?;
-                find(examples, "example", TargetKind::Example, build)?;
-                find(tests, "test", TargetKind::Test, test)?;
-                find(benches, "bench", TargetKind::Bench, &profiles.bench)?;
+                find(bins, "bin", Target::is_bin, profile)?;
+                find(examples, "example", Target::is_example, build)?;
+                find(tests, "test", Target::is_test, test)?;
+                find(benches, "bench", Target::is_bench, &profiles.bench)?;
             }
             Ok(targets)
         }
