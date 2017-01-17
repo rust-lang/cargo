@@ -138,6 +138,16 @@ license = "..."
 # lieu of the above key and must point to a file relative to this manifest
 # (similar to the readme key).
 license-file = "..."
+
+# Optional specificaion of badges to be displayed on crates.io. The badges
+# currently available are Travis CI and Appveyor latest build status, specified
+# using the following parameters:
+[badges]
+# Travis CI: `repository` is required. `branch` is optional; default is `master`
+travis-ci = { repository = "...", branch = "master" }
+# Appveyor: `repository` is required. `branch` is optional; default is `master`
+# `service` is optional; valid values are `github` (default) and `bitbucket`
+appveyor = { repository = "...", branch = "master", service = "github" }
 ```
 
 The [crates.io](https://crates.io) registry will render the description, display
