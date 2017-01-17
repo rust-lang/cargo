@@ -133,6 +133,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         for unit in units {
             self.visit_crate_type(unit, &mut crate_types)?;
         }
+        debug!("probe_target_info: crate_types={:?}", crate_types);
         self.probe_target_info_kind(&crate_types, Kind::Target)?;
         if self.requested_target().is_none() {
             self.host_info = self.target_info.clone();
@@ -517,19 +518,22 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 };
 
                 match *unit.target.kind() {
-                    TargetKind::Example |
                     TargetKind::Bin |
                     TargetKind::CustomBuild |
+                    TargetKind::ExampleBin |
                     TargetKind::Bench |
                     TargetKind::Test => {
                         add("bin", false)?;
                     }
-                    TargetKind::Lib(..) if unit.profile.test => {
+                    TargetKind::Lib(..) |
+                    TargetKind::ExampleLib(..)
+                    if unit.profile.test => {
                         add("bin", false)?;
                     }
-                    TargetKind::Lib(ref libs) => {
-                        for lib in libs {
-                            add(lib.crate_type(), lib.linkable())?;
+                    TargetKind::ExampleLib(ref kinds) |
+                    TargetKind::Lib(ref kinds) => {
+                        for kind in kinds {
+                            add(kind.crate_type(), kind.linkable())?;
                         }
                     }
                 }

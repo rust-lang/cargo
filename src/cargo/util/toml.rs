@@ -1159,7 +1159,16 @@ fn normalize(package_root: &Path,
                 PathValue::Path(default(ex))
             });
 
-            let mut target = Target::example_target(&ex.name(), package_root.join(path.to_path()));
+            let crate_types = match ex.crate_type {
+                Some(ref kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
+                None => Vec::new()
+            };
+
+            let mut target = Target::example_target(
+                &ex.name(),
+                crate_types,
+                package_root.join(path.to_path())
+            );
             configure(ex, &mut target);
             dst.push(target);
         }
