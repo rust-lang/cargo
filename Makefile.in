@@ -22,7 +22,8 @@ CFG_RELEASE=$(CFG_RELEASE_NUM)-dev
 CFG_PACKAGE_VERS=$(CFG_RELEASE_NUM)-dev
 endif
 
-CFG_BUILD_DATE = $(shell date +%F)
+# allow build systems to use a constant date instead of the current one
+CFG_BUILD_DATE = $(shell SOURCE_DATE_EPOCH="$${SOURCE_DATE_EPOCH:-$$(date +%s)}" ; date -u -d "@$$SOURCE_DATE_EPOCH" +%F 2>/dev/null || date -u -r "$$SOURCE_DATE_EPOCH" +%F 2>/dev/null || date -u +%F)
 
 ifeq ($(wildcard $(CFG_SRC_DIR)/.git),)
 CFG_VERSION = $(CFG_RELEASE) (built $(CFG_BUILD_DATE))
