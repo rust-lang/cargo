@@ -17,6 +17,8 @@ use cargo::execute_main_without_stdin;
 use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
 use cargo::util::CliError;
 
+pub mod options;
+
 #[derive(RustcDecodable)]
 pub struct Flags {
     flag_list: bool,

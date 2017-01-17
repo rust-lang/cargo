@@ -62,3 +62,8 @@ cargotest = { path = "tests/cargotest" }
 name = "cargo"
 test = false
 doc = false
+
+[[bin]]
+name = "generate-options"
+test = false
+doc = false

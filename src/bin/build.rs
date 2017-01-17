@@ -1,75 +1,11 @@
 use std::env;
 
 use cargo::core::Workspace;
-use cargo::ops::{self, CompileOptions, MessageFormat, Packages};
+use cargo::ops::{self, CompileOptions, Packages};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 use cargo::util::{CliResult, Config};
-
-#[derive(RustcDecodable)]
-pub struct Options {
-    flag_package: Vec<String>,
-    flag_jobs: Option<u32>,
-    flag_features: Vec<String>,
-    flag_all_features: bool,
-    flag_no_default_features: bool,
-    flag_target: Option<String>,
-    flag_manifest_path: Option<String>,
-    flag_verbose: u32,
-    flag_quiet: Option<bool>,
-    flag_color: Option<String>,
-    flag_message_format: MessageFormat,
-    flag_release: bool,
-    flag_lib: bool,
-    flag_bin: Vec<String>,
-    flag_example: Vec<String>,
-    flag_test: Vec<String>,
-    flag_bench: Vec<String>,
-    flag_locked: bool,
-    flag_frozen: bool,
-    flag_all: bool,
-}
-
-pub const USAGE: &'static str = "
-Compile a local package and all of its dependencies
-
-Usage:
-    cargo build [options]
-
-Options:
-    -h, --help                   Print this message
-    -p SPEC, --package SPEC ...  Package to build
-    --all                        Build all packages in the workspace
-    -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
-    --lib                        Build only this package's library
-    --bin NAME                   Build only the specified binary
-    --example NAME               Build only the specified example
-    --test NAME                  Build only the specified test target
-    --bench NAME                 Build only the specified benchmark target
-    --release                    Build artifacts in release mode, with optimizations
-    --features FEATURES          Space-separated list of features to also build
-    --all-features               Build all available features
-    --no-default-features        Do not build the `default` feature
-    --target TRIPLE              Build for the target triple
-    --manifest-path PATH         Path to the manifest to compile
-    -v, --verbose ...            Use verbose output (-vv very verbose/build.rs output)
-    -q, --quiet                  No output printed to stdout
-    --color WHEN                 Coloring: auto, always, never
-    --message-format FMT         Error format: human, json [default: human]
-    --frozen                     Require Cargo.lock and cache are up to date
-    --locked                     Require Cargo.lock is up to date
-
-If the --package argument is given, then SPEC is a package id specification
-which indicates which package should be built. If it is not given, then the
-current package is built. For more information on SPEC and its format, see the
-`cargo help pkgid` command.
-
-All packages in the workspace are built if the `--all` flag is supplied. The
-`--all` flag may be supplied in the presence of a virtual manifest.
-
-Compilation can be configured via the use of profiles which are configured in
-the manifest. The default profile for this command is `dev`, but passing
-the --release flag will use the `release` profile instead.
-";
+pub use super::options::BuildCommandFlags as Options;
+pub use super::options::BUILD_COMMAND_USAGE as USAGE;
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     debug!("executing; cmd=cargo-build; args={:?}",
