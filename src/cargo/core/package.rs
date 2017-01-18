@@ -94,7 +94,9 @@ impl Package {
         self.targets().iter().any(|t| t.is_custom_build())
     }
 
-    pub fn find_closest_target(&self, target: &str, is_expected_kind: fn(&Target)-> bool) -> Option<&Target> {
+    pub fn find_closest_target(&self,
+                               target: &str,
+                               is_expected_kind: fn(&Target)-> bool) -> Option<&Target> {
         let targets = self.targets();
 
         let matches = targets.iter().filter(|t| is_expected_kind(t))
