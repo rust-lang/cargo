@@ -1891,6 +1891,82 @@ fn cargo_platform_specific_dependency_wrong_platform() {
 }
 
 #[test]
+fn example_as_lib() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[example]]
+            name = "ex"
+            crate-type = ["lib"]
+        "#)
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+}
+
+#[test]
+fn example_as_rlib() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[example]]
+            name = "ex"
+            crate-type = ["rlib"]
+        "#)
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+}
+
+#[test]
+fn example_as_dylib() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[example]]
+            name = "ex"
+            crate-type = ["dylib"]
+        "#)
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+}
+
+#[test]
+fn example_as_proc_macro() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[example]]
+            name = "ex"
+            crate-type = ["proc-macro"]
+        "#)
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+}
+
+#[test]
 fn example_bin_same_name() {
     let p = project("foo")
         .file("Cargo.toml", r#"
