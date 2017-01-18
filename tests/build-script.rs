@@ -520,6 +520,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
                        .with_stderr("\
 [DOCUMENTING] foo v0.5.0 (file://[..])
 [RUNNING] `rustdoc [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     File::create(&p.root().join("src/main.rs")).unwrap()
