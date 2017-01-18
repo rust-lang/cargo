@@ -28,6 +28,7 @@ fn simple() {
                 execs().with_status(0).with_stderr(&format!("\
 [..] foo v0.0.1 ({dir})
 [..] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = path2url(p.root()))));
     assert_that(&p.root().join("target/doc"), existing_dir());
@@ -71,6 +72,7 @@ fn doc_twice() {
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stderr(&format!("\
 [DOCUMENTING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = path2url(p.root()))));
 
@@ -109,6 +111,7 @@ fn doc_deps() {
 [..] bar v0.0.1 ({dir}/bar)
 [..] bar v0.0.1 ({dir}/bar)
 [DOCUMENTING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = path2url(p.root()))));
 
@@ -255,6 +258,7 @@ fn doc_dash_p() {
 [..] b v0.0.1 (file://[..])
 [..] b v0.0.1 (file://[..])
 [DOCUMENTING] a v0.0.1 (file://[..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
@@ -447,6 +451,7 @@ fn doc_release() {
                        .with_stderr("\
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc [..] src[/]lib.rs [..]`
+[FINISHED] release [optimized] target(s) in [..]
 "));
 }
 
