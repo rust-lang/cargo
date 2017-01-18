@@ -400,11 +400,11 @@ properties:
 
 [RFC 1525]: https://github.com/rust-lang/rfcs/blob/master/text/1525-cargo-workspace.md
 
-The root crate of a workspace, indicated by the presence of `[workspace]` in
-its manifest, is responsible for defining the entire workspace (listing all
-members). This can be done through the `members` key, and if it is omitted then
-members are implicitly included through all `path` dependencies. Note that
-members of the workspaces listed explicitly will also have their path
+The root crate of a workspace, indicated by the presence of `[workspace]` in its
+manifest, is responsible for defining the entire workspace. All `path`
+dependencies residing in the workspace directory become members. You can add
+additional packages to the workspace by listing them in the `members` key. Note
+that members of the workspaces listed explicitly will also have their path
 dependencies included in the workspace.
 
 The `package.workspace` manifest key (described above) is used in member crates
