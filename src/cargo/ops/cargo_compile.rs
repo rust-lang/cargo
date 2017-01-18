@@ -386,7 +386,10 @@ fn generate_targets<'a>(pkg: &'a Package,
             }
 
             {
-                let mut find = |names: &[String], desc, is_expected_kind: fn(&Target) -> bool, profile| {
+                let mut find = |names: &[String],
+                                desc,
+                                is_expected_kind: fn(&Target) -> bool,
+                                profile| {
                     for name in names {
                         let target = pkg.targets().iter().find(|t| {
                             t.name() == *name && is_expected_kind(t)
