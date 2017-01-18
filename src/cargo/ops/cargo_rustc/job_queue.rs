@@ -30,7 +30,6 @@ pub struct JobQueue<'a> {
     documented: HashSet<&'a PackageId>,
     counts: HashMap<&'a PackageId, usize>,
     is_release: bool,
-    is_doc_all: bool,
 }
 
 /// A helper structure for metadata about the state of a building package.
@@ -90,7 +89,6 @@ impl<'a> JobQueue<'a> {
             documented: HashSet::new(),
             counts: HashMap::new(),
             is_release: cx.build_config.release,
-            is_doc_all: cx.build_config.doc_all,
         }
     }
 
@@ -209,12 +207,11 @@ impl<'a> JobQueue<'a> {
                                    duration.as_secs(),
                                    duration.subsec_nanos() / 10000000);
         if self.queue.is_empty() {
-            if !self.is_doc_all {
-                cx.config.shell().status("Finished", format!("{} [{}] target(s) in {}",
-                                                                  build_type,
-                                                                  opt_type,
-                                                                  time_elapsed))?;
-            }
+            let message = format!("{} [{}] target(s) in {}",
+                                  build_type,
+                                  opt_type,
+                                  time_elapsed);
+            cx.config.shell().status("Finished", message)?;
             Ok(())
         } else if let Some(e) = error {
             Err(e)
