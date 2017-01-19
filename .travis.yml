@@ -104,7 +104,7 @@ before_script:
     fi
 script:
   - >
-      if [ "$ALLOW_PR" = "" ] && [ "$TRAVIS_BRANCH" != "auto-cargo" ]; then
+      if [ "$ALLOW_PR" = "" ] && [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
           echo skipping, not a full build;
       elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
           SRC=. src/ci/run.sh $TARGET;
