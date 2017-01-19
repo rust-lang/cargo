@@ -116,7 +116,7 @@ after_success: |
   [ $TRAVIS_BRANCH = master ] &&
   [ $TRAVIS_PULL_REQUEST = false ] &&
   [ $(uname -s) = Linux ] &&
-  pip install ghp-import --user $USER &&
+  pip install ghp-import --user &&
   $HOME/.local/bin/ghp-import -n target/doc &&
   git push -qf https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
 
