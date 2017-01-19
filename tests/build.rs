@@ -1906,7 +1906,8 @@ fn example_as_lib() {
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "");
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo_process("build").arg("--example=ex"), execs().with_status(0));
+    assert_that(&p.example_lib("ex", "lib"), existing_file());
 }
 
 #[test]
@@ -1923,9 +1924,10 @@ fn example_as_rlib() {
             crate-type = ["rlib"]
         "#)
         .file("src/lib.rs", "")
-        .file("examples/ex.rs", "");
+        .file("examples/ex.rs", "fn a() {}");
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo_process("build").arg("--example=ex"), execs().with_status(0));
+    assert_that(&p.example_lib("ex", "rlib"), existing_file());
 }
 
 #[test]
@@ -1944,7 +1946,8 @@ fn example_as_dylib() {
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "");
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo_process("build").arg("--example=ex"), execs().with_status(0));
+    assert_that(&p.example_lib("ex", "dylib"), existing_file());
 }
 
 #[test]
@@ -1963,7 +1966,8 @@ fn example_as_proc_macro() {
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "");
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo_process("build").arg("--example=ex"), execs().with_status(0));
+    assert_that(&p.example_lib("ex", "proc-macro"), existing_file());
 }
 
 #[test]

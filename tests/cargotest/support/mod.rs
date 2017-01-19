@@ -114,6 +114,25 @@ impl ProjectBuilder {
 
     pub fn url(&self) -> Url { path2url(self.root()) }
 
+    pub fn target_debug_dir(&self) -> PathBuf {
+        self.build_dir().join("debug")
+    }
+
+    pub fn example_lib(&self, name: &str, kind: &str) -> PathBuf {
+        let prefix = ProjectBuilder::get_lib_prefix(kind);
+
+        let extension = ProjectBuilder::get_lib_extension(kind);
+
+        let lib_file_name = format!("{}{}.{}",
+                                    prefix,
+                                    name,
+                                    extension);
+
+        self.target_debug_dir()
+            .join("examples")
+            .join(&lib_file_name)
+    }
+
     pub fn bin(&self, b: &str) -> PathBuf {
         self.build_dir().join("debug").join(&format!("{}{}", b,
                                                      env::consts::EXE_SUFFIX))
@@ -186,6 +205,43 @@ impl ProjectBuilder {
         fs::File::open(self.root().join("Cargo.lock")).unwrap()
             .read_to_string(&mut buffer).unwrap();
         buffer
+    }
+
+    fn get_lib_prefix(kind: &str) -> &str {
+        match kind {
+            "lib" | "rlib" => "lib",
+            "staticlib" | "dylib" | "proc-macro" => {
+                if cfg!(windows) {
+                    ""
+                } else {
+                    "lib"
+                }
+            }
+            _ => unreachable!()
+        }
+    }
+
+    fn get_lib_extension(kind: &str) -> &str {
+        match kind {
+            "lib" | "rlib" => "rlib",
+            "staticlib" => {
+                if cfg!(windows) {
+                    "lib"
+                } else {
+                    "a"
+                }
+            }
+            "dylib" | "proc-macro" => {
+                if cfg!(windows) {
+                    "dll"
+                } else if cfg!(target_os="macos") {
+                    "dylib"
+                } else {
+                    "so"
+                }
+            }
+            _ => unreachable!()
+        }
     }
 
     fn rm_root(&self) {
