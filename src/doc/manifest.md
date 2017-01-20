@@ -139,7 +139,7 @@ license = "..."
 # (similar to the readme key).
 license-file = "..."
 
-# Optional specificaion of badges to be displayed on crates.io. The badges
+# Optional specification of badges to be displayed on crates.io. The badges
 # currently available are Travis CI and Appveyor latest build status, specified
 # using the following parameters:
 [badges]
