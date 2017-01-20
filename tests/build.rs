@@ -1952,6 +1952,10 @@ fn example_as_dylib() {
 
 #[test]
 fn example_as_proc_macro() {
+    if !is_nightly() {
+        return;
+    }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
