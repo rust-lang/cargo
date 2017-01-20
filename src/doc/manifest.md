@@ -124,7 +124,7 @@ readme = "..."
 keywords = ["...", "..."]
 
 # This is a list of up to five categories where this crate would fit.
-# Categories are a fixed list available at crates.io/categories, and
+# Categories are a fixed list available at crates.io/category_slugs, and
 # they must match exactly.
 categories = ["...", "..."]
 
