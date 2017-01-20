@@ -113,7 +113,6 @@ impl Encodable for TargetKind {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         match *self {
             TargetKind::Lib(ref kinds) |
-            // TODO: I am not sure whether it should be encoded like a library or like an example
             TargetKind::ExampleLib(ref kinds) => {
                 kinds.iter().map(LibKind::crate_type).collect()
             }
