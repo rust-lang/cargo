@@ -27,6 +27,7 @@ pub struct Options {
     flag_locked: bool,
     flag_frozen: bool,
     flag_all: bool,
+    flag_deps_only: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -39,6 +40,7 @@ Options:
     -h, --help                   Print this message
     -p SPEC, --package SPEC ...  Package to build
     --all                        Build all packages in the workspace
+    --deps-only                  Build only dependencies
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --lib                        Build only this package's library
     --bin NAME                   Build only the specified binary
@@ -97,6 +99,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         no_default_features: options.flag_no_default_features,
         spec: spec,
         mode: ops::CompileMode::Build,
+        deps_only: options.flag_deps_only,
         release: options.flag_release,
         filter: ops::CompileFilter::new(options.flag_lib,
                                         &options.flag_bin,

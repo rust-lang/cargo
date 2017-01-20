@@ -726,7 +726,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 profile: self.lib_profile(),
                 kind: unit.kind.for_target(lib),
             });
-            if self.build_config.doc_all {
+            if self.build_config.doc_deps {
                 ret.push(Unit {
                     pkg: dep,
                     target: lib,
