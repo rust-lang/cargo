@@ -246,6 +246,7 @@ pub struct TomlManifest {
     target: Option<HashMap<String, TomlPlatform>>,
     replace: Option<HashMap<String, TomlDependency>>,
     workspace: Option<TomlWorkspace>,
+    badges: Option<HashMap<String, HashMap<String, String>>>,
 }
 
 #[derive(RustcDecodable, Clone, Default)]
@@ -317,6 +318,7 @@ pub struct TomlProject {
     documentation: Option<String>,
     readme: Option<String>,
     keywords: Option<Vec<String>>,
+    categories: Option<Vec<String>>,
     license: Option<String>,
     license_file: Option<String>,
     repository: Option<String>,
@@ -654,6 +656,8 @@ impl TomlManifest {
             license_file: project.license_file.clone(),
             repository: project.repository.clone(),
             keywords: project.keywords.clone().unwrap_or(Vec::new()),
+            categories: project.categories.clone().unwrap_or(Vec::new()),
+            badges: self.badges.clone().unwrap_or_else(HashMap::new),
         };
 
         let workspace_config = match (self.workspace.as_ref(),

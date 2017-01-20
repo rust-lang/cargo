@@ -118,9 +118,15 @@ repository = "..."
 # contents of this file are stored and indexed in the registry.
 readme = "..."
 
-# This is a small list of keywords used to categorize and search for this
-# package.
+# This is a list of up to five keywords that describe this crate. Keywords
+# are searchable on crates.io, and you may choose any words that would
+# help someone find this crate.
 keywords = ["...", "..."]
+
+# This is a list of up to five categories where this crate would fit.
+# Categories are a fixed list available at crates.io/categories, and
+# they must match exactly.
+categories = ["...", "..."]
 
 # This is a string description of the license for this package. Currently
 # crates.io will validate the license provided against a whitelist of known
@@ -132,6 +138,16 @@ license = "..."
 # lieu of the above key and must point to a file relative to this manifest
 # (similar to the readme key).
 license-file = "..."
+
+# Optional specificaion of badges to be displayed on crates.io. The badges
+# currently available are Travis CI and Appveyor latest build status, specified
+# using the following parameters:
+[badges]
+# Travis CI: `repository` is required. `branch` is optional; default is `master`
+travis-ci = { repository = "...", branch = "master" }
+# Appveyor: `repository` is required. `branch` is optional; default is `master`
+# `service` is optional; valid values are `github` (default) and `bitbucket`
+appveyor = { repository = "...", branch = "master", service = "github" }
 ```
 
 The [crates.io](https://crates.io) registry will render the description, display
@@ -384,11 +400,11 @@ properties:
 
 [RFC 1525]: https://github.com/rust-lang/rfcs/blob/master/text/1525-cargo-workspace.md
 
-The root crate of a workspace, indicated by the presence of `[workspace]` in
-its manifest, is responsible for defining the entire workspace (listing all
-members). This can be done through the `members` key, and if it is omitted then
-members are implicitly included through all `path` dependencies. Note that
-members of the workspaces listed explicitly will also have their path
+The root crate of a workspace, indicated by the presence of `[workspace]` in its
+manifest, is responsible for defining the entire workspace. All `path`
+dependencies residing in the workspace directory become members. You can add
+additional packages to the workspace by listing them in the `members` key. Note
+that members of the workspaces listed explicitly will also have their path
 dependencies included in the workspace.
 
 The `package.workspace` manifest key (described above) is used in member crates
