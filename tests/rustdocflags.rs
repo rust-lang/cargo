@@ -77,9 +77,12 @@ fn rerun() {
     assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo"),
                 execs().with_status(0));
     assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo"),
-                execs().with_status(0).with_stderr(""));
+                execs().with_status(0).with_stderr("\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
     assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=bar"),
                 execs().with_status(0).with_stderr("\
 [DOCUMENTING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }

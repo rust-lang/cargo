@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::path::{PathBuf, Path};
 
@@ -47,6 +48,7 @@ pub struct VirtualManifest {
 pub struct ManifestMetadata {
     pub authors: Vec<String>,
     pub keywords: Vec<String>,
+    pub categories: Vec<String>,
     pub license: Option<String>,
     pub license_file: Option<String>,
     pub description: Option<String>,    // not markdown
@@ -54,6 +56,7 @@ pub struct ManifestMetadata {
     pub homepage: Option<String>,       // url
     pub repository: Option<String>,     // url
     pub documentation: Option<String>,  // url
+    pub badges: HashMap<String, HashMap<String, String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -392,7 +395,11 @@ impl Target {
     pub fn doctested(&self) -> bool {
         self.doctest && match self.kind {
             TargetKind::Lib(ref kinds) => {
-                kinds.contains(&LibKind::Rlib) || kinds.contains(&LibKind::Lib)
+                kinds.iter().find(|k| {
+                  *k == &LibKind::Rlib ||
+                  *k == &LibKind::Lib ||
+                  *k == &LibKind::ProcMacro
+                }).is_some()
             }
             _ => false,
         }

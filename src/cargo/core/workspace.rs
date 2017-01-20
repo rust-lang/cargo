@@ -293,19 +293,26 @@ impl<'cfg> Workspace<'cfg> {
         };
 
         if let Some(list) = members {
-            let root = root_manifest.parent().unwrap();
             for path in list {
+                let root = root_manifest.parent().unwrap();
                 let manifest_path = root.join(path).join("Cargo.toml");
-                self.find_path_deps(&manifest_path)?;
+                self.find_path_deps(&manifest_path, false)?;
             }
         }
 
-        self.find_path_deps(&root_manifest)
+        self.find_path_deps(&root_manifest, false)
     }
 
-    fn find_path_deps(&mut self, manifest_path: &Path) -> CargoResult<()> {
+    fn find_path_deps(&mut self, manifest_path: &Path, is_path_dep: bool) -> CargoResult<()> {
         let manifest_path = paths::normalize_path(manifest_path);
         if self.members.iter().any(|p| p == &manifest_path) {
+            return Ok(())
+        }
+        if is_path_dep
+            && !manifest_path.parent().unwrap().starts_with(self.root())
+            && self.find_root(&manifest_path)? != self.root_manifest {
+            // If `manifest_path` is a path dependency outside of the workspace,
+            // don't add it, or any of its dependencies, as a members.
             return Ok(())
         }
 
@@ -326,7 +333,7 @@ impl<'cfg> Workspace<'cfg> {
                .collect::<Vec<_>>()
         };
         for candidate in candidates {
-            self.find_path_deps(&candidate)?;
+            self.find_path_deps(&candidate, true)?;
         }
         Ok(())
     }
