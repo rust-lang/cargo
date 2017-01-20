@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use semver::Version;
 
-use core::{Dependency, Manifest, PackageId, SourceId, Target, TargetKind};
+use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{Summary, SourceMap};
 use ops;
 use util::{CargoResult, Config, LazyCell, ChainError, internal, human, lev_distance};
@@ -94,10 +94,12 @@ impl Package {
         self.targets().iter().any(|t| t.is_custom_build())
     }
 
-    pub fn find_closest_target(&self, target: &str, kind: TargetKind) -> Option<&Target> {
+    pub fn find_closest_target(&self,
+                               target: &str,
+                               is_expected_kind: fn(&Target)-> bool) -> Option<&Target> {
         let targets = self.targets();
 
-        let matches = targets.iter().filter(|t| *t.kind() == kind)
+        let matches = targets.iter().filter(|t| is_expected_kind(t))
                                     .map(|t| (lev_distance(target, t.name()), t))
                                     .filter(|&(d, _)| d < 4);
         matches.min_by_key(|t| t.0).map(|t| t.1)
