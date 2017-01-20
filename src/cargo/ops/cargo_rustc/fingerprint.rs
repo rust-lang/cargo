@@ -657,7 +657,8 @@ fn filename(cx: &mut Context, unit: &Unit) -> String {
         TargetKind::Lib(..) => "lib",
         TargetKind::Bin => "bin",
         TargetKind::Test => "integration-test",
-        TargetKind::Example => "example",
+        TargetKind::ExampleBin |
+        TargetKind::ExampleLib(..) => "example",
         TargetKind::Bench => "bench",
         TargetKind::CustomBuild => "build-script",
     };
