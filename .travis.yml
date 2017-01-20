@@ -118,12 +118,12 @@ after_success: |
   [ $(uname -s) = Linux ] &&
   pip install ghp-import --user &&
   $HOME/.local/bin/ghp-import -n target/doc &&
-  git push -qf https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
+  git push -qf https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages 2>&1 > /dev/null
 
 env:
   global:
     - DEPLOY=1
-    - secure: LB2o9UL90Z4CVOLVQsTbZr7ZBLA1dCLxFODuCkPkbdqG3Kl5z1yMIPMRvSbjp9KwBlIgm+Mg0R1iqphKVq+rVP5zo96K4+kEQMG+zWsPb23ZKTxiL8MK5VgCZ7s9AONCvNeCTCNAG3EyeciFr5Zr9eygVCfo0WF6JsPujYYQZx0=
+    - secure: "hWheSLilMM4DXChfSy2XsDlLw338X2o+fw8bE590xxU2TzngFW8GUfq7lGfZEp/l4SNNIS6ROU/igyttCZtxZMANZ4aMQZR5E8Fp4yPOyE1pZLDH/LdQVXnROsfburQJeq+GIYIbZ01Abzh5ClpgLg5KX0H627uj063zZ7Ljo/w="
 
 notifications:
   email:
