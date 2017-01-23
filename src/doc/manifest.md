@@ -427,7 +427,7 @@ is a library, name the main source file `src/lib.rs`.
 Cargo will also treat any files located in `src/bin/*.rs` as executables.
 
 Your project can optionally contain folders named `examples`, `tests`, and
-`benches`, which Cargo will treat as containing example executable files,
+`benches`, which Cargo will treat as containing examples,
 integration tests, and benchmarks respectively.
 
 ```notrust
@@ -451,12 +451,18 @@ To structure your code after you've created the files and folders for your proje
 Files located under `examples` are example uses of the functionality provided by
 the library. When compiled, they are placed in the `target/examples` directory.
 
-They must compile as executables (with a `main()` function) and load in the
-library by using `extern crate <library-name>`. They are compiled when you run
+They may compile either as executables (with a `main()` function) or as libraries.
+They load in the library by using `extern crate <library-name>`. They are compiled when you run
 your tests to protect them from bitrotting.
 
-You can run individual examples with the command `cargo run --example
+You can run individual executable examples with the command `cargo run --example
 <example-name>`.
+
+Specify `crate-type` to make an example be compiled as a library:
+```toml
+[[example.example]]
+crate-type = ["staticlib"]
+```
 
 # Tests
 
