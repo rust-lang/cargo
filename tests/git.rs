@@ -1826,3 +1826,48 @@ fn add_a_git_dep() {
 
     assert_that(p.cargo("build"), execs().with_status(0));
 }
+
+#[test]
+fn two_at_rev_instead_of_tag() {
+    let git = git::new("git", |p| {
+        p.file("Cargo.toml", r#"
+            [project]
+            name = "git1"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "git2"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "")
+    }).unwrap();
+
+    // Make a tag corresponding to the current HEAD
+    let repo = git2::Repository::open(&git.root()).unwrap();
+    let head = repo.head().unwrap().target().unwrap();
+    repo.tag("v0.1.0",
+             &repo.find_object(head, None).unwrap(),
+             &repo.signature().unwrap(),
+             "make a new tag",
+             false).unwrap();
+
+    let p = project("foo")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            git1 = {{ git = '{0}', rev = 'v0.1.0' }}
+            git2 = {{ git = '{0}', rev = 'v0.1.0' }}
+        "#, git.url()))
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("generate-lockfile"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+}
