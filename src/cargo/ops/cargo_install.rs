@@ -97,6 +97,8 @@ pub fn install(root: Option<&str>,
     };
     let pkg = ws.current()?;
 
+    config.shell().status("Installing", pkg)?;
+
     // Preflight checks to check up front whether we'll overwrite something.
     // We have to check this again afterwards, but may as well avoid building
     // anything if we're gonna throw it away anyway.
