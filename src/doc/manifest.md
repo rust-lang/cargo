@@ -109,7 +109,9 @@ There are a number of optional metadata fields also accepted under the
 # uploaded to crates.io (aka this is not markdown).
 description = "..."
 
-# These URLs point to more information about the repository.
+# These URLs point to more information about the repository. These are
+# intended to be webviews of the relevant data, not necessarily compatible
+# with VCS tools and the like.
 documentation = "..."
 homepage = "..."
 repository = "..."
