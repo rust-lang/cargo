@@ -459,9 +459,12 @@ You can run individual executable examples with the command `cargo run --example
 
 Specify `crate-type` to make an example be compiled as a library:
 ```toml
-[[example.foo]]
+[[example]]
+name = "foo"
 crate-type = ["staticlib"]
 ```
+
+You can build individual library examples with the command `cargo build --example <example-name>`.
 
 # Tests
 
