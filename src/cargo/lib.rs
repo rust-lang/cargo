@@ -96,7 +96,7 @@ pub fn process_executed<T>(result: CliResult<Option<T>>, shell: &mut MultiShell)
     where T: Encodable
 {
     match result {
-        Err(e) => handle_error(e, shell),
+        Err(e) => handle_cli_error(e, shell),
         Ok(Some(encodable)) => {
             let encoded = json::encode(&encodable).unwrap();
             println!("{}", encoded);
@@ -150,8 +150,8 @@ pub fn shell(verbosity: Verbosity, color_config: ColorConfig) -> MultiShell {
     }
 }
 
-pub fn handle_error(err: CliError, shell: &mut MultiShell) {
-    debug!("handle_error; err={:?}", err);
+pub fn handle_cli_error(err: CliError, shell: &mut MultiShell) {
+    debug!("handle_cli_error; err={:?}", err);
 
     let CliError { error, exit_code, unknown } = err;
     // exit_code == 0 is non-fatal error, e.g. docopt version info
@@ -177,6 +177,13 @@ pub fn handle_error(err: CliError, shell: &mut MultiShell) {
     std::process::exit(exit_code);
 }
 
+pub fn handle_error(err: &CargoError, shell: &mut MultiShell) {
+    debug!("handle_error; err={:?}", err);
+
+    let _ignored_result = shell.error(err);
+    handle_cause(err, shell);
+}
+
 fn handle_cause(mut cargo_err: &CargoError, shell: &mut MultiShell) -> bool {
     let verbose = shell.get_verbose();
     let mut err;
@@ -197,7 +204,7 @@ fn handle_cause(mut cargo_err: &CargoError, shell: &mut MultiShell) -> bool {
 
     fn print(error: String, shell: &mut MultiShell) {
         let _ = shell.err().say("\nCaused by:", BLACK);
-        let _ = shell.err().say(format!("  {}", error), BLACK);
+        let _ = shell.err().say(format!("  {}\n", error), BLACK);
     }
 }
 
