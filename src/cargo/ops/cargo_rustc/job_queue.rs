@@ -9,7 +9,7 @@ use term::color::YELLOW;
 
 use core::{PackageId, Target, Profile};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
-use util::{CargoResult, ProcessBuilder, profile, internal};
+use util::{CargoResult, ProcessBuilder, profile, internal, human};
 
 use super::{Context, Kind, Unit};
 use super::job::Job;
@@ -181,13 +181,14 @@ impl<'a> JobQueue<'a> {
                     match result {
                         Ok(()) => self.finish(key, cx)?,
                         Err(e) => {
+                            cx.config.shell().error(format!("{}", e))?;
                             if self.active > 0 {
                                 cx.config.shell().say(
                                             "Build failed, waiting for other \
                                              jobs to finish...", YELLOW)?;
                             }
                             if error.is_none() {
-                                error = Some(e);
+                                error = Some(human("build failed"));
                             }
                         }
                     }
