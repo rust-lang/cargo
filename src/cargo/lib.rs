@@ -204,7 +204,7 @@ fn handle_cause(mut cargo_err: &CargoError, shell: &mut MultiShell) -> bool {
 
     fn print(error: String, shell: &mut MultiShell) {
         let _ = shell.err().say("\nCaused by:", BLACK);
-        let _ = shell.err().say(format!("  {}\n", error), BLACK);
+        let _ = shell.err().say(format!("  {}", error), BLACK);
     }
 }
 
