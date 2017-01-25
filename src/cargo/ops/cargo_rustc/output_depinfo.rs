@@ -85,7 +85,8 @@ fn add_deps_for_unit(deps: &mut HashSet<PathBuf>, context: &mut Context, unit: &
         TargetKind::Lib(..) => "lib",
         TargetKind::Bin => "bin",
         TargetKind::Test => "integration-test",
-        TargetKind::Example => "example",
+        TargetKind::ExampleBin |
+        TargetKind::ExampleLib(..) => "example",
         TargetKind::Bench => "bench",
         TargetKind::CustomBuild => "build-script",
     };
