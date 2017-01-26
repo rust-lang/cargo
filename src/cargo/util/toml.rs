@@ -636,8 +636,9 @@ impl TomlManifest {
                 let name = dep.name();
                 let prev = names_sources.insert(name, dep.source_id());
                 if prev.is_some() && prev != Some(dep.source_id()) {
-                    bail!("found duplicate dependency name {}, but all \
-                           dependencies must have a unique name", name);
+                    bail!("Dependency '{}' has different source paths depending on the build \
+                           target. Each dependency must have a single canonical source path \
+                           irrespective of build target.", name);
                 }
             }
         }
