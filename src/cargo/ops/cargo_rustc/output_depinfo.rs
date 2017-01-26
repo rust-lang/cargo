@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::io::Write;
+use std::io::{Write, BufWriter};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -53,7 +53,7 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
         if let Some(link_dst) = link_dst {
             let output_path = link_dst.with_extension("d");
             let target_fn = render_filename(link_dst, basedir)?;
-            let mut outfile = File::create(output_path)?;
+            let mut outfile = BufWriter::new(File::create(output_path)?);
             write!(outfile, "{}:", target_fn)?;
             for dep in &deps {
                 write!(outfile, " {}", render_filename(dep, basedir)?)?;
