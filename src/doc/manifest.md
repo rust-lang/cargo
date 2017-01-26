@@ -148,7 +148,8 @@ license-file = "..."
 # Travis CI: `repository` is required. `branch` is optional; default is `master`
 travis-ci = { repository = "...", branch = "master" }
 # Appveyor: `repository` is required. `branch` is optional; default is `master`
-# `service` is optional; valid values are `github` (default) and `bitbucket`
+# `service` is optional; valid values are `github` (default), `bitbucket`, and
+# `gitlab`.
 appveyor = { repository = "...", branch = "master", service = "github" }
 ```
 
