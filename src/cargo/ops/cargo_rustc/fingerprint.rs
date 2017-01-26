@@ -563,7 +563,8 @@ fn log_compare(unit: &Unit, compare: &CargoResult<()>) {
     }
 }
 
-fn dep_info_mtime_if_fresh(dep_info: &Path) -> CargoResult<Option<FileTime>> {
+// Parse the dep-info into a list of paths
+pub fn parse_dep_info(dep_info: &Path) -> CargoResult<Option<Vec<PathBuf>>> {
     macro_rules! fs_try {
         ($e:expr) => (match $e { Ok(e) => e, Err(..) => return Ok(None) })
     }
@@ -600,8 +601,15 @@ fn dep_info_mtime_if_fresh(dep_info: &Path) -> CargoResult<Option<FileTime>> {
         }
         paths.push(cwd.join(&file));
     }
+    Ok(Some(paths))
+}
 
-    Ok(mtime_if_fresh(&dep_info, paths.iter()))
+fn dep_info_mtime_if_fresh(dep_info: &Path) -> CargoResult<Option<FileTime>> {
+    if let Some(paths) = parse_dep_info(dep_info)? {
+        Ok(mtime_if_fresh(&dep_info, paths.iter()))
+    } else {
+        Ok(None)
+    }
 }
 
 fn pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String> {
