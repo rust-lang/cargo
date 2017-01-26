@@ -27,6 +27,7 @@ fn add_deps_for_unit<'a, 'b>(deps: &mut HashSet<PathBuf>, context: &mut Context<
     }
     visited.insert(unit.clone());
 
+    // Add dependencies from rustc dep-info output (stored in fingerprint directory)
     let dep_info_loc = fingerprint::dep_info_loc(context, unit);
     if let Some(paths) = fingerprint::parse_dep_info(&dep_info_loc)? {
         for path in paths {
@@ -34,7 +35,15 @@ fn add_deps_for_unit<'a, 'b>(deps: &mut HashSet<PathBuf>, context: &mut Context<
         }
     }
 
-    // recursively traverse all transitive dependencies
+    // Add rerun-if-changed dependencies
+    let key = (unit.pkg.package_id().clone(), unit.kind);
+    if let Some(output) = context.build_state.outputs.lock().unwrap().get(&key) {
+        for path in &output.rerun_if_changed {
+            deps.insert(path.into());
+        }
+    }
+
+    // Recursively traverse all transitive dependencies
     for dep_unit in &context.dep_targets(unit)? {
         let source_id = dep_unit.pkg.package_id().source_id();
         if source_id.is_path() {
