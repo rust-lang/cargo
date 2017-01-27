@@ -182,15 +182,15 @@ impl<'a> JobQueue<'a> {
                     match result {
                         Ok(()) => self.finish(key, cx)?,
                         Err(e) => {
-                            handle_error(&*e, &mut *cx.config.shell());
-
                             if self.active > 0 {
+                                error = Some(human("build failed"));
+                                handle_error(&*e, &mut *cx.config.shell());
                                 cx.config.shell().say(
                                             "Build failed, waiting for other \
                                              jobs to finish...", YELLOW)?;
                             }
                             if error.is_none() {
-                                error = Some(human("build failed"));
+                                error = Some(e);
                             }
                         }
                     }
