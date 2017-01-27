@@ -1,6 +1,6 @@
 use std::collections::HashSet;
-use std::io::{Write, BufWriter};
-use std::fs::File;
+use std::io::{Write, BufWriter, ErrorKind};
+use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
 use ops::{Context, Unit};
@@ -22,10 +22,9 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
 fn add_deps_for_unit<'a, 'b>(deps: &mut HashSet<PathBuf>, context: &mut Context<'a, 'b>,
     unit: &Unit<'a>, visited: &mut HashSet<Unit<'a>>) -> CargoResult<()>
 {
-    if visited.contains(unit) {
+    if !visited.insert(unit.clone()) {
         return Ok(());
     }
-    visited.insert(unit.clone());
 
     // Add dependencies from rustc dep-info output (stored in fingerprint directory)
     let dep_info_loc = fingerprint::dep_info_loc(context, unit);
@@ -33,6 +32,10 @@ fn add_deps_for_unit<'a, 'b>(deps: &mut HashSet<PathBuf>, context: &mut Context<
         for path in paths {
             deps.insert(path);
         }
+    } else {
+        debug!("can't find dep_info for {:?} {:?}",
+            unit.pkg.package_id(), unit.profile);
+        return Err(internal("dep_info missing"));
     }
 
     // Add rerun-if-changed dependencies
@@ -56,18 +59,32 @@ fn add_deps_for_unit<'a, 'b>(deps: &mut HashSet<PathBuf>, context: &mut Context<
 pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) -> CargoResult<()> {
     let mut deps = HashSet::new();
     let mut visited = HashSet::new();
-    add_deps_for_unit(&mut deps, context, unit, &mut visited)?;
+    let success = add_deps_for_unit(&mut deps, context, unit, &mut visited).is_ok();
     let basedir = None; // TODO
     for (_filename, link_dst, _linkable) in context.target_filenames(unit)? {
         if let Some(link_dst) = link_dst {
             let output_path = link_dst.with_extension("d");
-            let target_fn = render_filename(link_dst, basedir)?;
-            let mut outfile = BufWriter::new(File::create(output_path)?);
-            write!(outfile, "{}:", target_fn)?;
-            for dep in &deps {
-                write!(outfile, " {}", render_filename(dep, basedir)?)?;
+            if success {
+                let mut outfile = BufWriter::new(File::create(output_path)?);
+                let target_fn = render_filename(link_dst, basedir)?;
+                write!(outfile, "{}:", target_fn)?;
+                for dep in &deps {
+                    write!(outfile, " {}", render_filename(dep, basedir)?)?;
+                }
+                writeln!(outfile, "")?;
+            } else {
+                // dep-info generation failed, so delete output file. This will usually
+                // cause the build system to always rerun the build rule, which is correct
+                // if inefficient.
+                match fs::remove_file(output_path) {
+                    Err(err) => {
+                        if err.kind() != ErrorKind::NotFound {
+                            return Err(err.into());
+                        }
+                    }
+                    _ => ()
+                }
             }
-            writeln!(outfile, "")?;
         }
     }
     Ok(())
