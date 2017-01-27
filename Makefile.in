@@ -25,12 +25,10 @@ endif
 # allow build systems to use a constant date instead of the current one
 CFG_BUILD_DATE = $(shell SOURCE_DATE_EPOCH="$${SOURCE_DATE_EPOCH:-$$(date +%s)}" ; date -u -d "@$$SOURCE_DATE_EPOCH" +%F 2>/dev/null || date -u -r "$$SOURCE_DATE_EPOCH" +%F 2>/dev/null || date -u +%F)
 
-ifeq ($(wildcard $(CFG_SRC_DIR)/.git),)
-CFG_VERSION = $(CFG_RELEASE) (built $(CFG_BUILD_DATE))
-else
-CFG_VER_DATE = $(shell git --git-dir='$(CFG_SRC_DIR).git' log -1 --date=short --pretty=format:'%cd')
-CFG_VER_HASH = $(shell git --git-dir='$(CFG_SRC_DIR).git' rev-parse --short HEAD)
-CFG_VERSION = $(CFG_RELEASE) ($(CFG_VER_HASH) $(CFG_VER_DATE))
+ifneq ($(wildcard $(CFG_SRC_DIR)/.git),)
+CFG_COMMIT_DATE = $(shell git --git-dir='$(CFG_SRC_DIR).git' log -1 --date=short --pretty=format:'%cd')
+CFG_SHORT_COMMIT_HASH = $(shell git --git-dir='$(CFG_SRC_DIR).git' rev-parse --short HEAD)
+CFG_COMMIT_HASH = $(shell git --git-dir='$(CFG_SRC_DIR).git' rev-parse HEAD)
 endif
 PKG_NAME = cargo-$(CFG_PACKAGE_VERS)
 
@@ -58,7 +56,25 @@ endif
 
 S := $(CFG_SRC_DIR)/
 
+CFG_RELEASE_PARTS := $(subst ., ,$(CFG_RELEASE_NUM))
+CFG_VERSION_MAJOR := $(word 1,$(CFG_RELEASE_PARTS))
+CFG_VERSION_MINOR := $(word 2,$(CFG_RELEASE_PARTS))
+CFG_VERSION_PATCH := $(word 3,$(CFG_RELEASE_PARTS))
+
 export CFG_VERSION
+export CFG_VERSION_MAJOR
+export CFG_VERSION_MINOR
+export CFG_VERSION_PATCH
+ifneq ($(CFG_PRERELEASE_VERSION),)
+export CFG_PRERELEASE_VERSION
+endif
+ifneq ($(CFG_COMMIT_HASH),)
+export CFG_COMMIT_HASH
+export CFG_COMMIT_DATE
+export CFG_SHORT_COMMIT_HASH
+endif
+export CFG_BUILD_DATE
+export CFG_RELEASE_CHANNEL
 export CFG_DISABLE_CROSS_TESTS
 
 ifeq ($(OS),Windows_NT)
