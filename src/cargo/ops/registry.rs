@@ -81,9 +81,11 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
                        a version", dep.name())
             }
         } else if dep.source_id() != registry_src {
-            bail!("all dependencies must come from the same source.\n\
-                   dependency `{}` comes from {} instead",
-                  dep.name(), dep.source_id())
+            bail!("crates cannot be published to crates.io with dependencies sourced from \
+                   a repository\neither publish `{}` as its own crate on crates.io and \
+                   specify a crates.io version as a dependency or pull it into this \
+                   repository and specify it with a path and version\n(crate `{}` has \
+                   repository path `{}`)", dep.name(), dep.name(),  dep.source_id());
         }
     }
     Ok(())
