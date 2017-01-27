@@ -15,9 +15,6 @@ extern crate url;
 #[cfg(windows)] extern crate kernel32;
 #[cfg(windows)] extern crate winapi;
 
-#[macro_use]
-extern crate log;
-
 use cargo::util::Rustc;
 use std::ffi::OsStr;
 use std::time::Duration;
