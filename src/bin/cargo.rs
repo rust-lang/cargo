@@ -128,7 +128,18 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     let _token = cargo::util::job::setup();
 
     if flags.flag_version {
-        println!("{}", cargo::version());
+        let version = cargo::version();
+        println!("{}", version);
+        if flags.flag_verbose > 0{
+            println!("release: {}.{}.{}",
+                     version.major, version.minor, version.patch);
+            if let Some(ref cfg) = version.cfg_info {
+                if let Some(ref ci) = cfg.commit_info {
+                    println!("commit-hash: {}", ci.commit_hash);
+                    println!("commit-date: {}", ci.commit_date);
+                }
+            }
+        }
         return Ok(None)
     }
 
