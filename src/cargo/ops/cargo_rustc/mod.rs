@@ -18,6 +18,8 @@ use util::Freshness;
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
 
+use self::output_depinfo::output_depinfo;
+
 pub use self::compilation::Compilation;
 pub use self::context::{Context, Unit};
 pub use self::custom_build::{BuildOutput, BuildMap, BuildScripts};
@@ -30,6 +32,7 @@ mod job;
 mod job_queue;
 mod layout;
 mod links;
+mod output_depinfo;
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
 pub enum Kind { Host, Target }
@@ -184,6 +187,8 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                 .or_insert(HashSet::new())
                 .extend(feats.iter().map(|feat| format!("feature=\"{}\"", feat)));
         }
+
+        output_depinfo(&mut cx, unit)?;
     }
 
     for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
