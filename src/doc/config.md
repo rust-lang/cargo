@@ -79,7 +79,8 @@ index = "..."   # URL of the registry index (defaults to the central repository)
 token = "..."   # Access token (found on the central repo’s website)
 
 [http]
-proxy = "..."       # HTTP proxy to use for HTTP requests (defaults to none)
+proxy = "host:port" # HTTP proxy to use for HTTP requests (defaults to none)
+                    # in libcurl format, e.g. "socks5h://host:port"
 timeout = 60000     # Timeout for each HTTP request, in milliseconds
 cainfo = "cert.pem" # Path to Certificate Authority (CA) bundle (optional)
 
