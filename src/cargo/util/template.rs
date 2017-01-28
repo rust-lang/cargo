@@ -5,7 +5,7 @@ use std::io::{Read};
 use util::{CargoResult, human, ChainError};
 use url::Url;
 
-use handlebars::{Context, Helper, Handlebars, RenderContext, RenderError, html_escape};
+use handlebars::{Helper, Handlebars, RenderContext, RenderError, html_escape};
 use tempdir::TempDir;
 use toml;
 
@@ -14,8 +14,7 @@ use toml;
 /// So if 'name' is "foo \"bar\"" then:
 /// {{name}} renders as  'foo "bar"'
 /// {{#toml-escape name}} renders as '"foo \"bar\""'
-pub fn toml_escape_helper(_: &Context,
-                          h: &Helper,
+pub fn toml_escape_helper(h: &Helper,
                           _: &Handlebars,
                           rc: &mut RenderContext) -> Result<(), RenderError> {
     if let Some(param) = h.param(0) {
@@ -27,8 +26,7 @@ pub fn toml_escape_helper(_: &Context,
 }
 
 /// html_escape_helper escapes strings in templates using html escaping rules.
-pub fn html_escape_helper(_: &Context,
-                          h: &Helper,
+pub fn html_escape_helper(h: &Helper,
                           _: &Handlebars,
                           rc: &mut RenderContext) -> Result<(), RenderError> {
     if let Some(param) = h.param(0) {
@@ -170,7 +168,8 @@ mod test {
         handlebars.register_helper("toml-escape", Box::new(toml_escape_helper));
         let mut data = BTreeMap::new();
         data.insert("name".to_owned(), "\"Iron\" Mike Tyson".to_owned());
-        let result = handlebars.template_render("Hello, {{#toml-escape name}}{{/toml-escape}}", &data).unwrap();
+        let template_string = r#"Hello, {{#toml-escape name}}{{/toml-escape}}"#;
+        let result = handlebars.template_render(template_string, &data).unwrap();
         assert_eq!(result, "Hello, \"\\\"Iron\\\" Mike Tyson\"");
     }
 
