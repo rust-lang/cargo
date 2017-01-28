@@ -12,8 +12,7 @@ use std::env;
 use std::fs;
 use std::path::{Path,PathBuf};
 
-use cargo::core::shell::Verbosity;
-use cargo::execute_main_without_stdin;
+use cargo::core::shell::{Verbosity, ColorConfig};
 use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
 use cargo::util::CliError;
 
@@ -69,7 +68,30 @@ See 'cargo help <command>' for more information on a specific command.
 
 fn main() {
     env_logger::init().unwrap();
-    execute_main_without_stdin(execute, true, USAGE)
+
+    let config = match Config::default() {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            let mut shell = cargo::shell(Verbosity::Verbose, ColorConfig::Auto);
+            cargo::handle_cli_error(e.into(), &mut shell)
+        }
+    };
+
+    let result = (|| {
+        let args: Vec<_> = try!(env::args_os().map(|s| {
+            s.into_string().map_err(|s| {
+                human(format!("invalid unicode in argument: {:?}", s))
+            })
+        }).collect());
+        let rest = &args;
+        cargo::call_main_without_stdin(execute, &config, USAGE, rest, true)
+    })();
+
+    match result {
+        Err(e) => cargo::handle_cli_error(e, &mut *config.shell()),
+        Ok(None) => {},
+        Ok(Some(())) => unreachable!(),
+    }
 }
 
 macro_rules! each_subcommand{
