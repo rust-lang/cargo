@@ -716,7 +716,7 @@ fn scrape_build_config(config: &Config,
         None => None,
     };
     let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
-    let cfg_target = config.get_string("build.target")?.map(|s| s.val);
+    let cfg_target = config.build_target_triple()?;
     let target = target.or(cfg_target);
     let mut base = ops::BuildConfig {
         host_triple: config.rustc()?.host.clone(),
