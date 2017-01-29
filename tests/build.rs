@@ -1,4 +1,5 @@
 extern crate cargo;
+#[macro_use]
 extern crate cargotest;
 extern crate hamcrest;
 extern crate tempdir;
@@ -3270,4 +3271,33 @@ fn no_bin_in_src_with_lib() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
                        .with_stderr_contains(r#"[ERROR] couldn't read "[..]main.rs"[..]"#));
+}
+
+#[test]
+fn same_metadata_different_directory() {
+    // A top-level crate built in two different workspaces should have the
+    // same metadata hash.
+    let p = project("foo1")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+    let output = t!(String::from_utf8(
+        t!(p.cargo_process("build").arg("-v").exec_with_output())
+            .stderr,
+    ));
+    let metadata = output
+        .split_whitespace()
+        .filter(|arg| arg.starts_with("metadata="))
+        .next()
+        .unwrap();
+
+    let p = project("foo2")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+
+    assert_that(
+        p.cargo_process("build").arg("-v"),
+        execs().with_status(0).with_stderr_contains(
+            format!("[..]{}[..]", metadata),
+        ),
+    );
 }
