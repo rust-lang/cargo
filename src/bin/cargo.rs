@@ -124,6 +124,7 @@ macro_rules! each_subcommand{
         $mac!(package);
         $mac!(pkgid);
         $mac!(publish);
+        $mac!(publish_build_info);
         $mac!(read_manifest);
         $mac!(run);
         $mac!(rustc);

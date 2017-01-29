@@ -72,6 +72,15 @@ pub struct NewCrateDependency {
     pub registry: Option<String>,
 }
 
+#[derive(Serialize)]
+pub struct NewVersionBuildInfo {
+    pub name: String,
+    pub vers: String,
+    pub rust_version: String,
+    pub target: String,
+    pub passed: bool,
+}
+
 #[derive(Deserialize)]
 pub struct User {
     pub id: u32,
@@ -200,6 +209,18 @@ impl Registry {
             invalid_categories: invalid_categories,
             invalid_badges: invalid_badges,
         })
+    }
+
+    pub fn publish_build_info(&mut self, build_info: &NewVersionBuildInfo)
+                   -> Result<()> {
+        let body = serde_json::to_string(build_info)?;
+        let url = format!("/crates/{}/{}/build_info", build_info.name, build_info.vers);
+
+        let body = self.put(url, body.as_bytes())?;
+
+        assert!(serde_json::from_str::<R>(&body)?.ok);
+
+        Ok(())
     }
 
     pub fn search(&mut self, query: &str, limit: u8) -> Result<(Vec<Crate>, u32)> {

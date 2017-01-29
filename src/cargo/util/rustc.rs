@@ -60,7 +60,7 @@ impl Rustc {
         }
     }
 
-    pub fn medium_version(&self) -> Option<&str> {
-        self.verbose_version.lines().next()
+    pub fn version_channel_date(&self) -> CargoResult<&str> {
+        self.verbose_version.lines().next().ok_or(internal("rustc -v didn't have any lines"))
     }
 }
