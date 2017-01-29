@@ -1127,7 +1127,7 @@ fn normalize(package_root: &Path,
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
                 let default_bin_path = PathValue::Path(default(bin));
-                match package_root.join(p.to_path()).exists() {
+                match package_root.join(default_bin_path.to_path()).exists() {
                     true => default_bin_path, // inferred from bin's name
                     false => PathValue::Path(Path::new("src").join("main.rs"))
                 }
