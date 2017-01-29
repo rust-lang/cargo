@@ -59,4 +59,8 @@ impl Rustc {
             util::process(&self.path)
         }
     }
+
+    pub fn medium_version(&self) -> Option<&str> {
+        self.verbose_version.lines().next()
+    }
 }
