@@ -407,7 +407,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let name = unit.pkg.package_id().name();
         match self.target_metadata(unit) {
             Some(meta) => format!("{}-{}", name, meta),
-            None => format!("{}-{}", name, util::short_hash(unit.pkg)),
+            None => format!("{}-{}", name, self.target_short_hash(unit)),
         }
     }
 
@@ -424,6 +424,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Requested (not actual) target for the build
     pub fn requested_target(&self) -> Option<&str> {
         self.build_config.requested_target.as_ref().map(|s| &s[..])
+    }
+
+    /// Get the short hash based only on the PackageId
+    /// Used for the metadata when target_metadata returns None
+    pub fn target_short_hash(&self, unit: &Unit) -> String {
+        let hashable = unit.pkg.package_id().stable_hash(self.ws.root());
+        util::short_hash(&hashable)
     }
 
     /// Get the metadata for a target in a specific profile
@@ -459,7 +466,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         // Unique metadata per (name, source, version) triple. This'll allow us
         // to pull crates from anywhere w/o worrying about conflicts
-        unit.pkg.package_id().hash(&mut hasher);
+        unit.pkg.package_id().stable_hash(self.ws.root()).hash(&mut hasher);
 
         // Add package properties which map to environment variables
         // exposed by Cargo
