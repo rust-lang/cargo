@@ -1379,7 +1379,7 @@ fn cfg_test() {
 [RUNNING] `[..][/]test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]", dir = p.url()))
-                       .with_stdout("
+                       .with_stdout_contains("
 running 1 test
 test test_foo ... ok
 
@@ -1393,7 +1393,8 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test foo_0 ... ok
+test ")
+                       .with_stdout_contains("libs.rs - line 3 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
@@ -1496,7 +1497,7 @@ fn cfg_override_test() {
 [RUNNING] `[..][/]test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]", dir = p.url()))
-                       .with_stdout("
+                       .with_stdout_contains("
 running 1 test
 test test_foo ... ok
 
@@ -1510,7 +1511,8 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test foo_0 ... ok
+test ")
+                       .with_stdout_contains("lib.rs - line 3 ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
