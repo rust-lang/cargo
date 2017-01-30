@@ -38,7 +38,7 @@ If the lockfile is not available, then this is the equivalent of
 all updated.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -47,6 +47,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     let ws = Workspace::new(&root, config)?;
     ops::fetch(&ws)?;
-    Ok(None)
+    Ok(())
 }
 

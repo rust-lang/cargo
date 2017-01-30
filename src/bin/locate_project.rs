@@ -1,3 +1,4 @@
+use cargo;
 use cargo::util::{CliResult, CliError, human, ChainError, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
@@ -23,7 +24,7 @@ pub struct ProjectLocation {
 }
 
 pub fn execute(flags: LocateProjectFlags,
-               config: &Config) -> CliResult<Option<ProjectLocation>> {
+               config: &Config) -> CliResult {
     let root = find_root_manifest_for_wd(flags.flag_manifest_path, config.cwd())?;
 
     let string = root.to_str()
@@ -32,5 +33,7 @@ pub fn execute(flags: LocateProjectFlags,
                                              Unicode"))
                       .map_err(|e| CliError::new(e, 1))?;
 
-    Ok(Some(ProjectLocation { root: string.to_string() }))
+    let location = ProjectLocation { root: string.to_string() };
+    cargo::print_json(&location);
+    Ok(())
 }

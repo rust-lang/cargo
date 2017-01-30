@@ -53,7 +53,7 @@ Example Package IDs
 ";
 
 pub fn execute(options: Options,
-               config: &Config) -> CliResult<Option<()>> {
+               config: &Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -72,6 +72,6 @@ pub fn execute(options: Options,
     let spec = spec.as_ref().map(|s| &s[..]);
     let spec = ops::pkgid(&ws, spec)?;
     println!("{}", spec);
-    Ok(None)
+    Ok(())
 }
 

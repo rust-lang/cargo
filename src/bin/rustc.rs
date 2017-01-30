@@ -73,7 +73,7 @@ processes spawned by Cargo, use the $RUSTFLAGS environment variable or the
 `build.rustflags` configuration option.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     debug!("executing; cmd=cargo-rustc; args={:?}",
            env::args().collect::<Vec<_>>());
     config.configure(options.flag_verbose,
@@ -120,6 +120,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let ws = Workspace::new(&root, config)?;
     ops::compile(&ws, &opts)?;
-    Ok(None)
+    Ok(())
 }
 

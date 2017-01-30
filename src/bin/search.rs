@@ -33,7 +33,7 @@ Options:
     --locked                 Require Cargo.lock is up to date
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -47,5 +47,5 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     } = options;
 
     ops::search(&query.join("+"), config, host, cmp::min(100, limit.unwrap_or(10)) as u8)?;
-    Ok(None)
+    Ok(())
 }

@@ -89,8 +89,7 @@ fn main() {
 
     match result {
         Err(e) => cargo::handle_cli_error(e, &mut *config.shell()),
-        Ok(None) => {},
-        Ok(Some(())) => unreachable!(),
+        Ok(()) => {},
     }
 }
 
@@ -139,7 +138,7 @@ each_subcommand!(declare_mod);
   because they are fundamental (and intertwined). Other commands can rely
   on this top-level information.
 */
-fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
+fn execute(flags: Flags, config: &Config) -> CliResult {
     config.configure(flags.flag_verbose,
                      flags.flag_quiet,
                      &flags.flag_color,
@@ -162,7 +161,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
                 }
             }
         }
-        return Ok(None)
+        return Ok(())
     }
 
     if flags.flag_list {
@@ -170,13 +169,13 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         for command in list_commands(config) {
             println!("    {}", command);
         };
-        return Ok(None)
+        return Ok(())
     }
 
     if let Some(ref code) = flags.flag_explain {
         let mut procss = config.rustc()?.process();
         procss.arg("--explain").arg(code).exec().map_err(human)?;
-        return Ok(None)
+        return Ok(())
     }
 
     let args = match &flags.arg_command[..] {
@@ -189,7 +188,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
             let r = cargo::call_main_without_stdin(execute, config, USAGE, args,
                                                    false);
             cargo::process_executed(r, &mut config.shell());
-            return Ok(None)
+            return Ok(())
         }
 
         // For `cargo help -h` and `cargo help --help`, print out the help
@@ -221,7 +220,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     };
 
     if try_execute(&config, &args) {
-        return Ok(None)
+        return Ok(())
     }
 
     let alias_list = aliased_command(&config, &args[1])?;
@@ -233,7 +232,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
                 .map(|s| s.to_string())
                 .collect::<Vec<_>>();
             if try_execute(&config, &chain) {
-                return Ok(None)
+                return Ok(())
             } else {
                 chain
             }
@@ -241,7 +240,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         None => args,
     };
     execute_subcommand(config, &args[1], &args)?;
-    Ok(None)
+    Ok(())
 }
 
 fn try_execute(config: &Config, args: &[String]) -> bool {
@@ -298,7 +297,7 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
 
 fn execute_subcommand(config: &Config,
                       cmd: &str,
-                      args: &[String]) -> CliResult<()> {
+                      args: &[String]) -> CliResult {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let path = search_directories(config)
                     .iter()
