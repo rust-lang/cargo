@@ -2,7 +2,6 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf, Component};
 
@@ -66,10 +65,6 @@ pub fn without_prefix<'a>(a: &'a Path, b: &'a Path) -> Option<&'a Path> {
             None => return Some(a.as_path()),
         }
     }
-}
-
-pub fn file(p: &Path, contents: &[u8]) -> io::Result<()> {
-    try!(File::create(p)).write_all(contents)
 }
 
 pub fn read(path: &Path) -> CargoResult<String> {
