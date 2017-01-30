@@ -25,16 +25,14 @@ extern crate term;
 extern crate toml;
 extern crate url;
 
-use std::env;
-use std::fmt;
 use std::io;
+use std::fmt;
 use rustc_serialize::{Decodable, Encodable};
 use rustc_serialize::json;
 use docopt::Docopt;
 
 use core::{Shell, MultiShell, ShellConfig, Verbosity, ColorConfig};
 use core::shell::Verbosity::{Verbose};
-use core::shell::ColorConfig::{Auto};
 use term::color::{BLACK};
 
 pub use util::{CargoError, CargoResult, CliError, CliResult, human, Config, ChainError};
@@ -106,17 +104,6 @@ impl fmt::Display for VersionInfo {
     }
 }
 
-pub fn execute_main_without_stdin<T, V>(
-                                      exec: fn(T, &Config) -> CliResult<Option<V>>,
-                                      options_first: bool,
-                                      usage: &str)
-    where V: Encodable, T: Decodable
-{
-    process::<V, _>(|rest, config| {
-        call_main_without_stdin(exec, config, usage, rest, options_first)
-    });
-}
-
 pub fn call_main_without_stdin<T, V>(
             exec: fn(T, &Config) -> CliResult<Option<V>>,
             config: &Config,
@@ -129,26 +116,7 @@ pub fn call_main_without_stdin<T, V>(
     exec(flags, config)
 }
 
-fn process<V, F>(mut callback: F)
-    where F: FnMut(&[String], &Config) -> CliResult<Option<V>>,
-          V: Encodable
-{
-    let mut config = None;
-    let result = (|| {
-        config = Some(Config::default()?);
-        let args: Vec<_> = try!(env::args_os().map(|s| {
-            s.into_string().map_err(|s| {
-                human(format!("invalid unicode in argument: {:?}", s))
-            })
-        }).collect());
-        callback(&args, config.as_ref().unwrap())
-    })();
-    let mut verbose_shell = shell(Verbose, Auto);
-    let mut shell = config.as_ref().map(|s| s.shell());
-    let shell = shell.as_mut().map(|s| &mut **s).unwrap_or(&mut verbose_shell);
-    process_executed(result, shell)
-}
-
+// This will diverge if `result` is an `Err` and return otherwise.
 pub fn process_executed<T>(result: CliResult<Option<T>>, shell: &mut MultiShell)
     where T: Encodable
 {
@@ -207,7 +175,7 @@ pub fn shell(verbosity: Verbosity, color_config: ColorConfig) -> MultiShell {
     }
 }
 
-pub fn handle_cli_error(err: CliError, shell: &mut MultiShell) {
+pub fn handle_cli_error(err: CliError, shell: &mut MultiShell) -> ! {
     debug!("handle_cli_error; err={:?}", err);
 
     let CliError { error, exit_code, unknown } = err;
@@ -231,7 +199,7 @@ pub fn handle_cli_error(err: CliError, shell: &mut MultiShell) {
         }
     }
 
-    std::process::exit(exit_code);
+    std::process::exit(exit_code)
 }
 
 pub fn handle_error(err: &CargoError, shell: &mut MultiShell) {
