@@ -115,8 +115,10 @@ fn git_deps() {
                  .arg("--host").arg(registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
-[ERROR] all dependencies must come from the same source.
-dependency `foo` comes from git://path/to/nowhere instead
+[ERROR] Crates published to crates.io cannot have dependencies sourced from \
+repositories. Either publish `foo` as its own crate on crates.io and \
+specify a crates.io version as a dependency or pull it into this \
+repository and specify it with a path and version.
 "));
 }
 
