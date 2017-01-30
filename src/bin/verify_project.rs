@@ -3,12 +3,11 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::process;
 
+use cargo;
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 use cargo::util::{CliResult, Config};
 use rustc_serialize::json;
 use toml;
-
-pub type Error = HashMap<String, String>;
 
 #[derive(RustcDecodable)]
 pub struct Flags {
@@ -37,7 +36,7 @@ Options:
     --locked                Require Cargo.lock is up to date
 ";
 
-pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
+pub fn execute(args: Flags, config: &Config) -> CliResult {
     config.configure(args.flag_verbose,
                      args.flag_quiet,
                      &args.flag_color,
@@ -63,7 +62,8 @@ pub fn execute(args: Flags, config: &Config) -> CliResult<Option<Error>> {
 
     let mut h = HashMap::new();
     h.insert("success".to_string(), "true".to_string());
-    Ok(Some(h))
+    cargo::print_json(&h);
+    Ok(())
 }
 
 fn fail(reason: &str, value: &str) -> ! {

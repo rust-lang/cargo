@@ -66,7 +66,7 @@ pub struct Options {
     flag_frozen: bool,
 }
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     debug!("executing; cmd=cargo-check; args={:?}",
            env::args().collect::<Vec<_>>());
 
@@ -100,5 +100,5 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     };
 
     ops::compile(&ws, &opts)?;
-    Ok(None)
+    Ok(())
 }

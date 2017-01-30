@@ -70,7 +70,7 @@ not affect how many jobs are used when running the benchmarks.
 Compilation can be customized with the `bench` profile in the manifest.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     config.configure(options.flag_verbose,
                      options.flag_quiet,
@@ -105,7 +105,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let ws = Workspace::new(&root, config)?;
     let err = ops::run_benches(&ws, &ops, &options.arg_args)?;
     match err {
-        None => Ok(None),
+        None => Ok(()),
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
                 Some(i) => CliError::new(human("bench failed"), i),

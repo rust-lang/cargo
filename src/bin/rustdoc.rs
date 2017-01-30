@@ -70,7 +70,7 @@ current package is documented. For more information on SPEC and its format, see
 the `cargo help pkgid` command.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -108,5 +108,5 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let ws = Workspace::new(&root, config)?;
     ops::doc(&ws, &doc_opts)?;
 
-    Ok(None)
+    Ok(())
 }

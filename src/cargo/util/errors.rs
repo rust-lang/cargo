@@ -243,7 +243,7 @@ impl<E: CargoError> CargoError for Human<E> {
 // =============================================================================
 // CLI errors
 
-pub type CliResult<T> = Result<T, CliError>;
+pub type CliResult = Result<(), CliError>;
 
 #[derive(Debug)]
 pub struct CliError {

@@ -39,7 +39,7 @@ Options:
     --locked            Require Cargo.lock is up to date
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     debug!("executing; cmd=cargo-init; args={:?}", env::args().collect::<Vec<_>>());
     config.configure(options.flag_verbose,
                      options.flag_quiet,
@@ -63,6 +63,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
                                              if opts_lib { "library" }
                                              else {"binary (application)"}))?;
 
-    Ok(None)
+    Ok(())
 }
 
