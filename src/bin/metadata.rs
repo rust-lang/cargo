@@ -1,5 +1,6 @@
+use cargo;
 use cargo::core::Workspace;
-use cargo::ops::{output_metadata, OutputMetadataOptions, ExportInfo};
+use cargo::ops::{output_metadata, OutputMetadataOptions};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::util::{CliResult, Config};
 
@@ -42,7 +43,7 @@ Options:
     --locked                   Require Cargo.lock is up to date
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<ExportInfo>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -60,5 +61,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<ExportInfo
 
     let ws = Workspace::new(&manifest, config)?;
     let result = output_metadata(&ws, &options)?;
-    Ok(Some(result))
+    cargo::print_json(&result);
+    Ok(())
 }

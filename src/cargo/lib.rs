@@ -104,30 +104,38 @@ impl fmt::Display for VersionInfo {
     }
 }
 
-pub fn call_main_without_stdin<T, V>(
-            exec: fn(T, &Config) -> CliResult<Option<V>>,
+pub fn call_main_without_stdin<Flags: Decodable>(
+            exec: fn(Flags, &Config) -> CliResult,
             config: &Config,
             usage: &str,
             args: &[String],
-            options_first: bool) -> CliResult<Option<V>>
-    where V: Encodable, T: Decodable
+            options_first: bool) -> CliResult
 {
-    let flags = flags_from_args::<T>(usage, args, options_first)?;
+    let docopt = Docopt::new(usage).unwrap()
+        .options_first(options_first)
+        .argv(args.iter().map(|s| &s[..]))
+        .help(true);
+
+    let flags = docopt.decode().map_err(|e| {
+        let code = if e.fatal() {1} else {0};
+        CliError::new(human(e.to_string()), code)
+    })?;
+
     exec(flags, config)
 }
 
 // This will diverge if `result` is an `Err` and return otherwise.
-pub fn process_executed<T>(result: CliResult<Option<T>>, shell: &mut MultiShell)
-    where T: Encodable
+pub fn process_executed(result: CliResult, shell: &mut MultiShell)
 {
     match result {
         Err(e) => handle_cli_error(e, shell),
-        Ok(Some(encodable)) => {
-            let encoded = json::encode(&encodable).unwrap();
-            println!("{}", encoded);
-        }
-        Ok(None) => {}
+        Ok(()) => {}
     }
+}
+
+pub fn print_json<T: Encodable>(obj: &T) {
+    let encoded = json::encode(&obj).unwrap();
+    println!("{}", encoded);
 }
 
 pub fn shell(verbosity: Verbosity, color_config: ColorConfig) -> MultiShell {
@@ -274,17 +282,4 @@ pub fn version() -> VersionInfo {
             }
         }
     }
-}
-
-fn flags_from_args<T>(usage: &str, args: &[String], options_first: bool) -> CliResult<T>
-    where T: Decodable
-{
-    let docopt = Docopt::new(usage).unwrap()
-                                   .options_first(options_first)
-                                   .argv(args.iter().map(|s| &s[..]))
-                                   .help(true);
-    docopt.decode().map_err(|e| {
-        let code = if e.fatal() {1} else {0};
-        CliError::new(human(e.to_string()), code)
-    })
 }

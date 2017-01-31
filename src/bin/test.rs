@@ -93,7 +93,7 @@ To get the list of all options available for the test binaries use this:
   cargo test -- --help
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -146,7 +146,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     let ws = Workspace::new(&root, config)?;
     let err = ops::run_tests(&ws, &ops, &options.arg_args)?;
     match err {
-        None => Ok(None),
+        None => Ok(()),
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
                 Some(i) => CliError::new(human("test failed"), i),

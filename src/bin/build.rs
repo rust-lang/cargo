@@ -71,7 +71,7 @@ the manifest. The default profile for this command is `dev`, but passing
 the --release flag will use the `release` profile instead.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     debug!("executing; cmd=cargo-build; args={:?}",
            env::args().collect::<Vec<_>>());
     config.configure(options.flag_verbose,
@@ -110,5 +110,5 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let ws = Workspace::new(&root, config)?;
     ops::compile(&ws, &opts)?;
-    Ok(None)
+    Ok(())
 }

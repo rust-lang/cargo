@@ -39,7 +39,7 @@ Options:
     --locked                Require Cargo.lock is up to date
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -55,5 +55,5 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         allow_dirty: options.flag_allow_dirty,
         jobs: options.flag_jobs,
     })?;
-    Ok(None)
+    Ok(())
 }
