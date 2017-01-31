@@ -8,6 +8,7 @@ use cargotest::support::{project, execs, basic_bin_manifest, basic_lib_manifest,
 #[test]
 fn cargo_metadata_simple() {
     let p = project("foo")
+            .file("src/foo.rs", "")
             .file("Cargo.toml", &basic_bin_manifest("foo"));
 
     assert_that(p.cargo_process("metadata"), execs().with_json(r#"
@@ -52,6 +53,7 @@ fn cargo_metadata_simple() {
 #[test]
 fn cargo_metadata_with_deps_and_version() {
     let p = project("foo")
+        .file("src/foo.rs", "")
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
