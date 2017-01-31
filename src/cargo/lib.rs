@@ -124,15 +124,6 @@ pub fn call_main_without_stdin<Flags: Decodable>(
     exec(flags, config)
 }
 
-// This will diverge if `result` is an `Err` and return otherwise.
-pub fn process_executed(result: CliResult, shell: &mut MultiShell)
-{
-    match result {
-        Err(e) => handle_cli_error(e, shell),
-        Ok(()) => {}
-    }
-}
-
 pub fn print_json<T: Encodable>(obj: &T) {
     let encoded = json::encode(&obj).unwrap();
     println!("{}", encoded);
@@ -183,8 +174,8 @@ pub fn shell(verbosity: Verbosity, color_config: ColorConfig) -> MultiShell {
     }
 }
 
-pub fn handle_cli_error(err: CliError, shell: &mut MultiShell) -> ! {
-    debug!("handle_cli_error; err={:?}", err);
+pub fn exit_with_error(err: CliError, shell: &mut MultiShell) -> ! {
+    debug!("exit_with_error; err={:?}", err);
 
     let CliError { error, exit_code, unknown } = err;
     // exit_code == 0 is non-fatal error, e.g. docopt version info
