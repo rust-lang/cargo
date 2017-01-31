@@ -31,7 +31,7 @@ Options:
                         control at all (none) overriding a global configuration.
     --bin               Use a binary (application) template
     --lib               Use a library template
-    --name NAME         Set the resulting package name
+    --name NAME         Set the resulting package name, defaults to the value of <path>
     -v, --verbose ...   Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
