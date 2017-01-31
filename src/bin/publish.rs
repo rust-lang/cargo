@@ -42,7 +42,7 @@ Options:
 
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -70,5 +70,5 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         jobs: jobs,
         dry_run: dry_run,
     })?;
-    Ok(None)
+    Ok(())
 }

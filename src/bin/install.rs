@@ -94,7 +94,7 @@ the more explicit `install --path .`.
 The `--list` option will list all installed packages (and their versions).
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -147,5 +147,5 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     } else {
         ops::install(root, krate, &source, vers, &compile_opts, options.flag_force)?;
     }
-    Ok(None)
+    Ok(())
 }

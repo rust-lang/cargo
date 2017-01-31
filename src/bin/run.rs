@@ -57,7 +57,7 @@ arguments to both Cargo and the binary, the ones after `--` go to the binary,
 the ones before go to Cargo.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -99,7 +99,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let ws = Workspace::new(&root, config)?;
     match ops::run(&ws, &compile_opts, &options.arg_args)? {
-        None => Ok(None),
+        None => Ok(()),
         Some(err) => {
             // If we never actually spawned the process then that sounds pretty
             // bad and we always want to forward that up.

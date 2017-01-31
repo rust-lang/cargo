@@ -37,7 +37,7 @@ uninstalled for a crate but the `--bin` and `--example` flags can be used to
 only uninstall particular binaries.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+pub fn execute(options: Options, config: &Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -46,6 +46,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
 
     let root = options.flag_root.as_ref().map(|s| &s[..]);
     ops::uninstall(root, &options.arg_spec, &options.flag_bin, config)?;
-    Ok(None)
+    Ok(())
 }
 
