@@ -598,3 +598,21 @@ pub fn fetch(repo: &git2::Repository,
         Ok(())
     })
 }
+
+/// Clone a remote repository into a target directory. This is a simple utility function to get
+/// HEAD. When this is complete it should be equivalent to `git clone $url $target`
+pub fn clone(url: &str, target: &Path, config: &Config) -> CargoResult<()> {
+    let repo = git2::Repository::init(target).chain_error(||{
+        human(format!("Failed to create template directory `{}`",
+                      target.display()))
+    })?;
+    let refspec = "refs/heads/*:refs/heads/*";
+    fetch(&repo, &url, refspec, &config).chain_error(||{
+        human(format!("failed to fecth `{}`", url))
+    })?;
+    let reference = "HEAD";
+    let oid = repo.refname_to_id(reference)?;
+    let object = repo.find_object(oid, None)?;
+    repo.reset(&object, git2::ResetType::Hard, None)?;
+    Ok(())
+}
