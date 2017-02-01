@@ -49,6 +49,7 @@ pub struct Context<'a, 'cfg: 'a> {
     host_info: TargetInfo,
     profiles: &'a Profiles,
     incremental_enabled: bool,
+    target_info_probed: bool,
 }
 
 #[derive(Clone, Default)]
@@ -87,6 +88,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             resolve: resolve,
             packages: packages,
             config: config,
+            target_info_probed: false,
             target_info: TargetInfo::default(),
             host_info: TargetInfo::default(),
             compilation: Compilation::new(config),
@@ -147,6 +149,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         } else {
             self.probe_target_info_kind(&crate_types, Kind::Host)?;
         }
+        self.target_info_probed = true;
         Ok(())
     }
 
@@ -786,6 +789,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Some(p) => p,
             None => return true,
         };
+
+        // If we haven't gotten around to probing target info yet then the
+        // `host_info` and `target_info` structures we'll read below are empty.
+        // This means we're in very early phases of the building the compilation
+        // graph so we just don't filter out dependencies.
+        if !self.target_info_probed {
+            return true
+        }
+
         let (name, info) = match kind {
             Kind::Host => (self.host_triple(), &self.host_info),
             Kind::Target => (self.target_triple(), &self.target_info),

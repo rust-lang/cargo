@@ -2769,3 +2769,31 @@ fn build_all_member_dependency_same_name() {
                        [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
 }
 
+#[test]
+fn target_specific_dylib_rlib() {
+    let p = project("workspace")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.1.0"
+
+            [target.'cfg(unix)'.dependencies]
+            b = { path = "b" }
+            [target.'cfg(windows)'.dependencies]
+            b = { path = "b" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.1.0"
+
+            [lib]
+            crate-type = ["rlib", "dylib"]
+        "#)
+        .file("b/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
+}
