@@ -13,6 +13,7 @@ pub struct Options {
     arg_path: Option<String>,
     flag_name: Option<String>,
     flag_vcs: Option<ops::VersionControl>,
+    flag_template: Option<String>,
     flag_frozen: bool,
     flag_locked: bool,
 }
@@ -37,6 +38,7 @@ Options:
     --color WHEN        Coloring: auto, always, never
     --frozen            Require Cargo.lock and cache are up to date
     --locked            Require Cargo.lock is up to date
+    --template NAME     Specify a template for Cargo.toml
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult {
@@ -47,14 +49,15 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_frozen,
                      options.flag_locked)?;
 
-    let Options { flag_bin, flag_lib, arg_path, flag_name, flag_vcs, .. } = options;
+    let Options { flag_bin, flag_lib, arg_path, flag_name, flag_vcs, flag_template, .. } = options;
 
     let tmp = &arg_path.unwrap_or(format!("."));
     let opts = ops::NewOptions::new(flag_vcs,
                                      flag_bin,
                                      flag_lib,
                                      tmp,
-                                     flag_name.as_ref().map(|s| s.as_ref()));
+                                     flag_name.as_ref().map(|s| s.as_ref()),
+                                     flag_template.as_ref().map(|s| s.as_ref()));
 
     let opts_lib = opts.lib;
     ops::init(opts, config)?;
