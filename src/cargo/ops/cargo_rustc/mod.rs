@@ -318,13 +318,14 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
         // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
         //                              this manually
         for &(ref filename, ref _link_dst, _linkable) in filenames.iter() {
-            let mut dsts = vec![root.join(filename)];
+            let mut dsts = vec![filename.clone()];
             // If there is both an rmeta and rlib, rustc will prefer to use the
             // rlib, even if it is older. Therefore, we must delete the rlib to
             // force using the new rmeta.
             if dsts[0].extension() == Some(&OsStr::new("rmeta")) {
-                dsts.push(root.join(filename).with_extension("rlib"));
+                dsts.push(filename.with_extension("rlib"));
             }
+
             for dst in &dsts {
                 if fs::metadata(dst).is_ok() {
                     fs::remove_file(dst).chain_error(|| {
