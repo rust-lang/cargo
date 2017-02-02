@@ -1227,8 +1227,7 @@ fn test_path_dependency_under_member() {
 
     assert_that(p.cargo("build").cwd(p.root().join("foo/bar")),
                 execs().with_status(0));
-    // Ideally, `foo/bar` should be a member of the workspace,
-    // because it is hierarchically under the workspace member.
-    assert_that(&p.root().join("foo/bar/Cargo.lock"), existing_file());
-    assert_that(&p.root().join("foo/bar/target"), existing_dir());
+
+    assert_that(&p.root().join("foo/bar/Cargo.lock"), is_not(existing_file()));
+    assert_that(&p.root().join("foo/bar/target"), is_not(existing_dir()));
 }
