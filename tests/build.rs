@@ -2769,3 +2769,30 @@ fn build_all_member_dependency_same_name() {
                        [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
 }
 
+#[test]
+fn run_proper_binary() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+            [[bin]]
+            name = "main"
+            [[bin]]
+            name = "other"
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/main.rs", r#"
+            fn main() {
+                panic!("This should never be run.");
+            }
+        "#)
+        .file("src/bin/other.rs", r#"
+            fn main() {
+            }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("--bin").arg("other"),
+                execs().with_status(0));
+}

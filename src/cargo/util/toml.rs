@@ -64,15 +64,6 @@ impl Layout {
             benches: benches,
         }
     }
-
-    fn main(&self) -> Option<&PathBuf> {
-        self.bins.iter().find(|p| {
-            match p.file_name().and_then(|s| s.to_str()) {
-                Some(s) => s == "main.rs",
-                None => false
-            }
-        })
-    }
 }
 
 fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
@@ -475,22 +466,10 @@ impl TomlManifest {
 
         let bins = match self.bin {
             Some(ref bins) => {
-                let bin = layout.main();
-
                 for target in bins {
                     target.validate_binary_name()?;
-                }
-
-                bins.iter().map(|t| {
-                    if bin.is_some() && t.path.is_none() {
-                        TomlTarget {
-                            path: bin.as_ref().map(|&p| PathValue::Path(p.clone())),
-                            .. t.clone()
-                        }
-                    } else {
-                        t.clone()
-                    }
-                }).collect()
+                };
+                bins.clone()
             }
             None => inferred_bin_targets(&project.name, layout)
         };
@@ -1147,7 +1126,11 @@ fn normalize(package_root: &Path,
                        default: &mut FnMut(&TomlBinTarget) -> PathBuf| {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
-                PathValue::Path(default(bin))
+                let default_bin_path = PathValue::Path(default(bin));
+                match package_root.join(default_bin_path.to_path()).exists() {
+                    true => default_bin_path, // inferred from bin's name
+                    false => PathValue::Path(Path::new("src").join("main.rs"))
+                }
             });
             let mut target = Target::bin_target(&bin.name(), package_root.join(path.to_path()));
             configure(bin, &mut target);
