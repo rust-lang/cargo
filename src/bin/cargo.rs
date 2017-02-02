@@ -73,7 +73,7 @@ fn main() {
         Ok(cfg) => cfg,
         Err(e) => {
             let mut shell = cargo::shell(Verbosity::Verbose, ColorConfig::Auto);
-            cargo::handle_cli_error(e.into(), &mut shell)
+            cargo::exit_with_error(e.into(), &mut shell)
         }
     };
 
@@ -88,7 +88,7 @@ fn main() {
     })();
 
     match result {
-        Err(e) => cargo::handle_cli_error(e, &mut *config.shell()),
+        Err(e) => cargo::exit_with_error(e, &mut *config.shell()),
         Ok(()) => {},
     }
 }
@@ -185,10 +185,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
         "" | "help" if flags.arg_args.is_empty() => {
             config.shell().set_verbosity(Verbosity::Verbose);
             let args = &["cargo".to_string(), "-h".to_string()];
-            let r = cargo::call_main_without_stdin(execute, config, USAGE, args,
-                                                   false);
-            cargo::process_executed(r, &mut config.shell());
-            return Ok(())
+            return cargo::call_main_without_stdin(execute, config, USAGE, args, false);
         }
 
         // For `cargo help -h` and `cargo help --help`, print out the help
@@ -219,8 +216,8 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
         }
     };
 
-    if try_execute(&config, &args) {
-        return Ok(())
+    if let Some(r) = try_execute_builtin_command(&config, &args) {
+        return r;
     }
 
     let alias_list = aliased_command(&config, &args[1])?;
@@ -231,19 +228,19 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
                 .chain(args.iter().skip(2))
                 .map(|s| s.to_string())
                 .collect::<Vec<_>>();
-            if try_execute(&config, &chain) {
-                return Ok(())
+            if let Some(r) = try_execute_builtin_command(&config, &chain) {
+                return r;
             } else {
                 chain
             }
         }
         None => args,
     };
-    execute_subcommand(config, &args[1], &args)?;
-    Ok(())
+
+    execute_external_subcommand(config, &args[1], &args)
 }
 
-fn try_execute(config: &Config, args: &[String]) -> bool {
+fn try_execute_builtin_command(config: &Config, args: &[String]) -> Option<CliResult> {
     macro_rules! cmd {
         ($name:ident) => (if args[1] == stringify!($name).replace("_", "-") {
             config.shell().set_verbosity(Verbosity::Verbose);
@@ -251,13 +248,12 @@ fn try_execute(config: &Config, args: &[String]) -> bool {
                                                    $name::USAGE,
                                                    &args,
                                                    false);
-            cargo::process_executed(r, &mut config.shell());
-            return true
+            return Some(r);
         })
     }
     each_subcommand!(cmd);
 
-    return false
+    None
 }
 
 fn aliased_command(config: &Config, command: &String) -> CargoResult<Option<Vec<String>>> {
@@ -295,9 +291,9 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
     filtered.get(0).map(|slot| slot.1.clone())
 }
 
-fn execute_subcommand(config: &Config,
-                      cmd: &str,
-                      args: &[String]) -> CliResult {
+fn execute_external_subcommand(config: &Config,
+                               cmd: &str,
+                               args: &[String]) -> CliResult {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let path = search_directories(config)
                     .iter()
