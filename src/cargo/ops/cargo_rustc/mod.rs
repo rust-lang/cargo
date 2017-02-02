@@ -325,6 +325,12 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
             if dsts[0].extension() == Some(&OsStr::new("rmeta")) {
                 dsts.push(filename.with_extension("rlib"));
             }
+            // Delete save-analysis output.
+            dsts.push(filename.parent()
+                              .unwrap()
+                              .join("save-analysis")
+                              .join(filename.file_name().unwrap())
+                              .with_extension("json"));
 
             for dst in &dsts {
                 if fs::metadata(dst).is_ok() {
