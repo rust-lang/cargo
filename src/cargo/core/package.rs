@@ -31,6 +31,7 @@ struct SerializedPackage<'a> {
     id: &'a PackageId,
     license: Option<&'a str>,
     license_file: Option<&'a str>,
+    description: Option<&'a str>,
     source: &'a SourceId,
     dependencies: &'a [Dependency],
     targets: &'a [Target],
@@ -45,6 +46,7 @@ impl Encodable for Package {
         let manmeta = self.manifest.metadata();
         let license = manmeta.license.as_ref().map(String::as_ref);
         let license_file = manmeta.license_file.as_ref().map(String::as_ref);
+        let description = manmeta.description.as_ref().map(String::as_ref);
 
         SerializedPackage {
             name: &package_id.name(),
@@ -52,6 +54,7 @@ impl Encodable for Package {
             id: package_id,
             license: license,
             license_file: license_file,
+            description: description,
             source: summary.source_id(),
             dependencies: summary.dependencies(),
             targets: &self.manifest.targets(),
