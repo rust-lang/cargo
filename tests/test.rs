@@ -276,7 +276,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test foo_0 ... ok
+test [..] ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
@@ -338,7 +338,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test bar_0 ... ok
+test [..] ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
@@ -638,7 +638,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test foo_0 ... ok
+test [..] ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
@@ -1669,7 +1669,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test foo_0 ... ok
+test [..] ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
@@ -1784,7 +1784,7 @@ fn dylib_doctest() {
 [DOCTEST] foo")
                        .with_stdout("
 running 1 test
-test foo_0 ... ok
+test [..] ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
@@ -1860,7 +1860,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test _0 ... ok
+test [..] ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
@@ -1966,7 +1966,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test sub_one_0 ... ok
+test [..] ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
@@ -2160,7 +2160,7 @@ fn only_test_docs() {
 [DOCTEST] foo")
                        .with_stdout("
 running 1 test
-test bar_0 ... ok
+test [..] ... ok
 
 test result: ok.[..]
 
