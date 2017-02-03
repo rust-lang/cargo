@@ -22,6 +22,7 @@ fn cargo_metadata_simple() {
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
+                "description": null,
                 "targets": [
                     {
                         "kind": [
@@ -86,6 +87,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "source": "registry+[..]",
                 "license": null,
                 "license_file": null,
+                "description": null,
                 "targets": [
                     {
                         "kind": [
@@ -117,6 +119,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "source": "registry+[..]",
                 "license": null,
                 "license_file": null,
+                "description": null,
                 "targets": [
                     {
                         "kind": [
@@ -148,6 +151,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "source": null,
                 "license": "MIT",
                 "license_file": null,
+                "description": "foo",
                 "targets": [
                     {
                         "kind": [
@@ -210,6 +214,7 @@ fn workspace_metadata() {
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
+                "description": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -228,6 +233,7 @@ fn workspace_metadata() {
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
+                "description": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -281,6 +287,7 @@ fn workspace_metadata_no_deps() {
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
+                "description": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -299,6 +306,7 @@ fn workspace_metadata_no_deps() {
                 "dependencies": [],
                 "license": null,
                 "license_file": null,
+                "description": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -340,6 +348,7 @@ const MANIFEST_OUTPUT: &'static str=
         "dependencies":[],
         "license": null,
         "license_file": null,
+        "description": null,
         "targets":[{
             "kind":["bin"],
             "name":"foo",
