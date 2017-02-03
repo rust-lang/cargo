@@ -570,6 +570,8 @@ fn lines_match_works() {
 
 // Compares JSON object for approximate equality.
 // You can use `[..]` wildcard in strings (useful for OS dependent things such as paths).
+// You can use a `"{...}"` string literal as a wildcard for arbitrary nested JSON (useful
+// for parts of object emitted by other programs (e.g. rustc) rather than Cargo itself).
 // Arrays are sorted before comparison.
 fn find_mismatch<'a>(expected: &'a Json, actual: &'a Json) -> Option<(&'a Json, &'a Json)> {
     use rustc_serialize::json::Json::*;
@@ -586,8 +588,7 @@ fn find_mismatch<'a>(expected: &'a Json, actual: &'a Json) -> Option<(&'a Json, 
 
             fn sorted(xs: &Vec<Json>) -> Vec<&Json> {
                 let mut result = xs.iter().collect::<Vec<_>>();
-                // `unwrap` should be safe because JSON spec does not allow NaNs
-                result.sort_by(|x, y| x.partial_cmp(y).unwrap());
+                result.sort_by(|x, y| x.partial_cmp(y).expect("JSON spec does not allow NaNs"));
                 result
             }
 
@@ -606,6 +607,8 @@ fn find_mismatch<'a>(expected: &'a Json, actual: &'a Json) -> Option<(&'a Json, 
              .nth(0)
         }
         (&Null, &Null) => None,
+        // magic string literal "{...}" acts as wildcard for any sub-JSON
+        (&String(ref l), _) if l == "{...}" => None,
         _ => Some((expected, actual)),
     }
 
