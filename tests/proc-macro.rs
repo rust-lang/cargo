@@ -226,7 +226,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ").with_stdout_contains("\
 running 1 test
-test derive_0 ... ok
+test [..] ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
