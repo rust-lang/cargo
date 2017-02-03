@@ -11,6 +11,7 @@ static MANIFEST_OUTPUT: &'static str = r#"
     "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
     "license": null,
     "license_file": null,
+    "description": null,
     "source":null,
     "dependencies":[],
     "targets":[{
