@@ -7,7 +7,7 @@ authors = ["Yehuda Katz <wycats@gmail.com>",
 license = "MIT/Apache-2.0"
 homepage = "https://crates.io"
 repository = "https://github.com/rust-lang/cargo"
-documentation = "http://doc.crates.io/cargo"
+documentation = "https://docs.rs/cargo"
 description = """
 Cargo, a package manager for Rust.
 """
