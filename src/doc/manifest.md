@@ -142,8 +142,8 @@ license = "..."
 license-file = "..."
 
 # Optional specification of badges to be displayed on crates.io. The badges
-# currently available are Travis CI and Appveyor latest build status, specified
-# using the following parameters:
+# currently available are Travis CI, Appveyor, and Gitlab latest build status,
+# specified using the following parameters:
 [badges]
 # Travis CI: `repository` is required. `branch` is optional; default is `master`
 travis-ci = { repository = "...", branch = "master" }
@@ -151,6 +151,8 @@ travis-ci = { repository = "...", branch = "master" }
 # `service` is optional; valid values are `github` (default), `bitbucket`, and
 # `gitlab`.
 appveyor = { repository = "...", branch = "master", service = "github" }
+# Gitlab: `repository` is required. `branch` is optional; default is `master`
+gitlab = { repository = "...", branch = "master" }
 ```
 
 The [crates.io](https://crates.io) registry will render the description, display
