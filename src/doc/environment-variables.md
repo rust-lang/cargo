@@ -84,8 +84,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
                be useful to pass a `-j` parameter to a system like `make`.
 * `OPT_LEVEL`, `DEBUG` - values of the corresponding variables for the
                          profile currently being built.
-* `PROFILE` - name of the profile currently being built (see
-              [profiles][profile]).
+* `PROFILE` - `release` for release builds, `debug` for other builds.
 * `DEP_<name>_<key>` - For more information about this set of environment
                        variables, see build script documentation about [`links`][links].
 * `RUSTC`, `RUSTDOC` - the compiler and documentation generator that Cargo has
