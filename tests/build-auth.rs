@@ -33,6 +33,11 @@ fn http_auth_offered() {
     let t = thread::spawn(move|| {
         let mut conn = BufStream::new(server.accept().unwrap().0);
         let req = headers(&mut conn);
+        let user_agent = if cfg!(windows) {
+            "User-Agent: git/1.0 (libgit2 0.25.0)"
+        } else {
+            "User-Agent: git/2.0 (libgit2 0.25.0)"
+        };
         conn.write_all(b"\
             HTTP/1.1 401 Unauthorized\r\n\
             WWW-Authenticate: Basic realm=\"wheee\"\r\n
@@ -41,7 +46,7 @@ fn http_auth_offered() {
         assert_eq!(req, vec![
             "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
             "Accept: */*",
-            "User-Agent: git/1.0 (libgit2 0.24.0)",
+            user_agent,
         ].into_iter().map(|s| s.to_string()).collect());
         drop(conn);
 
@@ -56,7 +61,7 @@ fn http_auth_offered() {
             "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
             "Authorization: Basic Zm9vOmJhcg==",
             "Accept: */*",
-            "User-Agent: git/1.0 (libgit2 0.24.0)",
+            user_agent,
         ].into_iter().map(|s| s.to_string()).collect());
     });
 
