@@ -4,13 +4,14 @@ extern crate env_logger;
 extern crate git2_curl;
 extern crate rustc_serialize;
 extern crate toml;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::path::{Path,PathBuf};
+use std::path::{Path, PathBuf};
 
 use cargo::core::shell::{Verbosity, ColorConfig};
 use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
@@ -78,18 +79,18 @@ fn main() {
     };
 
     let result = (|| {
-        let args: Vec<_> = try!(env::args_os().map(|s| {
-            s.into_string().map_err(|s| {
-                human(format!("invalid unicode in argument: {:?}", s))
+        let args: Vec<_> = try!(env::args_os()
+            .map(|s| {
+                s.into_string().map_err(|s| human(format!("invalid unicode in argument: {:?}", s)))
             })
-        }).collect());
+            .collect());
         let rest = &args;
         cargo::call_main_without_stdin(execute, &config, USAGE, rest, true)
     })();
 
     match result {
         Err(e) => cargo::exit_with_error(e, &mut *config.shell()),
-        Ok(()) => {},
+        Ok(()) => {}
     }
 }
 
@@ -140,10 +141,10 @@ each_subcommand!(declare_mod);
 */
 fn execute(flags: Flags, config: &Config) -> CliResult {
     config.configure(flags.flag_verbose,
-                     flags.flag_quiet,
-                     &flags.flag_color,
-                     flags.flag_frozen,
-                     flags.flag_locked)?;
+                   flags.flag_quiet,
+                   &flags.flag_color,
+                   flags.flag_frozen,
+                   flags.flag_locked)?;
 
     init_git_transports(config);
     let _token = cargo::util::job::setup();
@@ -151,9 +152,11 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
     if flags.flag_version {
         let version = cargo::version();
         println!("{}", version);
-        if flags.flag_verbose > 0{
+        if flags.flag_verbose > 0 {
             println!("release: {}.{}.{}",
-                     version.major, version.minor, version.patch);
+                     version.major,
+                     version.minor,
+                     version.patch);
             if let Some(ref cfg) = version.cfg_info {
                 if let Some(ref ci) = cfg.commit_info {
                     println!("commit-hash: {}", ci.commit_hash);
@@ -161,21 +164,21 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
                 }
             }
         }
-        return Ok(())
+        return Ok(());
     }
 
     if flags.flag_list {
         println!("Installed Commands:");
         for command in list_commands(config) {
             println!("    {}", command);
-        };
-        return Ok(())
+        }
+        return Ok(());
     }
 
     if let Some(ref code) = flags.flag_explain {
         let mut procss = config.rustc()?.process();
         procss.arg("--explain").arg(code).exec().map_err(human)?;
-        return Ok(())
+        return Ok(());
     }
 
     let args = match &flags.arg_command[..] {
@@ -190,15 +193,13 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
 
         // For `cargo help -h` and `cargo help --help`, print out the help
         // message for `cargo help`
-        "help" if flags.arg_args[0] == "-h" ||
-                  flags.arg_args[0] == "--help" => {
+        "help" if flags.arg_args[0] == "-h" || flags.arg_args[0] == "--help" => {
             vec!["cargo".to_string(), "help".to_string(), "-h".to_string()]
         }
 
         // For `cargo help foo`, print out the usage message for the specified
         // subcommand by executing the command with the `-h` flag.
-        "help" => vec!["cargo".to_string(), flags.arg_args[0].clone(),
-                       "-h".to_string()],
+        "help" => vec!["cargo".to_string(), flags.arg_args[0].clone(), "-h".to_string()],
 
         // For all other invocations, we're of the form `cargo foo args...`. We
         // use the exact environment arguments to preserve tokens like `--` for
@@ -209,7 +210,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
             default_alias.insert("t", "test".to_string());
             default_alias.insert("r", "run".to_string());
             let mut args: Vec<String> = env::args().collect();
-            if let Some(new_command) = default_alias.get(&args[1][..]){
+            if let Some(new_command) = default_alias.get(&args[1][..]) {
                 args[1] = new_command.clone();
             }
             args
@@ -223,7 +224,8 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
     let alias_list = aliased_command(&config, &args[1])?;
     let args = match alias_list {
         Some(alias_command) => {
-            let chain = args.iter().take(1)
+            let chain = args.iter()
+                .take(1)
                 .chain(alias_command.iter())
                 .chain(args.iter().skip(2))
                 .map(|s| s.to_string())
@@ -262,17 +264,20 @@ fn aliased_command(config: &Config, command: &String) -> CargoResult<Option<Vec<
     match config.get_string(&alias_name) {
         Ok(value) => {
             if let Some(record) = value {
-                let alias_commands = record.val.split_whitespace()
-                                               .map(|s| s.to_string())
-                                               .collect();
+                let alias_commands = record.val
+                    .split_whitespace()
+                    .map(|s| s.to_string())
+                    .collect();
                 result = Ok(Some(alias_commands));
             }
-        },
+        }
         Err(_) => {
             let value = config.get_list(&alias_name)?;
             if let Some(record) = value {
-                let alias_commands: Vec<String> = record.val.iter()
-                                .map(|s| s.0.to_string()).collect();
+                let alias_commands: Vec<String> = record.val
+                    .iter()
+                    .map(|s| s.0.to_string())
+                    .collect();
                 result = Ok(Some(alias_commands));
             }
         }
@@ -284,29 +289,32 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
     let cmds = list_commands(config);
     // Only consider candidates with a lev_distance of 3 or less so we don't
     // suggest out-of-the-blue options.
-    let mut filtered = cmds.iter().map(|c| (lev_distance(&c, cmd), c))
-                                  .filter(|&(d, _)| d < 4)
-                                  .collect::<Vec<_>>();
+    let mut filtered = cmds.iter()
+        .map(|c| (lev_distance(&c, cmd), c))
+        .filter(|&(d, _)| d < 4)
+        .collect::<Vec<_>>();
     filtered.sort_by(|a, b| a.0.cmp(&b.0));
     filtered.get(0).map(|slot| slot.1.clone())
 }
 
-fn execute_external_subcommand(config: &Config,
-                               cmd: &str,
-                               args: &[String]) -> CliResult {
+fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> CliResult {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let path = search_directories(config)
-                    .iter()
-                    .map(|dir| dir.join(&command_exe))
-                    .find(|file| is_executable(file));
+        .iter()
+        .map(|dir| dir.join(&command_exe))
+        .find(|file| is_executable(file));
     let command = match path {
         Some(command) => command,
         None => {
             return Err(human(match find_closest(config, cmd) {
-                Some(closest) => format!("no such subcommand: `{}`\n\n\t\
-                                          Did you mean `{}`?\n", cmd, closest),
-                None => format!("no such subcommand: `{}`", cmd)
-            }).into())
+                    Some(closest) => {
+                        format!("no such subcommand: `{}`\n\n\tDid you mean `{}`?\n",
+                                cmd,
+                                closest)
+                    }
+                    None => format!("no such subcommand: `{}`", cmd),
+                })
+                .into())
         }
     };
     let err = match util::process(&command).args(&args[1..]).exec() {
@@ -329,16 +337,16 @@ fn list_commands(config: &Config) -> BTreeSet<String> {
     for dir in search_directories(config) {
         let entries = match fs::read_dir(dir) {
             Ok(entries) => entries,
-            _ => continue
+            _ => continue,
         };
         for entry in entries.filter_map(|e| e.ok()) {
             let path = entry.path();
             let filename = match path.file_name().and_then(|s| s.to_str()) {
                 Some(filename) => filename,
-                _ => continue
+                _ => continue,
             };
             if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
-                continue
+                continue;
             }
             if is_executable(entry.path()) {
                 let end = filename.len() - suffix.len();
@@ -357,9 +365,9 @@ fn list_commands(config: &Config) -> BTreeSet<String> {
 #[cfg(unix)]
 fn is_executable<P: AsRef<Path>>(path: P) -> bool {
     use std::os::unix::prelude::*;
-    fs::metadata(path).map(|metadata| {
-        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
-    }).unwrap_or(false)
+    fs::metadata(path)
+        .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
 }
 #[cfg(windows)]
 fn is_executable<P: AsRef<Path>>(path: P) -> bool {
@@ -380,7 +388,7 @@ fn init_git_transports(config: &Config) {
     // case. The custom transport, however, is not as well battle-tested.
     match cargo::ops::http_proxy_exists(config) {
         Ok(true) => {}
-        _ => return
+        _ => return,
     }
 
     let handle = match cargo::ops::http_handle(config) {
