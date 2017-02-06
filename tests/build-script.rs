@@ -1782,6 +1782,46 @@ fn changing_an_override_invalidates() {
 }
 
 #[test]
+fn fresh_builds_possible_with_overrides() {
+    // The bug is non-deterministic. Sometimes you can get a fresh build
+    let target = rustc_host();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", &format!("
+            [target.{}.foo]
+            rustc-link-lib = [\"foo\"]
+            rustc-cfg=[\"ossl102\"]
+            version = \"102\"
+            conf = \"\"
+        ", target))
+        .file("build.rs", "");
+ 
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.5.0 ([..]
+[RUNNING] `rustc [..] -l foo`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    sleep_ms(2000);
+
+    assert_that(p.cargo("build").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[FRESH] foo v0.5.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+}
+
+
+#[test]
 fn rebuild_only_on_explicit_paths() {
     let p = project("a")
         .file("Cargo.toml", r#"
