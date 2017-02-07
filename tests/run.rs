@@ -602,7 +602,7 @@ fn run_with_library_paths() {
     // Only link search directories within the target output directory are
     // propagated through to dylib_path_envvar() (see #3366).
     let mut dir1 = p.target_debug_dir();
-    dir1.push("foo");
+    dir1.push("foo\\backslash");
 
     let mut dir2 = p.target_debug_dir();
     dir2.push("dir=containing=equal=signs");
@@ -614,20 +614,20 @@ fn run_with_library_paths() {
             authors = []
             build = "build.rs"
         "#)
-        .file("build.rs", &format!(r#"
+        .file("build.rs", &format!(r##"
             fn main() {{
-                println!("cargo:rustc-link-search=native={}");
-                println!("cargo:rustc-link-search={}");
+                println!(r#"cargo:rustc-link-search=native={}"#);
+                println!(r#"cargo:rustc-link-search={}"#);
             }}
-        "#, dir1.display(), dir2.display()))
-        .file("src/main.rs", &format!(r#"
+        "##, dir1.display(), dir2.display()))
+        .file("src/main.rs", &format!(r##"
             fn main() {{
                 let search_path = std::env::var_os("{}").unwrap();
                 let paths = std::env::split_paths(&search_path).collect::<Vec<_>>();
-                assert!(paths.contains(&"{}".into()));
-                assert!(paths.contains(&"{}".into()));
+                assert!(paths.contains(&r#"{}"#.into()));
+                assert!(paths.contains(&r#"{}"#.into()));
             }}
-        "#, dylib_path_envvar(), dir1.display(), dir2.display()));
+        "##, dylib_path_envvar(), dir1.display(), dir2.display()));
 
     assert_that(p.cargo_process("run"), execs().with_status(0));
 }
