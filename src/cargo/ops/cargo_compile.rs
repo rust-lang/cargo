@@ -528,6 +528,10 @@ fn scrape_target_config(config: &Config, triple: &str)
                     output.metadata.push((k.clone(), val.to_string()));
                 }
             }
+
+            // We randomized the data source with HashMaps, so we must sort the resulting vectors
+            // to produce a deterministic result
+            output.sort();
         }
         ret.overrides.insert(lib_name, output);
     }
