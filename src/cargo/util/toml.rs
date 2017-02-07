@@ -534,7 +534,7 @@ impl TomlManifest {
         }
 
         // processing the custom build script
-        let new_build = self.maybe_custom_build(&project.build, &layout.root, &mut warnings);
+        let new_build = self.maybe_custom_build(&project.build, &layout.root);
 
         // Get targets
         let targets = normalize(&layout.root,
@@ -768,8 +768,7 @@ impl TomlManifest {
 
     fn maybe_custom_build(&self,
                           build: &Option<StringOrBool>,
-                          project_dir: &Path,
-                          warnings: &mut Vec<String>)
+                          project_dir: &Path)
                           -> Option<PathBuf> {
         let build_rs = project_dir.join("build.rs");
         match *build {
@@ -778,15 +777,9 @@ impl TomlManifest {
             Some(StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
             None => {
                 match fs::metadata(&build_rs) {
-                    // Enable this after the warning has been visible for some time
-                    // Ok(ref e) if e.is_file() => Some(build_rs.into()),
-                    Ok(ref e) if e.is_file() => {
-                        warnings.push("`build.rs` files in the same directory \
-                                       as your `Cargo.toml` will soon be treated \
-                                       as build scripts. Add `build = false` to \
-                                       your `Cargo.toml` to prevent this".into());
-                        None
-                    },
+                    // If there is a build.rs file next to the Cargo.toml, assume it is
+                    // a build script
+                    Ok(ref e) if e.is_file() => Some(build_rs.into()),
                     Ok(_) => None,
                     Err(_) => None,
                 }
