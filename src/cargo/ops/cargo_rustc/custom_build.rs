@@ -406,6 +406,17 @@ impl BuildOutput {
         }
         Ok((library_paths, library_links))
     }
+
+    /// Sort the contents of the struct for consistent hashing. 
+    /// Suggested if populated from a HashMap instead of a order-preserving data source
+    pub fn sort(&mut self){
+        self.library_paths.sort();
+        self.library_links.sort();
+        self.cfgs.sort();
+        self.metadata.sort();
+        self.rerun_if_changed.sort();
+        self.warnings.sort();
+    }   
 }
 
 /// Compute the `build_scripts` map in the `Context` which tracks what build
