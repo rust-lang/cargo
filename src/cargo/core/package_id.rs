@@ -5,7 +5,6 @@ use std::hash::Hash;
 use std::hash;
 use std::sync::Arc;
 
-use regex::Regex;
 use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 use semver;
 
@@ -37,17 +36,25 @@ impl Encodable for PackageId {
 impl Decodable for PackageId {
     fn decode<D: Decoder>(d: &mut D) -> Result<PackageId, D::Error> {
         let string: String = Decodable::decode(d)?;
-        let regex = Regex::new(r"^([^ ]+) ([^ ]+) \(([^\)]+)\)$").unwrap();
-        let captures = regex.captures(&string).ok_or_else(|| {
-            d.error("invalid serialized PackageId")
-        })?;
-
-        let name = captures.at(1).unwrap();
-        let version = captures.at(2).unwrap();
-        let url = captures.at(3).unwrap();
+        let mut s = string.splitn(3, ' ');
+        let name = s.next().unwrap();
+        let version = match s.next() {
+            Some(s) => s,
+            None => return Err(d.error("invalid serialized PackageId")),
+        };
         let version = semver::Version::parse(version).map_err(|_| {
             d.error("invalid version")
         })?;
+        let url = match s.next() {
+            Some(s) => s,
+            None => return Err(d.error("invalid serialized PackageId")),
+        };
+        let url = if url.starts_with("(") && url.ends_with(")") {
+            &url[1..url.len() - 1]
+        } else {
+            return Err(d.error("invalid serialized PackageId"))
+
+        };
         let source_id = SourceId::from_url(url).map_err(|e| {
             d.error(&e.to_string())
         })?;

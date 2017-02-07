@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet, BTreeMap};
 use std::fmt;
 use std::str::FromStr;
 
-use regex::Regex;
 use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
 use core::{Package, PackageId, SourceId, Workspace};
@@ -237,16 +236,19 @@ impl FromStr for EncodablePackageId {
     type Err = Box<CargoError>;
 
     fn from_str(s: &str) -> CargoResult<EncodablePackageId> {
-        let regex = Regex::new(r"^([^ ]+) ([^ ]+)(?: \(([^\)]+)\))?$").unwrap();
-        let captures = regex.captures(s).ok_or_else(|| {
+        let mut s = s.splitn(3, ' ');
+        let name = s.next().unwrap();
+        let version = s.next().chain_error(|| {
             internal("invalid serialized PackageId")
         })?;
-
-        let name = captures.at(1).unwrap();
-        let version = captures.at(2).unwrap();
-
-        let source_id = match captures.at(3) {
-            Some(s) => Some(SourceId::from_url(s)?),
+        let source_id = match s.next() {
+            Some(s) => {
+                if s.starts_with("(") && s.ends_with(")") {
+                    Some(SourceId::from_url(&s[1..s.len() - 1])?)
+                } else {
+                    bail!("invalid serialized PackageId")
+                }
+            }
             None => None,
         };
 
