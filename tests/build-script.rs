@@ -306,7 +306,7 @@ fn overrides_and_links() {
 [..]
 [..]
 [..]
-[RUNNING] `rustc --crate-name foo [..] -L foo -L bar[..]`
+[RUNNING] `rustc --crate-name foo [..] -L bar -L foo`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
