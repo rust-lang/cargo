@@ -149,7 +149,7 @@ mod imp {
 
         unsafe fn read(&mut self) -> io::Result<()> {
             let dst = slice_to_end(self.dst);
-            match self.pipe.read_overlapped(dst, &mut self.overlapped) {
+            match self.pipe.read_overlapped(dst, self.overlapped.raw()) {
                 Ok(_) => Ok(()),
                 Err(e) => {
                     if e.raw_os_error() == Some(ERROR_BROKEN_PIPE as i32) {
