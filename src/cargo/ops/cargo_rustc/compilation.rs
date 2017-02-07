@@ -20,7 +20,7 @@ pub struct Compilation<'cfg> {
     /// An array of all binaries created.
     pub binaries: Vec<PathBuf>,
 
-    /// All directires for the output of native build commands.
+    /// All directories for the output of native build commands.
     ///
     /// This is currently used to drive some entries which are added to the
     /// LD_LIBRARY_PATH as appropriate.
@@ -104,7 +104,10 @@ impl<'cfg> Compilation<'cfg> {
         } else {
             let mut search_path = vec![];
 
-            // Add -L arguments, after stripping off prefixes like "native=" or "framework=".
+            // Add -L arguments, after stripping off prefixes like "native="
+            // or "framework=" and filtering out directories *not* inside our
+            // output directory, since they are likely spurious and can cause
+            // clashes with system shared libraries (issue #3366).
             for dir in self.native_dirs.iter() {
                 let dir = match dir.to_str() {
                     Some(s) => {
@@ -120,7 +123,10 @@ impl<'cfg> Compilation<'cfg> {
                     }
                     None => dir.clone(),
                 };
-                search_path.push(dir);
+
+                if dir.starts_with(&self.root_output) {
+                    search_path.push(dir);
+                }
             }
             search_path.push(self.root_output.clone());
             search_path.push(self.deps_output.clone());
