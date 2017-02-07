@@ -408,7 +408,7 @@ impl BuildOutput {
     }
 
     /// Sort the contents of the struct for consistent hashing. 
-    /// Suggested if populated from a HashMap instead of a order-preserving data source
+    /// Suggested if populated from a HashMap instead of an order-preserving data source
     pub fn sort(&mut self){
         self.library_paths.sort();
         self.library_links.sort();

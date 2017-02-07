@@ -1812,8 +1812,6 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
-    sleep_ms(2000);
-
     assert_that(p.cargo("build").arg("-v").env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info"),
                 execs().with_status(0).with_stderr("\
 [FRESH] foo v0.5.0 ([..])
