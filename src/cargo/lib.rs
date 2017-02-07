@@ -16,7 +16,6 @@ extern crate handlebars;
 extern crate libc;
 extern crate libgit2_sys;
 extern crate num_cpus;
-extern crate regex;
 extern crate rustc_serialize;
 extern crate semver;
 extern crate shell_escape;
