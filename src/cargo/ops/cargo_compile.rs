@@ -22,7 +22,8 @@
 //!       previously compiled dependency
 //!
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::default::Default;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -187,7 +188,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
     } else {
         let root_package = ws.current()?;
-        generate_targets(root_package, profiles, mode, filter, release)?;
+        let all_features = resolve_with_overrides.features(root_package.package_id());
+        generate_targets(root_package, profiles, mode, filter, all_features, release)?;
         pkgids.push(root_package.package_id());
     };
 
@@ -204,8 +206,9 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
             panic!("`rustc` and `rustdoc` should not accept multiple `-p` flags")
         }
         (Some(args), _) => {
+            let all_features = resolve_with_overrides.features(to_builds[0].package_id());
             let targets = generate_targets(to_builds[0], profiles,
-                                           mode, filter, release)?;
+                                           mode, filter, all_features, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -218,8 +221,9 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
             }
         }
         (None, Some(args)) => {
+            let all_features = resolve_with_overrides.features(to_builds[0].package_id());
             let targets = generate_targets(to_builds[0], profiles,
-                                           mode, filter, release)?;
+                                           mode, filter, all_features, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -233,8 +237,9 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
         (None, None) => {
             for &to_build in to_builds.iter() {
+                let all_features = resolve_with_overrides.features(to_build.package_id());
                 let targets = generate_targets(to_build, profiles, mode,
-                                               filter, release)?;
+                                               filter, all_features, release)?;
                 package_targets.push((to_build, targets));
             }
         }
@@ -313,6 +318,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                         profiles: &'a Profiles,
                         mode: CompileMode,
                         filter: &CompileFilter,
+                        features: Option<&HashSet<String>>,
                         release: bool)
                         -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
     let build = if release {&profiles.release} else {&profiles.dev};
@@ -325,13 +331,13 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileMode::Doc { .. } => &profiles.doc,
         CompileMode::Doctest => &profiles.doctest,
     };
-    match *filter {
+    let mut targets = match *filter {
         CompileFilter::Everything => {
             match mode {
                 CompileMode::Bench => {
-                    Ok(pkg.targets().iter().filter(|t| t.benched()).map(|t| {
+                    pkg.targets().iter().filter(|t| t.benched()).map(|t| {
                         (t, profile)
-                    }).collect::<Vec<_>>())
+                    }).collect::<Vec<_>>()
                 }
                 CompileMode::Test => {
                     let deps = if release {
@@ -352,16 +358,16 @@ fn generate_targets<'a>(pkg: &'a Package,
                             base.push((t, deps));
                         }
                     }
-                    Ok(base)
+                    base
                 }
                 CompileMode::Build | CompileMode::Check => {
-                    Ok(pkg.targets().iter().filter(|t| {
+                    pkg.targets().iter().filter(|t| {
                         t.is_bin() || t.is_lib()
-                    }).map(|t| (t, profile)).collect())
+                    }).map(|t| (t, profile)).collect()
                 }
                 CompileMode::Doc { .. } => {
-                    Ok(pkg.targets().iter().filter(|t| t.documented())
-                          .map(|t| (t, profile)).collect())
+                    pkg.targets().iter().filter(|t| t.documented())
+                       .map(|t| (t, profile)).collect()
                 }
                 CompileMode::Doctest => {
                     if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
@@ -370,7 +376,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                         }
                     }
 
-                    Ok(Vec::new())
+                    Vec::new()
                 }
             }
         }
@@ -409,6 +415,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                             }
                         };
                         debug!("found {} `{}`", desc, name);
+
                         targets.push((t, profile));
                     }
                     Ok(())
@@ -418,9 +425,37 @@ fn generate_targets<'a>(pkg: &'a Package,
                 find(tests, "test", Target::is_test, test)?;
                 find(benches, "bench", Target::is_bench, &profiles.bench)?;
             }
-            Ok(targets)
+            targets
+        }
+    };
+
+    //Collect the targets that are libraries or have all required features available.
+    let no_features = HashSet::new();
+    let features = features.unwrap_or(&no_features);
+    let mut compatible_targets = Vec::with_capacity(targets.len());
+    for (target, profile) in targets.drain(0..) {
+        if target.is_lib() || match target.required_features() {
+            Some(f) => !f.iter().any(|f| !features.contains(f)),
+            None => true,
+        } {
+            compatible_targets.push((target, profile));
+            continue;
+        }
+
+        if let CompileFilter::Only { .. } = *filter {
+            let required_features = target.required_features().unwrap();
+            let quoted_required_features: Vec<String> = required_features.iter()
+                                                                         .map(|s| format!("`{}`",s))
+                                                                         .collect();
+            bail!("target `{}` requires the features: {}\n\
+                  Consider enabling them by passing e.g. `--features=\"{}\"`",
+                  target.name(),
+                  quoted_required_features.join(", "),
+                  required_features.join(" "));
         }
     }
+
+    Ok(compatible_targets)
 }
 
 /// Parse all config files to learn about build configuration. Currently
