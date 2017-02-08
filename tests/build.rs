@@ -2510,7 +2510,12 @@ fn compiler_json_error_format() {
     {
         "reason":"compiler-message",
         "package_id":"bar 0.5.0 ([..])",
-        "target":{"kind":["lib"],"name":"bar","src_path":"[..]lib.rs"},
+        "target":{
+            "kind":["lib"],
+            "crate_types":["lib"],
+            "name":"bar",
+            "src_path":"[..]lib.rs"
+        },
         "message":"{...}"
     }
 
@@ -2524,21 +2529,36 @@ fn compiler_json_error_format() {
         },
         "features": [],
         "package_id":"bar 0.5.0 ([..])",
-        "target":{"kind":["lib"],"name":"bar","src_path":"[..]lib.rs"},
+        "target":{
+            "kind":["lib"],
+            "crate_types":["lib"],
+            "name":"bar",
+            "src_path":"[..]lib.rs"
+        },
         "filenames":["[..].rlib"]
     }
 
     {
         "reason":"compiler-message",
         "package_id":"foo 0.5.0 ([..])",
-        "target":{"kind":["bin"],"name":"foo","src_path":"[..]main.rs"},
+        "target":{
+            "kind":["bin"],
+            "crate_types":["bin"],
+            "name":"foo",
+            "src_path":"[..]main.rs"
+        },
         "message":"{...}"
     }
 
     {
         "reason":"compiler-artifact",
         "package_id":"foo 0.5.0 ([..])",
-        "target":{"kind":["bin"],"name":"foo","src_path":"[..]main.rs"},
+        "target":{
+            "kind":["bin"],
+            "crate_types":["bin"],
+            "name":"foo",
+            "src_path":"[..]main.rs"
+        },
         "profile": {
             "debug_assertions": true,
             "debuginfo": 2,
