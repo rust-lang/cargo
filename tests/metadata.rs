@@ -203,6 +203,127 @@ fn cargo_metadata_with_deps_and_version() {
 }
 
 #[test]
+fn example() {
+    let p = project("foo")
+            .file("src/lib.rs", "")
+            .file("examples/ex.rs", "")
+            .file("Cargo.toml", r#"
+[package]
+name = "foo"
+version = "0.1.0"
+
+[[example]]
+name = "ex"
+            "#);
+
+    assert_that(p.cargo_process("metadata"), execs().with_json(r#"
+    {
+        "packages": [
+            {
+                "name": "foo",
+                "version": "0.1.0",
+                "id": "foo[..]",
+                "license": null,
+                "license_file": null,
+                "description": null,
+                "source": null,
+                "dependencies": [],
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "crate_types": [ "lib" ],
+                        "name": "foo",
+                        "src_path": "[..][/]foo[/]src[/]lib.rs"
+                    },
+                    {
+                        "kind": [ "example" ],
+                        "crate_types": [ "example" ],
+                        "name": "ex",
+                        "src_path": "[..][/]foo[/]examples[/]ex.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]Cargo.toml"
+            }
+        ],
+        "workspace_members": [
+            "foo 0.1.0 (path+file:[..]foo)"
+        ],
+        "resolve": {
+            "root": "foo 0.1.0 (path+file://[..]foo)",
+            "nodes": [
+                {
+                    "id": "foo 0.1.0 (path+file:[..]foo)",
+                    "dependencies": []
+                }
+            ]
+        },
+        "version": 1
+    }"#));
+}
+
+#[test]
+fn example_lib() {
+    let p = project("foo")
+            .file("src/lib.rs", "")
+            .file("examples/ex.rs", "")
+            .file("Cargo.toml", r#"
+[package]
+name = "foo"
+version = "0.1.0"
+
+[[example]]
+name = "ex"
+crate-type = ["staticlib"]
+            "#);
+
+    assert_that(p.cargo_process("metadata"), execs().with_json(r#"
+    {
+        "packages": [
+            {
+                "name": "foo",
+                "version": "0.1.0",
+                "id": "foo[..]",
+                "license": null,
+                "license_file": null,
+                "description": null,
+                "source": null,
+                "dependencies": [],
+                "targets": [
+                    {
+                        "kind": [ "lib" ],
+                        "crate_types": [ "lib" ],
+                        "name": "foo",
+                        "src_path": "[..][/]foo[/]src[/]lib.rs"
+                    },
+                    {
+                        "kind": [ "example" ],
+                        "crate_types": [ "staticlib" ],
+                        "name": "ex",
+                        "src_path": "[..][/]foo[/]examples[/]ex.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]Cargo.toml"
+            }
+        ],
+        "workspace_members": [
+            "foo 0.1.0 (path+file:[..]foo)"
+        ],
+        "resolve": {
+            "root": "foo 0.1.0 (path+file://[..]foo)",
+            "nodes": [
+                {
+                    "id": "foo 0.1.0 (path+file:[..]foo)",
+                    "dependencies": []
+                }
+            ]
+        },
+        "version": 1
+    }"#));
+}
+
+#[test]
 fn workspace_metadata() {
     let p = project("foo")
         .file("Cargo.toml", r#"
