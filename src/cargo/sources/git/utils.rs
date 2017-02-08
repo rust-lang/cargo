@@ -217,7 +217,10 @@ impl GitDatabase {
             }
             GitReference::Rev(ref s) => {
                 let obj = self.repo.revparse_single(s)?;
-                obj.id()
+                match obj.as_tag() {
+                    Some(tag) => tag.target_id(),
+                    None => obj.id(),
+                }
             }
         };
         Ok(GitRevision(id))
