@@ -306,7 +306,7 @@ fn overrides_and_links() {
 [..]
 [..]
 [..]
-[RUNNING] `rustc --crate-name foo [..] -L foo -L bar[..]`
+[RUNNING] `rustc --crate-name foo [..] -L foo -L bar`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
@@ -1780,6 +1780,87 @@ fn changing_an_override_invalidates() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
+
+
+#[test]
+fn fresh_builds_possible_with_link_libs() {
+    // The bug is non-deterministic. Sometimes you can get a fresh build
+    let target = rustc_host();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            links = "nativefoo"
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", &format!("
+            [target.{}.nativefoo]
+            rustc-link-lib = [\"a\"]
+            rustc-link-search = [\"./b\"]
+            rustc-flags = \"-l z -L ./\"
+        ", target))
+        .file("build.rs", "");
+ 
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.5.0 ([..]
+[RUNNING] `rustc [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    assert_that(p.cargo("build")
+                 .arg("-v")
+                 .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info"),
+                execs().with_status(0).with_stderr("\
+[FRESH] foo v0.5.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+}
+
+
+#[test]
+fn fresh_builds_possible_with_multiple_metadata_overrides() {
+    // The bug is non-deterministic. Sometimes you can get a fresh build
+    let target = rustc_host();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            links = "foo"
+            build = "build.rs"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", &format!("
+            [target.{}.foo]
+            a = \"\"
+            b = \"\"
+            c = \"\"
+            d = \"\"
+            e = \"\"
+        ", target))
+        .file("build.rs", "");
+ 
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.5.0 ([..]
+[RUNNING] `rustc [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    assert_that(p.cargo("build")
+                 .arg("-v")
+                 .env("RUST_LOG", "cargo::ops::cargo_rustc::fingerprint=info"),
+                execs().with_status(0).with_stderr("\
+[FRESH] foo v0.5.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+}
+
 
 #[test]
 fn rebuild_only_on_explicit_paths() {

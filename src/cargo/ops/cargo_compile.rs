@@ -492,7 +492,13 @@ fn scrape_target_config(config: &Config, triple: &str)
             rerun_if_changed: Vec::new(),
             warnings: Vec::new(),
         };
+        // We require deterministic order of evaluation, so we must sort the pairs by key first.
+        let mut pairs = Vec::new();
         for (k, value) in value.table(&lib_name)?.0 {
+            pairs.push((k,value));
+        }
+        pairs.sort_by_key( |p| p.0 );
+        for (k,value) in pairs{
             let key = format!("{}.{}", key, k);
             match &k[..] {
                 "rustc-flags" => {
