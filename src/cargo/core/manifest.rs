@@ -112,19 +112,31 @@ pub enum TargetKind {
     CustomBuild,
 }
 
-impl Encodable for TargetKind {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl TargetKind {
+    pub fn name(&self) -> &'static str {
+        use self::TargetKind::*;
         match *self {
-            TargetKind::Lib(ref kinds) |
-            TargetKind::ExampleLib(ref kinds) => {
+            Lib(_) => "lib",
+            Bin => "bin",
+            ExampleBin | ExampleLib(_) => "example",
+            Test => "test",
+            CustomBuild => "custom-build",
+            Bench => "bench"
+        }
+    }
+
+    pub fn crate_types(&self) -> Vec<&str> {
+        use self::TargetKind::*;
+        match *self {
+            Lib(ref kinds) | ExampleLib(ref kinds) => {
                 kinds.iter().map(LibKind::crate_type).collect()
             }
-            TargetKind::Bin => vec!["bin"],
-            TargetKind::ExampleBin => vec!["example"],
-            TargetKind::Test => vec!["test"],
-            TargetKind::CustomBuild => vec!["custom-build"],
-            TargetKind::Bench => vec!["bench"],
-        }.encode(s)
+            Bin => vec!["bin"],
+            ExampleBin => vec!["example"],
+            Test => vec!["test"],
+            CustomBuild => vec!["custom-build"],
+            Bench => vec!["bench"]
+        }
     }
 }
 
@@ -195,7 +207,8 @@ pub struct Target {
 
 #[derive(RustcEncodable)]
 struct SerializedTarget<'a> {
-    kind: &'a TargetKind,
+    kind: Vec<&'a str>,
+    crate_types: Vec<&'a str>,
     name: &'a str,
     src_path: &'a str,
 }
@@ -203,7 +216,8 @@ struct SerializedTarget<'a> {
 impl Encodable for Target {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         SerializedTarget {
-            kind: &self.kind,
+            kind: vec![self.kind.name()],
+            crate_types: self.kind.crate_types(),
             name: &self.name,
             src_path: &self.src_path.display().to_string(),
         }.encode(s)
