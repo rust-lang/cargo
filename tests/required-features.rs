@@ -1,6 +1,7 @@
 extern crate cargotest;
 extern crate hamcrest;
 
+use cargotest::is_nightly;
 use cargotest::support::{project, execs};
 use hamcrest::{assert_that, existing_file, not};
 
@@ -387,6 +388,10 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 #[test]
 fn bench_default_features() {
+    if !is_nightly() {
+        return;
+    }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -450,6 +455,10 @@ Consider enabling them by passing e.g. `--features=\"a\"`
 
 #[test]
 fn bench_arg_features() {
+    if !is_nightly() {
+        return;
+    }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -488,6 +497,10 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 #[test]
 fn bench_multiple_required_features() {
+    if !is_nightly() {
+        return;
+    }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
