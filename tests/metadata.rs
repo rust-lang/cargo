@@ -28,6 +28,9 @@ fn cargo_metadata_simple() {
                         "kind": [
                             "bin"
                         ],
+                        "crate_types": [
+                            "bin"
+                        ],
                         "name": "foo",
                         "src_path": "[..][/]foo[/]src[/]foo.rs"
                     }
@@ -93,6 +96,9 @@ fn cargo_metadata_with_deps_and_version() {
                         "kind": [
                             "lib"
                         ],
+                        "crate_types": [
+                            "lib"
+                        ],
                         "name": "baz",
                         "src_path": "[..]lib.rs"
                     }
@@ -125,6 +131,9 @@ fn cargo_metadata_with_deps_and_version() {
                         "kind": [
                             "lib"
                         ],
+                        "crate_types": [
+                            "lib"
+                        ],
                         "name": "bar",
                         "src_path": "[..]lib.rs"
                     }
@@ -155,6 +164,9 @@ fn cargo_metadata_with_deps_and_version() {
                 "targets": [
                     {
                         "kind": [
+                            "bin"
+                        ],
+                        "crate_types": [
                             "bin"
                         ],
                         "name": "foo",
@@ -218,6 +230,7 @@ fn workspace_metadata() {
                 "targets": [
                     {
                         "kind": [ "lib" ],
+                        "crate_types": [ "lib" ],
                         "name": "bar",
                         "src_path": "[..]bar[/]src[/]lib.rs"
                     }
@@ -237,6 +250,7 @@ fn workspace_metadata() {
                 "targets": [
                     {
                         "kind": [ "lib" ],
+                        "crate_types": [ "lib" ],
                         "name": "baz",
                         "src_path": "[..]baz[/]src[/]lib.rs"
                     }
@@ -291,6 +305,7 @@ fn workspace_metadata_no_deps() {
                 "targets": [
                     {
                         "kind": [ "lib" ],
+                        "crate_types": [ "lib" ],
                         "name": "bar",
                         "src_path": "[..]bar[/]src[/]lib.rs"
                     }
@@ -310,6 +325,7 @@ fn workspace_metadata_no_deps() {
                 "targets": [
                     {
                         "kind": [ "lib" ],
+                        "crate_types": ["lib"],
                         "name": "baz",
                         "src_path": "[..]baz[/]src[/]lib.rs"
                     }
@@ -351,6 +367,7 @@ const MANIFEST_OUTPUT: &'static str=
         "description": null,
         "targets":[{
             "kind":["bin"],
+            "crate_types":["bin"],
             "name":"foo",
             "src_path":"[..][/]foo[/]src[/]foo.rs"
         }],
