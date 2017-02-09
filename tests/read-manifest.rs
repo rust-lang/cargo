@@ -16,6 +16,7 @@ static MANIFEST_OUTPUT: &'static str = r#"
     "dependencies":[],
     "targets":[{
         "kind":["bin"],
+        "crate_types":["bin"],
         "name":"foo",
         "src_path":"[..][/]foo[/]src[/]foo.rs"
     }],
