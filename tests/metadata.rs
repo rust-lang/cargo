@@ -274,7 +274,7 @@ version = "0.1.0"
 
 [[example]]
 name = "ex"
-crate-type = ["staticlib"]
+crate-type = ["rlib", "dylib"]
             "#);
 
     assert_that(p.cargo_process("metadata"), execs().with_json(r#"
@@ -298,7 +298,7 @@ crate-type = ["staticlib"]
                     },
                     {
                         "kind": [ "example" ],
-                        "crate_types": [ "staticlib" ],
+                        "crate_types": [ "rlib", "dylib" ],
                         "name": "ex",
                         "src_path": "[..][/]foo[/]examples[/]ex.rs"
                     }
