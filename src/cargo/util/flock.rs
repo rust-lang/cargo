@@ -276,6 +276,9 @@ fn acquire(config: &Config,
         #[cfg(target_os = "macos")]
         Err(ref e) if e.raw_os_error() == Some(libc::ENOTSUP) => return Ok(()),
 
+        #[cfg(target_os = "linux")]
+        Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => return Ok(()),
+
         Err(e) => {
             if e.raw_os_error() != lock_contended_error().raw_os_error() {
                 return Err(human(e)).chain_error(|| {
