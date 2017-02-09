@@ -35,7 +35,14 @@ the build command works.
 ## Inputs to the Build Script
 
 When the build script is run, there are a number of inputs to the build script,
-all passed in the form of [environment variables][env].
+all passed in the form of [environment variables][env] or as a CLI command prameters.
+
+CLI parameters for the build script can be passed after '--' flag, eg.:
+```bash
+cargo build --release -- --source-dir=/tmp/data -a
+```
+
+Parameters after '--' (--source-dir and -a) will be ignored by cargo and passed to build script. Parameters can be read via std::env::args().
 
 In addition to environment variables, the build script’s current directory is
 the source directory of the build script’s package.

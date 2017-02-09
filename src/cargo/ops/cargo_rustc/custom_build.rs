@@ -1,4 +1,5 @@
 use std::collections::{HashMap, BTreeSet, HashSet};
+use std::env;
 use std::fs;
 use std::path::{PathBuf, Path};
 use std::str;
@@ -113,6 +114,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
        .env("HOST", cx.host_triple())
        .env("RUSTC", &cx.config.rustc()?.path)
        .env("RUSTDOC", &*cx.config.rustdoc()?);
+
+    for arg in env::args_os().skip_while(|x| x != "--").skip(1) {
+        cmd.arg(arg);
+    }
 
     if let Some(links) = unit.pkg.manifest().links() {
         cmd.env("CARGO_MANIFEST_LINKS", links);

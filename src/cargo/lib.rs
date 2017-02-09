@@ -113,7 +113,7 @@ pub fn call_main_without_stdin<Flags: Decodable>(
 {
     let docopt = Docopt::new(usage).unwrap()
         .options_first(options_first)
-        .argv(args.iter().map(|s| &s[..]))
+        .argv(args.iter().take_while(|x| *x != "--").map(|s| &s[..]))
         .help(true);
 
     let flags = docopt.decode().map_err(|e| {
