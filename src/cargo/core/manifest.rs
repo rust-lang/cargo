@@ -3,7 +3,7 @@ use std::fmt;
 use std::path::{PathBuf, Path};
 
 use semver::Version;
-use rustc_serialize::{Encoder, Encodable};
+use serde::ser;
 
 use core::{Dependency, PackageId, Summary, SourceId, PackageIdSpec};
 use core::WorkspaceConfig;
@@ -113,20 +113,6 @@ pub enum TargetKind {
 }
 
 impl TargetKind {
-    /// Returns a vector of crate types as specified in a manifest with one difference.
-    /// For ExampleLib it returns "example" instead of crate types
-    pub fn kinds(&self) -> Vec<&str> {
-        use self::TargetKind::*;
-        match *self {
-            Lib(ref kinds) => kinds.iter().map(LibKind::crate_type).collect(),
-            Bin => vec!["bin"],
-            ExampleBin | ExampleLib(_) => vec!["example"],
-            Test => vec!["test"],
-            CustomBuild => vec!["custom-build"],
-            Bench => vec!["bench"]
-        }
-    }
-
     /// Returns a vector of crate types as specified in a manifest
     pub fn crate_types(&self) -> Vec<&str> {
         use self::TargetKind::*;
@@ -143,40 +129,50 @@ impl TargetKind {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+impl ser::Serialize for TargetKind {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer,
+    {
+        use self::TargetKind::*;
+        match *self {
+            Lib(ref kinds) => kinds.iter().map(LibKind::crate_type).collect(),
+            Bin => vec!["bin"],
+            ExampleBin | ExampleLib(_) => vec!["example"],
+            Test => vec!["test"],
+            CustomBuild => vec!["custom-build"],
+            Bench => vec!["bench"]
+        }.serialize(s)
+    }
+}
+
+
+// Note that most of the fields here are skipped when serializing because we
+// don't want to export them just yet (becomes a public API of Cargo). Others
+// though are definitely needed!
+#[derive(Clone, PartialEq, Eq, Debug, Hash, Serialize)]
 pub struct Profile {
     pub opt_level: String,
+    #[serde(skip_serializing)]
     pub lto: bool,
+    #[serde(skip_serializing)]
     pub codegen_units: Option<u32>,    // None = use rustc default
+    #[serde(skip_serializing)]
     pub rustc_args: Option<Vec<String>>,
+    #[serde(skip_serializing)]
     pub rustdoc_args: Option<Vec<String>>,
     pub debuginfo: Option<u32>,
     pub debug_assertions: bool,
+    #[serde(skip_serializing)]
     pub rpath: bool,
     pub test: bool,
+    #[serde(skip_serializing)]
     pub doc: bool,
+    #[serde(skip_serializing)]
     pub run_custom_build: bool,
+    #[serde(skip_serializing)]
     pub check: bool,
+    #[serde(skip_serializing)]
     pub panic: Option<String>,
-}
-
-#[derive(RustcEncodable)]
-struct SerializedProfile<'a> {
-    opt_level: &'a str,
-    debuginfo: Option<u32>,
-    debug_assertions: bool,
-    test: bool,
-}
-
-impl Encodable for Profile {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        SerializedProfile {
-            opt_level: &self.opt_level,
-            debuginfo: self.debuginfo,
-            debug_assertions: self.debug_assertions,
-            test: self.test,
-        }.encode(s)
-    }
 }
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
@@ -209,22 +205,22 @@ pub struct Target {
     for_host: bool,
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 struct SerializedTarget<'a> {
-    kind: Vec<&'a str>,
+    kind: &'a TargetKind,
     crate_types: Vec<&'a str>,
     name: &'a str,
-    src_path: &'a str,
+    src_path: &'a PathBuf,
 }
 
-impl Encodable for Target {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl ser::Serialize for Target {
+    fn serialize<S: ser::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         SerializedTarget {
-            kind: self.kind.kinds(),
+            kind: &self.kind,
             crate_types: self.kind.crate_types(),
             name: &self.name,
-            src_path: &self.src_path.display().to_string(),
-        }.encode(s)
+            src_path: &self.src_path,
+        }.serialize(s)
     }
 }
 

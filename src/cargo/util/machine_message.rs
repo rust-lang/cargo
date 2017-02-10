@@ -1,27 +1,23 @@
-use rustc_serialize::Encodable;
-use rustc_serialize::json::{self, Json};
+use serde::ser;
+use serde_json::{self, Value};
 
 use core::{PackageId, Target, Profile};
 
-pub trait Message: Encodable {
+pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;
 }
 
 pub fn emit<T: Message>(t: T) {
-    let json = json::encode(&t).unwrap();
-    let mut map = match json.parse().unwrap() {
-        Json::Object(obj) => obj,
-        _ => panic!("not a json object"),
-    };
-    map.insert("reason".to_string(), Json::String(t.reason().to_string()));
-    println!("{}", Json::Object(map));
+    let mut json: Value = serde_json::to_value(&t).unwrap();
+    json["reason"] = json!(t.reason());
+    println!("{}", json);
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 pub struct FromCompiler<'a> {
     pub package_id: &'a PackageId,
     pub target: &'a Target,
-    pub message: json::Json,
+    pub message: serde_json::Value,
 }
 
 impl<'a> Message for FromCompiler<'a> {
@@ -30,7 +26,7 @@ impl<'a> Message for FromCompiler<'a> {
     }
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 pub struct Artifact<'a> {
     pub package_id: &'a PackageId,
     pub target: &'a Target,
@@ -45,7 +41,7 @@ impl<'a> Message for Artifact<'a> {
     }
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 pub struct BuildScript<'a> {
     pub package_id: &'a PackageId,
     pub linked_libs: &'a [String],

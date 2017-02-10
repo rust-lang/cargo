@@ -3,6 +3,8 @@
 
 #[cfg(test)] extern crate hamcrest;
 #[macro_use] extern crate log;
+#[macro_use] extern crate serde_derive;
+#[macro_use] extern crate serde_json;
 extern crate crates_io as registry;
 extern crate crossbeam;
 extern crate curl;
@@ -18,6 +20,8 @@ extern crate libgit2_sys;
 extern crate num_cpus;
 extern crate rustc_serialize;
 extern crate semver;
+extern crate serde;
+extern crate serde_ignored;
 extern crate shell_escape;
 extern crate tar;
 extern crate tempdir;
@@ -27,8 +31,8 @@ extern crate url;
 
 use std::io;
 use std::fmt;
-use rustc_serialize::{Decodable, Encodable};
-use rustc_serialize::json;
+use rustc_serialize::Decodable;
+use serde::ser;
 use docopt::Docopt;
 
 use core::{Shell, MultiShell, ShellConfig, Verbosity, ColorConfig};
@@ -121,8 +125,8 @@ pub fn call_main_without_stdin<Flags: Decodable>(
     exec(flags, config)
 }
 
-pub fn print_json<T: Encodable>(obj: &T) {
-    let encoded = json::encode(&obj).unwrap();
+pub fn print_json<T: ser::Serialize>(obj: &T) {
+    let encoded = serde_json::to_string(&obj).unwrap();
     println!("{}", encoded);
 }
 

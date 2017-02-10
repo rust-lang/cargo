@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, BTreeSet};
 use std::default::Default;
 use std::fmt;
 use std::fs;
@@ -7,7 +7,8 @@ use std::str;
 
 use toml;
 use semver::{self, VersionReq};
-use rustc_serialize::{Decodable, Decoder};
+use serde::de::{self, Deserialize};
+use serde_ignored;
 
 use core::{SourceId, Profiles, PackageIdSpec, GitReference, WorkspaceConfig};
 use core::{Summary, Manifest, Target, Dependency, DependencyInner, PackageId};
@@ -29,7 +30,6 @@ pub struct Layout {
     examples: Vec<PathBuf>,
     tests: Vec<PathBuf>,
     benches: Vec<PathBuf>,
-
 }
 
 impl Layout {
@@ -102,15 +102,19 @@ pub fn to_manifest(contents: &str,
         None => manifest.clone(),
     };
     let root = parse(contents, &manifest, config)?;
-    let mut d = toml::Decoder::new(toml::Value::Table(root));
-    let manifest: TomlManifest = Decodable::decode(&mut d).map_err(|e| {
-        human(e.to_string())
+    let mut unused = BTreeSet::new();
+    let manifest: TomlManifest = serde_ignored::deserialize(root, |path| {
+        let mut key = String::new();
+        stringify(&mut key, &path);
+        if !key.starts_with("package.metadata") {
+            unused.insert(key);
+        }
     })?;
 
     return match manifest.to_real_manifest(source_id, &layout, config) {
         Ok((mut manifest, paths)) => {
-            if let Some(ref toml) = d.toml {
-                add_unused_keys(&mut manifest, toml, String::new());
+            for key in unused {
+                manifest.add_warning(format!("unused manifest key: {}", key));
             }
             if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
                 bail!("no targets specified in the manifest\n  \
@@ -127,41 +131,43 @@ pub fn to_manifest(contents: &str,
         }
     };
 
-    fn add_unused_keys(m: &mut Manifest, toml: &toml::Value, key: String) {
-        if key == "package.metadata" {
-            return
-        }
-        match *toml {
-            toml::Value::Table(ref table) => {
-                for (k, v) in table.iter() {
-                    add_unused_keys(m, v, if key.is_empty() {
-                        k.clone()
-                    } else {
-                        key.clone() + "." + k
-                    })
+    fn stringify(dst: &mut String, path: &serde_ignored::Path) {
+        use serde_ignored::Path;
+
+        match *path {
+            Path::Root => {}
+            Path::Seq { parent, index } => {
+                stringify(dst, parent);
+                if dst.len() > 0 {
+                    dst.push_str(".");
                 }
+                dst.push_str(&index.to_string());
             }
-            toml::Value::Array(ref arr) => {
-                for v in arr.iter() {
-                    add_unused_keys(m, v, key.clone());
+            Path::Map { parent, ref key } => {
+                stringify(dst, parent);
+                if dst.len() > 0 {
+                    dst.push_str(".");
                 }
+                dst.push_str(key);
             }
-            _ => m.add_warning(format!("unused manifest key: {}", key)),
+            Path::Some { parent } |
+            Path::NewtypeVariant { parent } |
+            Path::NewtypeStruct { parent } => stringify(dst, parent),
         }
     }
 }
 
 pub fn parse(toml: &str,
              file: &Path,
-             config: &Config) -> CargoResult<toml::Table> {
-    let mut first_parser = toml::Parser::new(toml);
-    if let Some(toml) = first_parser.parse() {
-        return Ok(toml);
-    }
+             config: &Config) -> CargoResult<toml::Value> {
+    let first_error = match toml.parse() {
+        Ok(ret) => return Ok(ret),
+        Err(e) => e,
+    };
 
-    let mut second_parser = toml::Parser::new(toml);
+    let mut second_parser = toml::de::Deserializer::new(toml);
     second_parser.set_require_newline_after_table(false);
-    if let Some(toml) = second_parser.parse() {
+    if let Ok(ret) = toml::Value::deserialize(&mut second_parser) {
         let msg = format!("\
 TOML file found which contains invalid syntax and will soon not parse
 at `{}`.
@@ -171,25 +177,12 @@ invalid), but this file has a table header which does not have a newline after
 it. A newline needs to be added and this warning will soon become a hard error
 in the future.", file.display());
         config.shell().warn(&msg)?;
-        return Ok(toml)
+        return Ok(ret)
     }
 
-    let mut error_str = "could not parse input as TOML\n".to_string();
-    for error in first_parser.errors.iter() {
-        let (loline, locol) = first_parser.to_linecol(error.lo);
-        let (hiline, hicol) = first_parser.to_linecol(error.hi);
-        error_str.push_str(&format!("{}:{}:{}{} {}\n",
-                                    file.display(),
-                                    loline + 1, locol + 1,
-                                    if loline != hiline || locol != hicol {
-                                        format!("-{}:{}", hiline + 1,
-                                                hicol + 1)
-                                    } else {
-                                        "".to_string()
-                                    },
-                                    error.desc));
-    }
-    Err(human(error_str))
+    Err(first_error).chain_error(|| {
+        human("could not parse input as TOML")
+    })
 }
 
 type TomlLibTarget = TomlTarget;
@@ -198,14 +191,15 @@ type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
+#[serde(untagged)]
 pub enum TomlDependency {
     Simple(String),
     Detailed(DetailedTomlDependency)
 }
 
 
-#[derive(RustcDecodable, Clone, Default)]
+#[derive(Deserialize, Clone, Default)]
 pub struct DetailedTomlDependency {
     version: Option<String>,
     path: Option<String>,
@@ -215,10 +209,11 @@ pub struct DetailedTomlDependency {
     rev: Option<String>,
     features: Option<Vec<String>>,
     optional: Option<bool>,
+    #[serde(rename = "default-features")]
     default_features: Option<bool>,
 }
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct TomlManifest {
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
@@ -229,7 +224,9 @@ pub struct TomlManifest {
     test: Option<Vec<TomlTestTarget>>,
     bench: Option<Vec<TomlTestTarget>>,
     dependencies: Option<HashMap<String, TomlDependency>>,
+    #[serde(rename = "dev-dependencies")]
     dev_dependencies: Option<HashMap<String, TomlDependency>>,
+    #[serde(rename = "build-dependencies")]
     build_dependencies: Option<HashMap<String, TomlDependency>>,
     features: Option<HashMap<String, Vec<String>>>,
     target: Option<HashMap<String, TomlPlatform>>,
@@ -238,7 +235,7 @@ pub struct TomlManifest {
     badges: Option<HashMap<String, HashMap<String, String>>>,
 }
 
-#[derive(RustcDecodable, Clone, Default)]
+#[derive(Deserialize, Clone, Default)]
 pub struct TomlProfiles {
     test: Option<TomlProfile>,
     doc: Option<TomlProfile>,
@@ -250,50 +247,74 @@ pub struct TomlProfiles {
 #[derive(Clone)]
 pub struct TomlOptLevel(String);
 
-impl Decodable for TomlOptLevel {
-    fn decode<D: Decoder>(d: &mut D) -> Result<TomlOptLevel, D::Error> {
-        match d.read_u32() {
-            Ok(i) => Ok(TomlOptLevel(i.to_string())),
-            Err(_) => {
-                match d.read_str() {
-                    Ok(ref s) if s == "s" || s == "z" =>
-                        Ok(TomlOptLevel(s.to_string())),
-                    Ok(_) | Err(_) =>
-                        Err(d.error("expected an integer, a string \"z\" or a string \"s\""))
+impl de::Deserialize for TomlOptLevel {
+    fn deserialize<D>(d: D) -> Result<TomlOptLevel, D::Error>
+        where D: de::Deserializer
+    {
+        struct Visitor;
+
+        impl de::Visitor for Visitor {
+            type Value = TomlOptLevel;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("an optimization level")
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<TomlOptLevel, E>
+                where E: de::Error
+            {
+                Ok(TomlOptLevel(value.to_string()))
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<TomlOptLevel, E>
+                where E: de::Error
+            {
+                if value == "s" || value == "z" {
+                    Ok(TomlOptLevel(value.to_string()))
+                } else {
+                    Err(E::custom(format!("must be an integer, `z`, or `s`, \
+                                           but found: {}", value)))
                 }
             }
         }
+
+        d.deserialize_u32(Visitor)
     }
 }
 
-#[derive(RustcDecodable, Clone)]
+#[derive(Deserialize, Clone)]
+#[serde(untagged)]
 pub enum U32OrBool {
     U32(u32),
     Bool(bool),
 }
 
-#[derive(RustcDecodable, Clone, Default)]
+#[derive(Deserialize, Clone, Default)]
 pub struct TomlProfile {
+    #[serde(rename = "opt-level")]
     opt_level: Option<TomlOptLevel>,
     lto: Option<bool>,
+    #[serde(rename = "codegen-units")]
     codegen_units: Option<u32>,
     debug: Option<U32OrBool>,
+    #[serde(rename = "debug-assertions")]
     debug_assertions: Option<bool>,
     rpath: Option<bool>,
     panic: Option<String>,
 }
 
-#[derive(RustcDecodable, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug)]
+#[serde(untagged)]
 pub enum StringOrBool {
     String(String),
     Bool(bool),
 }
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct TomlProject {
     name: String,
     version: TomlVersion,
-    authors: Vec<String>,
+    authors: Option<Vec<String>>,
     build: Option<StringOrBool>,
     links: Option<String>,
     exclude: Option<Vec<String>>,
@@ -309,11 +330,12 @@ pub struct TomlProject {
     keywords: Option<Vec<String>>,
     categories: Option<Vec<String>>,
     license: Option<String>,
+    #[serde(rename = "license-file")]
     license_file: Option<String>,
     repository: Option<String>,
 }
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct TomlWorkspace {
     members: Option<Vec<String>>,
 }
@@ -322,13 +344,30 @@ pub struct TomlVersion {
     version: semver::Version,
 }
 
-impl Decodable for TomlVersion {
-    fn decode<D: Decoder>(d: &mut D) -> Result<TomlVersion, D::Error> {
-        let s = d.read_str()?;
-        match s.to_semver() {
-            Ok(s) => Ok(TomlVersion { version: s }),
-            Err(e) => Err(d.error(&e)),
+impl de::Deserialize for TomlVersion {
+    fn deserialize<D>(d: D) -> Result<TomlVersion, D::Error>
+        where D: de::Deserializer
+    {
+        struct Visitor;
+
+        impl de::Visitor for Visitor {
+            type Value = TomlVersion;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a semver version")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<TomlVersion, E>
+                where E: de::Error
+            {
+                match value.to_semver() {
+                    Ok(s) => Ok(TomlVersion { version: s}),
+                    Err(e) => Err(E::custom(e)),
+                }
+            }
         }
+
+        d.deserialize_str(Visitor)
     }
 }
 
@@ -630,7 +669,7 @@ impl TomlManifest {
             homepage: project.homepage.clone(),
             documentation: project.documentation.clone(),
             readme: project.readme.clone(),
-            authors: project.authors.clone(),
+            authors: project.authors.clone().unwrap_or(Vec::new()),
             license: project.license.clone(),
             license_file: project.license_file.clone(),
             repository: project.repository.clone(),
@@ -918,50 +957,50 @@ impl TomlDependency {
     }
 }
 
-#[derive(RustcDecodable, Debug, Clone)]
+#[derive(Default, Deserialize, Debug, Clone)]
 struct TomlTarget {
     name: Option<String>,
+
+    // The intention was to only accept `crate-type` here but historical
+    // versions of Cargo also accepted `crate_type`, so look for both.
+    #[serde(rename = "crate-type")]
     crate_type: Option<Vec<String>>,
+    #[serde(rename = "crate_type")]
+    crate_type2: Option<Vec<String>>,
+
     path: Option<PathValue>,
     test: Option<bool>,
     doctest: Option<bool>,
     bench: Option<bool>,
     doc: Option<bool>,
     plugin: Option<bool>,
+    #[serde(rename = "proc-macro")]
     proc_macro: Option<bool>,
     harness: Option<bool>,
+    #[serde(rename = "required-features")]
     required_features: Option<Vec<String>>,
 }
 
-#[derive(RustcDecodable, Clone)]
+#[derive(Deserialize, Clone)]
+#[serde(untagged)]
 enum PathValue {
     String(String),
     Path(PathBuf),
 }
 
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 struct TomlPlatform {
     dependencies: Option<HashMap<String, TomlDependency>>,
+    #[serde(rename = "build-dependencies")]
     build_dependencies: Option<HashMap<String, TomlDependency>>,
+    #[serde(rename = "dev-dependencies")]
     dev_dependencies: Option<HashMap<String, TomlDependency>>,
 }
 
 impl TomlTarget {
     fn new() -> TomlTarget {
-        TomlTarget {
-            name: None,
-            crate_type: None,
-            path: None,
-            test: None,
-            doctest: None,
-            bench: None,
-            doc: None,
-            plugin: None,
-            proc_macro: None,
-            harness: None,
-            required_features: None
-        }
+        TomlTarget::default()
     }
 
     fn name(&self) -> String {
@@ -1100,7 +1139,8 @@ fn normalize(package_root: &Path,
         let path = l.path.clone().unwrap_or_else(
             || PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name())))
         );
-        let crate_types = match l.crate_type.clone() {
+        let crate_types = l.crate_type.as_ref().or(l.crate_type2.as_ref());
+        let crate_types = match crate_types {
             Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
             None => {
                 vec![ if l.plugin == Some(true) {LibKind::Dylib}
@@ -1148,8 +1188,9 @@ fn normalize(package_root: &Path,
                 PathValue::Path(default(ex))
             });
 
-            let crate_types = match ex.crate_type {
-                Some(ref kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
+            let crate_types = ex.crate_type.as_ref().or(ex.crate_type2.as_ref());
+            let crate_types = match crate_types {
+                Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
                 None => Vec::new()
             };
 

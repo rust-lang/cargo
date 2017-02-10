@@ -2,14 +2,15 @@ use std::collections::{HashMap, HashSet, BTreeMap};
 use std::fmt;
 use std::str::FromStr;
 
-use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
+use serde::ser;
+use serde::de;
 
 use core::{Package, PackageId, SourceId, Workspace};
 use util::{CargoResult, Graph, Config, internal, ChainError, CargoError};
 
 use super::Resolve;
 
-#[derive(RustcEncodable, RustcDecodable, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct EncodableResolve {
     package: Option<Vec<EncodableDependency>>,
     /// `root` is optional to allow forward compatibility.
@@ -206,7 +207,7 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
     }
 }
 
-#[derive(RustcEncodable, RustcDecodable, Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub struct EncodableDependency {
     name: String,
     version: String,
@@ -260,17 +261,21 @@ impl FromStr for EncodablePackageId {
     }
 }
 
-impl Encodable for EncodablePackageId {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        self.to_string().encode(s)
+impl ser::Serialize for EncodablePackageId {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer,
+    {
+        self.to_string().serialize(s)
     }
 }
 
-impl Decodable for EncodablePackageId {
-    fn decode<D: Decoder>(d: &mut D) -> Result<EncodablePackageId, D::Error> {
-        String::decode(d).and_then(|string| {
+impl de::Deserialize for EncodablePackageId {
+    fn deserialize<D>(d: D) -> Result<EncodablePackageId, D::Error>
+        where D: de::Deserializer,
+    {
+        String::deserialize(d).and_then(|string| {
             string.parse::<EncodablePackageId>()
-                  .map_err(|e| d.error(&e.to_string()))
+                  .map_err(de::Error::custom)
         })
     }
 }
@@ -281,8 +286,10 @@ pub struct WorkspaceResolve<'a, 'cfg: 'a> {
     pub use_root_key: bool,
 }
 
-impl<'a, 'cfg> Encodable for WorkspaceResolve<'a, 'cfg> {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer,
+    {
         let mut ids: Vec<&PackageId> = self.resolve.graph.iter().collect();
         ids.sort();
 
@@ -320,7 +327,7 @@ impl<'a, 'cfg> Encodable for WorkspaceResolve<'a, 'cfg> {
             package: Some(encodable),
             root: root,
             metadata: metadata,
-        }.encode(s)
+        }.serialize(s)
     }
 }
 

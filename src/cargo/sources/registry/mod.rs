@@ -184,7 +184,7 @@ pub struct RegistrySource<'cfg> {
     index_locked: bool,
 }
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct RegistryConfig {
     /// Download endpoint for all crates. This will be appended with
     /// `/<crate>/<version>/download` and then will be hit with an HTTP GET
@@ -196,7 +196,7 @@ pub struct RegistryConfig {
     pub api: String,
 }
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 struct RegistryPackage {
     name: String,
     vers: String,
@@ -206,7 +206,7 @@ struct RegistryPackage {
     yanked: Option<bool>,
 }
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 struct RegistryDependency {
     name: String,
     req: String,

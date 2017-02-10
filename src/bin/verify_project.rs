@@ -6,7 +6,7 @@ use std::process;
 use cargo;
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 use cargo::util::{CliResult, Config};
-use rustc_serialize::json;
+use serde_json;
 use toml;
 
 #[derive(RustcDecodable)]
@@ -55,10 +55,9 @@ pub fn execute(args: Flags, config: &Config) -> CliResult {
         Ok(_) => {},
         Err(e) => fail("invalid", &format!("error reading file: {}", e))
     };
-    match toml::Parser::new(&contents).parse() {
-        None => fail("invalid", "invalid-format"),
-        Some(..) => {}
-    };
+    if contents.parse::<toml::Value>().is_err() {
+        fail("invalid", "invalid-format");
+    }
 
     let mut h = HashMap::new();
     h.insert("success".to_string(), "true".to_string());
@@ -69,6 +68,6 @@ pub fn execute(args: Flags, config: &Config) -> CliResult {
 fn fail(reason: &str, value: &str) -> ! {
     let mut h = HashMap::new();
     h.insert(reason.to_string(), value.to_string());
-    println!("{}", json::encode(&h).unwrap());
+    println!("{}", serde_json::to_string(&h).unwrap());
     process::exit(1)
 }

@@ -1317,17 +1317,17 @@ fn old_version_req_upstream() {
     p.build();
 
     Package::new("remote", "0.3.0")
-			.file("Cargo.toml", r#"
-				[project]
+            .file("Cargo.toml", r#"
+                [project]
                 name = "remote"
                 version = "0.3.0"
                 authors = []
 
                 [dependencies]
                 bar = "0.2*"
-			"#)
+            "#)
             .file("src/lib.rs", "")
-			.publish();
+            .publish();
     Package::new("bar", "0.2.0").publish();
 
     assert_that(p.cargo("build"),
@@ -1356,17 +1356,17 @@ fn toml_lies_but_index_is_truth() {
     Package::new("foo", "0.2.0").publish();
     Package::new("bar", "0.3.0")
             .dep("foo", "0.2.0")
-			.file("Cargo.toml", r#"
-				[project]
+            .file("Cargo.toml", r#"
+                [project]
                 name = "bar"
                 version = "0.3.0"
                 authors = []
 
                 [dependencies]
                 foo = "0.1.0"
-			"#)
+            "#)
             .file("src/lib.rs", "extern crate foo;")
-			.publish();
+            .publish();
 
     let p = project("foo")
         .file("Cargo.toml", r#"

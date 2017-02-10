@@ -1,6 +1,8 @@
 extern crate curl;
 extern crate url;
-extern crate rustc_serialize;
+extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
 
 use std::collections::HashMap;
 use std::fmt;
@@ -10,7 +12,6 @@ use std::io::{self, Cursor};
 use std::result;
 
 use curl::easy::{Easy, List};
-use rustc_serialize::json::{self, Json};
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
@@ -37,26 +38,12 @@ pub enum Error {
     TokenMissing,
     Io(io::Error),
     NotFound,
-    JsonEncodeError(json::EncoderError),
-    JsonDecodeError(json::DecoderError),
-    JsonParseError(json::ParserError),
+    Json(serde_json::Error),
 }
 
-impl From<json::EncoderError> for Error {
-    fn from(err: json::EncoderError) -> Error {
-        Error::JsonEncodeError(err)
-    }
-}
-
-impl From<json::DecoderError> for Error {
-    fn from(err: json::DecoderError) -> Error {
-        Error::JsonDecodeError(err)
-    }
-}
-
-impl From<json::ParserError> for Error {
-    fn from(err: json::ParserError) -> Error {
-        Error::JsonParseError(err)
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Error {
+        Error::Json(err)
     }
 }
 
@@ -66,14 +53,14 @@ impl From<curl::Error> for Error {
     }
 }
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Crate {
     pub name: String,
     pub description: Option<String>,
     pub max_version: String
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 pub struct NewCrate {
     pub name: String,
     pub vers: String,
@@ -92,7 +79,7 @@ pub struct NewCrate {
     pub badges: HashMap<String, HashMap<String, String>>,
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 pub struct NewCrateDependency {
     pub optional: bool,
     pub default_features: bool,
@@ -103,7 +90,7 @@ pub struct NewCrateDependency {
     pub kind: String,
 }
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct User {
     pub id: u32,
     pub login: String,
@@ -117,13 +104,13 @@ pub struct Warnings {
     pub invalid_badges: Vec<String>,
 }
 
-#[derive(RustcDecodable)] struct R { ok: bool }
-#[derive(RustcDecodable)] struct ApiErrorList { errors: Vec<ApiError> }
-#[derive(RustcDecodable)] struct ApiError { detail: String }
-#[derive(RustcEncodable)] struct OwnersReq<'a> { users: &'a [&'a str] }
-#[derive(RustcDecodable)] struct Users { users: Vec<User> }
-#[derive(RustcDecodable)] struct TotalCrates { total: u32 }
-#[derive(RustcDecodable)] struct Crates { crates: Vec<Crate>, meta: TotalCrates }
+#[derive(Deserialize)] struct R { ok: bool }
+#[derive(Deserialize)] struct ApiErrorList { errors: Vec<ApiError> }
+#[derive(Deserialize)] struct ApiError { detail: String }
+#[derive(Serialize)] struct OwnersReq<'a> { users: &'a [&'a str] }
+#[derive(Deserialize)] struct Users { users: Vec<User> }
+#[derive(Deserialize)] struct TotalCrates { total: u32 }
+#[derive(Deserialize)] struct Crates { crates: Vec<Crate>, meta: TotalCrates }
 impl Registry {
     pub fn new(host: String, token: Option<String>) -> Registry {
         Registry::new_handle(host, token, Easy::new())
@@ -140,29 +127,29 @@ impl Registry {
     }
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = json::encode(&OwnersReq { users: owners })?;
+        let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.put(format!("/crates/{}/owners", krate),
                                  body.as_bytes())?;
-        assert!(json::decode::<R>(&body)?.ok);
+        assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = json::encode(&OwnersReq { users: owners })?;
+        let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.delete(format!("/crates/{}/owners", krate),
                                     Some(body.as_bytes()))?;
-        assert!(json::decode::<R>(&body)?.ok);
+        assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn list_owners(&mut self, krate: &str) -> Result<Vec<User>> {
         let body = self.get(format!("/crates/{}/owners", krate))?;
-        Ok(json::decode::<Users>(&body)?.users)
+        Ok(serde_json::from_str::<Users>(&body)?.users)
     }
 
     pub fn publish(&mut self, krate: &NewCrate, tarball: &File)
                    -> Result<Warnings> {
-        let json = json::encode(krate)?;
+        let json = serde_json::to_string(krate)?;
         // Prepare the body. The format of the upload request is:
         //
         //      <le u32 of json>
@@ -208,28 +195,27 @@ impl Registry {
             body.read(buf).unwrap_or(0)
         })?;
 
-        // Can't derive RustcDecodable because JSON has a key named "crate" :(
         let response = if body.len() > 0 {
-            Json::from_str(&body)?
+            body.parse::<serde_json::Value>()?
         } else {
-            Json::from_str("{}")?
+            "{}".parse()?
         };
 
         let invalid_categories: Vec<String> =
-            response
-                .find_path(&["warnings", "invalid_categories"])
-                .and_then(Json::as_array)
+            response.get("warnings")
+                .and_then(|j| j.get("invalid_categories"))
+                .and_then(|j| j.as_array())
                 .map(|x| {
-                    x.iter().flat_map(Json::as_string).map(Into::into).collect()
+                    x.iter().flat_map(|j| j.as_str()).map(Into::into).collect()
                 })
                 .unwrap_or_else(Vec::new);
 
         let invalid_badges: Vec<String> =
-            response
-                .find_path(&["warnings", "invalid_badges"])
-                .and_then(Json::as_array)
+            response.get("warnings")
+                .and_then(|j| j.get("invalid_badges"))
+                .and_then(|j| j.as_array())
                 .map(|x| {
-                    x.iter().flat_map(Json::as_string).map(Into::into).collect()
+                    x.iter().flat_map(|j| j.as_str()).map(Into::into).collect()
                 })
                 .unwrap_or_else(Vec::new);
 
@@ -246,21 +232,21 @@ impl Registry {
             None, Auth::Unauthorized
         )?;
 
-        let crates = json::decode::<Crates>(&body)?;
+        let crates = serde_json::from_str::<Crates>(&body)?;
         Ok((crates.crates, crates.meta.total))
     }
 
     pub fn yank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = self.delete(format!("/crates/{}/{}/yank", krate, version),
                                     None)?;
-        assert!(json::decode::<R>(&body)?.ok);
+        assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = self.put(format!("/crates/{}/{}/unyank", krate, version),
                                  &[])?;
-        assert!(json::decode::<R>(&body)?.ok);
+        assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
     }
 
@@ -337,7 +323,7 @@ fn handle(handle: &mut Easy,
         Ok(body) => body,
         Err(..) => return Err(Error::NonUtf8Body),
     };
-    match json::decode::<ApiErrorList>(&body) {
+    match serde_json::from_str::<ApiErrorList>(&body) {
         Ok(errors) => {
             return Err(Error::Api(errors.errors.into_iter().map(|s| s.detail)
                                         .collect()))
@@ -369,9 +355,7 @@ impl fmt::Display for Error {
             Error::TokenMissing => write!(f, "no upload token found, please run `cargo login`"),
             Error::Io(ref e) => write!(f, "io error: {}", e),
             Error::NotFound => write!(f, "cannot find crate"),
-            Error::JsonEncodeError(ref e) => write!(f, "json encode error: {}", e),
-            Error::JsonDecodeError(ref e) => write!(f, "json decode error: {}", e),
-            Error::JsonParseError(ref e) => write!(f, "json parse error: {}", e),
+            Error::Json(ref e) => write!(f, "json error: {}", e),
         }
     }
 }
