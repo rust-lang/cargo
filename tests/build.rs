@@ -2600,14 +2600,24 @@ fn message_format_json_forward_stderr() {
     {
         "reason":"compiler-message",
         "package_id":"foo 0.5.0 ([..])",
-        "target":{"kind":["bin"],"name":"foo","src_path":"[..]"},
+        "target":{
+            "kind":["bin"],
+            "crate_types":["bin"],
+            "name":"foo",
+            "src_path":"[..]"
+        },
         "message":"{...}"
     }
 
     {
         "reason":"compiler-artifact",
         "package_id":"foo 0.5.0 ([..])",
-        "target":{"kind":["bin"],"name":"foo","src_path":"[..]"},
+        "target":{
+            "kind":["bin"],
+            "crate_types":["bin"],
+            "name":"foo",
+            "src_path":"[..]"
+        },
         "profile":{
             "debug_assertions":true,
             "debuginfo":2,
