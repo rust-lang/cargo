@@ -2,6 +2,7 @@ extern crate cargotest;
 extern crate hamcrest;
 
 use cargotest::is_nightly;
+use cargotest::install::{cargo_home, has_installed_exe};
 use cargotest::support::{project, execs};
 use hamcrest::{assert_that, existing_file, not};
 
@@ -576,3 +577,154 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
                 .with_stdout(""));
 }
 
+#[test]
+fn install_default_features() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            default = ["a"]
+            a = []
+
+            [[bin]]
+            name = "foo"
+            required-features = ["a"]
+
+            [[example]]
+            name = "foo"
+            required-features = ["a"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("examples/foo.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("install"),
+                execs().with_status(0));
+    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_that(p.cargo_process("uninstall").arg("foo"),
+                execs().with_status(0));
+
+    assert_that(p.cargo_process("install").arg("--no-default-features"),
+                execs().with_status(101).with_stderr(format!("\
+[INSTALLING] foo v0.0.1 ([..])
+[FINISHED] release [optimized] target(s) in [..]
+[ERROR] no binaries are available for install using the selected features
+")));
+    assert_that(cargo_home(), not(has_installed_exe("foo")));
+
+    assert_that(p.cargo_process("install").arg("--bin=foo"),
+                execs().with_status(0));
+    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_that(p.cargo_process("uninstall").arg("foo"),
+                execs().with_status(0));
+
+    assert_that(p.cargo_process("install").arg("--bin=foo").arg("--no-default-features"),
+                execs().with_status(101).with_stderr(format!("\
+[INSTALLING] foo v0.0.1 ([..])
+[ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
+    `[..]target`
+
+Caused by:
+  target `foo` requires the features: `a`
+Consider enabling them by passing e.g. `--features=\"a\"`
+")));
+    assert_that(cargo_home(), not(has_installed_exe("foo")));
+
+    assert_that(p.cargo_process("install").arg("--example=foo"),
+                execs().with_status(0));
+    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_that(p.cargo_process("uninstall").arg("foo"),
+                execs().with_status(0));
+
+    assert_that(p.cargo_process("install").arg("--example=foo").arg("--no-default-features"),
+                execs().with_status(101).with_stderr(format!("\
+[INSTALLING] foo v0.0.1 ([..])
+[ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
+    `[..]target`
+
+Caused by:
+  target `foo` requires the features: `a`
+Consider enabling them by passing e.g. `--features=\"a\"`
+")));
+    assert_that(cargo_home(), not(has_installed_exe("foo")));
+}
+
+#[test]
+fn install_arg_features() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            a = []
+
+            [[bin]]
+            name = "foo"
+            required-features = ["a"]
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("install").arg("--features").arg("a"),
+                execs().with_status(0));
+    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_that(p.cargo_process("uninstall").arg("foo"),
+                execs().with_status(0));
+}
+
+#[test]
+fn install_multiple_required_features() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            default = ["a", "b"]
+            a = []
+            b = ["a"]
+            c = []
+
+            [[bin]]
+            name = "foo_1"
+            path = "src/foo_1.rs"
+            required-features = ["b", "c"]
+
+            [[bin]]
+            name = "foo_2"
+            path = "src/foo_2.rs"
+            required-features = ["a"]
+        "#)
+        .file("src/foo_1.rs", "fn main() {}")
+        .file("src/foo_2.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("install"),
+                execs().with_status(0));
+    assert_that(cargo_home(), not(has_installed_exe("foo_1")));
+    assert_that(cargo_home(), has_installed_exe("foo_2"));
+    assert_that(p.cargo_process("uninstall").arg("foo"),
+                execs().with_status(0));
+
+    assert_that(p.cargo_process("install").arg("--features").arg("c"),
+                execs().with_status(0));
+    assert_that(cargo_home(), has_installed_exe("foo_1"));
+    assert_that(cargo_home(), has_installed_exe("foo_2"));
+    assert_that(p.cargo_process("uninstall").arg("foo"),
+                execs().with_status(0));
+
+    assert_that(p.cargo_process("install").arg("--no-default-features"),
+                execs().with_status(101).with_stderr("\
+[INSTALLING] foo v0.0.1 ([..])
+[FINISHED] release [optimized] target(s) in [..]
+[ERROR] no binaries are available for install using the selected features
+"));
+    assert_that(cargo_home(), not(has_installed_exe("foo_1")));
+    assert_that(cargo_home(), not(has_installed_exe("foo_2")));
+}
