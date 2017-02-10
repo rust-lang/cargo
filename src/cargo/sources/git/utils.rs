@@ -3,15 +3,28 @@ use std::fmt;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
-use rustc_serialize::{Encodable, Encoder};
-use url::Url;
 use git2::{self, ObjectType};
+use serde::ser::{self, Serialize};
+use url::Url;
 
 use core::GitReference;
 use util::{CargoResult, ChainError, human, ToUrl, internal, Config, network};
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRevision(git2::Oid);
+
+impl ser::Serialize for GitRevision {
+    fn serialize<S: ser::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        serialize_str(self, s)
+    }
+}
+
+fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
+    where T: fmt::Display,
+          S: ser::Serializer,
+{
+    t.to_string().serialize(s)
+}
 
 impl fmt::Display for GitRevision {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -29,75 +42,32 @@ impl GitShortID {
 
 /// GitRemote represents a remote repository. It gets cloned into a local
 /// GitDatabase.
-#[derive(PartialEq,Clone,Debug)]
+#[derive(PartialEq, Clone, Debug, Serialize)]
 pub struct GitRemote {
+    #[serde(serialize_with = "serialize_str")]
     url: Url,
-}
-
-#[derive(PartialEq,Clone,RustcEncodable)]
-struct EncodableGitRemote {
-    url: String,
-}
-
-impl Encodable for GitRemote {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        EncodableGitRemote {
-            url: self.url.to_string()
-        }.encode(s)
-    }
 }
 
 /// GitDatabase is a local clone of a remote repository's database. Multiple
 /// GitCheckouts can be cloned from this GitDatabase.
+#[derive(Serialize)]
 pub struct GitDatabase {
     remote: GitRemote,
     path: PathBuf,
+    #[serde(skip_serializing)]
     repo: git2::Repository,
-}
-
-#[derive(RustcEncodable)]
-pub struct EncodableGitDatabase {
-    remote: GitRemote,
-    path: String,
-}
-
-impl Encodable for GitDatabase {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        EncodableGitDatabase {
-            remote: self.remote.clone(),
-            path: self.path.display().to_string()
-        }.encode(s)
-    }
 }
 
 /// GitCheckout is a local checkout of a particular revision. Calling
 /// `clone_into` with a reference will resolve the reference into a revision,
 /// and return a CargoError if no revision for that reference was found.
+#[derive(Serialize)]
 pub struct GitCheckout<'a> {
     database: &'a GitDatabase,
     location: PathBuf,
     revision: GitRevision,
+    #[serde(skip_serializing)]
     repo: git2::Repository,
-}
-
-#[derive(RustcEncodable)]
-pub struct EncodableGitCheckout {
-    database: EncodableGitDatabase,
-    location: String,
-    revision: String,
-}
-
-impl<'a> Encodable for GitCheckout<'a> {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        EncodableGitCheckout {
-            location: self.location.display().to_string(),
-            revision: self.revision.to_string(),
-            database: EncodableGitDatabase {
-                remote: self.database.remote.clone(),
-                path: self.database.path.display().to_string(),
-            },
-        }.encode(s)
-    }
 }
 
 // Implementations

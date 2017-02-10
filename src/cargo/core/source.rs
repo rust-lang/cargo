@@ -7,7 +7,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
 use std::sync::atomic::Ordering::SeqCst;
 
-use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
+use serde::ser;
+use serde::de;
 use url::Url;
 
 use core::{Package, PackageId, Registry};
@@ -342,22 +343,24 @@ impl Ord for SourceId {
     }
 }
 
-impl Encodable for SourceId {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl ser::Serialize for SourceId {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer,
+    {
         if self.is_path() {
-            s.emit_option_none()
+            None::<String>.serialize(s)
         } else {
-            self.to_url().encode(s)
+            Some(self.to_url()).serialize(s)
         }
     }
 }
 
-impl Decodable for SourceId {
-    fn decode<D: Decoder>(d: &mut D) -> Result<SourceId, D::Error> {
-        let string: String = Decodable::decode(d)?;
-        SourceId::from_url(&string).map_err(|e| {
-            d.error(&e.to_string())
-        })
+impl de::Deserialize for SourceId {
+    fn deserialize<D>(d: D) -> Result<SourceId, D::Error>
+        where D: de::Deserializer,
+    {
+        let string = String::deserialize(d)?;
+        SourceId::from_url(&string).map_err(de::Error::custom)
     }
 }
 

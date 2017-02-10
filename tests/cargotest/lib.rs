@@ -8,6 +8,9 @@ extern crate git2;
 extern crate hamcrest;
 extern crate libc;
 extern crate rustc_serialize;
+extern crate serde;
+#[macro_use]
+extern crate serde_json;
 extern crate tar;
 extern crate tempdir;
 extern crate term;
@@ -49,6 +52,7 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env("CARGO_HOME", support::paths::home().join(".cargo"))
      .env_remove("RUSTC")
      .env_remove("RUSTFLAGS")
+     .env_remove("CARGO_INCREMENTAL")
      .env_remove("XDG_CONFIG_HOME")      // see #2345
      .env("GIT_CONFIG_NOSYSTEM", "1")    // keep trying to sandbox ourselves
      .env_remove("CARGO_TARGET_DIR")     // we assume 'target'

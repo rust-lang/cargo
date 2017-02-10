@@ -11,7 +11,7 @@ use std::process::Output;
 use std::str;
 use std::usize;
 
-use rustc_serialize::json::Json;
+use serde_json::{self, Value};
 use url::Url;
 use hamcrest as ham;
 use cargo::util::ProcessBuilder;
@@ -335,7 +335,7 @@ pub struct Execs {
     expect_stderr_contains: Vec<String>,
     expect_stdout_not_contains: Vec<String>,
     expect_stderr_not_contains: Vec<String>,
-    expect_json: Option<Vec<Json>>,
+    expect_json: Option<Vec<Value>>,
 }
 
 impl Execs {
@@ -376,7 +376,7 @@ impl Execs {
 
     pub fn with_json(mut self, expected: &str) -> Execs {
         self.expect_json = Some(expected.split("\n\n").map(|obj| {
-            Json::from_str(obj).unwrap()
+            obj.parse().unwrap()
         }).collect());
         self
     }
@@ -500,8 +500,8 @@ impl Execs {
         }
     }
 
-    fn match_json(&self, expected: &Json, line: &str) -> ham::MatchResult {
-        let actual = match Json::from_str(line) {
+    fn match_json(&self, expected: &Value, line: &str) -> ham::MatchResult {
+        let actual = match line.parse() {
              Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
              Ok(actual) => actual,
         };
@@ -509,8 +509,10 @@ impl Execs {
         match find_mismatch(expected, &actual) {
             Some((expected_part, actual_part)) => Err(format!(
                 "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
-                expected.pretty(), actual.pretty(),
-                expected_part.pretty(), actual_part.pretty()
+                serde_json::to_string_pretty(expected).unwrap(),
+                serde_json::to_string_pretty(&actual).unwrap(),
+                serde_json::to_string_pretty(expected_part).unwrap(),
+                serde_json::to_string_pretty(actual_part).unwrap(),
             )),
             None => Ok(()),
         }
@@ -583,32 +585,42 @@ fn lines_match_works() {
 }
 
 // Compares JSON object for approximate equality.
-// You can use `[..]` wildcard in strings (useful for OS dependent things such as paths).
-// You can use a `"{...}"` string literal as a wildcard for arbitrary nested JSON (useful
-// for parts of object emitted by other programs (e.g. rustc) rather than Cargo itself).
-// Arrays are sorted before comparison.
-fn find_mismatch<'a>(expected: &'a Json, actual: &'a Json) -> Option<(&'a Json, &'a Json)> {
-    use rustc_serialize::json::Json::*;
+// You can use `[..]` wildcard in strings (useful for OS dependent things such
+// as paths).  You can use a `"{...}"` string literal as a wildcard for
+// arbitrary nested JSON (useful for parts of object emitted by other programs
+// (e.g. rustc) rather than Cargo itself).  Arrays are sorted before comparison.
+fn find_mismatch<'a>(expected: &'a Value, actual: &'a Value)
+                     -> Option<(&'a Value, &'a Value)> {
+    use serde_json::Value::*;
     match (expected, actual) {
-        (&I64(l), &I64(r)) if l == r => None,
-        (&F64(l), &F64(r)) if l == r => None,
-        (&U64(l), &U64(r)) if l == r => None,
-        (&Boolean(l), &Boolean(r)) if l == r => None,
+        (&Number(ref l), &Number(ref r)) if l == r => None,
+        (&Bool(l), &Bool(r)) if l == r => None,
         (&String(ref l), &String(ref r)) if lines_match(l, r) => None,
         (&Array(ref l), &Array(ref r)) => {
             if l.len() != r.len() {
                 return Some((expected, actual));
             }
 
-            fn sorted(xs: &Vec<Json>) -> Vec<&Json> {
-                let mut result = xs.iter().collect::<Vec<_>>();
-                result.sort_by(|x, y| x.partial_cmp(y).expect("JSON spec does not allow NaNs"));
-                result
-            }
+            let mut l = l.iter().collect::<Vec<_>>();
+            let mut r = r.iter().collect::<Vec<_>>();
 
-            sorted(l).iter().zip(sorted(r))
-             .filter_map(|(l, r)| find_mismatch(l, r))
-             .nth(0)
+            l.retain(|l| {
+                match r.iter().position(|r| find_mismatch(l, r).is_none()) {
+                    Some(i) => {
+                        r.remove(i);
+                        false
+                    }
+                    None => true
+                }
+            });
+
+            if l.len() > 0 {
+                assert!(r.len() > 0);
+                Some((&l[0], &r[0]))
+            } else {
+                assert!(r.len() == 0);
+                None
+            }
         }
         (&Object(ref l), &Object(ref r)) => {
             let same_keys = l.len() == r.len() && l.keys().all(|k| r.contains_key(k));

@@ -5,8 +5,9 @@ use std::hash::Hash;
 use std::hash;
 use std::sync::Arc;
 
-use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 use semver;
+use serde::de;
+use serde::ser;
 
 use util::{CargoResult, CargoError, ToSemver};
 use core::source::SourceId;
@@ -24,40 +25,41 @@ struct PackageIdInner {
     source_id: SourceId,
 }
 
-impl Encodable for PackageId {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl ser::Serialize for PackageId {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer
+    {
         let source = self.inner.source_id.to_url();
         let encoded = format!("{} {} ({})", self.inner.name, self.inner.version,
                               source);
-        encoded.encode(s)
+        encoded.serialize(s)
     }
 }
 
-impl Decodable for PackageId {
-    fn decode<D: Decoder>(d: &mut D) -> Result<PackageId, D::Error> {
-        let string: String = Decodable::decode(d)?;
+impl de::Deserialize for PackageId {
+    fn deserialize<D>(d: D) -> Result<PackageId, D::Error>
+        where D: de::Deserializer
+    {
+        let string = String::deserialize(d)?;
         let mut s = string.splitn(3, ' ');
         let name = s.next().unwrap();
         let version = match s.next() {
             Some(s) => s,
-            None => return Err(d.error("invalid serialized PackageId")),
+            None => return Err(de::Error::custom("invalid serialized PackageId")),
         };
-        let version = semver::Version::parse(version).map_err(|_| {
-            d.error("invalid version")
-        })?;
+        let version = semver::Version::parse(version)
+                            .map_err(de::Error::custom)?;
         let url = match s.next() {
             Some(s) => s,
-            None => return Err(d.error("invalid serialized PackageId")),
+            None => return Err(de::Error::custom("invalid serialized PackageId")),
         };
         let url = if url.starts_with("(") && url.ends_with(")") {
             &url[1..url.len() - 1]
         } else {
-            return Err(d.error("invalid serialized PackageId"))
+            return Err(de::Error::custom("invalid serialized PackageId"))
 
         };
-        let source_id = SourceId::from_url(url).map_err(|e| {
-            d.error(&e.to_string())
-        })?;
+        let source_id = SourceId::from_url(url).map_err(de::Error::custom)?;
 
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {

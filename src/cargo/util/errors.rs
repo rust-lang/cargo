@@ -11,8 +11,8 @@ use std::string;
 use curl;
 use git2;
 use handlebars;
-use rustc_serialize::json;
 use semver;
+use serde_json;
 use term;
 use toml;
 use url;
@@ -334,13 +334,12 @@ from_error! {
     io::Error,
     ProcessError,
     git2::Error,
-    json::DecoderError,
-    json::EncoderError,
+    serde_json::Error,
     curl::Error,
     CliError,
-    toml::Error,
     url::ParseError,
-    toml::DecodeError,
+    toml::ser::Error,
+    toml::de::Error,
     ffi::NulError,
     term::Error,
     num::ParseIntError,
@@ -363,14 +362,17 @@ impl<E: CargoError> From<Human<E>> for Box<CargoError> {
 impl CargoError for semver::ReqParseError {}
 impl CargoError for io::Error {}
 impl CargoError for git2::Error {}
-impl CargoError for json::DecoderError {}
-impl CargoError for json::EncoderError {}
+impl CargoError for serde_json::Error {}
 impl CargoError for curl::Error {}
 impl CargoError for ProcessError {}
 impl CargoError for CargoTestError {}
 impl CargoError for CliError {}
-impl CargoError for toml::Error {}
-impl CargoError for toml::DecodeError {}
+impl CargoError for toml::ser::Error {
+    fn is_human(&self) -> bool { true }
+}
+impl CargoError for toml::de::Error {
+    fn is_human(&self) -> bool { true }
+}
 impl CargoError for url::ParseError {}
 impl CargoError for ffi::NulError {}
 impl CargoError for term::Error {}

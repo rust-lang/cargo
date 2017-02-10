@@ -7,7 +7,6 @@ use flate2::Compression::Default;
 use flate2::write::GzEncoder;
 use git2;
 use rustc_serialize::hex::ToHex;
-use rustc_serialize::json::ToJson;
 use tar::{Builder, Header};
 use url::Url;
 
@@ -137,29 +136,29 @@ impl Package {
 
         // Figure out what we're going to write into the index
         let deps = self.deps.iter().map(|dep| {
-            let mut map = HashMap::new();
-            map.insert("name".to_string(), dep.name.to_json());
-            map.insert("req".to_string(), dep.vers.to_json());
-            map.insert("features".to_string(), dep.features.to_json());
-            map.insert("default_features".to_string(), true.to_json());
-            map.insert("target".to_string(), dep.target.to_json());
-            map.insert("optional".to_string(), false.to_json());
-            map.insert("kind".to_string(), dep.kind.to_json());
-            map
+            json!({
+                "name": dep.name,
+                "req": dep.vers,
+                "features": dep.features,
+                "default_features": true,
+                "target": dep.target,
+                "optional": false,
+                "kind": dep.kind,
+            })
         }).collect::<Vec<_>>();
         let cksum = {
             let mut c = Vec::new();
             t!(t!(File::open(&self.archive_dst())).read_to_end(&mut c));
             cksum(&c)
         };
-        let mut dep = HashMap::new();
-        dep.insert("name".to_string(), self.name.to_json());
-        dep.insert("vers".to_string(), self.vers.to_json());
-        dep.insert("deps".to_string(), deps.to_json());
-        dep.insert("cksum".to_string(), cksum.to_json());
-        dep.insert("features".to_string(), self.features.to_json());
-        dep.insert("yanked".to_string(), self.yanked.to_json());
-        let line = dep.to_json().to_string();
+        let line = json!({
+            "name": self.name,
+            "vers": self.vers,
+            "deps": deps,
+            "cksum": cksum,
+            "features": self.features,
+            "yanked": self.yanked,
+        }).to_string();
 
         let file = match self.name.len() {
             1 => format!("1/{}", self.name),

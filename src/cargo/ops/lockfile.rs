@@ -1,7 +1,6 @@
 use std::io::prelude::*;
 
-use rustc_serialize::{Encodable, Decodable};
-use toml::{self, Encoder, Value};
+use toml;
 
 use core::{Resolve, resolver, Workspace};
 use core::resolver::WorkspaceResolve;
@@ -22,10 +21,8 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
     })?;
 
     (|| {
-        let table = cargo_toml::parse(&s, f.path(), ws.config())?;
-        let table = toml::Value::Table(table);
-        let mut d = toml::Decoder::new(table);
-        let v: resolver::EncodableResolve = Decodable::decode(&mut d)?;
+        let resolve = cargo_toml::parse(&s, f.path(), ws.config())?;
+        let v: resolver::EncodableResolve = resolve.try_into()?;
         Ok(Some(v.into_resolve(ws)?))
     }).chain_error(|| {
         human(format!("failed to parse lock file at: {}", f.path().display()))
@@ -50,24 +47,23 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
         true
     };
 
-    let mut e = Encoder::new();
-    WorkspaceResolve {
+    let toml = toml::Value::try_from(WorkspaceResolve {
         ws: ws,
         resolve: resolve,
         use_root_key: use_root_key,
-    }.encode(&mut e).unwrap();
+    }).unwrap();
 
     let mut out = String::new();
 
     // Note that we do not use e.toml.to_string() as we want to control the
     // exact format the toml is in to ensure pretty diffs between updates to the
     // lockfile.
-    if let Some(root) = e.toml.get(&"root".to_string()) {
+    if let Some(root) = toml.get("root") {
         out.push_str("[root]\n");
         emit_package(root.as_table().unwrap(), &mut out);
     }
 
-    let deps = e.toml[&"package".to_string()].as_slice().unwrap();
+    let deps = toml["package"].as_array().unwrap();
     for dep in deps.iter() {
         let dep = dep.as_table().unwrap();
 
@@ -75,9 +71,9 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
         emit_package(dep, &mut out);
     }
 
-    if let Some(metadata) = e.toml.get(&"metadata".to_string()) {
+    if let Some(meta) = toml.get("metadata") {
         out.push_str("[metadata]\n");
-        out.push_str(&metadata.to_string());
+        out.push_str(&meta.to_string());
     }
 
     // If the lockfile contents haven't changed so don't rewrite it. This is
@@ -117,16 +113,16 @@ fn has_crlf_line_endings(s: &str) -> bool {
     }
 }
 
-fn emit_package(dep: &toml::Table, out: &mut String) {
-    out.push_str(&format!("name = {}\n", lookup(dep, "name")));
-    out.push_str(&format!("version = {}\n", lookup(dep, "version")));
+fn emit_package(dep: &toml::value::Table, out: &mut String) {
+    out.push_str(&format!("name = {}\n", &dep["name"]));
+    out.push_str(&format!("version = {}\n", &dep["version"]));
 
     if dep.contains_key("source") {
-        out.push_str(&format!("source = {}\n", lookup(dep, "source")));
+        out.push_str(&format!("source = {}\n", &dep["source"]));
     }
 
-    if let Some(s) = dep.get("dependencies") {
-        let slice = Value::as_slice(s).unwrap();
+    if let Some(ref s) = dep.get("dependencies") {
+        let slice = s.as_array().unwrap();
 
         if !slice.is_empty() {
             out.push_str("dependencies = [\n");
@@ -139,10 +135,6 @@ fn emit_package(dep: &toml::Table, out: &mut String) {
         }
         out.push_str("\n");
     } else if dep.contains_key("replace") {
-        out.push_str(&format!("replace = {}\n\n", lookup(dep, "replace")));
+        out.push_str(&format!("replace = {}\n\n", &dep["replace"]));
     }
-}
-
-fn lookup<'a>(table: &'a toml::Table, key: &str) -> &'a toml::Value {
-    table.get(key).expect(&format!("didn't find {}", key))
 }

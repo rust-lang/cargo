@@ -5,12 +5,12 @@ use std::hash;
 use std::path::{Path, PathBuf};
 
 use semver::Version;
+use serde::ser;
 
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{Summary, SourceMap};
 use ops;
 use util::{CargoResult, Config, LazyCell, ChainError, internal, human, lev_distance};
-use rustc_serialize::{Encoder,Encodable};
 
 /// Information about a package that is available somewhere in the file system.
 ///
@@ -24,7 +24,7 @@ pub struct Package {
     manifest_path: PathBuf,
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 struct SerializedPackage<'a> {
     name: &'a str,
     version: &'a str,
@@ -39,8 +39,10 @@ struct SerializedPackage<'a> {
     manifest_path: &'a str,
 }
 
-impl Encodable for Package {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl ser::Serialize for Package {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer,
+    {
         let summary = self.manifest.summary();
         let package_id = summary.package_id();
         let manmeta = self.manifest.metadata();
@@ -60,7 +62,7 @@ impl Encodable for Package {
             targets: &self.manifest.targets(),
             features: summary.features(),
             manifest_path: &self.manifest_path.display().to_string(),
-        }.encode(s)
+        }.serialize(s)
     }
 }
 
