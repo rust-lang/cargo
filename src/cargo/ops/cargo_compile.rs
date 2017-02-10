@@ -435,7 +435,7 @@ fn generate_targets<'a>(pkg: &'a Package,
     let mut compatible_targets = Vec::with_capacity(targets.len());
     for (target, profile) in targets.drain(0..) {
         if target.is_lib() || match target.required_features() {
-            Some(f) => !f.iter().any(|f| !features.contains(f)),
+            Some(f) => f.iter().all(|f| features.contains(f)),
             None => true,
         } {
             compatible_targets.push((target, profile));
