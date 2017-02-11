@@ -113,18 +113,21 @@ pub enum TargetKind {
 }
 
 impl TargetKind {
-    pub fn name(&self) -> &'static str {
+    /// Returns a vector of crate types as specified in a manifest with one difference.
+    /// For ExampleLib it returns "example" instead of crate types
+    pub fn kinds(&self) -> Vec<&str> {
         use self::TargetKind::*;
         match *self {
-            Lib(_) => "lib",
-            Bin => "bin",
-            ExampleBin | ExampleLib(_) => "example",
-            Test => "test",
-            CustomBuild => "custom-build",
-            Bench => "bench"
+            Lib(ref kinds) => kinds.iter().map(LibKind::crate_type).collect(),
+            Bin => vec!["bin"],
+            ExampleBin | ExampleLib(_) => vec!["example"],
+            Test => vec!["test"],
+            CustomBuild => vec!["custom-build"],
+            Bench => vec!["bench"]
         }
     }
 
+    /// Returns a vector of crate types as specified in a manifest
     pub fn crate_types(&self) -> Vec<&str> {
         use self::TargetKind::*;
         match *self {
@@ -216,7 +219,7 @@ struct SerializedTarget<'a> {
 impl Encodable for Target {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         SerializedTarget {
-            kind: vec![self.kind.name()],
+            kind: self.kind.kinds(),
             crate_types: self.kind.crate_types(),
             name: &self.name,
             src_path: &self.src_path.display().to_string(),

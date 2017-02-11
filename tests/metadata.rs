@@ -51,6 +51,61 @@ fn cargo_metadata_simple() {
     }"#));
 }
 
+#[test]
+fn library_with_several_crate_types() {
+    let p = project("foo")
+            .file("src/lib.rs", "")
+            .file("Cargo.toml", r#"
+[package]
+name = "foo"
+version = "0.5.0"
+
+[lib]
+crate-type = ["lib", "staticlib"]
+            "#);
+
+    assert_that(p.cargo_process("metadata"), execs().with_json(r#"
+    {
+        "packages": [
+            {
+                "name": "foo",
+                "version": "0.5.0",
+                "id": "foo[..]",
+                "source": null,
+                "dependencies": [],
+                "license": null,
+                "license_file": null,
+                "targets": [
+                    {
+                        "kind": [
+                            "lib",
+                            "staticlib"
+                        ],
+                        "crate_types": [
+                            "lib",
+                            "staticlib"
+                        ],
+                        "name": "foo",
+                        "src_path": "[..][/]foo[/]src[/]lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]Cargo.toml"
+            }
+        ],
+        "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "resolve": {
+            "nodes": [
+                {
+                    "dependencies": [],
+                    "id": "foo 0.5.0 (path+file:[..]foo)"
+                }
+            ],
+            "root": "foo 0.5.0 (path+file:[..]foo)"
+        },
+        "version": 1
+    }"#));
+}
 
 #[test]
 fn cargo_metadata_with_deps_and_version() {
@@ -219,7 +274,6 @@ name = "ex"
                 "id": "foo[..]",
                 "license": null,
                 "license_file": null,
-                "description": null,
                 "source": null,
                 "dependencies": [],
                 "targets": [
@@ -280,7 +334,6 @@ crate-type = ["rlib", "dylib"]
                 "id": "foo[..]",
                 "license": null,
                 "license_file": null,
-                "description": null,
                 "source": null,
                 "dependencies": [],
                 "targets": [
@@ -556,7 +609,7 @@ fn cargo_metadata_no_deps_cwd() {
 }
 
 #[test]
-fn carg_metadata_bad_version() {
+fn cargo_metadata_bad_version() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
