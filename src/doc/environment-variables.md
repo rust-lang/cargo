@@ -26,7 +26,7 @@ system:
 Note that Cargo will also read environment variables for `.cargo/config`
 configuration values, as described in [that documentation][config-env]
 
-[config-env]: config.html#environment-variables
+[config-env]: config.md#environment-variables
 
 # Environment variables Cargo sets for crates
 
