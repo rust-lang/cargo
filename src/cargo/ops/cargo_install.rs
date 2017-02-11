@@ -129,6 +129,10 @@ pub fn install(root: Option<&str>,
             bail!("Binary `{:?}` name can't be serialized into string", name)
         }
     }).collect::<CargoResult<_>>()?;
+    if binaries.is_empty() {
+        bail!("no binaries are available for install using the selected \
+              features");
+    }
 
     let metadata = metadata(config, &root)?;
     let mut list = read_crate_list(metadata.file())?;

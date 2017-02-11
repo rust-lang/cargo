@@ -932,6 +932,7 @@ struct TomlTarget {
     plugin: Option<bool>,
     proc_macro: Option<bool>,
     harness: Option<bool>,
+    required_features: Option<Vec<String>>,
 }
 
 #[derive(RustcDecodable, Clone)]
@@ -961,6 +962,7 @@ impl TomlTarget {
             plugin: None,
             proc_macro: None,
             harness: None,
+            required_features: None
         }
     }
 
@@ -1125,7 +1127,8 @@ fn normalize(package_root: &Path,
                     false => PathValue::Path(Path::new("src").join("main.rs"))
                 }
             });
-            let mut target = Target::bin_target(&bin.name(), package_root.join(path.to_path()));
+            let mut target = Target::bin_target(&bin.name(), package_root.join(path.to_path()),
+                                                bin.required_features.clone());
             configure(bin, &mut target);
             dst.push(target);
         }
@@ -1154,7 +1157,8 @@ fn normalize(package_root: &Path,
             let mut target = Target::example_target(
                 &ex.name(),
                 crate_types,
-                package_root.join(path.to_path())
+                package_root.join(path.to_path()),
+                ex.required_features.clone()
             );
             configure(ex, &mut target);
             dst.push(target);
@@ -1169,7 +1173,8 @@ fn normalize(package_root: &Path,
                 PathValue::Path(default(test))
             });
 
-            let mut target = Target::test_target(&test.name(), package_root.join(path.to_path()));
+            let mut target = Target::test_target(&test.name(), package_root.join(path.to_path()),
+                                                 test.required_features.clone());
             configure(test, &mut target);
             dst.push(target);
         }
@@ -1183,7 +1188,8 @@ fn normalize(package_root: &Path,
                 PathValue::Path(default(bench))
             });
 
-            let mut target = Target::bench_target(&bench.name(), package_root.join(path.to_path()));
+            let mut target = Target::bench_target(&bench.name(), package_root.join(path.to_path()),
+                                                  bench.required_features.clone());
             configure(bench, &mut target);
             dst.push(target);
         }
