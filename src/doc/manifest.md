@@ -551,6 +551,24 @@ proc-macro = false
 harness = true
 ```
 
+## The `required-features` field (optional)
+
+The `required-features` field specifies which features must be selected for the
+target to be built. This is only relevant for the `[[bin]]`, `[[bench]]`,
+`[[test]]`, and `[[example]]` sections, it has no effect on `[lib]`.
+
+```toml
+[features]
+# ...
+postgres = []
+sqlite = []
+tools = []
+
+[[bin]]
+# ...
+required-features = ["postgres", "tools"]
+```
+
 # Building dynamic or static libraries
 
 If your project produces a library, you can specify which kind of library to
