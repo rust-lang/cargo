@@ -112,19 +112,34 @@ pub enum TargetKind {
     CustomBuild,
 }
 
-impl Encodable for TargetKind {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl TargetKind {
+    /// Returns a vector of crate types as specified in a manifest with one difference.
+    /// For ExampleLib it returns "example" instead of crate types
+    pub fn kinds(&self) -> Vec<&str> {
+        use self::TargetKind::*;
         match *self {
-            TargetKind::Lib(ref kinds) |
-            TargetKind::ExampleLib(ref kinds) => {
+            Lib(ref kinds) => kinds.iter().map(LibKind::crate_type).collect(),
+            Bin => vec!["bin"],
+            ExampleBin | ExampleLib(_) => vec!["example"],
+            Test => vec!["test"],
+            CustomBuild => vec!["custom-build"],
+            Bench => vec!["bench"]
+        }
+    }
+
+    /// Returns a vector of crate types as specified in a manifest
+    pub fn crate_types(&self) -> Vec<&str> {
+        use self::TargetKind::*;
+        match *self {
+            Lib(ref kinds) | ExampleLib(ref kinds) => {
                 kinds.iter().map(LibKind::crate_type).collect()
             }
-            TargetKind::Bin => vec!["bin"],
-            TargetKind::ExampleBin => vec!["example"],
-            TargetKind::Test => vec!["test"],
-            TargetKind::CustomBuild => vec!["custom-build"],
-            TargetKind::Bench => vec!["bench"],
-        }.encode(s)
+            Bin => vec!["bin"],
+            ExampleBin => vec!["example"],
+            Test => vec!["test"],
+            CustomBuild => vec!["custom-build"],
+            Bench => vec!["bench"]
+        }
     }
 }
 
@@ -196,7 +211,8 @@ pub struct Target {
 
 #[derive(RustcEncodable)]
 struct SerializedTarget<'a> {
-    kind: &'a TargetKind,
+    kind: Vec<&'a str>,
+    crate_types: Vec<&'a str>,
     name: &'a str,
     src_path: &'a str,
 }
@@ -204,7 +220,8 @@ struct SerializedTarget<'a> {
 impl Encodable for Target {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         SerializedTarget {
-            kind: &self.kind,
+            kind: self.kind.kinds(),
+            crate_types: self.kind.crate_types(),
             name: &self.name,
             src_path: &self.src_path.display().to_string(),
         }.encode(s)
