@@ -87,7 +87,7 @@ fn simple() {
                        .with_stderr("\
 [UPDATING] registry `[..]`")
                        .with_stdout("\
-hoare = \"^0.1.1\"    # Design by contract style assertions for Rust"));
+hoare = \"0.1.1\"    # Design by contract style assertions for Rust"));
 }
 
 #[test]
@@ -139,7 +139,7 @@ fn multiple_query_params() {
                        .with_stderr("\
 [UPDATING] registry `[..]`")
                        .with_stdout("\
-hoare = \"^0.1.1\"    # Design by contract style assertions for Rust"));
+hoare = \"0.1.1\"    # Design by contract style assertions for Rust"));
 }
 
 #[test]
