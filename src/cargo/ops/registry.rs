@@ -424,7 +424,7 @@ pub fn search(query: &str,
 
     let list_items = crates.iter()
         .map(|krate| (
-            format!("{} ({})", krate.name, krate.max_version),
+            format!("{} = \"^{}\"", krate.name, krate.max_version),
             krate.description.as_ref().map(|desc|
                 truncate_with_ellipsis(&desc.replace("\n", " "), 128))
         ))
@@ -439,7 +439,7 @@ pub fn search(query: &str,
             Some(desc) => {
                 let space = repeat(' ').take(description_margin - name.len())
                                        .collect::<String>();
-                name + &space + &desc
+                name + &space + "# " + &desc
             }
             None => name
         };
