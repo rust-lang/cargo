@@ -101,7 +101,7 @@ pub enum MessageFormat {
     Json
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Packages<'a> {
     All,
     Packages(&'a [String]),
@@ -141,7 +141,7 @@ pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
 }
 
 pub fn compile_with_exec<'a>(ws: &Workspace<'a>,
-                             options: &CompileOptions<'a>, 
+                             options: &CompileOptions<'a>,
                              exec: Arc<Executor>)
                              -> CargoResult<ops::Compilation<'a>> {
     for member in ws.members() {
