@@ -78,7 +78,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // Enable incremental builds if the user opts in. For now,
         // this is an environment variable until things stabilize a
         // bit more.
-        let incremental_enabled = env::var("CARGO_INCREMENTAL").is_ok();
+        let incremental_enabled = match env::var("CARGO_INCREMENTAL") {
+            Ok(v) => v == "1",
+            Err(_) => false,
+        };
 
         Ok(Context {
             ws: ws,
