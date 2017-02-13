@@ -652,3 +652,80 @@ fn fail_no_extra_verbose() {
                        .with_stdout("")
                        .with_stderr(""));
 }
+
+#[test]
+fn run_multiple_packages() {
+    let p = project("foo")
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [workspace]
+
+            [dependencies]
+            d1 = { path = "d1" }
+            d2 = { path = "d2" }
+            d3 = { path = "../d3" } # outside of the workspace
+
+            [[bin]]
+            name = "foo"
+        "#)
+        .file("foo/src/foo.rs", "fn main() { println!(\"foo\"); }")
+        .file("foo/d1/Cargo.toml", r#"
+            [package]
+            name = "d1"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name = "d1"
+        "#)
+        .file("foo/d1/src/lib.rs", "")
+        .file("foo/d1/src/main.rs", "fn main() { println!(\"d1\"); }")
+        .file("foo/d2/Cargo.toml", r#"
+            [package]
+            name = "d2"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name = "d2"
+        "#)
+        .file("foo/d2/src/main.rs", "fn main() { println!(\"d2\"); }")
+        .file("d3/Cargo.toml", r#"
+            [package]
+            name = "d3"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("d3/src/main.rs", "fn main() { println!(\"d2\"); }");
+
+    let p = p.build();
+
+    let cargo = || {
+        let mut process_builder = p.cargo("run");
+        process_builder.cwd(p.root().join("foo"));
+        process_builder
+    };
+
+    assert_that(cargo().arg("-p").arg("d1"),
+                execs().with_status(0).with_stdout("d1"));
+
+    assert_that(cargo().arg("-p").arg("d2").arg("--bin").arg("d2"),
+                execs().with_status(0).with_stdout("d2"));
+
+    assert_that(cargo(),
+                execs().with_status(0).with_stdout("foo"));
+
+    assert_that(cargo().arg("-p").arg("d1").arg("-p").arg("d2"),
+                execs()
+                    .with_status(1)
+                    .with_stderr_contains("[ERROR] Invalid arguments."));
+
+    assert_that(cargo().arg("-p").arg("d3"),
+                execs()
+                    .with_status(101)
+                    .with_stderr_contains("[ERROR] package `d3` is not a member of the workspace"));
+}
