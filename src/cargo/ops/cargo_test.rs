@@ -141,8 +141,8 @@ fn run_doc_tests(options: &TestOptions,
                 p.arg("-L").arg(native_dep);
             }
 
-            if test_args.len() > 0 {
-                p.arg("--test-args").arg(&test_args.join(" "));
+            for arg in test_args {
+                p.arg("--test-args").arg(arg);
             }
 
             if let Some(cfgs) = compilation.cfgs.get(&package.package_id()) {
