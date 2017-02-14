@@ -2298,26 +2298,40 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
             authors = []
 
             [features]
-            default = ["serde_codegen"]
-            nightly = ["serde_derive"]
+            default = ["mock_serde_codegen"]
+            nightly = ["mock_serde_derive"]
 
             [dependencies]
-            serde_derive = { version = "0.8", optional = true }
+            mock_serde_derive = { path = "../mock_serde_derive", optional = true }
 
             [build-dependencies]
-            serde_codegen = { version = "0.8", optional = true }
+            mock_serde_codegen = { path = "../mock_serde_codegen", optional = true }
         "#)
         .file("libs/feature_a/src/lib.rs", r#"
-            #[cfg(feature = "serde_derive")]
+            #[cfg(feature = "mock_serde_derive")]
             const MSG: &'static str = "This is safe";
 
-            #[cfg(feature = "serde_codegen")]
+            #[cfg(feature = "mock_serde_codegen")]
             const MSG: &'static str = "This is risky";
 
             pub fn get() -> &'static str {
                 MSG
             }
-        "#);
+        "#)
+        .file("libs/mock_serde_derive/Cargo.toml", r#"
+            [package]
+            name = "mock_serde_derive"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("libs/mock_serde_derive/src/lib.rs", "")
+        .file("libs/mock_serde_codegen/Cargo.toml", r#"
+                [package]
+                name = "mock_serde_codegen"
+                version = "0.1.0"
+                authors = []
+            "#)
+        .file("libs/mock_serde_codegen/src/lib.rs", "");
 
     assert_that(p.cargo_process("test")
                 .arg("--package").arg("feature_a")
@@ -2325,7 +2339,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
                 execs().with_status(0)
                        .with_stderr_contains("\
 [DOCTEST] feature_a
-[RUNNING] `rustdoc --test [..]serde_codegen[..]`"));
+[RUNNING] `rustdoc --test [..]mock_serde_codegen[..]`"));
 
     assert_that(p.cargo_process("test")
                 .arg("--verbose"),
