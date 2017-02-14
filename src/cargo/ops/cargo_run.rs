@@ -1,16 +1,28 @@
 use std::path::Path;
 
-use ops::{self, CompileFilter};
-use util::{self, CargoResult, ProcessError};
+use ops::{self, CompileFilter, Packages};
+use util::{self, human, CargoResult, ProcessError};
 use core::Workspace;
 
 pub fn run(ws: &Workspace,
            options: &ops::CompileOptions,
            args: &[String]) -> CargoResult<Option<ProcessError>> {
     let config = ws.config();
-    let root = ws.current()?;
 
-    let mut bins = root.manifest().targets().iter().filter(|a| {
+    let pkg = match options.spec {
+        Packages::All => unreachable!("cargo run supports single package only"),
+        Packages::Packages(xs) => match xs.len() {
+            0 => ws.current()?,
+            1 => ws.members()
+                .find(|pkg| pkg.name() == xs[0])
+                .ok_or_else(|| human(
+                    format!("package `{}` is not a member of the workspace", xs[0])
+                ))?,
+            _ => unreachable!("cargo run supports single package only"),
+        }
+    };
+
+    let mut bins = pkg.manifest().targets().iter().filter(|a| {
         !a.is_lib() && !a.is_custom_build() && match options.filter {
             CompileFilter::Everything => a.is_bin(),
             CompileFilter::Only { .. } => options.filter.matches(a),
@@ -41,6 +53,7 @@ pub fn run(ws: &Workspace,
     }
 
     let compile = ops::compile(ws, options)?;
+    assert_eq!(compile.binaries.len(), 1);
     let exe = &compile.binaries[0];
     let exe = match util::without_prefix(&exe, config.cwd()) {
         Some(path) if path.file_name() == Some(path.as_os_str())
@@ -48,7 +61,7 @@ pub fn run(ws: &Workspace,
         Some(path) => path.to_path_buf(),
         None => exe.to_path_buf(),
     };
-    let mut process = compile.target_process(exe, &root)?;
+    let mut process = compile.target_process(exe, &pkg)?;
     process.args(args).cwd(config.cwd());
 
     config.shell().status("Running", process.to_string())?;
