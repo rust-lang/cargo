@@ -5,7 +5,7 @@ use std::iter::repeat;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use curl::easy::Easy;
+use curl::easy::{Easy, SslOpt};
 use git2;
 use registry::{Registry, NewCrate, NewCrateDependency};
 use term::color::BLACK;
@@ -230,6 +230,9 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     }
     if let Some(cainfo) = config.get_path("http.cainfo")? {
         handle.cainfo(&cainfo.val)?;
+    }
+    if let Some(check) = config.get_bool("http.check-revoke")? {
+        handle.ssl_options(SslOpt::new().no_revoke(!check.val))?;
     }
     if let Some(timeout) = http_timeout(config)? {
         handle.connect_timeout(Duration::new(timeout as u64, 0))?;
