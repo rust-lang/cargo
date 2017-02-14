@@ -68,9 +68,7 @@ pub struct Layout {
 }
 
 impl Layout {
-    pub fn new(ws: &Workspace,
-               triple: Option<&str>,
-               dest: &str) -> CargoResult<Layout> {
+    pub fn new(ws: &Workspace, triple: Option<&str>, dest: &str) -> CargoResult<Layout> {
         let mut path = ws.target_dir();
         // Flexible target specifications often point at filenames, so interpret
         // the target triple as a Path and then just use the file stem as the
@@ -123,11 +121,25 @@ impl Layout {
         }
     }
 
-    pub fn dest(&self) -> &Path { &self.root }
-    pub fn deps(&self) -> &Path { &self.deps }
-    pub fn examples(&self) -> &Path { &self.examples }
-    pub fn root(&self) -> &Path { &self.root }
-    pub fn incremental(&self) -> &Path { &self.incremental }
-    pub fn fingerprint(&self) -> &Path { &self.fingerprint }
-    pub fn build(&self) -> &Path { &self.build }
+    pub fn dest(&self) -> &Path {
+        &self.root
+    }
+    pub fn deps(&self) -> &Path {
+        &self.deps
+    }
+    pub fn examples(&self) -> &Path {
+        &self.examples
+    }
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+    pub fn incremental(&self) -> &Path {
+        &self.incremental
+    }
+    pub fn fingerprint(&self) -> &Path {
+        &self.fingerprint
+    }
+    pub fn build(&self) -> &Path {
+        &self.build
+    }
 }

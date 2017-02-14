@@ -28,9 +28,10 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
                                 no_default_features: bool,
                                 specs: &[PackageIdSpec])
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let features = features.iter().flat_map(|s| {
-        s.split_whitespace()
-    }).map(|s| s.to_string()).collect::<Vec<String>>();
+    let features = features.iter()
+        .flat_map(|s| s.split_whitespace())
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
 
     let mut registry = PackageRegistry::new(ws.config())?;
     if let Some(source) = source {
@@ -59,15 +60,13 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     };
 
     let resolved_with_overrides =
-    ops::resolve_with_previous(&mut registry, ws,
-                               method, Some(&resolve), None,
-                               &specs)?;
+        ops::resolve_with_previous(&mut registry, ws, method, Some(&resolve), None, &specs)?;
 
     for &(ref replace_spec, _) in ws.root_replace() {
         if !resolved_with_overrides.replacements().keys().any(|r| replace_spec.matches(r)) {
-            ws.config().shell().warn(
-                format!("package replacement is not used: {}", replace_spec)
-            )?
+            ws.config()
+                .shell()
+                .warn(format!("package replacement is not used: {}", replace_spec))?
         }
     }
 
@@ -76,12 +75,10 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     Ok((packages, resolved_with_overrides))
 }
 
-fn resolve_with_registry(ws: &Workspace, registry: &mut PackageRegistry)
-                         -> CargoResult<Resolve> {
+fn resolve_with_registry(ws: &Workspace, registry: &mut PackageRegistry) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
-    let resolve = resolve_with_previous(registry, ws,
-                                        Method::Everything,
-                                        prev.as_ref(), None, &[])?;
+    let resolve =
+        resolve_with_previous(registry, ws, Method::Everything, prev.as_ref(), None, &[])?;
 
     if !ws.is_ephemeral() {
         ops::write_pkg_lockfile(ws, &resolve)?;
@@ -116,8 +113,8 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     let mut to_avoid_sources = HashSet::new();
     if let Some(to_avoid) = to_avoid {
         to_avoid_sources.extend(to_avoid.iter()
-                                        .map(|p| p.source_id())
-                                        .filter(|s| !s.is_registry()));
+            .map(|p| p.source_id())
+            .filter(|s| !s.is_registry()));
     }
 
     // In the case where a previous instance of resolve is available, we
@@ -145,8 +142,9 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         trace!("previous: {:?}", r);
         for node in r.iter().filter(|p| keep(p, to_avoid, &to_avoid_sources)) {
             let deps = r.deps_not_replaced(node)
-                        .filter(|p| keep(p, to_avoid, &to_avoid_sources))
-                        .cloned().collect();
+                .filter(|p| keep(p, to_avoid, &to_avoid_sources))
+                .cloned()
+                .collect();
             registry.register_lock(node.clone(), deps);
         }
     }
@@ -189,7 +187,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                         if specs.iter().any(|spec| spec.matches(member_id)) {
                             base
                         } else {
-                            continue
+                            continue;
                         }
                     }
                 }
@@ -204,16 +202,17 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
 
     let replace = match previous {
         Some(r) => {
-            root_replace.iter().map(|&(ref spec, ref dep)| {
-                for (key, val) in r.replacements().iter() {
-                    if spec.matches(key) &&
-                       dep.matches_id(val) &&
-                       keep(&val, to_avoid, &to_avoid_sources) {
-                        return (spec.clone(), dep.clone().lock_to(val))
+            root_replace.iter()
+                .map(|&(ref spec, ref dep)| {
+                    for (key, val) in r.replacements().iter() {
+                        if spec.matches(key) && dep.matches_id(val) &&
+                           keep(&val, to_avoid, &to_avoid_sources) {
+                            return (spec.clone(), dep.clone().lock_to(val));
+                        }
                     }
-                }
-                (spec.clone(), dep.clone())
-            }).collect::<Vec<_>>()
+                    (spec.clone(), dep.clone())
+                })
+                .collect::<Vec<_>>()
         }
         None => root_replace.to_vec(),
     };
@@ -228,7 +227,8 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                 to_avoid_packages: Option<&HashSet<&'a PackageId>>,
                 to_avoid_sources: &HashSet<&'a SourceId>)
                 -> bool {
-        !to_avoid_sources.contains(&p.source_id()) && match to_avoid_packages {
+        !to_avoid_sources.contains(&p.source_id()) &&
+        match to_avoid_packages {
             Some(set) => !set.contains(p),
             None => true,
         }
@@ -237,11 +237,10 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
 
 /// Read the `paths` configuration variable to discover all path overrides that
 /// have been configured.
-fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
-                     ws: &Workspace<'a>) -> CargoResult<()> {
+fn add_overrides<'a>(registry: &mut PackageRegistry<'a>, ws: &Workspace<'a>) -> CargoResult<()> {
     let paths = match ws.config().get_list("paths")? {
         Some(list) => list,
-        None => return Ok(())
+        None => return Ok(()),
     };
 
     let paths = paths.val.iter().map(|&(ref s, ref p)| {
@@ -254,20 +253,18 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
     for (path, definition) in paths {
         let id = SourceId::for_path(&path)?;
         let mut source = PathSource::new_recursive(&path, &id, ws.config());
-        source.update().chain_error(|| {
-            human(format!("failed to update path override `{}` \
-                           (defined in `{}`)", path.display(),
-                          definition.display()))
-        })?;
+        source.update()
+            .chain_error(|| {
+                human(format!("failed to update path override `{}` (defined in `{}`)",
+                              path.display(),
+                              definition.display()))
+            })?;
         registry.add_override(Box::new(source));
     }
     Ok(())
 }
 
-fn get_resolved_packages<'a>(resolve: &Resolve,
-                             registry: PackageRegistry<'a>)
-                             -> PackageSet<'a> {
+fn get_resolved_packages<'a>(resolve: &Resolve, registry: PackageRegistry<'a>) -> PackageSet<'a> {
     let ids: Vec<PackageId> = resolve.iter().cloned().collect();
     registry.get(&ids)
 }
-

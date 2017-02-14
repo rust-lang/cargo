@@ -19,7 +19,7 @@ impl<'a> Links<'a> {
 
     pub fn validate(&mut self, unit: &Unit<'a>) -> CargoResult<()> {
         if !self.validated.insert(unit.pkg.package_id()) {
-            return Ok(())
+            return Ok(());
         }
         let lib = match unit.pkg.manifest().links() {
             Some(lib) => lib,
@@ -32,16 +32,24 @@ impl<'a> Links<'a> {
                        than one version of the same package, but it can \
                        only be linked once; try updating or pinning your \
                        dependencies to ensure that this package only shows \
-                       up once\n\n  {}\n  {}", lib, prev, pkg)
+                       up once\n\n  {}\n  {}",
+                      lib,
+                      prev,
+                      pkg)
             } else {
                 bail!("native library `{}` is being linked to by more than \
                        one package, and can only be linked to by one \
-                       package\n\n  {}\n  {}", lib, prev, pkg)
+                       package\n\n  {}\n  {}",
+                      lib,
+                      prev,
+                      pkg)
             }
         }
         if !unit.pkg.manifest().targets().iter().any(|t| t.is_custom_build()) {
             bail!("package `{}` specifies that it links to `{}` but does not \
-                   have a custom build script", unit.pkg.package_id(), lib)
+                   have a custom build script",
+                  unit.pkg.package_id(),
+                  lib)
         }
         self.links.insert(lib.to_string(), unit.pkg.package_id());
         Ok(())

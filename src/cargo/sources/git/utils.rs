@@ -41,9 +41,7 @@ struct EncodableGitRemote {
 
 impl Encodable for GitRemote {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        EncodableGitRemote {
-            url: self.url.to_string()
-        }.encode(s)
+        EncodableGitRemote { url: self.url.to_string() }.encode(s)
     }
 }
 
@@ -64,9 +62,10 @@ pub struct EncodableGitDatabase {
 impl Encodable for GitDatabase {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         EncodableGitDatabase {
-            remote: self.remote.clone(),
-            path: self.path.display().to_string()
-        }.encode(s)
+                remote: self.remote.clone(),
+                path: self.path.display().to_string(),
+            }
+            .encode(s)
     }
 }
 
@@ -90,13 +89,14 @@ pub struct EncodableGitCheckout {
 impl<'a> Encodable for GitCheckout<'a> {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         EncodableGitCheckout {
-            location: self.location.display().to_string(),
-            revision: self.revision.to_string(),
-            database: EncodableGitDatabase {
-                remote: self.database.remote.clone(),
-                path: self.database.path.display().to_string(),
-            },
-        }.encode(s)
+                location: self.location.display().to_string(),
+                revision: self.revision.to_string(),
+                database: EncodableGitDatabase {
+                    remote: self.database.remote.clone(),
+                    path: self.database.path.display().to_string(),
+                },
+            }
+            .encode(s)
     }
 }
 
@@ -111,8 +111,7 @@ impl GitRemote {
         &self.url
     }
 
-    pub fn rev_for(&self, path: &Path, reference: &GitReference)
-                   -> CargoResult<GitRevision> {
+    pub fn rev_for(&self, path: &Path, reference: &GitReference) -> CargoResult<GitRevision> {
         let db = self.db_at(path)?;
         db.rev_for(reference)
     }
@@ -120,15 +119,13 @@ impl GitRemote {
     pub fn checkout(&self, into: &Path, cargo_config: &Config) -> CargoResult<GitDatabase> {
         let repo = match git2::Repository::open(into) {
             Ok(repo) => {
-                self.fetch_into(&repo, &cargo_config).chain_error(|| {
-                    human(format!("failed to fetch into {}", into.display()))
-                })?;
+                self.fetch_into(&repo, &cargo_config)
+                    .chain_error(|| human(format!("failed to fetch into {}", into.display())))?;
                 repo
             }
             Err(..) => {
-                self.clone_into(into, &cargo_config).chain_error(|| {
-                    human(format!("failed to clone into: {}", into.display()))
-                })?
+                self.clone_into(into, &cargo_config)
+                    .chain_error(|| human(format!("failed to clone into: {}", into.display())))?
             }
         };
 
@@ -172,7 +169,10 @@ impl GitDatabase {
         &self.path
     }
 
-    pub fn copy_to(&self, rev: GitRevision, dest: &Path, cargo_config: &Config)
+    pub fn copy_to(&self,
+                   rev: GitRevision,
+                   dest: &Path,
+                   cargo_config: &Config)
                    -> CargoResult<GitCheckout> {
         let checkout = match git2::Repository::open(dest) {
             Ok(repo) => {
@@ -186,9 +186,8 @@ impl GitDatabase {
             }
             Err(..) => GitCheckout::clone_into(dest, self, rev)?,
         };
-        checkout.update_submodules(&cargo_config).chain_error(|| {
-            internal("failed to update submodules")
-        })?;
+        checkout.update_submodules(&cargo_config)
+            .chain_error(|| internal("failed to update submodules"))?;
         Ok(checkout)
     }
 
@@ -196,24 +195,20 @@ impl GitDatabase {
         let id = match *reference {
             GitReference::Tag(ref s) => {
                 (|| {
-                    let refname = format!("refs/tags/{}", s);
-                    let id = self.repo.refname_to_id(&refname)?;
-                    let obj = self.repo.find_object(id, None)?;
-                    let obj = obj.peel(ObjectType::Commit)?;
-                    Ok(obj.id())
-                }).chain_error(|| {
-                    human(format!("failed to find tag `{}`", s))
-                })?
+                        let refname = format!("refs/tags/{}", s);
+                        let id = self.repo.refname_to_id(&refname)?;
+                        let obj = self.repo.find_object(id, None)?;
+                        let obj = obj.peel(ObjectType::Commit)?;
+                        Ok(obj.id())
+                    }).chain_error(|| human(format!("failed to find tag `{}`", s)))?
             }
             GitReference::Branch(ref s) => {
                 (|| {
-                    let b = self.repo.find_branch(s, git2::BranchType::Local)?;
-                    b.get().target().chain_error(|| {
-                        human(format!("branch `{}` did not have a target", s))
-                    })
-                }).chain_error(|| {
-                    human(format!("failed to find branch `{}`", s))
-                })?
+                        let b = self.repo.find_branch(s, git2::BranchType::Local)?;
+                        b.get()
+                            .target()
+                            .chain_error(|| human(format!("branch `{}` did not have a target", s)))
+                    }).chain_error(|| human(format!("failed to find branch `{}`", s)))?
             }
             GitReference::Rev(ref s) => {
                 let obj = self.repo.revparse_single(s)?;
@@ -238,10 +233,11 @@ impl GitDatabase {
 }
 
 impl<'a> GitCheckout<'a> {
-    fn new(path: &Path, database: &'a GitDatabase, revision: GitRevision,
+    fn new(path: &Path,
+           database: &'a GitDatabase,
+           revision: GitRevision,
            repo: git2::Repository)
-           -> GitCheckout<'a>
-    {
+           -> GitCheckout<'a> {
         GitCheckout {
             location: path.to_path_buf(),
             database: database,
@@ -250,10 +246,10 @@ impl<'a> GitCheckout<'a> {
         }
     }
 
-    fn clone_into(into: &Path, database: &'a GitDatabase,
+    fn clone_into(into: &Path,
+                  database: &'a GitDatabase,
                   revision: GitRevision)
-                  -> CargoResult<GitCheckout<'a>>
-    {
+                  -> CargoResult<GitCheckout<'a>> {
         let repo = GitCheckout::clone_repo(database.path(), into)?;
         let checkout = GitCheckout::new(into, database, revision, repo);
         checkout.reset()?;
@@ -276,9 +272,10 @@ impl<'a> GitCheckout<'a> {
         let url = source.to_url()?;
         let url = url.to_string();
         let repo = git2::Repository::clone(&url, into).chain_error(|| {
-            internal(format!("failed to clone {} into {}", source.display(),
-                             into.display()))
-        })?;
+                internal(format!("failed to clone {} into {}",
+                                 source.display(),
+                                 into.display()))
+            })?;
         Ok(repo)
     }
 
@@ -327,9 +324,8 @@ impl<'a> GitCheckout<'a> {
 
             for mut child in repo.submodules()?.into_iter() {
                 child.init(false)?;
-                let url = child.url().chain_error(|| {
-                    internal("non-utf8 url for submodule")
-                })?;
+                let url = child.url()
+                    .chain_error(|| internal("non-utf8 url for submodule"))?;
 
                 // A submodule which is listed in .gitmodules but not actually
                 // checked out will not have a head id, so we should ignore it.
@@ -349,7 +345,7 @@ impl<'a> GitCheckout<'a> {
                 let repo = match head_and_repo {
                     Ok((head, repo)) => {
                         if child.head_id() == head {
-                            continue
+                            continue;
                         }
                         repo
                     }
@@ -363,9 +359,10 @@ impl<'a> GitCheckout<'a> {
                 // Fetch data from origin and reset to the head commit
                 let refspec = "refs/heads/*:refs/heads/*";
                 fetch(&repo, url, refspec, &cargo_config).chain_error(|| {
-                    internal(format!("failed to fetch submodule `{}` from {}",
-                                     child.name().unwrap_or(""), url))
-                })?;
+                        internal(format!("failed to fetch submodule `{}` from {}",
+                                         child.name().unwrap_or(""),
+                                         url))
+                    })?;
 
                 let obj = repo.find_object(head, None)?;
                 repo.reset(&obj, git2::ResetType::Hard, None)?;
@@ -403,8 +400,7 @@ impl<'a> GitCheckout<'a> {
 /// credentials until we give it a reason to not do so. To ensure we don't
 /// just sit here looping forever we keep track of authentications we've
 /// attempted and we don't try the same ones again.
-fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
-                             -> CargoResult<T>
+fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F) -> CargoResult<T>
     where F: FnMut(&mut git2::Credentials) -> CargoResult<T>
 {
     let mut cred_helper = git2::CredentialHelper::new(url);
@@ -439,7 +435,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
         if allowed.contains(git2::USERNAME) {
             debug_assert!(username.is_none());
             ssh_username_requested = true;
-            return Err(git2::Error::from_str("gonna try usernames later"))
+            return Err(git2::Error::from_str("gonna try usernames later"));
         }
 
         // An "SSH_KEY" authentication indicates that we need some sort of SSH
@@ -459,7 +455,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
             let username = username.unwrap();
             debug_assert!(!ssh_username_requested);
             ssh_agent_attempts.push(username.to_string());
-            return git2::Cred::ssh_key_from_agent(&username)
+            return git2::Cred::ssh_key_from_agent(&username);
         }
 
         // Sometimes libgit2 will ask for a username/password in plaintext. This
@@ -470,13 +466,13 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
         if allowed.contains(git2::USER_PASS_PLAINTEXT) {
             let r = git2::Cred::credential_helper(cfg, url, username);
             cred_helper_bad = Some(r.is_err());
-            return r
+            return r;
         }
 
         // I'm... not sure what the DEFAULT kind of authentication is, but seems
         // easy to support?
         if allowed.contains(git2::DEFAULT) {
-            return git2::Cred::default()
+            return git2::Cred::default();
         }
 
         // Whelp, we tried our best
@@ -520,7 +516,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
                     attempts += 1;
                     if attempts == 1 {
                         ssh_agent_attempts.push(s.to_string());
-                        return git2::Cred::ssh_key_from_agent(&s)
+                        return git2::Cred::ssh_key_from_agent(&s);
                     }
                 }
                 Err(git2::Error::from_str("no authentication available"))
@@ -539,28 +535,28 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
             // errors happened). Otherwise something else is funny so we bail
             // out.
             if attempts != 2 {
-                break
+                break;
             }
         }
     }
 
     if res.is_ok() || !any_attempts {
-        return res.map_err(From::from)
+        return res.map_err(From::from);
     }
 
     // In the case of an authentication failure (where we tried something) then
     // we try to give a more helpful error message about precisely what we
     // tried.
     res.chain_error(|| {
-        let mut msg = "failed to authenticate when downloading \
-                       repository".to_string();
+        let mut msg = "failed to authenticate when downloading repository".to_string();
         if ssh_agent_attempts.len() > 0 {
             let names = ssh_agent_attempts.iter()
-                                          .map(|s| format!("`{}`", s))
-                                          .collect::<Vec<_>>()
-                                          .join(", ");
+                .map(|s| format!("`{}`", s))
+                .collect::<Vec<_>>()
+                .join(", ");
             msg.push_str(&format!("\nattempted ssh-agent authentication, but \
-                                   none of the usernames {} succeeded", names));
+                                   none of the usernames {} succeeded",
+                                  names));
         }
         if let Some(failed_cred_helper) = cred_helper_bad {
             if failed_cred_helper {
@@ -579,7 +575,8 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
 pub fn fetch(repo: &git2::Repository,
              url: &str,
              refspec: &str,
-             config: &Config) -> CargoResult<()> {
+             config: &Config)
+             -> CargoResult<()> {
     if !config.network_allowed() {
         bail!("attempting to update a git repository, but --frozen \
                was specified")
@@ -595,9 +592,7 @@ pub fn fetch(repo: &git2::Repository,
         opts.remote_callbacks(cb)
             .download_tags(git2::AutotagOption::All);
 
-        network::with_retry(config, ||{
-            remote.fetch(&[refspec], Some(&mut opts), None)
-        })?;
+        network::with_retry(config, || remote.fetch(&[refspec], Some(&mut opts), None))?;
         Ok(())
     })
 }
@@ -605,10 +600,10 @@ pub fn fetch(repo: &git2::Repository,
 /// Clone a remote repository into a target directory. This is a simple utility function to get
 /// HEAD. When this is complete it should be equivalent to `git clone $url $target`
 pub fn clone(url: &str, target: &Path, config: &Config) -> CargoResult<()> {
-    let repo = git2::Repository::init(target).chain_error(||{
-        human(format!("Failed to create template directory `{}`",
-                      target.display()))
-    })?;
+    let repo =
+        git2::Repository::init(target).chain_error(|| {
+                human(format!("Failed to create template directory `{}`", target.display()))
+            })?;
     let refspec = "refs/heads/*:refs/heads/*";
     fetch(&repo, &url, refspec, &config).chain_error(||{
         human(format!("failed to fecth `{}`", url))

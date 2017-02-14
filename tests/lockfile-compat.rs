@@ -25,7 +25,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "#;
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -38,8 +39,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file("Cargo.lock", lockfile);
     p.build();
 
-    assert_that(p.cargo("build"),
-                execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
 
     let lock = p.read_lockfile();
     assert!(lock.starts_with(lockfile.trim()));
@@ -50,7 +50,8 @@ fn totally_wild_checksums_works() {
     Package::new("foo", "0.1.0").publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -60,7 +61,8 @@ fn totally_wild_checksums_works() {
             foo = "0.1.0"
         "#)
         .file("src/lib.rs", "")
-        .file("Cargo.lock", r#"
+        .file("Cargo.lock",
+              r#"
 [root]
 name = "bar"
 version = "0.0.1"
@@ -80,8 +82,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
     p.build();
 
-    assert_that(p.cargo("build"),
-                execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
 
     let lock = p.read_lockfile();
     assert!(lock.starts_with(r#"
@@ -98,7 +99,8 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
-"#.trim()));
+"#
+        .trim()));
 }
 
 #[test]
@@ -106,7 +108,8 @@ fn wrong_checksum_is_an_error() {
     Package::new("foo", "0.1.0").publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -116,7 +119,8 @@ fn wrong_checksum_is_an_error() {
             foo = "0.1.0"
         "#)
         .file("src/lib.rs", "")
-        .file("Cargo.lock", r#"
+        .file("Cargo.lock",
+              r#"
 [root]
 name = "bar"
 version = "0.0.1"
@@ -159,7 +163,8 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
     Package::new("foo", "0.1.0").publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -169,7 +174,8 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
             foo = "0.1.0"
         "#)
         .file("src/lib.rs", "")
-        .file("Cargo.lock", r#"
+        .file("Cargo.lock",
+              r#"
 [root]
 name = "bar"
 version = "0.0.1"
@@ -209,17 +215,20 @@ this could be indicative of a few possible situations:
 #[test]
 fn listed_checksum_bad_if_we_cannot_compute() {
     let git = git::new("foo", |p| {
-        p.file("Cargo.toml", r#"
+            p.file("Cargo.toml",
+                      r#"
             [project]
             name = "foo"
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", "")
-    }).unwrap();
+                .file("src/lib.rs", "")
+        })
+        .unwrap();
 
     let p = project("bar")
-        .file("Cargo.toml", &format!(r#"
+        .file("Cargo.toml",
+              &format!(r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -227,9 +236,11 @@ fn listed_checksum_bad_if_we_cannot_compute() {
 
             [dependencies]
             foo = {{ git = '{}' }}
-        "#, git.url()))
+        "#,
+                       git.url()))
         .file("src/lib.rs", "")
-        .file("Cargo.lock", &format!(r#"
+        .file("Cargo.lock",
+              &format!(r#"
 [root]
 name = "bar"
 version = "0.0.1"
@@ -244,7 +255,8 @@ source = "git+{0}"
 
 [metadata]
 "checksum foo 0.1.0 (git+{0})" = "checksum"
-"#, git.url()));
+"#,
+                       git.url()));
 
     p.build();
 
@@ -270,7 +282,8 @@ fn current_lockfile_format() {
     Package::new("foo", "0.1.0").publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.0.1"
@@ -327,7 +340,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "#;
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.0.1"

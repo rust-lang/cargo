@@ -126,7 +126,7 @@ impl Resolve {
         for (id, cksum) in previous.checksums.iter() {
             if let Some(mine) = self.checksums.get(id) {
                 if mine == cksum {
-                    continue
+                    continue;
                 }
 
                 // If the previous checksum wasn't calculated, the current
@@ -146,12 +146,14 @@ this could be indicative of a few possible situations:
     * newer Cargo implementations know how to checksum this source, but this
       older implementation does not
     * the lock file is corrupt
-", id, id.source_id())
+",
+                          id,
+                          id.source_id())
 
-                // If our checksum hasn't been calculated, then it could mean
-                // that future Cargo figured out how to checksum something or
-                // more realistically we were overridden with a source that does
-                // not have checksums.
+                    // If our checksum hasn't been calculated, then it could mean
+                    // that future Cargo figured out how to checksum something or
+                    // more realistically we were overridden with a source that does
+                    // not have checksums.
                 } else if mine.is_none() {
                     bail!("\
 checksum for `{}` could not be calculated, but a checksum is listed in \
@@ -164,11 +166,13 @@ this could be indicative of a few possible situations:
     * the lock file is corrupt
 
 unable to verify that `{0}` is the same as when the lockfile was generated
-", id, id.source_id())
+",
+                          id,
+                          id.source_id())
 
-                // If the checksums aren't equal, and neither is None, then they
-                // must both be Some, in which case the checksum now differs.
-                // That's quite bad!
+                    // If the checksums aren't equal, and neither is None, then they
+                    // must both be Some, in which case the checksum now differs.
+                    // That's quite bad!
                 } else {
                     bail!("\
 checksum for `{}` changed between lock files
@@ -180,7 +184,8 @@ this could be indicative of a few possible errors:
     * the source itself may be corrupt in one way or another
 
 unable to verify that `{0}` is the same as when the lockfile was generated
-", id);
+",
+                          id);
                 }
             }
         }
@@ -195,7 +200,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     }
 
     pub fn deps(&self, pkg: &PackageId) -> Deps {
-        Deps { edges: self.graph.edges(pkg), resolve: self }
+        Deps {
+            edges: self.graph.edges(pkg),
+            resolve: self,
+        }
     }
 
     pub fn deps_not_replaced(&self, pkg: &PackageId) -> DepsNotReplaced {
@@ -234,7 +242,8 @@ impl<'a> Iterator for Deps<'a> {
     type Item = &'a PackageId;
 
     fn next(&mut self) -> Option<&'a PackageId> {
-        self.edges.as_mut()
+        self.edges
+            .as_mut()
             .and_then(|e| e.next())
             .map(|id| self.resolve.replacement(id).unwrap_or(id))
     }
@@ -260,7 +269,8 @@ struct Context<'a> {
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summaries: &[(Summary, Method)],
                replacements: &[(PackageIdSpec, Dependency)],
-               registry: &mut Registry) -> CargoResult<Resolve> {
+               registry: &mut Registry)
+               -> CargoResult<Resolve> {
     let cx = Context {
         resolve_graph: Graph::new(),
         resolve_features: HashMap::new(),
@@ -318,7 +328,8 @@ fn activate(cx: &mut Context,
             if cx.flag_activated(&replace, method) {
                 return Ok(None);
             }
-            trace!("activating {} (replacing {})", replace.package_id(),
+            trace!("activating {} (replacing {})",
+                   replace.package_id(),
                    candidate.summary.package_id());
             replace
         }
@@ -359,12 +370,12 @@ impl<T> RcVecIter<T> {
     }
 }
 
-impl<T> Iterator for RcVecIter<T> where T: Clone {
+impl<T> Iterator for RcVecIter<T>
+    where T: Clone
+{
     type Item = (usize, T);
     fn next(&mut self) -> Option<(usize, T)> {
-        self.rest.next().and_then(|i| {
-            self.vec.get(i).map(|val| (i, val.clone()))
-        })
+        self.rest.next().and_then(|i| self.vec.get(i).map(|val| (i, val.clone())))
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.rest.size_hint()
@@ -385,9 +396,11 @@ impl DepsFrame {
     /// number of candidates at the front, so we just return the number of
     /// candidates in that entry.
     fn min_candidates(&self) -> usize {
-        self.remaining_siblings.as_slice().get(0).map(|&(_, ref candidates, _)| {
-            candidates.len()
-        }).unwrap_or(0)
+        self.remaining_siblings
+            .as_slice()
+            .get(0)
+            .map(|&(_, ref candidates, _)| candidates.len())
+            .unwrap_or(0)
     }
 }
 
@@ -444,9 +457,11 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     for &(ref summary, ref method) in summaries {
         debug!("initial activation: {}", summary.package_id());
         let summary = Rc::new(summary.clone());
-        let candidate = Candidate { summary: summary, replace: None };
-        remaining_deps.extend(activate(&mut cx, registry, None, candidate,
-                                       method)?);
+        let candidate = Candidate {
+            summary: summary,
+            replace: None,
+        };
+        remaining_deps.extend(activate(&mut cx, registry, None, candidate, method)?);
     }
 
     // Main resolution loop, this is the workhorse of the resolution algorithm.
@@ -476,10 +491,16 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
 
         let my_candidates = {
             let prev_active = cx.prev_active(&dep);
-            trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
+            trace!("{}[{}]>{} {} candidates",
+                   parent.name(),
+                   cur,
+                   dep.name(),
                    candidates.len());
-            trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
-                   dep.name(), prev_active.len());
+            trace!("{}[{}]>{} {} prev activations",
+                   parent.name(),
+                   cur,
+                   dep.name(),
+                   prev_active.len());
 
             // Filter the set of candidates based on the previously activated
             // versions for this dependency. We can actually use a version if it
@@ -488,12 +509,13 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
             // define "compatible" here in terms of the semver sense where if
             // the left-most nonzero digit is the same they're considered
             // compatible.
-            candidates.iter().filter(|&b| {
-                prev_active.iter().any(|a| *a == b.summary) ||
-                    prev_active.iter().all(|a| {
-                        !compatible(a.version(), b.summary.version())
-                    })
-            }).cloned().collect()
+            candidates.iter()
+                .filter(|&b| {
+                    prev_active.iter().any(|a| *a == b.summary) ||
+                    prev_active.iter().all(|a| !compatible(a.version(), b.summary.version()))
+                })
+                .cloned()
+                .collect()
         };
 
         // Alright, for each candidate that's gotten this far, it meets the
@@ -528,8 +550,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                 // find a dependency that does have a candidate to try, and try
                 // to activate that one.  This resets the `remaining_deps` to
                 // their state at the found level of the `backtrack_stack`.
-                trace!("{}[{}]>{} -- no candidates", parent.name(), cur,
-                       dep.name());
+                trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
                 match find_candidate(&mut backtrack_stack,
                                      &mut cx,
                                      &mut remaining_deps,
@@ -537,10 +558,14 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                                      &mut cur,
                                      &mut dep,
                                      &mut features) {
-                    None => return Err(activation_error(&cx, registry, &parent,
-                                                        &dep,
-                                                        &cx.prev_active(&dep),
-                                                        &candidates)),
+                    None => {
+                        return Err(activation_error(&cx,
+                                                    registry,
+                                                    &parent,
+                                                    &dep,
+                                                    &cx.prev_active(&dep),
+                                                    &candidates))
+                    }
                     Some(candidate) => candidate,
                 }
             }
@@ -551,10 +576,12 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
             features: &features,
             uses_default_features: dep.uses_default_features(),
         };
-        trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
+        trace!("{}[{}]>{} trying {}",
+               parent.name(),
+               cur,
+               dep.name(),
                candidate.summary.version());
-        remaining_deps.extend(activate(&mut cx, registry, Some(&parent),
-                              candidate, &method)?);
+        remaining_deps.extend(activate(&mut cx, registry, Some(&parent), candidate, &method)?);
     }
 
     Ok(cx)
@@ -569,7 +596,8 @@ fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
                       parent: &mut Rc<Summary>,
                       cur: &mut usize,
                       dep: &mut Dependency,
-                      features: &mut Vec<String>) -> Option<Candidate> {
+                      features: &mut Vec<String>)
+                      -> Option<Candidate> {
     while let Some(mut frame) = backtrack_stack.pop() {
         if let Some((_, candidate)) = frame.remaining_candidates.next() {
             *cx = frame.context_backup.clone();
@@ -579,7 +607,7 @@ fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
             *dep = frame.dep.clone();
             *features = frame.features.clone();
             backtrack_stack.push(frame);
-            return Some(candidate)
+            return Some(candidate);
         }
     }
     None
@@ -590,13 +618,14 @@ fn activation_error(cx: &Context,
                     parent: &Summary,
                     dep: &Dependency,
                     prev_active: &[Rc<Summary>],
-                    candidates: &[Candidate]) -> Box<CargoError> {
+                    candidates: &[Candidate])
+                    -> Box<CargoError> {
     if candidates.len() > 0 {
-        let mut msg = format!("failed to select a version for `{}` \
-                               (required by `{}`):\n\
-                               all possible versions conflict with \
-                               previously selected versions of `{}`",
-                              dep.name(), parent.name(),
+        let mut msg = format!("failed to select a version for `{}` (required by `{}`):\nall \
+                               possible versions conflict with previously selected versions of \
+                               `{}`",
+                              dep.name(),
+                              parent.name(),
                               dep.name());
         'outer: for v in prev_active.iter() {
             for node in cx.resolve_graph.iter() {
@@ -605,25 +634,25 @@ fn activation_error(cx: &Context,
                     None => continue,
                 };
                 for edge in edges {
-                    if edge != v.package_id() { continue }
+                    if edge != v.package_id() {
+                        continue;
+                    }
 
-                    msg.push_str(&format!("\n  version {} in use by {}",
-                                          v.version(), edge));
+                    msg.push_str(&format!("\n  version {} in use by {}", v.version(), edge));
                     continue 'outer;
                 }
             }
-            msg.push_str(&format!("\n  version {} in use by ??",
-                                  v.version()));
+            msg.push_str(&format!("\n  version {} in use by ??", v.version()));
         }
 
         msg.push_str(&format!("\n  possible versions to select: {}",
                               candidates.iter()
-                                        .map(|v| v.summary.version())
-                                        .map(|v| v.to_string())
-                                        .collect::<Vec<_>>()
-                                        .join(", ")));
+                                  .map(|v| v.summary.version())
+                                  .map(|v| v.to_string())
+                                  .collect::<Vec<_>>()
+                                  .join(", ")));
 
-        return human(msg)
+        return human(msg);
     }
 
     // Once we're all the way down here, we're definitely lost in the
@@ -633,11 +662,10 @@ fn activation_error(cx: &Context,
     // Note that we re-query the registry with a new dependency that
     // allows any version so we can give some nicer error reporting
     // which indicates a few versions that were actually found.
-    let msg = format!("no matching package named `{}` found \
-                       (required by `{}`)\n\
-                       location searched: {}\n\
-                       version required: {}",
-                      dep.name(), parent.name(),
+    let msg = format!("no matching package named `{}` found (required by `{}`)\nlocation \
+                       searched: {}\nversion required: {}",
+                      dep.name(),
+                      parent.name(),
                       dep.source_id(),
                       dep.version_req());
     let mut msg = msg;
@@ -647,13 +675,13 @@ fn activation_error(cx: &Context,
         Ok(candidates) => candidates,
         Err(e) => return e,
     };
-    candidates.sort_by(|a, b| {
-        b.version().cmp(a.version())
-    });
+    candidates.sort_by(|a, b| b.version().cmp(a.version()));
     if !candidates.is_empty() {
         msg.push_str("\nversions found: ");
         for (i, c) in candidates.iter().take(3).enumerate() {
-            if i != 0 { msg.push_str(", "); }
+            if i != 0 {
+                msg.push_str(", ");
+            }
             msg.push_str(&c.version().to_string());
         }
         if candidates.len() > 3 {
@@ -664,8 +692,7 @@ fn activation_error(cx: &Context,
     // If we have a path dependency with a locked version, then this may
     // indicate that we updated a sub-package and forgot to run `cargo
     // update`. In this case try to print a helpful error!
-    if dep.source_id().is_path() &&
-       dep.version_req().to_string().starts_with("=") &&
+    if dep.source_id().is_path() && dep.version_req().to_string().starts_with("=") &&
        !candidates.is_empty() {
         msg.push_str("\nconsider running `cargo update` to update \
                       a path dependency's locked version");
@@ -680,10 +707,18 @@ fn activation_error(cx: &Context,
 // Versions `a` and `b` are compatible if their left-most nonzero digit is the
 // same.
 fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
-    if a.major != b.major { return false }
-    if a.major != 0 { return true }
-    if a.minor != b.minor { return false }
-    if a.minor != 0 { return true }
+    if a.major != b.major {
+        return false;
+    }
+    if a.major != 0 {
+        return true;
+    }
+    if a.minor != b.minor {
+        return false;
+    }
+    if a.minor != 0 {
+        return true;
+    }
     a.patch == b.patch
 }
 
@@ -696,7 +731,8 @@ fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
 // The all used features set is the set of features which this local package had
 // enabled, which is later used when compiling to instruct the code what
 // features were enabled.
-fn build_features(s: &Summary, method: &Method)
+fn build_features(s: &Summary,
+                  method: &Method)
                   -> CargoResult<(HashMap<String, Vec<String>>, HashSet<String>)> {
     let mut deps = HashMap::new();
     let mut used = HashSet::new();
@@ -707,11 +743,10 @@ fn build_features(s: &Summary, method: &Method)
                 add_feature(s, key, &mut deps, &mut used, &mut visited)?;
             }
             for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-                add_feature(s, dep.name(), &mut deps, &mut used,
-                            &mut visited)?;
+                add_feature(s, dep.name(), &mut deps, &mut used, &mut visited)?;
             }
         }
-        Method::Required { features: requested_features, .. } =>  {
+        Method::Required { features: requested_features, .. } => {
             for feat in requested_features.iter() {
                 add_feature(s, feat, &mut deps, &mut used, &mut visited)?;
             }
@@ -721,19 +756,22 @@ fn build_features(s: &Summary, method: &Method)
         Method::Everything |
         Method::Required { uses_default_features: true, .. } => {
             if s.features().get("default").is_some() {
-                add_feature(s, "default", &mut deps, &mut used,
-                            &mut visited)?;
+                add_feature(s, "default", &mut deps, &mut used, &mut visited)?;
             }
         }
         Method::Required { uses_default_features: false, .. } => {}
     }
     return Ok((deps, used));
 
-    fn add_feature(s: &Summary, feat: &str,
+    fn add_feature(s: &Summary,
+                   feat: &str,
                    deps: &mut HashMap<String, Vec<String>>,
                    used: &mut HashSet<String>,
-                   visited: &mut HashSet<String>) -> CargoResult<()> {
-        if feat.is_empty() { return Ok(()) }
+                   visited: &mut HashSet<String>)
+                   -> CargoResult<()> {
+        if feat.is_empty() {
+            return Ok(());
+        }
 
         // If this feature is of the form `foo/bar`, then we just lookup package
         // `foo` and enable its feature `bar`. Otherwise this feature is of the
@@ -754,7 +792,8 @@ fn build_features(s: &Summary, method: &Method)
                 let feat = feat_or_package;
                 if !visited.insert(feat.to_string()) {
                     bail!("Cyclic feature dependency: feature `{}` depends \
-                           on itself", feat)
+                           on itself",
+                          feat)
                 }
                 used.insert(feat.to_string());
                 match s.features().get(feat) {
@@ -778,16 +817,14 @@ impl<'a> Context<'a> {
     // Activate this summary by inserting it into our list of known activations.
     //
     // Returns if this summary with the given method is already activated.
-    fn flag_activated(&mut self,
-                      summary: &Rc<Summary>,
-                      method: &Method) -> bool {
+    fn flag_activated(&mut self, summary: &Rc<Summary>, method: &Method) -> bool {
         let id = summary.package_id();
         let key = (id.name().to_string(), id.source_id().clone());
         let prev = self.activations.entry(key).or_insert(Vec::new());
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.add(id.clone(), &[]);
             prev.push(summary.clone());
-            return false
+            return false;
         }
         debug!("checking if {} is already activated", summary.package_id());
         let (features, use_default) = match *method {
@@ -801,17 +838,17 @@ impl<'a> Context<'a> {
         match self.resolve_features.get(id) {
             Some(prev) => {
                 features.iter().all(|f| prev.contains(f)) &&
-                    (!use_default || prev.contains("default") ||
-                     !has_default_feature)
+                (!use_default || prev.contains("default") || !has_default_feature)
             }
-            None => features.is_empty() && (!use_default || !has_default_feature)
+            None => features.is_empty() && (!use_default || !has_default_feature),
         }
     }
 
     fn build_deps(&mut self,
                   registry: &mut Registry,
                   candidate: &Summary,
-                  method: &Method) -> CargoResult<Vec<DepInfo>> {
+                  method: &Method)
+                  -> CargoResult<Vec<DepInfo>> {
         // First, figure out our set of dependencies based on the requsted set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
@@ -819,15 +856,15 @@ impl<'a> Context<'a> {
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
-        let mut deps = deps.into_iter().map(|(dep, features)| {
-            let mut candidates = self.query(registry, &dep)?;
-            // When we attempt versions for a package, we'll want to start at
-            // the maximum version and work our way down.
-            candidates.sort_by(|a, b| {
-                b.summary.version().cmp(a.summary.version())
-            });
-            Ok((dep, candidates, features))
-        }).collect::<CargoResult<Vec<DepInfo>>>()?;
+        let mut deps = deps.into_iter()
+            .map(|(dep, features)| {
+                let mut candidates = self.query(registry, &dep)?;
+                // When we attempt versions for a package, we'll want to start at
+                // the maximum version and work our way down.
+                candidates.sort_by(|a, b| b.summary.version().cmp(a.summary.version()));
+                Ok((dep, candidates, features))
+            })
+            .collect::<CargoResult<Vec<DepInfo>>>()?;
 
         // Attempt to resolve dependencies with fewer candidates before trying
         // dependencies with more candidates.  This way if the dependency with
@@ -844,67 +881,83 @@ impl<'a> Context<'a> {
     /// any candidates are returned which match an override then the override is
     /// applied by performing a second query for what the override should
     /// return.
-    fn query(&self,
-             registry: &mut Registry,
-             dep: &Dependency) -> CargoResult<Vec<Candidate>> {
+    fn query(&self, registry: &mut Registry, dep: &Dependency) -> CargoResult<Vec<Candidate>> {
         let summaries = registry.query(dep)?;
-        summaries.into_iter().map(Rc::new).map(|summary| {
-            // get around lack of non-lexical lifetimes
-            let summary2 = summary.clone();
+        summaries.into_iter()
+            .map(Rc::new)
+            .map(|summary| {
+                // get around lack of non-lexical lifetimes
+                let summary2 = summary.clone();
 
-            let mut potential_matches = self.replacements.iter()
-                .filter(|&&(ref spec, _)| spec.matches(summary2.package_id()));
+                let mut potential_matches = self.replacements
+                    .iter()
+                    .filter(|&&(ref spec, _)| spec.matches(summary2.package_id()));
 
-            let &(ref spec, ref dep) = match potential_matches.next() {
-                None => return Ok(Candidate { summary: summary, replace: None }),
-                Some(replacement) => replacement,
-            };
-            debug!("found an override for {} {}", dep.name(), dep.version_req());
+                let &(ref spec, ref dep) = match potential_matches.next() {
+                    None => {
+                        return Ok(Candidate {
+                            summary: summary,
+                            replace: None,
+                        })
+                    }
+                    Some(replacement) => replacement,
+                };
+                debug!("found an override for {} {}", dep.name(), dep.version_req());
 
-            let mut summaries = registry.query(dep)?.into_iter();
-            let s = summaries.next().chain_error(|| {
-                human(format!("no matching package for override `{}` found\n\
-                               location searched: {}\n\
-                               version required: {}",
-                              spec, dep.source_id(), dep.version_req()))
-            })?;
-            let summaries = summaries.collect::<Vec<_>>();
-            if summaries.len() > 0 {
-                let bullets = summaries.iter().map(|s| {
-                    format!("  * {}", s.package_id())
-                }).collect::<Vec<_>>();
-                bail!("the replacement specification `{}` matched \
-                       multiple packages:\n  * {}\n{}", spec, s.package_id(),
-                      bullets.join("\n"));
-            }
+                let mut summaries = registry.query(dep)?.into_iter();
+                let s = summaries.next()
+                    .chain_error(|| {
+                        human(format!("no matching package for override `{}` found\nlocation \
+                                       searched: {}\nversion required: {}",
+                                      spec,
+                                      dep.source_id(),
+                                      dep.version_req()))
+                    })?;
+                let summaries = summaries.collect::<Vec<_>>();
+                if summaries.len() > 0 {
+                    let bullets = summaries.iter()
+                        .map(|s| format!("  * {}", s.package_id()))
+                        .collect::<Vec<_>>();
+                    bail!("the replacement specification `{}` matched multiple packages:\n  * \
+                           {}\n{}",
+                          spec,
+                          s.package_id(),
+                          bullets.join("\n"));
+                }
 
-            // The dependency should be hard-coded to have the same name and an
-            // exact version requirement, so both of these assertions should
-            // never fail.
-            assert_eq!(s.version(), summary.version());
-            assert_eq!(s.name(), summary.name());
+                // The dependency should be hard-coded to have the same name and an
+                // exact version requirement, so both of these assertions should
+                // never fail.
+                assert_eq!(s.version(), summary.version());
+                assert_eq!(s.name(), summary.name());
 
-            let replace = if s.source_id() == summary.source_id() {
-                debug!("Preventing\n{:?}\nfrom replacing\n{:?}", summary, s);
-                None
-            } else {
-                Some(Rc::new(s))
-            };
-            let matched_spec = spec.clone();
+                let replace = if s.source_id() == summary.source_id() {
+                    debug!("Preventing\n{:?}\nfrom replacing\n{:?}", summary, s);
+                    None
+                } else {
+                    Some(Rc::new(s))
+                };
+                let matched_spec = spec.clone();
 
-            // Make sure no duplicates
-            if let Some(&(ref spec, _)) = potential_matches.next() {
-                bail!("overlapping replacement specifications found:\n\n  \
-                       * {}\n  * {}\n\nboth specifications match: {}",
-                      matched_spec, spec, summary.package_id());
-            }
+                // Make sure no duplicates
+                if let Some(&(ref spec, _)) = potential_matches.next() {
+                    bail!("overlapping replacement specifications found:\n\n  * {}\n  * \
+                           {}\n\nboth specifications match: {}",
+                          matched_spec,
+                          spec,
+                          summary.package_id());
+                }
 
-            for dep in summary.dependencies() {
-                debug!("\t{} => {}", dep.name(), dep.version_req());
-            }
+                for dep in summary.dependencies() {
+                    debug!("\t{} => {}", dep.name(), dep.version_req());
+                }
 
-            Ok(Candidate { summary: summary, replace: replace })
-        }).collect()
+                Ok(Candidate {
+                    summary: summary,
+                    replace: replace,
+                })
+            })
+            .collect()
     }
 
     fn prev_active(&self, dep: &Dependency) -> &[Rc<Summary>] {
@@ -912,7 +965,9 @@ impl<'a> Context<'a> {
         self.activations.get(&key).map(|v| &v[..]).unwrap_or(&[])
     }
 
-    fn resolve_features(&mut self, candidate: &Summary, method: &Method)
+    fn resolve_features(&mut self,
+                        candidate: &Summary,
+                        method: &Method)
                         -> CargoResult<Vec<(Dependency, Vec<String>)>> {
         let dev_deps = match *method {
             Method::Everything => true,
@@ -923,8 +978,7 @@ impl<'a> Context<'a> {
         let deps = candidate.dependencies();
         let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
 
-        let (mut feature_deps, used_features) = build_features(candidate,
-                                                                    method)?;
+        let (mut feature_deps, used_features) = build_features(candidate, method)?;
         let mut ret = Vec::new();
 
         // Next, sanitize all requested features by whitelisting all the
@@ -932,7 +986,7 @@ impl<'a> Context<'a> {
         for dep in deps {
             // weed out optional dependencies, but not those required
             if dep.is_optional() && !feature_deps.contains_key(dep.name()) {
-                continue
+                continue;
             }
             let mut base = feature_deps.remove(dep.name()).unwrap_or(vec![]);
             base.extend(dep.features().iter().map(|x| x.clone()));
@@ -949,19 +1003,22 @@ impl<'a> Context<'a> {
         // remaining features are bugs in that the package does not actually
         // have those features.
         if !feature_deps.is_empty() {
-            let unknown = feature_deps.keys().map(|s| &s[..])
-                                      .collect::<Vec<&str>>();
+            let unknown = feature_deps.keys()
+                .map(|s| &s[..])
+                .collect::<Vec<&str>>();
             if !unknown.is_empty() {
                 let features = unknown.join(", ");
                 bail!("Package `{}` does not have these features: `{}`",
-                      candidate.package_id(), features)
+                      candidate.package_id(),
+                      features)
             }
         }
 
         // Record what list of features is active for this package.
         if !used_features.is_empty() {
             let pkgid = candidate.package_id();
-            self.resolve_features.entry(pkgid.clone())
+            self.resolve_features
+                .entry(pkgid.clone())
                 .or_insert(HashSet::new())
                 .extend(used_features);
         }
@@ -983,11 +1040,7 @@ fn check_cycles(resolve: &Resolve,
     let mut checked = HashSet::new();
     for pkg in all_packages {
         if !checked.contains(pkg) {
-            visit(resolve,
-                  pkg,
-                  &summaries,
-                  &mut HashSet::new(),
-                  &mut checked)?
+            visit(resolve, pkg, &summaries, &mut HashSet::new(), &mut checked)?
         }
     }
     return Ok(());
@@ -1014,11 +1067,14 @@ fn check_cycles(resolve: &Resolve,
         if checked.insert(id) {
             let summary = summaries[id];
             for dep in resolve.deps(id) {
-                let is_transitive = summary.dependencies().iter().any(|d| {
-                    d.matches_id(dep) && d.is_transitive()
-                });
+                let is_transitive =
+                    summary.dependencies().iter().any(|d| d.matches_id(dep) && d.is_transitive());
                 let mut empty = HashSet::new();
-                let visited = if is_transitive {&mut *visited} else {&mut empty};
+                let visited = if is_transitive {
+                    &mut *visited
+                } else {
+                    &mut empty
+                };
                 visit(resolve, dep, summaries, visited, checked)?;
             }
         }

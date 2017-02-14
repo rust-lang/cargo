@@ -33,7 +33,7 @@ fn enabled() -> bool {
         let r = kernel32::IsProcessInJob(me, 0 as *mut _, &mut ret);
         assert!(r != 0);
         if ret == winapi::FALSE {
-            return true
+            return true;
         }
 
         // If we are in a job, then we can run these tests if we can be added to
@@ -53,14 +53,15 @@ fn enabled() -> bool {
 #[test]
 fn ctrl_c_kills_everyone() {
     if !enabled() {
-        return
+        return;
     }
 
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -68,7 +69,8 @@ fn ctrl_c_kills_everyone() {
             build = "build.rs"
         "#)
         .file("src/lib.rs", "")
-        .file("build.rs", &format!(r#"
+        .file("build.rs",
+              &format!(r#"
             use std::net::TcpStream;
             use std::io::Read;
 
@@ -77,14 +79,15 @@ fn ctrl_c_kills_everyone() {
                 let _ = socket.read(&mut [0; 10]);
                 panic!("that read should never return");
             }}
-        "#, addr));
+        "#,
+                       addr));
     p.build();
 
     let mut cargo = p.cargo("build").build_command();
     cargo.stdin(Stdio::piped())
-         .stdout(Stdio::piped())
-         .stderr(Stdio::piped())
-         .env("__CARGO_TEST_SETSID_PLEASE_DONT_USE_ELSEWHERE", "1");
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .env("__CARGO_TEST_SETSID_PLEASE_DONT_USE_ELSEWHERE", "1");
     let mut child = cargo.spawn().unwrap();
 
     let mut sock = listener.accept().unwrap().0;

@@ -25,8 +25,7 @@ impl<'cfg> PathSource<'cfg> {
     ///
     /// This source will only return the package at precisely the `path`
     /// specified, and it will be an error if there's not a package at `path`.
-    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config)
-               -> PathSource<'cfg> {
+    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config) -> PathSource<'cfg> {
         PathSource {
             source_id: id.clone(),
             path: path.to_path_buf(),
@@ -45,12 +44,8 @@ impl<'cfg> PathSource<'cfg> {
     ///
     /// Note that this should be used with care and likely shouldn't be chosen
     /// by default!
-    pub fn new_recursive(root: &Path, id: &SourceId, config: &'cfg Config)
-                         -> PathSource<'cfg> {
-        PathSource {
-            recursive: true,
-            .. PathSource::new(root, id, config)
-        }
+    pub fn new_recursive(root: &Path, id: &SourceId, config: &'cfg Config) -> PathSource<'cfg> {
+        PathSource { recursive: true, ..PathSource::new(root, id, config) }
     }
 
     pub fn root_package(&mut self) -> CargoResult<Package> {
@@ -60,7 +55,7 @@ impl<'cfg> PathSource<'cfg> {
 
         match self.packages.iter().find(|p| p.root() == &*self.path) {
             Some(pkg) => Ok(pkg.clone()),
-            None => Err(internal("no package found in source"))
+            None => Err(internal("no package found in source")),
         }
     }
 
@@ -89,28 +84,26 @@ impl<'cfg> PathSource<'cfg> {
         let root = pkg.root();
 
         let parse = |p: &String| {
-            Pattern::new(p).map_err(|e| {
-                human(format!("could not parse pattern `{}`: {}", p, e))
-            })
+            Pattern::new(p).map_err(|e| human(format!("could not parse pattern `{}`: {}", p, e)))
         };
 
         let exclude = pkg.manifest()
-                         .exclude()
-                         .iter()
-                         .map(|p| parse(p))
-                         .collect::<Result<Vec<_>, _>>()?;
+            .exclude()
+            .iter()
+            .map(|p| parse(p))
+            .collect::<Result<Vec<_>, _>>()?;
 
         let include = pkg.manifest()
-                         .include()
-                         .iter()
-                         .map(|p| parse(p))
-                         .collect::<Result<Vec<_>, _>>()?;
+            .include()
+            .iter()
+            .map(|p| parse(p))
+            .collect::<Result<Vec<_>, _>>()?;
 
         let mut filter = |p: &Path| {
             let relative_path = util::without_prefix(p, &root).unwrap();
-            include.iter().any(|p| p.matches_path(&relative_path)) || {
-                include.is_empty() &&
-                 !exclude.iter().any(|p| p.matches_path(&relative_path))
+            include.iter().any(|p| p.matches_path(&relative_path)) ||
+            {
+                include.is_empty() && !exclude.iter().any(|p| p.matches_path(&relative_path))
             }
         };
 
@@ -131,7 +124,8 @@ impl<'cfg> PathSource<'cfg> {
                 if let Ok(repo) = git2::Repository::open(cur) {
                     let index = repo.index()?;
                     let path = util::without_prefix(root, cur)
-                                    .unwrap().join("Cargo.toml");
+                        .unwrap()
+                        .join("Cargo.toml");
                     if index.get_path(&path, 0).is_some() {
                         return self.list_files_git(pkg, repo, &mut filter);
                     }
@@ -139,7 +133,7 @@ impl<'cfg> PathSource<'cfg> {
             }
             // don't cross submodule boundaries
             if cur.join(".git").is_dir() {
-                break
+                break;
             }
             match cur.parent() {
                 Some(parent) => cur = parent,
@@ -149,14 +143,15 @@ impl<'cfg> PathSource<'cfg> {
         self.list_files_walk(pkg, &mut filter)
     }
 
-    fn list_files_git(&self, pkg: &Package, repo: git2::Repository,
+    fn list_files_git(&self,
+                      pkg: &Package,
+                      repo: git2::Repository,
                       filter: &mut FnMut(&Path) -> bool)
                       -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
         let index = repo.index()?;
-        let root = repo.workdir().chain_error(|| {
-            internal_error("Can't list files on a bare repository.", "")
-        })?;
+        let root = repo.workdir()
+            .chain_error(|| internal_error("Can't list files on a bare repository.", ""))?;
         let pkg_path = pkg.root();
 
         let mut ret = Vec::<PathBuf>::new();
@@ -179,11 +174,9 @@ impl<'cfg> PathSource<'cfg> {
             opts.pathspec(suffix);
         }
         let statuses = repo.statuses(Some(&mut opts))?;
-        let untracked = statuses.iter().filter_map(|entry| {
-            match entry.status() {
-                git2::STATUS_WT_NEW => Some((join(&root, entry.path_bytes()), None)),
-                _ => None
-            }
+        let untracked = statuses.iter().filter_map(|entry| match entry.status() {
+            git2::STATUS_WT_NEW => Some((join(&root, entry.path_bytes()), None)),
+            _ => None,
         });
 
         let mut subpackages_found = Vec::new();
@@ -195,7 +188,7 @@ impl<'cfg> PathSource<'cfg> {
             // bit obove via the `pathspec` function call, but we need to filter
             // the entries in the index as well.
             if !file_path.starts_with(pkg_path) {
-                continue
+                continue;
             }
 
             match file_path.file_name().and_then(|s| s.to_str()) {
@@ -214,7 +207,7 @@ impl<'cfg> PathSource<'cfg> {
                         warn!("subpackage found: {}", path.display());
                         ret.retain(|p| !p.starts_with(path));
                         subpackages_found.push(path.to_path_buf());
-                        continue
+                        continue;
                     }
                 }
 
@@ -224,15 +217,14 @@ impl<'cfg> PathSource<'cfg> {
             // If this file is part of any other sub-package we've found so far,
             // skip it.
             if subpackages_found.iter().any(|p| file_path.starts_with(p)) {
-                continue
+                continue;
             }
 
             if is_dir.unwrap_or_else(|| file_path.is_dir()) {
                 warn!("  found submodule {}", file_path.display());
                 let rel = util::without_prefix(&file_path, &root).unwrap();
-                let rel = rel.to_str().chain_error(|| {
-                    human(format!("invalid utf-8 filename: {}", rel.display()))
-                })?;
+                let rel = rel.to_str()
+                    .chain_error(|| human(format!("invalid utf-8 filename: {}", rel.display())))?;
                 // Git submodules are currently only named through `/` path
                 // separators, explicitly not `\` which windows uses. Who knew?
                 let rel = rel.replace(r"\", "/");
@@ -242,8 +234,7 @@ impl<'cfg> PathSource<'cfg> {
                         ret.extend(files.into_iter());
                     }
                     Err(..) => {
-                        PathSource::walk(&file_path, &mut ret, false,
-                                              filter)?;
+                        PathSource::walk(&file_path, &mut ret, false, filter)?;
                     }
                 }
             } else if (*filter)(&file_path) {
@@ -265,42 +256,46 @@ impl<'cfg> PathSource<'cfg> {
             use std::str;
             match str::from_utf8(data) {
                 Ok(s) => Ok(path.join(s)),
-                Err(..) => Err(internal("cannot process path in git with a non \
-                                         unicode filename")),
+                Err(..) => Err(internal("cannot process path in git with a non unicode filename")),
             }
         }
     }
 
-    fn list_files_walk(&self, pkg: &Package, filter: &mut FnMut(&Path) -> bool)
+    fn list_files_walk(&self,
+                       pkg: &Package,
+                       filter: &mut FnMut(&Path) -> bool)
                        -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
         PathSource::walk(pkg.root(), &mut ret, true, filter)?;
         Ok(ret)
     }
 
-    fn walk(path: &Path, ret: &mut Vec<PathBuf>,
-            is_root: bool, filter: &mut FnMut(&Path) -> bool) -> CargoResult<()>
-    {
+    fn walk(path: &Path,
+            ret: &mut Vec<PathBuf>,
+            is_root: bool,
+            filter: &mut FnMut(&Path) -> bool)
+            -> CargoResult<()> {
         if !fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false) {
             if (*filter)(path) {
                 ret.push(path.to_path_buf());
             }
-            return Ok(())
+            return Ok(());
         }
         // Don't recurse into any sub-packages that we have
         if !is_root && fs::metadata(&path.join("Cargo.toml")).is_ok() {
-            return Ok(())
+            return Ok(());
         }
         for dir in fs::read_dir(path)? {
             let dir = dir?.path();
             let name = dir.file_name().and_then(|s| s.to_str());
             // Skip dotfile directories
             if name.map(|s| s.starts_with('.')) == Some(true) {
-                continue
+                continue;
             } else if is_root {
                 // Skip cargo artifacts
                 match name {
-                    Some("target") | Some("Cargo.lock") => continue,
+                    Some("target") |
+                    Some("Cargo.lock") => continue,
                     _ => {}
                 }
             }
@@ -341,9 +336,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         trace!("getting packages; id={}", id);
 
         let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
-        pkg.cloned().ok_or_else(|| {
-            internal(format!("failed to find {} in path source", id))
-        })
+        pkg.cloned().ok_or_else(|| internal(format!("failed to find {} in path source", id)))
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
@@ -359,9 +352,9 @@ impl<'cfg> Source for PathSource<'cfg> {
             // condition where this path was rm'ed - either way,
             // we can ignore the error and treat the path's mtime
             // as 0.
-            let mtime = fs::metadata(&file).map(|meta| {
-                FileTime::from_last_modification_time(&meta)
-            }).unwrap_or(FileTime::zero());
+            let mtime = fs::metadata(&file)
+                .map(|meta| FileTime::from_last_modification_time(&meta))
+                .unwrap_or(FileTime::zero());
             warn!("{} {}", mtime, file.display());
             if mtime > max {
                 max = mtime;

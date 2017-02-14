@@ -8,9 +8,13 @@ use util::{self, paths, CargoResult, human, Config, ChainError};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::Layout;
 
-pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
+pub fn read_manifest(path: &Path,
+                     source_id: &SourceId,
+                     config: &Config)
                      -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
-    trace!("read_package; path={}; source-id={}", path.display(), source_id);
+    trace!("read_package; path={}; source-id={}",
+           path.display(),
+           source_id);
     let contents = paths::read(path)?;
 
     let layout = Layout::from_project_path(path.parent().unwrap());
@@ -21,53 +25,62 @@ pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
     })
 }
 
-pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
+pub fn read_package(path: &Path,
+                    source_id: &SourceId,
+                    config: &Config)
                     -> CargoResult<(Package, Vec<PathBuf>)> {
-    trace!("read_package; path={}; source-id={}", path.display(), source_id);
+    trace!("read_package; path={}; source-id={}",
+           path.display(),
+           source_id);
     let (manifest, nested) = read_manifest(path, source_id, config)?;
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => {
             bail!("found a virtual manifest at `{}` instead of a package \
-                   manifest", path.display())
+                   manifest",
+                  path.display())
         }
     };
 
     Ok((Package::new(manifest, path), nested))
 }
 
-pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
+pub fn read_packages(path: &Path,
+                     source_id: &SourceId,
+                     config: &Config)
                      -> CargoResult<Vec<Package>> {
     let mut all_packages = HashMap::new();
     let mut visited = HashSet::<PathBuf>::new();
 
-    trace!("looking for root package: {}, source_id={}", path.display(), source_id);
+    trace!("looking for root package: {}, source_id={}",
+           path.display(),
+           source_id);
 
-    walk(path, &mut |dir| {
+    walk(path,
+         &mut |dir| {
         trace!("looking for child package: {}", dir.display());
 
         // Don't recurse into hidden/dot directories unless we're at the toplevel
         if dir != path {
             let name = dir.file_name().and_then(|s| s.to_str());
             if name.map(|s| s.starts_with(".")) == Some(true) {
-                return Ok(false)
+                return Ok(false);
             }
 
             // Don't automatically discover packages across git submodules
             if fs::metadata(&dir.join(".git")).is_ok() {
-                return Ok(false)
+                return Ok(false);
             }
         }
 
         // Don't ever look at target directories
         if dir.file_name().and_then(|s| s.to_str()) == Some("target") &&
            has_manifest(dir.parent().unwrap()) {
-            return Ok(false)
+            return Ok(false);
         }
 
         if has_manifest(dir) {
-            read_nested_packages(dir, &mut all_packages, source_id, config,
-                                      &mut visited)?;
+            read_nested_packages(dir, &mut all_packages, source_id, config, &mut visited)?;
         }
         Ok(true)
     })?;
@@ -79,24 +92,20 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
     }
 }
 
-fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>)
-        -> CargoResult<()> {
+fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>) -> CargoResult<()> {
     if !callback(path)? {
         trace!("not processing {}", path.display());
-        return Ok(())
+        return Ok(());
     }
 
     // Ignore any permission denied errors because temporary directories
     // can often have some weird permissions on them.
     let dirs = match fs::read_dir(path) {
         Ok(dirs) => dirs,
-        Err(ref e) if e.kind() == io::ErrorKind::PermissionDenied => {
-            return Ok(())
-        }
+        Err(ref e) if e.kind() == io::ErrorKind::PermissionDenied => return Ok(()),
         Err(e) => {
-            return Err(human(e)).chain_error(|| {
-                human(format!("failed to read directory `{}`", path.display()))
-            })
+            return Err(human(e))
+                .chain_error(|| human(format!("failed to read directory `{}`", path.display())))
         }
     };
     for dir in dirs {
@@ -116,8 +125,11 @@ fn read_nested_packages(path: &Path,
                         all_packages: &mut HashMap<PackageId, Package>,
                         source_id: &SourceId,
                         config: &Config,
-                        visited: &mut HashSet<PathBuf>) -> CargoResult<()> {
-    if !visited.insert(path.to_path_buf()) { return Ok(()) }
+                        visited: &mut HashSet<PathBuf>)
+                        -> CargoResult<()> {
+    if !visited.insert(path.to_path_buf()) {
+        return Ok(());
+    }
 
     let manifest_path = find_project_manifest_exact(path, "Cargo.toml")?;
 
@@ -133,7 +145,8 @@ fn read_nested_packages(path: &Path,
         all_packages.insert(pkg_id, pkg);
     } else {
         info!("skipping nested package `{}` found at `{}`",
-              pkg.name(), path.to_string_lossy());
+              pkg.name(),
+              path.to_string_lossy());
     }
 
     // Registry sources are not allowed to have `path=` dependencies because
@@ -147,8 +160,7 @@ fn read_nested_packages(path: &Path,
     if !source_id.is_registry() {
         for p in nested.iter() {
             let path = util::normalize_path(&path.join(p));
-            read_nested_packages(&path, all_packages, source_id,
-                                      config, visited)?;
+            read_nested_packages(&path, all_packages, source_id, config, visited)?;
         }
     }
 

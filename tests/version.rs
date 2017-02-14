@@ -11,12 +11,10 @@ fn simple() {
     let p = project("foo");
 
     assert_that(p.cargo_process("version"),
-                execs().with_status(0).with_stdout(&format!("{}\n",
-                                                            cargo::version())));
+                execs().with_status(0).with_stdout(&format!("{}\n", cargo::version())));
 
     assert_that(p.cargo_process("--version"),
-                execs().with_status(0).with_stdout(&format!("{}\n",
-                                                            cargo::version())));
+                execs().with_status(0).with_stdout(&format!("{}\n", cargo::version())));
 
 }
 
@@ -31,19 +29,16 @@ fn version_works_without_rustc() {
 
 #[test]
 fn version_works_with_bad_config() {
-    let p = project("foo")
-        .file(".cargo/config", "this is not toml");
-    assert_that(p.cargo_process("version"),
-                execs().with_status(0));
+    let p = project("foo").file(".cargo/config", "this is not toml");
+    assert_that(p.cargo_process("version"), execs().with_status(0));
 }
 
 #[test]
 fn version_works_with_bad_target_dir() {
-    let p = project("foo")
-        .file(".cargo/config", r#"
+    let p = project("foo").file(".cargo/config",
+                                r#"
             [build]
             target-dir = 4
         "#);
-    assert_that(p.cargo_process("version"),
-                execs().with_status(0));
+    assert_that(p.cargo_process("version"), execs().with_status(0));
 }

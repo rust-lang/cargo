@@ -10,8 +10,8 @@ use hamcrest::assert_that;
 #[test]
 fn profile_overrides() {
     let mut p = project("foo");
-    p = p
-        .file("Cargo.toml", r#"
+    p = p.file("Cargo.toml",
+              r#"
             [package]
 
             name = "test"
@@ -45,8 +45,8 @@ url = p.url(),
 #[test]
 fn opt_level_override_0() {
     let mut p = project("foo");
-    p = p
-        .file("Cargo.toml", r#"
+    p = p.file("Cargo.toml",
+              r#"
             [package]
 
             name = "test"
@@ -68,17 +68,16 @@ fn opt_level_override_0() {
         -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] [..] target(s) in [..]
 ",
-dir = p.root().display(),
-url = p.url()
-)));
+                                                            dir = p.root().display(),
+                                                            url = p.url())));
 }
 
 #[test]
 fn debug_override_1() {
     let mut p = project("foo");
 
-    p = p
-        .file("Cargo.toml", r#"
+    p = p.file("Cargo.toml",
+              r#"
             [package]
             name = "test"
             version = "0.0.0"
@@ -99,15 +98,14 @@ fn debug_override_1() {
         -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] [..] target(s) in [..]
 ",
-dir = p.root().display(),
-url = p.url()
-)));
+                                                            dir = p.root().display(),
+                                                            url = p.url())));
 }
 
 fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
     let mut p = project("foo");
-    p = p
-        .file("Cargo.toml", &format!(r#"
+    p = p.file("Cargo.toml",
+              &format!(r#"
             [package]
 
             name = "test"
@@ -116,7 +114,8 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
 
             [profile.dev]
             opt-level = {level}
-        "#, level = profile_level))
+        "#,
+                       level = profile_level))
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
@@ -131,23 +130,19 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         -L dependency={dir}[/]target[/]debug[/]deps`
 [FINISHED] [..] target(s) in [..]
 ",
-dir = p.root().display(),
-url = p.url(),
-level = rustc_level
-)));
+                                                            dir = p.root().display(),
+                                                            url = p.url(),
+                                                            level = rustc_level)));
 }
 
 #[test]
 fn opt_level_overrides() {
-    if !is_nightly() { return }
+    if !is_nightly() {
+        return;
+    }
 
-    for &(profile_level, rustc_level) in &[
-        ("1", "1"),
-        ("2", "2"),
-        ("3", "3"),
-        ("\"s\"", "s"),
-        ("\"z\"", "z"),
-    ] {
+    for &(profile_level, rustc_level) in
+        &[("1", "1"), ("2", "2"), ("3", "3"), ("\"s\"", "s"), ("\"z\"", "z")] {
         check_opt_level_override(profile_level, rustc_level)
     }
 }
@@ -155,8 +150,8 @@ fn opt_level_overrides() {
 #[test]
 fn top_level_overrides_deps() {
     let mut p = project("foo");
-    p = p
-        .file("Cargo.toml", r#"
+    p = p.file("Cargo.toml",
+              r#"
             [package]
 
             name = "test"
@@ -171,7 +166,8 @@ fn top_level_overrides_deps() {
             path = "foo"
         "#)
         .file("src/lib.rs", "")
-        .file("foo/Cargo.toml", r#"
+        .file("foo/Cargo.toml",
+              r#"
             [package]
 
             name = "foo"
@@ -212,16 +208,17 @@ fn top_level_overrides_deps() {
         --extern foo={dir}[/]target[/]release[/]deps[/]libfoo.rlib`
 [FINISHED] release [optimized + debuginfo] target(s) in [..]
 ",
-                    dir = p.root().display(),
-                    url = p.url(),
-                    prefix = env::consts::DLL_PREFIX,
-                    suffix = env::consts::DLL_SUFFIX)));
+                                                            dir = p.root().display(),
+                                                            url = p.url(),
+                                                            prefix = env::consts::DLL_PREFIX,
+                                                            suffix = env::consts::DLL_SUFFIX)));
 }
 
 #[test]
 fn profile_in_non_root_manifest_triggers_a_warning() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             version = "0.1.0"
@@ -234,7 +231,8 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
             debug = false
         "#)
         .file("src/main.rs", "fn main() {}")
-        .file("bar/Cargo.toml", r#"
+        .file("bar/Cargo.toml",
+              r#"
             [project]
             name = "bar"
             version = "0.1.0"
@@ -249,18 +247,24 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
 
     assert_that(p.cargo_process("build").cwd(p.root().join("bar")).arg("-v"),
                 execs().with_status(0).with_stderr("\
-[WARNING] profiles for the non root package will be ignored, specify profiles at the workspace root:
+[WARNING] profiles for the non root \
+                                                    package will be ignored, specify profiles \
+                                                    at the workspace root:
 package:   [..]
-workspace: [..]
-[COMPILING] bar v0.1.0 ([..])
+\
+                                                    workspace: [..]
+[COMPILING] bar v0.1.0 \
+                                                    ([..])
 [RUNNING] `rustc [..]`
-[FINISHED] dev [unoptimized] target(s) in [..]"));
+[FINISHED] \
+                                                    dev [unoptimized] target(s) in [..]"));
 }
 
 #[test]
 fn profile_in_virtual_manifest_works() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [workspace]
             members = ["bar"]
 
@@ -269,7 +273,8 @@ fn profile_in_virtual_manifest_works() {
             debug = false
         "#)
         .file("src/main.rs", "fn main() {}")
-        .file("bar/Cargo.toml", r#"
+        .file("bar/Cargo.toml",
+              r#"
             [project]
             name = "bar"
             version = "0.1.0"

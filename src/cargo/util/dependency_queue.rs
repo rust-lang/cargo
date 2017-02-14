@@ -48,7 +48,10 @@ pub enum Freshness {
 
 impl Freshness {
     pub fn combine(&self, other: Freshness) -> Freshness {
-        match *self { Fresh => other, Dirty => Dirty }
+        match *self {
+            Fresh => other,
+            Dirty => Dirty,
+        }
     }
 }
 
@@ -67,11 +70,7 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
     ///
     /// It is assumed that any dependencies of this package will eventually also
     /// be added to the dependency queue.
-    pub fn queue(&mut self,
-                 fresh: Freshness,
-                 key: K,
-                 value: V,
-                 dependencies: &[K]) -> &mut V {
+    pub fn queue(&mut self, fresh: Freshness, key: K, value: V, dependencies: &[K]) -> &mut V {
         let slot = match self.dep_map.entry(key.clone()) {
             Occupied(v) => return &mut v.into_mut().1,
             Vacant(v) => v,
@@ -84,8 +83,9 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
         let mut my_dependencies = HashSet::new();
         for dep in dependencies {
             assert!(my_dependencies.insert(dep.clone()));
-            let rev = self.reverse_dep_map.entry(dep.clone())
-                                          .or_insert(HashSet::new());
+            let rev = self.reverse_dep_map
+                .entry(dep.clone())
+                .or_insert(HashSet::new());
             assert!(rev.insert(key.clone()));
         }
         &mut slot.insert((my_dependencies, value)).1
@@ -96,14 +96,19 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
     /// A package is ready to be built when it has 0 un-built dependencies. If
     /// `None` is returned then no packages are ready to be built.
     pub fn dequeue(&mut self) -> Option<(Freshness, K, V)> {
-        let key = match self.dep_map.iter()
-                                    .find(|&(_, &(ref deps, _))| deps.is_empty())
-                                    .map(|(key, _)| key.clone()) {
+        let key = match self.dep_map
+            .iter()
+            .find(|&(_, &(ref deps, _))| deps.is_empty())
+            .map(|(key, _)| key.clone()) {
             Some(key) => key,
-            None => return None
+            None => return None,
         };
         let (_, data) = self.dep_map.remove(&key).unwrap();
-        let fresh = if self.dirty.contains(&key) {Dirty} else {Fresh};
+        let fresh = if self.dirty.contains(&key) {
+            Dirty
+        } else {
+            Fresh
+        };
         self.pending.insert(key.clone());
         Some((fresh, key, data))
     }

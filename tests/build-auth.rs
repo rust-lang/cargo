@@ -21,16 +21,15 @@ fn http_auth_offered() {
 
     fn headers(rdr: &mut BufRead) -> HashSet<String> {
         let valid = ["GET", "Authorization", "Accept", "User-Agent"];
-        rdr.lines().map(|s| s.unwrap())
-           .take_while(|s| s.len() > 2)
-           .map(|s| s.trim().to_string())
-           .filter(|s| {
-               valid.iter().any(|prefix| s.starts_with(*prefix))
-            })
-           .collect()
+        rdr.lines()
+            .map(|s| s.unwrap())
+            .take_while(|s| s.len() > 2)
+            .map(|s| s.trim().to_string())
+            .filter(|s| valid.iter().any(|prefix| s.starts_with(*prefix)))
+            .collect()
     }
 
-    let t = thread::spawn(move|| {
+    let t = thread::spawn(move || {
         let mut conn = BufStream::new(server.accept().unwrap().0);
         let req = headers(&mut conn);
         let user_agent = if cfg!(windows) {
@@ -42,12 +41,15 @@ fn http_auth_offered() {
             HTTP/1.1 401 Unauthorized\r\n\
             WWW-Authenticate: Basic realm=\"wheee\"\r\n
             \r\n\
-        ").unwrap();
-        assert_eq!(req, vec![
-            "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
-            "Accept: */*",
-            user_agent,
-        ].into_iter().map(|s| s.to_string()).collect());
+        ")
+            .unwrap();
+        assert_eq!(req,
+                   vec!["GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
+                        "Accept: */*",
+                        user_agent]
+                       .into_iter()
+                       .map(|s| s.to_string())
+                       .collect());
         drop(conn);
 
         let mut conn = BufStream::new(server.accept().unwrap().0);
@@ -56,23 +58,28 @@ fn http_auth_offered() {
             HTTP/1.1 401 Unauthorized\r\n\
             WWW-Authenticate: Basic realm=\"wheee\"\r\n
             \r\n\
-        ").unwrap();
-        assert_eq!(req, vec![
-            "GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
-            "Authorization: Basic Zm9vOmJhcg==",
-            "Accept: */*",
-            user_agent,
-        ].into_iter().map(|s| s.to_string()).collect());
+        ")
+            .unwrap();
+        assert_eq!(req,
+                   vec!["GET /foo/bar/info/refs?service=git-upload-pack HTTP/1.1",
+                        "Authorization: Basic Zm9vOmJhcg==",
+                        "Accept: */*",
+                        user_agent]
+                       .into_iter()
+                       .map(|s| s.to_string())
+                       .collect());
     });
 
     let script = project("script")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "script"
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             fn main() {
                 println!("username=foo");
                 println!("password=bar");
@@ -85,11 +92,12 @@ fn http_auth_offered() {
 
     let config = paths::home().join(".gitconfig");
     let mut config = git2::Config::open(&config).unwrap();
-    config.set_str("credential.helper",
-                   &script.display().to_string()).unwrap();
+    config.set_str("credential.helper", &script.display().to_string())
+        .unwrap();
 
     let p = project("foo")
-        .file("Cargo.toml", &format!(r#"
+        .file("Cargo.toml",
+              &format!(r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -97,9 +105,11 @@ fn http_auth_offered() {
 
             [dependencies.bar]
             git = "http://127.0.0.1:{}/foo/bar"
-        "#, addr.port()))
+        "#,
+                       addr.port()))
         .file("src/main.rs", "")
-        .file(".cargo/config","\
+        .file(".cargo/config",
+              "\
         [net]
         retry = 0
         ");
@@ -121,7 +131,7 @@ attempted to find username/password via `credential.helper`, but [..]
 
 To learn more, run the command again with --verbose.
 ",
-        addr = addr)));
+                                                              addr = addr)));
 
     t.join().ok().unwrap();
 }
@@ -131,7 +141,7 @@ To learn more, run the command again with --verbose.
 fn https_something_happens() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
-    let t = thread::spawn(move|| {
+    let t = thread::spawn(move || {
         let mut conn = server.accept().unwrap().0;
         drop(conn.write(b"1234"));
         drop(conn.shutdown(std::net::Shutdown::Write));
@@ -139,7 +149,8 @@ fn https_something_happens() {
     });
 
     let p = project("foo")
-        .file("Cargo.toml", &format!(r#"
+        .file("Cargo.toml",
+              &format!(r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -147,9 +158,11 @@ fn https_something_happens() {
 
             [dependencies.bar]
             git = "https://127.0.0.1:{}/foo/bar"
-        "#, addr.port()))
+        "#,
+                       addr.port()))
         .file("src/main.rs", "")
-        .file(".cargo/config","\
+        .file(".cargo/config",
+              "\
         [net]
         retry = 0
         ");
@@ -181,12 +194,11 @@ Caused by:
 fn ssh_something_happens() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
-    let t = thread::spawn(move|| {
-        drop(server.accept().unwrap());
-    });
+    let t = thread::spawn(move || { drop(server.accept().unwrap()); });
 
     let p = project("foo")
-        .file("Cargo.toml", &format!(r#"
+        .file("Cargo.toml",
+              &format!(r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -194,13 +206,18 @@ fn ssh_something_happens() {
 
             [dependencies.bar]
             git = "ssh://127.0.0.1:{}/foo/bar"
-        "#, addr.port()))
+        "#,
+                       addr.port()))
         .file("src/main.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(101).with_stderr_contains(&format!("\
-[UPDATING] git repository `ssh://{addr}/foo/bar`
-", addr = addr))
+                execs()
+                    .with_status(101)
+                    .with_stderr_contains(&format!("\
+[UPDATING] git repository \
+                                                    `ssh://{addr}/foo/bar`
+",
+                                                   addr = addr))
                     .with_stderr_contains("\
 Caused by:
   [[..]] Failed to start SSH session: Failed getting banner

@@ -1,8 +1,10 @@
 #![deny(unused)]
 #![cfg_attr(test, deny(warnings))]
 
-#[cfg(test)] extern crate hamcrest;
-#[macro_use] extern crate log;
+#[cfg(test)]
+extern crate hamcrest;
+#[macro_use]
+extern crate log;
 extern crate crates_io as registry;
 extern crate crossbeam;
 extern crate curl;
@@ -32,8 +34,8 @@ use rustc_serialize::json;
 use docopt::Docopt;
 
 use core::{Shell, MultiShell, ShellConfig, Verbosity, ColorConfig};
-use core::shell::Verbosity::{Verbose};
-use term::color::{BLACK};
+use core::shell::Verbosity::Verbose;
+use term::color::BLACK;
 
 pub use util::{CargoError, CargoResult, CliError, CliResult, human, Config, ChainError};
 
@@ -75,8 +77,7 @@ pub struct VersionInfo {
 
 impl fmt::Display for VersionInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "cargo-{}.{}.{}",
-               self.major, self.minor, self.patch)?;
+        write!(f, "cargo-{}.{}.{}", self.major, self.minor, self.patch)?;
         match self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
             Some(channel) => {
                 if channel != "stable" {
@@ -84,19 +85,17 @@ impl fmt::Display for VersionInfo {
                     let empty = String::from("");
                     write!(f, "{}", self.pre_release.as_ref().unwrap_or(&empty))?;
                 }
-            },
+            }
             None => (),
         };
 
         if let Some(ref cfg) = self.cfg_info {
             match cfg.commit_info {
                 Some(ref ci) => {
-                    write!(f, " ({} {})",
-                           ci.short_commit_hash, ci.commit_date)?;
-                },
+                    write!(f, " ({} {})", ci.short_commit_hash, ci.commit_date)?;
+                }
                 None => {
-                    write!(f, " (built {})",
-                           cfg.build_date)?;
+                    write!(f, " (built {})", cfg.build_date)?;
                 }
             }
         };
@@ -104,22 +103,23 @@ impl fmt::Display for VersionInfo {
     }
 }
 
-pub fn call_main_without_stdin<Flags: Decodable>(
-            exec: fn(Flags, &Config) -> CliResult,
-            config: &Config,
-            usage: &str,
-            args: &[String],
-            options_first: bool) -> CliResult
-{
-    let docopt = Docopt::new(usage).unwrap()
+pub fn call_main_without_stdin<Flags: Decodable>(exec: fn(Flags, &Config) -> CliResult,
+                                                 config: &Config,
+                                                 usage: &str,
+                                                 args: &[String],
+                                                 options_first: bool)
+                                                 -> CliResult {
+    let docopt = Docopt::new(usage)
+        .unwrap()
         .options_first(options_first)
         .argv(args.iter().map(|s| &s[..]))
         .help(true);
 
-    let flags = docopt.decode().map_err(|e| {
-        let code = if e.fatal() {1} else {0};
-        CliError::new(human(e.to_string()), code)
-    })?;
+    let flags = docopt.decode()
+        .map_err(|e| {
+            let code = if e.fatal() { 1 } else { 0 };
+            CliError::new(human(e.to_string()), code)
+        })?;
 
     exec(flags, config)
 }
@@ -137,12 +137,18 @@ pub fn shell(verbosity: Verbosity, color_config: ColorConfig) -> MultiShell {
 
     let tty = isatty(Output::Stderr);
 
-    let config = ShellConfig { color_config: color_config, tty: tty };
+    let config = ShellConfig {
+        color_config: color_config,
+        tty: tty,
+    };
     let err = Shell::create(|| Box::new(io::stderr()), config);
 
     let tty = isatty(Output::Stdout);
 
-    let config = ShellConfig { color_config: color_config, tty: tty };
+    let config = ShellConfig {
+        color_config: color_config,
+        tty: tty,
+    };
     let out = Shell::create(|| Box::new(io::stdout()), config);
 
     return MultiShell::new(out, err, verbosity);
@@ -193,8 +199,9 @@ pub fn exit_with_error(err: CliError, shell: &mut MultiShell) -> ! {
         };
 
         if !handle_cause(&error, shell) || hide {
-            let _ = shell.err().say("\nTo learn more, run the command again \
-                                     with --verbose.".to_string(), BLACK);
+            let _ = shell.err()
+                .say("\nTo learn more, run the command again with --verbose.".to_string(),
+                     BLACK);
         }
     }
 
@@ -214,14 +221,24 @@ fn handle_cause(mut cargo_err: &CargoError, shell: &mut MultiShell) -> bool {
     loop {
         cargo_err = match cargo_err.cargo_cause() {
             Some(cause) => cause,
-            None => { err = cargo_err.cause(); break }
+            None => {
+                err = cargo_err.cause();
+                break;
+            }
         };
-        if verbose != Verbose && !cargo_err.is_human() { return false }
+        if verbose != Verbose && !cargo_err.is_human() {
+            return false;
+        }
         print(cargo_err.to_string(), shell);
     }
     loop {
-        let cause = match err { Some(err) => err, None => return true };
-        if verbose != Verbose { return false }
+        let cause = match err {
+            Some(err) => err,
+            None => return true,
+        };
+        if verbose != Verbose {
+            return false;
+        }
         print(cause.to_string(), shell);
         err = cause.cause();
     }
@@ -242,14 +259,13 @@ pub fn version() -> VersionInfo {
     match option_env!("CFG_RELEASE_CHANNEL") {
         // We have environment variables set up from configure/make.
         Some(_) => {
-            let commit_info =
-                option_env!("CFG_COMMIT_HASH").map(|s| {
-                    CommitInfo {
-                        commit_hash: s.to_string(),
-                        short_commit_hash: option_env_str!("CFG_SHORT_COMMIT_HASH").unwrap(),
-                        commit_date: option_env_str!("CFG_COMMIT_DATE").unwrap(),
-                    }
-                });
+            let commit_info = option_env!("CFG_COMMIT_HASH").map(|s| {
+                CommitInfo {
+                    commit_hash: s.to_string(),
+                    short_commit_hash: option_env_str!("CFG_SHORT_COMMIT_HASH").unwrap(),
+                    commit_date: option_env_str!("CFG_COMMIT_DATE").unwrap(),
+                }
+            });
             VersionInfo {
                 major: option_env_str!("CFG_VERSION_MAJOR").unwrap(),
                 minor: option_env_str!("CFG_VERSION_MINOR").unwrap(),
@@ -261,7 +277,7 @@ pub fn version() -> VersionInfo {
                     commit_info: commit_info,
                 }),
             }
-        },
+        }
         // We are being compiled by Cargo itself.
         None => {
             VersionInfo {

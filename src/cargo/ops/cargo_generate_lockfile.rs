@@ -17,15 +17,13 @@ pub struct UpdateOptions<'a> {
 
 pub fn generate_lockfile(ws: &Workspace) -> CargoResult<()> {
     let mut registry = PackageRegistry::new(ws.config())?;
-    let resolve = ops::resolve_with_previous(&mut registry, ws,
-                                             Method::Everything,
-                                             None, None, &[])?;
+    let resolve =
+        ops::resolve_with_previous(&mut registry, ws, Method::Everything, None, None, &[])?;
     ops::write_pkg_lockfile(ws, &resolve)?;
     Ok(())
 }
 
-pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
-                       -> CargoResult<()> {
+pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> {
 
     if opts.aggressive && opts.precise.is_some() {
         bail!("cannot specify both aggressive and precise simultaneously")
@@ -49,8 +47,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
         for name in opts.to_update {
             let dep = previous_resolve.query(name)?;
             if opts.aggressive {
-                fill_with_deps(&previous_resolve, dep, &mut to_avoid,
-                               &mut HashSet::new());
+                fill_with_deps(&previous_resolve, dep, &mut to_avoid, &mut HashSet::new());
             } else {
                 to_avoid.insert(dep);
                 sources.push(match opts.precise {
@@ -65,9 +62,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
                         };
                         dep.source_id().clone().with_precise(Some(precise))
                     }
-                    None => {
-                        dep.source_id().clone().with_precise(None)
-                    }
+                    None => dep.source_id().clone().with_precise(None),
                 });
             }
         }
@@ -75,20 +70,19 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
     }
 
     let resolve = ops::resolve_with_previous(&mut registry,
-                                                  ws,
-                                                  Method::Everything,
-                                                  Some(&previous_resolve),
-                                                  Some(&to_avoid),
-                                                  &[])?;
+                                             ws,
+                                             Method::Everything,
+                                             Some(&previous_resolve),
+                                             Some(&to_avoid),
+                                             &[])?;
 
     // Summarize what is changing for the user.
-    let print_change = |status: &str, msg: String| {
-        opts.config.shell().status(status, msg)
-    };
+    let print_change = |status: &str, msg: String| opts.config.shell().status(status, msg);
     for (removed, added) in compare_dependency_graphs(&previous_resolve, &resolve) {
         if removed.len() == 1 && added.len() == 1 {
             let msg = if removed[0].source_id().is_git() {
-                format!("{} -> #{}", removed[0],
+                format!("{} -> #{}",
+                        removed[0],
                         &added[0].source_id().precise().unwrap()[..8])
             } else {
                 format!("{} -> v{}", removed[0], added[0].version())
@@ -107,11 +101,12 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
     ops::write_pkg_lockfile(&ws, &resolve)?;
     return Ok(());
 
-    fn fill_with_deps<'a>(resolve: &'a Resolve, dep: &'a PackageId,
+    fn fill_with_deps<'a>(resolve: &'a Resolve,
+                          dep: &'a PackageId,
                           set: &mut HashSet<&'a PackageId>,
                           visited: &mut HashSet<&'a PackageId>) {
         if !visited.insert(dep) {
-            return
+            return;
         }
         set.insert(dep);
         for dep in resolve.deps(dep) {
@@ -120,8 +115,8 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
     }
 
     fn compare_dependency_graphs<'a>(previous_resolve: &'a Resolve,
-                                     resolve: &'a Resolve) ->
-                                     Vec<(Vec<&'a PackageId>, Vec<&'a PackageId>)> {
+                                     resolve: &'a Resolve)
+                                     -> Vec<(Vec<&'a PackageId>, Vec<&'a PackageId>)> {
         fn key(dep: &PackageId) -> (&str, &SourceId) {
             (dep.name(), dep.source_id())
         }
@@ -130,31 +125,34 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
         // more complicated because the equality for source ids does not take
         // precise versions into account (e.g. git shas), but we want to take
         // that into account here.
-        fn vec_subtract<'a>(a: &[&'a PackageId],
-                            b: &[&'a PackageId]) -> Vec<&'a PackageId> {
-            a.iter().filter(|a| {
-                // If this package id is not found in `b`, then it's definitely
-                // in the subtracted set
-                let i = match b.binary_search(a) {
-                    Ok(i) => i,
-                    Err(..) => return true,
-                };
+        fn vec_subtract<'a>(a: &[&'a PackageId], b: &[&'a PackageId]) -> Vec<&'a PackageId> {
+            a.iter()
+                .filter(|a| {
+                    // If this package id is not found in `b`, then it's definitely
+                    // in the subtracted set
+                    let i = match b.binary_search(a) {
+                        Ok(i) => i,
+                        Err(..) => return true,
+                    };
 
-                // If we've found `a` in `b`, then we iterate over all instances
-                // (we know `b` is sorted) and see if they all have different
-                // precise versions. If so, then `a` isn't actually in `b` so
-                // we'll let it through.
-                //
-                // Note that we only check this for non-registry sources,
-                // however, as registries countain enough version information in
-                // the package id to disambiguate
-                if a.source_id().is_registry() {
-                    return false
-                }
-                b[i..].iter().take_while(|b| a == b).all(|b| {
-                    a.source_id().precise() != b.source_id().precise()
+                    // If we've found `a` in `b`, then we iterate over all instances
+                    // (we know `b` is sorted) and see if they all have different
+                    // precise versions. If so, then `a` isn't actually in `b` so
+                    // we'll let it through.
+                    //
+                    // Note that we only check this for non-registry sources,
+                    // however, as registries countain enough version information in
+                    // the package id to disambiguate
+                    if a.source_id().is_registry() {
+                        return false;
+                    }
+                    b[i..]
+                        .iter()
+                        .take_while(|b| a == b)
+                        .all(|b| a.source_id().precise() != b.source_id().precise())
                 })
-            }).cloned().collect()
+                .cloned()
+                .collect()
         }
 
         // Map (package name, package source) to (removed versions, added versions).

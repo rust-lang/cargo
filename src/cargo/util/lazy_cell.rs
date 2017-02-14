@@ -41,16 +41,12 @@ impl<T> LazyCell<T> {
     /// This function will return `Some` if the cell has been previously
     /// initialized, and `None` if it has not yet been initialized.
     pub fn borrow(&self) -> Option<&T> {
-        unsafe {
-            (*self.inner.get()).as_ref()
-        }
+        unsafe { (*self.inner.get()).as_ref() }
     }
 
     /// Consumes this `LazyCell`, returning the underlying value.
     pub fn into_inner(self) -> Option<T> {
-        unsafe {
-            self.inner.into_inner()
-        }
+        unsafe { self.inner.into_inner() }
     }
 
     /// Borrows the contents of this lazy cell, initializing it if necessary.

@@ -21,8 +21,12 @@ fn cargo_process(s: &str) -> ProcessBuilder {
 
 #[test]
 fn simple_lib() {
-    assert_that(cargo_process("new").arg("--lib").arg("foo").arg("--vcs").arg("none")
-                                    .env("USER", "foo"),
+    assert_that(cargo_process("new")
+                    .arg("--lib")
+                    .arg("foo")
+                    .arg("--vcs")
+                    .arg("none")
+                    .env("USER", "foo"),
                 execs().with_status(0).with_stderr("\
 [CREATED] library `foo` project
 "));
@@ -30,7 +34,8 @@ fn simple_lib() {
     assert_that(&paths::root().join("foo"), existing_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
     assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
-    assert_that(&paths::root().join("foo/.gitignore"), is_not(existing_file()));
+    assert_that(&paths::root().join("foo/.gitignore"),
+                is_not(existing_file()));
 
     assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));
@@ -38,8 +43,10 @@ fn simple_lib() {
 
 #[test]
 fn simple_bin() {
-    assert_that(cargo_process("new").arg("--bin").arg("foo")
-                                    .env("USER", "foo"),
+    assert_that(cargo_process("new")
+                    .arg("--bin")
+                    .arg("foo")
+                    .env("USER", "foo"),
                 execs().with_status(0).with_stderr("\
 [CREATED] binary (application) `foo` project
 "));
@@ -50,8 +57,7 @@ fn simple_bin() {
 
     assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));
-    assert_that(&paths::root().join(&format!("foo/target/debug/foo{}",
-                                             env::consts::EXE_SUFFIX)),
+    assert_that(&paths::root().join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX)),
                 existing_file());
 }
 
@@ -60,23 +66,29 @@ fn simple_template() {
     let root = paths::root();
     fs::create_dir_all(&root.join("home/.cargo/templates/testtemplate/src")).unwrap();
     File::create(&root.join("home/.cargo/templates/testtemplate/Cargo.toml"))
-                      .unwrap().write_all(br#"[package]
+        .unwrap()
+        .write_all(br#"[package]
 name = "{{name}}"
 version = "0.0.1"
 authors = ["{{author}}"]
-"#).unwrap();
+"#)
+        .unwrap();
     File::create(&root.join("home/.cargo/templates/testtemplate/src/main.rs"))
-                      .unwrap().write_all(br#"
+        .unwrap()
+        .write_all(br#"
 fn main () {
   println!("hello {{name}}");
 }
-    "#).unwrap();
+    "#)
+        .unwrap();
 
-    assert_that(cargo_process("new").arg("--template-subdir").arg("testtemplate")
-                                    .arg("--template")
-                                    .arg(&root.join("home/.cargo/templates/"))
-                                    .arg("foo")
-                                    .env("USER", "foo"),
+    assert_that(cargo_process("new")
+                    .arg("--template-subdir")
+                    .arg("testtemplate")
+                    .arg("--template")
+                    .arg(&root.join("home/.cargo/templates/"))
+                    .arg("foo")
+                    .env("USER", "foo"),
                 execs().with_status(0).with_stderr("\
 [CREATED] library `foo` project
 "));
@@ -87,30 +99,33 @@ fn main () {
 
     assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));
-    assert_that(&paths::root().join(&format!("foo/target/debug/foo{}",
-                                             env::consts::EXE_SUFFIX)),
+    assert_that(&paths::root().join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX)),
                 existing_file());
 }
 
 #[test]
 fn git_template() {
     let git_project = git::new("template1", |project| {
-        project
-            .file("Cargo.toml", r#"[package]
+            project.file("Cargo.toml",
+                      r#"[package]
 name = "{{name}}"
 version = "0.0.1"
 authors = ["{{author}}"]
             "#)
-            .file("src/main.rs", r#"
+                .file("src/main.rs",
+                      r#"
                 pub fn main() {
                     println!("hello world");
                 }
             "#)
-    }).unwrap();
+        })
+        .unwrap();
 
-    assert_that(cargo_process("new").arg("--template").arg(git_project.url().as_str())
-                                    .arg("foo")
-                                    .env("USER", "foo"),
+    assert_that(cargo_process("new")
+                    .arg("--template")
+                    .arg(git_project.url().as_str())
+                    .arg("foo")
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo"), existing_dir());
@@ -119,25 +134,32 @@ authors = ["{{author}}"]
 
     assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));
-    assert_that(&paths::root().join(&format!("foo/target/debug/foo{}",
-                                             env::consts::EXE_SUFFIX)),
+    assert_that(&paths::root().join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX)),
                 existing_file());
 }
 
 #[test]
 fn both_lib_and_bin() {
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("--lib").arg("--bin").arg("foo").cwd(td.path().clone())
-                                    .env("USER", "foo"),
-                execs().with_status(101).with_stderr(
-                    "[ERROR] can't specify both lib and binary outputs"));
+    assert_that(cargo_process("new")
+                    .arg("--lib")
+                    .arg("--bin")
+                    .arg("foo")
+                    .cwd(td.path().clone())
+                    .env("USER", "foo"),
+                execs()
+                    .with_status(101)
+                    .with_stderr("[ERROR] can't specify both lib and binary outputs"));
 }
 
 #[test]
 fn simple_git() {
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("--lib").arg("foo").cwd(td.path().clone())
-                                    .env("USER", "foo"),
+    assert_that(cargo_process("new")
+                    .arg("--lib")
+                    .arg("foo")
+                    .cwd(td.path().clone())
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(td.path(), existing_dir());
@@ -153,12 +175,14 @@ fn simple_git() {
 #[test]
 fn no_argument() {
     assert_that(cargo_process("new"),
-                execs().with_status(1)
-                       .with_stderr("\
+                execs()
+                    .with_status(1)
+                    .with_stderr("\
 [ERROR] Invalid arguments.
 
 Usage:
-    cargo new [options] <path>
+    cargo new [options] \
+                                  <path>
     cargo new -h | --help
 "));
 }
@@ -168,43 +192,49 @@ fn existing() {
     let dst = paths::root().join("foo");
     fs::create_dir(&dst).unwrap();
     assert_that(cargo_process("new").arg("foo"),
-                execs().with_status(101)
-                       .with_stderr(format!("[ERROR] destination `{}` already exists\n",
-                                            dst.display())));
+                execs()
+                    .with_status(101)
+                    .with_stderr(format!("[ERROR] destination `{}` already exists\n",
+                                         dst.display())));
 }
 
 #[test]
 fn invalid_characters() {
     assert_that(cargo_process("new").arg("foo.rs"),
-                execs().with_status(101)
-                       .with_stderr("\
+                execs()
+                    .with_status(101)
+                    .with_stderr("\
 [ERROR] Invalid character `.` in crate name: `foo.rs`
-use --name to override crate name"));
+use \
+                                  --name to override crate name"));
 }
 
 #[test]
 fn reserved_name() {
     assert_that(cargo_process("new").arg("test"),
-                execs().with_status(101)
-                       .with_stderr("\
-[ERROR] The name `test` cannot be used as a crate name\n\
-use --name to override crate name"));
+                execs()
+                    .with_status(101)
+                    .with_stderr("\
+[ERROR] The name `test` cannot be used as a crate name\nuse \
+                                  --name to override crate name"));
 }
 
 #[test]
 fn keyword_name() {
     assert_that(cargo_process("new").arg("pub"),
-                execs().with_status(101)
-                       .with_stderr("\
-[ERROR] The name `pub` cannot be used as a crate name\n\
-use --name to override crate name"));
+                execs()
+                    .with_status(101)
+                    .with_stderr("\
+[ERROR] The name `pub` cannot be used as a crate name\nuse \
+                                  --name to override crate name"));
 }
 
 #[test]
 fn rust_prefix_stripped() {
     assert_that(cargo_process("new").arg("--lib").arg("rust-foo").env("USER", "foo"),
-                execs().with_status(0)
-                       .with_stdout("note: package will be named `foo`; use --name to override"));
+                execs()
+                    .with_status(0)
+                    .with_stdout("note: package will be named `foo`; use --name to override"));
     let toml = paths::root().join("rust-foo/Cargo.toml");
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
@@ -236,8 +266,10 @@ fn finds_author_user() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("foo").env("USER", "foo")
-                                    .cwd(td.path().clone()),
+    assert_that(cargo_process("new")
+                    .arg("foo")
+                    .env("USER", "foo")
+                    .cwd(td.path().clone()),
                 execs().with_status(0));
 
     let toml = td.path().join("foo/Cargo.toml");
@@ -251,8 +283,10 @@ fn finds_author_user_escaped() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("foo").env("USER", "foo \"bar\"")
-                                    .cwd(td.path().clone()),
+    assert_that(cargo_process("new")
+                    .arg("foo")
+                    .env("USER", "foo \"bar\"")
+                    .cwd(td.path().clone()),
                 execs().with_status(0));
 
     let toml = td.path().join("foo/Cargo.toml");
@@ -266,10 +300,11 @@ fn finds_author_username() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("foo")
-                                    .env_remove("USER")
-                                    .env("USERNAME", "foo")
-                                    .cwd(td.path().clone()),
+    assert_that(cargo_process("new")
+                    .arg("foo")
+                    .env_remove("USER")
+                    .env("USERNAME", "foo")
+                    .cwd(td.path().clone()),
                 execs().with_status(0));
 
     let toml = td.path().join("foo/Cargo.toml");
@@ -283,12 +318,13 @@ fn finds_author_priority() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("foo")
-                                    .env("USER", "bar2")
-                                    .env("EMAIL", "baz2")
-                                    .env("CARGO_NAME", "bar")
-                                    .env("CARGO_EMAIL", "baz")
-                                    .cwd(td.path().clone()),
+    assert_that(cargo_process("new")
+                    .arg("foo")
+                    .env("USER", "bar2")
+                    .env("EMAIL", "baz2")
+                    .env("CARGO_NAME", "bar")
+                    .env("CARGO_EMAIL", "baz")
+                    .cwd(td.path().clone()),
                 execs().with_status(0));
 
     let toml = td.path().join("foo/Cargo.toml");
@@ -302,10 +338,11 @@ fn finds_author_email() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("foo")
-                                    .env("USER", "bar")
-                                    .env("EMAIL", "baz")
-                                    .cwd(td.path().clone()),
+    assert_that(cargo_process("new")
+                    .arg("foo")
+                    .env("USER", "bar")
+                    .env("EMAIL", "baz")
+                    .cwd(td.path().clone()),
                 execs().with_status(0));
 
     let toml = td.path().join("foo/Cargo.toml");
@@ -316,10 +353,14 @@ fn finds_author_email() {
 
 #[test]
 fn finds_author_git() {
-    process("git").args(&["config", "--global", "user.name", "bar"])
-                  .exec().unwrap();
-    process("git").args(&["config", "--global", "user.email", "baz"])
-                  .exec().unwrap();
+    process("git")
+        .args(&["config", "--global", "user.name", "bar"])
+        .exec()
+        .unwrap();
+    process("git")
+        .args(&["config", "--global", "user.email", "baz"])
+        .exec()
+        .unwrap();
     assert_that(cargo_process("new").arg("foo").env("USER", "foo"),
                 execs().with_status(0));
 
@@ -332,10 +373,11 @@ fn finds_author_git() {
 #[test]
 fn finds_git_email() {
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("foo")
-                                    .env("GIT_AUTHOR_NAME", "foo")
-                                    .env("GIT_AUTHOR_EMAIL", "gitfoo")
-                                    .cwd(td.path().clone()),
+    assert_that(cargo_process("new")
+                    .arg("foo")
+                    .env("GIT_AUTHOR_NAME", "foo")
+                    .env("GIT_AUTHOR_EMAIL", "gitfoo")
+                    .cwd(td.path().clone()),
                 execs().with_status(0));
 
     let toml = td.path().join("foo/Cargo.toml");
@@ -350,10 +392,11 @@ fn finds_git_author() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("foo")
-                                    .env_remove("USER")
-                                    .env("GIT_COMMITTER_NAME", "gitfoo")
-                                    .cwd(td.path().clone()),
+    assert_that(cargo_process("new")
+                    .arg("foo")
+                    .env_remove("USER")
+                    .env("GIT_COMMITTER_NAME", "gitfoo")
+                    .cwd(td.path().clone()),
                 execs().with_status(0));
 
     let toml = td.path().join("foo/Cargo.toml");
@@ -364,18 +407,25 @@ fn finds_git_author() {
 
 #[test]
 fn author_prefers_cargo() {
-    process("git").args(&["config", "--global", "user.name", "foo"])
-                  .exec().unwrap();
-    process("git").args(&["config", "--global", "user.email", "bar"])
-                  .exec().unwrap();
+    process("git")
+        .args(&["config", "--global", "user.name", "foo"])
+        .exec()
+        .unwrap();
+    process("git")
+        .args(&["config", "--global", "user.email", "bar"])
+        .exec()
+        .unwrap();
     let root = paths::root();
     fs::create_dir(&root.join(".cargo")).unwrap();
-    File::create(&root.join(".cargo/config")).unwrap().write_all(br#"
+    File::create(&root.join(".cargo/config"))
+        .unwrap()
+        .write_all(br#"
         [cargo-new]
         name = "new-foo"
         email = "new-bar"
         vcs = "none"
-    "#).unwrap();
+    "#)
+        .unwrap();
 
     assert_that(cargo_process("new").arg("foo").env("USER", "foo"),
                 execs().with_status(0));
@@ -392,16 +442,22 @@ fn git_prefers_command_line() {
     let root = paths::root();
     let td = TempDir::new("cargo").unwrap();
     fs::create_dir(&root.join(".cargo")).unwrap();
-    File::create(&root.join(".cargo/config")).unwrap().write_all(br#"
+    File::create(&root.join(".cargo/config"))
+        .unwrap()
+        .write_all(br#"
         [cargo-new]
         vcs = "none"
         name = "foo"
         email = "bar"
-    "#).unwrap();
+    "#)
+        .unwrap();
 
-    assert_that(cargo_process("new").arg("foo").arg("--vcs").arg("git")
-                                    .cwd(td.path())
-                                    .env("USER", "foo"),
+    assert_that(cargo_process("new")
+                    .arg("foo")
+                    .arg("--vcs")
+                    .arg("git")
+                    .cwd(td.path())
+                    .env("USER", "foo"),
                 execs().with_status(0));
     assert!(td.path().join("foo/.gitignore").exists());
 }
@@ -413,14 +469,15 @@ fn subpackage_no_git() {
 
     let subpackage = paths::root().join("foo").join("components");
     fs::create_dir(&subpackage).unwrap();
-    assert_that(cargo_process("new").arg("foo/components/subcomponent")
-                                    .env("USER", "foo"),
+    assert_that(cargo_process("new")
+                    .arg("foo/components/subcomponent")
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo/components/subcomponent/.git"),
-                 is_not(existing_file()));
+                is_not(existing_file()));
     assert_that(&paths::root().join("foo/components/subcomponent/.gitignore"),
-                 is_not(existing_file()));
+                is_not(existing_file()));
 }
 
 #[test]
@@ -430,26 +487,30 @@ fn subpackage_git_with_vcs_arg() {
 
     let subpackage = paths::root().join("foo").join("components");
     fs::create_dir(&subpackage).unwrap();
-    assert_that(cargo_process("new").arg("foo/components/subcomponent")
-                                    .arg("--vcs").arg("git")
-                                    .env("USER", "foo"),
+    assert_that(cargo_process("new")
+                    .arg("foo/components/subcomponent")
+                    .arg("--vcs")
+                    .arg("git")
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo/components/subcomponent/.git"),
-                 existing_dir());
+                existing_dir());
     assert_that(&paths::root().join("foo/components/subcomponent/.gitignore"),
-                 existing_file());
+                existing_file());
 }
 
 #[test]
 fn unknown_flags() {
     assert_that(cargo_process("new").arg("foo").arg("--flag"),
-                execs().with_status(1)
-                       .with_stderr("\
+                execs()
+                    .with_status(1)
+                    .with_stderr("\
 [ERROR] Unknown flag: '--flag'
 
 Usage:
     cargo new [..]
-    cargo new [..]
+    \
+                                  cargo new [..]
 "));
 }

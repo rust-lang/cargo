@@ -221,9 +221,7 @@ pub trait RegistryData {
     fn index_path(&self) -> &Filesystem;
     fn config(&self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
-    fn download(&mut self,
-                pkg: &PackageId,
-                checksum: &str) -> CargoResult<FileLock>;
+    fn download(&mut self, pkg: &PackageId, checksum: &str) -> CargoResult<FileLock>;
 }
 
 mod index;
@@ -237,16 +235,13 @@ fn short_name(id: &SourceId) -> String {
 }
 
 impl<'cfg> RegistrySource<'cfg> {
-    pub fn remote(source_id: &SourceId,
-                  config: &'cfg Config) -> RegistrySource<'cfg> {
+    pub fn remote(source_id: &SourceId, config: &'cfg Config) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = remote::RemoteRegistry::new(source_id, config, &name);
         RegistrySource::new(source_id, config, &name, Box::new(ops), true)
     }
 
-    pub fn local(source_id: &SourceId,
-                 path: &Path,
-                 config: &'cfg Config) -> RegistrySource<'cfg> {
+    pub fn local(source_id: &SourceId, path: &Path, config: &'cfg Config) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = local::LocalRegistry::new(path, config, &name);
         RegistrySource::new(source_id, config, &name, Box::new(ops), false)
@@ -256,16 +251,14 @@ impl<'cfg> RegistrySource<'cfg> {
            config: &'cfg Config,
            name: &str,
            ops: Box<RegistryData + 'cfg>,
-           index_locked: bool) -> RegistrySource<'cfg> {
+           index_locked: bool)
+           -> RegistrySource<'cfg> {
         RegistrySource {
             src_path: config.registry_source_path().join(name),
             config: config,
             source_id: source_id.clone(),
             updated: false,
-            index: index::RegistryIndex::new(source_id,
-                                             ops.index_path(),
-                                             config,
-                                             index_locked),
+            index: index::RegistryIndex::new(source_id, ops.index_path(), config, index_locked),
             index_locked: index_locked,
             ops: ops,
         }
@@ -282,12 +275,8 @@ impl<'cfg> RegistrySource<'cfg> {
     /// compiled.
     ///
     /// No action is taken if the source looks like it's already unpacked.
-    fn unpack_package(&self,
-                      pkg: &PackageId,
-                      tarball: &FileLock)
-                      -> CargoResult<PathBuf> {
-        let dst = self.src_path.join(&format!("{}-{}", pkg.name(),
-                                              pkg.version()));
+    fn unpack_package(&self, pkg: &PackageId, tarball: &FileLock) -> CargoResult<PathBuf> {
+        let dst = self.src_path.join(&format!("{}-{}", pkg.name(), pkg.version()));
         dst.create_dir()?;
         // Note that we've already got the `tarball` locked above, and that
         // implies a lock on the unpacked destination as well, so this access
@@ -295,7 +284,7 @@ impl<'cfg> RegistrySource<'cfg> {
         let dst = dst.into_path_unlocked();
         let ok = dst.join(".cargo-ok");
         if ok.exists() {
-            return Ok(dst)
+            return Ok(dst);
         }
 
         let gz = GzDecoder::new(tarball.file())?;
@@ -308,10 +297,8 @@ impl<'cfg> RegistrySource<'cfg> {
     fn do_update(&mut self) -> CargoResult<()> {
         self.ops.update_index()?;
         let path = self.ops.index_path();
-        self.index = index::RegistryIndex::new(&self.source_id,
-                                               path,
-                                               self.config,
-                                               self.index_locked);
+        self.index =
+            index::RegistryIndex::new(&self.source_id, path, self.config, self.index_locked);
         Ok(())
     }
 }
@@ -358,9 +345,8 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
         let hash = self.index.hash(package)?;
         let path = self.ops.download(package, &hash)?;
-        let path = self.unpack_package(package, &path).chain_error(|| {
-            internal(format!("failed to unpack package `{}`", package))
-        })?;
+        let path = self.unpack_package(package, &path)
+            .chain_error(|| internal(format!("failed to unpack package `{}`", package)))?;
         let mut src = PathSource::new(&path, &self.source_id, self.config);
         src.update()?;
         let pkg = src.download(package)?;
@@ -370,9 +356,10 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // *summary* loaded from the Cargo.toml we just downloaded with the one
         // we loaded from the index.
         let summaries = self.index.summaries(package.name())?;
-        let summary = summaries.iter().map(|s| &s.0).find(|s| {
-            s.package_id() == package
-        }).expect("summary not found");
+        let summary = summaries.iter()
+            .map(|s| &s.0)
+            .find(|s| s.package_id() == package)
+            .expect("summary not found");
         let mut manifest = pkg.manifest().clone();
         manifest.set_summary(summary.clone());
         Ok(Package::new(manifest, pkg.manifest_path()))

@@ -45,9 +45,11 @@ pub type Preparation = (Freshness, Work, Work);
 /// work necessary to either write the fingerprint or copy over all fresh files
 /// from the old directories to their new locations.
 pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
-                                unit: &Unit<'a>) -> CargoResult<Preparation> {
+                                unit: &Unit<'a>)
+                                -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint: {} / {}",
-                                    unit.pkg.package_id(), unit.target.name()));
+                                    unit.pkg.package_id(),
+                                    unit.target.name()));
     let new = cx.fingerprint_dir(unit);
     let loc = new.join(&filename(cx, unit));
 
@@ -70,9 +72,8 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     if compare.is_err() {
         let source_id = unit.pkg.package_id().source_id();
         let sources = cx.packages.sources();
-        let source = sources.get(source_id).chain_error(|| {
-            internal("missing package source")
-        })?;
+        let source = sources.get(source_id)
+            .chain_error(|| internal("missing package source"))?;
         source.verify(unit.pkg.package_id())?;
     }
 
@@ -80,7 +81,8 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let mut missing_outputs = false;
     if unit.profile.doc {
         missing_outputs = !root.join(unit.target.crate_name())
-                               .join("index.html").exists();
+            .join("index.html")
+            .exists();
     } else {
         for (src, link_dst, _) in cx.target_filenames(unit)? {
             missing_outputs |= !src.exists();
@@ -95,13 +97,13 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         match fingerprint.update_local() {
             Ok(()) => {}
             Err(..) if allow_failure => return Ok(()),
-            Err(e) => return Err(e)
+            Err(e) => return Err(e),
         }
         write_fingerprint(&loc, &*fingerprint)
     });
 
     let fresh = compare.is_ok() && !missing_outputs;
-    Ok((if fresh {Fresh} else {Dirty}, write_fingerprint, Work::noop()))
+    Ok((if fresh { Fresh } else { Dirty }, write_fingerprint, Work::noop()))
 }
 
 /// A fingerprint can be considered to be a "short string" representing the
@@ -154,7 +156,7 @@ impl Fingerprint {
                 let mtime = FileTime::from_last_modification_time(&meta);
                 *slot.0.lock().unwrap() = Some(mtime);
             }
-            LocalFingerprint::Precalculated(..) => return Ok(())
+            LocalFingerprint::Precalculated(..) => return Ok(()),
         }
 
         *self.memoized_hash.lock().unwrap() = None;
@@ -163,7 +165,7 @@ impl Fingerprint {
 
     fn hash(&self) -> u64 {
         if let Some(s) = *self.memoized_hash.lock().unwrap() {
-            return s
+            return s;
         }
         let ret = util::hash_u64(self);
         *self.memoized_hash.lock().unwrap() = Some(ret);
@@ -175,7 +177,9 @@ impl Fingerprint {
             bail!("rust compiler has changed")
         }
         if self.features != old.features {
-            bail!("features have changed: {} != {}", self.features, old.features)
+            bail!("features have changed: {} != {}",
+                  self.features,
+                  old.features)
         }
         if self.target != old.target {
             bail!("target configuration has changed")
@@ -184,14 +188,12 @@ impl Fingerprint {
             bail!("profile configuration has changed")
         }
         if self.rustflags != old.rustflags {
-            return Err(internal("RUSTFLAGS has changed"))
+            return Err(internal("RUSTFLAGS has changed"));
         }
         match (&self.local, &old.local) {
-            (&LocalFingerprint::Precalculated(ref a),
-             &LocalFingerprint::Precalculated(ref b)) => {
+            (&LocalFingerprint::Precalculated(ref a), &LocalFingerprint::Precalculated(ref b)) => {
                 if a != b {
-                    bail!("precalculated components have changed: {} != {}",
-                          a, b)
+                    bail!("precalculated components have changed: {} != {}", a, b)
                 }
             }
             (&LocalFingerprint::MtimeBased(ref on_disk_mtime, ref ap),
@@ -208,7 +210,10 @@ impl Fingerprint {
                 if should_rebuild {
                     bail!("mtime based components have changed: previously {:?} now {:?}, \
                            paths are {:?} and {:?}",
-                          *previously_built_mtime, *on_disk_mtime, ap, bp)
+                          *previously_built_mtime,
+                          *on_disk_mtime,
+                          ap,
+                          bp)
                 }
             }
             _ => bail!("local fingerprint type has changed"),
@@ -228,16 +233,14 @@ impl Fingerprint {
 
 impl hash::Hash for Fingerprint {
     fn hash<H: Hasher>(&self, h: &mut H) {
-        let Fingerprint {
-            rustc,
-            ref features,
-            target,
-            profile,
-            ref deps,
-            ref local,
-            memoized_hash: _,
-            ref rustflags,
-        } = *self;
+        let Fingerprint { rustc,
+                          ref features,
+                          target,
+                          profile,
+                          ref deps,
+                          ref local,
+                          memoized_hash: _,
+                          ref rustflags } = *self;
         (rustc, features, target, profile, deps, local, rustflags).hash(h)
     }
 }
@@ -249,14 +252,14 @@ impl Encodable for Fingerprint {
             e.emit_struct_field("target", 1, |e| self.target.encode(e))?;
             e.emit_struct_field("profile", 2, |e| self.profile.encode(e))?;
             e.emit_struct_field("local", 3, |e| self.local.encode(e))?;
-            e.emit_struct_field("features", 4, |e| {
-                self.features.encode(e)
-            })?;
+            e.emit_struct_field("features", 4, |e| self.features.encode(e))?;
             e.emit_struct_field("deps", 5, |e| {
-                self.deps.iter().map(|&(ref a, ref b)| {
-                    (a, b.hash())
-                }).collect::<Vec<_>>().encode(e)
-            })?;
+                    self.deps
+                        .iter()
+                        .map(|&(ref a, ref b)| (a, b.hash()))
+                        .collect::<Vec<_>>()
+                        .encode(e)
+                })?;
             e.emit_struct_field("rustflags", 6, |e| self.rustflags.encode(e))?;
             Ok(())
         })
@@ -279,18 +282,21 @@ impl Decodable for Fingerprint {
                 deps: {
                     let decode = decode::<Vec<(String, u64)>, D>;
                     let v = d.read_struct_field("deps", 5, decode)?;
-                    v.into_iter().map(|(name, hash)| {
-                        (name, Arc::new(Fingerprint {
-                            rustc: 0,
-                            target: 0,
-                            profile: 0,
-                            local: LocalFingerprint::Precalculated(String::new()),
-                            features: String::new(),
-                            deps: Vec::new(),
-                            memoized_hash: Mutex::new(Some(hash)),
-                            rustflags: Vec::new(),
-                        }))
-                    }).collect()
+                    v.into_iter()
+                        .map(|(name, hash)| {
+                            (name,
+                             Arc::new(Fingerprint {
+                                 rustc: 0,
+                                 target: 0,
+                                 profile: 0,
+                                 local: LocalFingerprint::Precalculated(String::new()),
+                                 features: String::new(),
+                                 deps: Vec::new(),
+                                 memoized_hash: Mutex::new(Some(hash)),
+                                 rustflags: Vec::new(),
+                             }))
+                        })
+                        .collect()
                 },
                 rustflags: d.read_struct_field("rustflags", 6, decode)?,
             })
@@ -306,18 +312,18 @@ impl hash::Hash for MtimeSlot {
 
 impl Encodable for MtimeSlot {
     fn encode<E: Encoder>(&self, e: &mut E) -> Result<(), E::Error> {
-        self.0.lock().unwrap().map(|ft| {
-            (ft.seconds_relative_to_1970(), ft.nanoseconds())
-        }).encode(e)
+        self.0
+            .lock()
+            .unwrap()
+            .map(|ft| (ft.seconds_relative_to_1970(), ft.nanoseconds()))
+            .encode(e)
     }
 }
 
 impl Decodable for MtimeSlot {
     fn decode<D: Decoder>(e: &mut D) -> Result<MtimeSlot, D::Error> {
         let kind: Option<(u64, u32)> = Decodable::decode(e)?;
-        Ok(MtimeSlot(Mutex::new(kind.map(|(s, n)| {
-            FileTime::from_seconds_since_1970(s, n)
-        }))))
+        Ok(MtimeSlot(Mutex::new(kind.map(|(s, n)| FileTime::from_seconds_since_1970(s, n)))))
     }
 }
 
@@ -333,10 +339,11 @@ impl Decodable for MtimeSlot {
 ///
 /// Information like file modification time is only calculated for path
 /// dependencies and is calculated in `calculate_target_fresh`.
-fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
+fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
+                       unit: &Unit<'a>)
                        -> CargoResult<Arc<Fingerprint>> {
     if let Some(s) = cx.fingerprints.get(unit) {
-        return Ok(s.clone())
+        return Ok(s.clone());
     }
 
     // First, calculate all statically known "salt data" such as the profile
@@ -357,13 +364,12 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // induce a recompile, they're just dependencies in the sense that they need
     // to be built.
     let deps = cx.dep_targets(unit)?;
-    let deps = deps.iter().filter(|u| {
-        !u.target.is_custom_build() && !u.target.is_bin()
-    }).map(|unit| {
-        calculate(cx, unit).map(|fingerprint| {
-            (unit.pkg.package_id().to_string(), fingerprint)
+    let deps = deps.iter()
+        .filter(|u| !u.target.is_custom_build() && !u.target.is_bin())
+        .map(|unit| {
+            calculate(cx, unit).map(|fingerprint| (unit.pkg.package_id().to_string(), fingerprint))
         })
-    }).collect::<CargoResult<Vec<_>>>()?;
+        .collect::<CargoResult<Vec<_>>>()?;
 
     // And finally, calculate what our own local fingerprint is
     let local = if use_dep_info(unit) {
@@ -422,10 +428,10 @@ fn use_dep_info(unit: &Unit) -> bool {
 ///
 /// The currently implemented solution is option (1), although it is planned to
 /// migrate to option (2) in the near future.
-pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
+pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
+                                   unit: &Unit<'a>)
                                    -> CargoResult<Preparation> {
-    let _p = profile::start(format!("fingerprint build cmd: {}",
-                                    unit.pkg.package_id()));
+    let _p = profile::start(format!("fingerprint build cmd: {}", unit.pkg.package_id()));
     let new = cx.fingerprint_dir(unit);
     let loc = new.join("build");
 
@@ -491,15 +497,14 @@ pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
             let outputs = state.outputs.lock().unwrap();
             if !outputs[&key].rerun_if_changed.is_empty() {
                 let slot = MtimeSlot(Mutex::new(None));
-                fingerprint.local = LocalFingerprint::MtimeBased(slot,
-                                                                 output_path);
+                fingerprint.local = LocalFingerprint::MtimeBased(slot, output_path);
                 fingerprint.update_local()?;
             }
         }
         write_fingerprint(&loc, &fingerprint)
     });
 
-    Ok((if compare.is_ok() {Fresh} else {Dirty}, write_fingerprint, Work::noop()))
+    Ok((if compare.is_ok() { Fresh } else { Dirty }, write_fingerprint, Work::noop()))
 }
 
 fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
@@ -530,13 +535,12 @@ pub fn dep_info_loc(cx: &mut Context, unit: &Unit) -> PathBuf {
     cx.fingerprint_dir(unit).join(&format!("dep-{}", filename(cx, unit)))
 }
 
-fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint)
-                           -> CargoResult<()> {
+fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<()> {
     let old_fingerprint_short = paths::read(loc)?;
     let new_hash = new_fingerprint.hash();
 
     if util::to_hex(new_hash) == old_fingerprint_short {
-        return Ok(())
+        return Ok(());
     }
 
     let old_fingerprint_json = paths::read(&loc.with_extension("json"))?;
@@ -572,17 +576,18 @@ pub fn parse_dep_info(dep_info: &Path) -> CargoResult<Option<Vec<PathBuf>>> {
     // see comments in append_current_dir for where this cwd is manifested from.
     let mut cwd = Vec::new();
     if fs_try!(f.read_until(0, &mut cwd)) == 0 {
-        return Ok(None)
+        return Ok(None);
     }
-    let cwd = util::bytes2path(&cwd[..cwd.len()-1])?;
+    let cwd = util::bytes2path(&cwd[..cwd.len() - 1])?;
     let line = match f.lines().next() {
         Some(Ok(line)) => line,
         _ => return Ok(None),
     };
-    let pos = line.find(": ").chain_error(|| {
-        internal(format!("dep-info not in an understood format: {}",
-                         dep_info.display()))
-    })?;
+    let pos = line.find(": ")
+        .chain_error(|| {
+            internal(format!("dep-info not in an understood format: {}",
+                             dep_info.display()))
+        })?;
     let deps = &line[pos + 2..];
 
     let mut paths = Vec::new();
@@ -595,9 +600,8 @@ pub fn parse_dep_info(dep_info: &Path) -> CargoResult<Option<Vec<PathBuf>>> {
         while file.ends_with("\\") {
             file.pop();
             file.push(' ');
-            file.push_str(deps.next().chain_error(|| {
-                internal(format!("malformed dep-info format, trailing \\"))
-            })?);
+            file.push_str(deps.next()
+                .chain_error(|| internal(format!("malformed dep-info format, trailing \\")))?);
         }
         paths.push(cwd.join(&file));
     }
@@ -615,15 +619,14 @@ fn dep_info_mtime_if_fresh(dep_info: &Path) -> CargoResult<Option<FileTime>> {
 fn pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String> {
     let source_id = pkg.package_id().source_id();
     let sources = cx.packages.sources();
-    let source = sources.get(source_id).chain_error(|| {
-        internal("missing package source")
-    })?;
+    let source = sources.get(source_id)
+        .chain_error(|| internal("missing package source"))?;
     source.fingerprint(pkg)
 }
 
 fn mtime_if_fresh<I>(output: &Path, paths: I) -> Option<FileTime>
     where I: IntoIterator,
-          I::Item: AsRef<Path>,
+          I::Item: AsRef<Path>
 {
     let meta = match fs::metadata(output) {
         Ok(meta) => meta,
@@ -637,7 +640,7 @@ fn mtime_if_fresh<I>(output: &Path, paths: I) -> Option<FileTime>
             Ok(meta) => meta,
             Err(..) => {
                 info!("stale: {} -- missing", path.display());
-                return true
+                return true;
             }
         };
         let mtime2 = FileTime::from_last_modification_time(&meta);
@@ -649,11 +652,7 @@ fn mtime_if_fresh<I>(output: &Path, paths: I) -> Option<FileTime>
         }
     });
 
-    if any_stale {
-        None
-    } else {
-        Some(mtime)
-    }
+    if any_stale { None } else { Some(mtime) }
 }
 
 fn filename(cx: &mut Context, unit: &Unit) -> String {

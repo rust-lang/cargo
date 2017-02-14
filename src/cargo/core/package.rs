@@ -10,7 +10,7 @@ use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{Summary, SourceMap};
 use ops;
 use util::{CargoResult, Config, LazyCell, ChainError, internal, human, lev_distance};
-use rustc_serialize::{Encoder,Encodable};
+use rustc_serialize::{Encoder, Encodable};
 
 /// Information about a package that is available somewhere in the file system.
 ///
@@ -49,24 +49,24 @@ impl Encodable for Package {
         let description = manmeta.description.as_ref().map(String::as_ref);
 
         SerializedPackage {
-            name: &package_id.name(),
-            version: &package_id.version().to_string(),
-            id: package_id,
-            license: license,
-            license_file: license_file,
-            description: description,
-            source: summary.source_id(),
-            dependencies: summary.dependencies(),
-            targets: &self.manifest.targets(),
-            features: summary.features(),
-            manifest_path: &self.manifest_path.display().to_string(),
-        }.encode(s)
+                name: &package_id.name(),
+                version: &package_id.version().to_string(),
+                id: package_id,
+                license: license,
+                license_file: license_file,
+                description: description,
+                source: summary.source_id(),
+                dependencies: summary.dependencies(),
+                targets: &self.manifest.targets(),
+                features: summary.features(),
+                manifest_path: &self.manifest_path.display().to_string(),
+            }
+            .encode(s)
     }
 }
 
 impl Package {
-    pub fn new(manifest: Manifest,
-               manifest_path: &Path) -> Package {
+    pub fn new(manifest: Manifest, manifest_path: &Path) -> Package {
         Package {
             manifest: manifest,
             manifest_path: manifest_path.to_path_buf(),
@@ -76,22 +76,43 @@ impl Package {
     pub fn for_path(manifest_path: &Path, config: &Config) -> CargoResult<Package> {
         let path = manifest_path.parent().unwrap();
         let source_id = SourceId::for_path(path)?;
-        let (pkg, _) = ops::read_package(&manifest_path, &source_id,
-                                         config)?;
+        let (pkg, _) = ops::read_package(&manifest_path, &source_id, config)?;
         Ok(pkg)
     }
 
-    pub fn dependencies(&self) -> &[Dependency] { self.manifest.dependencies() }
-    pub fn manifest(&self) -> &Manifest { &self.manifest }
-    pub fn manifest_path(&self) -> &Path { &self.manifest_path }
-    pub fn name(&self) -> &str { self.package_id().name() }
-    pub fn package_id(&self) -> &PackageId { self.manifest.package_id() }
-    pub fn root(&self) -> &Path { self.manifest_path.parent().unwrap() }
-    pub fn summary(&self) -> &Summary { self.manifest.summary() }
-    pub fn targets(&self) -> &[Target] { self.manifest.targets() }
-    pub fn version(&self) -> &Version { self.package_id().version() }
-    pub fn authors(&self) -> &Vec<String> { &self.manifest.metadata().authors }
-    pub fn publish(&self) -> bool { self.manifest.publish() }
+    pub fn dependencies(&self) -> &[Dependency] {
+        self.manifest.dependencies()
+    }
+    pub fn manifest(&self) -> &Manifest {
+        &self.manifest
+    }
+    pub fn manifest_path(&self) -> &Path {
+        &self.manifest_path
+    }
+    pub fn name(&self) -> &str {
+        self.package_id().name()
+    }
+    pub fn package_id(&self) -> &PackageId {
+        self.manifest.package_id()
+    }
+    pub fn root(&self) -> &Path {
+        self.manifest_path.parent().unwrap()
+    }
+    pub fn summary(&self) -> &Summary {
+        self.manifest.summary()
+    }
+    pub fn targets(&self) -> &[Target] {
+        self.manifest.targets()
+    }
+    pub fn version(&self) -> &Version {
+        self.package_id().version()
+    }
+    pub fn authors(&self) -> &Vec<String> {
+        &self.manifest.metadata().authors
+    }
+    pub fn publish(&self) -> bool {
+        self.manifest.publish()
+    }
 
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())
@@ -99,17 +120,18 @@ impl Package {
 
     pub fn find_closest_target(&self,
                                target: &str,
-                               is_expected_kind: fn(&Target)-> bool) -> Option<&Target> {
+                               is_expected_kind: fn(&Target) -> bool)
+                               -> Option<&Target> {
         let targets = self.targets();
 
-        let matches = targets.iter().filter(|t| is_expected_kind(t))
-                                    .map(|t| (lev_distance(target, t.name()), t))
-                                    .filter(|&(d, _)| d < 4);
+        let matches = targets.iter()
+            .filter(|t| is_expected_kind(t))
+            .map(|t| (lev_distance(target, t.name()), t))
+            .filter(|&(d, _)| d < 4);
         matches.min_by_key(|t| t.0).map(|t| t.1)
     }
 
-    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
-                      -> Package {
+    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId) -> Package {
         Package {
             manifest: self.manifest.map_source(to_replace, replace_with),
             manifest_path: self.manifest_path,
@@ -143,35 +165,33 @@ pub struct PackageSet<'cfg> {
 }
 
 impl<'cfg> PackageSet<'cfg> {
-    pub fn new(package_ids: &[PackageId],
-               sources: SourceMap<'cfg>) -> PackageSet<'cfg> {
+    pub fn new(package_ids: &[PackageId], sources: SourceMap<'cfg>) -> PackageSet<'cfg> {
         PackageSet {
-            packages: package_ids.iter().map(|id| {
-                (id.clone(), LazyCell::new())
-            }).collect(),
+            packages: package_ids.iter()
+                .map(|id| (id.clone(), LazyCell::new()))
+                .collect(),
             sources: RefCell::new(sources),
         }
     }
 
-    pub fn package_ids<'a>(&'a self) -> Box<Iterator<Item=&'a PackageId> + 'a> {
+    pub fn package_ids<'a>(&'a self) -> Box<Iterator<Item = &'a PackageId> + 'a> {
         Box::new(self.packages.iter().map(|&(ref p, _)| p))
     }
 
     pub fn get(&self, id: &PackageId) -> CargoResult<&Package> {
-        let slot = self.packages.iter().find(|p| p.0 == *id).chain_error(|| {
-            internal(format!("couldn't find `{}` in package set", id))
-        })?;
+        let slot = self.packages
+            .iter()
+            .find(|p| p.0 == *id)
+            .chain_error(|| internal(format!("couldn't find `{}` in package set", id)))?;
         let slot = &slot.1;
         if let Some(pkg) = slot.borrow() {
-            return Ok(pkg)
+            return Ok(pkg);
         }
         let mut sources = self.sources.borrow_mut();
-        let source = sources.get_mut(id.source_id()).chain_error(|| {
-            internal(format!("couldn't find source for `{}`", id))
-        })?;
-        let pkg = source.download(id).chain_error(|| {
-            human("unable to get packages from source")
-        })?;
+        let source = sources.get_mut(id.source_id())
+            .chain_error(|| internal(format!("couldn't find source for `{}`", id)))?;
+        let pkg = source.download(id)
+            .chain_error(|| human("unable to get packages from source"))?;
         assert!(slot.fill(pkg).is_ok());
         Ok(slot.borrow().unwrap())
     }

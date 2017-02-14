@@ -51,11 +51,11 @@ pub struct ManifestMetadata {
     pub categories: Vec<String>,
     pub license: Option<String>,
     pub license_file: Option<String>,
-    pub description: Option<String>,    // not markdown
-    pub readme: Option<String>,         // file, not contents
-    pub homepage: Option<String>,       // url
-    pub repository: Option<String>,     // url
-    pub documentation: Option<String>,  // url
+    pub description: Option<String>, // not markdown
+    pub readme: Option<String>, // file, not contents
+    pub homepage: Option<String>, // url
+    pub repository: Option<String>, // url
+    pub documentation: Option<String>, // url
     pub badges: HashMap<String, HashMap<String, String>>,
 }
 
@@ -92,10 +92,7 @@ impl LibKind {
 
     pub fn linkable(&self) -> bool {
         match *self {
-            LibKind::Lib |
-            LibKind::Rlib |
-            LibKind::Dylib |
-            LibKind::ProcMacro => true,
+            LibKind::Lib | LibKind::Rlib | LibKind::Dylib | LibKind::ProcMacro => true,
             LibKind::Other(..) => false,
         }
     }
@@ -123,7 +120,7 @@ impl TargetKind {
             ExampleBin | ExampleLib(_) => vec!["example"],
             Test => vec!["test"],
             CustomBuild => vec!["custom-build"],
-            Bench => vec!["bench"]
+            Bench => vec!["bench"],
         }
     }
 
@@ -131,14 +128,13 @@ impl TargetKind {
     pub fn crate_types(&self) -> Vec<&str> {
         use self::TargetKind::*;
         match *self {
-            Lib(ref kinds) | ExampleLib(ref kinds) => {
-                kinds.iter().map(LibKind::crate_type).collect()
-            }
+            Lib(ref kinds) |
+            ExampleLib(ref kinds) => kinds.iter().map(LibKind::crate_type).collect(),
             Bin => vec!["bin"],
             ExampleBin => vec!["example"],
             Test => vec!["test"],
             CustomBuild => vec!["custom-build"],
-            Bench => vec!["bench"]
+            Bench => vec!["bench"],
         }
     }
 }
@@ -147,7 +143,7 @@ impl TargetKind {
 pub struct Profile {
     pub opt_level: String,
     pub lto: bool,
-    pub codegen_units: Option<u32>,    // None = use rustc default
+    pub codegen_units: Option<u32>, // None = use rustc default
     pub rustc_args: Option<Vec<String>>,
     pub rustdoc_args: Option<Vec<String>>,
     pub debuginfo: Option<u32>,
@@ -171,11 +167,12 @@ struct SerializedProfile<'a> {
 impl Encodable for Profile {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         SerializedProfile {
-            opt_level: &self.opt_level,
-            debuginfo: self.debuginfo,
-            debug_assertions: self.debug_assertions,
-            test: self.test,
-        }.encode(s)
+                opt_level: &self.opt_level,
+                debuginfo: self.debuginfo,
+                debug_assertions: self.debug_assertions,
+                test: self.test,
+            }
+            .encode(s)
     }
 }
 
@@ -220,11 +217,12 @@ struct SerializedTarget<'a> {
 impl Encodable for Target {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         SerializedTarget {
-            kind: self.kind.kinds(),
-            crate_types: self.kind.crate_types(),
-            name: &self.name,
-            src_path: &self.src_path.display().to_string(),
-        }.encode(s)
+                kind: self.kind.kinds(),
+                crate_types: self.kind.crate_types(),
+                name: &self.name,
+                src_path: &self.src_path.display().to_string(),
+            }
+            .encode(s)
     }
 }
 
@@ -238,7 +236,8 @@ impl Manifest {
                profiles: Profiles,
                publish: bool,
                replace: Vec<(PackageIdSpec, Dependency)>,
-               workspace: WorkspaceConfig) -> Manifest {
+               workspace: WorkspaceConfig)
+               -> Manifest {
         Manifest {
             summary: summary,
             targets: targets,
@@ -254,19 +253,45 @@ impl Manifest {
         }
     }
 
-    pub fn dependencies(&self) -> &[Dependency] { self.summary.dependencies() }
-    pub fn exclude(&self) -> &[String] { &self.exclude }
-    pub fn include(&self) -> &[String] { &self.include }
-    pub fn metadata(&self) -> &ManifestMetadata { &self.metadata }
-    pub fn name(&self) -> &str { self.package_id().name() }
-    pub fn package_id(&self) -> &PackageId { self.summary.package_id() }
-    pub fn summary(&self) -> &Summary { &self.summary }
-    pub fn targets(&self) -> &[Target] { &self.targets }
-    pub fn version(&self) -> &Version { self.package_id().version() }
-    pub fn warnings(&self) -> &[String] { &self.warnings }
-    pub fn profiles(&self) -> &Profiles { &self.profiles }
-    pub fn publish(&self) -> bool { self.publish }
-    pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] { &self.replace }
+    pub fn dependencies(&self) -> &[Dependency] {
+        self.summary.dependencies()
+    }
+    pub fn exclude(&self) -> &[String] {
+        &self.exclude
+    }
+    pub fn include(&self) -> &[String] {
+        &self.include
+    }
+    pub fn metadata(&self) -> &ManifestMetadata {
+        &self.metadata
+    }
+    pub fn name(&self) -> &str {
+        self.package_id().name()
+    }
+    pub fn package_id(&self) -> &PackageId {
+        self.summary.package_id()
+    }
+    pub fn summary(&self) -> &Summary {
+        &self.summary
+    }
+    pub fn targets(&self) -> &[Target] {
+        &self.targets
+    }
+    pub fn version(&self) -> &Version {
+        self.package_id().version()
+    }
+    pub fn warnings(&self) -> &[String] {
+        &self.warnings
+    }
+    pub fn profiles(&self) -> &Profiles {
+        &self.profiles
+    }
+    pub fn publish(&self) -> bool {
+        self.publish
+    }
+    pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
+        &self.replace
+    }
     pub fn links(&self) -> Option<&str> {
         self.links.as_ref().map(|s| &s[..])
     }
@@ -283,19 +308,16 @@ impl Manifest {
         self.summary = summary;
     }
 
-    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
-                      -> Manifest {
-        Manifest {
-            summary: self.summary.map_source(to_replace, replace_with),
-            ..self
-        }
+    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId) -> Manifest {
+        Manifest { summary: self.summary.map_source(to_replace, replace_with), ..self }
     }
 }
 
 impl VirtualManifest {
     pub fn new(replace: Vec<(PackageIdSpec, Dependency)>,
                workspace: WorkspaceConfig,
-               profiles: Profiles) -> VirtualManifest {
+               profiles: Profiles)
+               -> VirtualManifest {
         VirtualManifest {
             replace: replace,
             workspace: workspace,
@@ -333,9 +355,7 @@ impl Target {
         }
     }
 
-    pub fn lib_target(name: &str,
-                      crate_targets: Vec<LibKind>,
-                      src_path: PathBuf) -> Target {
+    pub fn lib_target(name: &str, crate_targets: Vec<LibKind>, src_path: PathBuf) -> Target {
         Target {
             kind: TargetKind::Lib(crate_targets),
             name: name.to_string(),
@@ -345,8 +365,10 @@ impl Target {
         }
     }
 
-    pub fn bin_target(name: &str, src_path: PathBuf,
-                      required_features: Option<Vec<String>>) -> Target {
+    pub fn bin_target(name: &str,
+                      src_path: PathBuf,
+                      required_features: Option<Vec<String>>)
+                      -> Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
@@ -371,7 +393,8 @@ impl Target {
     pub fn example_target(name: &str,
                           crate_targets: Vec<LibKind>,
                           src_path: PathBuf,
-                          required_features: Option<Vec<String>>) -> Target {
+                          required_features: Option<Vec<String>>)
+                          -> Target {
         let kind = if crate_targets.is_empty() {
             TargetKind::ExampleBin
         } else {
@@ -387,8 +410,10 @@ impl Target {
         }
     }
 
-    pub fn test_target(name: &str, src_path: PathBuf,
-                       required_features: Option<Vec<String>>) -> Target {
+    pub fn test_target(name: &str,
+                       src_path: PathBuf,
+                       required_features: Option<Vec<String>>)
+                       -> Target {
         Target {
             kind: TargetKind::Test,
             name: name.to_string(),
@@ -398,8 +423,10 @@ impl Target {
         }
     }
 
-    pub fn bench_target(name: &str, src_path: PathBuf,
-                        required_features: Option<Vec<String>>) -> Target {
+    pub fn bench_target(name: &str,
+                        src_path: PathBuf,
+                        required_features: Option<Vec<String>>)
+                        -> Target {
         Target {
             kind: TargetKind::Bench,
             name: name.to_string(),
@@ -409,25 +436,46 @@ impl Target {
         }
     }
 
-    pub fn name(&self) -> &str { &self.name }
-    pub fn crate_name(&self) -> String { self.name.replace("-", "_") }
-    pub fn src_path(&self) -> &Path { &self.src_path }
-    pub fn required_features(&self) -> Option<&Vec<String>> { self.required_features.as_ref() }
-    pub fn kind(&self) -> &TargetKind { &self.kind }
-    pub fn tested(&self) -> bool { self.tested }
-    pub fn harness(&self) -> bool { self.harness }
-    pub fn documented(&self) -> bool { self.doc }
-    pub fn for_host(&self) -> bool { self.for_host }
-    pub fn benched(&self) -> bool { self.benched }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn crate_name(&self) -> String {
+        self.name.replace("-", "_")
+    }
+    pub fn src_path(&self) -> &Path {
+        &self.src_path
+    }
+    pub fn required_features(&self) -> Option<&Vec<String>> {
+        self.required_features.as_ref()
+    }
+    pub fn kind(&self) -> &TargetKind {
+        &self.kind
+    }
+    pub fn tested(&self) -> bool {
+        self.tested
+    }
+    pub fn harness(&self) -> bool {
+        self.harness
+    }
+    pub fn documented(&self) -> bool {
+        self.doc
+    }
+    pub fn for_host(&self) -> bool {
+        self.for_host
+    }
+    pub fn benched(&self) -> bool {
+        self.benched
+    }
 
     pub fn doctested(&self) -> bool {
-        self.doctest && match self.kind {
+        self.doctest &&
+        match self.kind {
             TargetKind::Lib(ref kinds) => {
-                kinds.iter().find(|k| {
-                  *k == &LibKind::Rlib ||
-                  *k == &LibKind::Lib ||
-                  *k == &LibKind::ProcMacro
-                }).is_some()
+                kinds.iter()
+                    .find(|k| {
+                        *k == &LibKind::Rlib || *k == &LibKind::Lib || *k == &LibKind::ProcMacro
+                    })
+                    .is_some()
             }
             _ => false,
         }
@@ -440,61 +488,61 @@ impl Target {
     pub fn is_lib(&self) -> bool {
         match self.kind {
             TargetKind::Lib(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_dylib(&self) -> bool {
         match self.kind {
             TargetKind::Lib(ref libs) => libs.iter().any(|l| *l == LibKind::Dylib),
-            _ => false
+            _ => false,
         }
     }
 
     pub fn linkable(&self) -> bool {
         match self.kind {
-            TargetKind::Lib(ref kinds) => {
-                kinds.iter().any(|k| k.linkable())
-            }
-            _ => false
+            TargetKind::Lib(ref kinds) => kinds.iter().any(|k| k.linkable()),
+            _ => false,
         }
     }
 
-    pub fn is_bin(&self) -> bool { self.kind == TargetKind::Bin }
+    pub fn is_bin(&self) -> bool {
+        self.kind == TargetKind::Bin
+    }
 
     pub fn is_example(&self) -> bool {
         match self.kind {
             TargetKind::ExampleBin |
             TargetKind::ExampleLib(..) => true,
-            _ => false
+            _ => false,
         }
     }
 
-    pub fn is_test(&self) -> bool { self.kind == TargetKind::Test }
-    pub fn is_bench(&self) -> bool { self.kind == TargetKind::Bench }
-    pub fn is_custom_build(&self) -> bool { self.kind == TargetKind::CustomBuild }
+    pub fn is_test(&self) -> bool {
+        self.kind == TargetKind::Test
+    }
+    pub fn is_bench(&self) -> bool {
+        self.kind == TargetKind::Bench
+    }
+    pub fn is_custom_build(&self) -> bool {
+        self.kind == TargetKind::CustomBuild
+    }
 
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.
     pub fn rustc_crate_types(&self) -> Vec<&str> {
         match self.kind {
             TargetKind::Lib(ref kinds) |
-            TargetKind::ExampleLib(ref kinds) => {
-                kinds.iter().map(LibKind::crate_type).collect()
-            }
-            TargetKind::CustomBuild |
-            TargetKind::Bench |
-            TargetKind::Test |
-            TargetKind::ExampleBin |
-            TargetKind::Bin => vec!["bin"],
+            TargetKind::ExampleLib(ref kinds) => kinds.iter().map(LibKind::crate_type).collect(),
+            TargetKind::CustomBuild | TargetKind::Bench | TargetKind::Test |
+            TargetKind::ExampleBin | TargetKind::Bin => vec!["bin"],
         }
     }
 
     pub fn can_lto(&self) -> bool {
         match self.kind {
             TargetKind::Lib(ref v) => {
-                !v.contains(&LibKind::Rlib) &&
-                    !v.contains(&LibKind::Dylib) &&
-                    !v.contains(&LibKind::Lib)
+                !v.contains(&LibKind::Rlib) && !v.contains(&LibKind::Dylib) &&
+                !v.contains(&LibKind::Lib)
             }
             _ => true,
         }
@@ -558,38 +606,23 @@ impl Profile {
     }
 
     pub fn default_test() -> Profile {
-        Profile {
-            test: true,
-            ..Profile::default_dev()
-        }
+        Profile { test: true, ..Profile::default_dev() }
     }
 
     pub fn default_bench() -> Profile {
-        Profile {
-            test: true,
-            ..Profile::default_release()
-        }
+        Profile { test: true, ..Profile::default_release() }
     }
 
     pub fn default_doc() -> Profile {
-        Profile {
-            doc: true,
-            ..Profile::default_dev()
-        }
+        Profile { doc: true, ..Profile::default_dev() }
     }
 
     pub fn default_custom_build() -> Profile {
-        Profile {
-            run_custom_build: true,
-            ..Profile::default_dev()
-        }
+        Profile { run_custom_build: true, ..Profile::default_dev() }
     }
 
     pub fn default_check() -> Profile {
-        Profile {
-            check: true,
-            ..Profile::default_dev()
-        }
+        Profile { check: true, ..Profile::default_dev() }
     }
 
     pub fn default_doctest() -> Profile {

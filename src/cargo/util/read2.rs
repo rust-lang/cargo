@@ -12,7 +12,8 @@ mod imp {
 
     pub fn read2(mut out_pipe: ChildStdout,
                  mut err_pipe: ChildStderr,
-                 mut data: &mut FnMut(bool, &mut Vec<u8>, bool)) -> io::Result<()> {
+                 mut data: &mut FnMut(bool, &mut Vec<u8>, bool))
+                 -> io::Result<()> {
         unsafe {
             libc::fcntl(out_pipe.as_raw_fd(), libc::F_SETFL, libc::O_NONBLOCK);
             libc::fcntl(err_pipe.as_raw_fd(), libc::F_SETFL, libc::O_NONBLOCK);
@@ -34,15 +35,14 @@ mod imp {
                 if !err_done {
                     libc::FD_SET(err_pipe.as_raw_fd(), &mut read);
                 }
-                libc::select(max + 1, &mut read, 0 as *mut _, 0 as *mut _,
-                             0 as *mut _)
+                libc::select(max + 1, &mut read, 0 as *mut _, 0 as *mut _, 0 as *mut _)
             };
             if r == -1 {
                 let err = io::Error::last_os_error();
                 if err.kind() == io::ErrorKind::Interrupted {
-                    continue
+                    continue;
                 }
-                return Err(err)
+                return Err(err);
             }
 
             // Read as much as we can from each pipe, ignoring EWOULDBLOCK or
@@ -50,15 +50,13 @@ mod imp {
             // reader will return Ok(0), in which case we'll see `Ok` ourselves. In
             // this case we flip the other fd back into blocking mode and read
             // whatever's leftover on that file descriptor.
-            let handle = |res: io::Result<_>| {
-                match res {
-                    Ok(_) => Ok(true),
-                    Err(e) => {
-                        if e.kind() == io::ErrorKind::WouldBlock {
-                            Ok(false)
-                        } else {
-                            Err(e)
-                        }
+            let handle = |res: io::Result<_>| match res {
+                Ok(_) => Ok(true),
+                Err(e) => {
+                    if e.kind() == io::ErrorKind::WouldBlock {
+                        Ok(false)
+                    } else {
+                        Err(e)
                     }
                 }
             };
@@ -72,7 +70,7 @@ mod imp {
             data(false, &mut err, err_done);
 
             if out_done && err_done {
-                return Ok(())
+                return Ok(());
             }
         }
     }
@@ -102,7 +100,8 @@ mod imp {
 
     pub fn read2(out_pipe: ChildStdout,
                  err_pipe: ChildStderr,
-                 mut data: &mut FnMut(bool, &mut Vec<u8>, bool)) -> io::Result<()> {
+                 mut data: &mut FnMut(bool, &mut Vec<u8>, bool))
+                 -> io::Result<()> {
         let mut out = Vec::new();
         let mut err = Vec::new();
 

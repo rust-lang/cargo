@@ -20,8 +20,11 @@ fn cargo_process(s: &str) -> ProcessBuilder {
 
 #[test]
 fn simple_lib() {
-    assert_that(cargo_process("init").arg("--lib").arg("--vcs").arg("none")
-                                    .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .arg("--lib")
+                    .arg("--vcs")
+                    .arg("none")
+                    .env("USER", "foo"),
                 execs().with_status(0).with_stderr("\
 [CREATED] library project
 "));
@@ -30,16 +33,19 @@ fn simple_lib() {
     assert_that(&paths::root().join("src/lib.rs"), existing_file());
     assert_that(&paths::root().join(".gitignore"), is_not(existing_file()));
 
-    assert_that(cargo_process("build"),
-                execs().with_status(0));
+    assert_that(cargo_process("build"), execs().with_status(0));
 }
 
 #[test]
 fn simple_bin() {
     let path = paths::root().join("foo");
     fs::create_dir(&path).unwrap();
-    assert_that(cargo_process("init").arg("--bin").arg("--vcs").arg("none")
-                                    .env("USER", "foo").cwd(&path),
+    assert_that(cargo_process("init")
+                    .arg("--bin")
+                    .arg("--vcs")
+                    .arg("none")
+                    .env("USER", "foo")
+                    .cwd(&path),
                 execs().with_status(0).with_stderr("\
 [CREATED] binary (application) project
 "));
@@ -47,20 +53,22 @@ fn simple_bin() {
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
     assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
 
-    assert_that(cargo_process("build").cwd(&path),
-                execs().with_status(0));
-    assert_that(&paths::root().join(&format!("foo/target/debug/foo{}",
-                                             env::consts::EXE_SUFFIX)),
+    assert_that(cargo_process("build").cwd(&path), execs().with_status(0));
+    assert_that(&paths::root().join(&format!("foo/target/debug/foo{}", env::consts::EXE_SUFFIX)),
                 existing_file());
 }
 
 #[test]
 fn both_lib_and_bin() {
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("init").arg("--lib").arg("--bin").cwd(td.path().clone())
-                                    .env("USER", "foo"),
-                execs().with_status(101).with_stderr(
-                    "[ERROR] can't specify both lib and binary outputs"));
+    assert_that(cargo_process("init")
+                    .arg("--lib")
+                    .arg("--bin")
+                    .cwd(td.path().clone())
+                    .env("USER", "foo"),
+                execs()
+                    .with_status(101)
+                    .with_stderr("[ERROR] can't specify both lib and binary outputs"));
 }
 
 fn bin_already_exists(explicit: bool, rellocation: &str) {
@@ -78,17 +86,25 @@ fn bin_already_exists(explicit: bool, rellocation: &str) {
     File::create(&sourcefile_path).unwrap().write_all(content).unwrap();
 
     if explicit {
-        assert_that(cargo_process("init").arg("--bin").arg("--vcs").arg("none")
-                                        .env("USER", "foo").cwd(&path),
+        assert_that(cargo_process("init")
+                        .arg("--bin")
+                        .arg("--vcs")
+                        .arg("none")
+                        .env("USER", "foo")
+                        .cwd(&path),
                     execs().with_status(0));
     } else {
-        assert_that(cargo_process("init").arg("--vcs").arg("none")
-                                        .env("USER", "foo").cwd(&path),
+        assert_that(cargo_process("init")
+                        .arg("--vcs")
+                        .arg("none")
+                        .env("USER", "foo")
+                        .cwd(&path),
                     execs().with_status(0));
     }
 
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("foo/src/lib.rs"), is_not(existing_file()));
+    assert_that(&paths::root().join("foo/src/lib.rs"),
+                is_not(existing_file()));
 
     // Check that our file is not overwritten
     let mut new_content = Vec::new();
@@ -133,27 +149,37 @@ fn confused_by_multiple_lib_files() {
 
     let sourcefile_path1 = path.join("src/lib.rs");
 
-    File::create(&sourcefile_path1).unwrap().write_all(br#"
+    File::create(&sourcefile_path1)
+        .unwrap()
+        .write_all(br#"
         fn qqq () {
             println!("Hello, world 2!");
         }
-    "#).unwrap();
+    "#)
+        .unwrap();
 
     let sourcefile_path2 = path.join("lib.rs");
 
-    File::create(&sourcefile_path2).unwrap().write_all(br#"
+    File::create(&sourcefile_path2)
+        .unwrap()
+        .write_all(br#"
         fn qqq () {
             println!("Hello, world 3!");
         }
-    "#).unwrap();
+    "#)
+        .unwrap();
 
-    assert_that(cargo_process("init").arg("--vcs").arg("none")
-                                    .env("USER", "foo").cwd(&path),
+    assert_that(cargo_process("init")
+                    .arg("--vcs")
+                    .arg("none")
+                    .env("USER", "foo")
+                    .cwd(&path),
                 execs().with_status(101).with_stderr("\
 [ERROR] cannot have a project with multiple libraries, found both `src/lib.rs` and `lib.rs`
 "));
 
-    assert_that(&paths::root().join("foo/Cargo.toml"), is_not(existing_file()));
+    assert_that(&paths::root().join("foo/Cargo.toml"),
+                is_not(existing_file()));
 }
 
 
@@ -164,22 +190,32 @@ fn multibin_project_name_clash() {
 
     let sourcefile_path1 = path.join("foo.rs");
 
-    File::create(&sourcefile_path1).unwrap().write_all(br#"
+    File::create(&sourcefile_path1)
+        .unwrap()
+        .write_all(br#"
         fn main () {
             println!("Hello, world 2!");
         }
-    "#).unwrap();
+    "#)
+        .unwrap();
 
     let sourcefile_path2 = path.join("main.rs");
 
-    File::create(&sourcefile_path2).unwrap().write_all(br#"
+    File::create(&sourcefile_path2)
+        .unwrap()
+        .write_all(br#"
         fn main () {
             println!("Hello, world 3!");
         }
-    "#).unwrap();
+    "#)
+        .unwrap();
 
-    assert_that(cargo_process("init").arg("--lib").arg("--vcs").arg("none")
-                                    .env("USER", "foo").cwd(&path),
+    assert_that(cargo_process("init")
+                    .arg("--lib")
+                    .arg("--vcs")
+                    .arg("none")
+                    .env("USER", "foo")
+                    .cwd(&path),
                 execs().with_status(101).with_stderr("\
 [ERROR] multiple possible binary sources found:
   main.rs
@@ -187,7 +223,8 @@ fn multibin_project_name_clash() {
 cannot automatically generate Cargo.toml as the main target would be ambiguous
 "));
 
-    assert_that(&paths::root().join("foo/Cargo.toml"), is_not(existing_file()));
+    assert_that(&paths::root().join("foo/Cargo.toml"),
+                is_not(existing_file()));
 }
 
 fn lib_already_exists(rellocation: &str) {
@@ -202,12 +239,16 @@ fn lib_already_exists(rellocation: &str) {
 
     File::create(&sourcefile_path).unwrap().write_all(content).unwrap();
 
-    assert_that(cargo_process("init").arg("--vcs").arg("none")
-                                    .env("USER", "foo").cwd(&path),
+    assert_that(cargo_process("init")
+                    .arg("--vcs")
+                    .arg("none")
+                    .env("USER", "foo")
+                    .cwd(&path),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("foo/src/main.rs"), is_not(existing_file()));
+    assert_that(&paths::root().join("foo/src/main.rs"),
+                is_not(existing_file()));
 
     // Check that our file is not overwritten
     let mut new_content = Vec::new();
@@ -227,10 +268,11 @@ fn lib_already_exists_nosrc() {
 
 #[test]
 fn simple_git() {
-    assert_that(cargo_process("init").arg("--lib")
-                                     .arg("--vcs")
-                                     .arg("git")
-                                     .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .arg("--lib")
+                    .arg("--vcs")
+                    .arg("git")
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
@@ -244,9 +286,10 @@ fn auto_git() {
     let td = TempDir::new("cargo").unwrap();
     let foo = &td.path().join("foo");
     fs::create_dir_all(&foo).unwrap();
-    assert_that(cargo_process("init").arg("--lib")
-                                     .cwd(foo.clone())
-                                     .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .arg("--lib")
+                    .cwd(foo.clone())
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&foo.join("Cargo.toml"), existing_file());
@@ -259,8 +302,9 @@ fn auto_git() {
 fn invalid_dir_name() {
     let foo = &paths::root().join("foo.bar");
     fs::create_dir_all(&foo).unwrap();
-    assert_that(cargo_process("init").cwd(foo.clone())
-                                     .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .cwd(foo.clone())
+                    .env("USER", "foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Invalid character `.` in crate name: `foo.bar`
 use --name to override crate name
@@ -273,8 +317,9 @@ use --name to override crate name
 fn reserved_name() {
     let test = &paths::root().join("test");
     fs::create_dir_all(&test).unwrap();
-    assert_that(cargo_process("init").cwd(test.clone())
-                                     .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .cwd(test.clone())
+                    .env("USER", "foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] The name `test` cannot be used as a crate name\n\
 use --name to override crate name
@@ -287,8 +332,9 @@ use --name to override crate name
 fn git_autodetect() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
-    assert_that(cargo_process("init").arg("--lib")
-                                    .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .arg("--lib")
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
 
@@ -303,8 +349,9 @@ fn git_autodetect() {
 fn mercurial_autodetect() {
     fs::create_dir(&paths::root().join(".hg")).unwrap();
 
-    assert_that(cargo_process("init").arg("--lib")
-                                    .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .arg("--lib")
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
 
@@ -320,8 +367,9 @@ fn gitignore_appended_not_replaced() {
 
     File::create(&paths::root().join(".gitignore")).unwrap().write_all(b"qqqqqq\n").unwrap();
 
-    assert_that(cargo_process("init").arg("--lib")
-                                     .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .arg("--lib")
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
 
@@ -339,8 +387,11 @@ fn gitignore_appended_not_replaced() {
 fn cargo_lock_gitignored_if_lib1() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
-    assert_that(cargo_process("init").arg("--lib").arg("--vcs").arg("git")
-                                     .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .arg("--lib")
+                    .arg("--vcs")
+                    .arg("git")
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join(".gitignore"), existing_file());
@@ -356,8 +407,10 @@ fn cargo_lock_gitignored_if_lib2() {
 
     File::create(&paths::root().join("lib.rs")).unwrap().write_all(br#""#).unwrap();
 
-    assert_that(cargo_process("init").arg("--vcs").arg("git")
-                                     .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .arg("--vcs")
+                    .arg("git")
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join(".gitignore"), existing_file());
@@ -371,9 +424,11 @@ fn cargo_lock_gitignored_if_lib2() {
 fn cargo_lock_not_gitignored_if_bin1() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
-    assert_that(cargo_process("init").arg("--vcs").arg("git")
-                                     .arg("--bin")
-                                     .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .arg("--vcs")
+                    .arg("git")
+                    .arg("--bin")
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join(".gitignore"), existing_file());
@@ -389,8 +444,10 @@ fn cargo_lock_not_gitignored_if_bin2() {
 
     File::create(&paths::root().join("main.rs")).unwrap().write_all(br#""#).unwrap();
 
-    assert_that(cargo_process("init").arg("--vcs").arg("git")
-                                     .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .arg("--vcs")
+                    .arg("git")
+                    .env("USER", "foo"),
                 execs().with_status(0));
 
     assert_that(&paths::root().join(".gitignore"), existing_file());
@@ -402,8 +459,11 @@ fn cargo_lock_not_gitignored_if_bin2() {
 
 #[test]
 fn with_argument() {
-    assert_that(cargo_process("init").arg("foo").arg("--vcs").arg("none")
-                                     .env("USER", "foo"),
+    assert_that(cargo_process("init")
+                    .arg("foo")
+                    .arg("--vcs")
+                    .arg("none")
+                    .env("USER", "foo"),
                 execs().with_status(0));
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
 }
@@ -412,12 +472,14 @@ fn with_argument() {
 #[test]
 fn unknown_flags() {
     assert_that(cargo_process("init").arg("foo").arg("--flag"),
-                execs().with_status(1)
-                       .with_stderr("\
+                execs()
+                    .with_status(1)
+                    .with_stderr("\
 [ERROR] Unknown flag: '--flag'
 
 Usage:
-    cargo init [options] [<path>]
+    cargo init \
+                                  [options] [<path>]
     cargo init -h | --help
 "));
 }
@@ -426,8 +488,10 @@ Usage:
 #[test]
 fn no_filename() {
     assert_that(cargo_process("init").arg("/"),
-                execs().with_status(101)
-                       .with_stderr(&format!("\
-[ERROR] cannot auto-detect project name from path \"/\" ; use --name to override
+                execs()
+                    .with_status(101)
+                    .with_stderr(&format!("\
+[ERROR] cannot auto-detect project name from path \
+                                           \"/\" ; use --name to override
 ")));
 }

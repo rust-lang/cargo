@@ -9,10 +9,11 @@ use hamcrest::assert_that;
 #[test]
 fn check_success() {
     if !is_nightly() {
-        return
+        return;
     }
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -21,35 +22,38 @@ fn check_success() {
             [dependencies.bar]
             path = "../bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             extern crate bar;
             fn main() {
                 ::bar::baz();
             }
         "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             pub fn baz() {}
         "#);
     bar.build();
 
-    assert_that(foo.cargo_process("check"),
-                execs().with_status(0));
+    assert_that(foo.cargo_process("check"), execs().with_status(0));
 }
 
 #[test]
 fn check_fail() {
     if !is_nightly() {
-        return
+        return;
     }
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -58,35 +62,38 @@ fn check_fail() {
             [dependencies.bar]
             path = "../bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             extern crate bar;
             fn main() {
                 ::bar::baz(42);
             }
         "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             pub fn baz() {}
         "#);
     bar.build();
 
-    assert_that(foo.cargo_process("check"),
-                execs().with_status(101));
+    assert_that(foo.cargo_process("check"), execs().with_status(101));
 }
 
 #[test]
 fn custom_derive() {
     if !is_nightly() {
-        return
+        return;
     }
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -95,7 +102,8 @@ fn custom_derive() {
             [dependencies.bar]
             path = "../bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
 #![feature(proc_macro)]
 
 #[macro_use]
@@ -114,7 +122,8 @@ fn main() {
 }
 "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.1.0"
@@ -122,7 +131,8 @@ fn main() {
             [lib]
             proc-macro = true
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
 #![feature(proc_macro, proc_macro_lib)]
 #![crate_type = "proc-macro"]
 
@@ -137,8 +147,7 @@ pub fn derive(_input: TokenStream) -> TokenStream {
 "#);
     bar.build();
 
-    assert_that(foo.cargo_process("check"),
-                execs().with_status(0));
+    assert_that(foo.cargo_process("check"), execs().with_status(0));
 }
 
 #[test]
@@ -148,7 +157,8 @@ fn check_build() {
     }
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -157,28 +167,29 @@ fn check_build() {
             [dependencies.bar]
             path = "../bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             extern crate bar;
             fn main() {
                 ::bar::baz();
             }
         "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             pub fn baz() {}
         "#);
     bar.build();
 
-    assert_that(foo.cargo_process("check"),
-                execs().with_status(0));
-    assert_that(foo.cargo_process("build"),
-                execs().with_status(0));
+    assert_that(foo.cargo_process("check"), execs().with_status(0));
+    assert_that(foo.cargo_process("build"), execs().with_status(0));
 }
 
 #[test]
@@ -188,7 +199,8 @@ fn build_check() {
     }
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -197,28 +209,29 @@ fn build_check() {
             [dependencies.bar]
             path = "../bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             extern crate bar;
             fn main() {
                 ::bar::baz();
             }
         "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             pub fn baz() {}
         "#);
     bar.build();
 
-    assert_that(foo.cargo_process("build"),
-                execs().with_status(0));
-    assert_that(foo.cargo_process("check"),
-                execs().with_status(0));
+    assert_that(foo.cargo_process("build"), execs().with_status(0));
+    assert_that(foo.cargo_process("check"), execs().with_status(0));
 }
 
 // Checks that where a project has both a lib and a bin, the lib is only checked
@@ -230,7 +243,8 @@ fn issue_3418() {
     }
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.1.0"
@@ -243,8 +257,9 @@ fn issue_3418() {
     foo.build();
 
     assert_that(foo.cargo_process("check").arg("-v"),
-                execs().with_status(0)
-                       .with_stderr_contains("[..] --emit=dep-info,metadata [..]"));
+                execs()
+                    .with_status(0)
+                    .with_stderr_contains("[..] --emit=dep-info,metadata [..]"));
 }
 
 // Some weirdness that seems to be caused by a crate being built as well as
@@ -256,7 +271,8 @@ fn issue_3419() {
     }
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -265,14 +281,16 @@ fn issue_3419() {
             [dependencies]
             rustc-serialize = "*"
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             extern crate rustc_serialize;
 
             use rustc_serialize::Decodable;
 
             pub fn take<T: Decodable>() {}
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             extern crate rustc_serialize;
 
             extern crate foo;
@@ -295,20 +313,21 @@ fn issue_3419() {
                     fn read_struct<T, F>(&mut self, s_name: &str, len: usize, f: F)
                                          -> Result<T, Self::Error>
                     where F: FnOnce(&mut Self) -> Result<T, Self::Error>;
-                 } "#).publish();
+                 } "#)
+        .publish();
 
-    assert_that(foo.cargo_process("check"),
-                execs().with_status(0));
+    assert_that(foo.cargo_process("check"), execs().with_status(0));
 }
 
 // test `cargo rustc --profile check`
 #[test]
 fn rustc_check() {
     if !is_nightly() {
-        return
+        return;
     }
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -317,39 +336,43 @@ fn rustc_check() {
             [dependencies.bar]
             path = "../bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             extern crate bar;
             fn main() {
                 ::bar::baz();
             }
         "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             pub fn baz() {}
         "#);
     bar.build();
 
     assert_that(foo.cargo_process("rustc")
-                   .arg("--profile")
-                   .arg("check")
-                   .arg("--")
-                   .arg("--emit=metadata"),
+                    .arg("--profile")
+                    .arg("check")
+                    .arg("--")
+                    .arg("--emit=metadata"),
                 execs().with_status(0));
 }
 
 #[test]
 fn rustc_check_err() {
     if !is_nightly() {
-        return
+        return;
     }
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -358,28 +381,31 @@ fn rustc_check_err() {
             [dependencies.bar]
             path = "../bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             extern crate bar;
             fn main() {
                 ::bar::qux();
             }
         "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             pub fn baz() {}
         "#);
     bar.build();
 
     assert_that(foo.cargo_process("rustc")
-                   .arg("--profile")
-                   .arg("check")
-                   .arg("--")
-                   .arg("--emit=metadata"),
+                    .arg("--profile")
+                    .arg("check")
+                    .arg("--")
+                    .arg("--emit=metadata"),
                 execs().with_status(101));
 }

@@ -4,193 +4,246 @@ extern crate hamcrest;
 use cargotest::support::{execs, project};
 use hamcrest::assert_that;
 
-const CARGO_RUSTC_ERROR: &'static str =
-"[ERROR] extra arguments to `rustc` can only be passed to one target, consider filtering
-the package by passing e.g. `--lib` or `--bin NAME` to specify a single target";
+const CARGO_RUSTC_ERROR: &'static str = "[ERROR] extra arguments to `rustc` can only be passed to \
+                                         one target, consider filtering
+the package by passing \
+                                         e.g. `--lib` or `--bin NAME` to specify a single target";
 
 #[test]
 fn build_lib_for_foo() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             fn main() {}
         "#)
         .file("src/lib.rs", r#" "#);
 
     assert_that(p.cargo_process("rustc").arg("--lib").arg("-v"),
                 execs()
-                .with_status(0)
-                .with_stderr(format!("\
+                    .with_status(0)
+                    .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
-        -C metadata=[..] \
-        --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", dir = p.root().display(), url = p.url())));
+[RUNNING] `rustc \
+                                          --crate-name foo src[/]lib.rs --crate-type lib \
+                                          --emit=dep-info,link -C debuginfo=2 -C metadata=[..] \
+                                          --out-dir [..] -L \
+                                          dependency={dir}[/]target[/]debug[/]deps`
+[FINISHED] \
+                                          dev [unoptimized + debuginfo] target(s) in [..]
+",
+                                         dir = p.root().display(),
+                                         url = p.url())));
 }
 
 #[test]
 fn lib() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             fn main() {}
         "#)
         .file("src/lib.rs", r#" "#);
 
-    assert_that(p.cargo_process("rustc").arg("--lib").arg("-v")
-                .arg("--").arg("-C").arg("debug-assertions=off"),
+    assert_that(p.cargo_process("rustc")
+                    .arg("--lib")
+                    .arg("-v")
+                    .arg("--")
+                    .arg("-C")
+                    .arg("debug-assertions=off"),
                 execs()
-                .with_status(0)
-                .with_stderr(format!("\
+                    .with_status(0)
+                    .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
-        -C debug-assertions=off \
-        -C metadata=[..] \
-        --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", dir = p.root().display(), url = p.url())))
+[RUNNING] `rustc \
+                                          --crate-name foo src[/]lib.rs --crate-type lib \
+                                          --emit=dep-info,link -C debuginfo=2 -C \
+                                          debug-assertions=off -C metadata=[..] --out-dir [..] \
+                                          -L dependency={dir}[/]target[/]debug[/]deps`
+\
+                                          [FINISHED] dev [unoptimized + debuginfo] target(s) in \
+                                          [..]
+",
+                                         dir = p.root().display(),
+                                         url = p.url())))
 }
 
 #[test]
 fn build_main_and_allow_unstable_options() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             fn main() {}
         "#)
         .file("src/lib.rs", r#" "#);
 
-    assert_that(p.cargo_process("rustc").arg("-v").arg("--bin").arg("foo")
-                .arg("--").arg("-C").arg("debug-assertions"),
+    assert_that(p.cargo_process("rustc")
+                    .arg("-v")
+                    .arg("--bin")
+                    .arg("foo")
+                    .arg("--")
+                    .arg("-C")
+                    .arg("debug-assertions"),
                 execs()
-                .with_status(0)
-                .with_stderr(&format!("\
+                    .with_status(0)
+                    .with_stderr(&format!("\
 [COMPILING] {name} v{version} ({url})
-[RUNNING] `rustc --crate-name {name} src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
-        -C metadata=[..] \
-        --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
-[RUNNING] `rustc --crate-name {name} src[/]main.rs --crate-type bin \
-        --emit=dep-info,link -C debuginfo=2 \
-        -C debug-assertions \
-        -C metadata=[..] \
-        --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps \
-        --extern {name}={dir}[/]target[/]debug[/]deps[/]lib{name}-[..].rlib`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] \
+                                           `rustc --crate-name {name} src[/]lib.rs \
+                                           --crate-type lib --emit=dep-info,link -C \
+                                           debuginfo=2 -C metadata=[..] --out-dir [..] -L \
+                                           dependency={dir}[/]target[/]debug[/]deps`
+[RUNNING] \
+                                           `rustc --crate-name {name} src[/]main.rs \
+                                           --crate-type bin --emit=dep-info,link -C \
+                                           debuginfo=2 -C debug-assertions -C metadata=[..] \
+                                           --out-dir [..] -L \
+                                           dependency={dir}[/]target[/]debug[/]deps --extern \
+                                           {name}={dir}[/]target[/]debug[/]deps[/]lib{name}-[..\
+                                           ].rlib`
+[FINISHED] dev [unoptimized + debuginfo] \
+                                           target(s) in [..]
 ",
-            dir = p.root().display(), url = p.url(),
-            name = "foo", version = "0.0.1")));
+                                          dir = p.root().display(),
+                                          url = p.url(),
+                                          name = "foo",
+                                          version = "0.0.1")));
 }
 
 #[test]
 fn fails_when_trying_to_build_main_and_lib_with_args() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             fn main() {}
         "#)
         .file("src/lib.rs", r#" "#);
 
-    assert_that(p.cargo_process("rustc").arg("-v")
-                .arg("--").arg("-C").arg("debug-assertions"),
+    assert_that(p.cargo_process("rustc")
+                    .arg("-v")
+                    .arg("--")
+                    .arg("-C")
+                    .arg("debug-assertions"),
                 execs()
-                .with_status(101)
-                .with_stderr(CARGO_RUSTC_ERROR));
+                    .with_status(101)
+                    .with_stderr(CARGO_RUSTC_ERROR));
 }
 
 #[test]
 fn build_with_args_to_one_of_multiple_binaries() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/bin/foo.rs", r#"
+        .file("src/bin/foo.rs",
+              r#"
             fn main() {}
         "#)
-        .file("src/bin/bar.rs", r#"
+        .file("src/bin/bar.rs",
+              r#"
             fn main() {}
         "#)
-        .file("src/bin/baz.rs", r#"
+        .file("src/bin/baz.rs",
+              r#"
             fn main() {}
         "#)
         .file("src/lib.rs", r#" "#);
 
-    assert_that(p.cargo_process("rustc").arg("-v").arg("--bin").arg("bar")
-                .arg("--").arg("-C").arg("debug-assertions"),
+    assert_that(p.cargo_process("rustc")
+                    .arg("-v")
+                    .arg("--bin")
+                    .arg("bar")
+                    .arg("--")
+                    .arg("-C")
+                    .arg("debug-assertions"),
                 execs()
-                .with_status(0)
-                .with_stderr(format!("\
+                    .with_status(0)
+                    .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link \
-        -C debuginfo=2 -C metadata=[..] \
-        --out-dir [..]`
-[RUNNING] `rustc --crate-name bar src[/]bin[/]bar.rs --crate-type bin --emit=dep-info,link \
-        -C debuginfo=2 -C debug-assertions [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", url = p.url())));
+[RUNNING] `rustc \
+                                          --crate-name foo src[/]lib.rs --crate-type lib \
+                                          --emit=dep-info,link -C debuginfo=2 -C metadata=[..] \
+                                          --out-dir [..]`
+[RUNNING] `rustc --crate-name bar \
+                                          src[/]bin[/]bar.rs --crate-type bin \
+                                          --emit=dep-info,link -C debuginfo=2 -C \
+                                          debug-assertions [..]`
+[FINISHED] dev [unoptimized + \
+                                          debuginfo] target(s) in [..]
+",
+                                         url = p.url())));
 }
 
 #[test]
 fn fails_with_args_to_all_binaries() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/bin/foo.rs", r#"
+        .file("src/bin/foo.rs",
+              r#"
             fn main() {}
         "#)
-        .file("src/bin/bar.rs", r#"
+        .file("src/bin/bar.rs",
+              r#"
             fn main() {}
         "#)
-        .file("src/bin/baz.rs", r#"
+        .file("src/bin/baz.rs",
+              r#"
             fn main() {}
         "#)
         .file("src/lib.rs", r#" "#);
 
-    assert_that(p.cargo_process("rustc").arg("-v")
-                .arg("--").arg("-C").arg("debug-assertions"),
+    assert_that(p.cargo_process("rustc")
+                    .arg("-v")
+                    .arg("--")
+                    .arg("-C")
+                    .arg("debug-assertions"),
                 execs()
-                .with_status(101)
-                .with_stderr(CARGO_RUSTC_ERROR));
+                    .with_status(101)
+                    .with_stderr(CARGO_RUSTC_ERROR));
 }
 
 #[test]
 fn build_with_args_to_one_of_multiple_tests() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -201,25 +254,35 @@ fn build_with_args_to_one_of_multiple_tests() {
         .file("tests/baz.rs", r#" "#)
         .file("src/lib.rs", r#" "#);
 
-    assert_that(p.cargo_process("rustc").arg("-v").arg("--test").arg("bar")
-                .arg("--").arg("-C").arg("debug-assertions"),
+    assert_that(p.cargo_process("rustc")
+                    .arg("-v")
+                    .arg("--test")
+                    .arg("bar")
+                    .arg("--")
+                    .arg("-C")
+                    .arg("debug-assertions"),
                 execs()
-                .with_status(0)
-                .with_stderr(format!("\
+                    .with_status(0)
+                    .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link \
-        -C debuginfo=2 -C metadata=[..] \
-        --out-dir [..]`
-[RUNNING] `rustc --crate-name bar tests[/]bar.rs --emit=dep-info,link -C debuginfo=2 \
-        -C debug-assertions [..]--test[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", url = p.url())));
+[RUNNING] `rustc \
+                                          --crate-name foo src[/]lib.rs --crate-type lib \
+                                          --emit=dep-info,link -C debuginfo=2 -C metadata=[..] \
+                                          --out-dir [..]`
+[RUNNING] `rustc --crate-name bar \
+                                          tests[/]bar.rs --emit=dep-info,link -C debuginfo=2 \
+                                          -C debug-assertions [..]--test[..]`
+[FINISHED] dev \
+                                          [unoptimized + debuginfo] target(s) in [..]
+",
+                                         url = p.url())));
 }
 
 #[test]
 fn build_foo_with_bar_dependency() {
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -228,40 +291,49 @@ fn build_foo_with_bar_dependency() {
             [dependencies.bar]
             path = "../bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             extern crate bar;
             fn main() {
                 bar::baz()
             }
         "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             pub fn baz() {}
         "#);
     bar.build();
 
     assert_that(foo.cargo_process("rustc").arg("-v").arg("--").arg("-C").arg("debug-assertions"),
                 execs()
-                .with_status(0)
-                .with_stderr(format!("\
+                    .with_status(0)
+                    .with_stderr(format!("\
 [COMPILING] bar v0.1.0 ([..])
-[RUNNING] `[..] -C debuginfo=2 [..]`
+[RUNNING] `[..] -C \
+                                          debuginfo=2 [..]`
 [COMPILING] foo v0.0.1 ({url})
-[RUNNING] `[..] -C debuginfo=2 -C debug-assertions [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", url = foo.url())));
+\
+                                          [RUNNING] `[..] -C debuginfo=2 -C debug-assertions \
+                                          [..]`
+[FINISHED] dev [unoptimized + debuginfo] \
+                                          target(s) in [..]
+",
+                                         url = foo.url())));
 }
 
 #[test]
 fn build_only_bar_dependency() {
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -270,39 +342,50 @@ fn build_only_bar_dependency() {
             [dependencies.bar]
             path = "../bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             extern crate bar;
             fn main() {
                 bar::baz()
             }
         "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             pub fn baz() {}
         "#);
     bar.build();
 
-    assert_that(foo.cargo_process("rustc").arg("-v").arg("-p").arg("bar")
-                .arg("--").arg("-C").arg("debug-assertions"),
+    assert_that(foo.cargo_process("rustc")
+                    .arg("-v")
+                    .arg("-p")
+                    .arg("bar")
+                    .arg("--")
+                    .arg("-C")
+                    .arg("debug-assertions"),
                 execs()
-                .with_status(0)
-                .with_stderr("\
+                    .with_status(0)
+                    .with_stderr("\
 [COMPILING] bar v0.1.0 ([..])
-[RUNNING] `rustc --crate-name bar [..] --crate-type lib [..] -C debug-assertions [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `rustc --crate-name \
+                                  bar [..] --crate-type lib [..] -C debug-assertions [..]`
+\
+                                  [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
 #[test]
 fn fail_with_multiple_packages() {
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -314,19 +397,22 @@ fn fail_with_multiple_packages() {
             [dependencies.baz]
                 path = "../baz"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             fn main() {}
         "#);
     foo.build();
 
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             fn main() {
                 if cfg!(flag = "1") { println!("Yeah from bar!"); }
             }
@@ -334,21 +420,27 @@ fn fail_with_multiple_packages() {
     bar.build();
 
     let baz = project("baz")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "baz"
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             fn main() {
                 if cfg!(flag = "1") { println!("Yeah from baz!"); }
             }
         "#);
     baz.build();
 
-    assert_that(foo.cargo("rustc").arg("-v").arg("-p").arg("bar")
-                                          .arg("-p").arg("baz"),
+    assert_that(foo.cargo("rustc")
+                    .arg("-v")
+                    .arg("-p")
+                    .arg("bar")
+                    .arg("-p")
+                    .arg("baz"),
                 execs().with_status(1).with_stderr("\
 [ERROR] Invalid arguments.
 
@@ -359,7 +451,8 @@ Usage:
 #[test]
 fn rustc_with_other_profile() {
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -368,13 +461,15 @@ fn rustc_with_other_profile() {
             [dev-dependencies]
             a = { path = "a" }
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             #[cfg(test)] extern crate a;
 
             #[test]
             fn foo() {}
         "#)
-        .file("a/Cargo.toml", r#"
+        .file("a/Cargo.toml",
+              r#"
             [package]
             name = "a"
             version = "0.1.0"

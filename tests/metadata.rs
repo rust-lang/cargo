@@ -8,10 +8,11 @@ use cargotest::support::{project, execs, basic_bin_manifest, basic_lib_manifest,
 #[test]
 fn cargo_metadata_simple() {
     let p = project("foo")
-            .file("src/foo.rs", "")
-            .file("Cargo.toml", &basic_bin_manifest("foo"));
+        .file("src/foo.rs", "")
+        .file("Cargo.toml", &basic_bin_manifest("foo"));
 
-    assert_that(p.cargo_process("metadata"), execs().with_json(r#"
+    assert_that(p.cargo_process("metadata"),
+                execs().with_json(r#"
     {
         "packages": [
             {
@@ -56,8 +57,9 @@ fn cargo_metadata_simple() {
 #[test]
 fn library_with_several_crate_types() {
     let p = project("foo")
-            .file("src/lib.rs", "")
-            .file("Cargo.toml", r#"
+        .file("src/lib.rs", "")
+        .file("Cargo.toml",
+              r#"
 [package]
 name = "foo"
 version = "0.5.0"
@@ -66,7 +68,8 @@ version = "0.5.0"
 crate-type = ["lib", "staticlib"]
             "#);
 
-    assert_that(p.cargo_process("metadata"), execs().with_json(r#"
+    assert_that(p.cargo_process("metadata"),
+                execs().with_json(r#"
     {
         "packages": [
             {
@@ -114,7 +117,8 @@ crate-type = ["lib", "staticlib"]
 fn cargo_metadata_with_deps_and_version() {
     let p = project("foo")
         .file("src/foo.rs", "")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             version = "0.5.0"
@@ -132,8 +136,9 @@ fn cargo_metadata_with_deps_and_version() {
     Package::new("bar", "0.0.1").dep("baz", "0.0.1").publish();
 
     assert_that(p.cargo_process("metadata")
-                 .arg("-q")
-                 .arg("--format-version").arg("1"),
+                    .arg("-q")
+                    .arg("--format-version")
+                    .arg("1"),
                 execs().with_json(r#"
     {
         "packages": [
@@ -261,9 +266,10 @@ fn cargo_metadata_with_deps_and_version() {
 #[test]
 fn example() {
     let p = project("foo")
-            .file("src/lib.rs", "")
-            .file("examples/ex.rs", "")
-            .file("Cargo.toml", r#"
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "")
+        .file("Cargo.toml",
+              r#"
 [package]
 name = "foo"
 version = "0.1.0"
@@ -272,7 +278,8 @@ version = "0.1.0"
 name = "ex"
             "#);
 
-    assert_that(p.cargo_process("metadata"), execs().with_json(r#"
+    assert_that(p.cargo_process("metadata"),
+                execs().with_json(r#"
     {
         "packages": [
             {
@@ -321,9 +328,10 @@ name = "ex"
 #[test]
 fn example_lib() {
     let p = project("foo")
-            .file("src/lib.rs", "")
-            .file("examples/ex.rs", "")
-            .file("Cargo.toml", r#"
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "")
+        .file("Cargo.toml",
+              r#"
 [package]
 name = "foo"
 version = "0.1.0"
@@ -333,7 +341,8 @@ name = "ex"
 crate-type = ["rlib", "dylib"]
             "#);
 
-    assert_that(p.cargo_process("metadata"), execs().with_json(r#"
+    assert_that(p.cargo_process("metadata"),
+                execs().with_json(r#"
     {
         "packages": [
             {
@@ -382,7 +391,8 @@ crate-type = ["rlib", "dylib"]
 #[test]
 fn workspace_metadata() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [workspace]
             members = ["bar", "baz"]
         "#)
@@ -392,7 +402,8 @@ fn workspace_metadata() {
         .file("baz/src/lib.rs", "");
     p.build();
 
-    assert_that(p.cargo_process("metadata"), execs().with_status(0).with_json(r#"
+    assert_that(p.cargo_process("metadata"),
+                execs().with_status(0).with_json(r#"
     {
         "packages": [
             {
@@ -457,7 +468,8 @@ fn workspace_metadata() {
 #[test]
 fn workspace_metadata_no_deps() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [workspace]
             members = ["bar", "baz"]
         "#)
@@ -467,7 +479,8 @@ fn workspace_metadata_no_deps() {
         .file("baz/src/lib.rs", "");
     p.build();
 
-    assert_that(p.cargo_process("metadata").arg("--no-deps"), execs().with_status(0).with_json(r#"
+    assert_that(p.cargo_process("metadata").arg("--no-deps"),
+                execs().with_status(0).with_json(r#"
     {
         "packages": [
             {
@@ -519,19 +532,20 @@ fn workspace_metadata_no_deps() {
 
 #[test]
 fn cargo_metadata_with_invalid_manifest() {
-    let p = project("foo")
-            .file("Cargo.toml", "");
+    let p = project("foo").file("Cargo.toml", "");
 
-    assert_that(p.cargo_process("metadata"), execs().with_status(101)
-                                                    .with_stderr("\
+    assert_that(p.cargo_process("metadata"),
+                execs()
+                    .with_status(101)
+                    .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  no `package` or `project` section found."))
+  no \
+                                  `package` or `project` section found."))
 }
 
-const MANIFEST_OUTPUT: &'static str=
-    r#"
+const MANIFEST_OUTPUT: &'static str = r#"
 {
     "packages": [{
         "name":"foo",
@@ -562,11 +576,14 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
 
-        assert_that(p.cargo_process("metadata").arg("--no-deps")
-                     .arg("--manifest-path").arg("foo/Cargo.toml")
-                     .cwd(p.root().parent().unwrap()),
-                    execs().with_status(0)
-                           .with_json(MANIFEST_OUTPUT));
+    assert_that(p.cargo_process("metadata")
+                    .arg("--no-deps")
+                    .arg("--manifest-path")
+                    .arg("foo/Cargo.toml")
+                    .cwd(p.root().parent().unwrap()),
+                execs()
+                    .with_status(0)
+                    .with_json(MANIFEST_OUTPUT));
 }
 
 #[test]
@@ -575,11 +592,14 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
 
-    assert_that(p.cargo_process("metadata").arg("--no-deps")
-                 .arg("--manifest-path").arg(p.root().join("Cargo.toml"))
-                 .cwd(p.root().parent().unwrap()),
-                execs().with_status(0)
-                       .with_json(MANIFEST_OUTPUT));
+    assert_that(p.cargo_process("metadata")
+                    .arg("--no-deps")
+                    .arg("--manifest-path")
+                    .arg(p.root().join("Cargo.toml"))
+                    .cwd(p.root().parent().unwrap()),
+                execs()
+                    .with_status(0)
+                    .with_json(MANIFEST_OUTPUT));
 }
 
 #[test]
@@ -588,12 +608,14 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_relative() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
 
-    assert_that(p.cargo_process("metadata").arg("--no-deps")
-                 .arg("--manifest-path").arg("foo")
-                 .cwd(p.root().parent().unwrap()),
-                execs().with_status(101)
-                       .with_stderr("[ERROR] the manifest-path must be \
-                                             a path to a Cargo.toml file"));
+    assert_that(p.cargo_process("metadata")
+                    .arg("--no-deps")
+                    .arg("--manifest-path")
+                    .arg("foo")
+                    .cwd(p.root().parent().unwrap()),
+                execs()
+                    .with_status(101)
+                    .with_stderr("[ERROR] the manifest-path must be a path to a Cargo.toml file"));
 }
 
 #[test]
@@ -602,12 +624,14 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
 
-    assert_that(p.cargo_process("metadata").arg("--no-deps")
-                 .arg("--manifest-path").arg(p.root())
-                 .cwd(p.root().parent().unwrap()),
-                execs().with_status(101)
-                       .with_stderr("[ERROR] the manifest-path must be \
-                                             a path to a Cargo.toml file"));
+    assert_that(p.cargo_process("metadata")
+                    .arg("--no-deps")
+                    .arg("--manifest-path")
+                    .arg(p.root())
+                    .cwd(p.root().parent().unwrap()),
+                execs()
+                    .with_status(101)
+                    .with_stderr("[ERROR] the manifest-path must be a path to a Cargo.toml file"));
 }
 
 #[test]
@@ -616,10 +640,12 @@ fn cargo_metadata_no_deps_cwd() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
 
-    assert_that(p.cargo_process("metadata").arg("--no-deps")
-                 .cwd(p.root()),
-                execs().with_status(0)
-                       .with_json(MANIFEST_OUTPUT));
+    assert_that(p.cargo_process("metadata")
+                    .arg("--no-deps")
+                    .cwd(p.root()),
+                execs()
+                    .with_status(0)
+                    .with_json(MANIFEST_OUTPUT));
 }
 
 #[test]
@@ -628,17 +654,22 @@ fn cargo_metadata_bad_version() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
 
-    assert_that(p.cargo_process("metadata").arg("--no-deps")
-                 .arg("--format-version").arg("2")
-                 .cwd(p.root()),
-                execs().with_status(101)
-    .with_stderr("[ERROR] metadata version 2 not supported, only 1 is currently supported"));
+    assert_that(p.cargo_process("metadata")
+                    .arg("--no-deps")
+                    .arg("--format-version")
+                    .arg("2")
+                    .cwd(p.root()),
+                execs()
+                    .with_status(101)
+                    .with_stderr("[ERROR] metadata version 2 not supported, only 1 is currently \
+                                  supported"));
 }
 
 #[test]
 fn multiple_features() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.1.0"
@@ -651,6 +682,7 @@ fn multiple_features() {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("metadata")
-                 .arg("--features").arg("a b"),
+                    .arg("--features")
+                    .arg("a b"),
                 execs().with_status(0));
 }

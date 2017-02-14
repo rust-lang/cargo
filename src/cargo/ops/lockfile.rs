@@ -10,26 +10,24 @@ use util::toml as cargo_toml;
 
 pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
     if !ws.root().join("Cargo.lock").exists() {
-        return Ok(None)
+        return Ok(None);
     }
 
     let root = Filesystem::new(ws.root().to_path_buf());
     let mut f = root.open_ro("Cargo.lock", ws.config(), "Cargo.lock file")?;
 
     let mut s = String::new();
-    f.read_to_string(&mut s).chain_error(|| {
-        human(format!("failed to read file: {}", f.path().display()))
-    })?;
+    f.read_to_string(&mut s)
+        .chain_error(|| human(format!("failed to read file: {}", f.path().display())))?;
 
     (|| {
-        let table = cargo_toml::parse(&s, f.path(), ws.config())?;
-        let table = toml::Value::Table(table);
-        let mut d = toml::Decoder::new(table);
-        let v: resolver::EncodableResolve = Decodable::decode(&mut d)?;
-        Ok(Some(v.into_resolve(ws)?))
-    }).chain_error(|| {
-        human(format!("failed to parse lock file at: {}", f.path().display()))
-    })
+            let table = cargo_toml::parse(&s, f.path(), ws.config())?;
+            let table = toml::Value::Table(table);
+            let mut d = toml::Decoder::new(table);
+            let v: resolver::EncodableResolve = Decodable::decode(&mut d)?;
+            Ok(Some(v.into_resolve(ws)?))
+        })
+        .chain_error(|| human(format!("failed to parse lock file at: {}", f.path().display())))
 }
 
 pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> {
@@ -52,10 +50,12 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
 
     let mut e = Encoder::new();
     WorkspaceResolve {
-        ws: ws,
-        resolve: resolve,
-        use_root_key: use_root_key,
-    }.encode(&mut e).unwrap();
+            ws: ws,
+            resolve: resolve,
+            use_root_key: use_root_key,
+        }
+        .encode(&mut e)
+        .unwrap();
 
     let mut out = String::new();
 
@@ -90,14 +90,19 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
             out = out.replace("\n", "\r\n");
         }
         if out == orig {
-            return Ok(())
+            return Ok(());
         }
     }
 
     if !ws.config().lock_update_allowed() {
-        let flag = if ws.config().network_allowed() {"--frozen"} else {"--locked"};
+        let flag = if ws.config().network_allowed() {
+            "--frozen"
+        } else {
+            "--locked"
+        };
         bail!("the lock file needs to be updated but {} was passed to \
-               prevent this", flag);
+               prevent this",
+              flag);
     }
 
     // Ok, if that didn't work just write it out

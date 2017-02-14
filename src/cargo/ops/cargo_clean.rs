@@ -31,14 +31,17 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
 
     let profiles = ws.profiles();
     let host_triple = opts.config.rustc()?.host.clone();
-    let mut cx = Context::new(ws, &resolve, &packages, opts.config,
-                                   BuildConfig {
-                                       host_triple: host_triple,
-                                       requested_target: opts.target.map(|s| s.to_owned()),
-                                       release: opts.release,
-                                       ..BuildConfig::default()
-                                   },
-                                   profiles)?;
+    let mut cx = Context::new(ws,
+                              &resolve,
+                              &packages,
+                              opts.config,
+                              BuildConfig {
+                                  host_triple: host_triple,
+                                  requested_target: opts.target.map(|s| s.to_owned()),
+                                  release: opts.release,
+                                  ..BuildConfig::default()
+                              },
+                              profiles)?;
     let mut units = Vec::new();
 
     for spec in opts.spec {
@@ -49,13 +52,26 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {
             for kind in [Kind::Host, Kind::Target].iter() {
-                let Profiles {
-                    ref release, ref dev, ref test, ref bench, ref doc,
-                    ref custom_build, ref test_deps, ref bench_deps, ref check,
-                    ref doctest,
-                } = *profiles;
-                let profiles = [release, dev, test, bench, doc, custom_build,
-                                test_deps, bench_deps, check, doctest];
+                let Profiles { ref release,
+                               ref dev,
+                               ref test,
+                               ref bench,
+                               ref doc,
+                               ref custom_build,
+                               ref test_deps,
+                               ref bench_deps,
+                               ref check,
+                               ref doctest } = *profiles;
+                let profiles = [release,
+                                dev,
+                                test,
+                                bench,
+                                doc,
+                                custom_build,
+                                test_deps,
+                                bench_deps,
+                                check,
+                                doctest];
                 for profile in profiles.iter() {
                     units.push(Unit {
                         pkg: &pkg,
@@ -78,7 +94,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
             } else {
                 rm_rf(&cx.build_script_dir(unit))?;
             }
-            continue
+            continue;
         }
 
         for (src, link_dst, _) in cx.target_filenames(unit)? {
@@ -95,13 +111,9 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
 fn rm_rf(path: &Path) -> CargoResult<()> {
     let m = fs::metadata(path);
     if m.as_ref().map(|s| s.is_dir()).unwrap_or(false) {
-        fs::remove_dir_all(path).chain_error(|| {
-            human("could not remove build directory")
-        })?;
+        fs::remove_dir_all(path).chain_error(|| human("could not remove build directory"))?;
     } else if m.is_ok() {
-        fs::remove_file(path).chain_error(|| {
-            human("failed to remove build artifact")
-        })?;
+        fs::remove_file(path).chain_error(|| human("failed to remove build artifact"))?;
     }
     Ok(())
 }

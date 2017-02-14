@@ -58,22 +58,28 @@ mod imp {
         pub fn new() -> Sha256 {
             let mut hcp = 0;
             call!(unsafe {
-                CryptAcquireContextW(&mut hcp, ptr::null(), ptr::null(),
+                CryptAcquireContextW(&mut hcp,
+                                     ptr::null(),
+                                     ptr::null(),
                                      PROV_RSA_AES,
                                      CRYPT_VERIFYCONTEXT | CRYPT_SILENT)
             });
-            let mut ret = Sha256 { hcryptprov: hcp, hcrypthash: 0 };
+            let mut ret = Sha256 {
+                hcryptprov: hcp,
+                hcrypthash: 0,
+            };
             call!(unsafe {
-                CryptCreateHash(ret.hcryptprov, CALG_SHA_256,
-                                0, 0, &mut ret.hcrypthash)
+                CryptCreateHash(ret.hcryptprov, CALG_SHA_256, 0, 0, &mut ret.hcrypthash)
             });
             ret
         }
 
         pub fn update(&mut self, bytes: &[u8]) {
             call!(unsafe {
-                CryptHashData(self.hcrypthash, bytes.as_ptr() as *mut _,
-                              bytes.len() as DWORD, 0)
+                CryptHashData(self.hcrypthash,
+                              bytes.as_ptr() as *mut _,
+                              bytes.len() as DWORD,
+                              0)
             })
         }
 
@@ -81,8 +87,7 @@ mod imp {
             let mut ret = [0u8; 32];
             let mut len = ret.len() as DWORD;
             call!(unsafe {
-                CryptGetHashParam(self.hcrypthash, HP_HASHVAL, ret.as_mut_ptr(),
-                                  &mut len, 0)
+                CryptGetHashParam(self.hcrypthash, HP_HASHVAL, ret.as_mut_ptr(), &mut len, 0)
             });
             assert_eq!(len as usize, ret.len());
             ret

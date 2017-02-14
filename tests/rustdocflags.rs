@@ -7,7 +7,8 @@ use hamcrest::assert_that;
 #[test]
 fn parses_env() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -17,8 +18,9 @@ fn parses_env() {
     p.build();
 
     assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo").arg("-v"),
-                execs().with_status(0)
-                       .with_stderr_contains("\
+                execs()
+                    .with_status(0)
+                    .with_stderr_contains("\
 [RUNNING] `rustdoc [..] --cfg=foo[..]`
 "));
 }
@@ -26,22 +28,25 @@ fn parses_env() {
 #[test]
 fn parses_config() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
             authors = []
         "#)
         .file("src/lib.rs", "")
-        .file(".cargo/config", r#"
+        .file(".cargo/config",
+              r#"
             [build]
             rustdocflags = ["--cfg", "foo"]
         "#);
     p.build();
 
     assert_that(p.cargo("doc").arg("-v"),
-                execs().with_status(0)
-                       .with_stderr_contains("\
+                execs()
+                    .with_status(0)
+                    .with_stderr_contains("\
 [RUNNING] `rustdoc [..] --cfg foo[..]`
 "));
 }
@@ -49,7 +54,8 @@ fn parses_config() {
 #[test]
 fn bad_flags() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -65,7 +71,8 @@ fn bad_flags() {
 #[test]
 fn rerun() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"

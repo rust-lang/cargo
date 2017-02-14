@@ -23,19 +23,35 @@ pub type CargoResult<T> = Result<T, Box<CargoError>>;
 // CargoError trait
 
 pub trait CargoError: Error + Send + 'static {
-    fn is_human(&self) -> bool { false }
-    fn cargo_cause(&self) -> Option<&CargoError>{ None }
-    fn as_error(&self) -> &Error where Self: Sized { self as &Error }
+    fn is_human(&self) -> bool {
+        false
+    }
+    fn cargo_cause(&self) -> Option<&CargoError> {
+        None
+    }
+    fn as_error(&self) -> &Error
+        where Self: Sized
+    {
+        self as &Error
+    }
 }
 
 impl Error for Box<CargoError> {
-    fn description(&self) -> &str { (**self).description() }
-    fn cause(&self) -> Option<&Error> { (**self).cause() }
+    fn description(&self) -> &str {
+        (**self).description()
+    }
+    fn cause(&self) -> Option<&Error> {
+        (**self).cause()
+    }
 }
 
 impl CargoError for Box<CargoError> {
-    fn is_human(&self) -> bool { (**self).is_human() }
-    fn cargo_cause(&self) -> Option<&CargoError> { (**self).cargo_cause() }
+    fn is_human(&self) -> bool {
+        (**self).is_human()
+    }
+    fn cargo_cause(&self) -> Option<&CargoError> {
+        (**self).cargo_cause()
+    }
 }
 
 // =============================================================================
@@ -43,7 +59,8 @@ impl CargoError for Box<CargoError> {
 
 pub trait ChainError<T> {
     fn chain_error<E, F>(self, callback: F) -> CargoResult<T>
-                         where E: CargoError, F: FnOnce() -> E;
+        where E: CargoError,
+              F: FnOnce() -> E;
 }
 
 #[derive(Debug)]
@@ -52,16 +69,22 @@ struct ChainedError<E> {
     cause: Box<CargoError>,
 }
 
-impl<'a, T, F> ChainError<T> for F where F: FnOnce() -> CargoResult<T> {
+impl<'a, T, F> ChainError<T> for F
+    where F: FnOnce() -> CargoResult<T>
+{
     fn chain_error<E, C>(self, callback: C) -> CargoResult<T>
-                         where E: CargoError, C: FnOnce() -> E {
+        where E: CargoError,
+              C: FnOnce() -> E
+    {
         self().chain_error(callback)
     }
 }
 
 impl<T, E: CargoError + 'static> ChainError<T> for Result<T, E> {
     fn chain_error<E2: 'static, C>(self, callback: C) -> CargoResult<T>
-                         where E2: CargoError, C: FnOnce() -> E2 {
+        where E2: CargoError,
+              C: FnOnce() -> E2
+    {
         self.map_err(move |err| {
             Box::new(ChainedError {
                 error: callback(),
@@ -73,7 +96,9 @@ impl<T, E: CargoError + 'static> ChainError<T> for Result<T, E> {
 
 impl<T> ChainError<T> for Box<CargoError> {
     fn chain_error<E2, C>(self, callback: C) -> CargoResult<T>
-                         where E2: CargoError, C: FnOnce() -> E2 {
+        where E2: CargoError,
+              C: FnOnce() -> E2
+    {
         Err(Box::new(ChainedError {
             error: callback(),
             cause: self,
@@ -83,7 +108,9 @@ impl<T> ChainError<T> for Box<CargoError> {
 
 impl<T> ChainError<T> for Option<T> {
     fn chain_error<E: 'static, C>(self, callback: C) -> CargoResult<T>
-                         where E: CargoError, C: FnOnce() -> E {
+        where E: CargoError,
+              C: FnOnce() -> E
+    {
         match self {
             Some(t) => Ok(t),
             None => Err(Box::new(callback())),
@@ -92,7 +119,9 @@ impl<T> ChainError<T> for Option<T> {
 }
 
 impl<E: Error> Error for ChainedError<E> {
-    fn description(&self) -> &str { self.error.description() }
+    fn description(&self) -> &str {
+        self.error.description()
+    }
 }
 
 impl<E: fmt::Display> fmt::Display for ChainedError<E> {
@@ -102,8 +131,12 @@ impl<E: fmt::Display> fmt::Display for ChainedError<E> {
 }
 
 impl<E: CargoError> CargoError for ChainedError<E> {
-    fn is_human(&self) -> bool { self.error.is_human() }
-    fn cargo_cause(&self) -> Option<&CargoError> { Some(&*self.cause) }
+    fn is_human(&self) -> bool {
+        self.error.is_human()
+    }
+    fn cargo_cause(&self) -> Option<&CargoError> {
+        Some(&*self.cause)
+    }
 }
 
 // =============================================================================
@@ -117,7 +150,9 @@ pub struct ProcessError {
 }
 
 impl Error for ProcessError {
-    fn description(&self) -> &str { &self.desc }
+    fn description(&self) -> &str {
+        &self.desc
+    }
     fn cause(&self) -> Option<&Error> {
         self.cause.as_ref().map(|e| e.as_error())
     }
@@ -149,9 +184,10 @@ impl CargoTestError {
         if errors.is_empty() {
             panic!("Cannot create CargoTestError from empty Vec")
         }
-        let desc = errors.iter().map(|error| error.desc.clone())
-                                .collect::<Vec<String>>()
-                                .join("\n");
+        let desc = errors.iter()
+            .map(|error| error.desc.clone())
+            .collect::<Vec<String>>()
+            .join("\n");
         CargoTestError {
             desc: desc,
             exit: errors[0].exit,
@@ -173,7 +209,9 @@ impl fmt::Debug for CargoTestError {
 }
 
 impl Error for CargoTestError {
-    fn description(&self) -> &str { &self.desc }
+    fn description(&self) -> &str {
+        &self.desc
+    }
     fn cause(&self) -> Option<&Error> {
         self.causes.get(0).map(|s| s as &Error)
     }
@@ -186,7 +224,7 @@ impl Error for CargoTestError {
 struct ConcreteCargoError {
     description: String,
     detail: Option<String>,
-    cause: Option<Box<Error+Send>>,
+    cause: Option<Box<Error + Send>>,
     is_human: bool,
 }
 
@@ -206,10 +244,13 @@ impl fmt::Debug for ConcreteCargoError {
 }
 
 impl Error for ConcreteCargoError {
-    fn description(&self) -> &str { &self.description }
+    fn description(&self) -> &str {
+        &self.description
+    }
     fn cause(&self) -> Option<&Error> {
         self.cause.as_ref().map(|c| {
-            let e: &Error = &**c; e
+            let e: &Error = &**c;
+            e
         })
     }
 }
@@ -227,8 +268,12 @@ impl CargoError for ConcreteCargoError {
 pub struct Human<E>(pub E);
 
 impl<E: Error> Error for Human<E> {
-    fn description(&self) -> &str { self.0.description() }
-    fn cause(&self) -> Option<&Error> { self.0.cause() }
+    fn description(&self) -> &str {
+        self.0.description()
+    }
+    fn cause(&self) -> Option<&Error> {
+        self.0.cause()
+    }
 }
 
 impl<E: fmt::Display> fmt::Display for Human<E> {
@@ -238,8 +283,12 @@ impl<E: fmt::Display> fmt::Display for Human<E> {
 }
 
 impl<E: CargoError> CargoError for Human<E> {
-    fn is_human(&self) -> bool { true }
-    fn cargo_cause(&self) -> Option<&CargoError> { self.0.cargo_cause() }
+    fn is_human(&self) -> bool {
+        true
+    }
+    fn cargo_cause(&self) -> Option<&CargoError> {
+        self.0.cargo_cause()
+    }
 }
 
 // =============================================================================
@@ -251,12 +300,14 @@ pub type CliResult = Result<(), CliError>;
 pub struct CliError {
     pub error: Option<Box<CargoError>>,
     pub unknown: bool,
-    pub exit_code: i32
+    pub exit_code: i32,
 }
 
 impl Error for CliError {
     fn description(&self) -> &str {
-        self.error.as_ref().map(|e| e.description())
+        self.error
+            .as_ref()
+            .map(|e| e.description())
             .unwrap_or("unknown cli error")
     }
 
@@ -278,11 +329,19 @@ impl fmt::Display for CliError {
 impl CliError {
     pub fn new(error: Box<CargoError>, code: i32) -> CliError {
         let human = error.is_human();
-        CliError { error: Some(error), exit_code: code, unknown: !human }
+        CliError {
+            error: Some(error),
+            exit_code: code,
+            unknown: !human,
+        }
     }
 
     pub fn code(code: i32) -> CliError {
-        CliError { error: None, exit_code: code, unknown: false }
+        CliError {
+            error: None,
+            exit_code: code,
+            unknown: false,
+        }
     }
 }
 
@@ -304,17 +363,15 @@ impl NetworkError for git2::Error {
         match self.class() {
             git2::ErrorClass::Net |
             git2::ErrorClass::Os => true,
-            _ => false
+            _ => false,
         }
     }
 }
 impl NetworkError for curl::Error {
     fn maybe_spurious(&self) -> bool {
-        self.is_couldnt_connect() ||
-            self.is_couldnt_resolve_proxy() ||
-            self.is_couldnt_resolve_host() ||
-            self.is_operation_timedout() ||
-            self.is_recv_error()
+        self.is_couldnt_connect() || self.is_couldnt_resolve_proxy() ||
+        self.is_couldnt_resolve_host() || self.is_operation_timedout() ||
+        self.is_recv_error()
     }
 }
 
@@ -357,7 +414,9 @@ impl From<string::ParseError> for Box<CargoError> {
 }
 
 impl<E: CargoError> From<Human<E>> for Box<CargoError> {
-    fn from(t: Human<E>) -> Box<CargoError> { Box::new(t) }
+    fn from(t: Human<E>) -> Box<CargoError> {
+        Box::new(t)
+    }
 }
 
 impl CargoError for semver::ReqParseError {}
@@ -386,8 +445,8 @@ impl CargoError for handlebars::RenderError {}
 pub fn process_error(msg: &str,
                      cause: Option<Box<CargoError>>,
                      status: Option<&ExitStatus>,
-                     output: Option<&Output>) -> ProcessError
-{
+                     output: Option<&Output>)
+                     -> ProcessError {
     let exit = match status {
         Some(s) => status_to_string(s),
         None => "never executed".to_string(),
@@ -458,7 +517,7 @@ pub fn internal_error(error: &str, detail: &str) -> Box<CargoError> {
         description: error.to_string(),
         detail: Some(detail.to_string()),
         cause: None,
-        is_human: false
+        is_human: false,
     })
 }
 
@@ -471,7 +530,7 @@ fn _internal(error: &fmt::Display) -> Box<CargoError> {
         description: error.to_string(),
         detail: None,
         cause: None,
-        is_human: false
+        is_human: false,
     })
 }
 
@@ -484,7 +543,7 @@ fn _human(error: &fmt::Display) -> Box<CargoError> {
         description: error.to_string(),
         detail: None,
         cause: None,
-        is_human: true
+        is_human: true,
     })
 }
 
@@ -496,6 +555,6 @@ pub fn caused_human<S, E>(error: S, cause: E) -> Box<CargoError>
         description: error.to_string(),
         detail: None,
         cause: Some(Box::new(cause)),
-        is_human: true
+        is_human: true,
     })
 }

@@ -35,9 +35,7 @@ impl ProcessBuilder {
     }
 
     pub fn args<T: AsRef<OsStr>>(&mut self, arguments: &[T]) -> &mut ProcessBuilder {
-        self.args.extend(arguments.iter().map(|t| {
-            t.as_ref().to_os_string()
-        }));
+        self.args.extend(arguments.iter().map(|t| t.as_ref().to_os_string()));
         self
     }
 
@@ -46,8 +44,7 @@ impl ProcessBuilder {
         self
     }
 
-    pub fn env<T: AsRef<OsStr>>(&mut self, key: &str,
-                                val: T) -> &mut ProcessBuilder {
+    pub fn env<T: AsRef<OsStr>>(&mut self, key: &str, val: T) -> &mut ProcessBuilder {
         self.env.insert(key.to_string(), Some(val.as_ref().to_os_string()));
         self
     }
@@ -66,26 +63,35 @@ impl ProcessBuilder {
     }
 
     pub fn get_env(&self, var: &str) -> Option<OsString> {
-        self.env.get(var).cloned().or_else(|| Some(env::var_os(var)))
+        self.env
+            .get(var)
+            .cloned()
+            .or_else(|| Some(env::var_os(var)))
             .and_then(|s| s)
     }
 
-    pub fn get_envs(&self) -> &HashMap<String, Option<OsString>> { &self.env }
+    pub fn get_envs(&self) -> &HashMap<String, Option<OsString>> {
+        &self.env
+    }
 
     pub fn exec(&self) -> Result<(), ProcessError> {
         let mut command = self.build_command();
-        let exit = command.status().map_err(|e| {
-            process_error(&format!("could not execute process `{}`",
-                                   self.debug_string()),
-                          Some(Box::new(e)), None, None)
-        })?;
+        let exit = command.status()
+            .map_err(|e| {
+                process_error(&format!("could not execute process `{}`", self.debug_string()),
+                              Some(Box::new(e)),
+                              None,
+                              None)
+            })?;
 
         if exit.success() {
             Ok(())
         } else {
             Err(process_error(&format!("process didn't exit successfully: `{}`",
                                        self.debug_string()),
-                              None, Some(&exit), None))
+                              None,
+                              Some(&exit),
+                              None))
         }
     }
 
@@ -95,9 +101,10 @@ impl ProcessBuilder {
 
         let mut command = self.build_command();
         let error = command.exec();
-        Err(process_error(&format!("could not execute process `{}`",
-                                   self.debug_string()),
-                          Some(Box::new(error)), None, None))
+        Err(process_error(&format!("could not execute process `{}`", self.debug_string()),
+                          Some(Box::new(error)),
+                          None,
+                          None))
     }
 
     #[cfg(windows)]
@@ -108,18 +115,22 @@ impl ProcessBuilder {
     pub fn exec_with_output(&self) -> Result<Output, ProcessError> {
         let mut command = self.build_command();
 
-        let output = command.output().map_err(|e| {
-            process_error(&format!("could not execute process `{}`",
-                                   self.debug_string()),
-                          Some(Box::new(e)), None, None)
-        })?;
+        let output = command.output()
+            .map_err(|e| {
+                process_error(&format!("could not execute process `{}`", self.debug_string()),
+                              Some(Box::new(e)),
+                              None,
+                              None)
+            })?;
 
         if output.status.success() {
             Ok(output)
         } else {
             Err(process_error(&format!("process didn't exit successfully: `{}`",
                                        self.debug_string()),
-                              None, Some(&output.status), Some(&output)))
+                              None,
+                              Some(&output.status),
+                              Some(&output)))
         }
     }
 
@@ -137,40 +148,45 @@ impl ProcessBuilder {
 
         let mut callback_error = None;
         let status = (|| {
-            let mut child = cmd.spawn()?;
-            let out = child.stdout.take().unwrap();
-            let err = child.stderr.take().unwrap();
-            read2(out, err, &mut |is_out, data, eof| {
-                let idx = if eof {
-                    data.len()
-                } else {
-                    match data.iter().rposition(|b| *b == b'\n') {
-                        Some(i) => i + 1,
-                        None => return,
-                    }
-                };
-                let data = data.drain(..idx);
-                let dst = if is_out {&mut stdout} else {&mut stderr};
-                let start = dst.len();
-                dst.extend(data);
-                for line in String::from_utf8_lossy(&dst[start..]).lines() {
-                    if callback_error.is_some() { break }
-                    let callback_result = if is_out {
-                        on_stdout_line(line)
+                let mut child = cmd.spawn()?;
+                let out = child.stdout.take().unwrap();
+                let err = child.stderr.take().unwrap();
+                read2(out,
+                      err,
+                      &mut |is_out, data, eof| {
+                    let idx = if eof {
+                        data.len()
                     } else {
-                        on_stderr_line(line)
+                        match data.iter().rposition(|b| *b == b'\n') {
+                            Some(i) => i + 1,
+                            None => return,
+                        }
                     };
-                    if let Err(e) = callback_result {
-                        callback_error = Some(e);
+                    let data = data.drain(..idx);
+                    let dst = if is_out { &mut stdout } else { &mut stderr };
+                    let start = dst.len();
+                    dst.extend(data);
+                    for line in String::from_utf8_lossy(&dst[start..]).lines() {
+                        if callback_error.is_some() {
+                            break;
+                        }
+                        let callback_result = if is_out {
+                            on_stdout_line(line)
+                        } else {
+                            on_stderr_line(line)
+                        };
+                        if let Err(e) = callback_result {
+                            callback_error = Some(e);
+                        }
                     }
-                }
+                })?;
+                child.wait()
+            })().map_err(|e| {
+                process_error(&format!("could not execute process `{}`", self.debug_string()),
+                              Some(Box::new(e)),
+                              None,
+                              None)
             })?;
-            child.wait()
-        })().map_err(|e| {
-            process_error(&format!("could not execute process `{}`",
-                                   self.debug_string()),
-                          Some(Box::new(e)), None, None)
-        })?;
         let output = Output {
             stdout: stdout,
             stderr: stderr,
@@ -179,11 +195,15 @@ impl ProcessBuilder {
         if !output.status.success() {
             Err(process_error(&format!("process didn't exit successfully: `{}`",
                                        self.debug_string()),
-                              None, Some(&output.status), Some(&output)))
+                              None,
+                              Some(&output.status),
+                              Some(&output)))
         } else if let Some(e) = callback_error {
             Err(process_error(&format!("failed to parse process output: `{}`",
                                        self.debug_string()),
-                              Some(Box::new(e)), Some(&output.status), Some(&output)))
+                              Some(Box::new(e)),
+                              Some(&output.status),
+                              Some(&output)))
         } else {
             Ok(output)
         }
@@ -199,8 +219,12 @@ impl ProcessBuilder {
         }
         for (k, v) in self.env.iter() {
             match *v {
-                Some(ref v) => { command.env(k, v); }
-                None => { command.env_remove(k); }
+                Some(ref v) => {
+                    command.env(k, v);
+                }
+                None => {
+                    command.env_remove(k);
+                }
             }
         }
         command

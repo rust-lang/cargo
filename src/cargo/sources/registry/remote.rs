@@ -26,8 +26,7 @@ pub struct RemoteRegistry<'cfg> {
 }
 
 impl<'cfg> RemoteRegistry<'cfg> {
-    pub fn new(source_id: &SourceId, config: &'cfg Config, name: &str)
-               -> RemoteRegistry<'cfg> {
+    pub fn new(source_id: &SourceId, config: &'cfg Config, name: &str) -> RemoteRegistry<'cfg> {
         RemoteRegistry {
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
@@ -44,9 +43,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn config(&self) -> CargoResult<Option<RegistryConfig>> {
-        let lock = self.index_path.open_ro(Path::new(INDEX_LOCK),
-                                           self.config,
-                                           "the registry index")?;
+        let lock = self.index_path
+            .open_ro(Path::new(INDEX_LOCK), self.config, "the registry index")?;
         let path = lock.path().parent().unwrap();
         let contents = paths::read(&path.join("config.json"))?;
         let config = json::decode(&contents)?;
@@ -64,18 +62,18 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
         // Then we actually update the index
         self.index_path.create_dir()?;
-        let lock = self.index_path.open_rw(Path::new(INDEX_LOCK),
-                                           self.config,
-                                           "the registry index")?;
+        let lock = self.index_path
+            .open_rw(Path::new(INDEX_LOCK), self.config, "the registry index")?;
         let path = lock.path().parent().unwrap();
 
-        self.config.shell().status("Updating",
-             format!("registry `{}`", self.source_id.url()))?;
+        self.config
+            .shell()
+            .status("Updating", format!("registry `{}`", self.source_id.url()))?;
 
         let repo = git2::Repository::open(path).or_else(|_| {
-            let _ = lock.remove_siblings();
-            git2::Repository::init(path)
-        })?;
+                let _ = lock.remove_siblings();
+                git2::Repository::init(path)
+            })?;
 
         if self.source_id.url().host_str() == Some("github.com") {
             if let Ok(oid) = repo.refname_to_id("refs/heads/master") {
@@ -86,10 +84,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                         self.handle.as_mut().unwrap()
                     }
                 };
-                debug!("attempting github fast path for {}",
-                       self.source_id.url());
+                debug!("attempting github fast path for {}", self.source_id.url());
                 if github_up_to_date(handle, &self.source_id.url(), &oid) {
-                    return Ok(())
+                    return Ok(());
                 }
                 debug!("fast path failed, falling back to a git fetch");
             }
@@ -112,8 +109,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: &PackageId, checksum: &str)
-                -> CargoResult<FileLock> {
+    fn download(&mut self, pkg: &PackageId, checksum: &str) -> CargoResult<FileLock> {
         let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
         let path = Path::new(&filename);
 
@@ -126,19 +122,20 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         if let Ok(dst) = self.cache_path.open_ro(path, self.config, &filename) {
             let meta = dst.file().metadata()?;
             if meta.len() > 0 {
-                return Ok(dst)
+                return Ok(dst);
             }
         }
         let mut dst = self.cache_path.open_rw(path, self.config, &filename)?;
         let meta = dst.file().metadata()?;
         if meta.len() > 0 {
-            return Ok(dst)
+            return Ok(dst);
         }
         self.config.shell().status("Downloading", pkg)?;
 
         let config = self.config()?.unwrap();
         let mut url = config.dl.to_url()?;
-        url.path_segments_mut().unwrap()
+        url.path_segments_mut()
+            .unwrap()
             .push(pkg.name())
             .push(&pkg.version().to_string())
             .push("download");
@@ -163,10 +160,10 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             body = Vec::new();
             let mut handle = handle.transfer();
             handle.write_function(|buf| {
-                state.update(buf);
-                body.extend_from_slice(buf);
-                Ok(buf.len())
-            })?;
+                    state.update(buf);
+                    body.extend_from_slice(buf);
+                    Ok(buf.len())
+                })?;
             handle.perform()
         })?;
         let code = handle.response_code()?;
@@ -215,11 +212,12 @@ fn github_up_to_date(handle: &mut Easy, url: &Url, oid: &git2::Oid) -> bool {
     let username = try!(pieces.next());
     let repo = try!(pieces.next());
     if pieces.next().is_some() {
-        return false
+        return false;
     }
 
     let url = format!("https://api.github.com/repos/{}/{}/commits/master",
-                      username, repo);
+                      username,
+                      repo);
     try!(handle.get(true).ok());
     try!(handle.url(&url).ok());
     try!(handle.useragent("cargo").ok());

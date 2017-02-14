@@ -23,7 +23,9 @@ pub fn with_retry<T, E, F>(config: &Config, mut callback: F) -> CargoResult<T>
             Ok(ret) => return Ok(ret),
             Err(ref e) if e.maybe_spurious() && remaining > 0 => {
                 let msg = format!("spurious network error ({} tries \
-                          remaining): {}", remaining, e);
+                          remaining): {}",
+                                  remaining,
+                                  e);
                 config.shell().warn(msg)?;
                 remaining -= 1;
             }
@@ -55,9 +57,7 @@ fn with_retry_repeats_the_call_then_works() {
     impl NetworkRetryError {
         fn new(error: &str) -> NetworkRetryError {
             let error = human(error.to_string());
-            NetworkRetryError {
-                error: error,
-            }
+            NetworkRetryError { error: error }
         }
     }
 
@@ -81,8 +81,7 @@ fn with_retry_repeats_the_call_then_works() {
 
     let error1 = NetworkRetryError::new("one");
     let error2 = NetworkRetryError::new("two");
-    let mut results: Vec<Result<(), NetworkRetryError>> = vec![Ok(()),
-    Err(error1), Err(error2)];
+    let mut results: Vec<Result<(), NetworkRetryError>> = vec![Ok(()), Err(error1), Err(error2)];
     let config = Config::default().unwrap();
     let result = with_retry(&config, || results.pop().unwrap());
     assert_eq!(result.unwrap(), ())
