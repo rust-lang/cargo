@@ -1,3 +1,5 @@
+use std::iter::FromIterator;
+
 use cargo::core::Workspace;
 use cargo::ops::{self, MessageFormat, Packages};
 use cargo::util::{CliResult, CliError, Config, Human};
@@ -7,6 +9,7 @@ use cargo::util::important_paths::{find_root_manifest_for_wd};
 pub struct Options {
     flag_bin: Option<String>,
     flag_example: Option<String>,
+    flag_package: Option<String>,
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,
     flag_all_features: bool,
@@ -30,22 +33,23 @@ Usage:
     cargo run [options] [--] [<args>...]
 
 Options:
-    -h, --help              Print this message
-    --bin NAME              Name of the bin target to run
-    --example NAME          Name of the example target to run
-    -j N, --jobs N          Number of parallel jobs, defaults to # of CPUs
-    --release               Build artifacts in release mode, with optimizations
-    --features FEATURES     Space-separated list of features to also build
-    --all-features          Build all available features
-    --no-default-features   Do not build the `default` feature
-    --target TRIPLE         Build for the target triple
-    --manifest-path PATH    Path to the manifest to execute
-    -v, --verbose ...       Use verbose output (-vv very verbose/build.rs output)
-    -q, --quiet             No output printed to stdout
-    --color WHEN            Coloring: auto, always, never
-    --message-format FMT    Error format: human, json [default: human]
-    --frozen                Require Cargo.lock and cache are up to date
-    --locked                Require Cargo.lock is up to date
+    -h, --help                   Print this message
+    --bin NAME                   Name of the bin target to run
+    --example NAME               Name of the example target to run
+    -p SPEC, --package SPEC      Package with the target to run
+    -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
+    --release                    Build artifacts in release mode, with optimizations
+    --features FEATURES          Space-separated list of features to also build
+    --all-features               Build all available features
+    --no-default-features        Do not build the `default` feature
+    --target TRIPLE              Build for the target triple
+    --manifest-path PATH         Path to the manifest to execute
+    -v, --verbose ...            Use verbose output (-vv very verbose/build.rs output)
+    -q, --quiet                  No output printed to stdout
+    --color WHEN                 Coloring: auto, always, never
+    --message-format FMT         Error format: human, json [default: human]
+    --frozen                     Require Cargo.lock and cache are up to date
+    --locked                     Require Cargo.lock is up to date
 
 If neither `--bin` nor `--example` are given, then if the project only has one
 bin target it will be run. Otherwise `--bin` specifies the bin target to run,
@@ -74,6 +78,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         examples.push(s);
     }
 
+    let packages = Vec::from_iter(options.flag_package.iter().cloned());
+    let spec = Packages::Packages(&packages);
+
     let compile_opts = ops::CompileOptions {
         config: config,
         jobs: options.flag_jobs,
@@ -81,7 +88,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         features: &options.flag_features,
         all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
-        spec: Packages::Packages(&[]),
+        spec: spec,
         release: options.flag_release,
         mode: ops::CompileMode::Build,
         filter: if examples.is_empty() && bins.is_empty() {
