@@ -12,7 +12,7 @@ impl GitRepo {
         git2::Repository::init(path)?;
         Ok(GitRepo)
     }
-    pub fn discover(path: &Path, _: &Path) -> Result<git2::Repository,git2::Error> {
+    pub fn discover(path: &Path, _: &Path) -> Result<git2::Repository, git2::Error> {
         git2::Repository::discover(path)
     }
 }
@@ -27,4 +27,3 @@ impl HgRepo {
         Ok(HgRepo)
     }
 }
-

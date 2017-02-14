@@ -22,9 +22,7 @@ fn disabled() -> bool {
     // Right now the windows bots cannot cross compile due to the mingw setup,
     // so we disable ourselves on all but macos/linux setups where the rustc
     // install script ensures we have both architectures
-    if !(cfg!(target_os = "macos") ||
-         cfg!(target_os = "linux") ||
-         cfg!(target_env = "msvc")) {
+    if !(cfg!(target_os = "macos") || cfg!(target_os = "linux") || cfg!(target_env = "msvc")) {
         return true;
     }
 
@@ -42,7 +40,8 @@ fn disabled() -> bool {
             .file("src/cross_test.rs", &main_file(r#""testing!""#, &[]));
 
         let result = p.cargo_process("build")
-            .arg("--target").arg(&cross_target)
+            .arg("--target")
+            .arg(&cross_target)
             .exec_with_output();
 
         if result.is_ok() {
@@ -76,7 +75,8 @@ fn disabled() -> bool {
     let linux_help = if cfg!(target_os = "linux") {
         "
 
-You may need to install runtime libraries for your Linux distribution as well.".to_string()
+You may need to install runtime libraries for your Linux distribution as well."
+            .to_string()
     } else {
         "".to_string()
     };
@@ -86,7 +86,9 @@ You may need to install runtime libraries for your Linux distribution as well.".
 
 Alternatively, you can install the necessary libraries for cross-compilation with
 
-    rustup target add {}{}", cross_target, linux_help)
+    rustup target add {}{}",
+                cross_target,
+                linux_help)
     } else {
         "".to_string()
     };
@@ -95,7 +97,9 @@ Alternatively, you can install the necessary libraries for cross-compilation wit
 
 This failure can be safely ignored. If you would prefer to not see this
 failure, you can set the environment variable CFG_DISABLE_CROSS_TESTS to \"1\".{}
-", cross_target, rustup_help);
+",
+           cross_target,
+           rustup_help);
 }
 
 fn alternate() -> String {
@@ -138,27 +142,34 @@ fn host() -> String {
 
 #[test]
 fn simple_cross() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.0"
             authors = []
             build = "build.rs"
         "#)
-        .file("build.rs", &format!(r#"
+        .file("build.rs",
+              &format!(r#"
             fn main() {{
                 assert_eq!(std::env::var("TARGET").unwrap(), "{}");
             }}
-        "#, alternate()))
-        .file("src/main.rs", &format!(r#"
+        "#,
+                       alternate()))
+        .file("src/main.rs",
+              &format!(r#"
             use std::env;
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, alternate_arch()));
+        "#,
+                       alternate_arch()));
 
     let target = alternate();
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
@@ -171,35 +182,43 @@ fn simple_cross() {
 
 #[test]
 fn simple_cross_config() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let p = project("foo")
-        .file(".cargo/config", &format!(r#"
+        .file(".cargo/config",
+              &format!(r#"
             [build]
             target = "{}"
-        "#, alternate()))
-        .file("Cargo.toml", r#"
+        "#,
+                       alternate()))
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.0"
             authors = []
             build = "build.rs"
         "#)
-        .file("build.rs", &format!(r#"
+        .file("build.rs",
+              &format!(r#"
             fn main() {{
                 assert_eq!(std::env::var("TARGET").unwrap(), "{}");
             }}
-        "#, alternate()))
-        .file("src/main.rs", &format!(r#"
+        "#,
+                       alternate()))
+        .file("src/main.rs",
+              &format!(r#"
             use std::env;
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, alternate_arch()));
+        "#,
+                       alternate_arch()));
 
     let target = alternate();
-    assert_that(p.cargo_process("build").arg("-v"),
-                execs().with_status(0));
+    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
     assert_that(process(&p.target_bin(&target, "foo")),
@@ -208,10 +227,13 @@ fn simple_cross_config() {
 
 #[test]
 fn simple_deps() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -220,12 +242,14 @@ fn simple_deps() {
             [dependencies.bar]
             path = "../bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             extern crate bar;
             fn main() { bar::bar(); }
         "#);
     let p2 = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.0.1"
@@ -245,11 +269,16 @@ fn simple_deps() {
 
 #[test]
 fn plugin_deps() {
-    if disabled() { return }
-    if !is_nightly() { return }
+    if disabled() {
+        return;
+    }
+    if !is_nightly() {
+        return;
+    }
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -261,7 +290,8 @@ fn plugin_deps() {
             [dependencies.baz]
             path = "../baz"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             #![feature(plugin)]
             #![plugin(bar)]
             extern crate baz;
@@ -270,7 +300,8 @@ fn plugin_deps() {
             }
         "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.0.1"
@@ -280,7 +311,8 @@ fn plugin_deps() {
             name = "bar"
             plugin = true
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             #![feature(plugin_registrar, quote, rustc_private)]
 
             extern crate rustc_plugin;
@@ -302,7 +334,8 @@ fn plugin_deps() {
             }
         "#);
     let baz = project("baz")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "baz"
             version = "0.0.1"
@@ -323,11 +356,16 @@ fn plugin_deps() {
 
 #[test]
 fn plugin_to_the_max() {
-    if disabled() { return }
-    if !is_nightly() { return }
+    if disabled() {
+        return;
+    }
+    if !is_nightly() {
+        return;
+    }
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -339,7 +377,8 @@ fn plugin_to_the_max() {
             [dependencies.baz]
             path = "../baz"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             #![feature(plugin)]
             #![plugin(bar)]
             extern crate baz;
@@ -348,7 +387,8 @@ fn plugin_to_the_max() {
             }
         "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.0.1"
@@ -361,7 +401,8 @@ fn plugin_to_the_max() {
             [dependencies.baz]
             path = "../baz"
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             #![feature(plugin_registrar, quote, rustc_private)]
 
             extern crate rustc_plugin;
@@ -384,7 +425,8 @@ fn plugin_to_the_max() {
             }
         "#);
     let baz = project("baz")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "baz"
             version = "0.0.1"
@@ -398,8 +440,10 @@ fn plugin_to_the_max() {
     assert_that(foo.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
     println!("second");
-    assert_that(foo.cargo("build").arg("-v")
-                   .arg("--target").arg(&target),
+    assert_that(foo.cargo("build")
+                    .arg("-v")
+                    .arg("--target")
+                    .arg(&target),
                 execs().with_status(0));
     assert_that(&foo.target_bin(&target, "foo"), existing_file());
 
@@ -409,27 +453,36 @@ fn plugin_to_the_max() {
 
 #[test]
 fn linker_and_ar() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let target = alternate();
     let p = project("foo")
-        .file(".cargo/config", &format!(r#"
+        .file(".cargo/config",
+              &format!(r#"
             [target.{}]
             ar = "my-ar-tool"
             linker = "my-linker-tool"
-        "#, target))
+        "#,
+                       target))
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &format!(r#"
+        .file("src/foo.rs",
+              &format!(r#"
             use std::env;
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, alternate_arch()));
+        "#,
+                       alternate_arch()));
 
-    assert_that(p.cargo_process("build").arg("--target").arg(&target)
-                                              .arg("-v"),
-                execs().with_status(101)
-                       .with_stderr_contains(&format!("\
+    assert_that(p.cargo_process("build")
+                    .arg("--target")
+                    .arg(&target)
+                    .arg("-v"),
+                execs()
+                    .with_status(101)
+                    .with_stderr_contains(&format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc --crate-name foo src[/]foo.rs --crate-type bin \
     --emit=dep-info,link -C debuginfo=2 \
@@ -448,11 +501,16 @@ fn linker_and_ar() {
 
 #[test]
 fn plugin_with_extra_dylib_dep() {
-    if disabled() { return }
-    if !is_nightly() { return }
+    if disabled() {
+        return;
+    }
+    if !is_nightly() {
+        return;
+    }
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -461,14 +519,16 @@ fn plugin_with_extra_dylib_dep() {
             [dependencies.bar]
             path = "../bar"
         "#)
-        .file("src/main.rs", r#"
+        .file("src/main.rs",
+              r#"
             #![feature(plugin)]
             #![plugin(bar)]
 
             fn main() {}
         "#);
     let bar = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.0.1"
@@ -481,7 +541,8 @@ fn plugin_with_extra_dylib_dep() {
             [dependencies.baz]
             path = "../baz"
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             #![feature(plugin_registrar, rustc_private)]
 
             extern crate rustc_plugin;
@@ -495,7 +556,8 @@ fn plugin_with_extra_dylib_dep() {
             }
         "#);
     let baz = project("baz")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "baz"
             version = "0.0.1"
@@ -516,10 +578,13 @@ fn plugin_with_extra_dylib_dep() {
 
 #[test]
 fn cross_tests() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             authors = []
@@ -528,55 +593,74 @@ fn cross_tests() {
             [[bin]]
             name = "bar"
         "#)
-        .file("src/main.rs", &format!(r#"
+        .file("src/main.rs",
+              &format!(r#"
             extern crate foo;
             use std::env;
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
             #[test] fn test() {{ main() }}
-        "#, alternate_arch()))
-        .file("src/lib.rs", &format!(r#"
+        "#,
+                       alternate_arch()))
+        .file("src/lib.rs",
+              &format!(r#"
             use std::env;
             pub fn foo() {{ assert_eq!(env::consts::ARCH, "{}"); }}
             #[test] fn test_foo() {{ foo() }}
-        "#, alternate_arch()));
+        "#,
+                       alternate_arch()));
 
     let target = alternate();
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
-                execs().with_status(0)
-                       .with_stderr(&format!("\
+                execs()
+                    .with_status(0)
+                    .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]{triple}[/]debug[/]deps[/]bar-[..][EXE]
-[RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]", foo = p.url(), triple = target))
-                       .with_stdout("
+[FINISHED] dev \
+                                           [unoptimized + debuginfo] target(s) in [..]
+\
+                                           [RUNNING] \
+                                           target[/]{triple}[/]debug[/]deps[/]bar-[..][EXE]
+\
+                                           [RUNNING] \
+                                           target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]",
+                                          foo = p.url(),
+                                          triple = target))
+                    .with_stdout("
 running 1 test
 test test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 1 passed; \
+                                  0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test test_foo ... ok
+test \
+                                  test_foo ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 1 passed; 0 failed; 0 \
+                                  ignored; 0 measured
 
 "));
 }
 
 #[test]
 fn no_cross_doctests() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             authors = []
             version = "0.0.0"
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             //! ```
             //! extern crate foo;
             //! assert!(true);
@@ -588,52 +672,72 @@ fn no_cross_doctests() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
 [DOCTEST] foo
-", foo = p.url());
+",
+                              foo = p.url());
 
     println!("a");
     assert_that(p.cargo_process("test"),
-                execs().with_status(0)
-                       .with_stderr(&host_output));
+                execs()
+                    .with_status(0)
+                    .with_stderr(&host_output));
 
     println!("b");
     let target = host();
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
-                execs().with_status(0)
-                       .with_stderr(&format!("\
+                execs()
+                    .with_status(0)
+                    .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
-[DOCTEST] foo
-", foo = p.url(), triple = target)));
+[FINISHED] dev \
+                                           [unoptimized + debuginfo] target(s) in [..]
+\
+                                           [RUNNING] \
+                                           target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
+\
+                                           [DOCTEST] foo
+",
+                                          foo = p.url(),
+                                          triple = target)));
 
     println!("c");
     let target = alternate();
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
-                execs().with_status(0)
-                       .with_stderr(&format!("\
+                execs()
+                    .with_status(0)
+                    .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
-", foo = p.url(), triple = target)));
+[FINISHED] dev \
+                                           [unoptimized + debuginfo] target(s) in [..]
+\
+                                           [RUNNING] \
+                                           target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
+",
+                                          foo = p.url(),
+                                          triple = target)));
 }
 
 #[test]
 fn simple_cargo_run() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.0"
             authors = []
         "#)
-        .file("src/main.rs", &format!(r#"
+        .file("src/main.rs",
+              &format!(r#"
             use std::env;
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, alternate_arch()));
+        "#,
+                       alternate_arch()));
 
     let target = alternate();
     assert_that(p.cargo_process("run").arg("--target").arg(&target),
@@ -642,18 +746,22 @@ fn simple_cargo_run() {
 
 #[test]
 fn cross_with_a_build_script() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let target = alternate();
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.0"
             authors = []
             build = 'build.rs'
         "#)
-        .file("build.rs", &format!(r#"
+        .file("build.rs",
+              &format!(r#"
             use std::env;
             use std::path::PathBuf;
             fn main() {{
@@ -672,29 +780,43 @@ fn cross_with_a_build_script() {
                 path.pop();
                 assert_eq!(path.file_name().unwrap().to_str().unwrap(), "target");
             }}
-        "#, target))
+        "#,
+                       target))
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
-                execs().with_status(0)
-                       .with_stderr(&format!("\
+                execs()
+                    .with_status(0)
+                    .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 (file://[..])
-[RUNNING] `rustc [..] build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]foo-[..]`
-[RUNNING] `{dir}[/]target[/]debug[/]build[/]foo-[..][/]build-script-build`
-[RUNNING] `rustc [..] src[/]main.rs [..] --target {target} [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", target = target,
-   dir = p.root().display())));
+[RUNNING] \
+                                           `rustc [..] build.rs [..] --out-dir \
+                                           {dir}[/]target[/]debug[/]build[/]foo-[..]`
+\
+                                           [RUNNING] \
+                                           `{dir}[/]target[/]debug[/]build[/]foo-[..\
+                                           ][/]build-script-build`
+[RUNNING] `rustc [..] \
+                                           src[/]main.rs [..] --target {target} [..]`
+\
+                                           [FINISHED] dev [unoptimized + debuginfo] target(s) \
+                                           in [..]
+",
+                                          target = target,
+                                          dir = p.root().display())));
 }
 
 #[test]
 fn build_script_needed_for_host_and_target() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let target = alternate();
     let host = rustc_host();
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.0"
@@ -706,33 +828,38 @@ fn build_script_needed_for_host_and_target() {
             [build-dependencies.d2]
             path = "d2"
         "#)
-
-        .file("build.rs", r#"
+        .file("build.rs",
+              r#"
             extern crate d2;
             fn main() { d2::d2(); }
         "#)
-        .file("src/main.rs", "
+        .file("src/main.rs",
+              "
             extern crate d1;
             fn main() { d1::d1(); }
         ")
-        .file("d1/Cargo.toml", r#"
+        .file("d1/Cargo.toml",
+              r#"
             [package]
             name = "d1"
             version = "0.0.0"
             authors = []
             build = 'build.rs'
         "#)
-        .file("d1/src/lib.rs", "
+        .file("d1/src/lib.rs",
+              "
             pub fn d1() {}
         ")
-        .file("d1/build.rs", r#"
+        .file("d1/build.rs",
+              r#"
             use std::env;
             fn main() {
                 let target = env::var("TARGET").unwrap();
                 println!("cargo:rustc-flags=-L /path/to/{}", target);
             }
         "#)
-        .file("d2/Cargo.toml", r#"
+        .file("d2/Cargo.toml",
+              r#"
             [package]
             name = "d2"
             version = "0.0.0"
@@ -741,44 +868,63 @@ fn build_script_needed_for_host_and_target() {
             [dependencies.d1]
             path = "../d1"
         "#)
-        .file("d2/src/lib.rs", "
+        .file("d2/src/lib.rs",
+              "
             extern crate d1;
             pub fn d2() { d1::d1(); }
         ");
 
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
-                execs().with_status(0)
-                       .with_stderr_contains(&format!("\
-[COMPILING] d1 v0.0.0 ({url}/d1)", url = p.url()))
-                       .with_stderr_contains(&format!("\
-[RUNNING] `rustc [..] d1[/]build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]d1-[..]`",
-    dir = p.root().display()))
-                       .with_stderr_contains(&format!("\
-[RUNNING] `{dir}[/]target[/]debug[/]build[/]d1-[..][/]build-script-build`",
-    dir = p.root().display()))
-                       .with_stderr_contains("\
+                execs()
+                    .with_status(0)
+                    .with_stderr_contains(&format!("\
+[COMPILING] d1 v0.0.0 ({url}/d1)",
+                                                   url = p.url()))
+                    .with_stderr_contains(&format!("\
+[RUNNING] `rustc [..] d1[/]build.rs [..] \
+                                                    --out-dir \
+                                                    {dir}[/]target[/]debug[/]build[/]d1-[..]`",
+                                                   dir = p.root().display()))
+                    .with_stderr_contains(&format!("\
+[RUNNING] \
+                                                    `{dir}[/]target[/]debug[/]build[/]d1-[..\
+                                                    ][/]build-script-build`",
+                                                   dir = p.root().display()))
+                    .with_stderr_contains("\
 [RUNNING] `rustc [..] d1[/]src[/]lib.rs [..]`")
-                       .with_stderr_contains(&format!("\
-[COMPILING] d2 v0.0.0 ({url}/d2)", url = p.url()))
-                       .with_stderr_contains(&format!("\
-[RUNNING] `rustc [..] d2[/]src[/]lib.rs [..] \
-           -L /path/to/{host}`", host = host))
-                       .with_stderr_contains(&format!("\
-[COMPILING] foo v0.0.0 ({url})", url = p.url()))
-                       .with_stderr_contains(&format!("\
-[RUNNING] `rustc [..] build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]foo-[..] \
-           -L /path/to/{host}`", dir = p.root().display(), host = host))
-                       .with_stderr_contains(&format!("\
-[RUNNING] `rustc [..] src[/]main.rs [..] --target {target} [..] \
-           -L /path/to/{target}`", target = target)));
+                    .with_stderr_contains(&format!("\
+[COMPILING] d2 v0.0.0 ({url}/d2)",
+                                                   url = p.url()))
+                    .with_stderr_contains(&format!("\
+[RUNNING] `rustc [..] d2[/]src[/]lib.rs \
+                                                    [..] -L /path/to/{host}`",
+                                                   host = host))
+                    .with_stderr_contains(&format!("\
+[COMPILING] foo v0.0.0 ({url})",
+                                                   url = p.url()))
+                    .with_stderr_contains(&format!("\
+[RUNNING] `rustc [..] build.rs [..] \
+                                                    --out-dir \
+                                                    {dir}[/]target[/]debug[/]build[/]foo-[..] \
+                                                    -L /path/to/{host}`",
+                                                   dir = p.root().display(),
+                                                   host = host))
+                    .with_stderr_contains(&format!("\
+[RUNNING] `rustc [..] src[/]main.rs [..] \
+                                                    --target {target} [..] -L \
+                                                    /path/to/{target}`",
+                                                   target = target)));
 }
 
 #[test]
 fn build_deps_for_the_right_arch() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.0"
@@ -788,16 +934,19 @@ fn build_deps_for_the_right_arch() {
             path = "d2"
         "#)
         .file("src/main.rs", "extern crate d2; fn main() {}")
-        .file("d1/Cargo.toml", r#"
+        .file("d1/Cargo.toml",
+              r#"
             [package]
             name = "d1"
             version = "0.0.0"
             authors = []
         "#)
-        .file("d1/src/lib.rs", "
+        .file("d1/src/lib.rs",
+              "
             pub fn d1() {}
         ")
-        .file("d2/Cargo.toml", r#"
+        .file("d2/Cargo.toml",
+              r#"
             [package]
             name = "d2"
             version = "0.0.0"
@@ -817,10 +966,13 @@ fn build_deps_for_the_right_arch() {
 
 #[test]
 fn build_script_only_host() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.0"
@@ -832,17 +984,20 @@ fn build_script_only_host() {
         "#)
         .file("src/main.rs", "fn main() {}")
         .file("build.rs", "extern crate d1; fn main() {}")
-        .file("d1/Cargo.toml", r#"
+        .file("d1/Cargo.toml",
+              r#"
             [package]
             name = "d1"
             version = "0.0.0"
             authors = []
             build = "build.rs"
         "#)
-        .file("d1/src/lib.rs", "
+        .file("d1/src/lib.rs",
+              "
             pub fn d1() {}
         ")
-        .file("d1/build.rs", r#"
+        .file("d1/build.rs",
+              r#"
             use std::env;
 
             fn main() {
@@ -859,9 +1014,12 @@ fn build_script_only_host() {
 
 #[test]
 fn plugin_build_script_right_arch() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -876,24 +1034,31 @@ fn plugin_build_script_right_arch() {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(alternate()),
-                execs().with_status(0)
-                       .with_stderr("\
+                execs()
+                    .with_status(0)
+                    .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] build.rs [..]`
+[RUNNING] `rustc [..] \
+                                  build.rs [..]`
 [RUNNING] `[..][/]build-script-build`
-[RUNNING] `rustc [..] src[/]lib.rs [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+\
+                                  [RUNNING] `rustc [..] src[/]lib.rs [..]`
+[FINISHED] dev \
+                                  [unoptimized + debuginfo] target(s) in [..]
 "));
 }
 
 #[test]
 fn build_script_with_platform_specific_dependencies() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let target = alternate();
     let host = rustc_host();
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -905,7 +1070,8 @@ fn build_script_with_platform_specific_dependencies() {
         "#)
         .file("build.rs", "extern crate d1; fn main() {}")
         .file("src/lib.rs", "")
-        .file("d1/Cargo.toml", &format!(r#"
+        .file("d1/Cargo.toml",
+              &format!(r#"
             [package]
             name = "d1"
             version = "0.0.0"
@@ -913,9 +1079,11 @@ fn build_script_with_platform_specific_dependencies() {
 
             [target.{}.dependencies]
             d2 = {{ path = "../d2" }}
-        "#, host))
+        "#,
+                       host))
         .file("d1/src/lib.rs", "extern crate d2;")
-        .file("d2/Cargo.toml", r#"
+        .file("d2/Cargo.toml",
+              r#"
             [package]
             name = "d2"
             version = "0.0.0"
@@ -924,28 +1092,43 @@ fn build_script_with_platform_specific_dependencies() {
         .file("d2/src/lib.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
-                execs().with_status(0)
-                       .with_stderr(&format!("\
+                execs()
+                    .with_status(0)
+                    .with_stderr(&format!("\
 [COMPILING] d2 v0.0.0 ([..])
-[RUNNING] `rustc [..] d2[/]src[/]lib.rs [..]`
-[COMPILING] d1 v0.0.0 ([..])
-[RUNNING] `rustc [..] d1[/]src[/]lib.rs [..]`
+[RUNNING] `rustc \
+                                           [..] d2[/]src[/]lib.rs [..]`
+[COMPILING] d1 v0.0.0 \
+                                           ([..])
+[RUNNING] `rustc [..] d1[/]src[/]lib.rs \
+                                           [..]`
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `{dir}[/]target[/]debug[/]build[/]foo-[..][/]build-script-build`
-[RUNNING] `rustc [..] src[/]lib.rs [..] --target {target} [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", dir = p.root().display(), target = target)));
+[RUNNING] \
+                                           `rustc [..] build.rs [..]`
+[RUNNING] \
+                                           `{dir}[/]target[/]debug[/]build[/]foo-[..\
+                                           ][/]build-script-build`
+[RUNNING] `rustc [..] \
+                                           src[/]lib.rs [..] --target {target} [..]`
+\
+                                           [FINISHED] dev [unoptimized + debuginfo] target(s) \
+                                           in [..]
+",
+                                          dir = p.root().display(),
+                                          target = target)));
 }
 
 #[test]
 fn platform_specific_dependencies_do_not_leak() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let target = alternate();
     let host = rustc_host();
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -960,7 +1143,8 @@ fn platform_specific_dependencies_do_not_leak() {
         "#)
         .file("build.rs", "extern crate d1; fn main() {}")
         .file("src/lib.rs", "")
-        .file("d1/Cargo.toml", &format!(r#"
+        .file("d1/Cargo.toml",
+              &format!(r#"
             [package]
             name = "d1"
             version = "0.0.0"
@@ -968,9 +1152,11 @@ fn platform_specific_dependencies_do_not_leak() {
 
             [target.{}.dependencies]
             d2 = {{ path = "../d2" }}
-        "#, host))
+        "#,
+                       host))
         .file("d1/src/lib.rs", "extern crate d2;")
-        .file("d2/Cargo.toml", r#"
+        .file("d2/Cargo.toml",
+              r#"
             [package]
             name = "d2"
             version = "0.0.0"
@@ -979,19 +1165,23 @@ fn platform_specific_dependencies_do_not_leak() {
         .file("d2/src/lib.rs", "");
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
-                execs().with_status(101)
-                       .with_stderr_contains("\
+                execs()
+                    .with_status(101)
+                    .with_stderr_contains("\
 [..] can't find crate for `d2`[..]"));
 }
 
 #[test]
 fn platform_specific_variables_reflected_in_build_scripts() {
-    if disabled() { return }
+    if disabled() {
+        return;
+    }
 
     let target = alternate();
     let host = rustc_host();
     let p = project("foo")
-        .file("Cargo.toml", &format!(r#"
+        .file("Cargo.toml",
+              &format!(r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -1003,8 +1193,11 @@ fn platform_specific_variables_reflected_in_build_scripts() {
 
             [target.{target}.dependencies]
             d2 = {{ path = "d2" }}
-        "#, host = host, target = target))
-        .file("build.rs", &format!(r#"
+        "#,
+                       host = host,
+                       target = target))
+        .file("build.rs",
+              &format!(r#"
             use std::env;
 
             fn main() {{
@@ -1020,9 +1213,12 @@ fn platform_specific_variables_reflected_in_build_scripts() {
                 env::var(not_expected).err()
                     .expect(&format!("found {{}}", not_expected));
             }}
-        "#, host = host, target = target))
+        "#,
+                       host = host,
+                       target = target))
         .file("src/lib.rs", "")
-        .file("d1/Cargo.toml", r#"
+        .file("d1/Cargo.toml",
+              r#"
             [package]
             name = "d1"
             version = "0.0.0"
@@ -1030,11 +1226,13 @@ fn platform_specific_variables_reflected_in_build_scripts() {
             links = "d1"
             build = "build.rs"
         "#)
-        .file("d1/build.rs", r#"
+        .file("d1/build.rs",
+              r#"
             fn main() { println!("cargo:val=1") }
         "#)
         .file("d1/src/lib.rs", "")
-        .file("d2/Cargo.toml", r#"
+        .file("d2/Cargo.toml",
+              r#"
             [package]
             name = "d2"
             version = "0.0.0"
@@ -1042,7 +1240,8 @@ fn platform_specific_variables_reflected_in_build_scripts() {
             links = "d2"
             build = "build.rs"
         "#)
-        .file("d2/build.rs", r#"
+        .file("d2/build.rs",
+              r#"
             fn main() { println!("cargo:val=1") }
         "#)
         .file("d2/src/lib.rs", "");

@@ -10,9 +10,7 @@ pub trait ToUrl {
 
 impl<'a> ToUrl for &'a str {
     fn to_url(self) -> CargoResult<Url> {
-        Url::parse(self).map_err(|s| {
-            human(format!("invalid url `{}`: {}", self, s))
-        })
+        Url::parse(self).map_err(|s| human(format!("invalid url `{}`: {}", self, s)))
     }
 }
 

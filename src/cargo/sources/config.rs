@@ -55,10 +55,11 @@ impl<'cfg> SourceConfigMap<'cfg> {
             id2name: HashMap::new(),
             config: config,
         };
-        base.add("crates-io", SourceConfig {
-            id: SourceId::crates_io(config)?,
-            replace_with: None,
-        });
+        base.add("crates-io",
+                 SourceConfig {
+                     id: SourceId::crates_io(config)?,
+                     replace_with: None,
+                 });
         Ok(base)
     }
 
@@ -78,10 +79,13 @@ impl<'cfg> SourceConfigMap<'cfg> {
         loop {
             let cfg = match self.cfgs.get(name) {
                 Some(cfg) => cfg,
-                None => bail!("could not find a configured source with the \
-                               name `{}` when attempting to lookup `{}` \
-                               (configuration in `{}`)",
-                              name, orig_name, path.display()),
+                None => {
+                    bail!("could not find a configured source with the name `{}` when attempting \
+                           to lookup `{}` (configuration in `{}`)",
+                          name,
+                          orig_name,
+                          path.display())
+                }
             };
             match cfg.replace_with {
                 Some((ref s, ref p)) => {
@@ -91,15 +95,17 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 None if *id == cfg.id => return Ok(id.load(self.config)),
                 None => {
                     new_id = cfg.id.with_precise(id.precise()
-                                                 .map(|s| s.to_string()));
-                    break
+                        .map(|s| s.to_string()));
+                    break;
                 }
             }
             debug!("following pointer to {}", name);
             if name == orig_name {
                 bail!("detected a cycle of `replace-with` sources, the source \
                        `{}` is eventually replaced with itself \
-                       (configuration in `{}`)", name, path.display())
+                       (configuration in `{}`)",
+                      name,
+                      path.display())
             }
         }
         let new_src = new_id.load(self.config);
@@ -115,7 +121,11 @@ cannot replace `{orig}` with `{name}`, the source `{supports}` supports \
 checksums, but `{no_support}` does not
 
 a lock file compatible with `{orig}` cannot be generated in this situation
-", orig = orig_name, name = name, supports = supports, no_support = no_support);
+",
+                  orig = orig_name,
+                  name = name,
+                  supports = supports,
+                  no_support = no_support);
         }
         Ok(Box::new(ReplacedSource::new(id, &new_id, new_src)))
     }
@@ -133,8 +143,7 @@ a lock file compatible with `{orig}` cannot be generated in this situation
             srcs.push(SourceId::for_registry(&url));
         }
         if let Some(val) = table.get("local-registry") {
-            let (s, path) = val.string(&format!("source.{}.local-registry",
-                                                     name))?;
+            let (s, path) = val.string(&format!("source.{}.local-registry", name))?;
             let mut path = path.to_path_buf();
             path.pop();
             path.pop();
@@ -142,8 +151,7 @@ a lock file compatible with `{orig}` cannot be generated in this situation
             srcs.push(SourceId::for_local_registry(&path)?);
         }
         if let Some(val) = table.get("directory") {
-            let (s, path) = val.string(&format!("source.{}.directory",
-                                                     name))?;
+            let (s, path) = val.string(&format!("source.{}.directory", name))?;
             let mut path = path.to_path_buf();
             path.pop();
             path.pop();
@@ -155,27 +163,29 @@ a lock file compatible with `{orig}` cannot be generated in this situation
         }
 
         let mut srcs = srcs.into_iter();
-        let src = srcs.next().chain_error(|| {
-            human(format!("no source URL specified for `source.{}`, need \
-                           either `registry` or `local-registry` defined",
-                          name))
-        })?;
+        let src = srcs.next()
+            .chain_error(|| {
+                human(format!("no source URL specified for `source.{}`, need either `registry` \
+                               or `local-registry` defined",
+                              name))
+            })?;
         if srcs.next().is_some() {
             return Err(human(format!("more than one source URL specified for \
-                                      `source.{}`", name)))
+                                      `source.{}`",
+                                     name)));
         }
 
         let mut replace_with = None;
         if let Some(val) = table.get("replace-with") {
-            let (s, path) = val.string(&format!("source.{}.replace-with",
-                                                     name))?;
+            let (s, path) = val.string(&format!("source.{}.replace-with", name))?;
             replace_with = Some((s.to_string(), path.to_path_buf()));
         }
 
-        self.add(name, SourceConfig {
-            id: src,
-            replace_with: replace_with,
-        });
+        self.add(name,
+                 SourceConfig {
+                     id: src,
+                     replace_with: replace_with,
+                 });
 
         return Ok(());
 
@@ -183,7 +193,9 @@ a lock file compatible with `{orig}` cannot be generated in this situation
             let (url, path) = cfg.string(key)?;
             url.to_url().chain_error(|| {
                 human(format!("configuration key `{}` specified an invalid \
-                               URL (in {})", key, path.display()))
+                               URL (in {})",
+                              key,
+                              path.display()))
 
             })
         }

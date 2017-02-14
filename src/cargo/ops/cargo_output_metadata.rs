@@ -18,11 +18,11 @@ pub struct OutputMetadataOptions {
 /// Loads the manifest, resolves the dependencies of the project to the concrete
 /// used versions - considering overrides - and writes all dependencies in a JSON
 /// format to stdout.
-pub fn output_metadata(ws: &Workspace,
-                       opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+pub fn output_metadata(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     if opt.version != VERSION {
         bail!("metadata version {} not supported, only {} is currently supported",
-              opt.version, VERSION);
+              opt.version,
+              VERSION);
     }
     if opt.no_deps {
         metadata_no_deps(ws, opt)
@@ -31,8 +31,7 @@ pub fn output_metadata(ws: &Workspace,
     }
 }
 
-fn metadata_no_deps(ws: &Workspace,
-                    _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+fn metadata_no_deps(ws: &Workspace, _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     Ok(ExportInfo {
         packages: ws.members().cloned().collect(),
         workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
@@ -41,8 +40,7 @@ fn metadata_no_deps(ws: &Workspace,
     })
 }
 
-fn metadata_full(ws: &Workspace,
-                 opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     let specs = Packages::All.into_package_id_specs(ws)?;
     let deps = ops::resolve_ws_precisely(ws,
                                          None,
@@ -53,13 +51,13 @@ fn metadata_full(ws: &Workspace,
     let (packages, resolve) = deps;
 
     let packages = packages.package_ids()
-                           .map(|i| packages.get(i).map(|p| p.clone()))
-                           .collect::<CargoResult<Vec<_>>>()?;
+        .map(|i| packages.get(i).map(|p| p.clone()))
+        .collect::<CargoResult<Vec<_>>>()?;
 
     Ok(ExportInfo {
         packages: packages,
         workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
-        resolve: Some(MetadataResolve{
+        resolve: Some(MetadataResolve {
             resolve: resolve,
             root: ws.current_opt().map(|pkg| pkg.package_id().clone()),
         }),
@@ -78,7 +76,7 @@ pub struct ExportInfo {
 /// Newtype wrapper to provide a custom `Encodable` implementation.
 /// The one from lockfile does not fit because it uses a non-standard
 /// format for `PackageId`s
-struct MetadataResolve{
+struct MetadataResolve {
     resolve: Resolve,
     root: Option<PackageId>,
 }
@@ -99,12 +97,15 @@ impl Encodable for MetadataResolve {
 
         let encodable = EncodableResolve {
             root: self.root.as_ref(),
-            nodes: self.resolve.iter().map(|id| {
-                Node {
-                    id: id,
-                    dependencies: self.resolve.deps(id).collect(),
-                }
-            }).collect(),
+            nodes: self.resolve
+                .iter()
+                .map(|id| {
+                    Node {
+                        id: id,
+                        dependencies: self.resolve.deps(id).collect(),
+                    }
+                })
+                .collect(),
         };
 
         encodable.encode(s)

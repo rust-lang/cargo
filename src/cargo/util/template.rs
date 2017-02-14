@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::fs::File;
-use std::io::{Read};
+use std::io::Read;
 
 use util::{CargoResult, human, ChainError};
 use url::Url;
@@ -16,7 +16,8 @@ use toml;
 /// {{#toml-escape name}} renders as '"foo \"bar\""'
 pub fn toml_escape_helper(h: &Helper,
                           _: &Handlebars,
-                          rc: &mut RenderContext) -> Result<(), RenderError> {
+                          rc: &mut RenderContext)
+                          -> Result<(), RenderError> {
     if let Some(param) = h.param(0) {
         let txt = param.value().as_string().unwrap_or("").to_owned();
         let rendered = format!("{}", toml::Value::String(txt));
@@ -28,7 +29,8 @@ pub fn toml_escape_helper(h: &Helper,
 /// html_escape_helper escapes strings in templates using html escaping rules.
 pub fn html_escape_helper(h: &Helper,
                           _: &Handlebars,
-                          rc: &mut RenderContext) -> Result<(), RenderError> {
+                          rc: &mut RenderContext)
+                          -> Result<(), RenderError> {
     if let Some(param) = h.param(0) {
         let rendered = html_escape(param.value().as_string().unwrap_or(""));
         try!(rc.writer.write(rendered.into_bytes().as_ref()));
@@ -59,10 +61,12 @@ impl TemplateFile for InputFileTemplateFile {
     fn template(&self) -> CargoResult<String> {
         let mut template_str = String::new();
         let mut entry_file = try!(File::open(&self.input_path).chain_error(|| {
-            human(format!("Failed to open file for templating: {}", self.input_path.display()))
+            human(format!("Failed to open file for templating: {}",
+                          self.input_path.display()))
         }));
         try!(entry_file.read_to_string(&mut template_str).chain_error(|| {
-            human(format!("Failed to read file for templating: {}", self.input_path.display()))
+            human(format!("Failed to read file for templating: {}",
+                          self.input_path.display()))
         }));
         Ok(template_str)
     }
@@ -72,7 +76,7 @@ impl InputFileTemplateFile {
     pub fn new(input_path: PathBuf, output_path: PathBuf) -> InputFileTemplateFile {
         InputFileTemplateFile {
             input_path: input_path,
-            output_path: output_path
+            output_path: output_path,
         }
     }
 }
@@ -97,12 +101,12 @@ impl InMemoryTemplateFile {
     pub fn new(output_path: PathBuf, template_str: String) -> InMemoryTemplateFile {
         InMemoryTemplateFile {
             template_str: template_str,
-            output_path: output_path
+            output_path: output_path,
         }
     }
 }
 
-pub enum TemplateDirectory{
+pub enum TemplateDirectory {
     Temp(TempDir),
     Normal(PathBuf),
 }
@@ -111,7 +115,7 @@ impl TemplateDirectory {
     pub fn path(&self) -> &Path {
         match *self {
             TemplateDirectory::Temp(ref tempdir) => tempdir.path(),
-            TemplateDirectory::Normal(ref path) => path.as_path()
+            TemplateDirectory::Normal(ref path) => path.as_path(),
         }
     }
 }
@@ -119,15 +123,15 @@ impl TemplateDirectory {
 /// A listing of all the files that are part of the template.
 pub struct TemplateSet {
     pub template_dir: Option<TemplateDirectory>,
-    pub template_files: Vec<Box<TemplateFile>>
+    pub template_files: Vec<Box<TemplateFile>>,
 }
 
 // The type of template we will use.
 #[derive(Debug, Eq, PartialEq)]
-pub enum TemplateType  {
+pub enum TemplateType {
     GitRepo(String),
     LocalDir(String),
-    Builtin
+    Builtin,
 }
 
 /// Given a repository string and subdir, determine if this is a git repository, local file, or a
@@ -136,7 +140,8 @@ pub enum TemplateType  {
 /// "git", "file", "http", "https", and "ssh"
 /// Also supported is an scp style syntax: git@domain.com:user/path
 pub fn get_template_type<'a>(repo: Option<&'a str>,
-                             subdir: Option<&'a str>) -> CargoResult<TemplateType> {
+                             subdir: Option<&'a str>)
+                             -> CargoResult<TemplateType> {
     match (repo, subdir) {
         (Some(repo_str), _) => {
             if let Ok(repo_url) = Url::parse(&repo_str) {
@@ -149,9 +154,9 @@ pub fn get_template_type<'a>(repo: Option<&'a str>,
             } else {
                 Ok(TemplateType::LocalDir(String::from(repo_str)))
             }
-        },
+        }
         (None, Some(_)) => Err(human("A template was given, but no template repository")),
-        (None, None) => Ok(TemplateType::Builtin)
+        (None, None) => Ok(TemplateType::Builtin),
     }
 }
 
@@ -232,6 +237,7 @@ mod test {
 
     #[test]
     fn test_get_template_type_builtin() {
-        assert_eq!(get_template_type(None, None).unwrap(), TemplateType::Builtin);
+        assert_eq!(get_template_type(None, None).unwrap(),
+                   TemplateType::Builtin);
     }
 }

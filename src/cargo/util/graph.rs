@@ -4,12 +4,12 @@ use std::collections::hash_set::{HashSet, Iter};
 use std::collections::hash_map::{HashMap, Keys};
 
 pub struct Graph<N> {
-    nodes: HashMap<N, HashSet<N>>
+    nodes: HashMap<N, HashSet<N>>,
 }
 
 enum Mark {
     InProgress,
-    Done
+    Done,
 }
 
 pub type Nodes<'a, N> = Keys<'a, N, HashSet<N>>;
@@ -86,7 +86,9 @@ impl<N: fmt::Display + Eq + Hash> fmt::Debug for Graph<N> {
 }
 
 impl<N: Eq + Hash> PartialEq for Graph<N> {
-    fn eq(&self, other: &Graph<N>) -> bool { self.nodes.eq(&other.nodes) }
+    fn eq(&self, other: &Graph<N>) -> bool {
+        self.nodes.eq(&other.nodes)
+    }
 }
 impl<N: Eq + Hash> Eq for Graph<N> {}
 

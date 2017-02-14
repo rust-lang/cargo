@@ -26,8 +26,7 @@ struct Checksum {
 }
 
 impl<'cfg> DirectorySource<'cfg> {
-    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config)
-               -> DirectorySource<'cfg> {
+    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config) -> DirectorySource<'cfg> {
         DirectorySource {
             source_id: id.clone(),
             root: path.to_path_buf(),
@@ -63,10 +62,12 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
     fn update(&mut self) -> CargoResult<()> {
         self.packages.clear();
-        let entries = self.root.read_dir().chain_error(|| {
-            human(format!("failed to read root of directory source: {}",
-                          self.root.display()))
-        })?;
+        let entries = self.root
+            .read_dir()
+            .chain_error(|| {
+                human(format!("failed to read root of directory source: {}",
+                              self.root.display()))
+            })?;
 
         for entry in entries {
             let entry = entry?;
@@ -77,7 +78,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             // (rust-lang/cargo#3414).
             if let Some(s) = path.file_name().and_then(|s| s.to_str()) {
                 if s.starts_with(".") {
-                    continue
+                    continue;
                 }
             }
 
@@ -87,18 +88,16 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
             let cksum_file = path.join(".cargo-checksum.json");
             let cksum = paths::read(&path.join(cksum_file)).chain_error(|| {
-                human(format!("failed to load checksum `.cargo-checksum.json` \
-                               of {} v{}",
-                              pkg.package_id().name(),
-                              pkg.package_id().version()))
+                    human(format!("failed to load checksum `.cargo-checksum.json` of {} v{}",
+                                  pkg.package_id().name(),
+                                  pkg.package_id().version()))
 
-            })?;
+                })?;
             let cksum: Checksum = json::decode(&cksum).chain_error(|| {
-                human(format!("failed to decode `.cargo-checksum.json` of \
-                               {} v{}",
-                              pkg.package_id().name(),
-                              pkg.package_id().version()))
-            })?;
+                    human(format!("failed to decode `.cargo-checksum.json` of {} v{}",
+                                  pkg.package_id().name(),
+                                  pkg.package_id().version()))
+                })?;
 
             let mut manifest = pkg.manifest().clone();
             let summary = manifest.summary().clone();
@@ -111,9 +110,11 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     }
 
     fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
-        self.packages.get(id).map(|p| &p.0).cloned().chain_error(|| {
-            human(format!("failed to find package with id: {}", id))
-        })
+        self.packages
+            .get(id)
+            .map(|p| &p.0)
+            .cloned()
+            .chain_error(|| human(format!("failed to find package with id: {}", id)))
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
@@ -123,8 +124,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     fn verify(&self, id: &PackageId) -> CargoResult<()> {
         let (pkg, cksum) = match self.packages.get(id) {
             Some(&(ref pkg, ref cksum)) => (pkg, cksum),
-            None => bail!("failed to find entry for `{}` in directory source",
-                          id),
+            None => bail!("failed to find entry for `{}` in directory source", id),
         };
 
         let mut buf = [0; 16 * 1024];
@@ -133,17 +133,16 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             let file = pkg.root().join(file);
 
             (|| -> CargoResult<()> {
-                let mut f = File::open(&file)?;
-                loop {
-                    match f.read(&mut buf)? {
-                        0 => return Ok(()),
-                        n => h.update(&buf[..n]),
+                    let mut f = File::open(&file)?;
+                    loop {
+                        match f.read(&mut buf)? {
+                            0 => return Ok(()),
+                            n => h.update(&buf[..n]),
+                        }
                     }
-                }
-            }).chain_error(|| {
-                human(format!("failed to calculate checksum of: {}",
-                              file.display()))
-            })?;
+                }).chain_error(|| {
+                    human(format!("failed to calculate checksum of: {}", file.display()))
+                })?;
 
             let actual = h.finish().to_hex();
             if &*actual != cksum {
@@ -156,7 +155,10 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                     modifications are required then it is recommended \
                     that [replace] is used with a forked copy of the \
                     source\
-                ", file.display(), cksum, actual);
+                ",
+                      file.display(),
+                      cksum,
+                      actual);
             }
         }
 

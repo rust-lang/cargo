@@ -75,7 +75,7 @@ mod imp {
 
         let job = kernel32::CreateJobObjectW(0 as *mut _, 0 as *const _);
         if job.is_null() {
-            return None
+            return None;
         }
         let job = Handle { inner: job };
 
@@ -85,14 +85,13 @@ mod imp {
         // our children will reside in the job once we spawn a process.
         let mut info: winapi::JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
         info = mem::zeroed();
-        info.BasicLimitInformation.LimitFlags =
-            winapi::JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        info.BasicLimitInformation.LimitFlags = winapi::JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
         let r = kernel32::SetInformationJobObject(job.inner,
-                        winapi::JobObjectExtendedLimitInformation,
-                        &mut info as *mut _ as winapi::LPVOID,
-                        mem::size_of_val(&info) as winapi::DWORD);
+                                                  winapi::JobObjectExtendedLimitInformation,
+                                                  &mut info as *mut _ as winapi::LPVOID,
+                                                  mem::size_of_val(&info) as winapi::DWORD);
         if r == 0 {
-            return None
+            return None;
         }
 
         // Assign our process to this job object, meaning that our children will
@@ -100,7 +99,7 @@ mod imp {
         let me = kernel32::GetCurrentProcess();
         let r = kernel32::AssignProcessToJobObject(job.inner, me);
         if r == 0 {
-            return None
+            return None;
         }
 
         Some(Setup { job: job })
@@ -128,14 +127,13 @@ mod imp {
 
                 let mut info: winapi::JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
                 info = mem::zeroed();
-                let r = kernel32::SetInformationJobObject(
-                            self.job.inner,
-                            winapi::JobObjectExtendedLimitInformation,
-                            &mut info as *mut _ as winapi::LPVOID,
-                            mem::size_of_val(&info) as winapi::DWORD);
+                let r =
+                    kernel32::SetInformationJobObject(self.job.inner,
+                                                      winapi::JobObjectExtendedLimitInformation,
+                                                      &mut info as *mut _ as winapi::LPVOID,
+                                                      mem::size_of_val(&info) as winapi::DWORD);
                 if r == 0 {
-                    info!("failed to configure job object to defaults: {}",
-                          last_err());
+                    info!("failed to configure job object to defaults: {}", last_err());
                 }
             }
         }
@@ -150,15 +148,14 @@ mod imp {
             }
 
             let mut jobs: Jobs = mem::zeroed();
-            let r = kernel32::QueryInformationJobObject(
-                            self.job.inner,
-                            winapi::JobObjectBasicProcessIdList,
-                            &mut jobs as *mut _ as winapi::LPVOID,
-                            mem::size_of_val(&jobs) as winapi::DWORD,
-                            0 as *mut _);
+            let r = kernel32::QueryInformationJobObject(self.job.inner,
+                                                        winapi::JobObjectBasicProcessIdList,
+                                                        &mut jobs as *mut _ as winapi::LPVOID,
+                                                        mem::size_of_val(&jobs) as winapi::DWORD,
+                                                        0 as *mut _);
             if r == 0 {
                 info!("failed to query job object: {}", last_err());
-                return false
+                return false;
             }
 
             let mut killed = false;
@@ -166,36 +163,36 @@ mod imp {
             assert!(list.len() > 0);
             info!("found {} remaining processes", list.len() - 1);
 
-            let list = list.iter().filter(|&&id| {
-                // let's not kill ourselves
-                id as winapi::DWORD != kernel32::GetCurrentProcessId()
-            }).filter_map(|&id| {
-                // Open the process with the necessary rights, and if this
-                // fails then we probably raced with the process exiting so we
-                // ignore the problem.
-                let flags = winapi::PROCESS_QUERY_INFORMATION |
-                            winapi::PROCESS_TERMINATE |
-                            winapi::SYNCHRONIZE;
-                let p = kernel32::OpenProcess(flags,
-                                              winapi::FALSE,
-                                              id as winapi::DWORD);
-                if p.is_null() {
-                    None
-                } else {
-                    Some(Handle { inner: p })
-                }
-            }).filter(|p| {
-                // Test if this process was actually in the job object or not.
-                // If it's not then we likely raced with something else
-                // recycling this PID, so we just skip this step.
-                let mut res = 0;
-                let r = kernel32::IsProcessInJob(p.inner, self.job.inner, &mut res);
-                if r == 0 {
-                    info!("failed to test is process in job: {}", last_err());
-                    return false
-                }
-                res == winapi::TRUE
-            });
+            let list = list.iter()
+                .filter(|&&id| {
+                    // let's not kill ourselves
+                    id as winapi::DWORD != kernel32::GetCurrentProcessId()
+                })
+                .filter_map(|&id| {
+                    // Open the process with the necessary rights, and if this
+                    // fails then we probably raced with the process exiting so we
+                    // ignore the problem.
+                    let flags = winapi::PROCESS_QUERY_INFORMATION | winapi::PROCESS_TERMINATE |
+                                winapi::SYNCHRONIZE;
+                    let p = kernel32::OpenProcess(flags, winapi::FALSE, id as winapi::DWORD);
+                    if p.is_null() {
+                        None
+                    } else {
+                        Some(Handle { inner: p })
+                    }
+                })
+                .filter(|p| {
+                    // Test if this process was actually in the job object or not.
+                    // If it's not then we likely raced with something else
+                    // recycling this PID, so we just skip this step.
+                    let mut res = 0;
+                    let r = kernel32::IsProcessInJob(p.inner, self.job.inner, &mut res);
+                    if r == 0 {
+                        info!("failed to test is process in job: {}", last_err());
+                        return false;
+                    }
+                    res == winapi::TRUE
+                });
 
 
             for p in list {
@@ -207,7 +204,7 @@ mod imp {
                                                         buf.len() as winapi::DWORD);
                 if r == 0 {
                     info!("failed to get image name: {}", last_err());
-                    continue
+                    continue;
                 }
                 let s = OsString::from_wide(&buf[..r as usize]);
                 info!("found remaining: {:?}", s);
@@ -226,7 +223,7 @@ mod imp {
                 if let Some(s) = s.to_str() {
                     if s.contains("mspdbsrv") {
                         info!("\toops, this is mspdbsrv");
-                        continue
+                        continue;
                     }
                 }
 
@@ -243,18 +240,20 @@ mod imp {
                 let r = kernel32::WaitForSingleObject(p.inner, winapi::INFINITE);
                 if r != 0 {
                     info!("failed to wait for process to die: {}", last_err());
-                    return false
+                    return false;
                 }
                 killed = true;
             }
 
-            return killed
+            return killed;
         }
     }
 
     impl Drop for Handle {
         fn drop(&mut self) {
-            unsafe { kernel32::CloseHandle(self.inner); }
+            unsafe {
+                kernel32::CloseHandle(self.inner);
+            }
         }
     }
 }

@@ -20,7 +20,8 @@ fn build_dep_info() {
 #[test]
 fn build_dep_info_lib() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -33,15 +34,18 @@ fn build_dep_info_lib() {
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "");
 
-    assert_that(p.cargo_process("build").arg("--example=ex"), execs().with_status(0));
-    assert_that(&p.example_lib("ex", "lib").with_extension("d"), existing_file());
+    assert_that(p.cargo_process("build").arg("--example=ex"),
+                execs().with_status(0));
+    assert_that(&p.example_lib("ex", "lib").with_extension("d"),
+                existing_file());
 }
 
 
 #[test]
 fn build_dep_info_rlib() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -54,14 +58,17 @@ fn build_dep_info_rlib() {
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "");
 
-    assert_that(p.cargo_process("build").arg("--example=ex"), execs().with_status(0));
-    assert_that(&p.example_lib("ex", "rlib").with_extension("d"), existing_file());
+    assert_that(p.cargo_process("build").arg("--example=ex"),
+                execs().with_status(0));
+    assert_that(&p.example_lib("ex", "rlib").with_extension("d"),
+                existing_file());
 }
 
 #[test]
 fn build_dep_info_dylib() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -74,6 +81,8 @@ fn build_dep_info_dylib() {
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "");
 
-    assert_that(p.cargo_process("build").arg("--example=ex"), execs().with_status(0));
-    assert_that(&p.example_lib("ex", "dylib").with_extension("d"), existing_file());
+    assert_that(p.cargo_process("build").arg("--example=ex"),
+                execs().with_status(0));
+    assert_that(&p.example_lib("ex", "dylib").with_extension("d"),
+                existing_file());
 }

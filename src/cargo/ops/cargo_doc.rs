@@ -80,8 +80,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
             match open_docs(&path) {
                 Ok(m) => shell.status("Launching", m)?,
                 Err(e) => {
-                    shell.warn(
-                            "warning: could not determine a browser to open docs with, tried:")?;
+                    shell.warn("warning: could not determine a browser to open docs with, tried:")?;
                     for method in e {
                         shell.warn(format!("\t{}", method))?;
                     }

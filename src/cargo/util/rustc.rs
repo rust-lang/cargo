@@ -33,12 +33,11 @@ impl Rustc {
         })?;
 
         let host = {
-            let triple = verbose_version.lines().find(|l| {
-                l.starts_with("host: ")
-            }).map(|l| &l[6..]);
-            let triple = triple.chain_error(|| {
-                internal("rustc -v didn't have a line for `host:`")
-            })?;
+            let triple = verbose_version.lines()
+                .find(|l| l.starts_with("host: "))
+                .map(|l| &l[6..]);
+            let triple =
+                triple.chain_error(|| internal("rustc -v didn't have a line for `host:`"))?;
             triple.to_string()
         };
 

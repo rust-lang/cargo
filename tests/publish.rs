@@ -18,10 +18,18 @@ use hamcrest::assert_that;
 use tar::Archive;
 use url::Url;
 
-fn registry_path() -> PathBuf { paths::root().join("registry") }
-fn registry() -> Url { Url::from_file_path(&*registry_path()).ok().unwrap() }
-fn upload_path() -> PathBuf { paths::root().join("upload") }
-fn upload() -> Url { Url::from_file_path(&*upload_path()).ok().unwrap() }
+fn registry_path() -> PathBuf {
+    paths::root().join("registry")
+}
+fn registry() -> Url {
+    Url::from_file_path(&*registry_path()).ok().unwrap()
+}
+fn upload_path() -> PathBuf {
+    paths::root().join("upload")
+}
+fn upload() -> Url {
+    Url::from_file_path(&*upload_path()).ok().unwrap()
+}
 
 fn setup() {
     let config = paths::root().join(".cargo/config");
@@ -29,14 +37,17 @@ fn setup() {
     t!(t!(File::create(&config)).write_all(&format!(r#"
         [registry]
             token = "api-token"
-    "#).as_bytes()));
+    "#)
+        .as_bytes()));
     t!(fs::create_dir_all(&upload_path().join("api/v1/crates")));
 
     repo(&registry_path())
-        .file("config.json", &format!(r#"{{
+        .file("config.json",
+              &format!(r#"{{
             "dl": "{0}",
             "api": "{0}"
-        }}"#, upload()))
+        }}"#,
+                       upload()))
         .build();
 }
 
@@ -45,7 +56,8 @@ fn simple() {
     setup();
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -55,8 +67,10 @@ fn simple() {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("publish").arg("--no-verify")
-                 .arg("--host").arg(registry().to_string()),
+    assert_that(p.cargo_process("publish")
+                    .arg("--no-verify")
+                    .arg("--host")
+                    .arg(registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
@@ -64,22 +78,21 @@ See [..]
 [PACKAGING] foo v0.0.1 ({dir})
 [UPLOADING] foo v0.0.1 ({dir})
 ",
-        dir = p.url(),
-        reg = registry())));
+                                                            dir = p.url(),
+                                                            reg = registry())));
 
     let mut f = File::open(&upload_path().join("api/v1/crates/new")).unwrap();
     // Skip the metadata payload and the size of the tarball
     let mut sz = [0; 4];
     assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = ((sz[0] as u32) <<  0) |
-             ((sz[1] as u32) <<  8) |
-             ((sz[2] as u32) << 16) |
+    let sz = ((sz[0] as u32) << 0) | ((sz[1] as u32) << 8) | ((sz[2] as u32) << 16) |
              ((sz[3] as u32) << 24);
     f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f).unwrap();
-    assert_eq!(rdr.header().filename().unwrap(), "foo-0.0.1.crate".as_bytes());
+    assert_eq!(rdr.header().filename().unwrap(),
+               "foo-0.0.1.crate".as_bytes());
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
@@ -87,9 +100,9 @@ See [..]
         let file = file.unwrap();
         let fname = file.header().path_bytes();
         let fname = &*fname;
-        assert!(fname == b"foo-0.0.1/Cargo.toml" ||
-                fname == b"foo-0.0.1/src/main.rs",
-                "unexpected filename: {:?}", file.header().path());
+        assert!(fname == b"foo-0.0.1/Cargo.toml" || fname == b"foo-0.0.1/src/main.rs",
+                "unexpected filename: {:?}",
+                file.header().path());
     }
 }
 
@@ -98,7 +111,8 @@ fn git_deps() {
     setup();
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -111,8 +125,11 @@ fn git_deps() {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("publish").arg("-v").arg("--no-verify")
-                 .arg("--host").arg(registry().to_string()),
+    assert_that(p.cargo_process("publish")
+                    .arg("-v")
+                    .arg("--no-verify")
+                    .arg("--host")
+                    .arg(registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [ERROR] crates cannot be published to crates.io with dependencies sourced from \
@@ -128,7 +145,8 @@ fn path_dependency_no_version() {
     setup();
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -140,7 +158,8 @@ fn path_dependency_no_version() {
             path = "bar"
         "#)
         .file("src/main.rs", "fn main() {}")
-        .file("bar/Cargo.toml", r#"
+        .file("bar/Cargo.toml",
+              r#"
             [package]
             name = "bar"
             version = "0.0.1"
@@ -149,7 +168,8 @@ fn path_dependency_no_version() {
         .file("bar/src/lib.rs", "");
 
     assert_that(p.cargo_process("publish")
-                 .arg("--host").arg(registry().to_string()),
+                    .arg("--host")
+                    .arg(registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [ERROR] all path dependencies must have a version specified when publishing.
@@ -162,7 +182,8 @@ fn unpublishable_crate() {
     setup();
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -174,7 +195,8 @@ fn unpublishable_crate() {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("publish")
-                 .arg("--host").arg(registry().to_string()),
+                    .arg("--host")
+                    .arg(registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
@@ -186,7 +208,8 @@ fn dont_publish_dirty() {
     setup();
 
     repo(&paths::root().join("foo"))
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -203,7 +226,8 @@ fn dont_publish_dirty() {
     let p = project("foo");
     t!(File::create(p.root().join("bar")));
     assert_that(p.cargo("publish")
-                 .arg("--host").arg(registry().to_string()),
+                    .arg("--host")
+                    .arg(registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry `[..]`
 error: 1 dirty files found in the working directory:
@@ -219,7 +243,8 @@ fn publish_clean() {
     setup();
 
     repo(&paths::root().join("foo"))
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -235,7 +260,8 @@ fn publish_clean() {
 
     let p = project("foo");
     assert_that(p.cargo("publish")
-                 .arg("--host").arg(registry().to_string()),
+                    .arg("--host")
+                    .arg(registry().to_string()),
                 execs().with_status(0));
 }
 
@@ -244,7 +270,8 @@ fn publish_in_sub_repo() {
     setup();
 
     repo(&paths::root().join("foo"))
-        .file("bar/Cargo.toml", r#"
+        .file("bar/Cargo.toml",
+              r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -260,8 +287,10 @@ fn publish_in_sub_repo() {
 
     let p = project("foo");
     t!(File::create(p.root().join("baz")));
-    assert_that(p.cargo("publish").cwd(p.root().join("bar"))
-                 .arg("--host").arg(registry().to_string()),
+    assert_that(p.cargo("publish")
+                    .cwd(p.root().join("bar"))
+                    .arg("--host")
+                    .arg(registry().to_string()),
                 execs().with_status(0));
 }
 
@@ -270,7 +299,8 @@ fn publish_when_ignored() {
     setup();
 
     repo(&paths::root().join("foo"))
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -288,7 +318,8 @@ fn publish_when_ignored() {
     let p = project("foo");
     t!(File::create(p.root().join("baz")));
     assert_that(p.cargo("publish")
-                 .arg("--host").arg(registry().to_string()),
+                    .arg("--host")
+                    .arg(registry().to_string()),
                 execs().with_status(0));
 }
 
@@ -298,7 +329,8 @@ fn ignore_when_crate_ignored() {
 
     repo(&paths::root().join("foo"))
         .file(".gitignore", "bar")
-        .nocommit_file("bar/Cargo.toml", r#"
+        .nocommit_file("bar/Cargo.toml",
+                       r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -312,8 +344,10 @@ fn ignore_when_crate_ignored() {
         .nocommit_file("bar/src/main.rs", "fn main() {}");
     let p = project("foo");
     t!(File::create(p.root().join("bar/baz")));
-    assert_that(p.cargo("publish").cwd(p.root().join("bar"))
-                 .arg("--host").arg(registry().to_string()),
+    assert_that(p.cargo("publish")
+                    .cwd(p.root().join("bar"))
+                    .arg("--host")
+                    .arg(registry().to_string()),
                 execs().with_status(0));
 }
 
@@ -322,7 +356,8 @@ fn new_crate_rejected() {
     setup();
 
     repo(&paths::root().join("foo"))
-        .nocommit_file("Cargo.toml", r#"
+        .nocommit_file("Cargo.toml",
+                       r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -337,7 +372,8 @@ fn new_crate_rejected() {
     let p = project("foo");
     t!(File::create(p.root().join("baz")));
     assert_that(p.cargo("publish")
-                 .arg("--host").arg(registry().to_string()),
+                    .arg("--host")
+                    .arg(registry().to_string()),
                 execs().with_status(101));
 }
 
@@ -346,7 +382,8 @@ fn dry_run() {
     setup();
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -356,8 +393,10 @@ fn dry_run() {
         "#)
         .file("src/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("publish").arg("--dry-run")
-                 .arg("--host").arg(registry().to_string()),
+    assert_that(p.cargo_process("publish")
+                    .arg("--dry-run")
+                    .arg("--host")
+                    .arg(registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [WARNING] manifest has no documentation, [..]
@@ -369,7 +408,7 @@ See [..]
 [UPLOADING] foo v0.0.1 ({dir})
 [WARNING] aborting upload due to dry run
 ",
-        dir = p.url())));
+                                                            dir = p.url())));
 
     // Ensure the API request wasn't actually made
     assert!(!upload_path().join("api/v1/crates/new").exists());

@@ -27,8 +27,7 @@ struct PackageIdInner {
 impl Encodable for PackageId {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         let source = self.inner.source_id.to_url();
-        let encoded = format!("{} {} ({})", self.inner.name, self.inner.version,
-                              source);
+        let encoded = format!("{} {} ({})", self.inner.name, self.inner.version, source);
         encoded.encode(s)
     }
 }
@@ -42,9 +41,7 @@ impl Decodable for PackageId {
             Some(s) => s,
             None => return Err(d.error("invalid serialized PackageId")),
         };
-        let version = semver::Version::parse(version).map_err(|_| {
-            d.error("invalid version")
-        })?;
+        let version = semver::Version::parse(version).map_err(|_| d.error("invalid version"))?;
         let url = match s.next() {
             Some(s) => s,
             None => return Err(d.error("invalid serialized PackageId")),
@@ -52,12 +49,10 @@ impl Decodable for PackageId {
         let url = if url.starts_with("(") && url.ends_with(")") {
             &url[1..url.len() - 1]
         } else {
-            return Err(d.error("invalid serialized PackageId"))
+            return Err(d.error("invalid serialized PackageId"));
 
         };
-        let source_id = SourceId::from_url(url).map_err(|e| {
-            d.error(&e.to_string())
-        })?;
+        let source_id = SourceId::from_url(url).map_err(|e| d.error(&e.to_string()))?;
 
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
@@ -97,37 +92,38 @@ impl Ord for PackageId {
 #[derive(Clone, Debug, PartialEq)]
 pub enum PackageIdError {
     InvalidVersion(String),
-    InvalidNamespace(String)
+    InvalidNamespace(String),
 }
 
 impl Error for PackageIdError {
-    fn description(&self) -> &str { "failed to parse package id" }
+    fn description(&self) -> &str {
+        "failed to parse package id"
+    }
 }
 
 impl fmt::Display for PackageIdError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            PackageIdError::InvalidVersion(ref v) => {
-                write!(f, "invalid version: {}", *v)
-            }
-            PackageIdError::InvalidNamespace(ref ns) => {
-                write!(f, "invalid namespace: {}", *ns)
-            }
+            PackageIdError::InvalidVersion(ref v) => write!(f, "invalid version: {}", *v),
+            PackageIdError::InvalidNamespace(ref ns) => write!(f, "invalid namespace: {}", *ns),
         }
     }
 }
 
 impl CargoError for PackageIdError {
-    fn is_human(&self) -> bool { true }
+    fn is_human(&self) -> bool {
+        true
+    }
 }
 
 impl From<PackageIdError> for Box<CargoError> {
-    fn from(t: PackageIdError) -> Box<CargoError> { Box::new(t) }
+    fn from(t: PackageIdError) -> Box<CargoError> {
+        Box::new(t)
+    }
 }
 
 impl PackageId {
-    pub fn new<T: ToSemver>(name: &str, version: T,
-                             sid: &SourceId) -> CargoResult<PackageId> {
+    pub fn new<T: ToSemver>(name: &str, version: T, sid: &SourceId) -> CargoResult<PackageId> {
         let v = version.to_semver().map_err(PackageIdError::InvalidVersion)?;
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
@@ -138,9 +134,15 @@ impl PackageId {
         })
     }
 
-    pub fn name(&self) -> &str { &self.inner.name }
-    pub fn version(&self) -> &semver::Version { &self.inner.version }
-    pub fn source_id(&self) -> &SourceId { &self.inner.source_id }
+    pub fn name(&self) -> &str {
+        &self.inner.name
+    }
+    pub fn version(&self) -> &semver::Version {
+        &self.inner.version
+    }
+    pub fn source_id(&self) -> &SourceId {
+        &self.inner.source_id
+    }
 
     pub fn with_precise(&self, precise: Option<String>) -> PackageId {
         PackageId {
@@ -178,10 +180,10 @@ impl fmt::Display for PackageId {
 impl fmt::Debug for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         f.debug_struct("PackageId")
-         .field("name", &self.inner.name)
-         .field("version", &self.inner.version.to_string())
-         .field("source", &self.inner.source_id.to_string())
-         .finish()
+            .field("name", &self.inner.name)
+            .field("version", &self.inner.version.to_string())
+            .field("source", &self.inner.source_id.to_string())
+            .finish()
     }
 }
 

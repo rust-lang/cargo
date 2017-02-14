@@ -57,15 +57,16 @@ struct SerializedDependency<'a> {
 impl Encodable for Dependency {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         SerializedDependency {
-            name: self.name(),
-            source: &self.source_id(),
-            req: self.version_req().to_string(),
-            kind: self.kind(),
-            optional: self.is_optional(),
-            uses_default_features: self.uses_default_features(),
-            features: self.features(),
-            target: self.platform(),
-        }.encode(s)
+                name: self.name(),
+                source: &self.source_id(),
+                req: self.version_req().to_string(),
+                kind: self.kind(),
+                optional: self.is_optional(),
+                uses_default_features: self.uses_default_features(),
+                features: self.features(),
+                target: self.platform(),
+            }
+            .encode(s)
     }
 }
 
@@ -79,10 +80,11 @@ pub enum Kind {
 impl Encodable for Kind {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         match *self {
-            Kind::Normal => None,
-            Kind::Development => Some("dev"),
-            Kind::Build => Some("build"),
-        }.encode(s)
+                Kind::Normal => None,
+                Kind::Development => Some("dev"),
+                Kind::Build => Some("build"),
+            }
+            .encode(s)
     }
 }
 
@@ -103,14 +105,14 @@ impl DependencyInner {
                  -> CargoResult<DependencyInner> {
         let (specified_req, version_req) = match version {
             Some(v) => (true, DependencyInner::parse_with_deprecated(v, deprecated_extra)?),
-            None => (false, VersionReq::any())
+            None => (false, VersionReq::any()),
         };
 
         Ok(DependencyInner {
             only_match_name: false,
             req: version_req,
             specified_req: specified_req,
-            .. DependencyInner::new_override(name, source_id)
+            ..DependencyInner::new_override(name, source_id)
         })
     }
 
@@ -136,14 +138,17 @@ This will soon become a hard error, so it's either recommended to
 update to a fixed version or contact the upstream maintainer about
 this warning.
 ",
-	req, inside.name(), inside.version(), requirement);
+                                          req,
+                                          inside.name(),
+                                          inside.version(),
+                                          requirement);
                         config.shell().warn(&msg)?;
 
                         Ok(requirement)
                     }
                     e => Err(From::from(e)),
                 }
-            },
+            }
             Ok(v) => Ok(v),
         }
     }
@@ -163,11 +168,21 @@ this warning.
         }
     }
 
-    pub fn version_req(&self) -> &VersionReq { &self.req }
-    pub fn name(&self) -> &str { &self.name }
-    pub fn source_id(&self) -> &SourceId { &self.source_id }
-    pub fn kind(&self) -> Kind { self.kind }
-    pub fn specified_req(&self) -> bool { self.specified_req }
+    pub fn version_req(&self) -> &VersionReq {
+        &self.req
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn source_id(&self) -> &SourceId {
+        &self.source_id
+    }
+    pub fn kind(&self) -> Kind {
+        self.kind
+    }
+    pub fn specified_req(&self) -> bool {
+        self.specified_req
+    }
 
     /// If none, this dependency must be built for all platforms.
     /// If some, it must only be built for matching platforms.
@@ -210,8 +225,7 @@ this warning.
         self
     }
 
-    pub fn set_platform(mut self, platform: Option<Platform>)
-                        -> DependencyInner {
+    pub fn set_platform(mut self, platform: Option<Platform>) -> DependencyInner {
         self.platform = platform;
         self
     }
@@ -232,13 +246,22 @@ this warning.
         }
     }
     pub fn is_build(&self) -> bool {
-        match self.kind { Kind::Build => true, _ => false }
+        match self.kind {
+            Kind::Build => true,
+            _ => false,
+        }
     }
-    pub fn is_optional(&self) -> bool { self.optional }
+    pub fn is_optional(&self) -> bool {
+        self.optional
+    }
     /// Returns true if the default features of the dependency are requested.
-    pub fn uses_default_features(&self) -> bool { self.default_features }
+    pub fn uses_default_features(&self) -> bool {
+        self.default_features
+    }
     /// Returns the list of features that are requested by the dependency.
-    pub fn features(&self) -> &[String] { &self.features }
+    pub fn features(&self) -> &[String] {
+        &self.features
+    }
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
     pub fn matches(&self, sum: &Summary) -> bool {
@@ -248,12 +271,12 @@ this warning.
     /// Returns true if the package (`id`) can fulfill this dependency request.
     pub fn matches_id(&self, id: &PackageId) -> bool {
         self.name == id.name() &&
-            (self.only_match_name || (self.req.matches(id.version()) &&
-                                      &self.source_id == id.source_id()))
+        (self.only_match_name ||
+         (self.req.matches(id.version()) && &self.source_id == id.source_id()))
     }
 
     pub fn into_dependency(self) -> Dependency {
-        Dependency {inner: Rc::new(self)}
+        Dependency { inner: Rc::new(self) }
     }
 }
 
@@ -263,33 +286,43 @@ impl Dependency {
                  version: Option<&str>,
                  source_id: &SourceId,
                  inside: &PackageId,
-                 config: &Config) -> CargoResult<Dependency> {
+                 config: &Config)
+                 -> CargoResult<Dependency> {
         let arg = Some((inside, config));
-        DependencyInner::parse(name, version, source_id, arg).map(|di| {
-            di.into_dependency()
-        })
+        DependencyInner::parse(name, version, source_id, arg).map(|di| di.into_dependency())
     }
 
     /// Attempt to create a `Dependency` from an entry in the manifest.
     pub fn parse_no_deprecated(name: &str,
                                version: Option<&str>,
-                               source_id: &SourceId) -> CargoResult<Dependency> {
-        DependencyInner::parse(name, version, source_id, None).map(|di| {
-            di.into_dependency()
-        })
+                               source_id: &SourceId)
+                               -> CargoResult<Dependency> {
+        DependencyInner::parse(name, version, source_id, None).map(|di| di.into_dependency())
     }
 
     pub fn new_override(name: &str, source_id: &SourceId) -> Dependency {
         DependencyInner::new_override(name, source_id).into_dependency()
     }
 
-    pub fn clone_inner(&self) -> DependencyInner { (*self.inner).clone() }
+    pub fn clone_inner(&self) -> DependencyInner {
+        (*self.inner).clone()
+    }
 
-    pub fn version_req(&self) -> &VersionReq { self.inner.version_req() }
-    pub fn name(&self) -> &str { self.inner.name() }
-    pub fn source_id(&self) -> &SourceId { self.inner.source_id() }
-    pub fn kind(&self) -> Kind { self.inner.kind() }
-    pub fn specified_req(&self) -> bool { self.inner.specified_req() }
+    pub fn version_req(&self) -> &VersionReq {
+        self.inner.version_req()
+    }
+    pub fn name(&self) -> &str {
+        self.inner.name()
+    }
+    pub fn source_id(&self) -> &SourceId {
+        self.inner.source_id()
+    }
+    pub fn kind(&self) -> Kind {
+        self.inner.kind()
+    }
+    pub fn specified_req(&self) -> bool {
+        self.inner.specified_req()
+    }
 
     /// If none, this dependencies must be built for all platforms.
     /// If some, it must only be built for the specified platform.
@@ -303,33 +336,43 @@ impl Dependency {
     }
 
     /// Returns false if the dependency is only used to build the local package.
-    pub fn is_transitive(&self) -> bool { self.inner.is_transitive() }
-    pub fn is_build(&self) -> bool { self.inner.is_build() }
-    pub fn is_optional(&self) -> bool { self.inner.is_optional() }
+    pub fn is_transitive(&self) -> bool {
+        self.inner.is_transitive()
+    }
+    pub fn is_build(&self) -> bool {
+        self.inner.is_build()
+    }
+    pub fn is_optional(&self) -> bool {
+        self.inner.is_optional()
+    }
 
     /// Returns true if the default features of the dependency are requested.
     pub fn uses_default_features(&self) -> bool {
         self.inner.uses_default_features()
     }
     /// Returns the list of features that are requested by the dependency.
-    pub fn features(&self) -> &[String] { self.inner.features() }
+    pub fn features(&self) -> &[String] {
+        self.inner.features()
+    }
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
-    pub fn matches(&self, sum: &Summary) -> bool { self.inner.matches(sum) }
+    pub fn matches(&self, sum: &Summary) -> bool {
+        self.inner.matches(sum)
+    }
 
     /// Returns true if the package (`id`) can fulfill this dependency request.
     pub fn matches_id(&self, id: &PackageId) -> bool {
         self.inner.matches_id(id)
     }
 
-    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
-                      -> Dependency {
+    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId) -> Dependency {
         if self.source_id() != to_replace {
             self
         } else {
-            Rc::try_unwrap(self.inner).unwrap_or_else(|r| (*r).clone())
-               .set_source_id(replace_with.clone())
-               .into_dependency()
+            Rc::try_unwrap(self.inner)
+                .unwrap_or_else(|r| (*r).clone())
+                .set_source_id(replace_with.clone())
+                .into_dependency()
         }
     }
 }
@@ -359,10 +402,10 @@ impl FromStr for Platform {
 
     fn from_str(s: &str) -> CargoResult<Platform> {
         if s.starts_with("cfg(") && s.ends_with(")") {
-            let s = &s[4..s.len()-1];
-            s.parse().map(Platform::Cfg).chain_error(|| {
-                human(format!("failed to parse `{}` as a cfg expression", s))
-            })
+            let s = &s[4..s.len() - 1];
+            s.parse()
+                .map(Platform::Cfg)
+                .chain_error(|| human(format!("failed to parse `{}` as a cfg expression", s)))
         } else {
             Ok(Platform::Name(s.to_string()))
         }

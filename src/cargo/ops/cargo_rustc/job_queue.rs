@@ -10,7 +10,7 @@ use term::color::YELLOW;
 use core::{PackageId, Target, Profile};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
 use util::{CargoResult, ProcessBuilder, profile, internal, human};
-use {handle_error};
+use handle_error;
 
 use super::{Context, Kind, Unit};
 use super::job::Job;
@@ -97,7 +97,8 @@ impl<'a> JobQueue<'a> {
                          cx: &Context<'a, 'cfg>,
                          unit: &Unit<'a>,
                          job: Job,
-                         fresh: Freshness) -> CargoResult<()> {
+                         fresh: Freshness)
+                         -> CargoResult<()> {
         let key = Key::new(unit);
         let deps = key.dependencies(cx)?;
         self.queue.queue(Fresh, key, Vec::new(), &deps).push((job, fresh));
@@ -113,13 +114,10 @@ impl<'a> JobQueue<'a> {
     pub fn execute(&mut self, cx: &mut Context) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
 
-        crossbeam::scope(|scope| {
-            self.drain_the_queue(cx, scope)
-        })
+        crossbeam::scope(|scope| self.drain_the_queue(cx, scope))
     }
 
-    fn drain_the_queue(&mut self, cx: &mut Context, scope: &Scope<'a>)
-                       -> CargoResult<()> {
+    fn drain_the_queue(&mut self, cx: &mut Context, scope: &Scope<'a>) -> CargoResult<()> {
         use std::time::Instant;
 
         let mut queue = Vec::new();
@@ -142,22 +140,19 @@ impl<'a> JobQueue<'a> {
                     let (key, job, fresh) = queue.remove(0);
                     self.run(key, fresh, job, cx.config, scope)?;
                 } else if let Some((fresh, key, jobs)) = self.queue.dequeue() {
-                    let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f)| {
-                        f.combine(fresh)
-                    });
-                    self.pending.insert(key, PendingBuild {
-                        amt: jobs.len(),
-                        fresh: total_fresh,
-                    });
-                    queue.extend(jobs.into_iter().map(|(job, f)| {
-                        (key, job, f.combine(fresh))
-                    }));
+                    let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f)| f.combine(fresh));
+                    self.pending.insert(key,
+                                        PendingBuild {
+                                            amt: jobs.len(),
+                                            fresh: total_fresh,
+                                        });
+                    queue.extend(jobs.into_iter().map(|(job, f)| (key, job, f.combine(fresh))));
                 } else {
-                    break
+                    break;
                 }
             }
             if self.active == 0 {
-                break
+                break;
             }
 
             let (key, msg) = self.rx.recv().unwrap();
@@ -185,9 +180,10 @@ impl<'a> JobQueue<'a> {
                             if self.active > 0 {
                                 error = Some(human("build failed"));
                                 handle_error(&*e, &mut *cx.config.shell());
-                                cx.config.shell().say(
-                                            "Build failed, waiting for other \
-                                             jobs to finish...", YELLOW)?;
+                                cx.config
+                                    .shell()
+                                    .say("Build failed, waiting for other jobs to finish...",
+                                         YELLOW)?;
                             }
                             if error.is_none() {
                                 error = Some(e);
@@ -200,8 +196,11 @@ impl<'a> JobQueue<'a> {
 
         let build_type = if self.is_release { "release" } else { "dev" };
         let profile = cx.lib_profile();
-        let mut opt_type = String::from(if profile.opt_level == "0" { "unoptimized" }
-                                        else { "optimized" });
+        let mut opt_type = String::from(if profile.opt_level == "0" {
+            "unoptimized"
+        } else {
+            "optimized"
+        });
         if profile.debuginfo.is_some() {
             opt_type = opt_type + " + debuginfo";
         }
@@ -231,7 +230,8 @@ impl<'a> JobQueue<'a> {
            fresh: Freshness,
            job: Job,
            config: &Config,
-           scope: &Scope<'a>) -> CargoResult<()> {
+           scope: &Scope<'a>)
+           -> CargoResult<()> {
         info!("start: {:?}", key);
 
         self.active += 1;
@@ -239,10 +239,11 @@ impl<'a> JobQueue<'a> {
 
         let my_tx = self.tx.clone();
         scope.spawn(move || {
-            let res = job.run(fresh, &JobState {
-                tx: my_tx.clone(),
-                key: key,
-            });
+            let res = job.run(fresh,
+                              &JobState {
+                                  tx: my_tx.clone(),
+                                  key: key,
+                              });
             my_tx.send((key, Message::Finish(res))).unwrap();
         });
 
@@ -281,10 +282,11 @@ impl<'a> JobQueue<'a> {
     fn note_working_on(&mut self,
                        config: &Config,
                        key: &Key<'a>,
-                       fresh: Freshness) -> CargoResult<()> {
+                       fresh: Freshness)
+                       -> CargoResult<()> {
         if (self.compiled.contains(key.pkg) && !key.profile.doc) ||
-            (self.documented.contains(key.pkg) && key.profile.doc) {
-            return Ok(())
+           (self.documented.contains(key.pkg) && key.profile.doc) {
+            return Ok(());
         }
 
         match fresh {
@@ -321,8 +323,7 @@ impl<'a> Key<'a> {
         }
     }
 
-    fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>)
-                          -> CargoResult<Vec<Key<'a>>> {
+    fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>) -> CargoResult<Vec<Key<'a>>> {
         let unit = Unit {
             pkg: cx.get_package(self.pkg)?,
             target: self.target,
@@ -330,21 +331,27 @@ impl<'a> Key<'a> {
             kind: self.kind,
         };
         let targets = cx.dep_targets(&unit)?;
-        Ok(targets.iter().filter_map(|unit| {
-            // Binaries aren't actually needed to *compile* tests, just to run
-            // them, so we don't include this dependency edge in the job graph.
-            if self.target.is_test() && unit.target.is_bin() {
-                None
-            } else {
-                Some(Key::new(unit))
-            }
-        }).collect())
+        Ok(targets.iter()
+            .filter_map(|unit| {
+                // Binaries aren't actually needed to *compile* tests, just to run
+                // them, so we don't include this dependency edge in the job graph.
+                if self.target.is_test() && unit.target.is_bin() {
+                    None
+                } else {
+                    Some(Key::new(unit))
+                }
+            })
+            .collect())
     }
 }
 
 impl<'a> fmt::Debug for Key<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} => {}/{} => {:?}", self.pkg, self.target, self.profile,
+        write!(f,
+               "{} => {}/{} => {:?}",
+               self.pkg,
+               self.target,
+               self.profile,
                self.kind)
     }
 }

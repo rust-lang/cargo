@@ -65,8 +65,7 @@ pub struct CompileOptions<'a> {
 }
 
 impl<'a> CompileOptions<'a> {
-    pub fn default(config: &'a Config, mode: CompileMode) -> CompileOptions<'a>
-    {
+    pub fn default(config: &'a Config, mode: CompileMode) -> CompileOptions<'a> {
         CompileOptions {
             config: config,
             jobs: None,
@@ -98,7 +97,7 @@ pub enum CompileMode {
 #[derive(Clone, Copy, PartialEq, Eq, RustcDecodable)]
 pub enum MessageFormat {
     Human,
-    Json
+    Json,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -132,10 +131,11 @@ pub enum CompileFilter<'a> {
         examples: &'a [String],
         tests: &'a [String],
         benches: &'a [String],
-    }
+    },
 }
 
-pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
+pub fn compile<'a>(ws: &Workspace<'a>,
+                   options: &CompileOptions<'a>)
                    -> CargoResult<ops::Compilation<'a>> {
     compile_with_exec(ws, options, Arc::new(DefaultExecutor))
 }
@@ -157,9 +157,16 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                       options: &CompileOptions<'a>,
                       exec: Arc<Executor>)
                       -> CargoResult<ops::Compilation<'a>> {
-    let CompileOptions { config, jobs, target, spec, features,
-                         all_features, no_default_features,
-                         release, mode, message_format,
+    let CompileOptions { config,
+                         jobs,
+                         target,
+                         spec,
+                         features,
+                         all_features,
+                         no_default_features,
+                         release,
+                         mode,
+                         message_format,
                          ref filter,
                          ref target_rustdoc_args,
                          ref target_rustc_args } = *options;
@@ -193,22 +200,21 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         pkgids.push(root_package.package_id());
     };
 
-    let to_builds = pkgids.iter().map(|id| {
-        packages.get(id)
-    }).collect::<CargoResult<Vec<_>>>()?;
+    let to_builds = pkgids.iter()
+        .map(|id| packages.get(id))
+        .collect::<CargoResult<Vec<_>>>()?;
 
     let mut general_targets = Vec::new();
     let mut package_targets = Vec::new();
 
     match (*target_rustc_args, *target_rustdoc_args) {
-        (Some(..), _) |
-        (_, Some(..)) if to_builds.len() != 1 => {
+        (Some(..), _) | (_, Some(..)) if to_builds.len() != 1 => {
             panic!("`rustc` and `rustdoc` should not accept multiple `-p` flags")
         }
         (Some(args), _) => {
             let all_features = resolve_with_overrides.features(to_builds[0].package_id());
-            let targets = generate_targets(to_builds[0], profiles,
-                                           mode, filter, all_features, release)?;
+            let targets =
+                generate_targets(to_builds[0], profiles, mode, filter, all_features, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -222,8 +228,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
         (None, Some(args)) => {
             let all_features = resolve_with_overrides.features(to_builds[0].package_id());
-            let targets = generate_targets(to_builds[0], profiles,
-                                           mode, filter, all_features, release)?;
+            let targets =
+                generate_targets(to_builds[0], profiles, mode, filter, all_features, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -238,8 +244,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         (None, None) => {
             for &to_build in to_builds.iter() {
                 let all_features = resolve_with_overrides.features(to_build.package_id());
-                let targets = generate_targets(to_build, profiles, mode,
-                                               filter, all_features, release)?;
+                let targets =
+                    generate_targets(to_build, profiles, mode, filter, all_features, release)?;
                 package_targets.push((to_build, targets));
             }
         }
@@ -281,11 +287,15 @@ impl<'a> CompileFilter<'a> {
                bins: &'a [String],
                tests: &'a [String],
                examples: &'a [String],
-               benches: &'a [String]) -> CompileFilter<'a> {
-        if lib_only || !bins.is_empty() || !tests.is_empty() ||
-           !examples.is_empty() || !benches.is_empty() {
+               benches: &'a [String])
+               -> CompileFilter<'a> {
+        if lib_only || !bins.is_empty() || !tests.is_empty() || !examples.is_empty() ||
+           !benches.is_empty() {
             CompileFilter::Only {
-                lib: lib_only, bins: bins, examples: examples, benches: benches,
+                lib: lib_only,
+                bins: bins,
+                examples: examples,
+                benches: benches,
                 tests: tests,
             }
         } else {
@@ -321,8 +331,16 @@ fn generate_targets<'a>(pkg: &'a Package,
                         features: Option<&HashSet<String>>,
                         release: bool)
                         -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
-    let build = if release {&profiles.release} else {&profiles.dev};
-    let test = if release {&profiles.bench} else {&profiles.test};
+    let build = if release {
+        &profiles.release
+    } else {
+        &profiles.dev
+    };
+    let test = if release {
+        &profiles.bench
+    } else {
+        &profiles.test
+    };
     let profile = match mode {
         CompileMode::Test => test,
         CompileMode::Bench => &profiles.bench,
@@ -335,9 +353,11 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileFilter::Everything => {
             match mode {
                 CompileMode::Bench => {
-                    pkg.targets().iter().filter(|t| t.benched()).map(|t| {
-                        (t, profile)
-                    }).collect::<Vec<_>>()
+                    pkg.targets()
+                        .iter()
+                        .filter(|t| t.benched())
+                        .map(|t| (t, profile))
+                        .collect::<Vec<_>>()
                 }
                 CompileMode::Test => {
                     let deps = if release {
@@ -345,11 +365,11 @@ fn generate_targets<'a>(pkg: &'a Package,
                     } else {
                         &profiles.test_deps
                     };
-                    let mut base = pkg.targets().iter().filter(|t| {
-                        t.tested()
-                    }).map(|t| {
-                        (t, if t.is_example() {deps} else {profile})
-                    }).collect::<Vec<_>>();
+                    let mut base = pkg.targets()
+                        .iter()
+                        .filter(|t| t.tested())
+                        .map(|t| (t, if t.is_example() { deps } else { profile }))
+                        .collect::<Vec<_>>();
 
                     // Always compile the library if we're testing everything as
                     // it'll be needed for doctests
@@ -361,18 +381,23 @@ fn generate_targets<'a>(pkg: &'a Package,
                     base
                 }
                 CompileMode::Build | CompileMode::Check => {
-                    pkg.targets().iter().filter(|t| {
-                        t.is_bin() || t.is_lib()
-                    }).map(|t| (t, profile)).collect()
+                    pkg.targets()
+                        .iter()
+                        .filter(|t| t.is_bin() || t.is_lib())
+                        .map(|t| (t, profile))
+                        .collect()
                 }
                 CompileMode::Doc { .. } => {
-                    pkg.targets().iter().filter(|t| t.documented())
-                       .map(|t| (t, profile)).collect()
+                    pkg.targets()
+                        .iter()
+                        .filter(|t| t.documented())
+                        .map(|t| (t, profile))
+                        .collect()
                 }
                 CompileMode::Doctest => {
                     if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
                         if t.doctested() {
-                            return Ok(vec![(t, profile)])
+                            return Ok(vec![(t, profile)]);
                         }
                     }
 
@@ -397,9 +422,8 @@ fn generate_targets<'a>(pkg: &'a Package,
                                 is_expected_kind: fn(&Target) -> bool,
                                 profile| {
                     for name in names {
-                        let target = pkg.targets().iter().find(|t| {
-                            t.name() == *name && is_expected_kind(t)
-                        });
+                        let target =
+                            pkg.targets().iter().find(|t| t.name() == *name && is_expected_kind(t));
                         let t = match target {
                             Some(t) => t,
                             None => {
@@ -408,7 +432,9 @@ fn generate_targets<'a>(pkg: &'a Package,
                                     Some(s) => {
                                         let suggested_name = s.name();
                                         bail!("no {} target named `{}`\n\nDid you mean `{}`?",
-                                              desc, name, suggested_name)
+                                              desc,
+                                              name,
+                                              suggested_name)
                                     }
                                     None => bail!("no {} target named `{}`", desc, name),
                                 }
@@ -434,7 +460,8 @@ fn generate_targets<'a>(pkg: &'a Package,
     let features = features.unwrap_or(&no_features);
     let mut compatible_targets = Vec::with_capacity(targets.len());
     for (target, profile) in targets.drain(0..) {
-        if target.is_lib() || match target.required_features() {
+        if target.is_lib() ||
+           match target.required_features() {
             Some(f) => f.iter().all(|f| features.contains(f)),
             None => true,
         } {
@@ -445,8 +472,8 @@ fn generate_targets<'a>(pkg: &'a Package,
         if let CompileFilter::Only { .. } = *filter {
             let required_features = target.required_features().unwrap();
             let quoted_required_features: Vec<String> = required_features.iter()
-                                                                         .map(|s| format!("`{}`",s))
-                                                                         .collect();
+                .map(|s| format!("`{}`", s))
+                .collect();
             bail!("target `{}` requires the features: {}\n\
                   Consider enabling them by passing e.g. `--features=\"{}\"`",
                   target.name(),
@@ -474,9 +501,11 @@ fn scrape_build_config(config: &Config,
         Some(v) => {
             if v.val <= 0 {
                 bail!("build.jobs must be positive, but found {} in {}",
-                      v.val, v.definition)
+                      v.val,
+                      v.definition)
             } else if v.val >= u32::max_value() as i64 {
-                bail!("build.jobs is too large: found {} in {}", v.val,
+                bail!("build.jobs is too large: found {} in {}",
+                      v.val,
                       v.definition)
             } else {
                 Some(v.val as u32)
@@ -501,8 +530,7 @@ fn scrape_build_config(config: &Config,
     Ok(base)
 }
 
-fn scrape_target_config(config: &Config, triple: &str)
-                        -> CargoResult<ops::TargetConfig> {
+fn scrape_target_config(config: &Config, triple: &str) -> CargoResult<ops::TargetConfig> {
 
     let key = format!("target.{}", triple);
     let mut ret = ops::TargetConfig {
@@ -516,7 +544,7 @@ fn scrape_target_config(config: &Config, triple: &str)
     };
     for (lib_name, value) in table {
         if lib_name == "ar" || lib_name == "linker" || lib_name == "rustflags" {
-            continue
+            continue;
         }
 
         let mut output = BuildOutput {
@@ -530,38 +558,34 @@ fn scrape_target_config(config: &Config, triple: &str)
         // We require deterministic order of evaluation, so we must sort the pairs by key first.
         let mut pairs = Vec::new();
         for (k, value) in value.table(&lib_name)?.0 {
-            pairs.push((k,value));
+            pairs.push((k, value));
         }
-        pairs.sort_by_key( |p| p.0 );
-        for (k,value) in pairs{
+        pairs.sort_by_key(|p| p.0);
+        for (k, value) in pairs {
             let key = format!("{}.{}", key, k);
             match &k[..] {
                 "rustc-flags" => {
                     let (flags, definition) = value.string(&k)?;
-                    let whence = format!("in `{}` (in {})", key,
-                                         definition.display());
-                    let (paths, links) =
-                        BuildOutput::parse_rustc_flags(&flags, &whence)
-                    ?;
+                    let whence = format!("in `{}` (in {})", key, definition.display());
+                    let (paths, links) = BuildOutput::parse_rustc_flags(&flags, &whence)?;
                     output.library_paths.extend(paths);
                     output.library_links.extend(links);
                 }
                 "rustc-link-lib" => {
                     let list = value.list(&k)?;
                     output.library_links.extend(list.iter()
-                                                    .map(|v| v.0.clone()));
+                        .map(|v| v.0.clone()));
                 }
                 "rustc-link-search" => {
                     let list = value.list(&k)?;
-                    output.library_paths.extend(list.iter().map(|v| {
-                        PathBuf::from(&v.0)
-                    }));
+                    output.library_paths.extend(list.iter().map(|v| PathBuf::from(&v.0)));
                 }
                 "rustc-cfg" => {
                     let list = value.list(&k)?;
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
-                "warning" | "rerun-if-changed" => {
+                "warning" |
+                "rerun-if-changed" => {
                     bail!("`{}` is not supported in build script overrides", k);
                 }
                 _ => {

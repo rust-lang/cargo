@@ -13,15 +13,20 @@ pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsStri
         internal(format!("failed to join path array: {:?}", paths)).chain_error(|| {
             human(format!("failed to join search paths together: {}\n\
                            Does ${} have an unterminated quote character?",
-                          e, env))
+                          e,
+                          env))
         })
     })
 }
 
 pub fn dylib_path_envvar() -> &'static str {
-    if cfg!(windows) {"PATH"}
-    else if cfg!(target_os = "macos") {"DYLD_LIBRARY_PATH"}
-    else {"LD_LIBRARY_PATH"}
+    if cfg!(windows) {
+        "PATH"
+    } else if cfg!(target_os = "macos") {
+        "DYLD_LIBRARY_PATH"
+    } else {
+        "LD_LIBRARY_PATH"
+    }
 }
 
 pub fn dylib_path() -> Vec<PathBuf> {
@@ -33,8 +38,9 @@ pub fn dylib_path() -> Vec<PathBuf> {
 
 pub fn normalize_path(path: &Path) -> PathBuf {
     let mut components = path.components().peekable();
-    let mut ret = if let Some(c @ Component::Prefix(..)) = components.peek()
-                                                                     .cloned() {
+    let mut ret = if let Some(c @ Component::Prefix(..)) =
+        components.peek()
+            .cloned() {
         components.next();
         PathBuf::from(c.as_os_str())
     } else {
@@ -44,10 +50,16 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     for component in components {
         match component {
             Component::Prefix(..) => unreachable!(),
-            Component::RootDir => { ret.push(component.as_os_str()); }
+            Component::RootDir => {
+                ret.push(component.as_os_str());
+            }
             Component::CurDir => {}
-            Component::ParentDir => { ret.pop(); }
-            Component::Normal(c) => { ret.push(c); }
+            Component::ParentDir => {
+                ret.pop();
+            }
+            Component::Normal(c) => {
+                ret.push(c);
+            }
         }
     }
     ret
@@ -58,10 +70,12 @@ pub fn without_prefix<'a>(a: &'a Path, b: &'a Path) -> Option<&'a Path> {
     let mut b = b.components();
     loop {
         match b.next() {
-            Some(y) => match a.next() {
-                Some(x) if x == y => continue,
-                _ => return None,
-            },
+            Some(y) => {
+                match a.next() {
+                    Some(x) if x == y => continue,
+                    _ => return None,
+                }
+            }
             None => return Some(a.as_path()),
         }
     }
@@ -69,49 +83,47 @@ pub fn without_prefix<'a>(a: &'a Path, b: &'a Path) -> Option<&'a Path> {
 
 pub fn read(path: &Path) -> CargoResult<String> {
     (|| -> CargoResult<_> {
-        let mut ret = String::new();
-        let mut f = File::open(path)?;
-        f.read_to_string(&mut ret)?;
-        Ok(ret)
-    })().map_err(human).chain_error(|| {
-        human(format!("failed to read `{}`", path.display()))
-    })
+            let mut ret = String::new();
+            let mut f = File::open(path)?;
+            f.read_to_string(&mut ret)?;
+            Ok(ret)
+        })()
+        .map_err(human)
+        .chain_error(|| human(format!("failed to read `{}`", path.display())))
 }
 
 pub fn read_bytes(path: &Path) -> CargoResult<Vec<u8>> {
     (|| -> CargoResult<_> {
-        let mut ret = Vec::new();
-        let mut f = File::open(path)?;
-        f.read_to_end(&mut ret)?;
-        Ok(ret)
-    })().map_err(human).chain_error(|| {
-        human(format!("failed to read `{}`", path.display()))
-    })
+            let mut ret = Vec::new();
+            let mut f = File::open(path)?;
+            f.read_to_end(&mut ret)?;
+            Ok(ret)
+        })()
+        .map_err(human)
+        .chain_error(|| human(format!("failed to read `{}`", path.display())))
 }
 
 pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
     (|| -> CargoResult<()> {
-        let mut f = File::create(path)?;
-        f.write_all(contents)?;
-        Ok(())
-    })().map_err(human).chain_error(|| {
-        human(format!("failed to write `{}`", path.display()))
-    })
+            let mut f = File::create(path)?;
+            f.write_all(contents)?;
+            Ok(())
+        })()
+        .map_err(human)
+        .chain_error(|| human(format!("failed to write `{}`", path.display())))
 }
 
 pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
     (|| -> CargoResult<()> {
-        let mut f = OpenOptions::new()
-                                 .write(true)
-                                 .append(true)
-                                 .create(true)
-                                 .open(path)?;
+            let mut f = OpenOptions::new().write(true)
+                .append(true)
+                .create(true)
+                .open(path)?;
 
-        f.write_all(contents)?;
-        Ok(())
-    }).chain_error(|| {
-        internal(format!("failed to write `{}`", path.display()))
-    })
+            f.write_all(contents)?;
+            Ok(())
+        })
+        .chain_error(|| internal(format!("failed to write `{}`", path.display())))
 }
 
 #[cfg(unix)]
@@ -123,8 +135,7 @@ pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
 pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
     match path.as_os_str().to_str() {
         Some(s) => Ok(s.as_bytes()),
-        None => Err(human(format!("invalid non-unicode path: {}",
-                                  path.display())))
+        None => Err(human(format!("invalid non-unicode path: {}", path.display()))),
     }
 }
 

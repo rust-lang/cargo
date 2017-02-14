@@ -11,17 +11,21 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
     let path = path.as_ref();
     let relpath = match basedir {
         None => path,
-        Some(base) => match path.strip_prefix(base) {
-            Ok(relpath) => relpath,
-            _ => path,
+        Some(base) => {
+            match path.strip_prefix(base) {
+                Ok(relpath) => relpath,
+                _ => path,
+            }
         }
     };
     relpath.to_str().ok_or(internal("path not utf-8")).map(|f| f.replace(" ", "\\ "))
 }
 
-fn add_deps_for_unit<'a, 'b>(deps: &mut HashSet<PathBuf>, context: &mut Context<'a, 'b>,
-    unit: &Unit<'a>, visited: &mut HashSet<Unit<'a>>) -> CargoResult<()>
-{
+fn add_deps_for_unit<'a, 'b>(deps: &mut HashSet<PathBuf>,
+                             context: &mut Context<'a, 'b>,
+                             unit: &Unit<'a>,
+                             visited: &mut HashSet<Unit<'a>>)
+                             -> CargoResult<()> {
     if !visited.insert(unit.clone()) {
         return Ok(());
     }
@@ -34,7 +38,8 @@ fn add_deps_for_unit<'a, 'b>(deps: &mut HashSet<PathBuf>, context: &mut Context<
         }
     } else {
         debug!("can't find dep_info for {:?} {:?}",
-            unit.pkg.package_id(), unit.profile);
+               unit.pkg.package_id(),
+               unit.profile);
         return Err(internal("dep_info missing"));
     }
 
@@ -82,7 +87,7 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
                             return Err(err.into());
                         }
                     }
-                    _ => ()
+                    _ => (),
                 }
             }
         }

@@ -53,7 +53,7 @@ impl FileLock {
         for entry in path.parent().unwrap().read_dir()? {
             let entry = entry?;
             if Some(&entry.file_name()[..]) == path.file_name() {
-                continue
+                continue;
             }
             let kind = entry.file_type()?;
             if kind.is_dir() {
@@ -158,10 +158,7 @@ impl Filesystem {
     ///
     /// The returned file can be accessed to look at the path and also has
     /// read/write access to the underlying file.
-    pub fn open_rw<P>(&self,
-                      path: P,
-                      config: &Config,
-                      msg: &str) -> CargoResult<FileLock>
+    pub fn open_rw<P>(&self, path: P, config: &Config, msg: &str) -> CargoResult<FileLock>
         where P: AsRef<Path>
     {
         self.open(path.as_ref(),
@@ -180,10 +177,7 @@ impl Filesystem {
     /// The returned file can be accessed to look at the path and also has read
     /// access to the underlying file. Any writes to the file will return an
     /// error.
-    pub fn open_ro<P>(&self,
-                      path: P,
-                      config: &Config,
-                      msg: &str) -> CargoResult<FileLock>
+    pub fn open_ro<P>(&self, path: P, config: &Config, msg: &str) -> CargoResult<FileLock>
         where P: AsRef<Path>
     {
         self.open(path.as_ref(),
@@ -198,37 +192,44 @@ impl Filesystem {
             opts: &OpenOptions,
             state: State,
             config: &Config,
-            msg: &str) -> CargoResult<FileLock> {
+            msg: &str)
+            -> CargoResult<FileLock> {
         let path = self.root.join(path);
 
         // If we want an exclusive lock then if we fail because of NotFound it's
         // likely because an intermediate directory didn't exist, so try to
         // create the directory and then continue.
-        let f = opts.open(&path).or_else(|e| {
-            if e.kind() == io::ErrorKind::NotFound && state == State::Exclusive {
+        let f = opts.open(&path)
+            .or_else(|e| if e.kind() == io::ErrorKind::NotFound && state == State::Exclusive {
                 create_dir_all(path.parent().unwrap())?;
                 opts.open(&path)
             } else {
                 Err(e)
-            }
-        }).chain_error(|| {
-            human(format!("failed to open: {}", path.display()))
-        })?;
+            })
+            .chain_error(|| human(format!("failed to open: {}", path.display())))?;
         match state {
             State::Exclusive => {
-                acquire(config, msg, &path,
+                acquire(config,
+                        msg,
+                        &path,
                         &|| f.try_lock_exclusive(),
                         &|| f.lock_exclusive())?;
             }
             State::Shared => {
-                acquire(config, msg, &path,
+                acquire(config,
+                        msg,
+                        &path,
                         &|| f.try_lock_shared(),
                         &|| f.lock_shared())?;
             }
             State::Unlocked => {}
 
         }
-        Ok(FileLock { f: Some(f), path: path, state: state })
+        Ok(FileLock {
+            f: Some(f),
+            path: path,
+            state: state,
+        })
     }
 }
 
@@ -251,7 +252,8 @@ fn acquire(config: &Config,
            msg: &str,
            path: &Path,
            try: &Fn() -> io::Result<()>,
-           block: &Fn() -> io::Result<()>) -> CargoResult<()> {
+           block: &Fn() -> io::Result<()>)
+           -> CargoResult<()> {
 
     // File locking on Unix is currently implemented via `flock`, which is known
     // to be broken on NFS. We could in theory just ignore errors that happen on
@@ -264,7 +266,7 @@ fn acquire(config: &Config,
     //
     // [1]: https://github.com/rust-lang/cargo/issues/2615
     if is_on_nfs_mount(path) {
-        return Ok(())
+        return Ok(());
     }
 
     match try() {
@@ -281,18 +283,15 @@ fn acquire(config: &Config,
 
         Err(e) => {
             if e.raw_os_error() != lock_contended_error().raw_os_error() {
-                return Err(human(e)).chain_error(|| {
-                    human(format!("failed to lock file: {}", path.display()))
-                })
+                return Err(human(e))
+                    .chain_error(|| human(format!("failed to lock file: {}", path.display())));
             }
         }
     }
     let msg = format!("waiting for file lock on {}", msg);
     config.shell().err().say_status("Blocking", &msg, CYAN, true)?;
 
-    return block().chain_error(|| {
-        human(format!("failed to lock file: {}", path.display()))
-    });
+    return block().chain_error(|| human(format!("failed to lock file: {}", path.display())));
 
     #[cfg(all(target_os = "linux", not(target_env = "musl")))]
     fn is_on_nfs_mount(path: &Path) -> bool {
@@ -325,7 +324,7 @@ fn create_dir_all(path: &Path) -> io::Result<()> {
         Err(e) => {
             if e.kind() == io::ErrorKind::NotFound {
                 if let Some(p) = path.parent() {
-                    return create_dir_all(p).and_then(|()| create_dir(path))
+                    return create_dir_all(p).and_then(|()| create_dir(path));
                 }
             }
             Err(e)

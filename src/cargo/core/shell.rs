@@ -15,35 +15,36 @@ use util::errors::CargoResult;
 pub enum Verbosity {
     Verbose,
     Normal,
-    Quiet
+    Quiet,
 }
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum ColorConfig {
     Auto,
     Always,
-    Never
+    Never,
 }
 
 impl fmt::Display for ColorConfig {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ColorConfig::Auto => "auto",
-            ColorConfig::Always => "always",
-            ColorConfig::Never => "never",
-        }.fmt(f)
+                ColorConfig::Auto => "auto",
+                ColorConfig::Always => "always",
+                ColorConfig::Never => "never",
+            }
+            .fmt(f)
     }
 }
 
 #[derive(Clone, Copy)]
 pub struct ShellConfig {
     pub color_config: ColorConfig,
-    pub tty: bool
+    pub tty: bool,
 }
 
 enum AdequateTerminal {
     NoColor(Box<Write + Send>),
-    Colored(Box<Terminal<Output=Box<Write + Send>> + Send>)
+    Colored(Box<Terminal<Output = Box<Write + Send>> + Send>),
 }
 
 pub struct Shell {
@@ -54,19 +55,32 @@ pub struct Shell {
 pub struct MultiShell {
     out: Shell,
     err: Shell,
-    verbosity: Verbosity
+    verbosity: Verbosity,
 }
 
 impl MultiShell {
     pub fn new(out: Shell, err: Shell, verbosity: Verbosity) -> MultiShell {
-        MultiShell { out: out, err: err, verbosity: verbosity }
+        MultiShell {
+            out: out,
+            err: err,
+            verbosity: verbosity,
+        }
     }
 
     // Create a quiet, basic shell from supplied writers.
     pub fn from_write(out: Box<Write + Send>, err: Box<Write + Send>) -> MultiShell {
-        let config = ShellConfig { color_config: ColorConfig::Never, tty: false };
-        let out = Shell { terminal: NoColor(out), config: config.clone() };
-        let err = Shell { terminal: NoColor(err), config: config };
+        let config = ShellConfig {
+            color_config: ColorConfig::Never,
+            tty: false,
+        };
+        let out = Shell {
+            terminal: NoColor(out),
+            config: config.clone(),
+        };
+        let err = Shell {
+            terminal: NoColor(err),
+            config: config,
+        };
         MultiShell {
             out: out,
             err: err,
@@ -82,20 +96,20 @@ impl MultiShell {
         &mut self.err
     }
 
-    pub fn say<T: ToString>(&mut self, message: T, color: Color)
-                            -> CargoResult<()> {
+    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> CargoResult<()> {
         match self.verbosity {
             Quiet => Ok(()),
-            _ => self.out().say(message, color)
+            _ => self.out().say(message, color),
         }
     }
 
     pub fn status<T, U>(&mut self, status: T, message: U) -> CargoResult<()>
-        where T: fmt::Display, U: fmt::Display
+        where T: fmt::Display,
+              U: fmt::Display
     {
         match self.verbosity {
             Quiet => Ok(()),
-            _ => self.err().say_status(status, message, GREEN, true)
+            _ => self.err().say_status(status, message, GREEN, true),
         }
     }
 
@@ -104,7 +118,7 @@ impl MultiShell {
     {
         match self.verbosity {
             Verbose => callback(self),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 
@@ -113,7 +127,7 @@ impl MultiShell {
     {
         match self.verbosity {
             Verbose => Ok(()),
-            _ => callback(self)
+            _ => callback(self),
         }
     }
 
@@ -140,8 +154,10 @@ impl MultiShell {
 
             None => Auto,
 
-            Some(arg) => bail!("argument for --color must be auto, always, or \
-                                never, but found `{}`", arg),
+            Some(arg) => {
+                bail!("argument for --color must be auto, always, or never, but found `{}`",
+                      arg)
+            }
         };
         self.out.set_color_config(cfg);
         self.err.set_color_config(cfg);
@@ -162,7 +178,7 @@ impl Shell {
     pub fn create<T: FnMut() -> Box<Write + Send>>(mut out_fn: T, config: ShellConfig) -> Shell {
         let term = match Shell::get_term(out_fn()) {
             Ok(t) => t,
-            Err(_) => NoColor(out_fn())
+            Err(_) => NoColor(out_fn()),
         };
 
         Shell {
@@ -208,7 +224,7 @@ impl Shell {
                     // Color output is possible.
                     Colored(Box::new(term))
                 }
-            },
+            }
             Err(_) => NoColor(out),
         }
     }
@@ -219,7 +235,9 @@ impl Shell {
 
     pub fn say<T: ToString>(&mut self, message: T, color: Color) -> CargoResult<()> {
         self.reset()?;
-        if color != BLACK { self.fg(color)?; }
+        if color != BLACK {
+            self.fg(color)?;
+        }
         write!(self, "{}\n", message.to_string())?;
         self.reset()?;
         self.flush()?;
@@ -232,11 +250,16 @@ impl Shell {
                             color: Color,
                             justified: bool)
                             -> CargoResult<()>
-        where T: fmt::Display, U: fmt::Display
+        where T: fmt::Display,
+              U: fmt::Display
     {
         self.reset()?;
-        if color != BLACK { self.fg(color)?; }
-        if self.supports_attr(Attr::Bold) { self.attr(Attr::Bold)?; }
+        if color != BLACK {
+            self.fg(color)?;
+        }
+        if self.supports_attr(Attr::Bold) {
+            self.attr(Attr::Bold)?;
+        }
         if justified {
             write!(self, "{:>12}", status.to_string())?;
         } else {
@@ -263,7 +286,7 @@ impl Shell {
 
         match self.terminal {
             Colored(ref mut c) if colored => c.attr(attr)?,
-            _ => return Ok(false)
+            _ => return Ok(false),
         }
         Ok(true)
     }
@@ -273,7 +296,7 @@ impl Shell {
 
         match self.terminal {
             Colored(ref c) if colored => c.supports_attr(attr),
-            _ => false
+            _ => false,
         }
     }
 
@@ -282,14 +305,13 @@ impl Shell {
 
         match self.terminal {
             Colored(ref mut c) if colored => c.reset()?,
-            _ => ()
+            _ => (),
         }
         Ok(())
     }
 
     fn colored(&self) -> bool {
-        self.config.tty && Auto == self.config.color_config
-            || Always == self.config.color_config
+        self.config.tty && Auto == self.config.color_config || Always == self.config.color_config
     }
 }
 
@@ -297,14 +319,14 @@ impl Write for Shell {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self.terminal {
             Colored(ref mut c) => c.write(buf),
-            NoColor(ref mut n) => n.write(buf)
+            NoColor(ref mut n) => n.write(buf),
         }
     }
 
     fn flush(&mut self) -> io::Result<()> {
         match self.terminal {
             Colored(ref mut c) => c.flush(),
-            NoColor(ref mut n) => n.flush()
+            NoColor(ref mut n) => n.flush(),
         }
     }
 }

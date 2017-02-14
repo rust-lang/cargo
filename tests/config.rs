@@ -7,7 +7,8 @@ use hamcrest::assert_that;
 #[test]
 fn read_env_vars_for_config() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             authors = []
@@ -15,7 +16,8 @@ fn read_env_vars_for_config() {
             build = "build.rs"
         "#)
         .file("src/lib.rs", "")
-        .file("build.rs", r#"
+        .file("build.rs",
+              r#"
             use std::env;
             fn main() {
                 assert_eq!(env::var("NUM_JOBS").unwrap(), "100");

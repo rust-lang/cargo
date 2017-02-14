@@ -11,27 +11,26 @@ use std::str;
 use cargotest::cargo_process;
 use cargotest::support::paths::{self, CargoPathExt};
 use cargotest::support::{execs, project, ProjectBuilder};
-use hamcrest::{assert_that};
+use hamcrest::assert_that;
 
 #[cfg_attr(windows,allow(dead_code))]
 enum FakeKind<'a> {
     Executable,
-    Symlink{target:&'a Path},
+    Symlink { target: &'a Path },
 }
 
 /// Add an empty file with executable flags (and platform-dependent suffix).
 /// TODO: move this to `ProjectBuilder` if other cases using this emerge.
 fn fake_file(proj: ProjectBuilder, dir: &Path, name: &str, kind: FakeKind) -> ProjectBuilder {
-    let path = proj.root().join(dir).join(&format!("{}{}", name,
-                                                   env::consts::EXE_SUFFIX));
+    let path = proj.root().join(dir).join(&format!("{}{}", name, env::consts::EXE_SUFFIX));
     path.parent().unwrap().mkdir_p();
     match kind {
         FakeKind::Executable => {
             File::create(&path).unwrap();
             make_executable(&path);
-        },
-        FakeKind::Symlink{target} => {
-            make_symlink(&path,target);
+        }
+        FakeKind::Symlink { target } => {
+            make_symlink(&path, target);
         }
     }
     return proj;
@@ -49,7 +48,7 @@ fn fake_file(proj: ProjectBuilder, dir: &Path, name: &str, kind: FakeKind) -> Pr
     fn make_executable(_: &Path) {}
     #[cfg(unix)]
     fn make_symlink(p: &Path, t: &Path) {
-        ::std::os::unix::fs::symlink(t,p).expect("Failed to create symlink");
+        ::std::os::unix::fs::symlink(t, p).expect("Failed to create symlink");
     }
     #[cfg(windows)]
     fn make_symlink(_: &Path, _: &Path) {
@@ -64,14 +63,18 @@ fn path() -> Vec<PathBuf> {
 #[test]
 fn list_command_looks_at_path() {
     let proj = project("list-non-overlapping");
-    let proj = fake_file(proj, &Path::new("path-test"), "cargo-1", FakeKind::Executable);
+    let proj = fake_file(proj,
+                         &Path::new("path-test"),
+                         "cargo-1",
+                         FakeKind::Executable);
     let mut pr = cargo_process();
 
     let mut path = path();
     path.push(proj.root().join("path-test"));
     let path = env::join_paths(path.iter()).unwrap();
-    let output = pr.arg("-v").arg("--list")
-                   .env("PATH", &path);
+    let output = pr.arg("-v")
+        .arg("--list")
+        .env("PATH", &path);
     let output = output.exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("\n    1\n"), "missing 1: {}", output);
@@ -84,15 +87,18 @@ fn list_command_resolves_symlinks() {
     use cargotest::support::cargo_dir;
 
     let proj = project("list-non-overlapping");
-    let proj = fake_file(proj, &Path::new("path-test"), "cargo-2",
-                         FakeKind::Symlink{target:&cargo_dir().join("cargo")});
+    let proj = fake_file(proj,
+                         &Path::new("path-test"),
+                         "cargo-2",
+                         FakeKind::Symlink { target: &cargo_dir().join("cargo") });
     let mut pr = cargo_process();
 
     let mut path = path();
     path.push(proj.root().join("path-test"));
     let path = env::join_paths(path.iter()).unwrap();
-    let output = pr.arg("-v").arg("--list")
-                   .env("PATH", &path);
+    let output = pr.arg("-v")
+        .arg("--list")
+        .env("PATH", &path);
     let output = output.exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("\n    2\n"), "missing 2: {}", output);
@@ -104,10 +110,12 @@ fn find_closest_biuld_to_build() {
     pr.arg("biuld");
 
     assert_that(pr,
-                execs().with_status(101)
-                       .with_stderr("[ERROR] no such subcommand: `biuld`
+                execs()
+                    .with_status(101)
+                    .with_stderr("[ERROR] no such subcommand: `biuld`
 
-<tab>Did you mean `build`?
+<tab>Did you mean \
+                                  `build`?
 
 "));
 }
@@ -117,12 +125,13 @@ fn find_closest_biuld_to_build() {
 fn find_closest_dont_correct_nonsense() {
     let mut pr = cargo_process();
     pr.arg("there-is-no-way-that-there-is-a-command-close-to-this")
-      .cwd(&paths::root());
+        .cwd(&paths::root());
 
     assert_that(pr,
-                execs().with_status(101)
-                       .with_stderr("[ERROR] no such subcommand: \
-                        `there-is-no-way-that-there-is-a-command-close-to-this`
+                execs()
+                    .with_status(101)
+                    .with_stderr("[ERROR] no such subcommand: \
+                                  `there-is-no-way-that-there-is-a-command-close-to-this`
 "));
 }
 
@@ -132,8 +141,9 @@ fn displays_subcommand_on_error() {
     pr.arg("invalid-command");
 
     assert_that(pr,
-                execs().with_status(101)
-                       .with_stderr("[ERROR] no such subcommand: `invalid-command`
+                execs()
+                    .with_status(101)
+                    .with_stderr("[ERROR] no such subcommand: `invalid-command`
 "));
 }
 
@@ -142,15 +152,19 @@ fn override_cargo_home() {
     let root = paths::root();
     let my_home = root.join("my_home");
     fs::create_dir(&my_home).unwrap();
-    File::create(&my_home.join("config")).unwrap().write_all(br#"
+    File::create(&my_home.join("config"))
+        .unwrap()
+        .write_all(br#"
         [cargo-new]
         name = "foo"
         email = "bar"
         git = false
-    "#).unwrap();
+    "#)
+        .unwrap();
 
     assert_that(cargo_process()
-                    .arg("new").arg("foo")
+                    .arg("new")
+                    .arg("foo")
                     .env("USER", "foo")
                     .env("CARGO_HOME", &my_home),
                 execs().with_status(0));
@@ -163,12 +177,9 @@ fn override_cargo_home() {
 
 #[test]
 fn cargo_help() {
-    assert_that(cargo_process(),
-                execs().with_status(0));
-    assert_that(cargo_process().arg("help"),
-                execs().with_status(0));
-    assert_that(cargo_process().arg("-h"),
-                execs().with_status(0));
+    assert_that(cargo_process(), execs().with_status(0));
+    assert_that(cargo_process().arg("help"), execs().with_status(0));
+    assert_that(cargo_process().arg("-h"), execs().with_status(0));
     assert_that(cargo_process().arg("help").arg("build"),
                 execs().with_status(0));
     assert_that(cargo_process().arg("build").arg("-h"),

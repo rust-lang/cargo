@@ -23,15 +23,19 @@ pub trait Registry {
 
 impl Registry for Vec<Summary> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        Ok(self.iter().filter(|summary| dep.matches(*summary))
-               .cloned().collect())
+        Ok(self.iter()
+            .filter(|summary| dep.matches(*summary))
+            .cloned()
+            .collect())
     }
 }
 
 impl Registry for Vec<Package> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        Ok(self.iter().filter(|pkg| dep.matches(pkg.summary()))
-               .map(|pkg| pkg.summary().clone()).collect())
+        Ok(self.iter()
+            .filter(|pkg| dep.matches(pkg.summary()))
+            .map(|pkg| pkg.summary().clone())
+            .collect())
     }
 }
 
@@ -113,14 +117,14 @@ impl<'cfg> PackageRegistry<'cfg> {
             // slightly different precise version listed.
             Some(&(_, Kind::Locked)) => {
                 debug!("load/locked   {}", namespace);
-                return Ok(())
+                return Ok(());
             }
 
             // If the previous source was not a precise source, then we can be
             // sure that it's already been updated if we've already loaded it.
             Some(&(ref previous, _)) if previous.precise().is_none() => {
                 debug!("load/precise  {}", namespace);
-                return Ok(())
+                return Ok(());
             }
 
             // If the previous source has the same precise version as we do,
@@ -129,7 +133,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             Some(&(ref previous, _)) => {
                 if previous.precise() == namespace.precise() {
                     debug!("load/match    {}", namespace);
-                    return Ok(())
+                    return Ok(());
                 }
                 debug!("load/mismatch {}", namespace);
             }
@@ -169,37 +173,38 @@ impl<'cfg> PackageRegistry<'cfg> {
         for dep in deps.iter() {
             trace!("\t-> {}", dep);
         }
-        let sub_map = self.locked.entry(id.source_id().clone())
-                                 .or_insert(HashMap::new());
+        let sub_map = self.locked
+            .entry(id.source_id().clone())
+            .or_insert(HashMap::new());
         let sub_vec = sub_map.entry(id.name().to_string())
-                             .or_insert(Vec::new());
+            .or_insert(Vec::new());
         sub_vec.push((id, deps));
     }
 
     fn load(&mut self, source_id: &SourceId, kind: Kind) -> CargoResult<()> {
         (|| {
-            let source = self.source_config.load(source_id)?;
-            assert_eq!(source.source_id(), source_id);
+                let source = self.source_config.load(source_id)?;
+                assert_eq!(source.source_id(), source_id);
 
-            if kind == Kind::Override {
-                self.overrides.push(source_id.clone());
-            }
-            self.add_source(source, kind);
+                if kind == Kind::Override {
+                    self.overrides.push(source_id.clone());
+                }
+                self.add_source(source, kind);
 
-            // Ensure the source has fetched all necessary remote data.
-            let _p = profile::start(format!("updating: {}", source_id));
-            self.sources.get_mut(source_id).unwrap().update()
-        }).chain_error(|| human(format!("Unable to update {}", source_id)))
+                // Ensure the source has fetched all necessary remote data.
+                let _p = profile::start(format!("updating: {}", source_id));
+                self.sources.get_mut(source_id).unwrap().update()
+            })
+            .chain_error(|| human(format!("Unable to update {}", source_id)))
     }
 
-    fn query_overrides(&mut self, dep: &Dependency)
-                       -> CargoResult<Option<Summary>> {
+    fn query_overrides(&mut self, dep: &Dependency) -> CargoResult<Option<Summary>> {
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.name(), s);
             let mut results = src.query(&dep)?;
             if results.len() > 0 {
-                return Ok(Some(results.remove(0)))
+                return Ok(Some(results.remove(0)));
             }
         }
         Ok(None)
@@ -223,11 +228,10 @@ impl<'cfg> PackageRegistry<'cfg> {
     /// possible. If we're unable to map a dependency though, we just pass it on
     /// through.
     pub fn lock(&self, summary: Summary) -> Summary {
-        let pair = self.locked.get(summary.source_id()).and_then(|map| {
-            map.get(summary.name())
-        }).and_then(|vec| {
-            vec.iter().find(|&&(ref id, _)| id == summary.package_id())
-        });
+        let pair = self.locked
+            .get(summary.source_id())
+            .and_then(|map| map.get(summary.name()))
+            .and_then(|vec| vec.iter().find(|&&(ref id, _)| id == summary.package_id()));
 
         trace!("locking summary of {}", summary.package_id());
 
@@ -237,8 +241,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             None => summary,
         };
         summary.map_dependencies(|dep| {
-            trace!("\t{}/{}/{}", dep.name(), dep.version_req(),
-                   dep.source_id());
+            trace!("\t{}/{}/{}", dep.name(), dep.version_req(), dep.source_id());
 
             // If we've got a known set of overrides for this summary, then
             // one of a few cases can arise:
@@ -263,18 +266,17 @@ impl<'cfg> PackageRegistry<'cfg> {
                 let locked = locked_deps.iter().find(|id| dep.matches_id(id));
                 if let Some(locked) = locked {
                     trace!("\tfirst hit on {}", locked);
-                    return dep.lock_to(locked)
+                    return dep.lock_to(locked);
                 }
             }
 
             // If this dependency did not have a locked version, then we query
             // all known locked packages to see if they match this dependency.
             // If anything does then we lock it to that and move on.
-            let v = self.locked.get(dep.source_id()).and_then(|map| {
-                map.get(dep.name())
-            }).and_then(|vec| {
-                vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
-            });
+            let v = self.locked
+                .get(dep.source_id())
+                .and_then(|map| map.get(dep.name()))
+                .and_then(|vec| vec.iter().find(|&&(ref id, _)| dep.matches_id(id)));
             match v {
                 Some(&(ref id, _)) => {
                     trace!("\tsecond hit on {}", id);
@@ -290,7 +292,8 @@ impl<'cfg> PackageRegistry<'cfg> {
 
     fn warn_bad_override(&self,
                          override_summary: &Summary,
-                         real_summary: &Summary) -> CargoResult<()> {
+                         real_summary: &Summary)
+                         -> CargoResult<()> {
         let mut real_deps = real_summary.dependencies().iter().collect::<Vec<_>>();
 
         let boilerplate = "\
@@ -309,24 +312,30 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
         for dep in override_summary.dependencies() {
             if let Some(i) = real_deps.iter().position(|d| dep == *d) {
                 real_deps.remove(i);
-                continue
+                continue;
             }
             let msg = format!("\
                 path override for crate `{}` has altered the original list of\n\
                 dependencies; the dependency on `{}` was either added or\n\
                 modified to not match the previously resolved version\n\n\
-                {}", override_summary.package_id().name(), dep.name(), boilerplate);
+                {}",
+                              override_summary.package_id().name(),
+                              dep.name(),
+                              boilerplate);
             self.source_config.config().shell().warn(&msg)?;
-            return Ok(())
+            return Ok(());
         }
 
         for id in real_deps {
             let msg = format!("\
                 path override for crate `{}` has altered the original list of
                 dependencies; the dependency on `{}` was removed\n\n
-                {}", override_summary.package_id().name(), id.name(), boilerplate);
+                {}",
+                              override_summary.package_id().name(),
+                              id.name(),
+                              boilerplate);
             self.source_config.config().shell().warn(&msg)?;
-            return Ok(())
+            return Ok(());
         }
 
         Ok(())
@@ -336,10 +345,10 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
 impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         // Ensure the requested source_id is loaded
-        self.ensure_loaded(dep.source_id(), Kind::Normal).chain_error(|| {
-            human(format!("failed to load source for a dependency \
-                           on `{}`", dep.name()))
-        })?;
+        self.ensure_loaded(dep.source_id(), Kind::Normal)
+            .chain_error(|| {
+                human(format!("failed to load source for a dependency on `{}`", dep.name()))
+            })?;
 
         let override_summary = self.query_overrides(&dep)?;
         let real_summaries = match self.sources.get_mut(dep.source_id()) {
@@ -373,12 +382,15 @@ pub mod test {
 
     pub struct RegistryBuilder {
         summaries: Vec<Summary>,
-        overrides: Vec<Summary>
+        overrides: Vec<Summary>,
     }
 
     impl RegistryBuilder {
         pub fn new() -> RegistryBuilder {
-            RegistryBuilder { summaries: vec![], overrides: vec![] }
+            RegistryBuilder {
+                summaries: vec![],
+                overrides: vec![],
+            }
         }
 
         pub fn summary(mut self, summary: Summary) -> RegistryBuilder {
@@ -402,7 +414,8 @@ pub mod test {
         }
 
         fn query_overrides(&self, dep: &Dependency) -> Vec<Summary> {
-            self.overrides.iter()
+            self.overrides
+                .iter()
                 .filter(|s| s.name() == dep.name())
                 .map(|s| s.clone())
                 .collect()

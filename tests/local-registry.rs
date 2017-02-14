@@ -27,12 +27,13 @@ fn setup() {
 fn simple() {
     setup();
     Package::new("foo", "0.0.1")
-            .local(true)
-            .file("src/lib.rs", "pub fn foo() {}")
-            .publish();
+        .local(true)
+        .file("src/lib.rs", "pub fn foo() {}")
+        .publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -41,7 +42,8 @@ fn simple() {
             [dependencies]
             foo = "0.0.1"
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             extern crate foo;
             pub fn bar() {
                 foo::foo();
@@ -55,8 +57,9 @@ fn simple() {
 [COMPILING] bar v0.0.1 ({dir})
 [FINISHED] [..]
 ",
-        dir = p.url())));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stderr("\
+                                                            dir = p.url())));
+    assert_that(p.cargo("build"),
+                execs().with_status(0).with_stderr("\
 [FINISHED] [..]
 "));
     assert_that(p.cargo("test"), execs().with_status(0));
@@ -67,12 +70,13 @@ fn multiple_versions() {
     setup();
     Package::new("foo", "0.0.1").local(true).publish();
     Package::new("foo", "0.1.0")
-            .local(true)
-            .file("src/lib.rs", "pub fn foo() {}")
-            .publish();
+        .local(true)
+        .file("src/lib.rs", "pub fn foo() {}")
+        .publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -81,7 +85,8 @@ fn multiple_versions() {
             [dependencies]
             foo = "*"
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             extern crate foo;
             pub fn bar() {
                 foo::foo();
@@ -95,12 +100,12 @@ fn multiple_versions() {
 [COMPILING] bar v0.0.1 ({dir})
 [FINISHED] [..]
 ",
-        dir = p.url())));
+                                                            dir = p.url())));
 
     Package::new("foo", "0.2.0")
-            .local(true)
-            .file("src/lib.rs", "pub fn foo() {}")
-            .publish();
+        .local(true)
+        .file("src/lib.rs", "pub fn foo() {}")
+        .publish();
 
     assert_that(p.cargo("update").arg("-v"),
                 execs().with_status(0).with_stderr("\
@@ -112,16 +117,17 @@ fn multiple_versions() {
 fn multiple_names() {
     setup();
     Package::new("foo", "0.0.1")
-            .local(true)
-            .file("src/lib.rs", "pub fn foo() {}")
-            .publish();
+        .local(true)
+        .file("src/lib.rs", "pub fn foo() {}")
+        .publish();
     Package::new("bar", "0.1.0")
-            .local(true)
-            .file("src/lib.rs", "pub fn bar() {}")
-            .publish();
+        .local(true)
+        .file("src/lib.rs", "pub fn bar() {}")
+        .publish();
 
     let p = project("local")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "local"
             version = "0.0.1"
@@ -131,7 +137,8 @@ fn multiple_names() {
             foo = "*"
             bar = "*"
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             extern crate foo;
             extern crate bar;
             pub fn local() {
@@ -149,24 +156,25 @@ fn multiple_names() {
 [COMPILING] local v0.0.1 ({dir})
 [FINISHED] [..]
 ",
-        dir = p.url())));
+                                                            dir = p.url())));
 }
 
 #[test]
 fn interdependent() {
     setup();
     Package::new("foo", "0.0.1")
-            .local(true)
-            .file("src/lib.rs", "pub fn foo() {}")
-            .publish();
+        .local(true)
+        .file("src/lib.rs", "pub fn foo() {}")
+        .publish();
     Package::new("bar", "0.1.0")
-            .local(true)
-            .dep("foo", "*")
-            .file("src/lib.rs", "extern crate foo; pub fn bar() {}")
-            .publish();
+        .local(true)
+        .dep("foo", "*")
+        .file("src/lib.rs", "extern crate foo; pub fn bar() {}")
+        .publish();
 
     let p = project("local")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "local"
             version = "0.0.1"
@@ -176,7 +184,8 @@ fn interdependent() {
             foo = "*"
             bar = "*"
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             extern crate foo;
             extern crate bar;
             pub fn local() {
@@ -194,20 +203,21 @@ fn interdependent() {
 [COMPILING] local v0.0.1 ({dir})
 [FINISHED] [..]
 ",
-        dir = p.url())));
+                                                            dir = p.url())));
 }
 
 #[test]
 fn path_dep_rewritten() {
     setup();
     Package::new("foo", "0.0.1")
-            .local(true)
-            .file("src/lib.rs", "pub fn foo() {}")
-            .publish();
+        .local(true)
+        .file("src/lib.rs", "pub fn foo() {}")
+        .publish();
     Package::new("bar", "0.1.0")
-            .local(true)
-            .dep("foo", "*")
-            .file("Cargo.toml", r#"
+        .local(true)
+        .dep("foo", "*")
+        .file("Cargo.toml",
+              r#"
                 [project]
                 name = "bar"
                 version = "0.1.0"
@@ -216,18 +226,20 @@ fn path_dep_rewritten() {
                 [dependencies]
                 foo = { path = "foo", version = "*" }
             "#)
-            .file("src/lib.rs", "extern crate foo; pub fn bar() {}")
-            .file("foo/Cargo.toml", r#"
+        .file("src/lib.rs", "extern crate foo; pub fn bar() {}")
+        .file("foo/Cargo.toml",
+              r#"
                 [project]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
             "#)
-            .file("foo/src/lib.rs", "pub fn foo() {}")
-            .publish();
+        .file("foo/src/lib.rs", "pub fn foo() {}")
+        .publish();
 
     let p = project("local")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "local"
             version = "0.0.1"
@@ -237,7 +249,8 @@ fn path_dep_rewritten() {
             foo = "*"
             bar = "*"
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             extern crate foo;
             extern crate bar;
             pub fn local() {
@@ -255,14 +268,15 @@ fn path_dep_rewritten() {
 [COMPILING] local v0.0.1 ({dir})
 [FINISHED] [..]
 ",
-        dir = p.url())));
+                                                            dir = p.url())));
 }
 
 #[test]
 fn invalid_dir_bad() {
     setup();
     let p = project("local")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "local"
             version = "0.0.1"
@@ -272,7 +286,8 @@ fn invalid_dir_bad() {
             foo = "*"
         "#)
         .file("src/lib.rs", "")
-        .file(".cargo/config", r#"
+        .file(".cargo/config",
+              r#"
             [source.crates-io]
             registry = 'https://wut'
             replace-with = 'my-awesome-local-directory'
@@ -308,7 +323,8 @@ fn different_directory_replacing_the_registry_is_bad() {
     t!(fs::rename(&config, &config_tmp));
 
     let p = project("local")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "local"
             version = "0.0.1"
@@ -330,9 +346,9 @@ fn different_directory_replacing_the_registry_is_bad() {
     config.rm_rf();
     t!(fs::rename(&config_tmp, &config));
     Package::new("foo", "0.0.1")
-            .file("src/lib.rs", "invalid")
-            .local(true)
-            .publish();
+        .file("src/lib.rs", "invalid")
+        .local(true)
+        .publish();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
@@ -362,12 +378,13 @@ fn crates_io_registry_url_is_optional() {
     "#));
 
     Package::new("foo", "0.0.1")
-            .local(true)
-            .file("src/lib.rs", "pub fn foo() {}")
-            .publish();
+        .local(true)
+        .file("src/lib.rs", "pub fn foo() {}")
+        .publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -376,7 +393,8 @@ fn crates_io_registry_url_is_optional() {
             [dependencies]
             foo = "0.0.1"
         "#)
-        .file("src/lib.rs", r#"
+        .file("src/lib.rs",
+              r#"
             extern crate foo;
             pub fn bar() {
                 foo::foo();
@@ -390,8 +408,9 @@ fn crates_io_registry_url_is_optional() {
 [COMPILING] bar v0.0.1 ({dir})
 [FINISHED] [..]
 ",
-        dir = p.url())));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stderr("\
+                                                            dir = p.url())));
+    assert_that(p.cargo("build"),
+                execs().with_status(0).with_stderr("\
 [FINISHED] [..]
 "));
     assert_that(p.cargo("test"), execs().with_status(0));

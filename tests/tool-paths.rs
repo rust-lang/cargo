@@ -10,7 +10,8 @@ fn pathless_tools() {
     let target = rustc_host();
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -20,18 +21,21 @@ fn pathless_tools() {
             name = "foo"
         "#)
         .file("src/lib.rs", "")
-        .file(".cargo/config", &format!(r#"
+        .file(".cargo/config",
+              &format!(r#"
             [target.{}]
             ar = "nonexistent-ar"
             linker = "nonexistent-linker"
-        "#, target));
+        "#,
+                       target));
 
     assert_that(foo.cargo_process("build").arg("--verbose"),
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", url = foo.url())))
+",
+                                             url = foo.url())))
 }
 
 #[test]
@@ -46,7 +50,8 @@ fn absolute_tools() {
     };
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file("Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -56,11 +61,15 @@ fn absolute_tools() {
             name = "foo"
         "#)
         .file("src/lib.rs", "")
-        .file(".cargo/config", &format!(r#"
+        .file(".cargo/config",
+              &format!(r#"
             [target.{target}]
             ar = "{ar}"
             linker = "{linker}"
-        "#, target = target, ar = config.0, linker = config.1));
+        "#,
+                       target = target,
+                       ar = config.0,
+                       linker = config.1));
 
     let output = if cfg!(windows) {
         (r#"C:\bogus\nonexistent-ar"#, r#"C:\bogus\nonexistent-linker"#)
@@ -73,7 +82,10 @@ fn absolute_tools() {
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", url = foo.url(), ar = output.0, linker = output.1)))
+",
+                                             url = foo.url(),
+                                             ar = output.0,
+                                             linker = output.1)))
 }
 
 #[test]
@@ -90,7 +102,8 @@ fn relative_tools() {
     // Funky directory structure to test that relative tool paths are made absolute
     // by reference to the `.cargo/..` directory and not to (for example) the CWD.
     let origin = project("origin")
-        .file("foo/Cargo.toml", r#"
+        .file("foo/Cargo.toml",
+              r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -100,11 +113,15 @@ fn relative_tools() {
             name = "foo"
         "#)
         .file("foo/src/lib.rs", "")
-        .file(".cargo/config", &format!(r#"
+        .file(".cargo/config",
+              &format!(r#"
             [target.{target}]
             ar = "{ar}"
             linker = "{linker}"
-        "#, target = target, ar = config.0, linker = config.1));
+        "#,
+                       target = target,
+                       ar = config.0,
+                       linker = config.1));
 
     let foo_path = origin.root().join("foo");
     let foo_url = path2url(foo_path.clone());
@@ -122,5 +139,8 @@ fn relative_tools() {
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", url = foo_url, ar = output.0, linker = output.1)))
+",
+                                             url = foo_url,
+                                             ar = output.0,
+                                             linker = output.1)))
 }
