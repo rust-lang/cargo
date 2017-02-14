@@ -1103,6 +1103,39 @@ fn relative_path_for_member_works() {
 }
 
 #[test]
+fn relative_path_for_root_works() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+        [project]
+        name = "foo"
+        version = "0.1.0"
+        authors = []
+
+        [workspace]
+
+        [dependencies]
+        subproj = { path = "./subproj" }
+    "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("subproj/Cargo.toml", r#"
+        [project]
+        name = "subproj"
+        version = "0.1.0"
+        authors = []
+    "#)
+        .file("subproj/src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build").cwd(p.root())
+                    .arg("--manifest-path").arg("./Cargo.toml"),
+                execs().with_status(0));
+
+    assert_that(p.cargo("build").cwd(p.root().join("subproj"))
+                    .arg("--manifest-path").arg("../Cargo.toml"),
+                execs().with_status(0));
+}
+
+#[test]
 fn path_dep_outside_workspace_is_not_member() {
     let p = project("foo")
         .file("ws/Cargo.toml", r#"
