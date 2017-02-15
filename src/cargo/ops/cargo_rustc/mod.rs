@@ -75,9 +75,9 @@ pub trait Executor: Send + Sync + 'static {
                  cmd: ProcessBuilder,
                  _id: &PackageId,
                  handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
-                 handle_srderr: &mut FnMut(&str) -> CargoResult<()>)
+                 handle_stderr: &mut FnMut(&str) -> CargoResult<()>)
                  -> Result<(), ProcessError> {
-        cmd.exec_with_streaming(handle_stdout, handle_srderr)?;
+        cmd.exec_with_streaming(handle_stdout, handle_stderr)?;
         Ok(())
     }
 }
