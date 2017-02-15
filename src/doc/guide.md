@@ -464,7 +464,7 @@ authors = [{{toml-escape author}}]
 ```rust
 // src/main.rs
 fn main() {
-    prinln!("This is the {{name}} project!");
+    println!("This is the {{name}} project!");
 }
 ```
 
