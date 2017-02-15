@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::env;
 use std::error::Error;
 use std::ffi::OsStr;
@@ -95,7 +96,8 @@ pub struct ProjectBuilder {
     name: String,
     root: PathBuf,
     files: Vec<FileBuilder>,
-    symlinks: Vec<SymlinkBuilder>
+    symlinks: Vec<SymlinkBuilder>,
+    is_build: Cell<bool>,
 }
 
 impl ProjectBuilder {
@@ -104,7 +106,8 @@ impl ProjectBuilder {
             name: name.to_string(),
             root: root,
             files: vec![],
-            symlinks: vec![]
+            symlinks: vec![],
+            is_build: Cell::new(false),
         }
     }
 
@@ -159,6 +162,9 @@ impl ProjectBuilder {
     }
 
     pub fn cargo(&self, cmd: &str) -> ProcessBuilder {
+        assert!(self.is_build.get(),
+                "call `.build()` before calling `.cargo()`, \
+                 or use `.cargo_process()`");
         let mut p = self.process(&cargo_dir().join("cargo"));
         p.arg(cmd);
         return p;
@@ -175,6 +181,11 @@ impl ProjectBuilder {
         self
     }
 
+    pub fn change_file(&self, path: &str, body: &str) {
+        assert!(self.is_build.get());
+        FileBuilder::new(self.root.join(path), body).mk()
+    }
+
     pub fn symlink<T: AsRef<Path>>(mut self, dst: T,
                                    src: T) -> ProjectBuilder {
         self.symlinks.push(SymlinkBuilder::new(self.root.join(dst),
@@ -184,6 +195,9 @@ impl ProjectBuilder {
 
     // TODO: return something different than a ProjectBuilder
     pub fn build(&self) -> &ProjectBuilder {
+        assert!(!self.is_build.get(),
+                "can `.build()` project only once");
+        self.is_build.set(true);
         // First, clean the directory if it already exists
         self.rm_root();
 

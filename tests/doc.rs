@@ -561,13 +561,15 @@ fn rerun_when_dir_removed() {
             /// dox
             pub fn foo() {}
         "#);
-    assert_that(p.cargo_process("doc"),
+    p.build();
+
+    assert_that(p.cargo("doc"),
                 execs().with_status(0));
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 
     fs::remove_dir_all(p.root().join("target/doc/foo")).unwrap();
 
-    assert_that(p.cargo_process("doc"),
+    assert_that(p.cargo("doc"),
                 execs().with_status(0));
     assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 }
@@ -643,7 +645,6 @@ fn doc_all_workspace() {
         .file("bar/src/lib.rs", r#"
             pub fn bar() {}
         "#);
-    p.build();
 
     // The order in which bar is compiled or documented is not deterministic
     assert_that(p.cargo_process("doc")
@@ -677,7 +678,6 @@ fn doc_all_virtual_manifest() {
         .file("bar/src/lib.rs", r#"
             pub fn bar() {}
         "#);
-    p.build();
 
     // The order in which foo and bar are documented is not guaranteed
     assert_that(p.cargo_process("doc")
@@ -705,7 +705,6 @@ fn doc_all_member_dependency_same_name() {
         .file("a/src/lib.rs", r#"
             pub fn a() {}
         "#);
-    p.build();
 
     Package::new("a", "0.1.0").publish();
 

@@ -1625,12 +1625,13 @@ fn bad_example() {
             authors = []
         "#)
         .file("src/lib.rs", "");
+    p.build();
 
-    assert_that(p.cargo_process("run").arg("--example").arg("foo"),
+    assert_that(p.cargo("run").arg("--example").arg("foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no example target named `foo`
 "));
-    assert_that(p.cargo_process("run").arg("--bin").arg("foo"),
+    assert_that(p.cargo("run").arg("--bin").arg("foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `foo`
 "));
@@ -2332,8 +2333,9 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
                 authors = []
             "#)
         .file("libs/mock_serde_codegen/src/lib.rs", "");
+    p.build();
 
-    assert_that(p.cargo_process("test")
+    assert_that(p.cargo("test")
                 .arg("--package").arg("feature_a")
                 .arg("--verbose"),
                 execs().with_status(0)
@@ -2341,7 +2343,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
 [DOCTEST] feature_a
 [RUNNING] `rustdoc --test [..]mock_serde_codegen[..]`"));
 
-    assert_that(p.cargo_process("test")
+    assert_that(p.cargo("test")
                 .arg("--verbose"),
                 execs().with_status(0)
                        .with_stderr_contains("\
@@ -2406,9 +2408,8 @@ fn test_many_with_features() {
             authors = []
         "#)
         .file("a/src/lib.rs", "");
-    p.build();
 
-    assert_that(p.cargo("test").arg("-v")
+    assert_that(p.cargo_process("test").arg("-v")
                  .arg("-p").arg("a")
                  .arg("-p").arg("foo")
                  .arg("--features").arg("foo"),
@@ -2441,7 +2442,6 @@ fn test_all_workspace() {
             #[test]
             fn bar_test() {}
         "#);
-    p.build();
 
     assert_that(p.cargo_process("test")
                  .arg("--all"),
@@ -2486,7 +2486,6 @@ fn test_all_virtual_manifest() {
             #[test]
             fn b() {}
         "#);
-    p.build();
 
     assert_that(p.cargo_process("test")
                  .arg("--all"),
@@ -2525,7 +2524,6 @@ fn test_all_member_dependency_same_name() {
             #[test]
             fn a() {}
         "#);
-    p.build();
 
     Package::new("a", "0.1.0").publish();
 

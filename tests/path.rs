@@ -259,8 +259,7 @@ fn cargo_compile_with_transitive_dev_deps() {
 
 #[test]
 fn no_rebuild_dependency() {
-    let mut p = project("foo");
-    p = p
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
 
@@ -301,16 +300,6 @@ fn no_rebuild_dependency() {
     // This time we shouldn't compile bar
     assert_that(p.cargo("build"),
                 execs().with_stdout(""));
-    p.root().move_into_the_past();
-
-    p.build(); // rebuild the files (rewriting them in the process)
-    assert_that(p.cargo("build"),
-                execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
-                                             [COMPILING] foo v0.5.0 ({})\n\
-                                             [FINISHED] dev [unoptimized + debuginfo] target(s) \
-                                             in [..]\n",
-                                            p.url(),
-                                            p.url())));
 }
 
 #[test]
