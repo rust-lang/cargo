@@ -489,7 +489,6 @@ In the future, more variables may be added. Suggestions welcome!
 The available templating functions are:
 
 - `toml-escape`: Escapes a string for use in a TOML file.
-  file.
 - `html-escape`: Escapes a string for use in a HTML file.
 
 There is more documentation available on the [Handlebars
