@@ -390,7 +390,6 @@ fn workspace_metadata() {
         .file("bar/src/lib.rs", "")
         .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file("baz/src/lib.rs", "");
-    p.build();
 
     assert_that(p.cargo_process("metadata"), execs().with_status(0).with_json(r#"
     {
@@ -465,7 +464,6 @@ fn workspace_metadata_no_deps() {
         .file("bar/src/lib.rs", "")
         .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file("baz/src/lib.rs", "");
-    p.build();
 
     assert_that(p.cargo_process("metadata").arg("--no-deps"), execs().with_status(0).with_json(r#"
     {

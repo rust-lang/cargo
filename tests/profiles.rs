@@ -245,7 +245,6 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
             opt-level = 1
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
 
     assert_that(p.cargo_process("build").cwd(p.root().join("bar")).arg("-v"),
                 execs().with_status(0).with_stderr("\
@@ -277,7 +276,6 @@ fn profile_in_virtual_manifest_works() {
             workspace = ".."
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
 
     assert_that(p.cargo_process("build").cwd(p.root().join("bar")).arg("-v"),
                 execs().with_status(0).with_stderr("\

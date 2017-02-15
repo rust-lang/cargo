@@ -292,22 +292,23 @@ fn run_with_filename() {
         .file("examples/a.rs", r#"
             fn main() { println!("example"); }
         "#);
+    p.build();
 
-    assert_that(p.cargo_process("run").arg("--bin").arg("bin.rs"),
+    assert_that(p.cargo("run").arg("--bin").arg("bin.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `bin.rs`"));
 
-    assert_that(p.cargo_process("run").arg("--bin").arg("a.rs"),
+    assert_that(p.cargo("run").arg("--bin").arg("a.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `a.rs`
 
 Did you mean `a`?"));
 
-    assert_that(p.cargo_process("run").arg("--example").arg("example.rs"),
+    assert_that(p.cargo("run").arg("--example").arg("example.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no example target named `example.rs`"));
 
-    assert_that(p.cargo_process("run").arg("--example").arg("a.rs"),
+    assert_that(p.cargo("run").arg("--example").arg("a.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no example target named `a.rs`
 

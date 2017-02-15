@@ -214,7 +214,6 @@ fn a() {
   assert!(true);
 }
 "#);
-    foo.build();
 
     assert_that(foo.cargo_process("test"),
                 execs().with_status(0)

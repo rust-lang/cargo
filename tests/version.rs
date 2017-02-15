@@ -9,12 +9,13 @@ use hamcrest::assert_that;
 #[test]
 fn simple() {
     let p = project("foo");
+    p.build();
 
-    assert_that(p.cargo_process("version"),
+    assert_that(p.cargo("version"),
                 execs().with_status(0).with_stdout(&format!("{}\n",
                                                             cargo::version())));
 
-    assert_that(p.cargo_process("--version"),
+    assert_that(p.cargo("--version"),
                 execs().with_status(0).with_stdout(&format!("{}\n",
                                                             cargo::version())));
 

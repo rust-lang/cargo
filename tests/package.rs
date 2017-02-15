@@ -6,7 +6,7 @@ extern crate hamcrest;
 extern crate tar;
 extern crate cargo;
 
-use std::fs::{File, OpenOptions};
+use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
@@ -546,6 +546,9 @@ Caused by:
 
 #[test]
 fn do_not_package_if_repository_is_dirty() {
+    let p = project("foo");
+    p.build();
+
     // Create a Git repository containing a minimal Rust project.
     git::repo(&paths::root().join("foo"))
         .file("Cargo.toml", r#"
@@ -562,10 +565,17 @@ fn do_not_package_if_repository_is_dirty() {
         .build();
 
     // Modify Cargo.toml without committing the change.
-    let p = project("foo");
-    let manifest_path = p.root().join("Cargo.toml");
-    let mut manifest = t!(OpenOptions::new().append(true).open(manifest_path));
-    t!(writeln!(manifest, ""));
+    p.change_file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+            # change
+    "#);
 
     assert_that(p.cargo("package"),
                 execs().with_status(101)
