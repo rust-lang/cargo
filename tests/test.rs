@@ -2571,3 +2571,79 @@ fn doctest_only_with_dev_dep() {
     assert_that(p.cargo_process("test").arg("--doc").arg("-v"),
                 execs().with_status(0));
 }
+
+#[test]
+fn test_can_test_example() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("examples/ex.rs", r#"
+            fn main() {}
+            #[test] fn kaboom() { panic("KABOOM!") }
+        "#);
+    let _ = p;
+// FIXME: does not work
+//    assert_that(p.cargo_process("test").arg("--example").arg("ex"),
+//                execs().with_status(101).with_stdout_contains("KABOOM!"))
+
+}
+
+#[test]
+fn test_many_targets() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("src/bin/a.rs", r#"
+            fn main() {}
+            #[test] fn bin_a() {}
+        "#)
+        .file("src/bin/b.rs", r#"
+            fn main() {}
+            #[test] fn bin_b() {}
+        "#)
+        .file("src/bin/c.rs", r#"
+            fn main() {}
+            #[test] fn bin_c() { panic!(); }
+        "#)
+        .file("examples/a.rs", r#"
+            fn main() {}
+            #[test] fn example_a() {}
+        "#)
+        .file("examples/b.rs", r#"
+            fn main() {}
+            #[test] fn example_b() {}
+        "#)
+        .file("examples/c.rs", r#"
+            #[test] fn example_c() { panic!(); }
+        "#)
+        .file("tests/a.rs", r#"
+            #[test] fn test_a() {}
+        "#)
+        .file("tests/b.rs", r#"
+            #[test] fn test_b() {}
+        "#)
+        .file("tests/c.rs", r#"
+            #[test] fn test_c() { panic!(); }
+        "#);
+
+    assert_that(p.cargo_process("test")
+                    .arg("--bin").arg("a").arg("--bin").arg("b")
+                    .arg("--example").arg("a").arg("--example").arg("b")
+                    .arg("--test").arg("a").arg("--test").arg("b"),
+                execs()
+                    .with_status(0)
+                    .with_stdout_contains("test bin_a ... ok")
+                    .with_stdout_contains("test bin_b ... ok")
+                    .with_stdout_contains("test test_a ... ok")
+                    .with_stdout_contains("test test_b ... ok")
+// FIXME: does not work
+//                  .with_stdout_contains("test example_a ... ok")
+//                  .with_stdout_contains("test example_b ... ok")
+    )
+}
