@@ -151,27 +151,26 @@ fn run_doc_tests(options: &TestOptions,
                 }
             }
 
-            for (_, libs) in compilation.libraries.iter() {
-                for &(ref target, ref lib) in libs.iter() {
-                    // Note that we can *only* doctest rlib outputs here.  A
-                    // staticlib output cannot be linked by the compiler (it just
-                    // doesn't do that). A dylib output, however, can be linked by
-                    // the compiler, but will always fail. Currently all dylibs are
-                    // built as "static dylibs" where the standard library is
-                    // statically linked into the dylib. The doc tests fail,
-                    // however, for now as they try to link the standard library
-                    // dynamically as well, causing problems. As a result we only
-                    // pass `--extern` for rlib deps and skip out on all other
-                    // artifacts.
-                    if lib.extension() != Some(OsStr::new("rlib")) &&
-                       !target.for_host() {
-                        continue
-                    }
-                    let mut arg = OsString::from(target.crate_name());
-                    arg.push("=");
-                    arg.push(lib);
-                    p.arg("--extern").arg(&arg);
+            let libs = &compilation.libraries[package.package_id()];
+            for &(ref target, ref lib) in libs.iter() {
+                // Note that we can *only* doctest rlib outputs here.  A
+                // staticlib output cannot be linked by the compiler (it just
+                // doesn't do that). A dylib output, however, can be linked by
+                // the compiler, but will always fail. Currently all dylibs are
+                // built as "static dylibs" where the standard library is
+                // statically linked into the dylib. The doc tests fail,
+                // however, for now as they try to link the standard library
+                // dynamically as well, causing problems. As a result we only
+                // pass `--extern` for rlib deps and skip out on all other
+                // artifacts.
+                if lib.extension() != Some(OsStr::new("rlib")) &&
+                   !target.for_host() {
+                    continue
                 }
+                let mut arg = OsString::from(target.crate_name());
+                arg.push("=");
+                arg.push(lib);
+                p.arg("--extern").arg(&arg);
             }
 
             config.shell().verbose(|shell| {
