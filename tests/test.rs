@@ -2624,3 +2624,45 @@ fn test_many_targets() {
                     .with_stderr_contains("[RUNNING] `rustc --crate-name a examples[/]a.rs [..]`")
                     .with_stderr_contains("[RUNNING] `rustc --crate-name b examples[/]b.rs [..]`"))
 }
+
+#[test]
+fn doctest_and_registry() {
+    let p = project("workspace")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.1.0"
+
+            [dependencies]
+            b = { path = "b" }
+            c = { path = "c" }
+
+            [workspace]
+        "#)
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.1.0"
+        "#)
+        .file("b/src/lib.rs", "
+            /// ```
+            /// b::foo();
+            /// ```
+            pub fn foo() {}
+        ")
+        .file("c/Cargo.toml", r#"
+            [project]
+            name = "c"
+            version = "0.1.0"
+
+            [dependencies]
+            b = "0.1"
+        "#)
+        .file("c/src/lib.rs", "");
+
+    Package::new("b", "0.1.0").publish();
+
+    assert_that(p.cargo_process("test").arg("--all").arg("-v"),
+                execs().with_status(0));
+}

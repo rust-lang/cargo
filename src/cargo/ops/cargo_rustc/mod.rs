@@ -153,33 +153,31 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                 cx.compilation.binaries.push(bindst);
             } else if unit.target.is_lib() {
                 let pkgid = unit.pkg.package_id().clone();
-                cx.compilation.libraries.entry(pkgid).or_insert(Vec::new())
-                  .push((unit.target.clone(), dst));
+                cx.compilation.libraries.entry(pkgid).or_insert(HashSet::new())
+                  .insert((unit.target.clone(), dst));
             }
+        }
+
+        for dep in cx.dep_targets(unit)?.iter() {
             if !unit.target.is_lib() { continue }
 
-            // Include immediate lib deps as well
-            for unit in cx.dep_targets(unit)?.iter() {
-                if unit.profile.run_custom_build {
-                    let out_dir = cx.build_script_out_dir(unit).display().to_string();
-                    cx.compilation.extra_env.entry(unit.pkg.package_id().clone())
-                      .or_insert(Vec::new())
-                      .push(("OUT_DIR".to_string(), out_dir));
-                }
-
-                let pkgid = unit.pkg.package_id();
-                if !unit.target.is_lib() { continue }
-                if unit.profile.doc { continue }
-                if cx.compilation.libraries.contains_key(pkgid) {
-                    continue
-                }
-
-                let v = cx.target_filenames(unit)?;
-                let v = v.into_iter().map(|(f, _, _)| {
-                    (unit.target.clone(), f)
-                }).collect::<Vec<_>>();
-                cx.compilation.libraries.insert(pkgid.clone(), v);
+            if dep.profile.run_custom_build {
+                let out_dir = cx.build_script_out_dir(dep).display().to_string();
+                cx.compilation.extra_env.entry(dep.pkg.package_id().clone())
+                  .or_insert(Vec::new())
+                  .push(("OUT_DIR".to_string(), out_dir));
             }
+
+            if !dep.target.is_lib() { continue }
+            if dep.profile.doc { continue }
+
+            let v = cx.target_filenames(dep)?;
+            cx.compilation.libraries
+                .entry(unit.pkg.package_id().clone())
+                .or_insert(HashSet::new())
+                .extend(v.into_iter().map(|(f, _, _)| {
+                    (dep.target.clone(), f)
+                }));
         }
 
         let feats = cx.resolve.features(&unit.pkg.package_id());
