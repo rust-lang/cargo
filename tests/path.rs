@@ -297,9 +297,17 @@ fn no_rebuild_dependency() {
                                              in [..]\n",
                                             p.url(),
                                             p.url())));
-    // This time we shouldn't compile bar
+
+    p.change_file("src/foo.rs", r#"
+        extern crate bar;
+        fn main() { bar::bar(); }
+    "#);
+    // Don't compile bar, but do recompile foo.
     assert_that(p.cargo("build"),
-                execs().with_stdout(""));
+                execs().with_stderr("\
+                     [COMPILING] foo v0.5.0 ([..])\n\
+                     [FINISHED] dev [unoptimized + debuginfo] target(s) \
+                     in [..]\n"));
 }
 
 #[test]
