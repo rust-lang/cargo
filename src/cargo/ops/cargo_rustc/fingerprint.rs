@@ -511,17 +511,14 @@ fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
     Ok(())
 }
 
-/// Prepare work for when a package starts to build
+/// Prepare for work when a package starts to build
 pub fn prepare_init(cx: &mut Context, unit: &Unit) -> CargoResult<()> {
     let new1 = cx.fingerprint_dir(unit);
-    let new2 = new1.clone();
 
     if fs::metadata(&new1).is_err() {
         fs::create_dir(&new1)?;
     }
-    if fs::metadata(&new2).is_err() {
-        fs::create_dir(&new2)?;
-    }
+
     Ok(())
 }
 
