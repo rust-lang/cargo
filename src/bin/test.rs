@@ -41,10 +41,10 @@ Options:
     -h, --help                   Print this message
     --lib                        Test only this package's library
     --doc                        Test only this library's documentation
-    --bin NAME                   Test only the specified binary
-    --example NAME               Test only the specified example
-    --test NAME                  Test only the specified integration test target
-    --bench NAME                 Test only the specified benchmark target
+    --bin NAME ...               Test only the specified binaries
+    --example NAME ...           Test only the specified examples
+    --test NAME ...              Test only the specified integration test targets
+    --bench NAME ...             Test only the specified benchmark targets
     --no-run                     Compile, but don't run tests
     -p SPEC, --package SPEC ...  Package to run tests for
     --all                        Test all packages in the workspace
