@@ -75,7 +75,7 @@ pub struct VersionInfo {
 
 impl fmt::Display for VersionInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "cargo-{}.{}.{}",
+        write!(f, "cargo {}.{}.{}",
                self.major, self.minor, self.patch)?;
         match self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
             Some(channel) => {
