@@ -42,7 +42,7 @@ Options:
     --lib                        Test only this package's library
     --doc                        Test only this library's documentation
     --bin NAME ...               Test only the specified binaries
-    --example NAME ...           Test only the specified examples
+    --example NAME ...           Check that the specified examples compile
     --test NAME ...              Test only the specified integration test targets
     --bench NAME ...             Test only the specified benchmark targets
     --no-run                     Compile, but don't run tests
