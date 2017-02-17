@@ -45,10 +45,6 @@ build: false
 test_script:
   - sh src/ci/run.sh %TARGET%
 
-cache:
-  - target
-  - C:\Users\appveyor\.cargo\registry
-
 before_deploy:
   - ps: |
         New-Item -Path deploy -ItemType directory
