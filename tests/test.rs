@@ -2573,25 +2573,6 @@ fn doctest_only_with_dev_dep() {
 }
 
 #[test]
-fn test_can_test_example() {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.1.0"
-        "#)
-        .file("examples/ex.rs", r#"
-            fn main() {}
-            #[test] fn kaboom() { panic("KABOOM!") }
-        "#);
-    let _ = p;
-// FIXME: does not work
-//    assert_that(p.cargo_process("test").arg("--example").arg("ex"),
-//                execs().with_status(101).with_stdout_contains("KABOOM!"))
-
-}
-
-#[test]
 fn test_many_targets() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -2629,10 +2610,10 @@ fn test_many_targets() {
             #[test] fn test_b() {}
         "#)
         .file("tests/c.rs", r#"
-            #[test] fn test_c() { panic!(); }
+            does not compile
         "#);
 
-    assert_that(p.cargo_process("test")
+    assert_that(p.cargo_process("test").arg("--verbose")
                     .arg("--bin").arg("a").arg("--bin").arg("b")
                     .arg("--example").arg("a").arg("--example").arg("b")
                     .arg("--test").arg("a").arg("--test").arg("b"),
@@ -2642,8 +2623,6 @@ fn test_many_targets() {
                     .with_stdout_contains("test bin_b ... ok")
                     .with_stdout_contains("test test_a ... ok")
                     .with_stdout_contains("test test_b ... ok")
-// FIXME: does not work
-//                  .with_stdout_contains("test example_a ... ok")
-//                  .with_stdout_contains("test example_b ... ok")
-    )
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name a examples[/]a.rs [..]`")
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name b examples[/]b.rs [..]`"))
 }
