@@ -157,5 +157,4 @@ deploy:
 
 cache:
   directories:
-    - $HOME/.cargo
     - target/openssl
