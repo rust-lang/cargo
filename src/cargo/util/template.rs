@@ -20,7 +20,7 @@ pub fn toml_escape_helper(h: &Helper,
     if let Some(param) = h.param(0) {
         let txt = param.value().as_string().unwrap_or("").to_owned();
         let rendered = format!("{}", toml::Value::String(txt));
-        try!(rc.writer.write(rendered.into_bytes().as_ref()));
+        try!(rc.writer.write_all(rendered.into_bytes().as_ref()));
     }
     Ok(())
 }
@@ -31,7 +31,7 @@ pub fn html_escape_helper(h: &Helper,
                           rc: &mut RenderContext) -> Result<(), RenderError> {
     if let Some(param) = h.param(0) {
         let rendered = html_escape(param.value().as_string().unwrap_or(""));
-        try!(rc.writer.write(rendered.into_bytes().as_ref()));
+        try!(rc.writer.write_all(rendered.into_bytes().as_ref()));
     }
     Ok(())
 }
@@ -139,7 +139,7 @@ pub fn get_template_type<'a>(repo: Option<&'a str>,
                              subdir: Option<&'a str>) -> CargoResult<TemplateType> {
     match (repo, subdir) {
         (Some(repo_str), _) => {
-            if let Ok(repo_url) = Url::parse(&repo_str) {
+            if let Ok(repo_url) = Url::parse(repo_str) {
                 let supported_schemes = ["git", "file", "http", "https", "ssh"];
                 if supported_schemes.contains(&repo_url.scheme()) {
                     Ok(TemplateType::GitRepo(repo_url.into_string()))

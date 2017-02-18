@@ -48,7 +48,7 @@ pub fn find_root_manifest_for_wd(manifest_path: Option<String>, cwd: &Path)
             }
             Ok(absolute_path)
         },
-        None => find_project_manifest(&cwd, "Cargo.toml"),
+        None => find_project_manifest(cwd, "Cargo.toml"),
     }
 }
 

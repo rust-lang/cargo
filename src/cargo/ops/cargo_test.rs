@@ -85,7 +85,7 @@ fn run_unit_tests(options: &TestOptions,
     let mut errors = Vec::new();
 
     for &(ref pkg, _, ref exe) in &compilation.tests {
-        let to_display = match util::without_prefix(exe, &cwd) {
+        let to_display = match util::without_prefix(exe, cwd) {
             Some(path) => path,
             None => &**exe,
         };
@@ -145,7 +145,7 @@ fn run_doc_tests(options: &TestOptions,
                 p.arg("--test-args").arg(arg);
             }
 
-            if let Some(cfgs) = compilation.cfgs.get(&package.package_id()) {
+            if let Some(cfgs) = compilation.cfgs.get(package.package_id()) {
                 for cfg in cfgs.iter() {
                     p.arg("--cfg").arg(cfg);
                 }

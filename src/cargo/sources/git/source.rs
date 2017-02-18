@@ -146,7 +146,7 @@ impl<'cfg> Source for GitSource<'cfg> {
 
             trace!("updating git source `{:?}`", self.remote);
 
-            let repo = self.remote.checkout(&db_path, &self.config)?;
+            let repo = self.remote.checkout(&db_path, self.config)?;
             let rev = repo.rev_for(&self.reference)?;
             (repo, rev)
         } else {
@@ -166,7 +166,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         // in scope so the destructors here won't tamper with too much.
         // Checkout is immutable, so we don't need to protect it with a lock once
         // it is created.
-        repo.copy_to(actual_rev.clone(), &checkout_path, &self.config)?;
+        repo.copy_to(actual_rev.clone(), &checkout_path, self.config)?;
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
         let path_source = PathSource::new_recursive(&checkout_path,

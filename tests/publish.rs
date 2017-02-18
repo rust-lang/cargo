@@ -26,10 +26,10 @@ fn upload() -> Url { Url::from_file_path(&*upload_path()).ok().unwrap() }
 fn setup() {
     let config = paths::root().join(".cargo/config");
     t!(fs::create_dir_all(config.parent().unwrap()));
-    t!(t!(File::create(&config)).write_all(&format!(r#"
+    t!(t!(File::create(&config)).write_all(br#"
         [registry]
             token = "api-token"
-    "#).as_bytes()));
+    "#));
     t!(fs::create_dir_all(&upload_path().join("api/v1/crates")));
 
     repo(&registry_path())

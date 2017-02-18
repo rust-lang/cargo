@@ -21,7 +21,7 @@ fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
 fn assert_cargo_toml_doesnt_exist(command: &str, manifest_path_argument: &str) {
     let p = project("foo");
     let expected_path = manifest_path_argument
-        .split("/").collect::<Vec<_>>().join("[..]");
+        .split('/').collect::<Vec<_>>().join("[..]");
 
     assert_that(p.cargo_process(command)
                  .arg("--manifest-path").arg(manifest_path_argument)

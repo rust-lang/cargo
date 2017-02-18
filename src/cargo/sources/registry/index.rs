@@ -53,14 +53,14 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// specified.
     pub fn summaries(&mut self, name: &str) -> CargoResult<&Vec<(Summary, bool)>> {
         if self.cache.contains_key(name) {
-            return Ok(self.cache.get(name).unwrap());
+            return Ok(&self.cache[name]);
         }
         let summaries = self.load_summaries(name)?;
         let summaries = summaries.into_iter().filter(|summary| {
             summary.0.package_id().name() == name
         }).collect();
         self.cache.insert(name.to_string(), summaries);
-        Ok(self.cache.get(name).unwrap())
+        Ok(&self.cache[name])
     }
 
     fn load_summaries(&mut self, name: &str) -> CargoResult<Vec<(Summary, bool)>> {
@@ -96,7 +96,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 let mut contents = String::new();
                 f.read_to_string(&mut contents)?;
                 let ret: CargoResult<Vec<(Summary, bool)>>;
-                ret = contents.lines().filter(|l| l.trim().len() > 0)
+                ret = contents.lines().filter(|l| !l.trim().is_empty())
                               .map(|l| self.parse_registry_package(l))
                               .collect();
                 ret.chain_error(|| {

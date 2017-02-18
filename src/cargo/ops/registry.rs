@@ -51,7 +51,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
     let (mut registry, reg_id) = registry(opts.config,
                                                opts.token.clone(),
                                                opts.index.clone())?;
-    verify_dependencies(&pkg, &reg_id)?;
+    verify_dependencies(pkg, &reg_id)?;
 
     // Prepare a tarball, with a non-surpressable warning if metadata
     // is missing since this is being put online.
@@ -66,7 +66,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
 
     // Upload said tarball to the specified destination
     opts.config.shell().status("Uploading", pkg.package_id().to_string())?;
-    transmit(opts.config, &pkg, tarball.file(), &mut registry, opts.dry_run)?;
+    transmit(opts.config, pkg, tarball.file(), &mut registry, opts.dry_run)?;
 
     Ok(())
 }
@@ -121,13 +121,10 @@ fn transmit(config: &Config,
         Some(ref readme) => Some(paths::read(&pkg.root().join(readme))?),
         None => None,
     };
-    match *license_file {
-        Some(ref file) => {
-            if fs::metadata(&pkg.root().join(file)).is_err() {
-                bail!("the license file `{}` does not exist", file)
-            }
+    if let Some(ref file) = *license_file {
+        if fs::metadata(&pkg.root().join(file)).is_err() {
+            bail!("the license file `{}` does not exist", file)
         }
-        None => {}
     }
 
     // Do not upload if performing a dry run
@@ -246,18 +243,13 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
 /// Favor cargo's `http.proxy`, then git's `http.proxy`. Proxies specified
 /// via environment variables are picked up by libcurl.
 fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
-    match config.get_string("http.proxy")? {
-        Some(s) => return Ok(Some(s.val)),
-        None => {}
+    if let Some(s) = config.get_string("http.proxy")? {
+        return Ok(Some(s.val))
     }
-    match git2::Config::open_default() {
-        Ok(cfg) => {
-            match cfg.get_str("http.proxy") {
-                Ok(s) => return Ok(Some(s.to_string())),
-                Err(..) => {}
-            }
+    if let Ok(cfg) = git2::Config::open_default() {
+        if let Ok(s) = cfg.get_str("http.proxy") {
+            return Ok(Some(s.to_string()))
         }
-        Err(..) => {}
     }
     Ok(None)
 }
@@ -282,9 +274,8 @@ pub fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
 }
 
 pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
-    match config.get_i64("http.timeout")? {
-        Some(s) => return Ok(Some(s.val)),
-        None => {}
+    if let Some(s) = config.get_i64("http.timeout")? {
+        return Ok(Some(s.val))
     }
     Ok(env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
 }
@@ -293,11 +284,8 @@ pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
     let RegistryConfig { index, token: _ } = registry_configuration(config)?;
     let mut map = HashMap::new();
     let p = config.cwd().to_path_buf();
-    match index {
-        Some(index) => {
-            map.insert("index".to_string(), ConfigValue::String(index, p.clone()));
-        }
-        None => {}
+    if let Some(index) = index {
+        map.insert("index".to_string(), ConfigValue::String(index, p.clone()));
     }
     map.insert("token".to_string(), ConfigValue::String(token, p));
 
@@ -327,28 +315,22 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     let (mut registry, _) = registry(config, opts.token.clone(),
                                           opts.index.clone())?;
 
-    match opts.to_add {
-        Some(ref v) => {
-            let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-            config.shell().status("Owner", format!("adding {:?} to crate {}",
-                                                        v, name))?;
-            registry.add_owners(&name, &v).map_err(|e| {
-                human(format!("failed to add owners to crate {}: {}", name, e))
-            })?;
-        }
-        None => {}
+    if let Some(ref v) = opts.to_add {
+        let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
+        config.shell().status("Owner", format!("adding {:?} to crate {}",
+                                                    v, name))?;
+        registry.add_owners(&name, &v).map_err(|e| {
+            human(format!("failed to add owners to crate {}: {}", name, e))
+        })?;
     }
 
-    match opts.to_remove {
-        Some(ref v) => {
-            let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-            config.shell().status("Owner", format!("removing {:?} from crate {}",
-                                                        v, name))?;
-            registry.remove_owners(&name, &v).map_err(|e| {
-                human(format!("failed to remove owners from crate {}: {}", name, e))
-            })?;
-        }
-        None => {}
+    if let Some(ref v) = opts.to_remove {
+        let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
+        config.shell().status("Owner", format!("removing {:?} from crate {}",
+                                                    v, name))?;
+        registry.remove_owners(&name, &v).map_err(|e| {
+            human(format!("failed to remove owners from crate {}: {}", name, e))
+        })?;
     }
 
     if opts.list {
