@@ -522,7 +522,6 @@ pub fn prepare_init(cx: &mut Context, unit: &Unit) -> CargoResult<()> {
     Ok(())
 }
 
-/// Returns the (old, new) location for the dep info file of a target.
 pub fn dep_info_loc(cx: &mut Context, unit: &Unit) -> PathBuf {
     cx.fingerprint_dir(unit).join(&format!("dep-{}", filename(cx, unit)))
 }
