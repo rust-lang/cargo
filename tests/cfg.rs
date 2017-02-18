@@ -205,7 +205,7 @@ fn works_through_the_registry() {
             .publish();
 
     let p = project("a")
-        .file("Cargo.toml", &r#"
+        .file("Cargo.toml", r#"
             [package]
             name = "a"
             version = "0.0.1"
@@ -263,7 +263,7 @@ fn ignore_version_from_other_platform() {
 #[test]
 fn bad_target_spec() {
     let p = project("a")
-        .file("Cargo.toml", &r#"
+        .file("Cargo.toml", r#"
             [package]
             name = "a"
             version = "0.0.1"
@@ -289,7 +289,7 @@ Caused by:
 #[test]
 fn bad_target_spec2() {
     let p = project("a")
-        .file("Cargo.toml", &r#"
+        .file("Cargo.toml", r#"
             [package]
             name = "a"
             version = "0.0.1"

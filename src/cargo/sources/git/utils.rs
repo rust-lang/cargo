@@ -120,13 +120,13 @@ impl GitRemote {
     pub fn checkout(&self, into: &Path, cargo_config: &Config) -> CargoResult<GitDatabase> {
         let repo = match git2::Repository::open(into) {
             Ok(repo) => {
-                self.fetch_into(&repo, &cargo_config).chain_error(|| {
+                self.fetch_into(&repo, cargo_config).chain_error(|| {
                     human(format!("failed to fetch into {}", into.display()))
                 })?;
                 repo
             }
             Err(..) => {
-                self.clone_into(into, &cargo_config).chain_error(|| {
+                self.clone_into(into, cargo_config).chain_error(|| {
                     human(format!("failed to clone into: {}", into.display()))
                 })?
             }
@@ -152,7 +152,7 @@ impl GitRemote {
         // Create a local anonymous remote in the repository to fetch the url
         let url = self.url.to_string();
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(dst, &url, refspec, &cargo_config)
+        fetch(dst, &url, refspec, cargo_config)
     }
 
     fn clone_into(&self, dst: &Path, cargo_config: &Config) -> CargoResult<git2::Repository> {
@@ -162,7 +162,7 @@ impl GitRemote {
         }
         fs::create_dir_all(dst)?;
         let repo = git2::Repository::init_bare(dst)?;
-        fetch(&repo, &url, "refs/heads/*:refs/heads/*", &cargo_config)?;
+        fetch(&repo, &url, "refs/heads/*:refs/heads/*", cargo_config)?;
         Ok(repo)
     }
 }
@@ -178,7 +178,7 @@ impl GitDatabase {
             Ok(repo) => {
                 let checkout = GitCheckout::new(dest, self, rev, repo);
                 if !checkout.is_fresh() {
-                    checkout.fetch(&cargo_config)?;
+                    checkout.fetch(cargo_config)?;
                     checkout.reset()?;
                     assert!(checkout.is_fresh());
                 }
@@ -186,7 +186,7 @@ impl GitDatabase {
             }
             Err(..) => GitCheckout::clone_into(dest, self, rev)?,
         };
-        checkout.update_submodules(&cargo_config).chain_error(|| {
+        checkout.update_submodules(cargo_config).chain_error(|| {
             internal("failed to update submodules")
         })?;
         Ok(checkout)
@@ -297,7 +297,7 @@ impl<'a> GitCheckout<'a> {
         let url = self.database.path.to_url()?;
         let url = url.to_string();
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(&self.repo, &url, refspec, &cargo_config)?;
+        fetch(&self.repo, &url, refspec, cargo_config)?;
         Ok(())
     }
 
@@ -320,7 +320,7 @@ impl<'a> GitCheckout<'a> {
     }
 
     fn update_submodules(&self, cargo_config: &Config) -> CargoResult<()> {
-        return update_submodules(&self.repo, &cargo_config);
+        return update_submodules(&self.repo, cargo_config);
 
         fn update_submodules(repo: &git2::Repository, cargo_config: &Config) -> CargoResult<()> {
             info!("update submodules for: {:?}", repo.workdir().unwrap());
@@ -362,14 +362,14 @@ impl<'a> GitCheckout<'a> {
 
                 // Fetch data from origin and reset to the head commit
                 let refspec = "refs/heads/*:refs/heads/*";
-                fetch(&repo, url, refspec, &cargo_config).chain_error(|| {
+                fetch(&repo, url, refspec, cargo_config).chain_error(|| {
                     internal(format!("failed to fetch submodule `{}` from {}",
                                      child.name().unwrap_or(""), url))
                 })?;
 
                 let obj = repo.find_object(head, None)?;
                 repo.reset(&obj, git2::ResetType::Hard, None)?;
-                update_submodules(&repo, &cargo_config)?;
+                update_submodules(&repo, cargo_config)?;
             }
             Ok(())
         }
@@ -459,7 +459,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
             let username = username.unwrap();
             debug_assert!(!ssh_username_requested);
             ssh_agent_attempts.push(username.to_string());
-            return git2::Cred::ssh_key_from_agent(&username)
+            return git2::Cred::ssh_key_from_agent(username)
         }
 
         // Sometimes libgit2 will ask for a username/password in plaintext. This
@@ -554,7 +554,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
     res.chain_error(|| {
         let mut msg = "failed to authenticate when downloading \
                        repository".to_string();
-        if ssh_agent_attempts.len() > 0 {
+        if !ssh_agent_attempts.is_empty() {
             let names = ssh_agent_attempts.iter()
                                           .map(|s| format!("`{}`", s))
                                           .collect::<Vec<_>>()
@@ -590,7 +590,7 @@ pub fn fetch(repo: &git2::Repository,
         cb.credentials(f);
 
         // Create a local anonymous remote in the repository to fetch the url
-        let mut remote = repo.remote_anonymous(&url)?;
+        let mut remote = repo.remote_anonymous(url)?;
         let mut opts = git2::FetchOptions::new();
         opts.remote_callbacks(cb)
             .download_tags(git2::AutotagOption::All);
@@ -610,7 +610,7 @@ pub fn clone(url: &str, target: &Path, config: &Config) -> CargoResult<()> {
                       target.display()))
     })?;
     let refspec = "refs/heads/*:refs/heads/*";
-    fetch(&repo, &url, refspec, &config).chain_error(||{
+    fetch(&repo, url, refspec, &config).chain_error(||{
         human(format!("failed to fecth `{}`", url))
     })?;
     let reference = "HEAD";

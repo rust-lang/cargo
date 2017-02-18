@@ -15,7 +15,7 @@ use tempdir::TempDir;
 fn cargo_process(s: &str) -> ProcessBuilder {
     let mut p = cargotest::process(&cargo_dir().join("cargo"));
     p.arg(s).cwd(&paths::root()).env("HOME", &paths::home());
-    return p;
+    p
 }
 
 #[test]
@@ -57,7 +57,7 @@ fn simple_bin() {
 #[test]
 fn both_lib_and_bin() {
     let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("init").arg("--lib").arg("--bin").cwd(td.path().clone())
+    assert_that(cargo_process("init").arg("--lib").arg("--bin").cwd(td.path())
                                     .env("USER", "foo"),
                 execs().with_status(101).with_stderr(
                     "[ERROR] can't specify both lib and binary outputs"));
@@ -427,7 +427,7 @@ Usage:
 fn no_filename() {
     assert_that(cargo_process("init").arg("/"),
                 execs().with_status(101)
-                       .with_stderr(&format!("\
+                       .with_stderr("\
 [ERROR] cannot auto-detect project name from path \"/\" ; use --name to override
-")));
+".to_string()));
 }

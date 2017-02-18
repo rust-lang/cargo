@@ -170,7 +170,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                 let pkgid = unit.pkg.package_id();
                 if !unit.target.is_lib() { continue }
                 if unit.profile.doc { continue }
-                if cx.compilation.libraries.contains_key(&pkgid) {
+                if cx.compilation.libraries.contains_key(pkgid) {
                     continue
                 }
 
@@ -182,9 +182,9 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             }
         }
 
-        if let Some(feats) = cx.resolve.features(&unit.pkg.package_id()) {
+        if let Some(feats) = cx.resolve.features(unit.pkg.package_id()) {
             cx.compilation.cfgs.entry(unit.pkg.package_id().clone())
-                .or_insert(HashSet::new())
+                .or_insert_with(HashSet::new)
                 .extend(feats.iter().map(|feat| format!("feature=\"{}\"", feat)));
         }
 
@@ -193,7 +193,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
 
     for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
         cx.compilation.cfgs.entry(pkg.clone())
-            .or_insert(HashSet::new())
+            .or_insert_with(HashSet::new)
             .extend(output.cfgs.iter().cloned());
 
         for dir in output.library_paths.iter() {
@@ -344,7 +344,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
                 },
                 &mut |line| {
                     // stderr from rustc can have a mix of JSON and non-JSON output
-                    if line.starts_with("{") {
+                    if line.starts_with('{') {
                         // Handle JSON lines
                         let compiler_message = json::Json::from_str(line).map_err(|_| {
                             internal(&format!("compiler produced invalid json: `{}`", line))

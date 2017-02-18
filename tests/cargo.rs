@@ -64,7 +64,7 @@ fn path() -> Vec<PathBuf> {
 #[test]
 fn list_command_looks_at_path() {
     let proj = project("list-non-overlapping");
-    let proj = fake_file(proj, &Path::new("path-test"), "cargo-1", FakeKind::Executable);
+    let proj = fake_file(proj, Path::new("path-test"), "cargo-1", FakeKind::Executable);
     let mut pr = cargo_process();
 
     let mut path = path();
@@ -84,7 +84,7 @@ fn list_command_resolves_symlinks() {
     use cargotest::support::cargo_dir;
 
     let proj = project("list-non-overlapping");
-    let proj = fake_file(proj, &Path::new("path-test"), "cargo-2",
+    let proj = fake_file(proj, Path::new("path-test"), "cargo-2",
                          FakeKind::Symlink{target:&cargo_dir().join("cargo")});
     let mut pr = cargo_process();
 

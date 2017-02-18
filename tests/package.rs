@@ -360,9 +360,9 @@ fn no_duplicates_from_modified_tracked_files() {
             fn main() {}
         "#);
     p.build();
-    File::create(p.root().join("src/main.rs")).unwrap().write_all(r#"
+    File::create(p.root().join("src/main.rs")).unwrap().write_all(br#"
             fn main() { println!("A change!"); }
-        "#.as_bytes()).unwrap();
+        "#).unwrap();
     let mut cargo = cargo_process();
     cargo.cwd(p.root());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
@@ -476,9 +476,9 @@ fn repackage_on_source_change() {
         panic!("could not create file {}: {}", p.root().join("src/foo.rs").display(), e)
     });
 
-    file.write_all(r#"
+    file.write_all(br#"
         fn main() { println!("foo"); }
-    "#.as_bytes()).unwrap();
+    "#).unwrap();
     std::mem::drop(file);
 
     let mut pro = process(&cargo_dir().join("cargo"));

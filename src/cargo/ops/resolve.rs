@@ -61,7 +61,7 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     let resolved_with_overrides =
     ops::resolve_with_previous(&mut registry, ws,
                                method, Some(&resolve), None,
-                               &specs)?;
+                               specs)?;
 
     for &(ref replace_spec, _) in ws.root_replace() {
         if !resolved_with_overrides.replacements().keys().any(|r| replace_spec.matches(r)) {
