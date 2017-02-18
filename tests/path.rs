@@ -298,6 +298,7 @@ fn no_rebuild_dependency() {
                                             p.url(),
                                             p.url())));
 
+    sleep_ms(1000);
     p.change_file("src/foo.rs", r#"
         extern crate bar;
         fn main() { bar::bar(); }
