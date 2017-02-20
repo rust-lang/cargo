@@ -745,3 +745,237 @@ fn install_multiple_required_features() {
     assert_that(cargo_home(), not(has_installed_exe("foo_1")));
     assert_that(cargo_home(), not(has_installed_exe("foo_2")));
 }
+
+#[test]
+fn dep_feature_in_toml() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = { path = "bar", features = ["a"] }
+
+            [[bin]]
+            name = "foo"
+            required-features = ["bar/a"]
+
+            [[example]]
+            name = "foo"
+            required-features = ["bar/a"]
+
+            [[test]]
+            name = "foo"
+            required-features = ["bar/a"]
+
+            [[bench]]
+            name = "foo"
+            required-features = ["bar/a"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("examples/foo.rs", "fn main() {}")
+        .file("tests/foo.rs", "#[test]\nfn test() {}")
+        .file("benches/foo.rs", r#"
+            #![feature(test)]
+            extern crate test;
+
+            #[bench]
+            fn bench(_: &mut test::Bencher) {
+            }"#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            a = []
+        "#)
+        .file("bar/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+
+    // bin
+    assert_that(p.cargo("build").arg("--bin=foo"),
+                execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+
+    // example
+    assert_that(p.cargo("build").arg("--example=foo"),
+                execs().with_status(0));
+    assert_that(&p.bin("examples/foo"), existing_file());
+
+    // test
+    assert_that(p.cargo("test").arg("--test=foo"),
+                execs().with_status(0).with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]", p.url()))
+                .with_stdout("
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+"));
+
+    // bench
+    if is_nightly() {
+        assert_that(p.cargo("bench").arg("--bench=foo"),
+                    execs().with_status(0).with_stderr(format!("\
+[COMPILING] bar v0.0.1 ({0}/bar)
+[COMPILING] foo v0.0.1 ({0})
+[FINISHED] release [optimized] target(s) in [..]
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
+                    .with_stdout("
+running 1 test
+test bench ... bench: [..] 0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+
+"));
+    }
+
+    // install
+    assert_that(p.cargo("install"),
+                execs().with_status(0));
+    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_that(p.cargo("uninstall").arg("foo"),
+                execs().with_status(0));
+}
+
+#[test]
+fn dep_feature_in_cmd_line() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [[bin]]
+            name = "foo"
+            required-features = ["bar/a"]
+
+            [[example]]
+            name = "foo"
+            required-features = ["bar/a"]
+
+            [[test]]
+            name = "foo"
+            required-features = ["bar/a"]
+
+            [[bench]]
+            name = "foo"
+            required-features = ["bar/a"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("examples/foo.rs", "fn main() {}")
+        .file("tests/foo.rs", "#[test]\nfn test() {}")
+        .file("benches/foo.rs", r#"
+            #![feature(test)]
+            extern crate test;
+
+            #[bench]
+            fn bench(_: &mut test::Bencher) {
+            }"#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            a = []
+        "#)
+        .file("bar/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+
+    // bin
+    assert_that(p.cargo("build").arg("--bin=foo"),
+                execs().with_status(101).with_stderr("\
+error: target `foo` requires the features: `bar/a`
+Consider enabling them by passing e.g. `--features=\"bar/a\"`
+"));
+
+    assert_that(p.cargo("build").arg("--bin=foo").arg("--features").arg("bar/a"),
+                execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+
+    // example
+    assert_that(p.cargo("build").arg("--example=foo"),
+                execs().with_status(101).with_stderr("\
+error: target `foo` requires the features: `bar/a`
+Consider enabling them by passing e.g. `--features=\"bar/a\"`
+"));
+
+    assert_that(p.cargo("build").arg("--example=foo").arg("--features").arg("bar/a"),
+                execs().with_status(0));
+    assert_that(&p.bin("examples/foo"), existing_file());
+
+    // test
+    assert_that(p.cargo("test"),
+                execs().with_status(0).with_stderr(format!("\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"))
+                .with_stdout(""));
+
+    assert_that(p.cargo("test").arg("--test=foo").arg("--features").arg("bar/a"),
+                execs().with_status(0).with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]", p.url()))
+                .with_stdout("
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+"));
+
+    // bench
+    if is_nightly() {
+        assert_that(p.cargo("bench"),
+                    execs().with_status(0).with_stderr(format!("\
+[FINISHED] release [optimized] target(s) in [..]"))
+                    .with_stdout(""));
+
+        assert_that(p.cargo("bench").arg("--bench=foo").arg("--features").arg("bar/a"),
+                    execs().with_status(0).with_stderr(format!("\
+[COMPILING] bar v0.0.1 ({0}/bar)
+[COMPILING] foo v0.0.1 ({0})
+[FINISHED] release [optimized] target(s) in [..]
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
+                    .with_stdout("
+running 1 test
+test bench ... bench: [..] 0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+
+"));
+    }
+
+    // install
+    assert_that(p.cargo("install"),
+                execs().with_status(101).with_stderr(format!("\
+[INSTALLING] foo v0.0.1 ([..])
+[FINISHED] release [optimized] target(s) in [..]
+[ERROR] no binaries are available for install using the selected features
+")));
+    assert_that(cargo_home(), not(has_installed_exe("foo")));
+
+    assert_that(p.cargo("install").arg("--features").arg("bar/a"),
+                execs().with_status(0));
+    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_that(p.cargo("uninstall").arg("foo"),
+                execs().with_status(0));
+}

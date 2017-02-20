@@ -28,7 +28,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use core::{Source, Package, Target};
-use core::{Profile, TargetKind, Profiles, Workspace, PackageIdSpec};
+use core::{Profile, TargetKind, Profiles, Workspace, PackageId, PackageIdSpec};
+use core::resolver::Resolve;
 use ops::{self, BuildOutput, Executor, DefaultExecutor};
 use util::config::Config;
 use util::{CargoResult, profile};
@@ -188,8 +189,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
     } else {
         let root_package = ws.current()?;
-        let all_features = resolve_with_overrides.features(root_package.package_id());
-        generate_targets(root_package, profiles, mode, filter, all_features, release)?;
+        let all_features = resolve_all_features(&resolve_with_overrides, root_package.package_id());
+        generate_targets(root_package, profiles, mode, filter, &all_features, release)?;
         pkgids.push(root_package.package_id());
     };
 
@@ -206,9 +207,9 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
             panic!("`rustc` and `rustdoc` should not accept multiple `-p` flags")
         }
         (Some(args), _) => {
-            let all_features = resolve_with_overrides.features(to_builds[0].package_id());
+            let all_features = resolve_all_features(&resolve_with_overrides, to_builds[0].package_id());
             let targets = generate_targets(to_builds[0], profiles,
-                                           mode, filter, all_features, release)?;
+                                           mode, filter, &all_features, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -221,9 +222,9 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
             }
         }
         (None, Some(args)) => {
-            let all_features = resolve_with_overrides.features(to_builds[0].package_id());
+            let all_features = resolve_all_features(&resolve_with_overrides, to_builds[0].package_id());
             let targets = generate_targets(to_builds[0], profiles,
-                                           mode, filter, all_features, release)?;
+                                           mode, filter, &all_features, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -237,9 +238,9 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
         (None, None) => {
             for &to_build in to_builds.iter() {
-                let all_features = resolve_with_overrides.features(to_build.package_id());
+                let all_features = resolve_all_features(&resolve_with_overrides, to_build.package_id());
                 let targets = generate_targets(to_build, profiles, mode,
-                                               filter, all_features, release)?;
+                                               filter, &all_features, release)?;
                 package_targets.push((to_build, targets));
             }
         }
@@ -273,7 +274,29 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
 
     ret.to_doc_test = to_builds.iter().map(|&p| p.clone()).collect();
 
-    Ok(ret)
+    return Ok(ret);
+
+    fn resolve_all_features(resolve_with_overrides: &Resolve,
+                            package_id: &PackageId)
+                            -> HashSet<String> {
+        let mut features = match resolve_with_overrides.features(package_id) {
+            Some(all_features) => all_features.clone(),
+            None => HashSet::new(),
+        };
+
+        // Include features enabled for use by dependencies so targets can also use them with the
+        // required-features field when deciding whether to be built or skipped.
+        let deps = resolve_with_overrides.deps(package_id);
+        for dep in deps {
+            if let Some(dep_features) = resolve_with_overrides.features(dep) {
+                for feature in dep_features {
+                    features.insert(dep.name().to_string() + "/" + feature);
+                }
+            }
+        }
+
+        features
+    }
 }
 
 impl<'a> CompileFilter<'a> {
@@ -318,7 +341,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                         profiles: &'a Profiles,
                         mode: CompileMode,
                         filter: &CompileFilter,
-                        features: Option<&HashSet<String>>,
+                        features: &HashSet<String>,
                         release: bool)
                         -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
     let build = if release {&profiles.release} else {&profiles.dev};
@@ -430,8 +453,6 @@ fn generate_targets<'a>(pkg: &'a Package,
     };
 
     //Collect the targets that are libraries or have all required features available.
-    let no_features = HashSet::new();
-    let features = features.unwrap_or(&no_features);
     let mut compatible_targets = Vec::with_capacity(targets.len());
     for (target, profile) in targets.drain(0..) {
         if target.is_lib() || match target.required_features() {
