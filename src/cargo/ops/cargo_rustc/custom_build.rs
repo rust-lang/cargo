@@ -352,10 +352,10 @@ impl BuildOutput {
 
             match key {
                 "rustc-flags" => {
-                    let (libs, links) =
+                    let (paths, links) =
                         BuildOutput::parse_rustc_flags(value, &whence)?;
                     library_links.extend(links.into_iter());
-                    library_paths.extend(libs.into_iter());
+                    library_paths.extend(paths.into_iter());
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
                 "rustc-link-search" => library_paths.push(PathBuf::from(value)),
@@ -381,7 +381,7 @@ impl BuildOutput {
         let value = value.trim();
         let mut flags_iter = value.split(|c: char| c.is_whitespace())
                                   .filter(|w| w.chars().any(|c| !c.is_whitespace()));
-        let (mut library_links, mut library_paths) = (Vec::new(), Vec::new());
+        let (mut library_paths, mut library_links) = (Vec::new(), Vec::new());
         loop {
             let flag = match flags_iter.next() {
                 Some(f) => f,
