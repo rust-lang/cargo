@@ -189,7 +189,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
     } else {
         let root_package = ws.current()?;
-        let all_features = resolve_all_features(&resolve_with_overrides, root_package.package_id());
+        let all_features = resolve_all_features(&resolve_with_overrides,
+                                                root_package.package_id());
         generate_targets(root_package, profiles, mode, filter, &all_features, release)?;
         pkgids.push(root_package.package_id());
     };
@@ -207,7 +208,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
             panic!("`rustc` and `rustdoc` should not accept multiple `-p` flags")
         }
         (Some(args), _) => {
-            let all_features = resolve_all_features(&resolve_with_overrides, to_builds[0].package_id());
+            let all_features = resolve_all_features(&resolve_with_overrides,
+                                                    to_builds[0].package_id());
             let targets = generate_targets(to_builds[0], profiles,
                                            mode, filter, &all_features, release)?;
             if targets.len() == 1 {
@@ -222,7 +224,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
             }
         }
         (None, Some(args)) => {
-            let all_features = resolve_all_features(&resolve_with_overrides, to_builds[0].package_id());
+            let all_features = resolve_all_features(&resolve_with_overrides,
+                                                    to_builds[0].package_id());
             let targets = generate_targets(to_builds[0], profiles,
                                            mode, filter, &all_features, release)?;
             if targets.len() == 1 {
@@ -238,7 +241,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
         (None, None) => {
             for &to_build in to_builds.iter() {
-                let all_features = resolve_all_features(&resolve_with_overrides, to_build.package_id());
+                let all_features = resolve_all_features(&resolve_with_overrides,
+                                                        to_build.package_id());
                 let targets = generate_targets(to_build, profiles, mode,
                                                filter, &all_features, release)?;
                 package_targets.push((to_build, targets));
