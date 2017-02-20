@@ -171,7 +171,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     let kind = unit.kind;
     let json_messages = cx.build_config.json_messages;
 
-    // Check to see if the build script as already run, and if it has keep
+    // Check to see if the build script has already run, and if it has keep
     // track of whether it has told us about some explicit dependencies
     let prev_output = BuildOutput::parse_file(&output_file, &pkg_name).ok();
     let rerun_if_changed = match prev_output {

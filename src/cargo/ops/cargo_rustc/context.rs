@@ -444,7 +444,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns a tuple with the directory and name of the hard link we expect
     /// our target to be copied to. Eg, file_stem may be out_dir/deps/foo-abcdef
     /// and link_stem would be out_dir/foo
-    /// This function returns it in two parts so the caller can add prefix/suffis
+    /// This function returns it in two parts so the caller can add prefix/suffix
     /// to filename separately
 
     /// Returns an Option because in some cases we don't want to link
