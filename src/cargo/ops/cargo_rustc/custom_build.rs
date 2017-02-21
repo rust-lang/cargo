@@ -120,10 +120,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
-    if let Some(features) = cx.resolve.features(unit.pkg.package_id()) {
-        for feat in features.iter() {
-            cmd.env(&format!("CARGO_FEATURE_{}", super::envify(feat)), "1");
-        }
+    for feat in cx.resolve.features(unit.pkg.package_id()).iter() {
+        cmd.env(&format!("CARGO_FEATURE_{}", super::envify(feat)), "1");
     }
 
     let mut cfg_map = HashMap::new();

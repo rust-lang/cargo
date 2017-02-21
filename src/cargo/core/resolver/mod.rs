@@ -47,6 +47,7 @@
 
 use std::cmp::Ordering;
 use std::collections::{HashSet, HashMap, BinaryHeap, BTreeMap};
+use std::iter::FromIterator;
 use std::fmt;
 use std::ops::Range;
 use std::rc::Rc;
@@ -74,6 +75,7 @@ mod encode;
 pub struct Resolve {
     graph: Graph<PackageId>,
     replacements: HashMap<PackageId, PackageId>,
+    empty_features: HashSet<String>,
     features: HashMap<PackageId, HashSet<String>>,
     checksums: HashMap<PackageId, Option<String>>,
     metadata: Metadata,
@@ -210,8 +212,14 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self.replacements
     }
 
-    pub fn features(&self, pkg: &PackageId) -> Option<&HashSet<String>> {
-        self.features.get(pkg)
+    pub fn features(&self, pkg: &PackageId) -> &HashSet<String> {
+        self.features.get(pkg).unwrap_or(&self.empty_features)
+    }
+
+    pub fn features_sorted(&self, pkg: &PackageId) -> Vec<&str> {
+        let mut v = Vec::from_iter(self.features(pkg).iter().map(|s| s.as_ref()));
+        v.sort();
+        v
     }
 
     pub fn query(&self, spec: &str) -> CargoResult<&PackageId> {
@@ -273,6 +281,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
 
     let mut resolve = Resolve {
         graph: cx.resolve_graph,
+        empty_features: HashSet::new(),
         features: cx.resolve_features,
         checksums: HashMap::new(),
         metadata: BTreeMap::new(),

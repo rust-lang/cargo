@@ -154,6 +154,7 @@ impl EncodableResolve {
 
         Ok(Resolve {
             graph: g,
+            empty_features: HashSet::new(),
             features: HashMap::new(),
             replacements: replacements,
             checksums: checksums,
