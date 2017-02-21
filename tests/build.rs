@@ -40,15 +40,16 @@ fn cargo_compile_incremental() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+    p.build();
 
     assert_that(
-        p.cargo_process("build").arg("-v").env("CARGO_INCREMENTAL", "1"),
+        p.cargo("build").arg("-v").env("CARGO_INCREMENTAL", "1"),
         execs().with_stderr_contains(
             "[RUNNING] `rustc [..] -Zincremental=[..][/]target[/]debug[/]incremental`\n")
             .with_status(0));
 
     assert_that(
-        p.cargo_process("test").arg("-v").env("CARGO_INCREMENTAL", "1"),
+        p.cargo("test").arg("-v").env("CARGO_INCREMENTAL", "1"),
         execs().with_stderr_contains(
             "[RUNNING] `rustc [..] -Zincremental=[..][/]target[/]debug[/]incremental`\n")
                .with_status(0));
@@ -700,22 +701,23 @@ fn cargo_compile_with_filename() {
         .file("examples/a.rs", r#"
             fn main() { println!("example"); }
         "#);
+    p.build();
 
-    assert_that(p.cargo_process("build").arg("--bin").arg("bin.rs"),
+    assert_that(p.cargo("build").arg("--bin").arg("bin.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `bin.rs`"));
 
-    assert_that(p.cargo_process("build").arg("--bin").arg("a.rs"),
+    assert_that(p.cargo("build").arg("--bin").arg("a.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `a.rs`
 
 Did you mean `a`?"));
 
-    assert_that(p.cargo_process("build").arg("--example").arg("example.rs"),
+    assert_that(p.cargo("build").arg("--example").arg("example.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no example target named `example.rs`"));
 
-    assert_that(p.cargo_process("build").arg("--example").arg("a.rs"),
+    assert_that(p.cargo("build").arg("--example").arg("a.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no example target named `a.rs`
 
@@ -814,9 +816,10 @@ fn cargo_default_env_metadata_env_var() {
             crate_type = ["dylib"]
         "#)
         .file("bar/src/lib.rs", "// hello");
+    p.build();
 
     // No metadata on libbar since it's a dylib path dependency
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type dylib \
@@ -840,10 +843,10 @@ prefix = env::consts::DLL_PREFIX,
 suffix = env::consts::DLL_SUFFIX,
 )));
 
-    assert_that(p.cargo_process("clean"), execs().with_status(0));
+    assert_that(p.cargo("clean"), execs().with_status(0));
 
     // If you set the env-var, then we expect metadata on libbar
-    assert_that(p.cargo_process("build").arg("-v").env("__CARGO_DEFAULT_LIB_METADATA", "1"),
+    assert_that(p.cargo("build").arg("-v").env("__CARGO_DEFAULT_LIB_METADATA", "1"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type dylib \
@@ -1447,15 +1450,16 @@ fn deletion_causes_failure() {
             authors = []
         "#)
         .file("bar/src/lib.rs", "");
+    p.build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
-    let p = p.file("Cargo.toml", r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#);
-    assert_that(p.cargo_process("build"), execs().with_status(101));
+    assert_that(p.cargo("build"), execs().with_status(0));
+    p.change_file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.1"
+        authors = []
+    "#);
+    assert_that(p.cargo("build"), execs().with_status(101));
 }
 
 #[test]
@@ -2356,7 +2360,6 @@ fn build_multiple_packages() {
                 doctest = false
         "#)
         .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }");
-    p.build();
 
     assert_that(p.cargo_process("build").arg("-p").arg("d1").arg("-p").arg("d2")
                                         .arg("-p").arg("foo"),
@@ -2408,12 +2411,12 @@ fn invalid_spec() {
         .file("d1/src/main.rs", "fn main() { println!(\"d1\"); }");
     p.build();
 
-    assert_that(p.cargo_process("build").arg("-p").arg("notAValidDep"),
+    assert_that(p.cargo("build").arg("-p").arg("notAValidDep"),
                 execs().with_status(101).with_stderr("\
 [ERROR] package id specification `notAValidDep` matched no packages
 "));
 
-    assert_that(p.cargo_process("build").arg("-p").arg("d1").arg("-p").arg("notAValidDep"),
+    assert_that(p.cargo("build").arg("-p").arg("d1").arg("-p").arg("notAValidDep"),
                 execs().with_status(101).with_stderr("\
 [ERROR] package id specification `notAValidDep` matched no packages
 "));
@@ -2456,22 +2459,23 @@ fn panic_abort_compiles_with_panic_abort() {
 
 #[test]
 fn explicit_color_config_is_propagated_to_rustc() {
-    let mut p = project("foo");
-    p = p
-    .file("Cargo.toml", r#"
-            [package]
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+                [package]
 
-            name = "test"
-            version = "0.0.0"
-            authors = []
-        "#)
-    .file("src/lib.rs", "");
-
-    assert_that(p.cargo_process("build").arg("-v").arg("--color").arg("always"),
+                name = "test"
+                version = "0.0.0"
+                authors = []
+            "#)
+        .file("src/lib.rs", "");
+    p.build();
+    assert_that(p.cargo("build").arg("-v").arg("--color").arg("always"),
                 execs().with_status(0).with_stderr_contains(
                     "[..]rustc [..] src[/]lib.rs --color always[..]"));
 
-    assert_that(p.cargo_process("build").arg("-v").arg("--color").arg("never"),
+    assert_that(p.cargo("clean"), execs().with_status(0));
+
+    assert_that(p.cargo("build").arg("-v").arg("--color").arg("never"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] test v0.0.0 ([..])
 [RUNNING] `rustc [..] --color never [..]`
@@ -2576,7 +2580,6 @@ fn wrong_message_format_option() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}");
-    p.build();
 
     assert_that(p.cargo_process("build").arg("--message-format").arg("XML"),
                 execs().with_status(1)
@@ -2659,7 +2662,6 @@ fn cargo_build_empty_target() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}");
-    p.build();
 
     assert_that(p.cargo_process("build").arg("--target").arg(""),
                 execs().with_status(101)
@@ -2690,7 +2692,6 @@ fn build_all_workspace() {
         .file("bar/src/lib.rs", r#"
             pub fn bar() {}
         "#);
-    p.build();
 
     assert_that(p.cargo_process("build")
                  .arg("--all"),
@@ -2723,7 +2724,6 @@ fn build_all_virtual_manifest() {
         .file("bar/src/lib.rs", r#"
             pub fn bar() {}
         "#);
-    p.build();
 
     // The order in which foo and bar are built is not guaranteed
     assert_that(p.cargo_process("build")
@@ -2754,7 +2754,6 @@ fn build_all_member_dependency_same_name() {
         .file("a/src/lib.rs", r#"
             pub fn a() {}
         "#);
-    p.build();
 
     Package::new("a", "0.1.0").publish();
 

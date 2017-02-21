@@ -582,6 +582,7 @@ fn no_cross_doctests() {
             //! assert!(true);
             //! ```
         "#);
+    p.build();
 
     let host_output = format!("\
 [COMPILING] foo v0.0.0 ({foo})
@@ -591,13 +592,13 @@ fn no_cross_doctests() {
 ", foo = p.url());
 
     println!("a");
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stderr(&host_output));
 
     println!("b");
     let target = host();
-    assert_that(p.cargo_process("test").arg("--target").arg(&target),
+    assert_that(p.cargo("test").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
@@ -608,7 +609,7 @@ fn no_cross_doctests() {
 
     println!("c");
     let target = alternate();
-    assert_that(p.cargo_process("test").arg("--target").arg(&target),
+    assert_that(p.cargo("test").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
@@ -1046,8 +1047,9 @@ fn platform_specific_variables_reflected_in_build_scripts() {
             fn main() { println!("cargo:val=1") }
         "#)
         .file("d2/src/lib.rs", "");
+    p.build();
 
-    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
-    assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
+    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(0));
 }
