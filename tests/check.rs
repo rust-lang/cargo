@@ -386,3 +386,41 @@ fn rustc_check_err() {
                    .arg("--emit=metadata"),
                 execs().with_status(101));
 }
+
+#[test]
+fn check_all() {
+    if !is_nightly() {
+        return
+    }
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [workspace]
+            [dependencies]
+            b = { path = "b" }
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("examples/a.rs", "fn main() {}")
+        .file("tests/a.rs", "")
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("b/src/main.rs", "fn main() {}")
+        .file("b/src/lib.rs", "");
+
+    assert_that(foo.cargo_process("check").arg("--all").arg("-v"),
+                execs().with_status(0)
+        .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..]")
+        .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..]")
+        .with_stderr_contains("[..] --crate-name b b[/]src[/]lib.rs [..]")
+        .with_stderr_contains("[..] --crate-name b b[/]src[/]main.rs [..]")
+        );
+}
