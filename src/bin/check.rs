@@ -1,7 +1,7 @@
 use std::env;
 
 use cargo::core::Workspace;
-use cargo::ops::{self, CompileOptions, MessageFormat};
+use cargo::ops::{self, CompileOptions, MessageFormat, Packages};
 use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
@@ -13,7 +13,8 @@ Usage:
 
 Options:
     -h, --help                   Print this message
-    -p SPEC, --package SPEC ...  Package to check
+    -p SPEC, --package SPEC ...  Package(s) to check
+    --all                        Check all packages in the workspace
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --lib                        Check only this package's library
     --bin NAME                   Check only the specified binary
@@ -64,6 +65,7 @@ pub struct Options {
     flag_bench: Vec<String>,
     flag_locked: bool,
     flag_frozen: bool,
+    flag_all: bool,
 }
 
 pub fn execute(options: Options, config: &Config) -> CliResult {
@@ -79,6 +81,12 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     let ws = Workspace::new(&root, config)?;
 
+    let spec = if options.flag_all {
+        Packages::All
+    } else {
+        Packages::Packages(&options.flag_package)
+    };
+
     let opts = CompileOptions {
         config: config,
         jobs: options.flag_jobs,
@@ -86,7 +94,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         features: &options.flag_features,
         all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
-        spec: ops::Packages::Packages(&options.flag_package),
+        spec: spec,
         mode: ops::CompileMode::Check,
         release: options.flag_release,
         filter: ops::CompileFilter::new(options.flag_lib,
