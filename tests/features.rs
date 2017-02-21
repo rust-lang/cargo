@@ -106,20 +106,21 @@ fn invalid4() {
             authors = []
         "#)
         .file("bar/src/lib.rs", "");
+    p.build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Package `bar v0.0.1 ([..])` does not have these features: `bar`
 "));
 
-    let p = p.file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#);
+    p.change_file("Cargo.toml", r#"
+        [project]
+        name = "foo"
+        version = "0.0.1"
+        authors = []
+    "#);
 
-    assert_that(p.cargo_process("build").arg("--features").arg("test"),
+    assert_that(p.cargo("build").arg("--features").arg("test"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Package `foo v0.0.1 ([..])` does not have these features: `test`
 "));
@@ -938,25 +939,26 @@ fn dep_feature_in_cmd_line() {
             #[cfg(feature = "some-feat")]
             pub fn test() { print!("test"); }
         "#);
+    p.build();
 
     // The foo project requires that feature "some-feat" in "bar" is enabled.
     // Building without any features enabled should fail:
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101));
 
     // We should be able to enable the feature "derived-feat", which enables "some-feat",
     // on the command line. The feature is enabled, thus building should be successful:
-    assert_that(p.cargo_process("build").arg("--features").arg("derived/derived-feat"),
+    assert_that(p.cargo("build").arg("--features").arg("derived/derived-feat"),
                 execs().with_status(0));
 
     // Trying to enable features of transitive dependencies is an error
-    assert_that(p.cargo_process("build").arg("--features").arg("bar/some-feat"),
+    assert_that(p.cargo("build").arg("--features").arg("bar/some-feat"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Package `foo v0.0.1 ([..])` does not have these features: `bar`
 "));
 
     // Hierarchical feature specification should still be disallowed
-    assert_that(p.cargo_process("build").arg("--features").arg("derived/bar/some-feat"),
+    assert_that(p.cargo("build").arg("--features").arg("derived/bar/some-feat"),
                 execs().with_status(101).with_stderr("\
 [ERROR] feature names may not contain slashes: `bar/some-feat`
 "));

@@ -163,6 +163,8 @@ fn check_build() {
                 ::bar::baz();
             }
         "#);
+    foo.build();
+
     let bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
@@ -175,9 +177,9 @@ fn check_build() {
         "#);
     bar.build();
 
-    assert_that(foo.cargo_process("check"),
+    assert_that(foo.cargo("check"),
                 execs().with_status(0));
-    assert_that(foo.cargo_process("build"),
+    assert_that(foo.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -203,6 +205,8 @@ fn build_check() {
                 ::bar::baz();
             }
         "#);
+    foo.build();
+
     let bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
@@ -215,9 +219,9 @@ fn build_check() {
         "#);
     bar.build();
 
-    assert_that(foo.cargo_process("build"),
+    assert_that(foo.cargo("build"),
                 execs().with_status(0));
-    assert_that(foo.cargo_process("check"),
+    assert_that(foo.cargo("check"),
                 execs().with_status(0));
 }
 
@@ -240,7 +244,6 @@ fn issue_3418() {
         "#)
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}");
-    foo.build();
 
     assert_that(foo.cargo_process("check").arg("-v"),
                 execs().with_status(0)

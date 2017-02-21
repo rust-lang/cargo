@@ -184,6 +184,9 @@ fn unpublishable_crate() {
 #[test]
 fn dont_publish_dirty() {
     setup();
+    let p = project("foo")
+        .file("bar", "");
+    p.build();
 
     repo(&paths::root().join("foo"))
         .file("Cargo.toml", r#"
@@ -200,8 +203,6 @@ fn dont_publish_dirty() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    let p = project("foo");
-    t!(File::create(p.root().join("bar")));
     assert_that(p.cargo("publish")
                  .arg("--host").arg(registry().to_string()),
                 execs().with_status(101).with_stderr("\
@@ -218,6 +219,9 @@ to proceed despite this, pass the `--allow-dirty` flag
 fn publish_clean() {
     setup();
 
+    let p = project("foo");
+    p.build();
+
     repo(&paths::root().join("foo"))
         .file("Cargo.toml", r#"
             [project]
@@ -233,7 +237,6 @@ fn publish_clean() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    let p = project("foo");
     assert_that(p.cargo("publish")
                  .arg("--host").arg(registry().to_string()),
                 execs().with_status(0));
@@ -242,6 +245,10 @@ fn publish_clean() {
 #[test]
 fn publish_in_sub_repo() {
     setup();
+
+    let p = project("foo")
+        .file("baz", "");
+    p.build();
 
     repo(&paths::root().join("foo"))
         .file("bar/Cargo.toml", r#"
@@ -258,8 +265,6 @@ fn publish_in_sub_repo() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    let p = project("foo");
-    t!(File::create(p.root().join("baz")));
     assert_that(p.cargo("publish").cwd(p.root().join("bar"))
                  .arg("--host").arg(registry().to_string()),
                 execs().with_status(0));
@@ -268,6 +273,10 @@ fn publish_in_sub_repo() {
 #[test]
 fn publish_when_ignored() {
     setup();
+
+    let p = project("foo")
+        .file("baz", "");
+    p.build();
 
     repo(&paths::root().join("foo"))
         .file("Cargo.toml", r#"
@@ -285,8 +294,6 @@ fn publish_when_ignored() {
         .file(".gitignore", "baz")
         .build();
 
-    let p = project("foo");
-    t!(File::create(p.root().join("baz")));
     assert_that(p.cargo("publish")
                  .arg("--host").arg(registry().to_string()),
                 execs().with_status(0));
@@ -295,6 +302,10 @@ fn publish_when_ignored() {
 #[test]
 fn ignore_when_crate_ignored() {
     setup();
+
+    let p = project("foo")
+        .file("bar/baz", "");
+    p.build();
 
     repo(&paths::root().join("foo"))
         .file(".gitignore", "bar")
@@ -310,8 +321,6 @@ fn ignore_when_crate_ignored() {
             repository = "foo"
         "#)
         .nocommit_file("bar/src/main.rs", "fn main() {}");
-    let p = project("foo");
-    t!(File::create(p.root().join("bar/baz")));
     assert_that(p.cargo("publish").cwd(p.root().join("bar"))
                  .arg("--host").arg(registry().to_string()),
                 execs().with_status(0));
@@ -320,6 +329,10 @@ fn ignore_when_crate_ignored() {
 #[test]
 fn new_crate_rejected() {
     setup();
+
+    let p = project("foo")
+        .file("baz", "");
+    p.build();
 
     repo(&paths::root().join("foo"))
         .nocommit_file("Cargo.toml", r#"
@@ -334,8 +347,6 @@ fn new_crate_rejected() {
             repository = "foo"
         "#)
         .nocommit_file("src/main.rs", "fn main() {}");
-    let p = project("foo");
-    t!(File::create(p.root().join("baz")));
     assert_that(p.cargo("publish")
                  .arg("--host").arg(registry().to_string()),
                 execs().with_status(101));

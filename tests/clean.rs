@@ -74,7 +74,6 @@ fn clean_multiple_packages() {
                 name = "d2"
         "#)
         .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }");
-    p.build();
 
     assert_that(p.cargo_process("build").arg("-p").arg("d1").arg("-p").arg("d2")
                                         .arg("-p").arg("foo"),
@@ -120,7 +119,7 @@ fn clean_release() {
         .file("a/src/lib.rs", "");
     p.build();
 
-    assert_that(p.cargo_process("build").arg("--release"),
+    assert_that(p.cargo("build").arg("--release"),
                 execs().with_status(0));
 
     assert_that(p.cargo("clean").arg("-p").arg("foo"),
@@ -164,7 +163,7 @@ fn build_script() {
         .file("a/src/lib.rs", "");
     p.build();
 
-    assert_that(p.cargo_process("build").env("FIRST", "1"),
+    assert_that(p.cargo("build").env("FIRST", "1"),
                 execs().with_status(0));
     assert_that(p.cargo("clean").arg("-p").arg("foo"),
                 execs().with_status(0));
@@ -203,7 +202,7 @@ fn clean_git() {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
     assert_that(p.cargo("clean").arg("-p").arg("dep"),
                 execs().with_status(0).with_stdout(""));
@@ -228,7 +227,7 @@ fn registry() {
 
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
     assert_that(p.cargo("clean").arg("-p").arg("bar"),
                 execs().with_status(0).with_stdout(""));

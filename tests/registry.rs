@@ -31,10 +31,11 @@ fn simple() {
             bar = ">= 0.0.0"
         "#)
         .file("src/main.rs", "fn main() {}");
+    p.build();
 
     Package::new("bar", "0.0.1").publish();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
@@ -45,16 +46,16 @@ fn simple() {
         dir = p.url(),
         reg = registry::registry())));
 
+    assert_that(p.cargo("clean"), execs().with_status(0));
+
     // Don't download a second time
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
-[UPDATING] registry `{reg}`
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
 ",
-        dir = p.url(),
-        reg = registry::registry())));
+        dir = p.url())));
 }
 
 #[test]
@@ -126,11 +127,12 @@ fn wrong_version() {
             foo = ">= 1.0.0"
         "#)
         .file("src/main.rs", "fn main() {}");
+    p.build();
 
     Package::new("foo", "0.0.1").publish();
     Package::new("foo", "0.0.2").publish();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `foo` found (required by `foo`)
 location searched: registry [..]
@@ -141,7 +143,7 @@ versions found: 0.0.2, 0.0.1
     Package::new("foo", "0.0.3").publish();
     Package::new("foo", "0.0.4").publish();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
 [ERROR] no matching package named `foo` found (required by `foo`)
 location searched: registry [..]

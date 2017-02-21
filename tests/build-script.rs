@@ -926,7 +926,9 @@ fn code_generation() {
                 ").unwrap();
             }
         "#);
-    assert_that(p.cargo_process("run"),
+    p.build();
+
+    assert_that(p.cargo("run"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 (file://[..])
@@ -936,7 +938,7 @@ fn code_generation() {
 Hello, World!
 "));
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0));
 }
 
