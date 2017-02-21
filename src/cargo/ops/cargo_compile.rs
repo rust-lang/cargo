@@ -283,19 +283,14 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     fn resolve_all_features(resolve_with_overrides: &Resolve,
                             package_id: &PackageId)
                             -> HashSet<String> {
-        let mut features = match resolve_with_overrides.features(package_id) {
-            Some(all_features) => all_features.clone(),
-            None => HashSet::new(),
-        };
+        let mut features = resolve_with_overrides.features(package_id).clone();
 
         // Include features enabled for use by dependencies so targets can also use them with the
         // required-features field when deciding whether to be built or skipped.
         let deps = resolve_with_overrides.deps(package_id);
         for dep in deps {
-            if let Some(dep_features) = resolve_with_overrides.features(dep) {
-                for feature in dep_features {
-                    features.insert(dep.name().to_string() + "/" + feature);
-                }
+            for feature in resolve_with_overrides.features(dep) {
+                features.insert(dep.name().to_string() + "/" + feature);
             }
         }
 
