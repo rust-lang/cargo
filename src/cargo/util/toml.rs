@@ -625,7 +625,7 @@ impl TomlManifest {
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
         let include = project.include.clone().unwrap_or(Vec::new());
 
-        let summary = Summary::new(pkgid, deps, self.features.clone() .unwrap_or(HashMap::new()))?;
+        let summary = Summary::new(pkgid, deps, self.features.clone().unwrap_or(HashMap::new()))?;
         let metadata = ManifestMetadata {
             description: project.description.clone(),
             homepage: project.homepage.clone(),
