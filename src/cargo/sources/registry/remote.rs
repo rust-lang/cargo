@@ -88,7 +88,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                 };
                 debug!("attempting github fast path for {}",
                        self.source_id.url());
-                if github_up_to_date(handle, &self.source_id.url(), &oid) {
+                if github_up_to_date(handle, self.source_id.url(), &oid) {
                     return Ok(())
                 }
                 debug!("fast path failed, falling back to a git fetch");
@@ -99,7 +99,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let url = self.source_id.url().to_string();
         let refspec = "refs/heads/*:refs/remotes/origin/*";
 
-        git::fetch(&repo, &url, refspec, &self.config).chain_error(|| {
+        git::fetch(&repo, &url, refspec, self.config).chain_error(|| {
             human(format!("failed to fetch `{}`", url))
         })?;
 

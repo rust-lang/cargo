@@ -16,7 +16,7 @@ use hamcrest::{assert_that, is_not};
 fn cargo_process(s: &str) -> ProcessBuilder {
     let mut p = cargotest::cargo_process();
     p.arg(s);
-    return p
+    p
 }
 
 fn pkg(name: &str, vers: &str) {

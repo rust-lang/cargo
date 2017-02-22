@@ -912,7 +912,7 @@ fn dep_with_changed_submodule() {
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
     let mut sub = git::add_submodule(&repo, &git_project2.url().to_string(),
-                                     &Path::new("src"));
+                                     Path::new("src"));
     git::commit(&repo);
 
     let project = project
@@ -1651,7 +1651,7 @@ fn dont_require_submodules_are_checked_out() {
 
     let repo = git2::Repository::open(&git1.root()).unwrap();
     let url = path2url(git2.root()).to_string();
-    git::add_submodule(&repo, &url, &Path::new("a/submodule"));
+    git::add_submodule(&repo, &url, Path::new("a/submodule"));
     git::commit(&repo);
 
     git2::Repository::init(&project.root()).unwrap();

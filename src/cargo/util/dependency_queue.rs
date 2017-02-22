@@ -85,7 +85,7 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
         for dep in dependencies {
             assert!(my_dependencies.insert(dep.clone()));
             let rev = self.reverse_dep_map.entry(dep.clone())
-                                          .or_insert(HashSet::new());
+                                          .or_insert_with(HashSet::new);
             assert!(rev.insert(key.clone()));
         }
         &mut slot.insert((my_dependencies, value)).1
