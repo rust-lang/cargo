@@ -553,9 +553,10 @@ harness = true
 
 ## The `required-features` field (optional)
 
-The `required-features` field specifies which features must be selected for the
-target to be built. This is only relevant for the `[[bin]]`, `[[bench]]`,
-`[[test]]`, and `[[example]]` sections, it has no effect on `[lib]`.
+The `required-features` field specifies which features the target needs in order
+to be built. If any of the required features are not selected, the target will
+be skipped. This is only relevant for the `[[bin]]`, `[[bench]]`, `[[test]]`,
+and `[[example]]` sections, it has no effect on `[lib]`.
 
 ```toml
 [features]
