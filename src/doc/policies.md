@@ -3,7 +3,7 @@
 In general, these policies are guidelines. Problems are often contextual, and
 exceptional circumstances sometimes require exceptional measures. We plan to
 continue to clarify and expand these rules over time as new circumstances
-arise.
+arise. If your problem is not described below, consider [sending us an email].
 
 # Package Ownership
 
@@ -45,8 +45,9 @@ of Conduct may be removed. There are two important, related aspects:
 
 - We will not be pro-actively monitoring the site for these kinds of violations,
   but relying on the community to draw them to our attention.
-- “Does this violate the Code of Conduct” is a contextual question that 
-  cannot be directly answered in the hypothetical sense. All of the details 
+- “Does this violate the Code of Conduct” is a contextual question that
+  cannot be directly answered in the hypothetical sense. All of the details
   must be taken into consideration in these kinds of situations.
 
 [Code of Conduct]: https://www.rust-lang.org/conduct.html
+[sending us an email]: mailto:help@crates.io
