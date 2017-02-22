@@ -35,11 +35,15 @@ log = "0.3"
 num_cpus = "1.0"
 rustc-serialize = "0.3"
 semver = "0.6.0"
+serde = "0.9"
+serde_derive = "0.9"
+serde_json = "0.9"
+serde_ignored = "0.0.2"
 shell-escape = "0.1"
 tar = { version = "0.4", default-features = false }
 tempdir = "0.3"
 term = "0.4.4"
-toml = "0.2"
+toml = "0.3"
 url = "1.1"
 
 [target.'cfg(unix)'.dependencies]

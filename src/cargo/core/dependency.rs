@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use semver::VersionReq;
 use semver::ReqParseError;
-use rustc_serialize::{Encoder, Encodable};
+use serde::ser;
 
 use core::{SourceId, Summary, PackageId};
 use util::{CargoError, CargoResult, Cfg, CfgExpr, ChainError, human, Config};
@@ -41,7 +41,7 @@ pub enum Platform {
     Cfg(CfgExpr),
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 struct SerializedDependency<'a> {
     name: &'a str,
     source: &'a SourceId,
@@ -54,8 +54,10 @@ struct SerializedDependency<'a> {
     target: Option<&'a Platform>,
 }
 
-impl Encodable for Dependency {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl ser::Serialize for Dependency {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer,
+    {
         SerializedDependency {
             name: self.name(),
             source: &self.source_id(),
@@ -65,7 +67,7 @@ impl Encodable for Dependency {
             uses_default_features: self.uses_default_features(),
             features: self.features(),
             target: self.platform(),
-        }.encode(s)
+        }.serialize(s)
     }
 }
 
@@ -76,13 +78,15 @@ pub enum Kind {
     Build,
 }
 
-impl Encodable for Kind {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl ser::Serialize for Kind {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer,
+    {
         match *self {
             Kind::Normal => None,
             Kind::Development => Some("dev"),
             Kind::Build => Some("build"),
-        }.encode(s)
+        }.serialize(s)
     }
 }
 
@@ -136,7 +140,7 @@ This will soon become a hard error, so it's either recommended to
 update to a fixed version or contact the upstream maintainer about
 this warning.
 ",
-	req, inside.name(), inside.version(), requirement);
+    req, inside.name(), inside.version(), requirement);
                         config.shell().warn(&msg)?;
 
                         Ok(requirement)
@@ -348,9 +352,11 @@ impl Platform {
     }
 }
 
-impl Encodable for Platform {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        self.to_string().encode(s)
+impl ser::Serialize for Platform {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer,
+    {
+        self.to_string().serialize(s)
     }
 }
 

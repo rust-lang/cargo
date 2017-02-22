@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::path::Path;
 
-use rustc_serialize::json;
+use serde_json;
 
 use core::dependency::{Dependency, DependencyInner, Kind};
 use core::{SourceId, Summary, PackageId, Registry};
@@ -116,7 +116,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                               -> CargoResult<(Summary, bool)> {
         let RegistryPackage {
             name, vers, cksum, deps, features, yanked
-        } = json::decode::<RegistryPackage>(line)?;
+        } = serde_json::from_str::<RegistryPackage>(line)?;
         let pkgid = PackageId::new(&name, &vers, &self.source_id)?;
         let deps: CargoResult<Vec<Dependency>> = deps.into_iter().map(|dep| {
             self.parse_registry_dependency(dep)

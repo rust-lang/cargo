@@ -6,7 +6,7 @@ use std::io::{self, Write};
 use std::path::{self, PathBuf};
 use std::sync::Arc;
 
-use rustc_serialize::json;
+use serde_json;
 
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
@@ -346,7 +346,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
                     // stderr from rustc can have a mix of JSON and non-JSON output
                     if line.starts_with('{') {
                         // Handle JSON lines
-                        let compiler_message = json::Json::from_str(line).map_err(|_| {
+                        let compiler_message = serde_json::from_str(line).map_err(|_| {
                             internal(&format!("compiler produced invalid json: `{}`", line))
                         })?;
 

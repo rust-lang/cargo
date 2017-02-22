@@ -5,7 +5,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use rustc_serialize::hex::ToHex;
-use rustc_serialize::json;
+use serde_json;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use sources::PathSource;
@@ -19,7 +19,7 @@ pub struct DirectorySource<'cfg> {
     config: &'cfg Config,
 }
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 struct Checksum {
     package: String,
     files: HashMap<String, String>,
@@ -93,7 +93,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                               pkg.package_id().version()))
 
             })?;
-            let cksum: Checksum = json::decode(&cksum).chain_error(|| {
+            let cksum: Checksum = serde_json::from_str(&cksum).chain_error(|| {
                 human(format!("failed to decode `.cargo-checksum.json` of \
                                {} v{}",
                               pkg.package_id().name(),

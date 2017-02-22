@@ -5,7 +5,7 @@ use std::path::Path;
 use curl::easy::{Easy, List};
 use git2;
 use rustc_serialize::hex::ToHex;
-use rustc_serialize::json;
+use serde_json;
 use url::Url;
 
 use core::{PackageId, SourceId};
@@ -49,7 +49,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                                            "the registry index")?;
         let path = lock.path().parent().unwrap();
         let contents = paths::read(&path.join("config.json"))?;
-        let config = json::decode(&contents)?;
+        let config = serde_json::from_str(&contents)?;
         Ok(Some(config))
     }
 

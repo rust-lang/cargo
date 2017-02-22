@@ -206,12 +206,13 @@ fn invalid_global_config() {
 [ERROR] Couldn't load Cargo configuration
 
 Caused by:
-  could not parse TOML configuration in `[..]config`
+  could not parse TOML configuration in `[..]`
 
 Caused by:
   could not parse input as TOML
-[..]config:1:2 expected `=`, but found eof
 
+Caused by:
+  expected an equals, found eof at line 1
 "));
 }
 
@@ -232,7 +233,7 @@ fn bad_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]Cargo.lock
 
 Caused by:
-  expected a value of type `string` for the key `package.name`
+  missing field `name` for key `package`
 "));
 }
 
@@ -315,7 +316,7 @@ fn bad_source_in_cargo_lock() {
 [ERROR] failed to parse lock file at: [..]
 
 Caused by:
-  invalid source `You shall not parse` for the key `package.source`
+  invalid source `You shall not parse` for key `package.source`
 "));
 }
 
@@ -421,8 +422,9 @@ fn malformed_override() {
 
 Caused by:
   could not parse input as TOML
-Cargo.toml:[..]
 
+Caused by:
+  expected a table key, found a newline at line 8
 "));
 }
 

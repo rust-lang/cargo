@@ -372,14 +372,13 @@ impl Config {
         walk_tree(&self.cwd, |mut file, path| {
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
-            let table = cargo_toml::parse(&contents,
-                                               path,
-                                               self).chain_error(|| {
+            let toml = cargo_toml::parse(&contents,
+                                         &path,
+                                         self).chain_error(|| {
                 human(format!("could not parse TOML configuration in `{}`",
                               path.display()))
             })?;
-            let toml = toml::Value::Table(table);
-            let value = CV::from_toml(path, toml).chain_error(|| {
+            let value = CV::from_toml(&path, toml).chain_error(|| {
                 human(format!("failed to load TOML configuration from `{}`",
                               path.display()))
             })?;
@@ -409,13 +408,13 @@ impl Config {
     }
 }
 
-#[derive(Eq, PartialEq, Clone, RustcEncodable, RustcDecodable, Copy)]
+#[derive(Eq, PartialEq, Clone, Copy)]
 pub enum Location {
     Project,
     Global
 }
 
-#[derive(Eq,PartialEq,Clone,RustcDecodable)]
+#[derive(Eq,PartialEq,Clone,Deserialize)]
 pub enum ConfigValue {
     Integer(i64, PathBuf),
     String(String, PathBuf),
@@ -743,9 +742,11 @@ pub fn set_config(cfg: &Config,
     let mut contents = String::new();
     let _ = file.read_to_string(&mut contents);
     let mut toml = cargo_toml::parse(&contents, file.path(), cfg)?;
-    toml.insert(key.to_string(), value.into_toml());
+    toml.as_table_mut()
+        .unwrap()
+        .insert(key.to_string(), value.into_toml());
 
-    let contents = toml::Value::Table(toml).to_string();
+    let contents = toml.to_string();
     file.seek(SeekFrom::Start(0))?;
     file.write_all(contents.as_bytes())?;
     file.file().set_len(contents.len() as u64)?;

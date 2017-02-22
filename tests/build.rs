@@ -100,8 +100,9 @@ fn cargo_compile_with_invalid_manifest2() {
 
 Caused by:
   could not parse input as TOML
-Cargo.toml:3:19-3:20 expected a value
 
+Caused by:
+  invalid number at line 3
 "))
 }
 
@@ -124,8 +125,11 @@ fn cargo_compile_with_invalid_manifest3() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  could not parse input as TOML\n\
-src[/]Cargo.toml:1:5-1:6 expected a value\n\n"))
+  could not parse input as TOML
+
+Caused by:
+  invalid number at line 1
+"))
 }
 
 #[test]
@@ -175,7 +179,7 @@ fn cargo_compile_with_invalid_version() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  cannot parse '1.0' as a semver for the key `project.version`
+  cannot parse '1.0' as a semver for key `project.version`
 "))
 
 }
@@ -876,39 +880,39 @@ suffix = env::consts::DLL_SUFFIX,
 fn crate_env_vars() {
     let p = project("foo")
         .file("Cargo.toml", r#"
-	    [project]
-	    name = "foo"
-	    version = "0.5.1-alpha.1"
-	    description = "This is foo"
-	    homepage = "http://example.com"
-	    authors = ["wycats@example.com"]
+        [project]
+        name = "foo"
+        version = "0.5.1-alpha.1"
+        description = "This is foo"
+        homepage = "http://example.com"
+        authors = ["wycats@example.com"]
         "#)
         .file("src/main.rs", r#"
             extern crate foo;
 
 
-	    static VERSION_MAJOR: &'static str = env!("CARGO_PKG_VERSION_MAJOR");
-	    static VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
-	    static VERSION_PATCH: &'static str = env!("CARGO_PKG_VERSION_PATCH");
-	    static VERSION_PRE: &'static str = env!("CARGO_PKG_VERSION_PRE");
-	    static VERSION: &'static str = env!("CARGO_PKG_VERSION");
-	    static CARGO_MANIFEST_DIR: &'static str = env!("CARGO_MANIFEST_DIR");
-	    static PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
-	    static HOMEPAGE: &'static str = env!("CARGO_PKG_HOMEPAGE");
-	    static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
+            static VERSION_MAJOR: &'static str = env!("CARGO_PKG_VERSION_MAJOR");
+            static VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
+            static VERSION_PATCH: &'static str = env!("CARGO_PKG_VERSION_PATCH");
+            static VERSION_PRE: &'static str = env!("CARGO_PKG_VERSION_PRE");
+            static VERSION: &'static str = env!("CARGO_PKG_VERSION");
+            static CARGO_MANIFEST_DIR: &'static str = env!("CARGO_MANIFEST_DIR");
+            static PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
+            static HOMEPAGE: &'static str = env!("CARGO_PKG_HOMEPAGE");
+            static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
 
             fn main() {
                 let s = format!("{}-{}-{} @ {} in {}", VERSION_MAJOR,
                                 VERSION_MINOR, VERSION_PATCH, VERSION_PRE,
                                 CARGO_MANIFEST_DIR);
-		 assert_eq!(s, foo::version());
-		 println!("{}", s);
-		 assert_eq!("foo", PKG_NAME);
-		 assert_eq!("http://example.com", HOMEPAGE);
-		 assert_eq!("This is foo", DESCRIPTION);
+                 assert_eq!(s, foo::version());
+                 println!("{}", s);
+                 assert_eq!("foo", PKG_NAME);
+                 assert_eq!("http://example.com", HOMEPAGE);
+                 assert_eq!("This is foo", DESCRIPTION);
                 let s = format!("{}.{}.{}-{}", VERSION_MAJOR,
                                 VERSION_MINOR, VERSION_PATCH, VERSION_PRE);
-		 assert_eq!(s, VERSION);
+                assert_eq!(s, VERSION);
             }
         "#)
         .file("src/lib.rs", r#"
@@ -1755,8 +1759,9 @@ Caused by:
 
 Caused by:
   could not parse input as TOML
-[..].cargo[..]config:2:20-2:21 expected `=`, but found `i`
 
+Caused by:
+  expected an equals, found an identifier at line 2
 "));
 }
 
