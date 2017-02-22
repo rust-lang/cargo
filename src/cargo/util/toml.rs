@@ -72,25 +72,23 @@ fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
     }
 }
 fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
-    match fs::read_dir(&root) {
-        Ok(new) => {
-            files.extend(new.filter_map(|dir| {
-                dir.map(|d| d.path()).ok()
-            }).filter(|f| {
-                f.extension().and_then(|s| s.to_str()) == Some("rs")
-            }).filter(|f| {
-                // Some unix editors may create "dotfiles" next to original
-                // source files while they're being edited, but these files are
-                // rarely actually valid Rust source files and sometimes aren't
-                // even valid UTF-8. Here we just ignore all of them and require
-                // that they are explicitly specified in Cargo.toml if desired.
-                f.file_name().and_then(|s| s.to_str()).map(|s| {
-                    !s.starts_with('.')
-                }).unwrap_or(true)
-            }))
-        }
-        Err(_) => {/* just don't add anything if the directory doesn't exist, etc. */}
+    if let Ok(new) = fs::read_dir(&root) {
+        files.extend(new.filter_map(|dir| {
+            dir.map(|d| d.path()).ok()
+        }).filter(|f| {
+            f.extension().and_then(|s| s.to_str()) == Some("rs")
+        }).filter(|f| {
+            // Some unix editors may create "dotfiles" next to original
+            // source files while they're being edited, but these files are
+            // rarely actually valid Rust source files and sometimes aren't
+            // even valid UTF-8. Here we just ignore all of them and require
+            // that they are explicitly specified in Cargo.toml if desired.
+            f.file_name().and_then(|s| s.to_str()).map(|s| {
+                !s.starts_with('.')
+            }).unwrap_or(true)
+        }))
     }
+    /* else just don't add anything if the directory doesn't exist, etc. */
 }
 
 pub fn to_manifest(contents: &str,
@@ -156,7 +154,7 @@ pub fn to_manifest(contents: &str,
 pub fn parse(toml: &str,
              file: &Path,
              config: &Config) -> CargoResult<toml::Table> {
-    let mut first_parser = toml::Parser::new(&toml);
+    let mut first_parser = toml::Parser::new(toml);
     if let Some(toml) = first_parser.parse() {
         return Ok(toml);
     }
@@ -176,7 +174,7 @@ in the future.", file.display());
         return Ok(toml)
     }
 
-    let mut error_str = format!("could not parse input as TOML\n");
+    let mut error_str = "could not parse input as TOML\n".to_string();
     for error in first_parser.errors.iter() {
         let (loline, locol) = first_parser.to_linecol(error.lo);
         let (hiline, hicol) = first_parser.to_linecol(error.hi);
@@ -454,8 +452,8 @@ impl TomlManifest {
                 Some(
                     TomlTarget {
                         name: lib.name.clone().or(Some(project.name.clone())),
-                        path: lib.path.clone().or(
-                            layout.lib.as_ref().map(|p| PathValue::Path(p.clone()))
+                        path: lib.path.clone().or_else(
+                            || layout.lib.as_ref().map(|p| PathValue::Path(p.clone()))
                         ),
                         ..lib.clone()
                     }
@@ -567,7 +565,7 @@ impl TomlManifest {
                 config: config,
                 warnings: &mut warnings,
                 platform: None,
-                layout: &layout,
+                layout: layout,
             };
 
             fn process_dependencies(
@@ -577,7 +575,7 @@ impl TomlManifest {
                 -> CargoResult<()>
             {
                 let dependencies = match new_deps {
-                    Some(ref dependencies) => dependencies,
+                    Some(dependencies) => dependencies,
                     None => return Ok(())
                 };
                 for (n, v) in dependencies.iter() {
@@ -625,7 +623,8 @@ impl TomlManifest {
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
         let include = project.include.clone().unwrap_or(Vec::new());
 
-        let summary = Summary::new(pkgid, deps, self.features.clone() .unwrap_or(HashMap::new()))?;
+        let summary = Summary::new(pkgid, deps, self.features.clone()
+            .unwrap_or_else(HashMap::new))?;
         let metadata = ManifestMetadata {
             description: project.description.clone(),
             homepage: project.homepage.clone(),
@@ -780,8 +779,7 @@ impl TomlManifest {
                     // If there is a build.rs file next to the Cargo.toml, assume it is
                     // a build script
                     Ok(ref e) if e.is_file() => Some(build_rs.into()),
-                    Ok(_) => None,
-                    Err(_) => None,
+                    Ok(_) | Err(_) => None,
                 }
             }
         }
@@ -1099,8 +1097,8 @@ fn normalize(package_root: &Path,
     }
 
     let lib_target = |dst: &mut Vec<Target>, l: &TomlLibTarget| {
-        let path = l.path.clone().unwrap_or(
-            PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name())))
+        let path = l.path.clone().unwrap_or_else(
+            || PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name())))
         );
         let crate_types = match l.crate_type.clone() {
             Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
@@ -1122,9 +1120,10 @@ fn normalize(package_root: &Path,
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
                 let default_bin_path = PathValue::Path(default(bin));
-                match package_root.join(default_bin_path.to_path()).exists() {
-                    true => default_bin_path, // inferred from bin's name
-                    false => PathValue::Path(Path::new("src").join("main.rs"))
+                if package_root.join(default_bin_path.to_path()).exists() {
+                    default_bin_path // inferred from bin's name
+                } else {
+                    PathValue::Path(Path::new("src").join("main.rs"))
                 }
             });
             let mut target = Target::bin_target(&bin.name(), package_root.join(path.to_path()),

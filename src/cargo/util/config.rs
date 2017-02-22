@@ -193,7 +193,7 @@ impl Config {
     }
 
     pub fn get_path(&self, key: &str) -> CargoResult<Option<Value<PathBuf>>> {
-        if let Some(val) = self.get_string(&key)? {
+        if let Some(val) = self.get_string(key)? {
             let is_path = val.val.contains('/') ||
                           (cfg!(windows) && val.val.contains('\\'));
             let path = if is_path {
@@ -373,13 +373,13 @@ impl Config {
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
             let table = cargo_toml::parse(&contents,
-                                               &path,
+                                               path,
                                                self).chain_error(|| {
                 human(format!("could not parse TOML configuration in `{}`",
                               path.display()))
             })?;
             let toml = toml::Value::Table(table);
-            let value = CV::from_toml(&path, toml).chain_error(|| {
+            let value = CV::from_toml(path, toml).chain_error(|| {
                 human(format!("failed to load TOML configuration from `{}`",
                               path.display()))
             })?;

@@ -583,16 +583,13 @@ pub fn parse_dep_info(dep_info: &Path) -> CargoResult<Option<Vec<PathBuf>>> {
 
     let mut paths = Vec::new();
     let mut deps = deps.split(' ').map(|s| s.trim()).filter(|s| !s.is_empty());
-    loop {
-        let mut file = match deps.next() {
-            Some(s) => s.to_string(),
-            None => break,
-        };
-        while file.ends_with("\\") {
+    while let Some(s) = deps.next() {
+        let mut file = s.to_string();
+        while file.ends_with('\\') {
             file.pop();
             file.push(' ');
             file.push_str(deps.next().chain_error(|| {
-                internal(format!("malformed dep-info format, trailing \\"))
+                internal("malformed dep-info format, trailing \\".to_string())
             })?);
         }
         paths.push(cwd.join(&file));
@@ -602,7 +599,7 @@ pub fn parse_dep_info(dep_info: &Path) -> CargoResult<Option<Vec<PathBuf>>> {
 
 fn dep_info_mtime_if_fresh(dep_info: &Path) -> CargoResult<Option<FileTime>> {
     if let Some(paths) = parse_dep_info(dep_info)? {
-        Ok(mtime_if_fresh(&dep_info, paths.iter()))
+        Ok(mtime_if_fresh(dep_info, paths.iter()))
     } else {
         Ok(None)
     }

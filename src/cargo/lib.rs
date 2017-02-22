@@ -77,15 +77,12 @@ impl fmt::Display for VersionInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "cargo {}.{}.{}",
                self.major, self.minor, self.patch)?;
-        match self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
-            Some(channel) => {
-                if channel != "stable" {
-                    write!(f, "-{}", channel)?;
-                    let empty = String::from("");
-                    write!(f, "{}", self.pre_release.as_ref().unwrap_or(&empty))?;
-                }
-            },
-            None => (),
+        if let Some(channel) = self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
+            if channel != "stable" {
+                write!(f, "-{}", channel)?;
+                let empty = String::from("");
+                write!(f, "{}", self.pre_release.as_ref().unwrap_or(&empty))?;
+            }
         };
 
         if let Some(ref cfg) = self.cfg_info {

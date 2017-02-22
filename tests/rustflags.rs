@@ -189,7 +189,7 @@ fn env_rustflags_normal_source_with_target() {
             #[bench] fn run1(_ben: &mut test::Bencher) { }"#);
     p.build();
 
-    let ref host = rustc_host();
+    let host = &rustc_host();
 
     // Use RUSTFLAGS to pass an argument that will generate an error
     assert_that(p.cargo("build").env("RUSTFLAGS", "-Z bogus")

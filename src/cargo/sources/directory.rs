@@ -76,7 +76,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             // crates and otherwise may conflict with a VCS
             // (rust-lang/cargo#3414).
             if let Some(s) = path.file_name().and_then(|s| s.to_str()) {
-                if s.starts_with(".") {
+                if s.starts_with('.') {
                     continue
                 }
             }

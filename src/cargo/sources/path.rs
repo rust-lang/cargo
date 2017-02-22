@@ -107,10 +107,10 @@ impl<'cfg> PathSource<'cfg> {
                          .collect::<Result<Vec<_>, _>>()?;
 
         let mut filter = |p: &Path| {
-            let relative_path = util::without_prefix(p, &root).unwrap();
-            include.iter().any(|p| p.matches_path(&relative_path)) || {
+            let relative_path = util::without_prefix(p, root).unwrap();
+            include.iter().any(|p| p.matches_path(relative_path)) || {
                 include.is_empty() &&
-                 !exclude.iter().any(|p| p.matches_path(&relative_path))
+                 !exclude.iter().any(|p| p.matches_path(relative_path))
             }
         };
 
@@ -171,24 +171,24 @@ impl<'cfg> PathSource<'cfg> {
         let index_files = index.iter().map(|entry| {
             use libgit2_sys::GIT_FILEMODE_COMMIT;
             let is_dir = entry.mode == GIT_FILEMODE_COMMIT as u32;
-            (join(&root, &entry.path), Some(is_dir))
+            (join(root, &entry.path), Some(is_dir))
         });
         let mut opts = git2::StatusOptions::new();
         opts.include_untracked(true);
-        if let Some(suffix) = util::without_prefix(pkg_path, &root) {
+        if let Some(suffix) = util::without_prefix(pkg_path, root) {
             opts.pathspec(suffix);
         }
         let statuses = repo.statuses(Some(&mut opts))?;
         let untracked = statuses.iter().filter_map(|entry| {
             match entry.status() {
-                git2::STATUS_WT_NEW => Some((join(&root, entry.path_bytes()), None)),
+                git2::STATUS_WT_NEW => Some((join(root, entry.path_bytes()), None)),
                 _ => None
             }
         });
 
         let mut subpackages_found = Vec::new();
 
-        'outer: for (file_path, is_dir) in index_files.chain(untracked) {
+        for (file_path, is_dir) in index_files.chain(untracked) {
             let file_path = file_path?;
 
             // Filter out files blatantly outside this package. This is helped a
@@ -229,7 +229,7 @@ impl<'cfg> PathSource<'cfg> {
 
             if is_dir.unwrap_or_else(|| file_path.is_dir()) {
                 warn!("  found submodule {}", file_path.display());
-                let rel = util::without_prefix(&file_path, &root).unwrap();
+                let rel = util::without_prefix(&file_path, root).unwrap();
                 let rel = rel.to_str().chain_error(|| {
                     human(format!("invalid utf-8 filename: {}", rel.display()))
                 })?;
