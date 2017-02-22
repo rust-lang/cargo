@@ -19,13 +19,18 @@ use sources::{GitSource, PathSource, SourceConfigMap};
 use util::{CargoResult, ChainError, Config, human, internal};
 use util::{Filesystem, FileLock};
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(Deserialize, Serialize)]
+#[serde(untagged)]
 enum CrateListing {
     V1(CrateListingV1),
-    Empty,
+    Empty(Empty),
 }
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct Empty {}
+
+#[derive(Deserialize, Serialize)]
 struct CrateListingV1 {
     v1: BTreeMap<PackageId, BTreeSet<String>>,
 }
@@ -412,12 +417,12 @@ fn read_crate_list(mut file: &File) -> CargoResult<CrateListingV1> {
     (|| -> CargoResult<_> {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        let listing = toml::decode_str(&contents).chain_error(|| {
+        let listing = toml::from_str(&contents).chain_error(|| {
             internal("invalid TOML found for metadata")
         })?;
         match listing {
             CrateListing::V1(v1) => Ok(v1),
-            CrateListing::Empty => {
+            CrateListing::Empty(_) => {
                 Ok(CrateListingV1 { v1: BTreeMap::new() })
             }
         }
@@ -430,7 +435,7 @@ fn write_crate_list(mut file: &File, listing: CrateListingV1) -> CargoResult<()>
     (|| -> CargoResult<_> {
         file.seek(SeekFrom::Start(0))?;
         file.set_len(0)?;
-        let data = toml::encode_str::<CrateListing>(&CrateListing::V1(listing));
+        let data = toml::to_string(&CrateListing::V1(listing))?;
         file.write_all(data.as_bytes())?;
         Ok(())
     }).chain_error(|| {

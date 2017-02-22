@@ -6,6 +6,9 @@ extern crate rustc_serialize;
 extern crate toml;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 
 use std::collections::BTreeSet;
 use std::collections::HashMap;

@@ -18,7 +18,7 @@ Options:
     -h, --help              Print this message
 ";
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 pub struct ProjectLocation {
     root: String
 }
