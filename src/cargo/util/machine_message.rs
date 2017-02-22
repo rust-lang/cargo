@@ -33,6 +33,7 @@ pub struct Artifact<'a> {
     pub profile: &'a Profile,
     pub features: Vec<String>,
     pub filenames: Vec<String>,
+    pub fresh: bool,
 }
 
 impl<'a> Message for Artifact<'a> {
