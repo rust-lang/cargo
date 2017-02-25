@@ -401,14 +401,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         // Also mix in enabled features to our metadata. This'll ensure that
         // when changing feature sets each lib is separately cached.
-        match self.resolve.features(unit.pkg.package_id()) {
-            Some(features) => {
-                let mut feat_vec: Vec<&String> = features.iter().collect();
-                feat_vec.sort();
-                feat_vec.hash(&mut hasher);
-            }
-            None => Vec::<&String>::new().hash(&mut hasher),
-        }
+        self.resolve.features_sorted(unit.pkg.package_id()).hash(&mut hasher);
 
         // Throw in the profile we're compiling with. This helps caching
         // panic=abort and panic=unwind artifacts, additionally with various
@@ -601,11 +594,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
                 // If the dependency is optional, then we're only activating it
                 // if the corresponding feature was activated
-                if d.is_optional() {
-                    match self.resolve.features(id) {
-                        Some(f) if f.contains(d.name()) => {}
-                        _ => return false,
-                    }
+                if d.is_optional() && !self.resolve.features(id).contains(d.name()) {
+                    return false;
                 }
 
                 // If we've gotten past all that, then this dependency is

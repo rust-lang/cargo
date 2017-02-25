@@ -182,11 +182,10 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             }
         }
 
-        if let Some(feats) = cx.resolve.features(unit.pkg.package_id()) {
-            cx.compilation.cfgs.entry(unit.pkg.package_id().clone())
-                .or_insert_with(HashSet::new)
-                .extend(feats.iter().map(|feat| format!("feature=\"{}\"", feat)));
-        }
+        let feats = cx.resolve.features(&unit.pkg.package_id());
+        cx.compilation.cfgs.entry(unit.pkg.package_id().clone())
+            .or_insert_with(HashSet::new)
+            .extend(feats.iter().map(|feat| format!("feature=\"{}\"", feat)));
 
         output_depinfo(&mut cx, unit)?;
     }
@@ -293,11 +292,9 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
     let profile = unit.profile.clone();
-    let features = cx.resolve.features(unit.pkg.package_id())
-                     .into_iter()
-                     .flat_map(|i| i)
-                     .map(|s| s.to_string())
-                     .collect::<Vec<_>>();
+    let features = cx.resolve.features(unit.pkg.package_id()).iter()
+                     .map(|s| s.to_owned())
+                     .collect();
 
     exec.init(cx);
     let exec = exec.clone();
@@ -533,10 +530,8 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
 
     rustdoc.arg("-o").arg(doc_dir);
 
-    if let Some(features) = cx.resolve.features(unit.pkg.package_id()) {
-        for feat in features {
-            rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
-        }
+    for feat in cx.resolve.features(unit.pkg.package_id()) {
+        rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
     if let Some(ref args) = unit.profile.rustdoc_args {
@@ -684,10 +679,8 @@ fn build_base_args(cx: &mut Context,
         cmd.arg("--cfg").arg("test");
     }
 
-    if let Some(features) = cx.resolve.features(unit.pkg.package_id()) {
-        for feat in features.iter() {
-            cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
-        }
+    for feat in cx.resolve.features(unit.pkg.package_id()).iter() {
+        cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
     match cx.target_metadata(unit) {
