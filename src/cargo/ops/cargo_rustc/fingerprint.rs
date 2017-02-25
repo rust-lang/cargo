@@ -319,16 +319,6 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         return Ok(s.clone())
     }
 
-    // First, calculate all statically known "salt data" such as the profile
-    // information (compiler flags), the compiler version, activated features,
-    // and target configuration.
-    let features = cx.resolve.features(unit.pkg.package_id());
-    let features = features.map(|s| {
-        let mut v = s.iter().collect::<Vec<_>>();
-        v.sort();
-        v
-    });
-
     // Next, recursively calculate the fingerprint for all of our dependencies.
     //
     // Skip the fingerprints of build scripts as they may not always be
@@ -365,7 +355,7 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         rustc: util::hash_u64(&cx.config.rustc()?.verbose_version),
         target: util::hash_u64(&unit.target),
         profile: util::hash_u64(&unit.profile),
-        features: format!("{:?}", features),
+        features: format!("{:?}", cx.resolve.features_sorted(unit.pkg.package_id())),
         deps: deps,
         local: local,
         memoized_hash: Mutex::new(None),
