@@ -230,11 +230,9 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         } else {
             rustc(cx, unit, exec.clone())?
         };
-        let link_work1 = link_targets(cx, unit)?;
-        let link_work2 = link_targets(cx, unit)?;
         // Need to link targets on both the dirty and fresh
-        let dirty = work.then(link_work1).then(dirty);
-        let fresh = link_work2.then(fresh);
+        let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
+        let fresh = link_targets(cx, unit, true)?.then(fresh);
         (dirty, fresh, freshness)
     };
     jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness)?;
@@ -291,10 +289,6 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
     let json_messages = cx.build_config.json_messages;
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
-    let profile = unit.profile.clone();
-    let features = cx.resolve.features(unit.pkg.package_id()).iter()
-                     .map(|s| s.to_owned())
-                     .collect();
 
     exec.init(cx);
     let exec = exec.clone();
@@ -388,18 +382,6 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
             fingerprint::append_current_dir(&dep_info_loc, &cwd)?;
         }
 
-        if json_messages {
-            machine_message::emit(machine_message::Artifact {
-                package_id: &package_id,
-                target: &target,
-                profile: &profile,
-                features: features,
-                filenames: filenames.iter().map(|&(ref src, _, _)| {
-                    src.display().to_string()
-                }).collect(),
-            });
-        }
-
         Ok(())
     }));
 
@@ -435,21 +417,36 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
 
 /// Link the compiled target (often of form foo-{metadata_hash}) to the
 /// final target. This must happen during both "Fresh" and "Compile"
-fn link_targets(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
+fn link_targets(cx: &mut Context, unit: &Unit, fresh: bool) -> CargoResult<Work> {
     let filenames = cx.target_filenames(unit)?;
+    let package_id = unit.pkg.package_id().clone();
+    let target = unit.target.clone();
+    let profile = unit.profile.clone();
+    let features = cx.resolve.features_sorted(&package_id).into_iter()
+        .map(|s| s.to_owned())
+        .collect();
+    let json_messages = cx.build_config.json_messages;
+
     Ok(Work::new(move |_| {
         // If we're a "root crate", e.g. the target of this compilation, then we
         // hard link our outputs out of the `deps` directory into the directory
         // above. This means that `cargo build` will produce binaries in
         // `target/debug` which one probably expects.
-        for (src, link_dst, _linkable) in filenames {
+        let mut destinations = vec![];
+        for &(ref src, ref link_dst, _linkable) in filenames.iter() {
             // This may have been a `cargo rustc` command which changes the
             // output, so the source may not actually exist.
-            debug!("Thinking about linking {} to {:?}", src.display(), link_dst);
-            if !src.exists() || link_dst.is_none() {
+            if !src.exists() {
                 continue
             }
-            let dst = link_dst.unwrap();
+            let dst = match link_dst.as_ref() {
+                Some(dst) => dst,
+                None => {
+                    destinations.push(src.display().to_string());
+                    continue;
+                }
+            };
+            destinations.push(dst.display().to_string());
 
             debug!("linking {} to {}", src.display(), dst.display());
             if dst.exists() {
@@ -457,15 +454,26 @@ fn link_targets(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                     human(format!("failed to remove: {}", dst.display()))
                 })?;
             }
-            fs::hard_link(&src, &dst)
+            fs::hard_link(src, dst)
                  .or_else(|err| {
                      debug!("hard link failed {}. falling back to fs::copy", err);
-                     fs::copy(&src, &dst).map(|_| ())
+                     fs::copy(src, dst).map(|_| ())
                  })
                  .chain_error(|| {
                      human(format!("failed to link or copy `{}` to `{}`",
                                    src.display(), dst.display()))
             })?;
+        }
+
+        if json_messages {
+            machine_message::emit(machine_message::Artifact {
+                package_id: &package_id,
+                target: &target,
+                profile: &profile,
+                features: features,
+                filenames: destinations,
+                fresh: fresh,
+            });
         }
         Ok(())
     }))
