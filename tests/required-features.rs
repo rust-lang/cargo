@@ -979,3 +979,62 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
     assert_that(p.cargo("uninstall").arg("foo"),
                 execs().with_status(0));
 }
+
+#[test]
+fn test_skips_compiling_bin_with_missing_required_features() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            a = []
+
+            [[bin]]
+            name = "bin_foo"
+            path = "src/bin/foo.rs"
+            required-features = ["a"]
+        "#)
+        .file("src/bin/foo.rs", "extern crate bar; fn main() {}")
+        .file("tests/foo.rs", "")
+        .file("benches/foo.rs", "");
+    p.build();
+
+    assert_that(p.cargo("test"),
+                execs().with_status(0).with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]", p.url()))
+                .with_stdout("
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+"));
+
+    assert_that(p.cargo("test").arg("--features").arg("a").arg("-j").arg("1"),
+                execs().with_status(101).with_stderr_contains(format!("\
+[COMPILING] foo v0.0.1 ({})
+error[E0463]: can't find crate for `bar`", p.url())));
+
+    if is_nightly() {
+        assert_that(p.cargo("bench"),
+                    execs().with_status(0).with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({})
+[FINISHED] release [optimized] target(s) in [..]
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
+                    .with_stdout("
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+"));
+
+        assert_that(p.cargo("bench").arg("--features").arg("a").arg("-j").arg("1"),
+                    execs().with_status(101).with_stderr_contains(format!("\
+[COMPILING] foo v0.0.1 ({})
+error[E0463]: can't find crate for `bar`", p.url())));
+    }
+}
