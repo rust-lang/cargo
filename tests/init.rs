@@ -63,7 +63,7 @@ fn both_lib_and_bin() {
                     "[ERROR] can't specify both lib and binary outputs"));
 }
 
-fn bin_already_exists(explicit: bool, rellocation: &str) {
+fn bin_already_exists(explicit: bool, rellocation: &str, needs_bin_section: bool) {
     let path = paths::root().join("foo");
     fs::create_dir_all(&path.join("src")).unwrap();
 
@@ -94,36 +94,47 @@ fn bin_already_exists(explicit: bool, rellocation: &str) {
     let mut new_content = Vec::new();
     File::open(&sourcefile_path).unwrap().read_to_end(&mut new_content).unwrap();
     assert_eq!(Vec::from(content as &[u8]), new_content);
+
+	let mut cargo_content = String::new();
+    File::open(&paths::root().join("foo/Cargo.toml")).unwrap().read_to_string(&mut cargo_content).unwrap();
+	// Check that Cargo.toml has a bin section pointing to the correct location (if needed)
+	if needs_bin_section {
+		assert!(cargo_content.contains(r#"[[bin]]"#));
+        assert_that(&paths::root().join("foo/src/main.rs"), is_not(existing_file()));
+	} else {
+		assert!(!cargo_content.contains(r#"[[bin]]"#));
+        assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
+	}
 }
 
 #[test]
 fn bin_already_exists_explicit() {
-    bin_already_exists(true, "src/main.rs")
+    bin_already_exists(true, "src/main.rs", false)
 }
 
 #[test]
 fn bin_already_exists_implicit() {
-    bin_already_exists(false, "src/main.rs")
+    bin_already_exists(false, "src/main.rs", false)
 }
 
 #[test]
 fn bin_already_exists_explicit_nosrc() {
-    bin_already_exists(true, "main.rs")
+    bin_already_exists(true, "main.rs", true)
 }
 
 #[test]
 fn bin_already_exists_implicit_nosrc() {
-    bin_already_exists(false, "main.rs")
+    bin_already_exists(false, "main.rs", true)
 }
 
 #[test]
 fn bin_already_exists_implicit_namenosrc() {
-    bin_already_exists(false, "foo.rs")
+    bin_already_exists(false, "foo.rs", true)
 }
 
 #[test]
 fn bin_already_exists_implicit_namesrc() {
-    bin_already_exists(false, "src/foo.rs")
+    bin_already_exists(false, "src/foo.rs", true)
 }
 
 #[test]
@@ -190,7 +201,7 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous
     assert_that(&paths::root().join("foo/Cargo.toml"), is_not(existing_file()));
 }
 
-fn lib_already_exists(rellocation: &str) {
+fn lib_already_exists(rellocation: &str, needs_lib_section: bool) {
     let path = paths::root().join("foo");
     fs::create_dir_all(&path.join("src")).unwrap();
 
@@ -213,16 +224,38 @@ fn lib_already_exists(rellocation: &str) {
     let mut new_content = Vec::new();
     File::open(&sourcefile_path).unwrap().read_to_end(&mut new_content).unwrap();
     assert_eq!(Vec::from(content as &[u8]), new_content);
+
+	let mut cargo_content = String::new();
+    File::open(&paths::root().join("foo/Cargo.toml")).unwrap().read_to_string(&mut cargo_content).unwrap();
+	// Check that Cargo.toml has a lib section pointing to the correct location (if needed)
+	if needs_lib_section {
+		assert!(cargo_content.contains(r#"[lib]"#));
+        assert_that(&paths::root().join("foo/src/lib.rs"), is_not(existing_file()));
+	} else {
+		assert!(!cargo_content.contains(r#"[lib]"#));
+        assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
+	}
+
 }
 
 #[test]
 fn lib_already_exists_src() {
-    lib_already_exists("src/lib.rs")
+    lib_already_exists("src/lib.rs", false)
 }
 
 #[test]
 fn lib_already_exists_nosrc() {
-    lib_already_exists("lib.rs")
+    lib_already_exists("lib.rs", true)
+}
+
+#[test]
+fn no_lib_already_exists_src_add_lib_section() {
+    lib_already_exists("src/foo.rs", true)
+}
+
+#[test]
+fn no_lib_already_exists_nosrc_add_lib_section() {
+    lib_already_exists("foo.rs", true)
 }
 
 #[test]
