@@ -2512,8 +2512,9 @@ fn compiler_json_error_format() {
             authors = ["wycats@example.com"]
         "#)
         .file("bar/src/lib.rs", r#"fn dead() {}"#);
+    p.build();
 
-    assert_that(p.cargo_process("build").arg("-v")
+    assert_that(p.cargo("build").arg("-v")
                     .arg("--message-format").arg("json"),
                 execs().with_status(0).with_json(r#"
     {
@@ -2544,7 +2545,8 @@ fn compiler_json_error_format() {
             "name":"bar",
             "src_path":"[..]lib.rs"
         },
-        "filenames":["[..].rlib"]
+        "filenames":["[..].rlib"],
+        "fresh": false
     }
 
     {
@@ -2575,7 +2577,54 @@ fn compiler_json_error_format() {
             "test": false
         },
         "features": [],
-        "filenames": ["[..]"]
+        "filenames": ["[..]"],
+        "fresh": false
+    }
+"#));
+
+    // With fresh build, we should repeat the artifacts,
+    // but omit compiler warnings.
+    assert_that(p.cargo("build").arg("-v")
+                    .arg("--message-format").arg("json"),
+                execs().with_status(0).with_json(r#"
+    {
+        "reason":"compiler-artifact",
+        "profile": {
+            "debug_assertions": true,
+            "debuginfo": 2,
+            "opt_level": "0",
+            "test": false
+        },
+        "features": [],
+        "package_id":"bar 0.5.0 ([..])",
+        "target":{
+            "kind":["lib"],
+            "crate_types":["lib"],
+            "name":"bar",
+            "src_path":"[..]lib.rs"
+        },
+        "filenames":["[..].rlib"],
+        "fresh": true
+    }
+
+    {
+        "reason":"compiler-artifact",
+        "package_id":"foo 0.5.0 ([..])",
+        "target":{
+            "kind":["bin"],
+            "crate_types":["bin"],
+            "name":"foo",
+            "src_path":"[..]main.rs"
+        },
+        "profile": {
+            "debug_assertions": true,
+            "debuginfo": 2,
+            "opt_level": "0",
+            "test": false
+        },
+        "features": [],
+        "filenames": ["[..]"],
+        "fresh": true
     }
 "#));
 }
@@ -2633,7 +2682,8 @@ fn message_format_json_forward_stderr() {
             "test":false
         },
         "features":[],
-        "filenames":["[..]"]
+        "filenames":[],
+        "fresh": false
     }
 "#));
 }
