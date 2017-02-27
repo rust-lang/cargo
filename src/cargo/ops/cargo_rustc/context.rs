@@ -639,16 +639,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // Integration tests/benchmarks require binaries to be built
         if unit.profile.test &&
            (unit.target.is_test() || unit.target.is_bench()) {
-            let no_features = HashSet::new();
-            let features = self.resolve.features(id).unwrap_or(&no_features);
-
             ret.extend(unit.pkg.targets().iter().filter(|t| {
                 let no_required_features = Vec::new();
 
                 t.is_bin() &&
                 // Skip binaries with required features that have not been selected.
                 t.required_features().unwrap_or(&no_required_features).iter().all(|f| {
-                    features.contains(f)
+                    self.resolve.features(id).contains(f)
                 })
             }).map(|t| {
                 Unit {
