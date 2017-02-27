@@ -95,17 +95,17 @@ fn bin_already_exists(explicit: bool, rellocation: &str, needs_bin_section: bool
     File::open(&sourcefile_path).unwrap().read_to_end(&mut new_content).unwrap();
     assert_eq!(Vec::from(content as &[u8]), new_content);
 
-	let mut cargo_content = String::new();
+    let mut cargo_content = String::new();
     File::open(&paths::root().join("foo/Cargo.toml")).unwrap()
         .read_to_string(&mut cargo_content).unwrap();
-	// Check that Cargo.toml has a bin section pointing to the correct location (if needed)
-	if needs_bin_section {
-		assert!(cargo_content.contains(r#"[[bin]]"#));
+    // Check that Cargo.toml has a bin section pointing to the correct location (if needed)
+    if needs_bin_section {
+        assert!(cargo_content.contains(r#"[[bin]]"#));
         assert_that(&paths::root().join("foo/src/main.rs"), is_not(existing_file()));
-	} else {
-		assert!(!cargo_content.contains(r#"[[bin]]"#));
+    } else {
+        assert!(!cargo_content.contains(r#"[[bin]]"#));
         assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
-	}
+    }
 }
 
 #[test]
@@ -226,17 +226,17 @@ fn lib_already_exists(rellocation: &str, needs_lib_section: bool) {
     File::open(&sourcefile_path).unwrap().read_to_end(&mut new_content).unwrap();
     assert_eq!(Vec::from(content as &[u8]), new_content);
 
-	let mut cargo_content = String::new();
+    let mut cargo_content = String::new();
     File::open(&paths::root().join("foo/Cargo.toml")).unwrap()
         .read_to_string(&mut cargo_content).unwrap();
-	// Check that Cargo.toml has a lib section pointing to the correct location (if needed)
-	if needs_lib_section {
-		assert!(cargo_content.contains(r#"[lib]"#));
+    // Check that Cargo.toml has a lib section pointing to the correct location (if needed)
+    if needs_lib_section {
+        assert!(cargo_content.contains(r#"[lib]"#));
         assert_that(&paths::root().join("foo/src/lib.rs"), is_not(existing_file()));
-	} else {
-		assert!(!cargo_content.contains(r#"[lib]"#));
+    } else {
+        assert!(!cargo_content.contains(r#"[lib]"#));
         assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
-	}
+    }
 
 }
 
