@@ -435,19 +435,17 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let path = opts.path;
     let name = opts.name;
     let cfg = global_config(config)?;
-    let mut ignore = "target\n".to_string();
-    let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap(), config.cwd());
-    if !opts.bin {
-        ignore.push_str("Cargo.lock\n");
-    }
+    let ignore = ["target/\n", "**/*.rs.bk\n",
+        if !opts.bin { "Cargo.lock\n" } else { "" }]
+        .concat();
 
+    let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap(), config.cwd());
     let vcs = match (opts.version_control, cfg.version_control, in_existing_vcs_repo) {
         (None, None, false) => VersionControl::Git,
         (None, Some(option), false) => option,
         (Some(option), _, _) => option,
         (_, _, true) => VersionControl::NoVcs,
     };
-
     match vcs {
         VersionControl::Git => {
             if !fs::metadata(&path.join(".git")).is_ok() {
