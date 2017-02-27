@@ -96,7 +96,8 @@ fn bin_already_exists(explicit: bool, rellocation: &str, needs_bin_section: bool
     assert_eq!(Vec::from(content as &[u8]), new_content);
 
 	let mut cargo_content = String::new();
-    File::open(&paths::root().join("foo/Cargo.toml")).unwrap().read_to_string(&mut cargo_content).unwrap();
+    File::open(&paths::root().join("foo/Cargo.toml")).unwrap()
+        .read_to_string(&mut cargo_content).unwrap();
 	// Check that Cargo.toml has a bin section pointing to the correct location (if needed)
 	if needs_bin_section {
 		assert!(cargo_content.contains(r#"[[bin]]"#));
@@ -226,7 +227,8 @@ fn lib_already_exists(rellocation: &str, needs_lib_section: bool) {
     assert_eq!(Vec::from(content as &[u8]), new_content);
 
 	let mut cargo_content = String::new();
-    File::open(&paths::root().join("foo/Cargo.toml")).unwrap().read_to_string(&mut cargo_content).unwrap();
+    File::open(&paths::root().join("foo/Cargo.toml")).unwrap()
+        .read_to_string(&mut cargo_content).unwrap();
 	// Check that Cargo.toml has a lib section pointing to the correct location (if needed)
 	if needs_lib_section {
 		assert!(cargo_content.contains(r#"[lib]"#));
