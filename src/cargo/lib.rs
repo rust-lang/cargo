@@ -252,10 +252,10 @@ pub fn version() -> VersionInfo {
                     }
                 });
             VersionInfo {
-                major: option_env_str!("CFG_VERSION_MAJOR").unwrap(),
-                minor: option_env_str!("CFG_VERSION_MINOR").unwrap(),
-                patch: option_env_str!("CFG_VERSION_PATCH").unwrap(),
-                pre_release: option_env_str!("CFG_PRERELEASE_VERSION"),
+                major: env_str!("CARGO_PKG_VERSION_MAJOR"),
+                minor: env_str!("CARGO_PKG_VERSION_MINOR"),
+                patch: env_str!("CARGO_PKG_VERSION_PATCH"),
+                pre_release: option_env_str!("CARGO_PKG_VERSION_PRE"),
                 cfg_info: Some(CfgInfo {
                     build_date: option_env_str!("CFG_BUILD_DATE").unwrap(),
                     release_channel: option_env_str!("CFG_RELEASE_CHANNEL").unwrap(),
