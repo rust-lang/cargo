@@ -211,6 +211,8 @@ pub struct DetailedTomlDependency {
     optional: Option<bool>,
     #[serde(rename = "default-features")]
     default_features: Option<bool>,
+    #[serde(rename = "default_features")]
+    default_features2: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -947,7 +949,9 @@ impl TomlDependency {
             None => DependencyInner::parse(name, version, &new_source_id, None)?,
         };
         dep = dep.set_features(details.features.unwrap_or(Vec::new()))
-                 .set_default_features(details.default_features.unwrap_or(true))
+                 .set_default_features(details.default_features
+                                              .or(details.default_features2)
+                                              .unwrap_or(true))
                  .set_optional(details.optional.unwrap_or(false))
                  .set_platform(cx.platform.clone());
         if let Some(kind) = kind {
