@@ -228,8 +228,12 @@ pub struct TomlManifest {
     dependencies: Option<HashMap<String, TomlDependency>>,
     #[serde(rename = "dev-dependencies")]
     dev_dependencies: Option<HashMap<String, TomlDependency>>,
+    #[serde(rename = "dev_dependencies")]
+    dev_dependencies2: Option<HashMap<String, TomlDependency>>,
     #[serde(rename = "build-dependencies")]
     build_dependencies: Option<HashMap<String, TomlDependency>>,
+    #[serde(rename = "build_dependencies")]
+    build_dependencies2: Option<HashMap<String, TomlDependency>>,
     features: Option<HashMap<String, Vec<String>>>,
     target: Option<HashMap<String, TomlPlatform>>,
     replace: Option<HashMap<String, TomlDependency>>,
@@ -630,19 +634,23 @@ impl TomlManifest {
             // Collect the deps
             process_dependencies(&mut cx, self.dependencies.as_ref(),
                                  None)?;
-            process_dependencies(&mut cx, self.dev_dependencies.as_ref(),
-                                 Some(Kind::Development))?;
-            process_dependencies(&mut cx, self.build_dependencies.as_ref(),
-                                 Some(Kind::Build))?;
+            let dev_deps = self.dev_dependencies.as_ref()
+                               .or(self.dev_dependencies2.as_ref());
+            process_dependencies(&mut cx, dev_deps, Some(Kind::Development))?;
+            let build_deps = self.build_dependencies.as_ref()
+                               .or(self.build_dependencies2.as_ref());
+            process_dependencies(&mut cx, build_deps, Some(Kind::Build))?;
 
             for (name, platform) in self.target.iter().flat_map(|t| t) {
                 cx.platform = Some(name.parse()?);
                 process_dependencies(&mut cx, platform.dependencies.as_ref(),
                                      None)?;
-                process_dependencies(&mut cx, platform.build_dependencies.as_ref(),
-                                     Some(Kind::Build))?;
-                process_dependencies(&mut cx, platform.dev_dependencies.as_ref(),
-                                     Some(Kind::Development))?;
+                let build_deps = platform.build_dependencies.as_ref()
+                                         .or(platform.build_dependencies2.as_ref());
+                process_dependencies(&mut cx, build_deps, Some(Kind::Build))?;
+                let dev_deps = platform.dev_dependencies.as_ref()
+                                         .or(platform.dev_dependencies2.as_ref());
+                process_dependencies(&mut cx, dev_deps, Some(Kind::Development))?;
             }
 
             replace = self.replace(&mut cx)?;
@@ -998,8 +1006,12 @@ struct TomlPlatform {
     dependencies: Option<HashMap<String, TomlDependency>>,
     #[serde(rename = "build-dependencies")]
     build_dependencies: Option<HashMap<String, TomlDependency>>,
+    #[serde(rename = "build_dependencies")]
+    build_dependencies2: Option<HashMap<String, TomlDependency>>,
     #[serde(rename = "dev-dependencies")]
     dev_dependencies: Option<HashMap<String, TomlDependency>>,
+    #[serde(rename = "dev_dependencies")]
+    dev_dependencies2: Option<HashMap<String, TomlDependency>>,
 }
 
 impl TomlTarget {
