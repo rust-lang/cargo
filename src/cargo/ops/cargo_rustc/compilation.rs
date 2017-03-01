@@ -8,11 +8,9 @@ use util::{self, CargoResult, Config, ProcessBuilder, process, join_paths};
 
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
-    /// All libraries which were built for a package.
-    ///
-    /// This is currently used for passing --extern flags to rustdoc tests later
-    /// on.
-    pub libraries: HashMap<PackageId, Vec<(Target, PathBuf)>>,
+    /// A mapping from a package to the list of libraries that need to be
+    /// linked when working with that package.
+    pub libraries: HashMap<PackageId, HashSet<(Target, PathBuf)>>,
 
     /// An array of all tests created during this compilation.
     pub tests: Vec<(Package, String, PathBuf)>,
