@@ -83,6 +83,7 @@ proxy = "host:port" # HTTP proxy to use for HTTP requests (defaults to none)
                     # in libcurl format, e.g. "socks5h://host:port"
 timeout = 60000     # Timeout for each HTTP request, in milliseconds
 cainfo = "cert.pem" # Path to Certificate Authority (CA) bundle (optional)
+check-revoke = true # Indicates whether SSL certs are checked for revocation
 
 [build]
 jobs = 1                  # number of parallel jobs, defaults to # of CPUs
