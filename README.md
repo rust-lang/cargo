@@ -4,7 +4,7 @@ Learn more at http://doc.crates.io/
 
 ## Code Status
 [![Build Status](https://travis-ci.org/rust-lang/cargo.svg?branch=master)](https://travis-ci.org/rust-lang/cargo)
-[![Build Status](https://ci.appveyor.com/api/projects/status/jnh54531mpidb2c2?svg=true)](https://ci.appveyor.com/project/alexcrichton/cargo)
+[![Build Status](https://ci.appveyor.com/api/projects/status/github/rust-lang/cargo?branch=master&svg=true)](https://ci.appveyor.com/project/rust-lang-libs/cargo)
 
 ## Installing Cargo
 
