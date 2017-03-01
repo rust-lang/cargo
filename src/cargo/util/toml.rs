@@ -988,6 +988,8 @@ struct TomlTarget {
     plugin: Option<bool>,
     #[serde(rename = "proc-macro")]
     proc_macro: Option<bool>,
+    #[serde(rename = "proc_macro")]
+    proc_macro2: Option<bool>,
     harness: Option<bool>,
     #[serde(rename = "required-features")]
     required_features: Option<Vec<String>>,
@@ -1104,11 +1106,15 @@ impl TomlTarget {
         //
         // A plugin requires exporting plugin_registrar so a crate cannot be
         // both at once.
-        if self.plugin == Some(true) && self.proc_macro == Some(true) {
+        if self.plugin == Some(true) && self.proc_macro() == Some(true) {
             Err(human("lib.plugin and lib.proc-macro cannot both be true".to_string()))
         } else {
             Ok(())
         }
+    }
+
+    fn proc_macro(&self) -> Option<bool> {
+        self.proc_macro.or(self.proc_macro2)
     }
 }
 
@@ -1144,7 +1150,7 @@ fn normalize(package_root: &Path,
               .set_doctest(toml.doctest.unwrap_or(t2.doctested()))
               .set_benched(toml.bench.unwrap_or(t2.benched()))
               .set_harness(toml.harness.unwrap_or(t2.harness()))
-              .set_for_host(match (toml.plugin, toml.proc_macro) {
+              .set_for_host(match (toml.plugin, toml.proc_macro()) {
                   (None, None) => t2.for_host(),
                   (Some(true), _) | (_, Some(true)) => true,
                   (Some(false), _) | (_, Some(false)) => false,
@@ -1160,7 +1166,7 @@ fn normalize(package_root: &Path,
             Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
             None => {
                 vec![ if l.plugin == Some(true) {LibKind::Dylib}
-                      else if l.proc_macro == Some(true) {LibKind::ProcMacro}
+                      else if l.proc_macro() == Some(true) {LibKind::ProcMacro}
                       else {LibKind::Lib} ]
             }
         };
