@@ -37,16 +37,22 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
         registry.add_preloaded(source);
     }
 
-    // First, resolve the root_package's *listed* dependencies, as well as
-    // downloading and updating all remotes and such.
-    let resolve = resolve_with_registry(ws, &mut registry)?;
+    let resolve = if ws.require_optional_deps() {
+        // First, resolve the root_package's *listed* dependencies, as well as
+        // downloading and updating all remotes and such.
+        let resolve = resolve_with_registry(ws, &mut registry)?;
 
-    // Second, resolve with precisely what we're doing. Filter out
-    // transitive dependencies if necessary, specify features, handle
-    // overrides, etc.
-    let _p = profile::start("resolving w/ overrides...");
+        // Second, resolve with precisely what we're doing. Filter out
+        // transitive dependencies if necessary, specify features, handle
+        // overrides, etc.
+        let _p = profile::start("resolving w/ overrides...");
 
-    add_overrides(&mut registry, ws)?;
+        add_overrides(&mut registry, ws)?;
+
+        Some(resolve)
+    } else {
+        None
+    };
 
     let method = if all_features {
         Method::Everything
@@ -60,7 +66,7 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
 
     let resolved_with_overrides =
     ops::resolve_with_previous(&mut registry, ws,
-                               method, Some(&resolve), None,
+                               method, resolve.as_ref(), None,
                                specs)?;
 
     for &(ref replace_spec, _) in ws.root_replace() {
@@ -159,8 +165,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             // members in the workspace, so propagate the `Method::Everything`.
             Method::Everything => Method::Everything,
 
-            // If we're not resolving everything though then the workspace is
-            // already resolved and now we're drilling down from that to the
+            // If we're not resolving everything though then we're constructing the
             // exact crate graph we're going to build. Here we don't necessarily
             // want to keep around all workspace crates as they may not all be
             // built/tested.
@@ -176,7 +181,6 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             // base method with no features specified but using default features
             // for any other packages specified with `-p`.
             Method::Required { dev_deps, .. } => {
-                assert!(previous.is_some());
                 let base = Method::Required {
                     dev_deps: dev_deps,
                     features: &[],
