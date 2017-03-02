@@ -20,7 +20,6 @@ fn setup() {
     t!(fs::create_dir(&root.join(".cargo")));
     t!(t!(File::create(root.join(".cargo/config"))).write_all(br#"
         [source.crates-io]
-        registry = 'https://wut'
         replace-with = 'my-awesome-local-registry'
 
         [source.my-awesome-local-registry]
