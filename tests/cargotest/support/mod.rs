@@ -165,7 +165,7 @@ impl ProjectBuilder {
         assert!(self.is_build.get(),
                 "call `.build()` before calling `.cargo()`, \
                  or use `.cargo_process()`");
-        let mut p = self.process(&cargo_dir().join("cargo"));
+        let mut p = self.process(&cargo_exe());
         p.arg(cmd);
         return p;
     }
@@ -315,6 +315,10 @@ pub fn cargo_dir() -> PathBuf {
     }).unwrap_or_else(|| {
         panic!("CARGO_BIN_PATH wasn't set. Cannot continue running test")
     })
+}
+
+pub fn cargo_exe() -> PathBuf {
+    cargo_dir().join(format!("cargo{}", env::consts::EXE_SUFFIX))
 }
 
 /// Returns an absolute path in the filesystem that `path` points to. The

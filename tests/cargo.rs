@@ -1,3 +1,4 @@
+extern crate cargo;
 extern crate cargotest;
 extern crate hamcrest;
 
@@ -10,8 +11,8 @@ use std::str;
 
 use cargotest::cargo_process;
 use cargotest::support::paths::{self, CargoPathExt};
-use cargotest::support::{execs, project, ProjectBuilder};
-use hamcrest::{assert_that};
+use cargotest::support::{execs, project, ProjectBuilder, basic_bin_manifest};
+use hamcrest::{assert_that, existing_file};
 
 #[cfg_attr(windows,allow(dead_code))]
 enum FakeKind<'a> {
@@ -81,11 +82,11 @@ fn list_command_looks_at_path() {
 #[cfg(unix)]
 #[test]
 fn list_command_resolves_symlinks() {
-    use cargotest::support::cargo_dir;
+    use cargotest::support::cargo_exe;
 
     let proj = project("list-non-overlapping");
     let proj = fake_file(proj, Path::new("path-test"), "cargo-2",
-                         FakeKind::Symlink{target:&cargo_dir().join("cargo")});
+                         FakeKind::Symlink{target:&cargo_exe()});
     let mut pr = cargo_process();
 
     let mut path = path();
@@ -159,6 +160,37 @@ fn override_cargo_home() {
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["foo <bar>"]"#));
+}
+
+#[test]
+fn cargo_subcommand_env() {
+    use cargotest::support::cargo_exe;
+
+    let src = format!(r#"
+        use std::env;
+
+        fn main() {{
+            println!("{{}}", env::var("{}").unwrap());
+        }}
+        "#, cargo::CARGO_ENV);
+
+    let p = project("cargo-envtest")
+        .file("Cargo.toml", &basic_bin_manifest("cargo-envtest"))
+        .file("src/main.rs", &src);
+
+    let target_dir = p.target_debug_dir();
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(&p.bin("cargo-envtest"), existing_file());
+
+    let mut pr = cargo_process();
+    let cargo = cargo_exe().canonicalize().unwrap();
+    let mut path = path();
+    path.push(target_dir);
+    let path = env::join_paths(path.iter()).unwrap();
+
+    assert_that(pr.arg("envtest").env("PATH", &path),
+                execs().with_status(0).with_stdout(cargo.to_str().unwrap()));
 }
 
 #[test]
