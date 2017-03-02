@@ -7,7 +7,7 @@ use std::io::prelude::*;
 use std::str;
 
 use cargotest::{sleep_ms, is_nightly};
-use cargotest::support::{project, execs, basic_bin_manifest, basic_lib_manifest};
+use cargotest::support::{project, execs, basic_bin_manifest, basic_lib_manifest, cargo_exe};
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file, is_not};
@@ -2665,4 +2665,33 @@ fn doctest_and_registry() {
 
     assert_that(p.cargo_process("test").arg("--all").arg("-v"),
                 execs().with_status(0));
+}
+
+#[test]
+fn cargo_test_env() {
+    let src = format!(r#"
+        #![crate_type = "rlib"]
+
+        #[test]
+        fn env_test() {{
+            use std::env;
+            println!("{{}}", env::var("{}").unwrap());
+        }}
+        "#, cargo::CARGO_ENV);
+
+    let p = project("env_test")
+        .file("Cargo.toml", &basic_lib_manifest("env_test"))
+        .file("src/lib.rs", &src);
+
+    let mut pr = p.cargo_process("test");
+    let cargo = cargo_exe().canonicalize().unwrap();
+    assert_that(pr.args(&["--lib", "--", "--nocapture"]),
+                execs().with_status(0).with_stdout(format!("
+running 1 test
+{}
+test env_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", cargo.to_str().unwrap())));
 }
