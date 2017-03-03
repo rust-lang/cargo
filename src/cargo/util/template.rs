@@ -18,7 +18,7 @@ pub fn toml_escape_helper(h: &Helper,
                           _: &Handlebars,
                           rc: &mut RenderContext) -> Result<(), RenderError> {
     if let Some(param) = h.param(0) {
-        let txt = param.value().as_string().unwrap_or("").to_owned();
+        let txt = param.value().as_str().unwrap_or("").to_owned();
         let rendered = format!("{}", toml::Value::String(txt));
         try!(rc.writer.write_all(rendered.into_bytes().as_ref()));
     }
@@ -30,7 +30,7 @@ pub fn html_escape_helper(h: &Helper,
                           _: &Handlebars,
                           rc: &mut RenderContext) -> Result<(), RenderError> {
     if let Some(param) = h.param(0) {
-        let rendered = html_escape(param.value().as_string().unwrap_or(""));
+        let rendered = html_escape(param.value().as_str().unwrap_or(""));
         try!(rc.writer.write_all(rendered.into_bytes().as_ref()));
     }
     Ok(())
