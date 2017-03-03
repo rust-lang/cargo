@@ -191,13 +191,42 @@ type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
 
-#[derive(Deserialize)]
-#[serde(untagged)]
 pub enum TomlDependency {
     Simple(String),
     Detailed(DetailedTomlDependency)
 }
 
+impl de::Deserialize for TomlDependency {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: de::Deserializer
+    {
+        struct TomlDependencyVisitor;
+
+        impl de::Visitor for TomlDependencyVisitor {
+            type Value = TomlDependency;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a version string like \"0.9.8\" or a \
+                                     detailed dependency like { version = \"0.9.8\" }")
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+                where E: de::Error
+            {
+                Ok(TomlDependency::Simple(s.to_owned()))
+            }
+
+            fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
+                where V: de::MapVisitor
+            {
+                let mvd = de::value::MapVisitorDeserializer::new(map);
+                DetailedTomlDependency::deserialize(mvd).map(TomlDependency::Detailed)
+            }
+        }
+
+        deserializer.deserialize(TomlDependencyVisitor)
+    }
+}
 
 #[derive(Deserialize, Clone, Default)]
 pub struct DetailedTomlDependency {
@@ -288,11 +317,46 @@ impl de::Deserialize for TomlOptLevel {
     }
 }
 
-#[derive(Deserialize, Clone)]
-#[serde(untagged)]
+#[derive(Clone)]
 pub enum U32OrBool {
     U32(u32),
     Bool(bool),
+}
+
+impl de::Deserialize for U32OrBool {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: de::Deserializer
+    {
+        struct Visitor;
+
+        impl de::Visitor for Visitor {
+            type Value = U32OrBool;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a boolean or an integer")
+            }
+
+            fn visit_i64<E>(self, u: i64) -> Result<Self::Value, E>
+                where E: de::Error,
+            {
+                Ok(U32OrBool::U32(u as u32))
+            }
+
+            fn visit_u64<E>(self, u: u64) -> Result<Self::Value, E>
+                where E: de::Error,
+            {
+                Ok(U32OrBool::U32(u as u32))
+            }
+
+            fn visit_bool<E>(self, b: bool) -> Result<Self::Value, E>
+                where E: de::Error,
+            {
+                Ok(U32OrBool::Bool(b))
+            }
+        }
+
+        deserializer.deserialize(Visitor)
+    }
 }
 
 #[derive(Deserialize, Clone, Default)]
@@ -309,11 +373,40 @@ pub struct TomlProfile {
     panic: Option<String>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
-#[serde(untagged)]
+#[derive(Clone, Debug)]
 pub enum StringOrBool {
     String(String),
     Bool(bool),
+}
+
+impl de::Deserialize for StringOrBool {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: de::Deserializer
+    {
+        struct Visitor;
+
+        impl de::Visitor for Visitor {
+            type Value = StringOrBool;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a boolean or a string")
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+                where E: de::Error,
+            {
+                Ok(StringOrBool::String(s.to_string()))
+            }
+
+            fn visit_bool<E>(self, b: bool) -> Result<Self::Value, E>
+                where E: de::Error,
+            {
+                Ok(StringOrBool::Bool(b))
+            }
+        }
+
+        deserializer.deserialize(Visitor)
+    }
 }
 
 #[derive(Deserialize)]
@@ -405,7 +498,7 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Option<TomlTarget> {
     layout.lib.as_ref().map(|lib| {
         TomlTarget {
             name: Some(name.to_string()),
-            path: Some(PathValue::Path(lib.clone())),
+            path: Some(PathValue(lib.clone())),
             .. TomlTarget::new()
         }
     })
@@ -423,7 +516,7 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
         name.map(|name| {
             TomlTarget {
                 name: Some(name),
-                path: Some(PathValue::Path(bin.clone())),
+                path: Some(PathValue(bin.clone())),
                 .. TomlTarget::new()
             }
         })
@@ -435,7 +528,7 @@ fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
         ex.file_stem().and_then(|s| s.to_str()).map(|name| {
             TomlTarget {
                 name: Some(name.to_string()),
-                path: Some(PathValue::Path(ex.clone())),
+                path: Some(PathValue(ex.clone())),
                 .. TomlTarget::new()
             }
         })
@@ -447,7 +540,7 @@ fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
         ex.file_stem().and_then(|s| s.to_str()).map(|name| {
             TomlTarget {
                 name: Some(name.to_string()),
-                path: Some(PathValue::Path(ex.clone())),
+                path: Some(PathValue(ex.clone())),
                 .. TomlTarget::new()
             }
         })
@@ -459,7 +552,7 @@ fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
         ex.file_stem().and_then(|s| s.to_str()).map(|name| {
             TomlTarget {
                 name: Some(name.to_string()),
-                path: Some(PathValue::Path(ex.clone())),
+                path: Some(PathValue(ex.clone())),
                 .. TomlTarget::new()
             }
         })
@@ -498,7 +591,7 @@ impl TomlManifest {
                     TomlTarget {
                         name: lib.name.clone().or(Some(project.name.clone())),
                         path: lib.path.clone().or_else(
-                            || layout.lib.as_ref().map(|p| PathValue::Path(p.clone()))
+                            || layout.lib.as_ref().map(|p| PathValue(p.clone()))
                         ),
                         ..lib.clone()
                     }
@@ -995,11 +1088,15 @@ struct TomlTarget {
     required_features: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Clone)]
-#[serde(untagged)]
-enum PathValue {
-    String(String),
-    Path(PathBuf),
+#[derive(Clone)]
+struct PathValue(PathBuf);
+
+impl de::Deserialize for PathValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: de::Deserializer
+    {
+        Ok(PathValue(String::deserialize(deserializer)?.into()))
+    }
 }
 
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
@@ -1118,21 +1215,9 @@ impl TomlTarget {
     }
 }
 
-impl PathValue {
-    fn to_path(&self) -> PathBuf {
-        match *self {
-            PathValue::String(ref s) => PathBuf::from(s),
-            PathValue::Path(ref p) => p.clone(),
-        }
-    }
-}
-
 impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            PathValue::String(ref s) => s.fmt(f),
-            PathValue::Path(ref p) => p.display().fmt(f),
-        }
+        self.0.fmt(f)
     }
 }
 
@@ -1159,7 +1244,7 @@ fn normalize(package_root: &Path,
 
     let lib_target = |dst: &mut Vec<Target>, l: &TomlLibTarget| {
         let path = l.path.clone().unwrap_or_else(
-            || PathValue::Path(Path::new("src").join(&format!("{}.rs", l.name())))
+            || PathValue(Path::new("src").join(&format!("{}.rs", l.name())))
         );
         let crate_types = l.crate_type.as_ref().or(l.crate_type2.as_ref());
         let crate_types = match crate_types {
@@ -1172,7 +1257,7 @@ fn normalize(package_root: &Path,
         };
 
         let mut target = Target::lib_target(&l.name(), crate_types,
-                                            package_root.join(path.to_path()));
+                                            package_root.join(&path.0));
         configure(l, &mut target);
         dst.push(target);
     };
@@ -1181,14 +1266,14 @@ fn normalize(package_root: &Path,
                        default: &mut FnMut(&TomlBinTarget) -> PathBuf| {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
-                let default_bin_path = PathValue::Path(default(bin));
-                if package_root.join(default_bin_path.to_path()).exists() {
+                let default_bin_path = PathValue(default(bin));
+                if package_root.join(&default_bin_path.0).exists() {
                     default_bin_path // inferred from bin's name
                 } else {
-                    PathValue::Path(Path::new("src").join("main.rs"))
+                    PathValue(Path::new("src").join("main.rs"))
                 }
             });
-            let mut target = Target::bin_target(&bin.name(), package_root.join(path.to_path()),
+            let mut target = Target::bin_target(&bin.name(), package_root.join(&path.0),
                                                 bin.required_features.clone());
             configure(bin, &mut target);
             dst.push(target);
@@ -1207,7 +1292,7 @@ fn normalize(package_root: &Path,
                            default: &mut FnMut(&TomlExampleTarget) -> PathBuf| {
         for ex in examples.iter() {
             let path = ex.path.clone().unwrap_or_else(|| {
-                PathValue::Path(default(ex))
+                PathValue(default(ex))
             });
 
             let crate_types = ex.crate_type.as_ref().or(ex.crate_type2.as_ref());
@@ -1219,7 +1304,7 @@ fn normalize(package_root: &Path,
             let mut target = Target::example_target(
                 &ex.name(),
                 crate_types,
-                package_root.join(path.to_path()),
+                package_root.join(&path.0),
                 ex.required_features.clone()
             );
             configure(ex, &mut target);
@@ -1232,10 +1317,10 @@ fn normalize(package_root: &Path,
                         default: &mut FnMut(&TomlTestTarget) -> PathBuf| {
         for test in tests.iter() {
             let path = test.path.clone().unwrap_or_else(|| {
-                PathValue::Path(default(test))
+                PathValue(default(test))
             });
 
-            let mut target = Target::test_target(&test.name(), package_root.join(path.to_path()),
+            let mut target = Target::test_target(&test.name(), package_root.join(&path.0),
                                                  test.required_features.clone());
             configure(test, &mut target);
             dst.push(target);
@@ -1247,10 +1332,10 @@ fn normalize(package_root: &Path,
                          default: &mut FnMut(&TomlBenchTarget) -> PathBuf| {
         for bench in benches.iter() {
             let path = bench.path.clone().unwrap_or_else(|| {
-                PathValue::Path(default(bench))
+                PathValue(default(bench))
             });
 
-            let mut target = Target::bench_target(&bench.name(), package_root.join(path.to_path()),
+            let mut target = Target::bench_target(&bench.name(), package_root.join(&path.0),
                                                   bench.required_features.clone());
             configure(bench, &mut target);
             dst.push(target);
