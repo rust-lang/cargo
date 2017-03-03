@@ -8,6 +8,7 @@ use git2::Config as GitConfig;
 
 use term::color::BLACK;
 
+use chrono::{Datelike,Local};
 use handlebars::{Handlebars, no_escape};
 use tempdir::TempDir;
 use toml;
@@ -520,6 +521,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let mut data = BTreeMap::new();
     data.insert("name".to_owned(), name.to_owned());
     data.insert("author".to_owned(), author);
+    data.insert("year".to_owned(), Local::now().year().to_string());
 
     let template_set = try!(get_input_template(config, opts));
     for template in template_set.template_files.iter() {
@@ -582,7 +584,7 @@ fn collect_template_dir(template_path: &PathBuf, _: &Path) -> CargoResult<Vec<Bo
                                       human(format!("entry is somehow not a subpath \
                                                      of the directory being walked."))
                                   })));
-        templates.push(Box::new(InputFileTemplateFile::new(entry_path, 
+        templates.push(Box::new(InputFileTemplateFile::new(entry_path,
                                                            dest_file_name.to_path_buf())));
         Ok(())
     }));
