@@ -17,6 +17,7 @@ name = "cargo"
 path = "src/cargo/lib.rs"
 
 [dependencies]
+chrono = "0.2.25"
 crates-io = { path = "src/crates-io", version = "0.7" }
 crossbeam = "0.2"
 curl = "0.4.6"
