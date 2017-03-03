@@ -2511,16 +2511,7 @@ fn compiler_json_error_format() {
         "reason":"compiler-message",
         "package_id":"bar 0.5.0 ([..])",
         "target":{"kind":["lib"],"name":"bar","src_path":"[..]lib.rs"},
-        "message":{
-            "children":[],"code":null,"level":"warning","rendered":null,
-            "message":"function is never used: `dead`, #[warn(dead_code)] on by default",
-            "spans":[{
-                "byte_end":12,"byte_start":0,"column_end":13,"column_start":1,"expansion":null,
-                "file_name":"[..]","is_primary":true,"label":null,"line_end":1,"line_start":1,
-                "suggested_replacement":null,
-                "text":[{"highlight_end":13,"highlight_start":1,"text":"fn dead() {}"}]
-            }]
-        }
+        "message":"{...}"
     }
 
     {
@@ -2541,16 +2532,7 @@ fn compiler_json_error_format() {
         "reason":"compiler-message",
         "package_id":"foo 0.5.0 ([..])",
         "target":{"kind":["bin"],"name":"foo","src_path":"[..]main.rs"},
-        "message":{
-            "children":[],"code":null,"level":"warning","rendered":null,
-            "message":"unused variable: `unused`, #[warn(unused_variables)] on by default",
-            "spans":[{
-                "byte_end":22,"byte_start":16,"column_end":23,"column_start":17,"expansion":null,
-                "file_name":"[..]","is_primary":true,"label":null,"line_end":1,"line_start":1,
-                "suggested_replacement":null,
-                "text":[{"highlight_end":23,"highlight_start":17,"text":"[..]"}]
-            }]
-        }
+        "message":"{...}"
     }
 
     {
@@ -2599,20 +2581,7 @@ fn message_format_json_forward_stderr() {
         "reason":"compiler-message",
         "package_id":"foo 0.5.0 ([..])",
         "target":{"kind":["bin"],"name":"foo","src_path":"[..]"},
-        "message":{
-            "children":[],"code":null,"level":"warning","rendered":null,
-            "message":"unused variable: `unused`, #[warn(unused_variables)] on by default",
-            "spans":[{
-                "byte_end":22,"byte_start":16,"column_end":23,"column_start":17,"expansion":null,
-                "file_name":"[..]","is_primary":true,"label":null,"line_end":1,"line_start":1,
-                "suggested_replacement":null,
-                "text":[{
-                    "highlight_end":23,
-                    "highlight_start":17,
-                    "text":"fn main() { let unused = 0; }"
-                }]
-            }]
-        }
+        "message":"{...}"
     }
 
     {

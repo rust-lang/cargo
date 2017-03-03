@@ -154,8 +154,3 @@ deploy:
     on:
       branch: auto-cargo
       condition: $DEPLOY = 1
-
-cache:
-  directories:
-    - $HOME/.cargo
-    - target/openssl
