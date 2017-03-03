@@ -947,3 +947,70 @@ fn bad_source_config7() {
 error: more than one source URL specified for `source.foo`
 "));
 }
+
+#[test]
+fn bad_dependency() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [dependencies]
+            bar = 3
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  invalid type: integer `3`, expected a version string like [..]
+"));
+}
+
+#[test]
+fn bad_debuginfo() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+
+            [profile.dev]
+            debug = 'a'
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  invalid type: string \"a\", expected a boolean or an integer for [..]
+"));
+}
+
+#[test]
+fn bad_opt_level() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+            build = 3
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  invalid type: integer `3`, expected a boolean or a string for key [..]
+"));
+}
