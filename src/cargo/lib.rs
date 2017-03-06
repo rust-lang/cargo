@@ -26,6 +26,7 @@ extern crate shell_escape;
 extern crate tar;
 extern crate tempdir;
 extern crate term;
+extern crate time;
 extern crate toml;
 extern crate url;
 

@@ -2,6 +2,7 @@ extern crate cargo;
 extern crate cargotest;
 extern crate hamcrest;
 extern crate tempdir;
+extern crate time;
 
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -76,6 +77,10 @@ name = "{{name}}"
 version = "0.0.1"
 authors = ["{{author}}"]
 "#).unwrap();
+File::create(&root.join("home/.cargo/templates/testtemplate/LICENSE"))
+                  .unwrap().write_all(br#"
+(c) {{year}} {{author}}
+"#).unwrap();
     File::create(&root.join("home/.cargo/templates/testtemplate/src/main.rs"))
                       .unwrap().write_all(br#"
 fn main () {
@@ -94,7 +99,14 @@ fn main () {
 
     assert_that(&paths::root().join("foo"), existing_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
+    assert_that(&paths::root().join("foo/LICENSE"), existing_file());
     assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
+
+    let license = paths::root().join("foo/LICENSE");
+    let mut contents = String::new();
+    File::open(&license).unwrap().read_to_string(&mut contents).unwrap();
+    let expected = format!("(c) {} {}", (time::now().tm_year + 1900).to_string(), "foo");
+    assert!(contents.contains(&expected));
 
     assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));
