@@ -5,7 +5,6 @@ dependencies = [
  "advapi32-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bufstream 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cargotest 0.1.0",
- "chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "crates-io 0.7.0",
  "crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "curl 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -37,6 +36,7 @@ dependencies = [
  "tar 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempdir 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "term 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -104,15 +104,6 @@ dependencies = [
 name = "cfg-if"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "chrono"
-version = "0.2.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "num 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
- "time 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "cmake"
@@ -850,7 +841,6 @@ dependencies = [
 "checksum bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "aad18937a628ec6abcd26d1489012cc0e18c21798210f491af69ded9b881106d"
 "checksum bufstream 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7b48dbe2ff0e98fa2f03377d204a9637d3c9816cd431bfe05a8abbd0ea11d074"
 "checksum cfg-if 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "de1e760d7b6535af4241fca8bd8adf68e2e7edacc6b29f5d399050c5e48cf88c"
-"checksum chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)" = "9213f7cd7c27e95c2b57c49f0e69b1ea65b27138da84a170133fd21b07659c00"
 "checksum cmake 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)" = "a3a6805df695087e7c1bcd9a82e03ad6fb864c8e67ac41b1348229ce5b7f0407"
 "checksum crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)" = "0c5ea215664ca264da8a9d9c3be80d2eaf30923c259d03e870388eb927508f97"
 "checksum curl 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)" = "c90e1240ef340dd4027ade439e5c7c2064dd9dc652682117bd50d1486a3add7b"
