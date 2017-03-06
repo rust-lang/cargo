@@ -582,7 +582,7 @@ fn collect_template_dir(template_path: &PathBuf, _: &Path) -> CargoResult<Vec<Bo
                                       human(format!("entry is somehow not a subpath \
                                                      of the directory being walked."))
                                   })));
-        templates.push(Box::new(InputFileTemplateFile::new(entry_path, 
+        templates.push(Box::new(InputFileTemplateFile::new(entry_path,
                                                            dest_file_name.to_path_buf())));
         Ok(())
     }));
@@ -707,8 +707,11 @@ authors = [{{toml-escape author}}]
 /// Create a new "lib" project
 fn create_lib_template() -> Vec<Box<TemplateFile>> {
     let lib_file = Box::new(InMemoryTemplateFile::new(PathBuf::from("src/lib.rs"),
-    String::from(r#"#[test]
-fn it_works() {
+    String::from(r#"#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+    }
 }
 "#)));
     vec![lib_file]

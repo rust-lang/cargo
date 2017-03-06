@@ -32,6 +32,17 @@ fn simple_lib() {
     assert_that(&paths::root().join("foo/src/lib.rs"), existing_file());
     assert_that(&paths::root().join("foo/.gitignore"), is_not(existing_file()));
 
+    let lib = paths::root().join("foo/src/lib.rs");
+    let mut contents = String::new();
+    File::open(&lib).unwrap().read_to_string(&mut contents).unwrap();
+    assert_eq!(contents, r#"#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+    }
+}
+"#);
+
     assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));
 }
