@@ -10,6 +10,7 @@ use term::color::BLACK;
 
 use handlebars::{Handlebars, no_escape};
 use tempdir::TempDir;
+use time;
 use toml;
 
 use core::Workspace;
@@ -520,6 +521,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let mut data = BTreeMap::new();
     data.insert("name".to_owned(), name.to_owned());
     data.insert("author".to_owned(), author);
+    data.insert("year".to_owned(), (time::now().tm_year + 1900).to_string());
 
     let template_set = try!(get_input_template(config, opts));
     for template in template_set.template_files.iter() {
