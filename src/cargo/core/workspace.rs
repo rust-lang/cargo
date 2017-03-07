@@ -44,6 +44,11 @@ pub struct Workspace<'cfg> {
     // True, if this is a temporary workspace created for the purposes of
     // cargo install or cargo package.
     is_ephemeral: bool,
+
+    // True if this workspace should enforce optional dependencies even when
+    // not needed; false if this workspace should only enforce dependencies
+    // needed by the current configuration (such as in cargo install).
+    require_optional_deps: bool,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -99,6 +104,7 @@ impl<'cfg> Workspace<'cfg> {
             target_dir: target_dir,
             members: Vec::new(),
             is_ephemeral: false,
+            require_optional_deps: true,
         };
         ws.root_manifest = ws.find_root(manifest_path)?;
         ws.find_members()?;
@@ -115,8 +121,8 @@ impl<'cfg> Workspace<'cfg> {
     ///
     /// This is currently only used in niche situations like `cargo install` or
     /// `cargo package`.
-    pub fn ephemeral(package: Package, config: &'cfg Config, target_dir: Option<Filesystem>)
-                     -> CargoResult<Workspace<'cfg>> {
+    pub fn ephemeral(package: Package, config: &'cfg Config, target_dir: Option<Filesystem>,
+                     require_optional_deps: bool) -> CargoResult<Workspace<'cfg>> {
         let mut ws = Workspace {
             config: config,
             current_manifest: package.manifest_path().to_path_buf(),
@@ -128,6 +134,7 @@ impl<'cfg> Workspace<'cfg> {
             target_dir: None,
             members: Vec::new(),
             is_ephemeral: true,
+            require_optional_deps: require_optional_deps,
         };
         {
             let key = ws.current_manifest.parent().unwrap();
@@ -217,6 +224,10 @@ impl<'cfg> Workspace<'cfg> {
 
     pub fn is_ephemeral(&self) -> bool {
         self.is_ephemeral
+    }
+
+    pub fn require_optional_deps(&self) -> bool {
+        self.require_optional_deps
     }
 
     /// Finds the root of a workspace for the crate whose manifest is located

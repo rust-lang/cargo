@@ -97,7 +97,7 @@ pub fn install(root: Option<&str>,
     };
 
     let ws = match overidden_target_dir {
-        Some(dir) => Workspace::ephemeral(pkg, config, Some(dir))?,
+        Some(dir) => Workspace::ephemeral(pkg, config, Some(dir), false)?,
         None => Workspace::new(pkg.manifest_path(), config)?,
     };
     let pkg = ws.current()?;
