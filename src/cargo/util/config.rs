@@ -28,6 +28,7 @@ pub struct Config {
     rustc: LazyCell<Rustc>,
     values: LazyCell<HashMap<String, ConfigValue>>,
     cwd: PathBuf,
+    cargo_exe: LazyCell<PathBuf>,
     rustdoc: LazyCell<PathBuf>,
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
@@ -44,6 +45,7 @@ impl Config {
             rustc: LazyCell::new(),
             cwd: cwd,
             values: LazyCell::new(),
+            cargo_exe: LazyCell::new(),
             rustdoc: LazyCell::new(),
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
@@ -91,6 +93,15 @@ impl Config {
 
     pub fn rustc(&self) -> CargoResult<&Rustc> {
         self.rustc.get_or_try_init(|| Rustc::new(self.get_tool("rustc")?))
+    }
+
+    pub fn cargo_exe(&self) -> CargoResult<&Path> {
+        self.cargo_exe.get_or_try_init(||
+            env::current_exe().and_then(|path| path.canonicalize())
+            .chain_error(|| {
+                human("couldn't get the path to cargo executable")
+            })
+        ).map(AsRef::as_ref)
     }
 
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {

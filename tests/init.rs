@@ -8,12 +8,12 @@ use std::io::prelude::*;
 use std::env;
 
 use cargo::util::ProcessBuilder;
-use cargotest::support::{execs, paths, cargo_dir};
+use cargotest::support::{execs, paths, cargo_exe};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 use tempdir::TempDir;
 
 fn cargo_process(s: &str) -> ProcessBuilder {
-    let mut p = cargotest::process(&cargo_dir().join("cargo"));
+    let mut p = cargotest::process(&cargo_exe());
     p.arg(s).cwd(&paths::root()).env("HOME", &paths::home());
     p
 }

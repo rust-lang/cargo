@@ -30,8 +30,9 @@ configuration values, as described in [that documentation][config-env]
 
 # Environment variables Cargo sets for crates
 
-Cargo exposes these environment variables to your crate when it is compiled. To get the
-value of any of these variables in a Rust program, do this:
+Cargo exposes these environment variables to your crate when it is compiled.
+Note that this applies for test binaries as well.
+To get the value of any of these variables in a Rust program, do this:
 
 ```
 let version = env!("CARGO_PKG_VERSION");
@@ -39,6 +40,7 @@ let version = env!("CARGO_PKG_VERSION");
 
 `version` will now contain the value of `CARGO_PKG_VERSION`.
 
+* `CARGO` - Path to the `cargo` binary performing the build.
 * `CARGO_MANIFEST_DIR` - The directory containing the manifest of your package.
 * `CARGO_PKG_VERSION` - The full version of your package.
 * `CARGO_PKG_VERSION_MAJOR` - The major version of your package.
@@ -96,3 +98,10 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [links]: build-script.html#the-links-manifest-key
 [profile]: manifest.html#the-profile-sections
 [clang]:http://clang.llvm.org/docs/CrossCompilation.html#target-triple
+
+# Environment variables Cargo sets for 3rd party subcommands
+
+Cargo exposes this environment variable to 3rd party subcommands
+(ie. programs named `cargo-foobar` placed in `$PATH`):
+
+* `CARGO` - Path to the `cargo` binary performing the build.

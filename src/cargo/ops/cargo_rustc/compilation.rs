@@ -143,6 +143,9 @@ impl<'cfg> Compilation<'cfg> {
 
         let metadata = pkg.manifest().metadata();
 
+        let cargo_exe = self.config.cargo_exe()?;
+        cmd.env(::CARGO_ENV, cargo_exe);
+
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
            .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
            .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())

@@ -320,7 +320,12 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> C
                 .into())
         }
     };
-    let err = match util::process(&command).args(&args[1..]).exec() {
+
+    let cargo_exe = config.cargo_exe()?;
+    let err = match util::process(&command)
+        .env(cargo::CARGO_ENV, cargo_exe)
+        .args(&args[1..])
+        .exec() {
         Ok(()) => return Ok(()),
         Err(e) => e,
     };
