@@ -11,7 +11,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 use cargotest::{cargo_process, process};
-use cargotest::support::{project, execs, paths, git, path2url, cargo_dir};
+use cargotest::support::{project, execs, paths, git, path2url, cargo_exe};
 use flate2::read::GzDecoder;
 use hamcrest::{assert_that, existing_file, contains};
 use tar::Archive;
@@ -481,7 +481,7 @@ fn repackage_on_source_change() {
     "#).unwrap();
     std::mem::drop(file);
 
-    let mut pro = process(&cargo_dir().join("cargo"));
+    let mut pro = process(&cargo_exe());
     pro.arg("package").cwd(p.root());
 
     // Check that cargo rebuilds the tarball

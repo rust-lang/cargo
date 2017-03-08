@@ -42,6 +42,8 @@ use term::color::{BLACK};
 
 pub use util::{CargoError, CargoResult, CliError, CliResult, human, Config, ChainError};
 
+pub const CARGO_ENV: &'static str = "CARGO";
+
 macro_rules! bail {
     ($($fmt:tt)*) => (
         return Err(::util::human(&format_args!($($fmt)*)))

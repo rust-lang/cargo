@@ -95,7 +95,7 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
 }
 
 pub fn cargo_process() -> cargo::util::ProcessBuilder {
-    process(&support::cargo_dir().join("cargo"))
+    process(&support::cargo_exe())
 }
 
 pub fn sleep_ms(ms: u64) {
