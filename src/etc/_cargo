@@ -3,6 +3,9 @@
 typeset -A opt_args
 autoload -U regexp-replace
 
+zstyle -T ':completion:*:*:cargo:*' tag-order && \
+  zstyle ':completion:*:*:cargo:*' tag-order 'common-commands'
+
 _cargo() {
 
 _arguments \
@@ -11,10 +14,14 @@ _arguments \
     '(- 1 *)'{-v,--verbose}'[use verbose output]' \
     '(- 1 *)'--color'[colorization option]' \
     '(- 1 *)'{-V,--version}'[show version information]' \
-    '1: :_cargo_cmds' \
+    '1: :->command' \
     '*:: :->args'
 
 case $state in
+    command)
+      _alternative 'common-commands:common:_cargo_cmds' 'all-commands:all:_cargo_all_cmds'
+      ;;
+
     args)
         case $words[1] in
             bench)
@@ -431,8 +438,12 @@ local -a commands;commands=(
 'version:show version information'
 'yank:remove pushed file from index'
 )
-_describe 'command' commands
+_describe -t common-commands 'common commands' commands
+}
 
+_cargo_all_cmds(){
+local -a commands;commands=($(cargo --list))
+_describe -t all-commands 'all commands' commands
 }
 
 
