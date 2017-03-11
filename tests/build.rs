@@ -2849,3 +2849,24 @@ fn run_proper_binary() {
     assert_that(p.cargo_process("run").arg("--bin").arg("other"),
                 execs().with_status(0));
 }
+
+#[test]
+fn run_proper_binary_main_rs() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+            [[bin]]
+            name = "foo"
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/main.rs", r#"
+            fn main() {
+            }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("--bin").arg("foo"),
+                execs().with_status(0));
+}
