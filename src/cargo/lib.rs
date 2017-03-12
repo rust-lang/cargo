@@ -64,8 +64,6 @@ pub struct CommitInfo {
 pub struct CfgInfo {
     // Information about the git repository we may have been built from.
     pub commit_info: Option<CommitInfo>,
-    // The date that the build was performed.
-    pub build_date: String,
     // The release channel we were built for.
     pub release_channel: String,
 }
@@ -93,15 +91,9 @@ impl fmt::Display for VersionInfo {
         };
 
         if let Some(ref cfg) = self.cfg_info {
-            match cfg.commit_info {
-                Some(ref ci) => {
-                    write!(f, " ({} {})",
-                           ci.short_commit_hash, ci.commit_date)?;
-                },
-                None => {
-                    write!(f, " (built {})",
-                           cfg.build_date)?;
-                }
+            if let Some(ref ci) = cfg.commit_info {
+                write!(f, " ({} {})",
+                       ci.short_commit_hash, ci.commit_date)?;
             }
         };
         Ok(())
@@ -260,7 +252,6 @@ pub fn version() -> VersionInfo {
                 patch: env_str!("CARGO_PKG_VERSION_PATCH"),
                 pre_release: option_env_str!("CARGO_PKG_VERSION_PRE"),
                 cfg_info: Some(CfgInfo {
-                    build_date: option_env_str!("CFG_BUILD_DATE").unwrap(),
                     release_channel: option_env_str!("CFG_RELEASE_CHANNEL").unwrap(),
                     commit_info: commit_info,
                 }),
