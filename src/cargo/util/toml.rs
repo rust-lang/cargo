@@ -1270,7 +1270,12 @@ fn normalize(package_root: &Path,
                 if package_root.join(&default_bin_path.0).exists() {
                     default_bin_path // inferred from bin's name
                 } else {
-                    PathValue(Path::new("src").join("main.rs"))
+                    let path = PathValue(Path::new("src").join("main.rs"));
+                    if package_root.join(&path.0).exists() {
+                        path
+                    } else {
+                        PathValue(Path::new("src").join("bin").join("main.rs"))
+                    }
                 }
             });
             let mut target = Target::bin_target(&bin.name(), package_root.join(&path.0),
