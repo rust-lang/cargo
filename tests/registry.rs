@@ -1384,3 +1384,30 @@ fn toml_lies_but_index_is_truth() {
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
+
+#[test]
+fn vv_prints_warnings() {
+    Package::new("foo", "0.2.0")
+            .file("src/lib.rs", r#"
+                #![deny(warnings)]
+
+                fn foo() {} // unused function
+            "#)
+            .publish();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "fo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            foo = "0.2"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build").arg("-vv"),
+                execs().with_status(0));
+}
