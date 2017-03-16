@@ -12,6 +12,8 @@ description = """
 Cargo, a package manager for Rust.
 """
 
+[workspace]
+
 [lib]
 name = "cargo"
 path = "src/cargo/lib.rs"
