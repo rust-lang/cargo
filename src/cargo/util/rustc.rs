@@ -6,8 +6,6 @@ pub struct Rustc {
     pub path: PathBuf,
     pub verbose_version: String,
     pub host: String,
-    /// Backwards compatibility: does this compiler support `--cap-lints` flag?
-    pub cap_lints: bool,
 }
 
 impl Rustc {
@@ -19,15 +17,9 @@ impl Rustc {
     pub fn new(path: PathBuf) -> CargoResult<Rustc> {
         let mut cmd = util::process(&path);
         cmd.arg("-vV");
-
-        let mut first = cmd.clone();
-        first.arg("--cap-lints").arg("allow");
-
-        let (cap_lints, output) = match first.exec_with_output() {
-            Ok(output) => (true, output),
-            Err(..) => (false, cmd.exec_with_output()?),
-        };
-
+        
+        let output = cmd.exec_with_output()?;
+        
         let verbose_version = String::from_utf8(output.stdout).map_err(|_| {
             internal("rustc -v didn't return utf8 output")
         })?;
@@ -46,7 +38,6 @@ impl Rustc {
             path: path,
             verbose_version: verbose_version,
             host: host,
-            cap_lints: cap_lints,
         })
     }
 

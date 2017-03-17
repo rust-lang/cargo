@@ -8,7 +8,7 @@ use std::io::prelude::*;
 use std::path::Path;
 
 use cargo::util::process;
-use cargotest::{sleep_ms, RUSTC};
+use cargotest::sleep_ms;
 use cargotest::support::paths::{self, CargoPathExt};
 use cargotest::support::{git, project, execs, main_file, path2url};
 use hamcrest::{assert_that,existing_file};
@@ -1743,9 +1743,6 @@ fn lints_are_suppressed() {
 
 #[test]
 fn denied_lints_are_allowed() {
-    let enabled = RUSTC.with(|r| r.cap_lints);
-    if !enabled { return }
-
     let a = git::new("a", |p| {
         p.file("Cargo.toml", r#"
             [project]
