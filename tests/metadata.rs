@@ -54,6 +54,21 @@ fn cargo_metadata_simple() {
 }
 
 #[test]
+fn cargo_metadata_warns_on_implicit_version() {
+    let p = project("foo")
+        .file("src/foo.rs", "")
+        .file("Cargo.toml", &basic_bin_manifest("foo"));
+    p.build();
+
+    assert_that(p.cargo("metadata"),
+                execs().with_stderr("\
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems"));
+
+    assert_that(p.cargo("metadata").arg("--format-version").arg("1"),
+                execs().with_stderr(""));
+}
+
+#[test]
 fn library_with_several_crate_types() {
     let p = project("foo")
             .file("src/lib.rs", "")
@@ -520,8 +535,8 @@ fn cargo_metadata_with_invalid_manifest() {
     let p = project("foo")
             .file("Cargo.toml", "");
 
-    assert_that(p.cargo_process("metadata"), execs().with_status(101)
-                                                    .with_stderr("\
+    assert_that(p.cargo_process("metadata").arg("--format-version").arg("1"),
+                execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
