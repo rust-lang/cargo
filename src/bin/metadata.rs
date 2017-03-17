@@ -9,7 +9,7 @@ pub struct Options {
     flag_color: Option<String>,
     flag_features: Vec<String>,
     flag_all_features: bool,
-    flag_format_version: u32,
+    flag_format_version: Option<u32>,
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
     flag_no_deps: bool,
@@ -34,7 +34,7 @@ Options:
     --no-deps                  Output information only about the root package
                                and don't fetch dependencies.
     --manifest-path PATH       Path to the manifest
-    --format-version VERSION   Format version [default: 1]
+    --format-version VERSION   Format version
                                Valid values: 1
     -v, --verbose ...          Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet                No output printed to stdout
@@ -51,12 +51,17 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_locked)?;
     let manifest = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
+    if options.flag_format_version.is_none() {
+        config.shell().warn("please specify `--format-version` flag explicitly to \
+                             avoid compatibility problems")?
+    }
+
     let options = OutputMetadataOptions {
         features: options.flag_features,
         all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
         no_deps: options.flag_no_deps,
-        version: options.flag_format_version,
+        version: options.flag_format_version.unwrap_or(1),
     };
 
     let ws = Workspace::new(&manifest, config)?;
