@@ -253,20 +253,12 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
     if !cx.show_warnings(unit.pkg.package_id()) {
-        if cx.config.rustc()?.cap_lints {
-            rustc.arg("--cap-lints").arg("allow");
-        } else {
-            rustc.arg("-Awarnings");
-        }
+        rustc.arg("--cap-lints").arg("allow");
 
     // If this is an upstream dep but we *do* want warnings, make sure that they
     // don't fail compilation.
     } else if !unit.pkg.package_id().source_id().is_path() {
-        if cx.config.rustc()?.cap_lints {
-            rustc.arg("--cap-lints").arg("warn");
-        } else {
-            rustc.arg("-Awarnings"); // not much to do on older compilers
-        }
+        rustc.arg("--cap-lints").arg("warn");
     }
 
     let filenames = cx.target_filenames(unit)?;
