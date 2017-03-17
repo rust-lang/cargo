@@ -1104,3 +1104,61 @@ warning: path override for crate `foo` has altered the original list of
 dependencies; the dependency on `bar` was either added or\
 "));
 }
+
+#[test]
+fn override_with_default_feature() {
+    Package::new("another", "0.1.0").publish();
+    Package::new("another", "0.1.1")
+            .dep("bar", "0.1")
+            .publish();
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project("local")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "local"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = { path = "bar", default-features = false }
+            another = "0.1"
+            another2 = { path = "another2" }
+
+            [replace]
+            'bar:0.1.0' = { path = "bar" }
+        "#)
+        .file("src/main.rs", r#"
+            extern crate bar;
+
+            fn main() {
+                bar::bar();
+            }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [features]
+            default = []
+        "#)
+        .file("bar/src/lib.rs", r#"
+            #[cfg(feature = "default")]
+            pub fn bar() {}
+        "#)
+        .file("another2/Cargo.toml", r#"
+            [package]
+            name = "another2"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            bar = { version = "0.1", default-features = false }
+        "#)
+        .file("another2/src/lib.rs", "");
+
+    assert_that(p.cargo_process("run"),
+                execs().with_status(0));
+}
