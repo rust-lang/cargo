@@ -316,15 +316,13 @@ fn activate(cx: &mut Context,
                               candidate.summary.package_id().clone());
     }
 
-    if cx.flag_activated(&candidate.summary, method) {
-        return Ok(None);
-    }
+    let activated = cx.flag_activated(&candidate.summary, method);
 
     let candidate = match candidate.replace {
         Some(replace) => {
             cx.resolve_replacements.insert(candidate.summary.package_id().clone(),
                                            replace.package_id().clone());
-            if cx.flag_activated(&replace, method) {
+            if cx.flag_activated(&replace, method) && activated {
                 return Ok(None);
             }
             trace!("activating {} (replacing {})", replace.package_id(),
@@ -332,6 +330,9 @@ fn activate(cx: &mut Context,
             replace
         }
         None => {
+            if activated {
+                return Ok(None)
+            }
             trace!("activating {}", candidate.summary.package_id());
             candidate.summary
         }
