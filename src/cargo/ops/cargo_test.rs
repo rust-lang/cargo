@@ -1,7 +1,7 @@
 use std::ffi::{OsString, OsStr};
 
 use ops::{self, Compilation};
-use util::{self, CargoResult, CargoTestError, ProcessError};
+use util::{self, CargoResult, CargoTestError, Test, ProcessError};
 use core::Workspace;
 
 pub struct TestOptions<'a> {
@@ -19,7 +19,7 @@ pub fn run_tests(ws: &Workspace,
     if options.no_run {
         return Ok(None)
     }
-    let mut errors = if options.only_doc {
+    let (test, mut errors) = if options.only_doc {
         run_doc_tests(options, test_args, &compilation)?
     } else {
         run_unit_tests(options, test_args, &compilation)?
@@ -27,7 +27,7 @@ pub fn run_tests(ws: &Workspace,
 
     // If we have an error and want to fail fast, return
     if !errors.is_empty() && !options.no_fail_fast {
-        return Ok(Some(CargoTestError::new(errors)))
+        return Ok(Some(CargoTestError::new(test, errors)))
     }
 
     // If a specific test was requested or we're not running any tests at all,
@@ -35,15 +35,16 @@ pub fn run_tests(ws: &Workspace,
     if let ops::CompileFilter::Only { .. } = options.compile_opts.filter {
         match errors.len() {
             0 => return Ok(None),
-            _ => return Ok(Some(CargoTestError::new(errors)))
+            _ => return Ok(Some(CargoTestError::new(test, errors)))
         }
     }
 
-    errors.extend(run_doc_tests(options, test_args, &compilation)?);
+    let (doctest, docerrors) = run_doc_tests(options, test_args, &compilation)?;
+    errors.extend(docerrors);
     if errors.is_empty() {
         Ok(None)
     } else {
-        Ok(Some(CargoTestError::new(errors)))
+        Ok(Some(CargoTestError::new(doctest, errors)))
     }
 }
 
@@ -57,10 +58,10 @@ pub fn run_benches(ws: &Workspace,
     if options.no_run {
         return Ok(None)
     }
-    let errors = run_unit_tests(options, &args, &compilation)?;
+    let (test, errors) = run_unit_tests(options, &args, &compilation)?;
     match errors.len() {
         0 => Ok(None),
-        _ => Ok(Some(CargoTestError::new(errors))),
+        _ => Ok(Some(CargoTestError::new(test, errors))),
     }
 }
 
@@ -69,7 +70,7 @@ fn compile_tests<'a>(ws: &Workspace<'a>,
                      -> CargoResult<Compilation<'a>> {
     let mut compilation = ops::compile(ws, &options.compile_opts)?;
     compilation.tests.sort_by(|a, b| {
-        (a.0.package_id(), &a.1).cmp(&(b.0.package_id(), &b.1))
+        (a.0.package_id(), &a.2).cmp(&(b.0.package_id(), &b.2))
     });
     Ok(compilation)
 }
@@ -78,13 +79,13 @@ fn compile_tests<'a>(ws: &Workspace<'a>,
 fn run_unit_tests(options: &TestOptions,
                   test_args: &[String],
                   compilation: &Compilation)
-                  -> CargoResult<Vec<ProcessError>> {
+                  -> CargoResult<(Test, Vec<ProcessError>)> {
     let config = options.compile_opts.config;
     let cwd = options.compile_opts.config.cwd();
 
     let mut errors = Vec::new();
 
-    for &(ref pkg, _, ref exe) in &compilation.tests {
+    for &(ref pkg, ref kind, ref test, ref exe) in &compilation.tests {
         let to_display = match util::without_prefix(exe, cwd) {
             Some(path) => path,
             None => &**exe,
@@ -101,23 +102,23 @@ fn run_unit_tests(options: &TestOptions,
         if let Err(e) = cmd.exec() {
             errors.push(e);
             if !options.no_fail_fast {
-                break
+                return Ok((Test::UnitTest(kind.clone(), test.clone()), errors))
             }
         }
     }
-    Ok(errors)
+    Ok((Test::Multiple, errors))
 }
 
 fn run_doc_tests(options: &TestOptions,
                  test_args: &[String],
                  compilation: &Compilation)
-                 -> CargoResult<Vec<ProcessError>> {
+                 -> CargoResult<(Test, Vec<ProcessError>)> {
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
 
     // We don't build/rust doctests if target != host
     if config.rustc()?.host != compilation.target {
-        return Ok(errors);
+        return Ok((Test::Doc, errors));
     }
 
     let libs = compilation.to_doc_test.iter().map(|package| {
@@ -179,10 +180,10 @@ fn run_doc_tests(options: &TestOptions,
             if let Err(e) = p.exec() {
                 errors.push(e);
                 if !options.no_fail_fast {
-                    return Ok(errors);
+                    return Ok((Test::Doc, errors));
                 }
             }
         }
     }
-    Ok(errors)
+    Ok((Test::Doc, errors))
 }
