@@ -149,7 +149,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         None => Ok(()),
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
-                Some(i) => CliError::new(human("test failed"), i),
+                Some(i) => CliError::new(human(err.hint()), i),
                 None => CliError::new(Box::new(Human(err)), 101),
             })
         }
