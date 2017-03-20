@@ -8,6 +8,8 @@ use std::process::{Output, ExitStatus};
 use std::str;
 use std::string;
 
+use core::TargetKind;
+
 use curl;
 use git2;
 use handlebars;
@@ -139,13 +141,20 @@ impl fmt::Debug for ProcessError {
 
 /// Error when testcases fail
 pub struct CargoTestError {
+    pub test: Test,
     pub desc: String,
     pub exit: Option<ExitStatus>,
     pub causes: Vec<ProcessError>,
 }
 
+pub enum Test {
+    Multiple,
+    Doc,
+    UnitTest(TargetKind, String)
+}
+
 impl CargoTestError {
-    pub fn new(errors: Vec<ProcessError>) -> Self {
+    pub fn new(test: Test, errors: Vec<ProcessError>) -> Self {
         if errors.is_empty() {
             panic!("Cannot create CargoTestError from empty Vec")
         }
@@ -153,9 +162,28 @@ impl CargoTestError {
                                 .collect::<Vec<String>>()
                                 .join("\n");
         CargoTestError {
+            test: test,
             desc: desc,
             exit: errors[0].exit,
             causes: errors,
+        }
+    }
+
+    pub fn hint(&self) -> String {
+        match &self.test {
+            &Test::UnitTest(ref kind, ref name) => {
+                match *kind {
+                    TargetKind::Bench => format!("test failed, to rerun pass '--bench {}'", name),
+                    TargetKind::Bin => format!("test failed, to rerun pass '--bin {}'", name),
+                    TargetKind::Lib(_) => "test failed, to rerun pass '--lib'".into(),
+                    TargetKind::Test => format!("test failed, to rerun pass '--test {}'", name),
+                    TargetKind::ExampleBin | TargetKind::ExampleLib(_) =>
+                        format!("test failed, to rerun pass '--example {}", name),
+                    _ => "test failed.".into()
+                }
+            },
+            &Test::Doc => "test failed, to rerun pass '--doc'".into(),
+            _ => "test failed.".into()
         }
     }
 }

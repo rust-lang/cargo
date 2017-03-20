@@ -1,7 +1,7 @@
 pub use self::cfg::{Cfg, CfgExpr};
 pub use self::config::{Config, homedir};
 pub use self::dependency_queue::{DependencyQueue, Fresh, Dirty, Freshness};
-pub use self::errors::{CargoResult, CargoError, ChainError, CliResult};
+pub use self::errors::{CargoResult, CargoError, Test, ChainError, CliResult};
 pub use self::errors::{CliError, ProcessError, CargoTestError};
 pub use self::errors::{Human, caused_human};
 pub use self::errors::{process_error, internal_error, internal, human};

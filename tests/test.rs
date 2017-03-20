@@ -172,7 +172,7 @@ fn many_similar_names() {
 }
 
 #[test]
-fn cargo_test_failing_test() {
+fn cargo_test_failing_test_in_bin() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
@@ -200,7 +200,7 @@ fn cargo_test_failing_test() {
 [COMPILING] foo v0.5.0 ({url})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
-[ERROR] test failed", url = p.url()))
+[ERROR] test failed, to rerun pass '--bin foo'", url = p.url()))
                        .with_stdout_contains("
 running 1 test
 test test_hello ... FAILED
@@ -220,6 +220,93 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
 ")
                        .with_status(101));
 }
+
+#[test]
+fn cargo_test_failing_test_in_test() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", r#"
+            pub fn main() {
+                println!("hello");
+            }"#)
+        .file("tests/footest.rs", r#"
+            #[test]
+            fn test_hello() {
+                assert!(false)
+            }"#);
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+
+    assert_that(process(&p.bin("foo")),
+                execs().with_status(0).with_stdout("hello\n"));
+
+    assert_that(p.cargo("test"),
+                execs().with_stderr(format!("\
+[COMPILING] foo v0.5.0 ({url})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]footest-[..][EXE]
+[ERROR] test failed, to rerun pass '--test footest'", url = p.url()))
+                       .with_stdout_contains("
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+
+running 1 test
+test test_hello ... FAILED
+
+failures:
+
+---- test_hello stdout ----
+<tab>thread 'test_hello' panicked at 'assertion failed: false', \
+      tests[/]footest.rs:4
+")
+                       .with_stdout_contains("\
+failures:
+    test_hello
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
+")
+                       .with_status(101));
+}
+
+#[test]
+fn cargo_test_failing_test_in_lib() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", r#"
+            #[test]
+            fn test_hello() {
+                assert!(false)
+            }"#);
+
+    assert_that(p.cargo_process("test"),
+                execs().with_stderr(format!("\
+[COMPILING] foo v0.5.0 ({url})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
+[ERROR] test failed, to rerun pass '--lib'", url = p.url()))
+                       .with_stdout_contains("
+running 1 test
+test test_hello ... FAILED
+
+failures:
+
+---- test_hello stdout ----
+<tab>thread 'test_hello' panicked at 'assertion failed: false', \
+      src[/]lib.rs:4
+")
+                       .with_stdout_contains("\
+failures:
+    test_hello
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
+")
+                       .with_status(101));
+}
+
 
 #[test]
 fn test_with_lib_dep() {
