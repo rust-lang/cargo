@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use semver::Version;
 
-use core::{PackageId, Package, Target};
+use core::{PackageId, Package, Target, TargetKind};
 use util::{self, CargoResult, Config, ProcessBuilder, process, join_paths};
 
 /// A structure returning the result of a compilation.
@@ -13,7 +13,7 @@ pub struct Compilation<'cfg> {
     pub libraries: HashMap<PackageId, HashSet<(Target, PathBuf)>>,
 
     /// An array of all tests created during this compilation.
-    pub tests: Vec<(Package, String, PathBuf)>,
+    pub tests: Vec<(Package, TargetKind, String, PathBuf)>,
 
     /// An array of all binaries created.
     pub binaries: Vec<PathBuf>,
