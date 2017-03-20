@@ -1162,3 +1162,38 @@ fn override_with_default_feature() {
     assert_that(p.cargo_process("run"),
                 execs().with_status(0));
 }
+
+#[test]
+fn override_plus_dep() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "0.1"
+
+            [replace]
+            'bar:0.1.0' = { path = "bar" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            foo = { path = ".." }
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr_contains("\
+error: cyclic package dependency: [..]
+"));
+}
