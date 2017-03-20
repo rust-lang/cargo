@@ -1023,13 +1023,17 @@ fn check_cycles(resolve: &Resolve,
         // dependencies.
         if checked.insert(id) {
             let summary = summaries[id];
-            for dep in resolve.deps(id) {
+            for dep in resolve.deps_not_replaced(id) {
                 let is_transitive = summary.dependencies().iter().any(|d| {
                     d.matches_id(dep) && d.is_transitive()
                 });
                 let mut empty = HashSet::new();
                 let visited = if is_transitive {&mut *visited} else {&mut empty};
                 visit(resolve, dep, summaries, visited, checked)?;
+
+                if let Some(id) = resolve.replacement(dep) {
+                    visit(resolve, id, summaries, visited, checked)?;
+                }
             }
         }
 
