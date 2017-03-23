@@ -680,3 +680,44 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
 [FINISHED] [..]
 "));
 }
+
+#[test]
+fn rebuild_if_environment_changes() {
+    let p = project("env_change")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "env_change"
+            description = "old desc"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {
+                println!("{}", env!("CARGO_PKG_DESCRIPTION"));
+            }
+        "#);
+
+    assert_that(p.cargo_process("run"),
+                execs().with_status(0)
+                .with_stdout("old desc").with_stderr(&format!("\
+[COMPILING] env_change v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target[/]debug[/]env_change[EXE]`
+", dir = p.url())));
+
+    File::create(&p.root().join("Cargo.toml")).unwrap().write_all(br#"
+        [package]
+        name = "env_change"
+        description = "new desc"
+        version = "0.0.1"
+        authors = []
+    "#).unwrap();
+
+    assert_that(p.cargo("run"),
+                execs().with_status(0)
+                .with_stdout("new desc").with_stderr(&format!("\
+[COMPILING] env_change v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target[/]debug[/]env_change[EXE]`
+", dir = p.url())));
+}
