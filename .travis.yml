@@ -17,6 +17,7 @@ matrix:
            IMAGE=dist
            MAKE_TARGETS="test distcheck doc install uninstall"
            ALLOW_PR=1
+           NO_ADD=1
     - env: TARGET=i686-unknown-linux-gnu
            IMAGE=dist
            MAKE_TARGETS=test-unit-i686-unknown-linux-gnu
@@ -27,6 +28,7 @@ matrix:
            ALT=i686-apple-darwin
            MAKE_TARGETS="test distcheck doc install uninstall"
            MACOSX_DEPLOYMENT_TARGET=10.7
+           NO_ADD=1
       os: osx
     - env: TARGET=i686-apple-darwin
            MAKE_TARGETS=test-unit-i686-apple-darwin
@@ -61,22 +63,22 @@ matrix:
            IMAGE=cross
     - env: TARGET=mips64-unknown-linux-gnuabi64
            IMAGE=cross
-      rust: beta-2017-03-03
+      rust: beta
     - env: TARGET=mips64el-unknown-linux-gnuabi64
            IMAGE=cross
-      rust: beta-2017-03-03
+      rust: beta
     - env: TARGET=s390x-unknown-linux-gnu
            IMAGE=cross
-      rust: beta-2017-03-03
+      rust: beta
     - env: TARGET=powerpc-unknown-linux-gnu
            IMAGE=cross
-      rust: beta-2017-03-03
+      rust: beta
     - env: TARGET=powerpc64-unknown-linux-gnu
            IMAGE=cross
-      rust: beta-2017-03-03
+      rust: beta
     - env: TARGET=powerpc64le-unknown-linux-gnu
            IMAGE=cross
-      rust: beta-2017-03-03
+      rust: beta
 
     # beta/nightly builds
     - env: TARGET=x86_64-unknown-linux-gnu
@@ -84,24 +86,22 @@ matrix:
            IMAGE=dist
            MAKE_TARGETS="test distcheck doc install uninstall"
            DEPLOY=0
-      rust: beta-2017-03-03
+           NO_ADD=1
+      rust: beta
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
            IMAGE=dist
            MAKE_TARGETS="test distcheck doc install uninstall"
            DEPLOY=0
-      rust: nightly-2017-03-03
+           NO_ADD=1
+      rust: nightly
 
   exclude:
     - rust: stable
 
 before_script:
-  - curl https://static.rust-lang.org/rustup.sh |
-    sh -s -- --add-target=$TARGET --disable-sudo -y --prefix=`rustc --print sysroot`
-  - if [ ! -z "$ALT" ]; then
-      curl https://static.rust-lang.org/rustup.sh |
-      sh -s -- --add-target=$ALT --disable-sudo -y --prefix=`rustc --print sysroot`;
-    fi
+  - if [ -z "$NO_ADD" ]; then rustup target add $TARGET; fi
+  - if [ ! -z "$ALT" ]; then rustup target add $ALT; fi
 script:
   - >
       if [ "$ALLOW_PR" = "" ] && [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
