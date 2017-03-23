@@ -399,6 +399,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // to pull crates from anywhere w/o worrying about conflicts
         unit.pkg.package_id().hash(&mut hasher);
 
+        // Add package properties which map to environment variables
+        // exposed by Cargo
+        let manifest_metadata = unit.pkg.manifest().metadata();
+        manifest_metadata.authors.hash(&mut hasher);
+        manifest_metadata.description.hash(&mut hasher);
+        manifest_metadata.homepage.hash(&mut hasher);
+
         // Also mix in enabled features to our metadata. This'll ensure that
         // when changing feature sets each lib is separately cached.
         self.resolve.features_sorted(unit.pkg.package_id()).hash(&mut hasher);
