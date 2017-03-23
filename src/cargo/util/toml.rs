@@ -437,6 +437,7 @@ pub struct TomlProject {
 #[derive(Deserialize)]
 pub struct TomlWorkspace {
     members: Option<Vec<String>>,
+    exclude: Option<Vec<String>>,
 }
 
 pub struct TomlVersion {
@@ -784,7 +785,10 @@ impl TomlManifest {
         let workspace_config = match (self.workspace.as_ref(),
                                       project.workspace.as_ref()) {
             (Some(config), None) => {
-                WorkspaceConfig::Root { members: config.members.clone() }
+                WorkspaceConfig::Root {
+                    members: config.members.clone(),
+                    exclude: config.exclude.clone().unwrap_or(Vec::new()),
+                }
             }
             (None, root) => {
                 WorkspaceConfig::Member { root: root.cloned() }
@@ -860,7 +864,10 @@ impl TomlManifest {
         let profiles = build_profiles(&self.profile);
         let workspace_config = match self.workspace {
             Some(ref config) => {
-                WorkspaceConfig::Root { members: config.members.clone() }
+                WorkspaceConfig::Root {
+                    members: config.members.clone(),
+                    exclude: config.exclude.clone().unwrap_or(Vec::new()),
+                }
             }
             None => {
                 bail!("virtual manifests must be configured with [workspace]");

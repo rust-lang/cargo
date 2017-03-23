@@ -388,6 +388,9 @@ as:
 
 # Optional key, inferred if not present
 members = ["path/to/member1", "path/to/member2"]
+
+# Optional key, empty if not present
+exclude = ["path1", "path/to/dir2"]
 ```
 
 Workspaces were added to Cargo as part [RFC 1525] and have a number of
@@ -410,7 +413,9 @@ manifest, is responsible for defining the entire workspace. All `path`
 dependencies residing in the workspace directory become members. You can add
 additional packages to the workspace by listing them in the `members` key. Note
 that members of the workspaces listed explicitly will also have their path
-dependencies included in the workspace.
+dependencies included in the workspace. Finally, the `exclude` key can be used
+to blacklist paths from being included in a workspace. This can be useful if
+some path dependencies aren't desired to be in the workspace at all.
 
 The `package.workspace` manifest key (described above) is used in member crates
 to point at a workspace's root crate. If this key is omitted then it is inferred

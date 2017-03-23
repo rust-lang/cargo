@@ -1264,3 +1264,117 @@ fn test_path_dependency_under_member() {
     assert_that(&p.root().join("foo/bar/Cargo.lock"), is_not(existing_file()));
     assert_that(&p.root().join("foo/bar/target"), is_not(existing_dir()));
 }
+
+#[test]
+fn excluded_simple() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "ws"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            exclude = ["foo"]
+        "#)
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target"), existing_dir());
+    assert_that(p.cargo("build").cwd(p.root().join("foo")),
+                execs().with_status(0));
+    assert_that(&p.root().join("foo/target"), existing_dir());
+}
+
+#[test]
+fn exclude_members_preferred() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "ws"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["foo/bar"]
+            exclude = ["foo"]
+        "#)
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", "")
+        .file("foo/bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/bar/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target"), existing_dir());
+    assert_that(p.cargo("build").cwd(p.root().join("foo")),
+                execs().with_status(0));
+    assert_that(&p.root().join("foo/target"), existing_dir());
+    assert_that(p.cargo("build").cwd(p.root().join("foo/bar")),
+                execs().with_status(0));
+    assert_that(&p.root().join("foo/bar/target"), is_not(existing_dir()));
+}
+
+#[test]
+fn exclude_but_also_depend() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "ws"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            bar = { path = "foo/bar" }
+
+            [workspace]
+            exclude = ["foo"]
+        "#)
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", "")
+        .file("foo/bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/bar/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target"), existing_dir());
+    assert_that(p.cargo("build").cwd(p.root().join("foo")),
+                execs().with_status(0));
+    assert_that(&p.root().join("foo/target"), existing_dir());
+    assert_that(p.cargo("build").cwd(p.root().join("foo/bar")),
+                execs().with_status(0));
+    assert_that(&p.root().join("foo/bar/target"), existing_dir());
+}
