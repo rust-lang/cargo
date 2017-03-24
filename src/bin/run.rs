@@ -94,10 +94,11 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         filter: if examples.is_empty() && bins.is_empty() {
             ops::CompileFilter::Everything { required_features_filterable: false, }
         } else {
-            ops::CompileFilter::Only {
-                lib: false, tests: &[], benches: &[],
-                bins: &bins, examples: &examples,
-            }
+            ops::CompileFilter::new(false,
+                                    &bins, false,
+                                    &[], false,
+                                    &examples, false,
+                                    &[], false)
         },
         message_format: options.flag_message_format,
         target_rustdoc_args: None,
