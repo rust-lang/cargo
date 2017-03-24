@@ -91,7 +91,7 @@ the `.d` files alongside the artifacts.
 Cargo is designed to be extensible with new subcommands without having to modify
 Cargo itself. This is achieved by translating a cargo invocation of the form
 cargo `(?<command>[^ ]+)` into an invocation of an external tool
-`cargo-${command} that then needs to be present in one of the user's `$PATH`
+`cargo-${command}` that then needs to be present in one of the user's `$PATH`
 directories.
 
 Custom subcommand may use `CARGO` environment variable to call back to
