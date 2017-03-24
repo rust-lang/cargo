@@ -112,23 +112,6 @@ pub enum TargetKind {
     CustomBuild,
 }
 
-impl TargetKind {
-    /// Returns a vector of crate types as specified in a manifest
-    pub fn crate_types(&self) -> Vec<&str> {
-        use self::TargetKind::*;
-        match *self {
-            Lib(ref kinds) | ExampleLib(ref kinds) => {
-                kinds.iter().map(LibKind::crate_type).collect()
-            }
-            Bin => vec!["bin"],
-            ExampleBin => vec!["example"],
-            Test => vec!["test"],
-            CustomBuild => vec!["custom-build"],
-            Bench => vec!["bench"]
-        }
-    }
-}
-
 impl ser::Serialize for TargetKind {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
         where S: ser::Serializer,
@@ -207,7 +190,11 @@ pub struct Target {
 
 #[derive(Serialize)]
 struct SerializedTarget<'a> {
+    /// Is this a `--bin bin`, `--lib`, `--example ex`?
+    /// Serialized as a list of strings for historical reasons.
     kind: &'a TargetKind,
+    /// Corresponds to `--crate-type` compiler attribute.
+    /// See https://doc.rust-lang.org/reference.html#linkage
     crate_types: Vec<&'a str>,
     name: &'a str,
     src_path: &'a PathBuf,
@@ -217,7 +204,7 @@ impl ser::Serialize for Target {
     fn serialize<S: ser::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         SerializedTarget {
             kind: &self.kind,
-            crate_types: self.kind.crate_types(),
+            crate_types: self.rustc_crate_types(),
             name: &self.name,
             src_path: &self.src_path,
         }.serialize(s)
