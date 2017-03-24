@@ -308,7 +308,7 @@ name = "ex"
                     },
                     {
                         "kind": [ "example" ],
-                        "crate_types": [ "example" ],
+                        "crate_types": [ "bin" ],
                         "name": "ex",
                         "src_path": "[..][/]foo[/]examples[/]ex.rs"
                     }
