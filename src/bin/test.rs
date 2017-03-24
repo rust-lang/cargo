@@ -17,9 +17,13 @@ pub struct Options {
     flag_lib: bool,
     flag_doc: bool,
     flag_bin: Vec<String>,
+    flag_bins: bool,
     flag_example: Vec<String>,
+    flag_examples: bool,
     flag_test: Vec<String>,
+    flag_tests: bool,
     flag_bench: Vec<String>,
+    flag_benches: bool,
     flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
@@ -41,10 +45,14 @@ Options:
     -h, --help                   Print this message
     --lib                        Test only this package's library
     --doc                        Test only this library's documentation
-    --bin NAME ...               Test only the specified binaries
+    --bin NAME ...               Test only the specified binary
+    --bins                       Test all binaries
     --example NAME ...           Check that the specified examples compile
-    --test NAME ...              Test only the specified integration test targets
-    --bench NAME ...             Test only the specified benchmark targets
+    --examples                   Check that all examples compile
+    --test NAME ...              Test only the specified test target
+    --tests                      Test all tests
+    --bench NAME ...             Test only the specified bench target
+    --benches                    Test all benches
     --no-run                     Compile, but don't run tests
     -p SPEC, --package SPEC ...  Package to run tests for
     --all                        Test all packages in the workspace
@@ -106,14 +114,15 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
     let (mode, filter);
     if options.flag_doc {
         mode = ops::CompileMode::Doctest;
-        filter = ops::CompileFilter::new(true, &empty, &empty, &empty, &empty);
+        filter = ops::CompileFilter::new(true, &empty, false, &empty, false,
+                                               &empty, false, &empty, false);
     } else {
         mode = ops::CompileMode::Test;
         filter = ops::CompileFilter::new(options.flag_lib,
-                                         &options.flag_bin,
-                                         &options.flag_test,
-                                         &options.flag_example,
-                                         &options.flag_bench);
+                                         &options.flag_bin, options.flag_bins,
+                                         &options.flag_test, options.flag_tests,
+                                         &options.flag_example, options.flag_examples,
+                                         &options.flag_bench, options.flag_benches);
     }
 
     let spec = if options.flag_all {

@@ -22,9 +22,13 @@ pub struct Options {
     flag_release: bool,
     flag_lib: bool,
     flag_bin: Vec<String>,
+    flag_bins: bool,
     flag_example: Vec<String>,
+    flag_examples: bool,
     flag_test: Vec<String>,
+    flag_tests: bool,
     flag_bench: Vec<String>,
+    flag_benches: bool,
     flag_profile: Option<String>,
     flag_frozen: bool,
     flag_locked: bool,
@@ -42,9 +46,13 @@ Options:
     -j N, --jobs N           Number of parallel jobs, defaults to # of CPUs
     --lib                    Build only this package's library
     --bin NAME               Build only the specified binary
+    --bins                   Build all binaries
     --example NAME           Build only the specified example
+    --examples               Build all examples
     --test NAME              Build only the specified test target
-    --bench NAME             Build only the specified benchmark target
+    --tests                  Build all tests
+    --bench NAME             Build only the specified bench target
+    --benches                Build all benches
     --release                Build artifacts in release mode, with optimizations
     --profile PROFILE        Profile to build the selected target for
     --features FEATURES      Features to compile for the package
@@ -109,10 +117,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         mode: mode,
         release: options.flag_release,
         filter: ops::CompileFilter::new(options.flag_lib,
-                                        &options.flag_bin,
-                                        &options.flag_test,
-                                        &options.flag_example,
-                                        &options.flag_bench),
+                                        &options.flag_bin, options.flag_bins,
+                                        &options.flag_test, options.flag_tests,
+                                        &options.flag_example, options.flag_examples,
+                                        &options.flag_bench, options.flag_benches,),
         message_format: options.flag_message_format,
         target_rustdoc_args: None,
         target_rustc_args: options.arg_opts.as_ref().map(|a| &a[..]),
