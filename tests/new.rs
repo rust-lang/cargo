@@ -77,10 +77,12 @@ name = "{{name}}"
 version = "0.0.1"
 authors = ["{{author}}"]
 "#).unwrap();
-File::create(&root.join("home/.cargo/templates/testtemplate/LICENSE"))
+    File::create(&root.join("home/.cargo/templates/testtemplate/LICENSE"))
                   .unwrap().write_all(br#"
 (c) {{year}} {{author}}
 "#).unwrap();
+    File::create(&root.join("home/.cargo/templates/testtemplate/.gitignore"))
+                      .unwrap().write_all(br#"callgrind.out.justfile"#).unwrap();
     File::create(&root.join("home/.cargo/templates/testtemplate/src/main.rs"))
                       .unwrap().write_all(br#"
 fn main () {
@@ -100,13 +102,21 @@ fn main () {
     assert_that(&paths::root().join("foo"), existing_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
     assert_that(&paths::root().join("foo/LICENSE"), existing_file());
+    assert_that(&paths::root().join("foo/.gitignore"), existing_file());
     assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
 
+    // Validate the date templating
     let license = paths::root().join("foo/LICENSE");
     let mut contents = String::new();
     File::open(&license).unwrap().read_to_string(&mut contents).unwrap();
     let expected = format!("(c) {} {}", (time::now().tm_year + 1900).to_string(), "foo");
     assert!(contents.contains(&expected));
+
+    // Validate that we did not blow away .gitignore
+    let gitignore = paths::root().join("foo/.gitignore");
+    let mut contents = String::new();
+    File::open(&gitignore).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(&"callgrind.out.justfile"));
 
     assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));

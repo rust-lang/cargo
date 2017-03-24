@@ -652,9 +652,6 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
 
 /// Recursively list directory contents under `dir`, only visiting files.
 ///
-/// This will also filter out files & files types which we don't want to
-/// try generate templates for. Image files, for instance.
-///
 /// It also filters out certain files & file types, as we don't want t
 ///
 /// We use this instead of std::fs::walk_dir as it is marked as unstable for now
@@ -663,7 +660,6 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
 ///    http://doc.rust-lang.org/std/fs/fn.read_dir.html
 fn walk_template_dir(dir: &Path, cb: &mut FnMut(DirEntry) -> CargoResult<()>) -> CargoResult<()> {
     let attr = try!(fs::metadata(&dir));
-    let ignore_files = vec![".gitignore"];
 
     if !attr.is_dir() {
         return Ok(());
@@ -678,11 +674,6 @@ fn walk_template_dir(dir: &Path, cb: &mut FnMut(DirEntry) -> CargoResult<()>) ->
                 }
             }
         } else {
-            if let Some(file_name) = entry.path().file_name() {
-                if ignore_files.contains(&file_name.to_str().unwrap()) {
-                    continue
-                }
-            }
             try!(cb(entry));
         }
     }
