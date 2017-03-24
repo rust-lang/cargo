@@ -57,6 +57,10 @@ impl ProcessBuilder {
         self
     }
 
+    pub fn get_program(&self) -> &OsString {
+        &self.program
+    }
+
     pub fn get_args(&self) -> &[OsString] {
         &self.args
     }

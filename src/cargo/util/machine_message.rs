@@ -1,7 +1,12 @@
+use std::path::Path;
+use std::collections::HashMap;
+use std::borrow::Cow;
+
 use serde::ser;
 use serde_json::{self, Value};
 
 use core::{PackageId, Target, Profile};
+use util::ProcessBuilder;
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;
@@ -53,5 +58,32 @@ pub struct BuildScript<'a> {
 impl<'a> Message for BuildScript<'a> {
     fn reason(&self) -> &str {
         "build-script-executed"
+    }
+}
+
+#[derive(Serialize)]
+pub struct RunProfile<'a> {
+    pub program: Cow<'a, str>,
+    pub args: Vec<Cow<'a, str>>,
+    pub env: HashMap<&'a str, Option<Cow<'a, str>>>,
+    pub cwd: Option<&'a Path>,
+}
+
+impl<'a> RunProfile<'a> {
+    pub fn new(process: &ProcessBuilder) -> RunProfile {
+        RunProfile {
+            program: process.get_program().to_string_lossy(),
+            args: process.get_args().iter().map(|s| s.to_string_lossy()).collect(),
+            env: process.get_envs().iter().map(|(k, v)| {
+                (k.as_str(), v.as_ref().map(|s| s.to_string_lossy()))
+            }).collect(),
+            cwd: process.get_cwd(),
+        }
+    }
+}
+
+impl<'a> Message for RunProfile<'a> {
+    fn reason(&self) -> &str {
+        "run-profile"
     }
 }

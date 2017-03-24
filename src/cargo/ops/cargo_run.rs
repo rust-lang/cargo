@@ -2,6 +2,7 @@ use std::path::Path;
 
 use ops::{self, CompileFilter, Packages};
 use util::{self, human, CargoResult, ProcessError};
+use util::machine_message::{self, RunProfile};
 use core::Workspace;
 
 pub fn run(ws: &Workspace,
@@ -64,6 +65,11 @@ pub fn run(ws: &Workspace,
     let mut process = compile.target_process(exe, &pkg)?;
     process.args(args).cwd(config.cwd());
 
-    config.shell().status("Running", process.to_string())?;
-    Ok(process.exec_replace().err())
+    if config.wrap_exe() {
+        machine_message::emit(RunProfile::new(&process));
+        Ok(None)
+    } else {
+        config.shell().status("Running", process.to_string())?;
+        Ok(process.exec_replace().err())
+    }
 }

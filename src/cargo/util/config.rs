@@ -33,6 +33,7 @@ pub struct Config {
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
     locked: Cell<bool>,
+    wrap_exe: Cell<bool>,
 }
 
 impl Config {
@@ -50,6 +51,7 @@ impl Config {
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
             locked: Cell::new(false),
+            wrap_exe: Cell::new(false),
         }
     }
 
@@ -361,6 +363,7 @@ impl Config {
         self.extra_verbose.set(extra_verbose);
         self.frozen.set(frozen);
         self.locked.set(locked);
+        self.wrap_exe.set(env::var("CARGO_WRAP").is_ok());
 
         Ok(())
     }
@@ -375,6 +378,10 @@ impl Config {
 
     pub fn lock_update_allowed(&self) -> bool {
         !self.frozen.get() && !self.locked.get()
+    }
+
+    pub fn wrap_exe(&self) -> bool {
+        self.wrap_exe.get()
     }
 
     fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
