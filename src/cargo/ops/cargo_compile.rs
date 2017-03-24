@@ -382,6 +382,13 @@ impl<'a> CompileFilter<'a> {
             }
         }
     }
+
+    pub fn is_specific(&self) -> bool {
+        match *self {
+            CompileFilter::Everything { .. } => false,
+            CompileFilter::Only { .. } => true,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]

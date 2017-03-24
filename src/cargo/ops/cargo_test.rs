@@ -20,6 +20,7 @@ pub fn run_tests(ws: &Workspace,
         return Ok(None)
     }
     let (test, mut errors) = if options.only_doc {
+        assert!(options.compile_opts.filter.is_specific());
         run_doc_tests(options, test_args, &compilation)?
     } else {
         run_unit_tests(options, test_args, &compilation)?
@@ -32,7 +33,7 @@ pub fn run_tests(ws: &Workspace,
 
     // If a specific test was requested or we're not running any tests at all,
     // don't run any doc tests.
-    if let ops::CompileFilter::Only { .. } = options.compile_opts.filter {
+    if options.compile_opts.filter.is_specific() {
         match errors.len() {
             0 => return Ok(None),
             _ => return Ok(Some(CargoTestError::new(test, errors)))
