@@ -266,8 +266,7 @@ impl<'cfg> Workspace<'cfg> {
             }
         }
 
-        let mut cur = manifest_path.parent().and_then(|p| p.parent());
-        while let Some(path) = cur {
+        for path in paths::ancestors(manifest_path).skip(2) {
             let manifest = path.join("Cargo.toml");
             debug!("find_root - trying {}", manifest.display());
             if manifest.exists() {
@@ -286,7 +285,6 @@ impl<'cfg> Workspace<'cfg> {
                     WorkspaceConfig::Member { .. } => {}
                 }
             }
-            cur = path.parent();
         }
 
         Ok(None)
