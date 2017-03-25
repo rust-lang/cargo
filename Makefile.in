@@ -160,7 +160,7 @@ clean:
 
 DOCS := index faq config guide manifest build-script pkgid-spec crates-io \
 	environment-variables specifying-dependencies source-replacement \
-	policies machine-readable-output
+	policies external-tools
 DOC_DIR := target/doc
 DOC_OPTS := --markdown-no-toc \
 		--markdown-css stylesheets/normalize.css \
