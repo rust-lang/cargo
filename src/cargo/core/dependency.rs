@@ -62,7 +62,7 @@ impl ser::Serialize for Dependency {
             name: self.name(),
             source: &self.source_id(),
             req: self.version_req().to_string(),
-            kind: self.kind(),
+            kind: self.kind().clone(),
             optional: self.is_optional(),
             uses_default_features: self.uses_default_features(),
             features: self.features(),
@@ -71,11 +71,13 @@ impl ser::Serialize for Dependency {
     }
 }
 
-#[derive(PartialEq, Clone, Debug, Copy)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Kind {
     Normal,
     Development,
     Build,
+    /// Binary-only dependency for a named binary target.
+    Bin(String),
 }
 
 impl ser::Serialize for Kind {
@@ -84,8 +86,9 @@ impl ser::Serialize for Kind {
     {
         match *self {
             Kind::Normal => None,
-            Kind::Development => Some("dev"),
-            Kind::Build => Some("build"),
+            Kind::Development => Some("dev".to_string()),
+            Kind::Build => Some("build".to_string()),
+            Kind::Bin(ref name) => Some(format!("bin:{}", name)),
         }.serialize(s)
     }
 }
@@ -170,7 +173,7 @@ this warning.
     pub fn version_req(&self) -> &VersionReq { &self.req }
     pub fn name(&self) -> &str { &self.name }
     pub fn source_id(&self) -> &SourceId { &self.source_id }
-    pub fn kind(&self) -> Kind { self.kind }
+    pub fn kind(&self) -> &Kind { &self.kind }
     pub fn specified_req(&self) -> bool { self.specified_req }
 
     /// If none, this dependency must be built for all platforms.
@@ -231,7 +234,7 @@ this warning.
     /// Returns false if the dependency is only used to build the local package.
     pub fn is_transitive(&self) -> bool {
         match self.kind {
-            Kind::Normal | Kind::Build => true,
+            Kind::Normal | Kind::Build | Kind::Bin(_) => true,
             Kind::Development => false,
         }
     }
@@ -292,7 +295,7 @@ impl Dependency {
     pub fn version_req(&self) -> &VersionReq { self.inner.version_req() }
     pub fn name(&self) -> &str { self.inner.name() }
     pub fn source_id(&self) -> &SourceId { self.inner.source_id() }
-    pub fn kind(&self) -> Kind { self.inner.kind() }
+    pub fn kind(&self) -> &Kind { self.inner.kind() }
     pub fn specified_req(&self) -> bool { self.inner.specified_req() }
 
     /// If none, this dependencies must be built for all platforms.

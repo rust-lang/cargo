@@ -104,11 +104,12 @@ fn transmit(config: &Config,
             features: dep.features().to_vec(),
             version_req: dep.version_req().to_string(),
             target: dep.platform().map(|s| s.to_string()),
-            kind: match dep.kind() {
-                Kind::Normal => "normal",
-                Kind::Build => "build",
-                Kind::Development => "dev",
-            }.to_string(),
+            kind: match *dep.kind() {
+                Kind::Normal => "normal".to_string(),
+                Kind::Build => "build".to_string(),
+                Kind::Development => "dev".to_string(),
+                Kind::Bin(ref name) => format!("bin:{}", name),
+            },
         }
     }).collect::<Vec<NewCrateDependency>>();
     let manifest = pkg.manifest();
