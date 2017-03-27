@@ -107,8 +107,10 @@ fn transmit(config: &Config,
             kind: match *dep.kind() {
                 Kind::Normal => "normal".to_string(),
                 Kind::Build => "build".to_string(),
-                Kind::Development => "dev".to_string(),
-                Kind::Bin(ref name) => format!("bin:{}", name),
+                // Binary-only deps are, at least for the purpose of crates.io display, equivalent
+                // to dev dependencies.
+                Kind::Development
+                | Kind::Bin(_) => "dev".to_string(),
             },
         }
     }).collect::<Vec<NewCrateDependency>>();
