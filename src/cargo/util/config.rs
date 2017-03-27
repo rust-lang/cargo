@@ -17,6 +17,7 @@ use core::shell::{Verbosity, ColorConfig};
 use core::MultiShell;
 use util::{CargoResult, CargoError, ChainError, Rustc, internal, human};
 use util::{Filesystem, LazyCell};
+use util::paths;
 
 use util::toml as cargo_toml;
 
@@ -698,10 +699,9 @@ pub fn homedir(cwd: &Path) -> Option<PathBuf> {
 fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     where F: FnMut(File, &Path) -> CargoResult<()>
 {
-    let mut current = pwd;
     let mut stash: HashSet<PathBuf> = HashSet::new();
 
-    loop {
+    for current in paths::ancestors(pwd) {
         let possible = current.join(".cargo").join("config");
         if fs::metadata(&possible).is_ok() {
             let file = File::open(&possible)?;
@@ -709,11 +709,6 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
             walk(file, &possible)?;
 
             stash.insert(possible);
-        }
-
-        match current.parent() {
-            Some(p) => current = p,
-            None => break,
         }
     }
 

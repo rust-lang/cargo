@@ -50,6 +50,7 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env_remove("CARGO_HOME")
      .env("HOME", support::paths::home())
      .env("CARGO_HOME", support::paths::home().join(".cargo"))
+     .env("__CARGO_TEST_ROOT", support::paths::root())
      .env_remove("RUSTC")
      .env_remove("RUSTFLAGS")
      .env_remove("CARGO_INCREMENTAL")
