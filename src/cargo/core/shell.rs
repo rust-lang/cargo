@@ -83,6 +83,13 @@ impl Style {
         }
         Ok(())
     }
+
+    pub fn new(color: Color, attr: Option<Attr>) -> Self {
+        Style {
+            color: color,
+            attr: attr
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq)]
