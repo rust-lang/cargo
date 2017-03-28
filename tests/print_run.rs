@@ -18,12 +18,22 @@ fn single_bin() {
             fn main() { println!("hello"); }
         "#);
 
-    assert_that(p.cargo_process("run").env("CARGO_PRINT_RUN", "1"),
+    assert_that(p.cargo_process("run").env("CARGO_PRINT_RUN", "1").arg("--message-format=json"),
                 execs().with_status(0)
                        .with_stderr(&"\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
                        .with_json(r#"
+{
+  "features": [],
+  "filenames": ["[..]target[/]debug[/]foo"],
+  "fresh": false,
+  "package_id": "foo 0.0.1 ([..])",
+  "profile": "{...}",
+  "reason": "compiler-artifact",
+  "target": "{...}"
+}
+
 {
   "reason": "run-profile",
   "program": "[..][/]foo[/]target[/]debug[/]foo",
@@ -87,9 +97,26 @@ fn several_tests() {
         "CARGO_MANIFEST_DIR": "[..]",
         "CARGO": "[..]"
     }"#;
-    assert_that(p.cargo_process("test").env("CARGO_PRINT_RUN", "1"),
+    let artifact = r#"{
+  "features": [],
+  "filenames": "{...}",
+  "fresh": false,
+  "package_id": "foo 0.0.1 ([..])",
+  "profile": "{...}",
+  "reason": "compiler-artifact",
+  "target": "{...}"
+}"#;
+    assert_that(p.cargo_process("test").env("CARGO_PRINT_RUN", "1").arg("--message-format=json"),
                 execs().with_status(0)
                        .with_json(&format!(r#"
+{artifact}
+
+{artifact}
+
+{artifact}
+
+{artifact}
+
 {{
   "reason": "run-profile",
   "program": "[..]bar-[..]",
@@ -113,6 +140,29 @@ fn several_tests() {
   "cwd": "[..]",
   "args": []
 }}
-"#, env=env)));
+"#, env=env, artifact=artifact)));
 }
 
+#[test]
+fn print_run_needs_json() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello"); }
+        "#);
+    p.build();
+
+    assert_that(p.cargo("run").env("CARGO_PRINT_RUN", "1"),
+                execs().with_status(101).with_stderr_contains("\
+[ERROR] CARGO_PRINT_RUN requires --message-format=json"));
+
+    assert_that(p.cargo("test").env("CARGO_PRINT_RUN", "1"),
+                execs().with_status(101).with_stderr_contains("\
+[ERROR] CARGO_PRINT_RUN requires --message-format=json"));
+
+}

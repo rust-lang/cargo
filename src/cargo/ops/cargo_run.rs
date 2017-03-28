@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use ops::{self, CompileFilter, Packages};
+use ops::{self, CompileFilter, Packages, MessageFormat};
 use util::{self, human, CargoResult, ProcessError};
 use util::machine_message::{self, RunProfile};
 use core::Workspace;
@@ -66,6 +66,9 @@ pub fn run(ws: &Workspace,
     process.args(args).cwd(config.cwd());
 
     if config.print_run() {
+        if options.message_format != MessageFormat::Json {
+            bail!("CARGO_PRINT_RUN requires --message-format=json")
+        }
         machine_message::emit(RunProfile::new(&process));
         Ok(None)
     } else {

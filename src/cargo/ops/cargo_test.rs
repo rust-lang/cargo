@@ -1,6 +1,6 @@
 use std::ffi::{OsString, OsStr};
 
-use ops::{self, Compilation};
+use ops::{self, Compilation, MessageFormat};
 use util::{self, CargoResult, CargoTestError, Test, ProcessError};
 use util::machine_message::{self, RunProfile};
 use core::Workspace;
@@ -98,6 +98,9 @@ fn run_unit_tests(options: &TestOptions,
         })?;
 
         if config.print_run() {
+            if options.compile_opts.message_format != MessageFormat::Json {
+                bail!("CARGO_PRINT_RUN requires --message-format=json")
+            }
             machine_message::emit(RunProfile::new(&cmd));
         } else {
             config.shell().verbose(|shell| {
