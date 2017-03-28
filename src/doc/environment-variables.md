@@ -28,6 +28,13 @@ configuration values, as described in [that documentation][config-env]
 
 [config-env]: config.html#environment-variables
 
+There are special environmental variables which are not read from `.cargo/config`:
+
+* `CARGO_PRINT_RUN` - If set, Cargo print information about binaries it is about to
+  run during `cargo test` and `cargo run`, without actually executing the binaries.
+  This is intended for integration with tools wrapping Cargo and IDEs.
+
+
 # Environment variables Cargo sets for crates
 
 Cargo exposes these environment variables to your crate when it is compiled.
