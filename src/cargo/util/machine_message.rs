@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{PathBuf, Path};
 use std::collections::HashMap;
 use std::borrow::Cow;
 
@@ -63,7 +63,7 @@ impl<'a> Message for BuildScript<'a> {
 
 #[derive(Serialize)]
 pub struct RunProfile<'a> {
-    pub program: Cow<'a, str>,
+    pub program:PathBuf,
     pub args: Vec<Cow<'a, str>>,
     pub env: HashMap<&'a str, Option<Cow<'a, str>>>,
     pub cwd: Option<&'a Path>,
@@ -71,8 +71,14 @@ pub struct RunProfile<'a> {
 
 impl<'a> RunProfile<'a> {
     pub fn new(process: &ProcessBuilder) -> RunProfile {
+        let program = if let Some(cwd) = process.get_cwd() {
+            cwd.join(process.get_program())
+        } else {
+            PathBuf::from(process.get_program())
+        };
+        assert!(program.is_absolute(), "Running program by relative path without cwd");
         RunProfile {
-            program: process.get_program().to_string_lossy(),
+            program: program,
             args: process.get_args().iter().map(|s| s.to_string_lossy()).collect(),
             env: process.get_envs().iter().map(|(k, v)| {
                 (k.as_str(), v.as_ref().map(|s| s.to_string_lossy()))

@@ -26,7 +26,7 @@ fn single_bin() {
                        .with_json(r#"
 {
   "reason": "run-profile",
-  "program": "target\/debug\/foo",
+  "program": "[..][/]foo[/]target[/]debug[/]foo",
   "env": {
     "LD_LIBRARY_PATH": "[..]",
     "CARGO_PKG_VERSION_PRE": "",
