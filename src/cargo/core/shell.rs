@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::prelude::*;
 use std::io;
 
-use term::color::{Color, BLACK, RED, GREEN, YELLOW};
+use term::color::{Color, BLACK, RED, GREEN, YELLOW, CYAN};
 use term::{self, Terminal, TerminfoTerminal, color, Attr};
 
 use self::AdequateTerminal::{NoColor, Colored};
@@ -16,6 +16,130 @@ pub enum Verbosity {
     Verbose,
     Normal,
     Quiet
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Style {
+    color: Color,
+    attr: Option<Attr>,
+}
+
+impl Default for Style {
+    fn default() -> Self {
+        Style {
+            color: BLACK,
+            attr: None,
+        }
+    }
+}
+
+impl Style {
+    fn from_str(config: &str, mut color: Color, mut attr: Option<Attr>) -> Self {
+        let parts = config.split(";").collect::<Vec<_>>();
+        if let Some(p) = parts.get(0) {
+            if let Ok(p) = p.parse() {
+                match p {
+                    0 if attr == Some(Attr::Bold) => {
+                        attr = None;
+                    }
+                    1 => {
+                        attr = Some(Attr::Bold);
+                    }
+                    3 => {
+                        attr = Some(Attr::Italic(true));
+                    }
+                    4 => {
+                        attr = Some(Attr::Underline(true));
+                    }
+                    5 | 6 => {
+                        attr = Some(Attr::Blink)
+                    }
+                    i if i >= 30 && i <= 39 => {
+                        color = i
+                    }
+                    _ => { 
+                        // ignore everything else
+                    }
+                }
+            }
+        }
+        if let Some(p) = parts.get(1) {
+            if let Ok(p) = p.parse() {
+                color = p;
+            }
+        }
+        Style {
+            color: color,
+            attr: attr,
+        }
+    }
+
+    fn apply(&self, shell: &mut Shell) -> CargoResult<()> {
+        if self.color != BLACK { shell.fg(self.color)?; }
+        if let Some(attr) = self.attr {
+            if shell.supports_attr(attr) {
+                shell.attr(attr)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub struct Styles {
+    pub status: Style,
+    pub warning: Style,
+    pub error: Style,
+    pub default: Style,
+    pub blocked: Style, 
+}
+
+
+impl Default for Styles {
+    fn default() -> Self {
+        Styles {
+            status: Style {
+                color: GREEN,
+                attr: Some(Attr::Bold),
+            },
+            warning: Style {
+                color: YELLOW,
+                attr: Some(Attr::Bold),
+            },
+            error: Style {
+                color: RED,
+                attr: Some(Attr::Bold),  
+            },
+            default: Style::default(),
+            blocked: Style {
+                color: CYAN,
+                attr: Some(Attr::Bold),
+            }
+        }
+    }
+}
+
+impl Styles {
+    fn from_env() -> Styles {
+        use std::env::var;
+        let mut ret = Styles::default();
+        if let Ok(config) = var("CARGO_COLORS") {
+            for p in config.split(":") {
+                if p.starts_with("status=") {
+                    ret.status = Style::from_str(&p[7..], ret.status.color, ret.status.attr);
+                } else if p.starts_with("warning=") {
+                    ret.warning = Style::from_str(&p[8..], ret.warning.color, ret.warning.attr);
+                } else if p.starts_with("error=") {
+                    ret.error = Style::from_str(&p[6..], ret.error.color, ret.error.attr);
+                } else if p.starts_with("default=") {
+                    ret.default = Style::from_str(&p[8..], ret.default.color, ret.default.attr);
+                } else if p.starts_with("blocked=") {
+                    ret.blocked = Style::from_str(&p[8..], ret.blocked.color, ret.blocked.attr);
+                }
+            } 
+        }
+        ret
+    }
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -54,12 +178,13 @@ pub struct Shell {
 pub struct MultiShell {
     out: Shell,
     err: Shell,
-    verbosity: Verbosity
+    verbosity: Verbosity,
+    pub styles: Styles,
 }
 
 impl MultiShell {
     pub fn new(out: Shell, err: Shell, verbosity: Verbosity) -> MultiShell {
-        MultiShell { out: out, err: err, verbosity: verbosity }
+        MultiShell { out: out, err: err, verbosity: verbosity, styles: Styles::from_env() }
     }
 
     // Create a quiet, basic shell from supplied writers.
@@ -71,6 +196,7 @@ impl MultiShell {
             out: out,
             err: err,
             verbosity: Verbosity::Quiet,
+            styles: Styles::from_env(),
         }
     }
 
@@ -82,11 +208,11 @@ impl MultiShell {
         &mut self.err
     }
 
-    pub fn say<T: ToString>(&mut self, message: T, color: Color)
+    pub fn say<T: ToString>(&mut self, message: T, style: Style)
                             -> CargoResult<()> {
         match self.verbosity {
             Quiet => Ok(()),
-            _ => self.out().say(message, color)
+            _ => self.out().say(message, style)
         }
     }
 
@@ -95,7 +221,10 @@ impl MultiShell {
     {
         match self.verbosity {
             Quiet => Ok(()),
-            _ => self.err().say_status(status, message, GREEN, true)
+            _ => {
+                let color = self.styles.status;
+                self.err().say_status(status, message, color, true)
+            }
         }
     }
 
@@ -118,13 +247,17 @@ impl MultiShell {
     }
 
     pub fn error<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        self.err().say_status("error:", message, RED, false)
+        let color = self.styles.error;
+        self.err().say_status("error:", message, color, false)
     }
 
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
         match self.verbosity {
             Quiet => Ok(()),
-            _ => self.err().say_status("warning:", message, YELLOW, false),
+            _ => {
+                let color = self.styles.warning;
+                self.err().say_status("warning:", message, color, false)
+            },
         }
     }
 
@@ -217,9 +350,9 @@ impl Shell {
         self.config.color_config = color_config;
     }
 
-    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> CargoResult<()> {
+    pub fn say<T: ToString>(&mut self, message: T, style: Style) -> CargoResult<()> {
         self.reset()?;
-        if color != BLACK { self.fg(color)?; }
+        style.apply(self)?;
         write!(self, "{}\n", message.to_string())?;
         self.reset()?;
         self.flush()?;
@@ -229,14 +362,13 @@ impl Shell {
     pub fn say_status<T, U>(&mut self,
                             status: T,
                             message: U,
-                            color: Color,
+                            style: Style,
                             justified: bool)
                             -> CargoResult<()>
         where T: fmt::Display, U: fmt::Display
     {
         self.reset()?;
-        if color != BLACK { self.fg(color)?; }
-        if self.supports_attr(Attr::Bold) { self.attr(Attr::Bold)?; }
+        style.apply(self)?;
         if justified {
             write!(self, "{:>12}", status.to_string())?;
         } else {

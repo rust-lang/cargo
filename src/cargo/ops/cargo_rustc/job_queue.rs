@@ -5,7 +5,6 @@ use std::io::Write;
 use std::sync::mpsc::{channel, Sender, Receiver};
 
 use crossbeam::{self, Scope};
-use term::color::YELLOW;
 
 use core::{PackageId, Target, Profile};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
@@ -185,9 +184,10 @@ impl<'a> JobQueue<'a> {
                             if self.active > 0 {
                                 error = Some(human("build failed"));
                                 handle_error(&*e, &mut *cx.config.shell());
+                                let color = cx.config.shell().styles.warning;
                                 cx.config.shell().say(
                                             "Build failed, waiting for other \
-                                             jobs to finish...", YELLOW)?;
+                                             jobs to finish...", color)?;
                             }
                             if error.is_none() {
                                 error = Some(e);
