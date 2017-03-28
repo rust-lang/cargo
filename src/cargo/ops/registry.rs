@@ -8,7 +8,6 @@ use std::time::Duration;
 use curl::easy::{Easy, SslOpt};
 use git2;
 use registry::{Registry, NewCrate, NewCrateDependency};
-use term::color::BLACK;
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
@@ -420,6 +419,7 @@ pub fn search(query: &str,
         .max()
         .unwrap_or(0);
 
+    let color = config.shell().styles.default;
     for (name, description) in list_items.into_iter() {
         let line = match description {
             Some(desc) => {
@@ -429,24 +429,22 @@ pub fn search(query: &str,
             }
             None => name
         };
-        config.shell().say(line, BLACK)?;
+        config.shell().say(line, color)?;
     }
 
     let search_max_limit = 100;
     if total_crates > limit as u32 && limit < search_max_limit {
         config.shell().say(
             format!("... and {} crates more (use --limit N to see more)",
-                    total_crates - limit as u32),
-            BLACK)
+                    total_crates - limit as u32), color)
         ?;
-    } else if total_crates > limit as u32 && limit >= search_max_limit {
+    } else if total_crates > limit as u32 && limit >= search_max_limit {        
         config.shell().say(
             format!(
                 "... and {} crates more (go to http://crates.io/search?q={} to see more)",
                 total_crates - limit as u32,
                 percent_encode(query.as_bytes(), QUERY_ENCODE_SET)
-            ),
-            BLACK)
+            ), color)
         ?;
     }
 
