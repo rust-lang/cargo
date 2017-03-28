@@ -18,7 +18,7 @@ fn single_bin() {
             fn main() { println!("hello"); }
         "#);
 
-    assert_that(p.cargo_process("run").env("CARGO_WRAP", "1"),
+    assert_that(p.cargo_process("run").env("CARGO_PRINT_RUN", "1"),
                 execs().with_status(0)
                        .with_stderr(&"\
 [COMPILING] foo v0.0.1 ([..])
@@ -87,7 +87,7 @@ fn several_tests() {
         "CARGO_MANIFEST_DIR": "[..]",
         "CARGO": "[..]"
     }"#;
-    assert_that(p.cargo_process("test").env("CARGO_WRAP", "1"),
+    assert_that(p.cargo_process("test").env("CARGO_PRINT_RUN", "1"),
                 execs().with_status(0)
                        .with_json(&format!(r#"
 {{

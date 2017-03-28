@@ -97,7 +97,7 @@ fn run_unit_tests(options: &TestOptions,
             shell.status("Running", to_display.display().to_string())
         })?;
 
-        if config.wrap_exe() {
+        if config.print_run() {
             machine_message::emit(RunProfile::new(&cmd));
         } else {
             config.shell().verbose(|shell| {
@@ -124,7 +124,7 @@ fn run_doc_tests(options: &TestOptions,
 
     // We don't build/rust doctests if target != host or
     // if we are not supposed to run binaries.
-    if config.rustc()?.host != compilation.target || config.wrap_exe()  {
+    if config.rustc()?.host != compilation.target || config.print_run()  {
         return Ok((Test::Doc, errors));
     }
 

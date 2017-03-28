@@ -65,7 +65,7 @@ pub fn run(ws: &Workspace,
     let mut process = compile.target_process(exe, &pkg)?;
     process.args(args).cwd(config.cwd());
 
-    if config.wrap_exe() {
+    if config.print_run() {
         machine_message::emit(RunProfile::new(&process));
         Ok(None)
     } else {
