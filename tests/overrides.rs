@@ -928,6 +928,59 @@ fn overriding_nonexistent_no_spurious() {
 }
 
 #[test]
+fn no_warnings_when_replace_is_used_in_another_workspace_member() {
+    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project("ws")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = [ "first_crate", "second_crate"]
+
+            [replace]
+            "foo:0.1.0" = { path = "local_foo" }"#)
+        .file("first_crate/Cargo.toml", r#"
+            [package]
+            name = "first_crate"
+            version = "0.1.0"
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("first_crate/src/lib.rs", "")
+        .file("second_crate/Cargo.toml", r#"
+            [package]
+            name = "second_crate"
+            version = "0.1.0"
+        "#)
+        .file("second_crate/src/lib.rs", "")
+        .file("local_foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("local_foo/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build").cwd(p.root().join("first_crate")),
+                execs().with_status(0)
+                    .with_stdout("")
+                    .with_stderr("\
+[UPDATING] registry `[..]`
+[COMPILING] foo v0.1.0 ([..])
+[COMPILING] first_crate v0.1.0 ([..])
+[FINISHED] [..]"));
+
+    assert_that(p.cargo("build").cwd(p.root().join("second_crate")),
+                execs().with_status(0)
+                    .with_stdout("")
+                    .with_stderr("\
+[COMPILING] second_crate v0.1.0 ([..])
+[FINISHED] [..]"));
+}
+
+
+#[test]
 fn override_to_path_dep() {
     Package::new("foo", "0.1.0").dep("bar", "0.1").publish();
     Package::new("bar", "0.1.0").publish();
