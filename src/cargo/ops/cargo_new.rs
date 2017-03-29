@@ -11,7 +11,6 @@ use term::color::BLACK;
 use chrono::{Datelike,Local};
 use handlebars::{Handlebars, no_escape};
 use tempdir::TempDir;
-use toml;
 
 use core::Workspace;
 use sources::git::clone;
@@ -46,7 +45,6 @@ struct MkOptions<'a> {
     path: &'a Path,
     name: &'a str,
     bin: bool,
-    source_files: Vec<SourceFileInformation>,
 }
 
 impl Decodable for VersionControl {
@@ -130,40 +128,11 @@ fn get_input_template(config: &Config, opts: &MkOptions) -> CargoResult<Template
         // no template given, use either "lib" or "bin" templates depending on the
         // presence of the --bin flag.
         TemplateType::Builtin => {
-
-
-            let mut cargotoml_path_specifier = String::new();
-            // If the main function is in a weird location, let Cargo.toml know.
-            // Otherwise, if the library files are somewhere else, let Cargo.toml know.
-            for i in &opts.source_files {
-                if i.bin {
-                    if i.relative_path != "src/main.rs" {
-                        cargotoml_path_specifier.push_str(&format!(r#"
-[[bin]]
-name = "{}"
-path = {}
-"#, i.target_name, toml::Value::String(i.relative_path.clone())));
-                    }
-                } else {
-                    if i.relative_path != "src/lib.rs" {
-                        cargotoml_path_specifier.push_str(&format!(r#"
-[lib]
-name = "{}"
-path = {}
-"#, i.target_name, toml::Value::String(i.relative_path.clone())));
-                    }
-                }
-            }
-
-            let mut template_files = create_generic_template(&cargotoml_path_specifier);
-            let mut source_files = match (opts.bin, cargotoml_path_specifier.len()) {
-                (true, 0)  => create_bin_template(),
-                (true, _)  => vec![],
-                (false, 0) => create_lib_template(),
-                (false, _)  => vec![],
+            let template_files = if opts.bin {
+                create_bin_template()
+            } else {
+                create_lib_template()
             };
-            template_files.extend(source_files.drain(..));
-
             TemplateSet {
                 template_dir: None,
                 template_files: template_files
@@ -370,7 +339,6 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         path: &path,
         name: name,
         bin: opts.bin,
-        source_files: vec![],
     };
 
     mk(config, &mkopts).chain_error(|| {
@@ -438,7 +406,6 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
         path: &path,
         name: name,
         bin: src_paths_types.iter().any(|x|x.bin),
-        source_files: src_paths_types,
     };
 
     mk(config, &mkopts).chain_error(|| {
@@ -692,22 +659,21 @@ fn walk_template_dir(dir: &Path, cb: &mut FnMut(DirEntry) -> CargoResult<()>) ->
 /// Create a generic template
 ///
 /// This consists of a Cargo.toml, and a src directory.
-fn create_generic_template(extra_cargo_info: &str) -> Vec<Box<TemplateFile>> {
-    let mut cargo_toml_contents = String::from(r#"[package]
+fn create_generic_template() -> Vec<Box<TemplateFile>> {
+    let template_file = Box::new(InMemoryTemplateFile::new(PathBuf::from("Cargo.toml"),
+    String::from(r#"[package]
 name = "{{name}}"
 version = "0.1.0"
 authors = [{{toml-escape author}}]
 
 [dependencies]
-"#);
-    cargo_toml_contents.push_str(extra_cargo_info);
-    let template_file = Box::new(InMemoryTemplateFile::new(PathBuf::from("Cargo.toml"),
-                            cargo_toml_contents));
+"#)));
     vec![template_file]
 }
 
 /// Create a new "lib" project
 fn create_lib_template() -> Vec<Box<TemplateFile>> {
+    let mut template_files = create_generic_template();
     let lib_file = Box::new(InMemoryTemplateFile::new(PathBuf::from("src/lib.rs"),
     String::from(r#"#[cfg(test)]
 mod tests {
@@ -716,17 +682,20 @@ mod tests {
     }
 }
 "#)));
-    vec![lib_file]
+    template_files.push(lib_file);
+    template_files
 }
 
 /// Create a new "bin" project
 fn create_bin_template() -> Vec<Box<TemplateFile>> {
+    let mut template_files = create_generic_template();
     let main_file = Box::new(InMemoryTemplateFile::new(PathBuf::from("src/main.rs"),
 String::from("fn main() {
     println!(\"Hello, world!\");
 }
 ")));
-    vec![main_file]
+    template_files.push(main_file);
+    template_files
 }
 
 #[cfg(test)]
