@@ -126,7 +126,10 @@ impl<'a> Packages<'a> {
 }
 
 pub enum CompileFilter<'a> {
-    Everything,
+    Everything {
+        /// Flag whether targets can be safely skipped when required-features are not satisfied.
+        required_features_filterable: bool,
+    },
     Only {
         lib: bool,
         bins: &'a [String],
@@ -311,13 +314,15 @@ impl<'a> CompileFilter<'a> {
                 tests: tests,
             }
         } else {
-            CompileFilter::Everything
+            CompileFilter::Everything {
+                required_features_filterable: true,
+            }
         }
     }
 
     pub fn matches(&self, target: &Target) -> bool {
         match *self {
-            CompileFilter::Everything => true,
+            CompileFilter::Everything { .. } => true,
             CompileFilter::Only { lib, bins, examples, tests, benches } => {
                 let list = match *target.kind() {
                     TargetKind::Bin => bins,
@@ -354,7 +359,7 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileMode::Doctest => &profiles.doctest,
     };
     let mut targets = match *filter {
-        CompileFilter::Everything => {
+        CompileFilter::Everything { .. } => {
             match mode {
                 CompileMode::Bench => {
                     pkg.targets().iter().filter(|t| t.benched()).map(|t| {
@@ -462,7 +467,11 @@ fn generate_targets<'a>(pkg: &'a Package,
             continue;
         }
 
-        if let CompileFilter::Only { .. } = *filter {
+        if match *filter {
+            CompileFilter::Everything { required_features_filterable } =>
+                !required_features_filterable,
+            CompileFilter::Only { .. } => true,
+        } {
             let required_features = target.required_features().unwrap();
             let quoted_required_features: Vec<String> = required_features.iter()
                                                                          .map(|s| format!("`{}`",s))
