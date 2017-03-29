@@ -29,7 +29,7 @@ repository by default. If you don't want it to do that, pass `--vcs none`.
 
 You can also use your own template to scaffold cargo projects! See the
 [Templates](#templates) section for more details.
-
+  
 Let’s check out what Cargo has generated for us:
 
 ```shell
@@ -480,8 +480,7 @@ $ cargo new proj --template http://your/project/repo
 The variables available for use are:
 
 - `name`: the name of the project
-- `author`: the toml formatted name of the project author
-- `year`: the current year
+- `authors`: the toml formatted name of the project author
 
 In the future, more variables may be added. Suggestions welcome!
 
