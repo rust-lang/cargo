@@ -17,6 +17,7 @@ name = "cargo"
 path = "src/cargo/lib.rs"
 
 [dependencies]
+chrono = "0.2.25"
 crates-io = { path = "src/crates-io", version = "0.7" }
 crossbeam = "0.2"
 curl = "0.4.6"
@@ -43,7 +44,6 @@ shell-escape = "0.1"
 tar = { version = "0.4", default-features = false }
 tempdir = "0.3"
 term = "0.4.4"
-time = "0.1.36"
 toml = "0.3"
 url = "1.1"
 
