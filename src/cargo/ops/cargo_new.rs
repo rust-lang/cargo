@@ -8,8 +8,7 @@ use git2::Config as GitConfig;
 
 use term::color::BLACK;
 
-use chrono::{Datelike,Local};
-use handlebars::{Handlebars, no_escape};
+use handlebars::{Handlebars, Context, no_escape};
 use tempdir::TempDir;
 
 use core::Workspace;
@@ -517,7 +516,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
                                                    dest_path.display()))
                                  }));
 
-        try!(handlebars.template_renderw(&template_str, &data, &mut dest_file)
+        try!(handlebars.template_renderw(&template_str, &Context::wraps(&data), &mut dest_file)
             .chain_error(|| {
                 human(format!("Failed to render template for file: {}", dest_path.display()))
         }))
