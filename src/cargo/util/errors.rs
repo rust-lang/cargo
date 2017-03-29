@@ -11,7 +11,6 @@ use core::TargetKind;
 
 use curl;
 use git2;
-use rustc_serialize::json;
 use semver;
 use serde_json;
 use term;
