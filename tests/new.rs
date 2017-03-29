@@ -1,8 +1,8 @@
 extern crate cargo;
 extern crate cargotest;
+extern crate chrono;
 extern crate hamcrest;
 extern crate tempdir;
-extern crate time;
 
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -11,6 +11,7 @@ use std::env;
 use cargo::util::ProcessBuilder;
 use cargotest::process;
 use cargotest::support::{execs, git, paths};
+use chrono::{Datelike,Local};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 use tempdir::TempDir;
 
@@ -96,6 +97,11 @@ fn main () {
     assert_that(&paths::root().join("foo"), existing_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
     assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
+
+    let license = paths::root().join("foo/LICENSE");
+    let mut contents = String::new();
+    File::open(&license).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(&format!("(c) {} {}", Local::now().year(), "foo")));
 
     assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
                 execs().with_status(0));
