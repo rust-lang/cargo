@@ -207,7 +207,6 @@ case $state in
                     '--vcs:initialize a new repo with a given VCS:(git hg none)' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '--name=[set the resulting package name]' \
-                    '--template[template from which to scaffold your project]' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=:colorization option:(auto always never)' \

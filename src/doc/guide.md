@@ -27,9 +27,6 @@ We’re passing `--bin` because we’re making a binary program: if we
 were making a library, we’d leave it off. This also initializes a new `git`
 repository by default. If you don't want it to do that, pass `--vcs none`.
 
-You can also use your own template to scaffold cargo projects! See the
-[Templates](#templates) section for more details.
-  
 Let’s check out what Cargo has generated for us:
 
 ```shell
@@ -52,8 +49,6 @@ we need to get started. First, let’s check out `Cargo.toml`:
 name = "hello_world"
 version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
-
-[dependencies]
 ```
 
 This is called a **manifest**, and it contains all of the metadata that Cargo
@@ -412,89 +407,6 @@ This will test all three release channels, but any breakage in nightly
 will not fail your overall build. Please see the [Travis CI Rust
 documentation](https://docs.travis-ci.com/user/languages/rust/) for more
 information.
-
-# Templates
-
-Cargo uses the [handlebars](https://github.com/sunng87/handlebars-rust) library
-to compile the templates used to scaffold projects. By default, there are only
-two templates available, `bin` and `lib`.  These are used by cargo to create the
-standard project structure.
-
-You can also specify other templates from which to scaffold your project. The
-`--template` argument to `cargo new` accepts either a path on your system, or a
-URL to a remote Git repository containing a project template.
-
-```
-# use the mytemplate template which is located in ~/.cargo/templates/mytemplate
-$ cargo new myproj --template ~/.cargo/mytemplates/mytemplate
-
-# download the template called mytemplate from your github package
-$ cargo new myproj --template http://github.com/you/mytemplate
-```
-
-If you have a collection of templates in a Git repository then you can use the
-`--template-subdir` option to specify the subdirectory containing the template
-you want to use.
-
-```
-# download the template project called mytemplates from your github package
-# and use the 'command-line-project' template.
-$ cargo new myproj --template http://github.com/you/mytemplate --template-subdir command-line-project
-```
-
-## Creating new templates
-
-A cargo template is just a folder containing one or more files. Usually, there
-is a `Cargo.toml` and a `src` directory. Each file in the template directory
-(aside from the contents of the .git directory) will be treated as a handlebars
-template. This means you can use handlebars variables wherever you want dynamic
-content, and cargo will render the proper values. Let's create a simple example.
-Create a new folder called `mytemplate`
-
-Add the following files:
-
-```toml
-# Cargo.toml
-[project]
-name = "{{name}}"
-version = "0.1.0"
-authors = [{{toml-escape author}}]
-```
-
-```rust
-// src/main.rs
-fn main() {
-    println!("This is the {{name}} project!");
-}
-```
-
-Upload this to a public git repository and anyone can now use it to start their
-projects with this command:
-
-```
-$ cargo new proj --template http://your/project/repo
-```
-
-## Available variables
-
-The variables available for use are:
-
-- `name`: the name of the project
-- `authors`: the toml formatted name of the project author
-
-In the future, more variables may be added. Suggestions welcome!
-
-## Available templating functions
-
-The available templating functions are:
-
-- `toml-escape`: Escapes a string for use in a TOML file.
-- `html-escape`: Escapes a string for use in a HTML file.
-
-There is more documentation available on the [Handlebars
-website](http://handlebarsjs.com/) though keep in mind that [the Rust
-implementation of Handlebars](https://docs.rs/handlebars/0.24.1/handlebars/)
-isn't 100% compatible with the Javascript version.
 
 # Further reading
 
