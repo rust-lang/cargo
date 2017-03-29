@@ -32,7 +32,6 @@ pub mod network;
 pub mod paths;
 pub mod process_builder;
 pub mod profile;
-pub mod template;
 pub mod to_semver;
 pub mod to_url;
 pub mod toml;

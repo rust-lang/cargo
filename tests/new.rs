@@ -10,8 +10,7 @@ use std::env;
 
 use cargo::util::ProcessBuilder;
 use cargotest::process;
-use cargotest::support::{execs, git, paths};
-use chrono::{Datelike,Local};
+use cargotest::support::{execs, paths};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 use tempdir::TempDir;
 
@@ -56,80 +55,6 @@ fn simple_bin() {
                 execs().with_status(0).with_stderr("\
 [CREATED] binary (application) `foo` project
 "));
-
-    assert_that(&paths::root().join("foo"), existing_dir());
-    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
-
-    assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
-                execs().with_status(0));
-    assert_that(&paths::root().join(&format!("foo/target/debug/foo{}",
-                                             env::consts::EXE_SUFFIX)),
-                existing_file());
-}
-
-#[test]
-fn simple_template() {
-    let root = paths::root();
-    fs::create_dir_all(&root.join("home/.cargo/templates/testtemplate/src")).unwrap();
-    File::create(&root.join("home/.cargo/templates/testtemplate/Cargo.toml"))
-                      .unwrap().write_all(br#"[package]
-name = "{{name}}"
-version = "0.0.1"
-authors = ["{{author}}"]
-"#).unwrap();
-    File::create(&root.join("home/.cargo/templates/testtemplate/src/main.rs"))
-                      .unwrap().write_all(br#"
-fn main () {
-  println!("hello {{name}}");
-}
-    "#).unwrap();
-
-    assert_that(cargo_process("new").arg("--template-subdir").arg("testtemplate")
-                                    .arg("--template")
-                                    .arg(&root.join("home/.cargo/templates/"))
-                                    .arg("foo")
-                                    .env("USER", "foo"),
-                execs().with_status(0).with_stderr("\
-[CREATED] library `foo` project
-"));
-
-    assert_that(&paths::root().join("foo"), existing_dir());
-    assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
-    assert_that(&paths::root().join("foo/src/main.rs"), existing_file());
-
-    let license = paths::root().join("foo/LICENSE");
-    let mut contents = String::new();
-    File::open(&license).unwrap().read_to_string(&mut contents).unwrap();
-    assert!(contents.contains(&format!("(c) {} {}", Local::now().year(), "foo")));
-
-    assert_that(cargo_process("build").cwd(&paths::root().join("foo")),
-                execs().with_status(0));
-    assert_that(&paths::root().join(&format!("foo/target/debug/foo{}",
-                                             env::consts::EXE_SUFFIX)),
-                existing_file());
-}
-
-#[test]
-fn git_template() {
-    let git_project = git::new("template1", |project| {
-        project
-            .file("Cargo.toml", r#"[package]
-name = "{{name}}"
-version = "0.0.1"
-authors = ["{{author}}"]
-            "#)
-            .file("src/main.rs", r#"
-                pub fn main() {
-                    println!("hello world");
-                }
-            "#)
-    }).unwrap();
-
-    assert_that(cargo_process("new").arg("--template").arg(git_project.url().as_str())
-                                    .arg("foo")
-                                    .env("USER", "foo"),
-                execs().with_status(0));
 
     assert_that(&paths::root().join("foo"), existing_dir());
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());

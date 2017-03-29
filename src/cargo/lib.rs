@@ -15,7 +15,6 @@ extern crate flate2;
 extern crate fs2;
 extern crate git2;
 extern crate glob;
-extern crate handlebars;
 extern crate libc;
 extern crate libgit2_sys;
 extern crate num_cpus;

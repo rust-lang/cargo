@@ -3,7 +3,6 @@ use std::ffi;
 use std::fmt;
 use std::io;
 use std::num;
-use std::path;
 use std::process::{Output, ExitStatus};
 use std::str;
 use std::string;
@@ -12,7 +11,7 @@ use core::TargetKind;
 
 use curl;
 use git2;
-use handlebars;
+use rustc_serialize::json;
 use semver;
 use serde_json;
 use term;
@@ -372,9 +371,6 @@ from_error! {
     term::Error,
     num::ParseIntError,
     str::ParseBoolError,
-    path::StripPrefixError,
-    handlebars::TemplateRenderError,
-    handlebars::RenderError,
 }
 
 impl From<string::ParseError> for Box<CargoError> {
@@ -406,9 +402,6 @@ impl CargoError for ffi::NulError {}
 impl CargoError for term::Error {}
 impl CargoError for num::ParseIntError {}
 impl CargoError for str::ParseBoolError {}
-impl CargoError for path::StripPrefixError {}
-impl CargoError for handlebars::TemplateRenderError {}
-impl CargoError for handlebars::RenderError {}
 
 // =============================================================================
 // Construction helpers
