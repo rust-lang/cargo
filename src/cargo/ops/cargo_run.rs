@@ -24,13 +24,13 @@ pub fn run(ws: &Workspace,
 
     let mut bins = pkg.manifest().targets().iter().filter(|a| {
         !a.is_lib() && !a.is_custom_build() && match options.filter {
-            CompileFilter::Everything => a.is_bin(),
+            CompileFilter::Everything { .. } => a.is_bin(),
             CompileFilter::Only { .. } => options.filter.matches(a),
         }
     });
     if bins.next().is_none() {
         match options.filter {
-            CompileFilter::Everything => {
+            CompileFilter::Everything { .. } => {
                 bail!("a bin target must be available for `cargo run`")
             }
             CompileFilter::Only { .. } => {
@@ -40,7 +40,7 @@ pub fn run(ws: &Workspace,
     }
     if bins.next().is_some() {
         match options.filter {
-            CompileFilter::Everything => {
+            CompileFilter::Everything { .. } => {
                 bail!("`cargo run` requires that a project only have one \
                        executable; use the `--bin` option to specify which one \
                        to run")

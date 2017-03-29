@@ -92,7 +92,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         release: options.flag_release,
         mode: ops::CompileMode::Build,
         filter: if examples.is_empty() && bins.is_empty() {
-            ops::CompileFilter::Everything
+            ops::CompileFilter::Everything { required_features_filterable: false, }
         } else {
             ops::CompileFilter::Only {
                 lib: false, tests: &[], benches: &[],

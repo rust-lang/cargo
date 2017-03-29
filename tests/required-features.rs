@@ -1038,3 +1038,69 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 error[E0463]: can't find crate for `bar`", p.url())));
     }
 }
+
+#[test]
+fn run_default() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            default = []
+            a = []
+
+            [[bin]]
+            name = "foo"
+            required-features = ["a"]
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "extern crate foo; fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("run"),
+                execs().with_status(101).with_stderr("\
+error: target `foo` requires the features: `a`
+Consider enabling them by passing e.g. `--features=\"a\"`
+"));
+
+    assert_that(p.cargo("run").arg("--features").arg("a"),
+                execs().with_status(0));
+}
+
+#[test]
+fn run_default_multiple_required_features() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            default = ["a"]
+            a = []
+            b = []
+
+            [[bin]]
+            name = "foo1"
+            path = "src/foo1.rs"
+            required-features = ["a"]
+
+            [[bin]]
+            name = "foo2"
+            path = "src/foo2.rs"
+            required-features = ["b"]
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/foo1.rs", "extern crate foo; fn main() {}")
+        .file("src/foo2.rs", "extern crate foo; fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("run"),
+                execs().with_status(101).with_stderr("\
+error: `cargo run` requires that a project only have one executable; \
+use the `--bin` option to specify which one to run"));
+}
