@@ -358,7 +358,7 @@ fn check_overwrites(dst: &Path,
                     filter: &ops::CompileFilter,
                     prev: &CrateListingV1,
                     force: bool) -> CargoResult<BTreeMap<String, Option<PackageId>>> {
-    if let CompileFilter::Everything = *filter {
+    if let CompileFilter::Everything { .. } = *filter {
         // If explicit --bin or --example flags were passed then those'll
         // get checked during cargo_compile, we only care about the "build
         // everything" case here
@@ -399,7 +399,7 @@ fn find_duplicates(dst: &Path,
         }
     };
     match *filter {
-        CompileFilter::Everything => {
+        CompileFilter::Everything { .. } => {
             pkg.targets().iter()
                          .filter(|t| t.is_bin())
                          .filter_map(|t| check(t.name()))
