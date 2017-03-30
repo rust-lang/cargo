@@ -38,7 +38,6 @@ use docopt::Docopt;
 
 use core::{Shell, MultiShell, ShellConfig, Verbosity, ColorConfig};
 use core::shell::Verbosity::{Verbose};
-use term::color::{BLACK};
 
 pub use util::{CargoError, CargoResult, CliError, CliResult, human, Config, ChainError};
 
@@ -185,12 +184,14 @@ pub fn exit_with_error(err: CliError, shell: &mut MultiShell) -> ! {
         } else if fatal {
             shell.error(&error)
         } else {
-            shell.say(&error, BLACK)
+            let color = shell.styles.default;
+            shell.say(&error, color)
         };
 
         if !handle_cause(&error, shell) || hide {
+            let color = shell.styles.default;
             let _ = shell.err().say("\nTo learn more, run the command again \
-                                     with --verbose.".to_string(), BLACK);
+                                     with --verbose.".to_string(), color);
         }
     }
 
@@ -223,8 +224,9 @@ fn handle_cause(mut cargo_err: &CargoError, shell: &mut MultiShell) -> bool {
     }
 
     fn print(error: String, shell: &mut MultiShell) {
-        let _ = shell.err().say("\nCaused by:", BLACK);
-        let _ = shell.err().say(format!("  {}", error), BLACK);
+        let color = shell.styles.default;
+        let _ = shell.err().say("\nCaused by:", color);
+        let _ = shell.err().say(format!("  {}", error), color);
     }
 }
 

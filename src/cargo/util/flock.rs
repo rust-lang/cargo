@@ -3,7 +3,6 @@ use std::io::*;
 use std::io;
 use std::path::{Path, PathBuf, Display};
 
-use term::color::CYAN;
 use fs2::{FileExt, lock_contended_error};
 #[allow(unused_imports)]
 use libc;
@@ -288,7 +287,8 @@ fn acquire(config: &Config,
         }
     }
     let msg = format!("waiting for file lock on {}", msg);
-    config.shell().err().say_status("Blocking", &msg, CYAN, true)?;
+    let color = config.shell().styles.blocked;
+    config.shell().err().say_status("Blocking", &msg, color, true)?;
 
     return block().chain_error(|| {
         human(format!("failed to lock file: {}", path.display()))
@@ -299,7 +299,7 @@ fn acquire(config: &Config,
         use std::ffi::CString;
         use std::mem;
         use std::os::unix::prelude::*;
-
+        
         let path = match CString::new(path.as_os_str().as_bytes()) {
             Ok(path) => path,
             Err(_) => return false,

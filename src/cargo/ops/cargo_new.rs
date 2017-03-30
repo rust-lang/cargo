@@ -6,8 +6,6 @@ use rustc_serialize::{Decodable, Decoder};
 
 use git2::Config as GitConfig;
 
-use term::color::BLACK;
-
 use handlebars::{Handlebars, no_escape};
 use tempdir::TempDir;
 use time;
@@ -193,10 +191,11 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoR
     } else {
         let new_name = strip_rust_affixes(dir_name);
         if new_name != dir_name {
+            let color = config.shell().styles.default;
             let message = format!(
                 "note: package will be named `{}`; use --name to override",
                 new_name);
-            config.shell().say(&message, BLACK)?;
+            config.shell().say(&message, color)?;
         }
         Ok(new_name)
     }
