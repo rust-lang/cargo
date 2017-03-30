@@ -49,6 +49,14 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
 
         add_overrides(&mut registry, ws)?;
 
+        for &(ref replace_spec, ref dep) in ws.root_replace() {
+            if !resolve.iter().any(|r| replace_spec.matches(r) && !dep.matches_id(r)) {
+                ws.config().shell().warn(
+                    format!("package replacement is not used: {}", replace_spec)
+                )?
+            }
+        }
+
         Some(resolve)
     } else {
         None
@@ -68,14 +76,6 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     ops::resolve_with_previous(&mut registry, ws,
                                method, resolve.as_ref(), None,
                                specs)?;
-
-    for &(ref replace_spec, _) in ws.root_replace() {
-        if !resolved_with_overrides.replacements().keys().any(|r| replace_spec.matches(r)) {
-            ws.config().shell().warn(
-                format!("package replacement is not used: {}", replace_spec)
-            )?
-        }
-    }
 
     let packages = get_resolved_packages(&resolved_with_overrides, registry);
 
