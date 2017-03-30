@@ -42,6 +42,18 @@ matrix:
            CFG_DISABLE_CROSS_TESTS=1
            MAKE_TARGETS=test-unit-$TARGET
 
+    # android targets
+    - env: TARGET=i686-linux-android
+           IMAGE=android
+    - env: TARGET=arm-linux-androideabi
+           IMAGE=android
+    - env: TARGET=armv7-linux-androideabi
+           IMAGE=android
+    # Use nightly because of https://github.com/rust-lang/rust/issues/40903
+    - env: TARGET=i686-linux-android
+           IMAGE=android
+      rust: nightly
+
     # cross compiled targets
     - env: TARGET=arm-unknown-linux-gnueabi
            IMAGE=cross
