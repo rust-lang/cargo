@@ -17,6 +17,9 @@ system:
   relative to the current working directory.
 * `RUSTC` - Instead of running `rustc`, Cargo will execute this specified
   compiler instead.
+* `RUSTC_WRAPPER` - Instead of simply running `rustc`, Cargo will execute this
+  specified wrapper instead, passing as its commandline arguments the rustc
+  invocation, with the first argument being rustc.
 * `RUSTDOC` - Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead.
 * `RUSTFLAGS` - A space-separated list of custom flags to pass to all compiler
