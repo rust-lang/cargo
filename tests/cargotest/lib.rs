@@ -27,7 +27,7 @@ use std::env;
 pub mod support;
 pub mod install;
 
-thread_local!(pub static RUSTC: Rustc = Rustc::new(PathBuf::from("rustc")).unwrap());
+thread_local!(pub static RUSTC: Rustc = Rustc::new(PathBuf::from("rustc"), None).unwrap());
 
 pub fn rustc_host() -> String {
     RUSTC.with(|r| r.host.clone())
@@ -54,6 +54,7 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env_remove("__CARGO_DEFAULT_LIB_METADATA")
      .env_remove("RUSTC")
      .env_remove("RUSTDOC")
+     .env_remove("RUSTC_WRAPPER")
      .env_remove("RUSTFLAGS")
      .env_remove("CARGO_INCREMENTAL")
      .env_remove("XDG_CONFIG_HOME")      // see #2345
