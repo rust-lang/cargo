@@ -6,6 +6,7 @@ use util::{CargoResult, process};
 
 pub struct HgRepo;
 pub struct GitRepo;
+pub struct PijulRepo;
 
 impl GitRepo {
     pub fn init(path: &Path, _: &Path) -> CargoResult<GitRepo> {
@@ -28,3 +29,9 @@ impl HgRepo {
     }
 }
 
+impl PijulRepo {
+    pub fn init(path: &Path, cwd: &Path) -> CargoResult<PijulRepo> {
+        process("pijul").cwd(cwd).arg("init").arg(path).exec()?;
+        Ok(PijulRepo)
+    }
+}
