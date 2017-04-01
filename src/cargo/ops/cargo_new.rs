@@ -10,13 +10,13 @@ use git2::Config as GitConfig;
 use term::color::BLACK;
 
 use core::Workspace;
-use util::{GitRepo, HgRepo, CargoResult, human, ChainError, internal};
+use util::{GitRepo, HgRepo, PijulRepo, CargoResult, human, ChainError, internal};
 use util::{Config, paths};
 
 use toml;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum VersionControl { Git, Hg, NoVcs }
+pub enum VersionControl { Git, Hg, Pijul, NoVcs }
 
 pub struct NewOptions<'a> {
     pub version_control: Option<VersionControl>,
@@ -45,6 +45,7 @@ impl Decodable for VersionControl {
         Ok(match &d.read_str()?[..] {
             "git" => VersionControl::Git,
             "hg" => VersionControl::Hg,
+            "pijul" => VersionControl::Pijul,
             "none" => VersionControl::NoVcs,
             n => {
                 let err = format!("could not decode '{}' as version control", n);
@@ -331,10 +332,15 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
             num_detected_vsces += 1;
         }
 
+        if fs::metadata(&path.join(".pijul")).is_ok() {
+            version_control = Some(VersionControl::Pijul);
+            num_detected_vsces += 1;
+        }
+
         // if none exists, maybe create git, like in `cargo new`
 
         if num_detected_vsces > 1 {
-            bail!("both .git and .hg directories found \
+            bail!("more than one of .hg, .git, or .pijul directories found \
                               and the ignore file can't be \
                               filled in as a result, \
                               specify --vcs to override detection");
@@ -400,6 +406,11 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
                 HgRepo::init(path, config.cwd())?;
             }
             paths::append(&path.join(".hgignore"), ignore.as_bytes())?;
+        },
+        VersionControl::Pijul => {
+            if !fs::metadata(&path.join(".pijul")).is_ok() {
+                PijulRepo::init(path, config.cwd())?;
+            }
         },
         VersionControl::NoVcs => {
             fs::create_dir_all(path)?;
