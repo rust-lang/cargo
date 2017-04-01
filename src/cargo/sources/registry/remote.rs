@@ -60,7 +60,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         //
         // This way if there's a problem the error gets printed before we even
         // hit the index, which may not actually read this configuration.
-        ops::http_handle(self.config)?;
+        if self.config.registry_update_allowed() {
+            ops::http_handle(self.config)?;
+        }
 
         // Then we actually update the index
         self.index_path.create_dir()?;
@@ -69,10 +71,19 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                                            "the registry index")?;
         let path = lock.path().parent().unwrap();
 
+        let existing_repo = git2::Repository::open(path);
+        if !self.config.registry_update_allowed() {
+            return if let Err(e) = existing_repo {
+                Err(e.into())
+            } else {
+                Ok(())
+            }
+        }
+
         self.config.shell().status("Updating",
              format!("registry `{}`", self.source_id.url()))?;
 
-        let repo = git2::Repository::open(path).or_else(|_| {
+        let repo = existing_repo.or_else(|_| {
             let _ = lock.remove_siblings();
             git2::Repository::init(path)
         })?;

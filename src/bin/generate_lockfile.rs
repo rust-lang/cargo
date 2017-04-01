@@ -13,6 +13,7 @@ pub struct Options {
     flag_color: Option<String>,
     flag_frozen: bool,
     flag_locked: bool,
+    flag_offline: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -29,6 +30,8 @@ Options:
     --color WHEN             Coloring: auto, always, never
     --frozen                 Require Cargo.lock and cache are up to date
     --locked                 Require Cargo.lock is up to date
+    --offline                Do not download crates.io registry and use
+                             a potentially stale local copy
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult {
@@ -38,6 +41,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      &options.flag_color,
                      options.flag_frozen,
                      options.flag_locked)?;
+    if options.flag_offline {
+        config.disable_registry_update();
+    }
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
     let ws = Workspace::new(&root, config)?;

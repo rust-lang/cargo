@@ -34,6 +34,7 @@ pub struct Config {
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
     locked: Cell<bool>,
+    disable_registry_update: Cell<bool>,
 }
 
 impl Config {
@@ -51,6 +52,7 @@ impl Config {
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
             locked: Cell::new(false),
+            disable_registry_update: Cell::new(false),
         }
     }
 
@@ -376,6 +378,14 @@ impl Config {
 
     pub fn lock_update_allowed(&self) -> bool {
         !self.frozen.get() && !self.locked.get()
+    }
+
+    pub fn registry_update_allowed(&self) -> bool {
+        !self.disable_registry_update.get()
+    }
+
+    pub fn disable_registry_update(&self) {
+        self.disable_registry_update.set(true)
     }
 
     fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
