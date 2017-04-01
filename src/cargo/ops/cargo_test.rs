@@ -1,7 +1,8 @@
 use std::ffi::{OsString, OsStr};
 
-use ops::{self, Compilation};
+use ops::{self, Compilation, MessageFormat};
 use util::{self, CargoResult, CargoTestError, Test, ProcessError};
+use util::machine_message::{self, RunProfile};
 use core::Workspace;
 
 pub struct TestOptions<'a> {
@@ -95,14 +96,22 @@ fn run_unit_tests(options: &TestOptions,
         config.shell().concise(|shell| {
             shell.status("Running", to_display.display().to_string())
         })?;
-        config.shell().verbose(|shell| {
-            shell.status("Running", cmd.to_string())
-        })?;
 
-        if let Err(e) = cmd.exec() {
-            errors.push(e);
-            if !options.no_fail_fast {
-                return Ok((Test::UnitTest(kind.clone(), test.clone()), errors))
+        if config.print_run() {
+            if options.compile_opts.message_format != MessageFormat::Json {
+                bail!("CARGO_PRINT_RUN requires --message-format=json")
+            }
+            machine_message::emit(RunProfile::new(&cmd));
+        } else {
+            config.shell().verbose(|shell| {
+                shell.status("Running", cmd.to_string())
+            })?;
+
+            if let Err(e) = cmd.exec() {
+                errors.push(e);
+                if !options.no_fail_fast {
+                    return Ok((Test::UnitTest(kind.clone(), test.clone()), errors))
+                }
             }
         }
     }
@@ -116,8 +125,9 @@ fn run_doc_tests(options: &TestOptions,
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
 
-    // We don't build/rust doctests if target != host
-    if config.rustc()?.host != compilation.target {
+    // We don't build/rust doctests if target != host or
+    // if we are not supposed to run binaries.
+    if config.rustc()?.host != compilation.target || config.print_run()  {
         return Ok((Test::Doc, errors));
     }
 

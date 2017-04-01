@@ -34,6 +34,10 @@ pub struct Config {
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
     locked: Cell<bool>,
+    /// When this is set, Cargo does not run binaries
+    /// during `cargo run`/`cargo test`. Instead it
+    /// prints what it should have run otherwise.
+    print_run: Cell<bool>,
 }
 
 impl Config {
@@ -51,6 +55,7 @@ impl Config {
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
             locked: Cell::new(false),
+            print_run: Cell::new(false),
         }
     }
 
@@ -362,6 +367,7 @@ impl Config {
         self.extra_verbose.set(extra_verbose);
         self.frozen.set(frozen);
         self.locked.set(locked);
+        self.print_run.set(env::var("CARGO_PRINT_RUN").is_ok());
 
         Ok(())
     }
@@ -376,6 +382,10 @@ impl Config {
 
     pub fn lock_update_allowed(&self) -> bool {
         !self.frozen.get() && !self.locked.get()
+    }
+
+    pub fn print_run(&self) -> bool {
+        self.print_run.get()
     }
 
     fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
