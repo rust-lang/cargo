@@ -109,6 +109,16 @@ impl Config {
         self.values.get_or_try_init(|| self.load_values())
     }
 
+    pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
+        if self.values.borrow().is_some() {
+            return Err(human("Config values already found"));
+        }
+        match self.values.fill(values) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(human("Could not fill values")),
+        }
+    }
+
     pub fn cwd(&self) -> &Path { &self.cwd }
 
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
@@ -378,7 +388,7 @@ impl Config {
         !self.frozen.get() && !self.locked.get()
     }
 
-    fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
+    pub fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
 
         walk_tree(&self.cwd, |mut file, path| {
