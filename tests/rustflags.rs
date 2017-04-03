@@ -951,6 +951,79 @@ fn target_rustflags_precedence() {
 }
 
 #[test]
+fn cfg_rustflags_normal_source() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", "fn main() {}")
+        .file("examples/b.rs", "fn main() {}")
+        .file("tests/c.rs", "#[test] fn f() { }")
+        .file("benches/d.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            #[bench] fn run1(_ben: &mut test::Bencher) { }"#)
+        .file(".cargo/config", "
+            [target.'cfg(feature=\"feat\")']
+            rustflags = [\"-Z\", \"bogus\"]
+            ");
+    p.build();
+
+    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+                .arg("--lib"),
+                execs().with_status(101));
+    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+                .arg("--bin=a"),
+                execs().with_status(101));
+    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+                .arg("--example=b"),
+                execs().with_status(101));
+    assert_that(p.cargo("test").arg("--features").arg("\"feat\""),
+                execs().with_status(101));
+    assert_that(p.cargo("bench").arg("--features").arg("\"feat\""),
+                execs().with_status(101));
+}
+
+// target.'cfg(...)'.rustflags takes precedence over build.rustflags
+#[test]
+fn cfg_rustflags_precedence() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", "
+            [build]
+            rustflags = [\"--cfg\", \"foo\"]
+
+            [target.'cfg(feature = \"feat\"')]
+            rustflags = [\"-Z\", \"bogus\"]
+            ");
+    p.build();
+
+    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+                .arg("--lib"),
+                execs().with_status(101));
+    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+                .arg("--bin=a"),
+                execs().with_status(101));
+    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+                .arg("--example=b"),
+                execs().with_status(101));
+    assert_that(p.cargo("test").arg("--features").arg("\"feat\""),
+                execs().with_status(101));
+    assert_that(p.cargo("bench").arg("--features").arg("\"feat\""),
+                execs().with_status(101));
+}
+
+
+
+#[test]
 fn target_rustflags_string_and_array_form1() {
     let p1 = project("foo")
         .file("Cargo.toml", r#"
