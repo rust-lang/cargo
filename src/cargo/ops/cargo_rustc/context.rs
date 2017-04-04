@@ -11,7 +11,7 @@ use std::sync::Arc;
 use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, Profiles, Dependency, Workspace};
 use core::dependency::Kind as DepKind;
-use util::{self, CargoResult, ChainError, internal, Config, profile, Cfg, human};
+use util::{self, CargoResult, ChainError, internal, Config, profile, Cfg, CfgExpr, human};
 
 use super::TargetConfig;
 use super::custom_build::{BuildState, BuildScripts};
@@ -178,6 +178,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                               -> CargoResult<()> {
         let rustflags = env_args(self.config,
                                  &self.build_config,
+                                 &self.info(&kind),
                                  kind,
                                  "RUSTFLAGS")?;
         let mut process = self.config.rustc()?.process();
@@ -872,15 +873,22 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        env_args(self.config, &self.build_config, unit.kind, "RUSTFLAGS")
+        env_args(self.config, &self.build_config, self.info(&unit.kind), unit.kind, "RUSTFLAGS")
     }
 
     pub fn rustdocflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        env_args(self.config, &self.build_config, unit.kind, "RUSTDOCFLAGS")
+        env_args(self.config, &self.build_config, self.info(&unit.kind), unit.kind, "RUSTDOCFLAGS")
     }
 
     pub fn show_warnings(&self, pkg: &PackageId) -> bool {
         pkg.source_id().is_path() || self.config.extra_verbose()
+    }
+
+    fn info(&self, kind: &Kind) -> &TargetInfo {
+        match *kind {
+            Kind::Host => &self.host_info,
+            Kind::Target => &self.target_info,
+        }
     }
 }
 
@@ -888,6 +896,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 // RUSTFLAGS environment variable and similar config values
 fn env_args(config: &Config,
             build_config: &BuildConfig,
+            target_info: &TargetInfo,
             kind: Kind,
             name: &str) -> CargoResult<Vec<String>> {
     // We *want* to apply RUSTFLAGS only to builds for the
@@ -928,13 +937,34 @@ fn env_args(config: &Config,
         return Ok(args.collect());
     }
 
+    let mut rustflags = Vec::new();
+
     let name = name.chars().flat_map(|c| c.to_lowercase()).collect::<String>();
-    // Then the target.*.rustflags value
+    // Then the target.*.rustflags value... 
     let target = build_config.requested_target.as_ref().unwrap_or(&build_config.host_triple);
     let key = format!("target.{}.{}", target, name);
     if let Some(args) = config.get_list_or_split_string(&key)? {
         let args = args.val.into_iter();
-        return Ok(args.collect());
+        rustflags.extend(args);
+    }
+    // ...including target.'cfg(...)'.rustflags
+    if let Some(ref target_cfg) = target_info.cfg {
+        if let Some(table) = config.get_table("target")? {
+            let cfgs = table.val.iter().map(|(t, _)| (CfgExpr::from_str(t), t))
+                .filter_map(|(c, n)| c.map(|c| (c, n)).ok())
+                .filter(|&(ref c, _)| c.matches(target_cfg));
+            for (_, n) in cfgs {
+                let key = format!("target.'{}'.{}", n, name);
+                if let Some(args) = config.get_list_or_split_string(&key)? {
+                    let args = args.val.into_iter();
+                    rustflags.extend(args);
+                }
+            }
+        }
+    }
+
+    if !rustflags.is_empty() {
+        return Ok(rustflags);
     }
 
     // Then the build.rustflags value
