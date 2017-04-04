@@ -104,11 +104,14 @@ fn transmit(config: &Config,
             features: dep.features().to_vec(),
             version_req: dep.version_req().to_string(),
             target: dep.platform().map(|s| s.to_string()),
-            kind: match dep.kind() {
-                Kind::Normal => "normal",
-                Kind::Build => "build",
-                Kind::Development => "dev",
-            }.to_string(),
+            kind: match *dep.kind() {
+                Kind::Normal => "normal".to_string(),
+                Kind::Build => "build".to_string(),
+                // Binary-only deps are, at least for the purpose of crates.io display, equivalent
+                // to dev dependencies.
+                Kind::Development
+                | Kind::Bin(_) => "dev".to_string(),
+            },
         }
     }).collect::<Vec<NewCrateDependency>>();
     let manifest = pkg.manifest();

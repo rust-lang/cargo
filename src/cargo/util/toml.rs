@@ -11,7 +11,7 @@ use serde::de::{self, Deserialize};
 use serde_ignored;
 
 use core::{SourceId, Profiles, PackageIdSpec, GitReference, WorkspaceConfig};
-use core::{Summary, Manifest, Target, Dependency, DependencyInner, PackageId};
+use core::{Summary, Manifest, Target, TargetKind, Dependency, DependencyInner, PackageId};
 use core::{EitherManifest, VirtualManifest};
 use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata};
@@ -191,6 +191,7 @@ type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
 
+#[derive(Debug, Clone)]
 pub enum TomlDependency {
     Simple(String),
     Detailed(DetailedTomlDependency)
@@ -228,7 +229,7 @@ impl de::Deserialize for TomlDependency {
     }
 }
 
-#[derive(Deserialize, Clone, Default)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct DetailedTomlDependency {
     version: Option<String>,
     path: Option<String>,
@@ -674,13 +675,13 @@ impl TomlManifest {
         let new_build = self.maybe_custom_build(&project.build, &layout.root);
 
         // Get targets
-        let targets = normalize(&layout.root,
-                                &lib,
-                                &bins,
-                                new_build,
-                                &examples,
-                                &tests,
-                                &benches);
+        let (targets, target_deps) = normalize(&layout.root,
+                                               &lib,
+                                               &bins,
+                                               new_build,
+                                               &examples,
+                                               &tests,
+                                               &benches);
 
         if targets.is_empty() {
             debug!("manifest has no build targets");
@@ -718,7 +719,7 @@ impl TomlManifest {
                     None => return Ok(())
                 };
                 for (n, v) in dependencies.iter() {
-                    let dep = v.to_dependency(n, cx, kind)?;
+                    let dep = v.to_dependency(n, cx, kind.clone())?;
                     cx.deps.push(dep);
                 }
 
@@ -745,6 +746,26 @@ impl TomlManifest {
                 let dev_deps = platform.dev_dependencies.as_ref()
                                          .or(platform.dev_dependencies2.as_ref());
                 process_dependencies(&mut cx, dev_deps, Some(Kind::Development))?;
+            }
+
+            for (index, (target, deps)) in targets.iter().zip(target_deps.iter()).enumerate() {
+                if deps.is_some() {
+                    debug!("adding target-specific deps for '{}' (#{})",
+                           target.name(),
+                           index);
+
+                    match *target.kind() {
+                        TargetKind::Bin => {
+                            process_dependencies(&mut cx,
+                                                 deps.as_ref(),
+                                                 Some(Kind::Bin(target.name().to_string())))?;
+                        },
+                        _ => {
+                            bail!("Target-specific dependencies are only supported for binary \
+                                   targets.");
+                        }
+                    }
+                }
             }
 
             replace = self.replace(&mut cx)?;
@@ -1093,6 +1114,7 @@ struct TomlTarget {
     harness: Option<bool>,
     #[serde(rename = "required-features")]
     required_features: Option<Vec<String>>,
+    dependencies: Option<HashMap<String, TomlDependency>>,
 }
 
 #[derive(Clone)]
@@ -1228,13 +1250,15 @@ impl fmt::Debug for PathValue {
     }
 }
 
-fn normalize(package_root: &Path,
-             lib: &Option<TomlLibTarget>,
-             bins: &[TomlBinTarget],
-             custom_build: Option<PathBuf>,
-             examples: &[TomlExampleTarget],
-             tests: &[TomlTestTarget],
-             benches: &[TomlBenchTarget]) -> Vec<Target> {
+fn normalize(
+    package_root: &Path,
+    lib: &Option<TomlLibTarget>,
+    bins: &[TomlBinTarget],
+    custom_build: Option<PathBuf>,
+    examples: &[TomlExampleTarget],
+    tests: &[TomlTestTarget],
+    benches: &[TomlBenchTarget]
+) -> (Vec<Target>, Vec<Option<HashMap<String, TomlDependency>>>) {
     fn configure(toml: &TomlTarget, target: &mut Target) {
         let t2 = target.clone();
         target.set_tested(toml.test.unwrap_or(t2.tested()))
@@ -1249,7 +1273,9 @@ fn normalize(package_root: &Path,
               });
     }
 
-    let lib_target = |dst: &mut Vec<Target>, l: &TomlLibTarget| {
+    let lib_target = |dst: &mut Vec<Target>,
+                      dst_deps: &mut Vec<_>,
+                      l: &TomlLibTarget| {
         let path = l.path.clone().unwrap_or_else(
             || PathValue(Path::new("src").join(&format!("{}.rs", l.name())))
         );
@@ -1267,9 +1293,12 @@ fn normalize(package_root: &Path,
                                             package_root.join(&path.0));
         configure(l, &mut target);
         dst.push(target);
+        dst_deps.push(l.dependencies.clone());
     };
 
-    let bin_targets = |dst: &mut Vec<Target>, bins: &[TomlBinTarget],
+    let bin_targets = |dst: &mut Vec<Target>,
+                       dst_deps: &mut Vec<_>,
+                       bins: &[TomlBinTarget],
                        default: &mut FnMut(&TomlBinTarget) -> PathBuf| {
         for bin in bins.iter() {
             let path = bin.path.clone().unwrap_or_else(|| {
@@ -1289,6 +1318,7 @@ fn normalize(package_root: &Path,
                                                 bin.required_features.clone());
             configure(bin, &mut target);
             dst.push(target);
+            dst_deps.push(bin.dependencies.clone());
         }
     };
 
@@ -1300,6 +1330,7 @@ fn normalize(package_root: &Path,
     };
 
     let example_targets = |dst: &mut Vec<Target>,
+                           dst_deps: &mut Vec<_>,
                            examples: &[TomlExampleTarget],
                            default: &mut FnMut(&TomlExampleTarget) -> PathBuf| {
         for ex in examples.iter() {
@@ -1321,10 +1352,12 @@ fn normalize(package_root: &Path,
             );
             configure(ex, &mut target);
             dst.push(target);
+            dst_deps.push(ex.dependencies.clone());
         }
     };
 
-    let test_targets = |dst: &mut Vec<Target>,
+    let test_targets = |dst: &mut Vec<_>,
+                        dst_deps: &mut Vec<_>,
                         tests: &[TomlTestTarget],
                         default: &mut FnMut(&TomlTestTarget) -> PathBuf| {
         for test in tests.iter() {
@@ -1336,10 +1369,12 @@ fn normalize(package_root: &Path,
                                                  test.required_features.clone());
             configure(test, &mut target);
             dst.push(target);
+            dst_deps.push(test.dependencies.clone());
         }
     };
 
-    let bench_targets = |dst: &mut Vec<Target>,
+    let bench_targets = |dst: &mut Vec<_>,
+                         dst_deps: &mut Vec<_>,
                          benches: &[TomlBenchTarget],
                          default: &mut FnMut(&TomlBenchTarget) -> PathBuf| {
         for bench in benches.iter() {
@@ -1351,31 +1386,34 @@ fn normalize(package_root: &Path,
                                                   bench.required_features.clone());
             configure(bench, &mut target);
             dst.push(target);
+            dst_deps.push(bench.dependencies.clone());
         }
     };
 
     let mut ret = Vec::new();
+    let mut ret_deps = Vec::new();
 
     if let Some(ref lib) = *lib {
-        lib_target(&mut ret, lib);
-        bin_targets(&mut ret, bins,
+        lib_target(&mut ret, &mut ret_deps, lib);
+        bin_targets(&mut ret, &mut ret_deps, bins,
                     &mut |bin| Path::new("src").join("bin")
                                    .join(&format!("{}.rs", bin.name())));
     } else if bins.len() > 0 {
-        bin_targets(&mut ret, bins,
+        bin_targets(&mut ret, &mut ret_deps, bins,
                     &mut |bin| Path::new("src")
                                     .join(&format!("{}.rs", bin.name())));
     }
 
     if let Some(custom_build) = custom_build {
         custom_build_target(&mut ret, &custom_build);
+        ret_deps.push(None);    // Can't have build-script-specific dependencies
     }
 
-    example_targets(&mut ret, examples,
+    example_targets(&mut ret, &mut ret_deps, examples,
                     &mut |ex| Path::new("examples")
                                    .join(&format!("{}.rs", ex.name())));
 
-    test_targets(&mut ret, tests, &mut |test| {
+    test_targets(&mut ret, &mut ret_deps, tests, &mut |test| {
         if test.name() == "test" {
             Path::new("src").join("test.rs")
         } else {
@@ -1383,7 +1421,7 @@ fn normalize(package_root: &Path,
         }
     });
 
-    bench_targets(&mut ret, benches, &mut |bench| {
+    bench_targets(&mut ret, &mut ret_deps, benches, &mut |bench| {
         if bench.name() == "bench" {
             Path::new("src").join("bench.rs")
         } else {
@@ -1391,7 +1429,9 @@ fn normalize(package_root: &Path,
         }
     });
 
-    ret
+    assert_eq!(ret.len(), ret_deps.len());
+
+    (ret, ret_deps)
 }
 
 fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {

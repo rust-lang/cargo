@@ -606,6 +606,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     return false;
                 }
 
+                // If it's a binary-only dependency, make sure we're building the
+                // binary it applies to.
+                if let DepKind::Bin(ref name) = *d.kind() {
+                    if unit.target.name() != name {
+                        return false;
+                    }
+                }
+
                 // If we've gotten past all that, then this dependency is
                 // actually used!
                 true
@@ -713,10 +721,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|dep| {
-                match dep.kind() {
+                match *dep.kind() {
                     DepKind::Normal => self.dep_platform_activated(dep,
                                                                    unit.kind),
-                    _ => false,
+                    DepKind::Bin(ref name) => {
+                        unit.target.is_bin() && unit.target.name() == name
+                    }
+                    DepKind::Build | DepKind::Development => false,
                 }
             })
         }).map(|dep| {
