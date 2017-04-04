@@ -2870,3 +2870,28 @@ fn run_proper_binary_main_rs() {
     assert_that(p.cargo_process("run").arg("--bin").arg("foo"),
                 execs().with_status(0));
 }
+
+#[test]
+fn run_proper_binary_main_rs_as_foo() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+            [[bin]]
+            name = "foo"
+        "#)
+        .file("src/foo.rs", r#"
+            fn main() {
+                panic!("This should never be run.");
+            }
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {
+            }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("--bin").arg("foo"),
+                execs().with_status(0));
+}
