@@ -58,7 +58,8 @@ vcs = "none"
 
 # For the following sections, $triple refers to any valid target triple, not the
 # literal string "$triple", and it will apply whenever that target triple is
-# being compiled to.
+# being compiled to. 'cfg(...)' refers to the Rust-like `#[cfg]` syntax for 
+# conditional compilation.
 [target]
 # For Cargo builds which do not mention --target, this is the linker
 # which is passed to rustc (via `-C linker=`). By default this flag is not
@@ -71,6 +72,13 @@ linker = ".."
 linker = ".."
 # custom flags to pass to all compiler invocations that target $triple
 # this value overrides build.rustflags when both are present
+rustflags = ["..", ".."]
+
+[target.'cfg(...)']
+# Similar for the $triple configuration, but using the `cfg` syntax.
+# If several `cfg` and $triple targets are candidates, then the rustflags
+# are concatenated. The `cfg` syntax only applies to rustflags, and not to
+# linker.
 rustflags = ["..", ".."]
 
 # Configuration keys related to the registry
