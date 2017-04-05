@@ -1383,13 +1383,19 @@ fn normalize(package_root: &Path,
     ret
 }
 
-fn inferred_bin_path(bin: &TomlBinTarget, package_root: &Path, lib: bool, bin_len: usize) -> PathBuf {
-    // we have a lib with multiple bins, so the bins are expected to be located inside src/bin
+fn inferred_bin_path(bin: &TomlBinTarget,
+                     package_root: &Path,
+                     lib: bool,
+                     bin_len: usize) -> PathBuf {
+    // we have a lib with multiple bins, so the bins are expected to be located
+    // inside src/bin
     if lib && bin_len > 1 {
-        return Path::new("src").join("bin").join(&format!("{}.rs", bin.name())).to_path_buf()
+        return Path::new("src").join("bin").join(&format!("{}.rs", bin.name()))
+                    .to_path_buf()
     }
 
-    // we have a lib with one bin, so it's either src/main.rs, src/bin/foo.rs or src/bin/main.rs
+    // we have a lib with one bin, so it's either src/main.rs, src/bin/foo.rs or
+    // src/bin/main.rs
     if lib && bin_len == 1 {
         let path = Path::new("src").join(&format!("main.rs"));
         if package_root.join(&path).exists() {
