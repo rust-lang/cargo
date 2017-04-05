@@ -2216,6 +2216,54 @@ fn filtering() {
 }
 
 #[test]
+fn filtering_implicit_bins() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", "fn main() {}")
+        .file("src/bin/b.rs", "fn main() {}")
+        .file("examples/a.rs", "fn main() {}")
+        .file("examples/b.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build").arg("--bins"),
+                execs().with_status(0));
+    assert_that(&p.bin("a"), existing_file());
+    assert_that(&p.bin("b"), existing_file());
+    assert_that(&p.bin("examples/a"), is_not(existing_file()));
+    assert_that(&p.bin("examples/b"), is_not(existing_file()));
+}
+
+#[test]
+fn filtering_implicit_examples() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", "fn main() {}")
+        .file("src/bin/b.rs", "fn main() {}")
+        .file("examples/a.rs", "fn main() {}")
+        .file("examples/b.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build").arg("--examples"),
+                execs().with_status(0));
+    assert_that(&p.bin("a"), is_not(existing_file()));
+    assert_that(&p.bin("b"), is_not(existing_file()));
+    assert_that(&p.bin("examples/a"), existing_file());
+    assert_that(&p.bin("examples/b"), existing_file());
+}
+
+#[test]
 fn ignore_dotfile() {
     let p = project("foo")
         .file("Cargo.toml", r#"
