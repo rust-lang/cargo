@@ -548,17 +548,17 @@ fn cross_tests() {
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]{triple}[/]debug[/]deps[/]bar-[..][EXE]
-[RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]", foo = p.url(), triple = target))
+[RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
+[RUNNING] target[/]{triple}[/]debug[/]deps[/]bar-[..][EXE]", foo = p.url(), triple = target))
                        .with_stdout("
 running 1 test
-test test ... ok
+test test_foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test test_foo ... ok
+test test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
