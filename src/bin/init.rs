@@ -30,7 +30,7 @@ Options:
                         control system (git or hg) or do not initialize any version
                         control at all (none) overriding a global configuration.
     --bin               Use a binary (application) template
-    --lib               Use a library template
+    --lib               Use a library template [default]
     --name NAME         Set the resulting package name
     -v, --verbose ...   Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet         No output printed to stdout
