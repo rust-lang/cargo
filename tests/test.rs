@@ -118,6 +118,41 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 }
 
 #[test]
+fn cargo_test_overflow_checks() {
+    if !is_nightly() {
+        return;
+    }
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [[bin]]
+            name = "foo"
+
+            [profile.release]
+            overflow-checks = true
+            "#)
+        .file("src/foo.rs", r#"
+            use std::panic;
+            pub fn main() {
+                let r = panic::catch_unwind(|| {
+                    [1, i32::max_value()].iter().sum::<i32>();
+                });
+                assert!(r.is_err());
+            }"#);
+
+    assert_that(p.cargo_process("build").arg("--release"),
+                execs().with_status(0));
+    assert_that(&p.release_bin("foo"), existing_file());
+
+    assert_that(process(&p.release_bin("foo")),
+                execs().with_status(0).with_stdout(""));
+}
+
+#[test]
 fn cargo_test_verbose() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))

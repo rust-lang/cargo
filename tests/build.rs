@@ -2535,6 +2535,7 @@ fn compiler_json_error_format() {
             "debug_assertions": true,
             "debuginfo": 2,
             "opt_level": "0",
+            "overflow_checks": true,
             "test": false
         },
         "features": [],
@@ -2574,6 +2575,7 @@ fn compiler_json_error_format() {
             "debug_assertions": true,
             "debuginfo": 2,
             "opt_level": "0",
+            "overflow_checks": true,
             "test": false
         },
         "features": [],
@@ -2593,6 +2595,7 @@ fn compiler_json_error_format() {
             "debug_assertions": true,
             "debuginfo": 2,
             "opt_level": "0",
+            "overflow_checks": true,
             "test": false
         },
         "features": [],
@@ -2620,6 +2623,7 @@ fn compiler_json_error_format() {
             "debug_assertions": true,
             "debuginfo": 2,
             "opt_level": "0",
+            "overflow_checks": true,
             "test": false
         },
         "features": [],
@@ -2679,6 +2683,7 @@ fn message_format_json_forward_stderr() {
             "debug_assertions":true,
             "debuginfo":2,
             "opt_level":"0",
+            "overflow_checks": true,
             "test":false
         },
         "features":[],

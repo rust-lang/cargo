@@ -371,6 +371,8 @@ pub struct TomlProfile {
     debug_assertions: Option<bool>,
     rpath: Option<bool>,
     panic: Option<String>,
+    #[serde(rename = "overflow-checks")]
+    overflow_checks: Option<bool>,
 }
 
 #[derive(Clone, Debug)]
@@ -1469,7 +1471,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
         let &TomlProfile {
             ref opt_level, lto, codegen_units, ref debug, debug_assertions, rpath,
-            ref panic
+            ref panic, ref overflow_checks,
         } = match toml {
             Some(toml) => toml,
             None => return profile,
@@ -1488,6 +1490,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
             rustdoc_args: None,
             debuginfo: debug.unwrap_or(profile.debuginfo),
             debug_assertions: debug_assertions.unwrap_or(profile.debug_assertions),
+            overflow_checks: overflow_checks.unwrap_or(profile.overflow_checks),
             rpath: rpath.unwrap_or(profile.rpath),
             test: profile.test,
             doc: profile.doc,

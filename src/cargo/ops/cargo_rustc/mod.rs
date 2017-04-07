@@ -597,8 +597,8 @@ fn build_base_args(cx: &mut Context,
                    crate_types: &[&str]) {
     let Profile {
         ref opt_level, lto, codegen_units, ref rustc_args, debuginfo,
-        debug_assertions, rpath, test, doc: _doc, run_custom_build,
-        ref panic, rustdoc_args: _, check,
+        debug_assertions, overflow_checks, rpath, test, doc: _doc,
+        run_custom_build, ref panic, rustdoc_args: _, check,
     } = *unit.profile;
     assert!(!run_custom_build);
 
@@ -678,10 +678,27 @@ fn build_base_args(cx: &mut Context,
         cmd.args(args);
     }
 
-    if debug_assertions && opt_level != "0" {
-        cmd.args(&["-C", "debug-assertions=on"]);
-    } else if !debug_assertions && opt_level == "0" {
-        cmd.args(&["-C", "debug-assertions=off"]);
+    // -C overflow-checks is implied by the setting of -C debug-assertions,
+    // so we only need to provide -C overflow-checks if it differs from
+    // the value of -C debug-assertions we would provide.
+    if opt_level != "0" {
+        if debug_assertions {
+            cmd.args(&["-C", "debug-assertions=on"]);
+            if !overflow_checks {
+                cmd.args(&["-C", "overflow-checks=off"]);
+            }
+        } else if overflow_checks {
+            cmd.args(&["-C", "overflow-checks=on"]);
+        }
+    } else {
+        if !debug_assertions {
+            cmd.args(&["-C", "debug-assertions=off"]);
+            if overflow_checks {
+                cmd.args(&["-C", "overflow-checks=on"]);
+            }
+        } else if !overflow_checks {
+            cmd.args(&["-C", "overflow-checks=off"]);
+        }
     }
 
     if test && unit.target.harness() {

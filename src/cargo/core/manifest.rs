@@ -145,6 +145,7 @@ pub struct Profile {
     pub rustdoc_args: Option<Vec<String>>,
     pub debuginfo: Option<u32>,
     pub debug_assertions: bool,
+    pub overflow_checks: bool,
     #[serde(skip_serializing)]
     pub rpath: bool,
     pub test: bool,
@@ -528,6 +529,7 @@ impl Profile {
         Profile {
             debuginfo: Some(2),
             debug_assertions: true,
+            overflow_checks: true,
             ..Profile::default()
         }
     }
@@ -594,6 +596,7 @@ impl Default for Profile {
             rustdoc_args: None,
             debuginfo: None,
             debug_assertions: false,
+            overflow_checks: false,
             rpath: false,
             test: false,
             doc: false,
