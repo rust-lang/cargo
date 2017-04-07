@@ -418,7 +418,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     };
 
     let (author_name, email) = discover_author()?;
-    // Hoo boy, sure glad we've got exhaustivenes checking behind us.
+    // Hoo boy, sure glad we've got exhaustiveness checking behind us.
     let author = match (cfg.name, cfg.email, author_name, email) {
         (Some(name), Some(email), _, _) |
         (Some(name), None, _, Some(email)) |
@@ -430,7 +430,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
 
     let mut cargotoml_path_specifier = String::new();
 
-    // Calculare what [lib] and [[bin]]s do we need to append to Cargo.toml
+    // Calculate what [lib] and [[bin]]s do we need to append to Cargo.toml
 
     for i in &opts.source_files {
         if i.bin {
