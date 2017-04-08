@@ -59,7 +59,7 @@ pub struct ManifestMetadata {
     pub badges: HashMap<String, HashMap<String, String>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum LibKind {
     Lib,
     Rlib,
@@ -101,7 +101,7 @@ impl LibKind {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TargetKind {
     Lib(Vec<LibKind>),
     Bin,
