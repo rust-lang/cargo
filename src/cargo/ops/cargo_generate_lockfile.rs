@@ -146,7 +146,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
                 // we'll let it through.
                 //
                 // Note that we only check this for non-registry sources,
-                // however, as registries countain enough version information in
+                // however, as registries contain enough version information in
                 // the package id to disambiguate
                 if a.source_id().is_registry() {
                     return false
