@@ -243,17 +243,17 @@ fn bench_with_lib_dep() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]baz-[..][EXE]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
+[RUNNING] target[/]release[/]deps[/]baz-[..][EXE]", p.url()))
                        .with_stdout("
 running 1 test
-test bin_bench ... bench: [..] 0 ns/iter (+/- 0)
+test lib_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 
 running 1 test
-test lib_bench ... bench: [..] 0 ns/iter (+/- 0)
+test bin_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -353,17 +353,17 @@ fn external_bench_explicit() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]bench-[..][EXE]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
+[RUNNING] target[/]release[/]deps[/]bench-[..][EXE]", p.url()))
                        .with_stdout("
 running 1 test
-test external_bench ... bench: [..] 0 ns/iter (+/- 0)
+test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 
 running 1 test
-test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
+test external_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -403,17 +403,17 @@ fn external_bench_implicit() {
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]external-[..][EXE]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
+[RUNNING] target[/]release[/]deps[/]external-[..][EXE]", p.url()))
                        .with_stdout("
 running 1 test
-test external_bench ... bench: [..] 0 ns/iter (+/- 0)
+test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 
 running 1 test
-test internal_bench ... bench: [..] 0 ns/iter (+/- 0)
+test external_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -600,17 +600,17 @@ fn lib_with_standard_name() {
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]bench-[..][EXE]
-[RUNNING] target[/]release[/]deps[/]syntax-[..][EXE]", dir = p.url()))
+[RUNNING] target[/]release[/]deps[/]syntax-[..][EXE]
+[RUNNING] target[/]release[/]deps[/]bench-[..][EXE]", dir = p.url()))
                        .with_stdout("
 running 1 test
-test bench ... bench: [..] 0 ns/iter (+/- 0)
+test foo_bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 
 running 1 test
-test foo_bench ... bench: [..] 0 ns/iter (+/- 0)
+test bench ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
@@ -722,8 +722,8 @@ fn bench_dylib() {
 [RUNNING] [..] -C opt-level=3 [..]
 [RUNNING] [..] -C opt-level=3 [..]
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `[..]target[/]release[/]deps[/]bench-[..][EXE] --bench`
-[RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE] --bench`", dir = p.url()))
+[RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE] --bench`
+[RUNNING] `[..]target[/]release[/]deps[/]bench-[..][EXE] --bench`", dir = p.url()))
                        .with_stdout("
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
@@ -744,8 +744,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 [FRESH] bar v0.0.1 ({dir}/bar)
 [FRESH] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `[..]target[/]release[/]deps[/]bench-[..][EXE] --bench`
-[RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE] --bench`", dir = p.url()))
+[RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE] --bench`
+[RUNNING] `[..]target[/]release[/]deps[/]bench-[..][EXE] --bench`", dir = p.url()))
                        .with_stdout("
 running 1 test
 test foo ... bench: [..] 0 ns/iter (+/- 0)
@@ -871,18 +871,18 @@ fn bench_with_examples() {
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `{dir}[/]target[/]release[/]deps[/]testb1-[..][EXE] --bench`
-[RUNNING] `{dir}[/]target[/]release[/]deps[/]testbench-[..][EXE] --bench`",
+[RUNNING] `{dir}[/]target[/]release[/]deps[/]testbench-[..][EXE] --bench`
+[RUNNING] `{dir}[/]target[/]release[/]deps[/]testb1-[..][EXE] --bench`",
                 dir = p.root().display(), url = p.url()))
                        .with_stdout("
 running 1 test
-test bench_bench2 ... bench: [..] 0 ns/iter (+/- 0)
+test bench_bench1 ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 
 
 running 1 test
-test bench_bench1 ... bench: [..] 0 ns/iter (+/- 0)
+test bench_bench2 ... bench: [..] 0 ns/iter (+/- 0)
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 

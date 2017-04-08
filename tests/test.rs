@@ -346,18 +346,18 @@ fn test_with_lib_dep() {
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]baz-[..][EXE]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]baz-[..][EXE]
 [DOCTEST] foo", p.url()))
                        .with_stdout("
 running 1 test
-test bin_test ... ok
+test lib_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test lib_test ... ok
+test bin_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
@@ -511,18 +511,18 @@ fn external_test_implicit() {
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]external-[..][EXE]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]external-[..][EXE]
 [DOCTEST] foo", p.url()))
                        .with_stdout("
 running 1 test
-test external_test ... ok
+test internal_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 
 running 1 test
-test internal_test ... ok
+test external_test ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
@@ -2781,4 +2781,44 @@ test env_test ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 ", cargo.to_str().unwrap())));
+}
+
+#[test]
+fn test_order() {
+   let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("src/lib.rs", r#"
+            #[test] fn test_lib() {}
+        "#)
+        .file("tests/a.rs", r#"
+            #[test] fn test_a() {}
+        "#)
+        .file("tests/z.rs", r#"
+            #[test] fn test_z() {}
+        "#);
+
+        assert_that(p.cargo_process("test").arg("--all"),
+            execs().with_status(0).with_stdout_contains("\
+running 1 test
+test test_lib ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+
+running 1 test
+test test_a ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+
+running 1 test
+test test_z ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+"));
+    
 }
