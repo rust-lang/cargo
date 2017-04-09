@@ -580,7 +580,8 @@ fn do_not_package_if_repository_is_dirty() {
     assert_that(p.cargo("package"),
                 execs().with_status(101)
                        .with_stderr("\
-error: 1 dirty files found in the working directory:
+error: 1 files in the working directory contain changes that were not yet \
+committed into git:
 
 Cargo.toml
 
