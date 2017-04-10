@@ -216,6 +216,10 @@ repository. While you're waiting for the PR to get merged you can continue to
 work locally with a `[replace]`, and then once the PR is merged and published
 you can remove `[replace]` and use the newly-published version.
 
+Note: The `Cargo.lock` file will list two versions of the replaced crate: one
+for the original crate, and one for the version specified in `[replace]`.
+`cargo build -v` can verify that only one version is used in the build.
+
 ### Overriding with local dependencies
 
 Sometimes you're only temporarily working on a crate and you don't want to have
