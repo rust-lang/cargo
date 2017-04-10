@@ -2805,6 +2805,51 @@ fn build_all_workspace() {
 }
 
 #[test]
+fn build_all_workspace_implicit_examples() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [workspace]
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", "fn main() {}")
+        .file("src/bin/b.rs", "fn main() {}")
+        .file("examples/c.rs", "fn main() {}")
+        .file("examples/d.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+        "#)
+        .file("bar/src/lib.rs", "")
+        .file("bar/src/bin/e.rs", "fn main() {}")
+        .file("bar/src/bin/f.rs", "fn main() {}")
+        .file("bar/examples/g.rs", "fn main() {}")
+        .file("bar/examples/h.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build")
+                 .arg("--all").arg("--examples"),
+                execs().with_status(0)
+                       .with_stderr("[..] Compiling bar v0.1.0 ([..])\n\
+                       [..] Compiling foo v0.1.0 ([..])\n\
+                       [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
+    assert_that(&p.bin("a"), is_not(existing_file()));
+    assert_that(&p.bin("b"), is_not(existing_file()));
+    assert_that(&p.bin("examples/c"), existing_file());
+    assert_that(&p.bin("examples/d"), existing_file());
+    assert_that(&p.bin("e"), is_not(existing_file()));
+    assert_that(&p.bin("f"), is_not(existing_file()));
+    assert_that(&p.bin("examples/g"), existing_file());
+    assert_that(&p.bin("examples/h"), existing_file());
+}
+
+#[test]
 fn build_all_virtual_manifest() {
     let p = project("workspace")
         .file("Cargo.toml", r#"
@@ -2837,6 +2882,53 @@ fn build_all_virtual_manifest() {
                        .with_stderr("[..] Compiling [..] v0.1.0 ([..])\n\
                        [..] Compiling [..] v0.1.0 ([..])\n\
                        [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
+}
+
+#[test]
+fn build_all_virtual_manifest_implicit_examples() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo", "bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("foo/src/lib.rs", "")
+        .file("foo/src/bin/a.rs", "fn main() {}")
+        .file("foo/src/bin/b.rs", "fn main() {}")
+        .file("foo/examples/c.rs", "fn main() {}")
+        .file("foo/examples/d.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+        "#)
+        .file("bar/src/lib.rs", "")
+        .file("bar/src/bin/e.rs", "fn main() {}")
+        .file("bar/src/bin/f.rs", "fn main() {}")
+        .file("bar/examples/g.rs", "fn main() {}")
+        .file("bar/examples/h.rs", "fn main() {}");
+
+    // The order in which foo and bar are built is not guaranteed
+    assert_that(p.cargo_process("build")
+                 .arg("--all").arg("--examples"),
+                execs().with_status(0)
+                       .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
+                       .with_stderr_contains("[..] Compiling foo v0.1.0 ([..])")
+                       .with_stderr("[..] Compiling [..] v0.1.0 ([..])\n\
+                       [..] Compiling [..] v0.1.0 ([..])\n\
+                       [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
+    assert_that(&p.bin("a"), is_not(existing_file()));
+    assert_that(&p.bin("b"), is_not(existing_file()));
+    assert_that(&p.bin("examples/c"), existing_file());
+    assert_that(&p.bin("examples/d"), existing_file());
+    assert_that(&p.bin("e"), is_not(existing_file()));
+    assert_that(&p.bin("f"), is_not(existing_file()));
+    assert_that(&p.bin("examples/g"), existing_file());
+    assert_that(&p.bin("examples/h"), existing_file());
 }
 
 #[test]
