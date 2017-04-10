@@ -173,7 +173,8 @@ fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
         if dirty.is_empty() {
             Ok(())
         } else {
-            bail!("{} dirty files found in the working directory:\n\n{}\n\n\
+            bail!("{} files in the working directory contain changes that were \
+                   not yet committed into git:\n\n{}\n\n\
                    to proceed despite this, pass the `--allow-dirty` flag",
                   dirty.len(), dirty.join("\n"))
         }

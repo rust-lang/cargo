@@ -207,7 +207,8 @@ fn dont_publish_dirty() {
                  .arg("--host").arg(registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry `[..]`
-error: 1 dirty files found in the working directory:
+error: 1 files in the working directory contain changes that were not yet \
+committed into git:
 
 bar
 
