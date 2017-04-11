@@ -49,19 +49,9 @@ fi
 
 # For some unknown reason libz is not found in the android docker image, so we
 # use this workaround
-case $TARGET in
-  arm-linux-androideabi | armv7-linux-androideabi )
+if [ "$TARGET" = armv7-linux-androideabi ]; then
     export DEP_Z_ROOT=/android-ndk/arm/sysroot/usr
-    ;;
-
-  aarch64-linux-android )
-    export DEP_Z_ROOT=/android-ndk/arm64/sysroot/usr/
-    ;;
-
-  i686-linux-android )
-    export DEP_Z_ROOT=/android-ndk/x86/sysroot/usr/
-    ;;
-esac
+fi
 
 $SRC/configure \
     --prefix=/tmp/obj/install \

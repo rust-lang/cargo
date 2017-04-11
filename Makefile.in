@@ -195,7 +195,7 @@ $(DOC_DIR)/%: $(S)src/doc/%
 	@mkdir -p $(@D)
 	cp $< $@
 
-OPENSSL_OS_aarch64-linux-android := linux-generic64
+OPENSSL_OS_aarch64-linux-android := linux-aarch64
 OPENSSL_OS_aarch64-unknown-linux-gnu := linux-aarch64
 OPENSSL_OS_arm-linux-androideabi := android
 OPENSSL_OS_arm-unknown-linux-gnueabi := linux-armv4
