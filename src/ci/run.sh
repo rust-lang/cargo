@@ -47,6 +47,12 @@ if [ -n "$CI" ] && [ "$BRANCH" != "auto-cargo" ] && [ "$ALLOW_PR" = "" ]; then
     exit 0
 fi
 
+# For some unknown reason libz is not found in the android docker image, so we
+# use this workaround
+if [ "$TARGET" = armv7-linux-androideabi ]; then
+    export DEP_Z_ROOT=/android-ndk/arm/sysroot/usr
+fi
+
 $SRC/configure \
     --prefix=/tmp/obj/install \
     --target=$TARGET \
