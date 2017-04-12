@@ -43,6 +43,8 @@ matrix:
            MAKE_TARGETS=test-unit-$TARGET
 
     # cross compiled targets
+    - env: TARGET=armv7-linux-androideabi
+           IMAGE=android
     - env: TARGET=arm-unknown-linux-gnueabi
            IMAGE=cross
     - env: TARGET=arm-unknown-linux-gnueabihf
