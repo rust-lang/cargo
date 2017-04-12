@@ -182,6 +182,9 @@ impl<'a> JobQueue<'a> {
                     match result {
                         Ok(()) => self.finish(key, cx)?,
                         Err(e) => {
+                            let msg = "The following warnings were emitted during compilation:";
+                            self.emit_warnings(Some(msg), key, cx)?;
+
                             if self.active > 0 {
                                 error = Some(human("build failed"));
                                 handle_error(&*e, &mut *cx.config.shell());
@@ -189,6 +192,7 @@ impl<'a> JobQueue<'a> {
                                             "Build failed, waiting for other \
                                              jobs to finish...", YELLOW)?;
                             }
+
                             if error.is_none() {
                                 error = Some(e);
                             }
@@ -252,15 +256,33 @@ impl<'a> JobQueue<'a> {
         Ok(())
     }
 
-    fn finish(&mut self, key: Key<'a>, cx: &mut Context) -> CargoResult<()> {
-        if key.profile.run_custom_build && cx.show_warnings(key.pkg) {
-            let output = cx.build_state.outputs.lock().unwrap();
-            if let Some(output) = output.get(&(key.pkg.clone(), key.kind)) {
-                for warning in output.warnings.iter() {
-                    cx.config.shell().warn(warning)?;
+    fn emit_warnings(&self, msg: Option<&str>, key: Key<'a>, cx: &mut Context) -> CargoResult<()> {
+        let output = cx.build_state.outputs.lock().unwrap();
+        if let Some(output) = output.get(&(key.pkg.clone(), key.kind)) {
+            if let Some(msg) = msg {
+                if !output.warnings.is_empty() {
+                    writeln!(cx.config.shell().err(), "{}\n", msg)?;
                 }
             }
+
+            for warning in output.warnings.iter() {
+                cx.config.shell().warn(warning)?;
+            }
+
+            if !output.warnings.is_empty() && msg.is_some() {
+                // Output an empty line.
+                writeln!(cx.config.shell().err(), "")?;
+            }
         }
+
+        Ok(())
+    }
+
+    fn finish(&mut self, key: Key<'a>, cx: &mut Context) -> CargoResult<()> {
+        if key.profile.run_custom_build && cx.show_warnings(key.pkg) {
+            self.emit_warnings(None, key, cx)?;
+        }
+
         let state = self.pending.get_mut(&key).unwrap();
         state.amt -= 1;
         if state.amt == 0 {
