@@ -3005,3 +3005,25 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 "));
 
 }
+
+#[test]
+fn cyclic_dev() {
+   let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [dev-dependencies]
+            foo = { path = "." }
+        "#)
+        .file("src/lib.rs", r#"
+            #[test] fn test_lib() {}
+        "#)
+        .file("tests/foo.rs", r#"
+            extern crate foo;
+        "#);
+
+    assert_that(p.cargo_process("test").arg("--all"),
+                execs().with_status(0));
+}
