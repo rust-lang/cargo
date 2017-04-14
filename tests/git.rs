@@ -796,17 +796,18 @@ fn dep_with_bad_submodule() {
             pub fn foo() { dep1::dep() }
         ");
 
-    assert_that(project.cargo_process("build").arg("--verbose"),
+    assert_that(project.cargo_process("build"),
                 execs().with_stderr(format!("\
 [UPDATING] git repository [..]
 [ERROR] failed to load source for a dependency on `dep1`
 
 Caused by:
-  Failed to update submodules of [..]
+  Unable to update {}
 
 Caused by:
-  [9/-3] object not found - no match for id ({})
-", original_submodule_ref)).with_status(101));
+  Failed to update submodule `src`
+
+To learn more, run the command again with --verbose.\n", path2url(git_project.root()))).with_status(101));
 }
 
 #[test]

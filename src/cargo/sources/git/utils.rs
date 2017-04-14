@@ -156,9 +156,7 @@ impl GitDatabase {
             }
             Err(..) => GitCheckout::clone_into(dest, self, rev)?,
         };
-        checkout.update_submodules(cargo_config).chain_error(|| {
-            internal("failed to update submodules")
-        })?;
+        checkout.update_submodules(cargo_config)?;
         Ok(checkout)
     }
 
@@ -297,8 +295,8 @@ impl<'a> GitCheckout<'a> {
 
             for mut child in repo.submodules()?.into_iter() {
                 update_submodule(repo, &mut child, cargo_config).chain_error(||
-                    internal(
-                        format!("failed to update submodule `{}`",
+                    human(
+                        format!("Failed to update submodule `{}`",
                             child.name().unwrap_or("")))
                     )?;
             }
