@@ -294,16 +294,17 @@ impl<'a> GitCheckout<'a> {
             info!("update submodules for: {:?}", repo.workdir().unwrap());
 
             for mut child in repo.submodules()?.into_iter() {
-                update_submodule(repo, &mut child, cargo_config).chain_error(||
-                    human(
-                        format!("Failed to update submodule `{}`",
-                            child.name().unwrap_or("")))
-                    )?;
+                update_submodule(repo, &mut child, cargo_config).chain_error(|| {
+                    human(format!("Failed to update submodule `{}`",
+                                  child.name().unwrap_or("")))
+                })?;
             }
             Ok(())
         }
 
-        fn update_submodule(parent: &git2::Repository, child: &mut git2::Submodule, cargo_config: &Config) -> CargoResult<()> {
+        fn update_submodule(parent: &git2::Repository,
+                            child: &mut git2::Submodule,
+                            cargo_config: &Config) -> CargoResult<()> {
             child.init(false)?;
             let url = child.url().chain_error(|| {
                 internal("non-utf8 url for submodule")

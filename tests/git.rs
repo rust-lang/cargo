@@ -777,7 +777,13 @@ fn dep_with_bad_submodule() {
     let repo = git2::Repository::open(&git_project2.root()).unwrap();
     let original_submodule_ref = repo.refname_to_id("refs/heads/master").unwrap();
     let commit = repo.find_commit(original_submodule_ref).unwrap();
-    commit.amend(Some("refs/heads/master"), None, None, None, Some("something something"), None).unwrap();
+    commit.amend(
+        Some("refs/heads/master"),
+        None,
+        None,
+        None,
+        Some("something something"),
+        None).unwrap();
 
     let project = project
         .file("Cargo.toml", &format!(r#"
@@ -796,8 +802,7 @@ fn dep_with_bad_submodule() {
             pub fn foo() { dep1::dep() }
         ");
 
-    assert_that(project.cargo_process("build"),
-                execs().with_stderr(format!("\
+    let expected = format!("\
 [UPDATING] git repository [..]
 [ERROR] failed to load source for a dependency on `dep1`
 
@@ -807,7 +812,10 @@ Caused by:
 Caused by:
   Failed to update submodule `src`
 
-To learn more, run the command again with --verbose.\n", path2url(git_project.root()))).with_status(101));
+To learn more, run the command again with --verbose.\n", path2url(git_project.root()));
+
+    assert_that(project.cargo_process("build"),
+                execs().with_stderr(expected).with_status(101));
 }
 
 #[test]
