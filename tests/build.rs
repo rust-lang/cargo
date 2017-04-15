@@ -2442,9 +2442,6 @@ fn manifest_with_bom_is_ok() {
 
 #[test]
 fn panic_abort_compiles_with_panic_abort() {
-    if !is_nightly() {
-        return
-    }
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -2489,8 +2486,6 @@ fn explicit_color_config_is_propagated_to_rustc() {
 
 #[test]
 fn compiler_json_error_format() {
-    if !is_nightly() { return }
-
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]

@@ -4,7 +4,7 @@ extern crate hamcrest;
 use std::str;
 use std::fs;
 
-use cargotest::{is_nightly, rustc_host};
+use cargotest::rustc_host;
 use cargotest::support::{project, execs, path2url};
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
@@ -283,8 +283,6 @@ fn doc_same_name() {
 #[test]
 fn doc_target() {
     const TARGET: &'static str = "arm-unknown-linux-gnueabihf";
-
-    if !is_nightly() { return }
 
     let p = project("foo")
         .file("Cargo.toml", r#"
