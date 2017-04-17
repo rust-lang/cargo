@@ -810,7 +810,7 @@ Caused by:
   Unable to update {}
 
 Caused by:
-  Failed to update submodule `src`
+  failed to update submodule `src`
 
 To learn more, run the command again with --verbose.\n", path2url(git_project.root()));
 

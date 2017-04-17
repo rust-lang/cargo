@@ -295,7 +295,7 @@ impl<'a> GitCheckout<'a> {
 
             for mut child in repo.submodules()?.into_iter() {
                 update_submodule(repo, &mut child, cargo_config).chain_error(|| {
-                    human(format!("Failed to update submodule `{}`",
+                    human(format!("failed to update submodule `{}`",
                                   child.name().unwrap_or("")))
                 })?;
             }
