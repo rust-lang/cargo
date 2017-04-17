@@ -1576,6 +1576,82 @@ fn cfg_override_doc() {
 }
 
 #[test]
+fn env_build() {
+    let build = project("builder")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "builder"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/main.rs", r#"
+            const FOO: &'static str = env!("FOO");
+            fn main() {}
+        "#)
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-env=FOO=foo");
+            }
+        "#);
+    assert_that(build.cargo_process("build").arg("-v"),
+                execs().with_status(0));
+}
+
+#[test]
+fn env_test() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-env=FOO=foo");
+            }
+        "#)
+        .file("src/lib.rs", r#"
+            pub const FOO: &'static str = env!("FOO");
+        "#)
+        .file("tests/test.rs", r#"
+            extern crate foo;
+
+            #[test]
+            fn test_foo() {
+                assert_eq!("foo", foo::FOO);
+            }
+        "#);
+    assert_that(p.cargo_process("test").arg("-v"),
+                execs().with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({dir})
+[RUNNING] [..] build.rs [..]
+[RUNNING] `[..][/]build-script-build`
+[RUNNING] [..] --cfg foo[..]
+[RUNNING] [..] --cfg foo[..]
+[RUNNING] [..] --cfg foo[..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `[..][/]foo-[..][EXE]`
+[RUNNING] `[..][/]test-[..][EXE]`
+[DOCTEST] foo
+[RUNNING] [..] --cfg foo[..]", dir = p.url()))
+                       .with_stdout("
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+
+running 1 test
+test test_foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+"));
+}
+
+#[test]
 fn flags_go_into_tests() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -1816,7 +1892,7 @@ fn fresh_builds_possible_with_link_libs() {
             rustc-flags = \"-l z -L ./\"
         ", target))
         .file("build.rs", "");
- 
+
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
@@ -1857,7 +1933,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
             e = \"\"
         ", target))
         .file("build.rs", "");
- 
+
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]

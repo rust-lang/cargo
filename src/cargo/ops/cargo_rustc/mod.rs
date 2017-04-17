@@ -305,12 +305,15 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
         // also need to be sure to add any -L paths for our plugins to the
         // dynamic library load path as a plugin's dynamic library may be
         // located somewhere in there.
+        // Finally, if custom environment variables have been produced by
+        // previous build scripts, we include them in the rustc invocation.
         if let Some(build_deps) = build_deps {
             let build_state = build_state.outputs.lock().unwrap();
             add_native_deps(&mut rustc, &build_state, &build_deps,
                                  pass_l_flag, &current_id)?;
             add_plugin_deps(&mut rustc, &build_state, &build_deps,
                                  &root_output)?;
+            add_custom_env(&mut rustc, &build_state, &build_deps, &current_id)?;
         }
 
         // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
@@ -415,6 +418,26 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
                     for name in output.library_links.iter() {
                         rustc.arg("-l").arg(name);
                     }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    // Add all custom environment variables present in `state` (after they've
+    // been put there by one of the `build_scripts`) to the command provided.
+    fn add_custom_env(rustc: &mut ProcessBuilder,
+                      build_state: &BuildMap,
+                      build_scripts: &BuildScripts,
+                      current_id: &PackageId) -> CargoResult<()> {
+        for key in build_scripts.to_link.iter() {
+            let output = build_state.get(key).chain_error(|| {
+                internal(format!("couldn't find build state for {}/{:?}",
+                                 key.0, key.1))
+            })?;
+            if key.0 == *current_id {
+                for &(ref name, ref value) in output.env.iter() {
+                    rustc.env(name, value);
                 }
             }
         }
