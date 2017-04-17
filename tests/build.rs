@@ -760,9 +760,8 @@ fn compile_path_dep_then_change_version() {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
-[ERROR] no matching package named `bar` found (required by `foo`)
+[ERROR] no matching version `= 0.0.1` found for package `bar` (required by `foo`)
 location searched: [..]
-version required: = 0.0.1
 versions found: 0.0.2
 consider running `cargo update` to update a path dependency's locked version
 "));
