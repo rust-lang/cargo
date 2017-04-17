@@ -670,6 +670,7 @@ fn scrape_target_config(config: &Config, triple: &str)
             library_paths: Vec::new(),
             library_links: Vec::new(),
             cfgs: Vec::new(),
+            env: Vec::new(),
             metadata: Vec::new(),
             rerun_if_changed: Vec::new(),
             warnings: Vec::new(),
