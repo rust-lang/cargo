@@ -4,7 +4,7 @@ extern crate hamcrest;
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use cargotest::{rustc_host, is_nightly, sleep_ms};
+use cargotest::{rustc_host, sleep_ms};
 use cargotest::support::{project, execs};
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::registry::Package;
@@ -2094,9 +2094,6 @@ fn custom_target_dir() {
 
 #[test]
 fn panic_abort_with_build_scripts() {
-    if !is_nightly() {
-        return
-    }
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]

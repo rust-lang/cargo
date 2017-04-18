@@ -8,9 +8,6 @@ use hamcrest::assert_that;
 
 #[test]
 fn check_success() {
-    if !is_nightly() {
-        return
-    }
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -45,9 +42,6 @@ fn check_success() {
 
 #[test]
 fn check_fail() {
-    if !is_nightly() {
-        return
-    }
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -143,10 +137,6 @@ pub fn derive(_input: TokenStream) -> TokenStream {
 
 #[test]
 fn check_build() {
-    if !is_nightly() {
-        return;
-    }
-
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -185,10 +175,6 @@ fn check_build() {
 
 #[test]
 fn build_check() {
-    if !is_nightly() {
-        return;
-    }
-
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -229,10 +215,6 @@ fn build_check() {
 // not built.
 #[test]
 fn issue_3418() {
-    if !is_nightly() {
-        return;
-    }
-
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -254,10 +236,6 @@ fn issue_3418() {
 // checked, but in this case with a proc macro too.
 #[test]
 fn issue_3419() {
-    if !is_nightly() {
-        return;
-    }
-
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -307,9 +285,6 @@ fn issue_3419() {
 // test `cargo rustc --profile check`
 #[test]
 fn rustc_check() {
-    if !is_nightly() {
-        return
-    }
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -348,9 +323,6 @@ fn rustc_check() {
 
 #[test]
 fn rustc_check_err() {
-    if !is_nightly() {
-        return
-    }
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -389,9 +361,6 @@ fn rustc_check_err() {
 
 #[test]
 fn check_all() {
-    if !is_nightly() {
-        return
-    }
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
