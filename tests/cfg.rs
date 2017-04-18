@@ -6,7 +6,7 @@ use std::str::FromStr;
 use std::fmt;
 
 use cargo::util::{Cfg, CfgExpr};
-use cargotest::{is_nightly, rustc_host};
+use cargotest::rustc_host;
 use cargotest::support::registry::Package;
 use cargotest::support::{project, execs};
 use hamcrest::assert_that;
@@ -138,8 +138,6 @@ fn cfg_matches() {
 
 #[test]
 fn cfg_easy() {
-    if !is_nightly() { return }
-
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -166,8 +164,6 @@ fn cfg_easy() {
 
 #[test]
 fn dont_include() {
-    if !is_nightly() { return }
-
     let other_family = if cfg!(unix) {"windows"} else {"unix"};
     let p = project("foo")
         .file("Cargo.toml", &format!(r#"
@@ -196,8 +192,6 @@ fn dont_include() {
 
 #[test]
 fn works_through_the_registry() {
-    if !is_nightly() { return }
-
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0")
             .target_dep("foo", "0.1.0", "cfg(unix)")
@@ -314,8 +308,6 @@ Caused by:
 
 #[test]
 fn multiple_match_ok() {
-    if !is_nightly() { return }
-
     let p = project("foo")
         .file("Cargo.toml", &format!(r#"
             [package]
@@ -351,8 +343,6 @@ fn multiple_match_ok() {
 
 #[test]
 fn any_ok() {
-    if !is_nightly() { return }
-
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]

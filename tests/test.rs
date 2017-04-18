@@ -2292,9 +2292,6 @@ test result: ok.[..]
 
 #[test]
 fn test_panic_abort_with_dep() {
-    if !is_nightly() {
-        return
-    }
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -2327,9 +2324,6 @@ fn test_panic_abort_with_dep() {
 
 #[test]
 fn cfg_test_even_with_no_harness() {
-    if !is_nightly() {
-        return
-    }
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
