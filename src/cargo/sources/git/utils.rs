@@ -156,9 +156,7 @@ impl GitDatabase {
             }
             Err(..) => GitCheckout::clone_into(dest, self, rev)?,
         };
-        checkout.update_submodules(cargo_config).chain_error(|| {
-            internal("failed to update submodules")
-        })?;
+        checkout.update_submodules(cargo_config)?;
         Ok(checkout)
     }
 
@@ -296,52 +294,61 @@ impl<'a> GitCheckout<'a> {
             info!("update submodules for: {:?}", repo.workdir().unwrap());
 
             for mut child in repo.submodules()?.into_iter() {
-                child.init(false)?;
-                let url = child.url().chain_error(|| {
-                    internal("non-utf8 url for submodule")
+                update_submodule(repo, &mut child, cargo_config).chain_error(|| {
+                    human(format!("failed to update submodule `{}`",
+                                  child.name().unwrap_or("")))
                 })?;
-
-                // A submodule which is listed in .gitmodules but not actually
-                // checked out will not have a head id, so we should ignore it.
-                let head = match child.head_id() {
-                    Some(head) => head,
-                    None => continue,
-                };
-
-                // If the submodule hasn't been checked out yet, we need to
-                // clone it. If it has been checked out and the head is the same
-                // as the submodule's head, then we can bail out and go to the
-                // next submodule.
-                let head_and_repo = child.open().and_then(|repo| {
-                    let target = repo.head()?.target();
-                    Ok((target, repo))
-                });
-                let repo = match head_and_repo {
-                    Ok((head, repo)) => {
-                        if child.head_id() == head {
-                            continue
-                        }
-                        repo
-                    }
-                    Err(..) => {
-                        let path = repo.workdir().unwrap().join(child.path());
-                        let _ = fs::remove_dir_all(&path);
-                        git2::Repository::clone(url, &path)?
-                    }
-                };
-
-                // Fetch data from origin and reset to the head commit
-                let refspec = "refs/heads/*:refs/heads/*";
-                fetch(&repo, url, refspec, cargo_config).chain_error(|| {
-                    internal(format!("failed to fetch submodule `{}` from {}",
-                                     child.name().unwrap_or(""), url))
-                })?;
-
-                let obj = repo.find_object(head, None)?;
-                repo.reset(&obj, git2::ResetType::Hard, None)?;
-                update_submodules(&repo, cargo_config)?;
             }
             Ok(())
+        }
+
+        fn update_submodule(parent: &git2::Repository,
+                            child: &mut git2::Submodule,
+                            cargo_config: &Config) -> CargoResult<()> {
+            child.init(false)?;
+            let url = child.url().chain_error(|| {
+                internal("non-utf8 url for submodule")
+            })?;
+
+            // A submodule which is listed in .gitmodules but not actually
+            // checked out will not have a head id, so we should ignore it.
+            let head = match child.head_id() {
+                Some(head) => head,
+                None => return Ok(()),
+            };
+
+            // If the submodule hasn't been checked out yet, we need to
+            // clone it. If it has been checked out and the head is the same
+            // as the submodule's head, then we can bail out and go to the
+            // next submodule.
+            let head_and_repo = child.open().and_then(|repo| {
+                let target = repo.head()?.target();
+                Ok((target, repo))
+            });
+            let repo = match head_and_repo {
+                Ok((head, repo)) => {
+                    if child.head_id() == head {
+                        return Ok(())
+                    }
+                    repo
+                }
+                Err(..) => {
+                    let path = parent.workdir().unwrap().join(child.path());
+                    let _ = fs::remove_dir_all(&path);
+                    git2::Repository::clone(url, &path)?
+                }
+            };
+
+            // Fetch data from origin and reset to the head commit
+            let refspec = "refs/heads/*:refs/heads/*";
+            fetch(&repo, url, refspec, cargo_config).chain_error(|| {
+                internal(format!("failed to fetch submodule `{}` from {}",
+                                 child.name().unwrap_or(""), url))
+            })?;
+
+            let obj = repo.find_object(head, None)?;
+            repo.reset(&obj, git2::ResetType::Hard, None)?;
+            update_submodules(&repo, cargo_config)
         }
     }
 }

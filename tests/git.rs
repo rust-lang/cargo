@@ -752,6 +752,73 @@ fn dep_with_submodule() {
 }
 
 #[test]
+fn dep_with_bad_submodule() {
+    let project = project("foo");
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [package]
+                name = "dep1"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+            "#)
+    }).unwrap();
+    let git_project2 = git::new("dep2", |project| {
+        project.file("lib.rs", "pub fn dep() {}")
+    }).unwrap();
+
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let url = path2url(git_project2.root()).to_string();
+    git::add_submodule(&repo, &url, Path::new("src"));
+    git::commit(&repo);
+
+    // now amend the first commit on git_project2 to make submodule ref point to not-found
+    // commit
+    let repo = git2::Repository::open(&git_project2.root()).unwrap();
+    let original_submodule_ref = repo.refname_to_id("refs/heads/master").unwrap();
+    let commit = repo.find_commit(original_submodule_ref).unwrap();
+    commit.amend(
+        Some("refs/heads/master"),
+        None,
+        None,
+        None,
+        Some("something something"),
+        None).unwrap();
+
+    let project = project
+        .file("Cargo.toml", &format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.dep1]
+
+            git = '{}'
+        "#, git_project.url()))
+        .file("src/lib.rs", "
+            extern crate dep1;
+            pub fn foo() { dep1::dep() }
+        ");
+
+    let expected = format!("\
+[UPDATING] git repository [..]
+[ERROR] failed to load source for a dependency on `dep1`
+
+Caused by:
+  Unable to update {}
+
+Caused by:
+  failed to update submodule `src`
+
+To learn more, run the command again with --verbose.\n", path2url(git_project.root()));
+
+    assert_that(project.cargo_process("build"),
+                execs().with_stderr(expected).with_status(101));
+}
+
+#[test]
 fn two_deps_only_update_one() {
     let project = project("foo");
     let git1 = git::new("dep1", |project| {
