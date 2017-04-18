@@ -643,14 +643,6 @@ fn activation_error(cx: &Context,
     // Note that we re-query the registry with a new dependency that
     // allows any version so we can give some nicer error reporting
     // which indicates a few versions that were actually found.
-    let msg = format!("no matching package named `{}` found \
-                       (required by `{}`)\n\
-                       location searched: {}\n\
-                       version required: {}",
-                      dep.name(), parent.name(),
-                      dep.source_id(),
-                      dep.version_req());
-    let mut msg = msg;
     let all_req = semver::VersionReq::parse("*").unwrap();
     let new_dep = dep.clone_inner().set_version_req(all_req).into_dependency();
     let mut candidates = match registry.query(&new_dep) {
@@ -660,27 +652,50 @@ fn activation_error(cx: &Context,
     candidates.sort_by(|a, b| {
         b.version().cmp(a.version())
     });
-    if !candidates.is_empty() {
-        msg.push_str("\nversions found: ");
-        for (i, c) in candidates.iter().take(3).enumerate() {
-            if i != 0 { msg.push_str(", "); }
-            msg.push_str(&c.version().to_string());
-        }
-        if candidates.len() > 3 {
-            msg.push_str(", ...");
-        }
-    }
 
-    // If we have a path dependency with a locked version, then this may
-    // indicate that we updated a sub-package and forgot to run `cargo
-    // update`. In this case try to print a helpful error!
-    if dep.source_id().is_path() &&
-       dep.version_req().to_string().starts_with("=") &&
-       !candidates.is_empty() {
-        msg.push_str("\nconsider running `cargo update` to update \
-                      a path dependency's locked version");
+    let msg = if !candidates.is_empty() {
+        let versions = {
+            let mut versions = candidates.iter().take(3).map(|cand| {
+                cand.version().to_string()
+            }).collect::<Vec<_>>();
 
-    }
+            if candidates.len() > 3 {
+                versions.push("...".into());
+            }
+
+            versions.join(", ")
+        };
+
+        let mut msg = format!("no matching version `{}` found for package `{}` \
+                               (required by `{}`)\n\
+                               location searched: {}\n\
+                               versions found: {}",
+                              dep.version_req(),
+                              dep.name(),
+                              parent.name(),
+                              dep.source_id(),
+                              versions);
+
+        // If we have a path dependency with a locked version, then this may
+        // indicate that we updated a sub-package and forgot to run `cargo
+        // update`. In this case try to print a helpful error!
+        if dep.source_id().is_path()
+           && dep.version_req().to_string().starts_with("=") {
+            msg.push_str("\nconsider running `cargo update` to update \
+                          a path dependency's locked version");
+        }
+
+        msg
+    } else {
+        format!("no matching package named `{}` found \
+                 (required by `{}`)\n\
+                 location searched: {}\n\
+                 version required: {}",
+                dep.name(), parent.name(),
+                dep.source_id(),
+                dep.version_req())
+    };
+
     human(msg)
 }
 

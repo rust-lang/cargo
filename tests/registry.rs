@@ -134,9 +134,8 @@ fn wrong_version() {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
-[ERROR] no matching package named `foo` found (required by `foo`)
+[ERROR] no matching version `>= 1.0.0` found for package `foo` (required by `foo`)
 location searched: registry [..]
-version required: >= 1.0.0
 versions found: 0.0.2, 0.0.1
 "));
 
@@ -145,9 +144,8 @@ versions found: 0.0.2, 0.0.1
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
-[ERROR] no matching package named `foo` found (required by `foo`)
+[ERROR] no matching version `>= 1.0.0` found for package `foo` (required by `foo`)
 location searched: registry [..]
-version required: >= 1.0.0
 versions found: 0.0.4, 0.0.3, 0.0.2, ...
 "));
 }
@@ -399,9 +397,8 @@ fn relying_on_a_yank_is_bad() {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
-[ERROR] no matching package named `baz` found (required by `bar`)
+[ERROR] no matching version `= 0.0.2` found for package `baz` (required by `bar`)
 location searched: registry [..]
-version required: = 0.0.2
 versions found: 0.0.1
 "));
 }
