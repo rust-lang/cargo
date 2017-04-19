@@ -93,7 +93,8 @@ impl Config {
     }
 
     pub fn rustc(&self) -> CargoResult<&Rustc> {
-        self.rustc.get_or_try_init(|| Rustc::new(self.get_tool("rustc")?))
+        self.rustc.get_or_try_init(|| Rustc::new(self.get_tool("rustc")?,
+                                                 self.maybe_get_tool("rustc_wrapper")?))
     }
 
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
@@ -415,18 +416,27 @@ impl Config {
         }
     }
 
-    fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
+    /// Look for a path for `tool` in an environment variable or config path, but return `None`
+    /// if it's not present.
+    fn maybe_get_tool(&self, tool: &str) -> CargoResult<Option<PathBuf>> {
         let var = tool.chars().flat_map(|c| c.to_uppercase()).collect::<String>();
         if let Some(tool_path) = env::var_os(&var) {
-            return Ok(PathBuf::from(tool_path));
+            return Ok(Some(PathBuf::from(tool_path)));
         }
 
         let var = format!("build.{}", tool);
         if let Some(tool_path) = self.get_path(&var)? {
-            return Ok(tool_path.val);
+            return Ok(Some(tool_path.val));
         }
 
-        Ok(PathBuf::from(tool))
+        Ok(None)
+    }
+
+    /// Look for a path for `tool` in an environment variable or config path, defaulting to `tool`
+    /// as a path.
+    fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
+        self.maybe_get_tool(tool)
+            .map(|t| t.unwrap_or(PathBuf::from(tool)))
     }
 }
 
