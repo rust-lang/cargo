@@ -3142,3 +3142,48 @@ fn cdylib_not_lifted() {
                     existing_file());
     }
 }
+
+#[test]
+fn deterministic_cfg_flags() {
+    // This bug is non-deterministic
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            build = "build.rs"
+
+            [features]
+            default = ["f_a", "f_b", "f_c", "f_d"]
+            f_a = []
+            f_b = []
+            f_c = []
+            f_d = []
+        "#)
+        .file("build.rs", r#"
+                fn main() {
+                    println!("cargo:rustc-cfg=cfg_a");
+                    println!("cargo:rustc-cfg=cfg_b");
+                    println!("cargo:rustc-cfg=cfg_c");
+                    println!("cargo:rustc-cfg=cfg_d");
+                    println!("cargo:rustc-cfg=cfg_e");
+                }
+            "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                    .with_stderr("\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] [..]
+[RUNNING] [..]
+[RUNNING] `rustc --crate-name foo [..] \
+--cfg 'feature=\"default\"' --cfg 'feature=\"f_a\"' --cfg 'feature=\"f_b\"' \
+--cfg 'feature=\"f_c\"' --cfg 'feature=\"f_d\"' [..] \
+--cfg cfg_a --cfg cfg_b --cfg cfg_c --cfg cfg_d --cfg cfg_e`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"));
+}
