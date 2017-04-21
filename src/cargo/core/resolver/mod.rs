@@ -200,6 +200,12 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         Deps { edges: self.graph.edges(pkg), resolve: self }
     }
 
+    pub fn deps_sorted(&self, pkg: &PackageId) -> Vec<&PackageId> {
+        let mut deps = self.deps(pkg).collect::<Vec<_>>();
+        deps.sort();
+        deps
+    }
+
     pub fn deps_not_replaced(&self, pkg: &PackageId) -> DepsNotReplaced {
         DepsNotReplaced { edges: self.graph.edges(pkg) }
     }
