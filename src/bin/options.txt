@@ -1,0 +1,87 @@
+OPTIONS package
+    -p SPEC, --package SPEC ...    Package to build                      : Vec<String>
+    --all                          Build all packages in the workspace   : bool
+
+
+OPTIONS target
+    --lib             Build only this package's library           : bool
+    --bin NAME        Build only the specified binary             : Vec<String>
+    --example NAME    Build only the specified example            : Vec<String>
+    --test NAME       Build only the specified test target        : Vec<String>
+    --bench NAME      Build only the specified benchmark target   : Vec<String>
+
+
+OPTIONS feature
+    --features FEATURES      Space-separated list of features to also build   : Vec<String>
+    --all-features           Build all available features                     : bool
+    --no-default-features    Do not build the `default` feature               : bool
+
+
+OPTIONS shell
+    -v, --verbose ...       Use verbose output (-vv very verbose/build.rs output)   : u32
+    -q, --quiet             No output printed to stdout                             : Option<bool>
+    --color WHEN            Coloring: auto, always, never                           : Option<String>
+    --message-format FMT    Error format: human, json [default: human]              : MessageFormat
+
+
+OPTIONS lock
+    --frozen    Require Cargo.lock and cache are up to date    : bool
+    --locked    Require Cargo.lock is up to date               : bool
+
+
+OPTIONS jobs
+    -j N, --jobs N    Number of parallel jobs, defaults to # of CPUs   : Option<u32>
+
+
+OPTIONS manifest
+    --manifest-path PATH     Path to the manifest of the package to publish : Option<String>
+
+
+COMMAND build
+
+Compile a local package and all of its dependencies
+
+Usage:
+    cargo build [options]
+
+Options:
+    {package}
+    {jobs}
+    {target}
+    --release          Build artifacts in release mode, with optimizations    : bool
+    {feature}
+    --target TRIPLE    Build for the target triple                            : Option<String>
+    {manifest}
+    {shell}
+    {lock}
+
+If the --package argument is given, then SPEC is a package id specification
+which indicates which package should be built. If it is not given, then the
+current package is built. For more information on SPEC and its format, see the
+`cargo help pkgid` command.
+
+All packages in the workspace are built if the `--all` flag is supplied. The
+`--all` flag may be supplied in the presence of a virtual manifest.
+
+Compilation can be configured via the use of profiles which are configured in
+the manifest. The default profile for this command is `dev`, but passing
+the --release flag will use the `release` profile instead.
+
+
+COMMAND publish
+
+Upload a package to the registry
+
+Usage:
+    cargo publish [options]
+
+Options:
+    --host HOST      Host to upload the package to                     : Option<String>
+    --token TOKEN    Token to use when uploading                       : Option<String>
+    --no-verify      Don't verify package tarball before publish       : bool
+    --allow-dirty    Allow publishing with a dirty source directory    : bool
+    {manifest}
+    {jobs}
+    --dry-run        Perform all checks without uploading              : bool
+    {shell}
+    {lock}

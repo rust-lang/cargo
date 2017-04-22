@@ -20,6 +20,8 @@ use cargo::core::shell::{Verbosity, ColorConfig};
 use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
 use cargo::util::CliError;
 
+pub mod options;
+
 #[derive(RustcDecodable)]
 pub struct Flags {
     flag_list: bool,
