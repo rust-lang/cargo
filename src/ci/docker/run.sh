@@ -43,8 +43,6 @@ exec docker run \
   --volume "$HOME/.cargo:/cargo" \
   --volume `rustc --print sysroot`:/rust:ro \
   --volume `pwd`/target:/tmp/target \
-  --interactive \
-  --tty \
   rust-ci \
   sh -c "\
     PATH=\$PATH:/rust/bin \
