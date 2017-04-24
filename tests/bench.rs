@@ -54,6 +54,88 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 }
 
 #[test]
+fn bench_bench_implicit() {
+    if !is_nightly() { return }
+
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            #[bench] fn run1(_ben: &mut test::Bencher) { }
+            fn main() { println!("Hello main!"); }"#)
+        .file("tests/other.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            #[bench] fn run3(_ben: &mut test::Bencher) { }"#)
+        .file("benches/mybench.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            #[bench] fn run2(_ben: &mut test::Bencher) { }"#);
+
+    assert_that(prj.cargo_process("bench").arg("--benches"),
+        execs().with_status(0)
+               .with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] release [optimized] target(s) in [..]
+[RUNNING] target[/]release[/]deps[/]mybench-[..][EXE]
+", dir = prj.url()))
+               .with_stdout("
+running 1 test
+test run2 ... bench: [..] 0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+
+"));
+}
+
+#[test]
+fn bench_bin_implicit() {
+    if !is_nightly() { return }
+
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            #[bench] fn run1(_ben: &mut test::Bencher) { }
+            fn main() { println!("Hello main!"); }"#)
+        .file("tests/other.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            #[bench] fn run3(_ben: &mut test::Bencher) { }"#)
+        .file("benches/mybench.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            #[bench] fn run2(_ben: &mut test::Bencher) { }"#);
+
+    assert_that(prj.cargo_process("bench").arg("--bins"),
+        execs().with_status(0)
+               .with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] release [optimized] target(s) in [..]
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
+", dir = prj.url()))
+               .with_stdout("
+running 1 test
+test run1 ... bench: [..] 0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+
+"));
+}
+
+#[test]
 fn bench_tarname() {
     if !is_nightly() { return }
 

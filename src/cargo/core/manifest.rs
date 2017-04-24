@@ -454,6 +454,14 @@ impl Target {
         }
     }
 
+    pub fn is_bin_example(&self) -> bool {
+        // Needed for --all-examples in contexts where only runnable examples make sense
+        match self.kind {
+            TargetKind::ExampleBin => true,
+            _ => false
+        }
+    }
+
     pub fn is_test(&self) -> bool { self.kind == TargetKind::Test }
     pub fn is_bench(&self) -> bool { self.kind == TargetKind::Bench }
     pub fn is_custom_build(&self) -> bool { self.kind == TargetKind::CustomBuild }

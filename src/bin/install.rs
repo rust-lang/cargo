@@ -10,7 +10,9 @@ pub struct Options {
     flag_no_default_features: bool,
     flag_debug: bool,
     flag_bin: Vec<String>,
+    flag_bins: bool,
     flag_example: Vec<String>,
+    flag_examples: bool,
     flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
@@ -54,8 +56,10 @@ Build and install options:
     --all-features            Build all available features
     --no-default-features     Do not build the `default` feature
     --debug                   Build in debug mode instead of release mode
-    --bin NAME                Only install the binary NAME
-    --example EXAMPLE         Install the example EXAMPLE instead of binaries
+    --bin NAME                Install only the specified binary
+    --bins                    Install all binaries
+    --example NAME            Install only the specified example
+    --examples                Install all examples
     --root DIR                Directory to install packages into
     -v, --verbose ...         Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet               Less output printed to stdout
@@ -111,8 +115,11 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         spec: ops::Packages::Packages(&[]),
         mode: ops::CompileMode::Build,
         release: !options.flag_debug,
-        filter: ops::CompileFilter::new(false, &options.flag_bin, &[],
-                                        &options.flag_example, &[]),
+        filter: ops::CompileFilter::new(false,
+                                        &options.flag_bin, options.flag_bins,
+                                        &[], false,
+                                        &options.flag_example, options.flag_examples,
+                                        &[], false),
         message_format: ops::MessageFormat::Human,
         target_rustc_args: None,
         target_rustdoc_args: None,

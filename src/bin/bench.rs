@@ -19,9 +19,13 @@ pub struct Options {
     flag_message_format: MessageFormat,
     flag_lib: bool,
     flag_bin: Vec<String>,
+    flag_bins: bool,
     flag_example: Vec<String>,
+    flag_examples: bool,
     flag_test: Vec<String>,
+    flag_tests: bool,
     flag_bench: Vec<String>,
+    flag_benches: bool,
     flag_frozen: bool,
     flag_locked: bool,
     arg_args: Vec<String>,
@@ -37,9 +41,13 @@ Options:
     -h, --help                   Print this message
     --lib                        Benchmark only this package's library
     --bin NAME                   Benchmark only the specified binary
+    --bins                       Benchmark all binaries
     --example NAME               Benchmark only the specified example
+    --examples                   Benchmark all examples
     --test NAME                  Benchmark only the specified test target
+    --tests                      Benchmark all tests
     --bench NAME                 Benchmark only the specified bench target
+    --benches                    Benchmark all benches
     --no-run                     Compile, but don't run benchmarks
     -p SPEC, --package SPEC ...  Package to run benchmarks for
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
@@ -92,10 +100,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             release: true,
             mode: ops::CompileMode::Bench,
             filter: ops::CompileFilter::new(options.flag_lib,
-                                            &options.flag_bin,
-                                            &options.flag_test,
-                                            &options.flag_example,
-                                            &options.flag_bench),
+                                            &options.flag_bin, options.flag_bins,
+                                            &options.flag_test, options.flag_tests,
+                                            &options.flag_example, options.flag_examples,
+                                            &options.flag_bench, options.flag_benches,),
             message_format: options.flag_message_format,
             target_rustdoc_args: None,
             target_rustc_args: None,

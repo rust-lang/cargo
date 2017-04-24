@@ -358,7 +358,7 @@ fn check_overwrites(dst: &Path,
                     filter: &ops::CompileFilter,
                     prev: &CrateListingV1,
                     force: bool) -> CargoResult<BTreeMap<String, Option<PackageId>>> {
-    if let CompileFilter::Everything { .. } = *filter {
+    if !filter.is_specific() {
         // If explicit --bin or --example flags were passed then those'll
         // get checked during cargo_compile, we only care about the "build
         // everything" case here
@@ -388,7 +388,8 @@ fn find_duplicates(dst: &Path,
                    pkg: &Package,
                    filter: &ops::CompileFilter,
                    prev: &CrateListingV1) -> BTreeMap<String, Option<PackageId>> {
-    let check = |name| {
+    let check = |name: String| {
+        // Need to provide type, works around Rust Issue #93349
         let name = format!("{}{}", name, env::consts::EXE_SUFFIX);
         if fs::metadata(dst.join(&name)).is_err() {
             None
@@ -402,13 +403,24 @@ fn find_duplicates(dst: &Path,
         CompileFilter::Everything { .. } => {
             pkg.targets().iter()
                          .filter(|t| t.is_bin())
-                         .filter_map(|t| check(t.name()))
+                         .filter_map(|t| check(t.name().to_string()))
                          .collect()
         }
         CompileFilter::Only { bins, examples, .. } => {
-            bins.iter().chain(examples)
-                       .filter_map(|t| check(t))
-                       .collect()
+            let all_bins: Vec<String> = bins.try_collect().unwrap_or_else(|| {
+                pkg.targets().iter().filter(|t| t.is_bin())
+                                    .map(|t| t.name().to_string())
+                                    .collect()
+            });
+            let all_examples: Vec<String> = examples.try_collect().unwrap_or_else(|| {
+                pkg.targets().iter().filter(|t| t.is_bin_example())
+                                    .map(|t| t.name().to_string())
+                                    .collect()
+            });
+
+            all_bins.iter().chain(all_examples.iter())
+                           .filter_map(|t| check(t.clone()))
+                           .collect::<BTreeMap<String, Option<PackageId>>>()
         }
     }
 }

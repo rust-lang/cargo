@@ -32,6 +32,32 @@ hello
 }
 
 #[test]
+#[ignore]
+fn simple_implicit_main() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() { println!("hello world"); }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("--bins"),
+                execs().with_status(0)
+                       .with_stderr(&format!("\
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target[/]debug[/]foo[EXE]`", dir = path2url(p.root())))
+                       .with_stdout("\
+hello
+"));
+    assert_that(&p.bin("foo"), existing_file());
+}
+
+#[test]
 fn simple_quiet() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -185,6 +211,24 @@ fn no_main_file() {
 }
 
 #[test]
+#[ignore]
+fn no_main_file_implicit() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("run").arg("--bins"),
+                execs().with_status(101)
+                       .with_stderr("[ERROR] a bin target must be available \
+                                     for `cargo run`\n"));
+}
+
+#[test]
 fn too_many_bins() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -198,6 +242,27 @@ fn too_many_bins() {
         .file("src/bin/b.rs", "");
 
     assert_that(p.cargo_process("run"),
+                execs().with_status(101)
+                       .with_stderr("[ERROR] `cargo run` requires that a project only \
+                                     have one executable; use the `--bin` option \
+                                     to specify which one to run\n"));
+}
+
+#[test]
+#[ignore]
+fn too_many_bins_implicit() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/a.rs", "")
+        .file("src/bin/b.rs", "");
+
+    assert_that(p.cargo_process("run").arg("--bins"),
                 execs().with_status(101)
                        .with_stderr("[ERROR] `cargo run` requires that a project only \
                                      have one executable; use the `--bin` option \
@@ -265,6 +330,64 @@ fn run_example() {
         "#);
 
     assert_that(p.cargo_process("run").arg("--example").arg("a"),
+                execs().with_status(0)
+                       .with_stderr(&format!("\
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target[/]debug[/]examples[/]a[EXE]`", dir = path2url(p.root())))
+                       .with_stdout("\
+example
+"));
+}
+
+#[test]
+#[ignore]
+fn run_bin_implicit() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("examples/a.rs", r#"
+            fn main() { println!("example"); }
+        "#)
+        .file("src/bin/a.rs", r#"
+            fn main() { println!("bin"); }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("--bins"),
+                execs().with_status(0)
+                       .with_stderr(&format!("\
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `target[/]debug[/]examples[/]a[EXE]`", dir = path2url(p.root())))
+                       .with_stdout("\
+bin
+"));
+}
+
+#[test]
+#[ignore]
+fn run_example_implicit() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("examples/a.rs", r#"
+            fn main() { println!("example"); }
+        "#)
+        .file("src/bin/a.rs", r#"
+            fn main() { println!("bin"); }
+        "#);
+
+    assert_that(p.cargo_process("run").arg("--examples"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
