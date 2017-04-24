@@ -23,7 +23,7 @@ mod imp {
 
         pub fn finish(&mut self) -> [u8; 32] {
             let mut ret = [0u8; 32];
-            let data = self.0.finish().unwrap();
+            let data = self.0.finish2().unwrap();
             ret.copy_from_slice(&data[..]);
             ret
         }
