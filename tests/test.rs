@@ -521,6 +521,28 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 }
 
 #[test]
+fn external_test_named_test() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[test]]
+            name = "test"
+        "#)
+        .file("src/lib.rs", "")
+        .file("tests/test.rs", r#"
+            #[test]
+            fn foo() { }
+        "#);
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0))
+}
+
+#[test]
 fn external_test_implicit() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -2849,5 +2871,5 @@ test test_z ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 "));
-    
+
 }
