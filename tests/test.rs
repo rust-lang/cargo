@@ -1288,6 +1288,41 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 }
 
 #[test]
+fn test_run_implicit_bin_target() {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="mybin"
+            path="src/mybin.rs"
+        "#)
+        .file("src/mybin.rs", "#[test] fn test_in_bin() { }
+               fn main() { panic!(\"Don't execute me!\"); }")
+        .file("tests/mytest.rs", "#[test] fn test_in_test() { }")
+        .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
+        .file("examples/myexm.rs", "#[test] fn test_in_exm() { }
+               fn main() { panic!(\"Don't execute me!\"); }");
+
+    assert_that(prj.cargo_process("test").arg("--bins"),
+                execs().with_status(0)
+                       .with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]debug[/]deps[/]mybin-[..][EXE]", dir = prj.url()))
+                       .with_stdout("
+running 1 test
+test test_in_bin ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+"));
+}
+
+#[test]
 fn test_run_specific_test_target() {
     let prj = project("foo")
         .file("Cargo.toml" , r#"
@@ -1314,6 +1349,103 @@ test test_b ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
 "));
+}
+
+#[test]
+fn test_run_implicit_test_target() {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="mybin"
+            path="src/mybin.rs"
+        "#)
+        .file("src/mybin.rs", "#[test] fn test_in_bin() { }
+               fn main() { panic!(\"Don't execute me!\"); }")
+        .file("tests/mytest.rs", "#[test] fn test_in_test() { }")
+        .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
+        .file("examples/myexm.rs", "#[test] fn test_in_exm() { }
+               fn main() { panic!(\"Don't execute me!\"); }");
+
+    assert_that(prj.cargo_process("test").arg("--tests"),
+                execs().with_status(0)
+                       .with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]debug[/]deps[/]mytest-[..][EXE]", dir = prj.url()))
+                       .with_stdout("
+running 1 test
+test test_in_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+"));
+}
+
+#[test]
+fn test_run_implicit_bench_target() {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="mybin"
+            path="src/mybin.rs"
+        "#)
+        .file("src/mybin.rs", "#[test] fn test_in_bin() { }
+               fn main() { panic!(\"Don't execute me!\"); }")
+        .file("tests/mytest.rs", "#[test] fn test_in_test() { }")
+        .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
+        .file("examples/myexm.rs", "#[test] fn test_in_exm() { }
+               fn main() { panic!(\"Don't execute me!\"); }");
+
+    assert_that(prj.cargo_process("test").arg("--benches"),
+                execs().with_status(0)
+                       .with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]debug[/]deps[/]mybench-[..][EXE]", dir = prj.url()))
+                       .with_stdout("
+running 1 test
+test test_in_bench ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+"));
+}
+
+#[test]
+fn test_run_implicit_example_target() {
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [[bin]]
+            name="mybin"
+            path="src/mybin.rs"
+        "#)
+        .file("src/mybin.rs", "#[test] fn test_in_bin() { }
+               fn main() { panic!(\"Don't execute me!\"); }")
+        .file("tests/mytest.rs", "#[test] fn test_in_test() { }")
+        .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
+        .file("examples/myexm.rs", "#[test] fn test_in_exm() { }
+               fn main() { panic!(\"Don't execute me!\"); }");
+
+    assert_that(prj.cargo_process("test").arg("--examples"),
+                execs().with_status(0)
+                       .with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]", dir = prj.url())));
 }
 
 #[test]
