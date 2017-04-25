@@ -369,7 +369,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
             let src = dst.with_file_name(dst.file_name().unwrap()
                                             .to_str().unwrap()
                                             .replace(&real_name, &crate_name));
-            if src.exists() {
+            if src.exists() && src.file_name() != dst.file_name() {
                 fs::rename(&src, &dst).chain_error(|| {
                     internal(format!("could not rename crate {:?}", src))
                 })?;
