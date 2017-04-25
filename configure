@@ -310,6 +310,7 @@ valopt local-rust-root "" "set prefix for local rust binary"
 if [ ! -z "${CFG_LOCAL_RUST_ROOT}" ]; then
     export LD_LIBRARY_PATH="${CFG_LOCAL_RUST_ROOT}/lib:$LD_LIBRARY_PATH"
     export DYLD_LIBRARY_PATH="${CFG_LOCAL_RUST_ROOT}/lib:$DYLD_LIBRARY_PATH"
+    export LIBRARY_PATH="${CFG_LOCAL_RUST_ROOT}/lib:$LIBRARY_PATH"
     export PATH="${CFG_LOCAL_RUST_ROOT}/bin:$PATH"
 fi
 
