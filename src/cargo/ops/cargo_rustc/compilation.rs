@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use semver::Version;
 
 use core::{PackageId, Package, Target, TargetKind};
-use util::{self, CargoResult, Config, ProcessBuilder, process, join_paths};
+use util::{self, CargoResult, Config, LazyCell, ProcessBuilder, process, join_paths};
 
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
@@ -53,6 +53,8 @@ pub struct Compilation<'cfg> {
     pub target: String,
 
     config: &'cfg Config,
+
+    target_runner: LazyCell<Option<PathBuf>>,
 }
 
 impl<'cfg> Compilation<'cfg> {
@@ -72,6 +74,7 @@ impl<'cfg> Compilation<'cfg> {
             cfgs: HashMap::new(),
             config: config,
             target: String::new(),
+            target_runner: LazyCell::new(),
         }
     }
 
@@ -91,10 +94,24 @@ impl<'cfg> Compilation<'cfg> {
         self.fill_env(process(cmd), pkg, true)
     }
 
+    fn target_runner(&self) -> CargoResult<&Option<PathBuf>> {
+        self.target_runner.get_or_try_init(|| {
+            let key = format!("target.{}.runner", self.target);
+            Ok(self.config.get_path(&key)?.map(|v| v.val))
+        })
+    }
+
     /// See `process`.
     pub fn target_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
                                            -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(cmd), pkg, false)
+        let builder = if let &Some(ref runner) = self.target_runner()? {
+            let mut builder = process(runner);
+            builder.arg(cmd);
+            builder
+        } else {
+            process(cmd)
+        };
+        self.fill_env(builder, pkg, false)
     }
 
     /// Prepares a new process with an appropriate environment to run against
