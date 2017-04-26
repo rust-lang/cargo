@@ -1367,19 +1367,11 @@ fn normalize(package_root: &Path,
                                    .join(&format!("{}.rs", ex.name())));
 
     test_targets(&mut ret, tests, &mut |test| {
-        if test.name() == "test" {
-            Path::new("src").join("test.rs")
-        } else {
-            Path::new("tests").join(&format!("{}.rs", test.name()))
-        }
+        Path::new("tests").join(&format!("{}.rs", test.name()))
     });
 
     bench_targets(&mut ret, benches, &mut |bench| {
-        if bench.name() == "bench" {
-            Path::new("src").join("bench.rs")
-        } else {
-            Path::new("benches").join(&format!("{}.rs", bench.name()))
-        }
+        Path::new("benches").join(&format!("{}.rs", bench.name()))
     });
 
     ret
