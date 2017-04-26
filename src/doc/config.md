@@ -66,6 +66,11 @@ vcs = "none"
 linker = ".."
 # Same but for the library archiver which is passed to rustc via `-C ar=`.
 ar = ".."
+# If a runner is provided, compiled targets for the `$triple` will be executed
+# by invoking the specified runner executable with actual target as first argument.
+# This applies to `cargo run`, `cargo test` and `cargo bench` commands.
+# By default compiled targets are executed directly.
+runner = ".."
 # custom flags to pass to all compiler invocations that target $triple
 # this value overrides build.rustflags when both are present
 rustflags = ["..", ".."]
