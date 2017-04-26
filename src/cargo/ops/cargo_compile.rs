@@ -662,8 +662,11 @@ fn scrape_target_config(config: &Config, triple: &str)
         None => return Ok(ret),
     };
     for (lib_name, value) in table {
-        if lib_name == "ar" || lib_name == "linker" || lib_name == "rustflags" {
-            continue
+        match lib_name.as_str() {
+            "ar" | "linker" | "runner" | "rustflags" => {
+                continue
+            },
+            _ => {}
         }
 
         let mut output = BuildOutput {
