@@ -471,3 +471,36 @@ required then it is recommended that [replace] is used with a forked copy of \
 the source
 "));
 }
+
+#[test]
+fn only_dot_files_ok() {
+    setup();
+
+    VendorPackage::new("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .build();
+    VendorPackage::new("bar")
+        .file(".foo", "")
+        .build();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+}
