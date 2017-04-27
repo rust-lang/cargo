@@ -196,13 +196,13 @@ pub enum TomlDependency {
     Detailed(DetailedTomlDependency)
 }
 
-impl de::Deserialize for TomlDependency {
+impl<'de> de::Deserialize<'de> for TomlDependency {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer
+        where D: de::Deserializer<'de>
     {
         struct TomlDependencyVisitor;
 
-        impl de::Visitor for TomlDependencyVisitor {
+        impl<'de> de::Visitor<'de> for TomlDependencyVisitor {
             type Value = TomlDependency;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -217,14 +217,14 @@ impl de::Deserialize for TomlDependency {
             }
 
             fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
-                where V: de::MapVisitor
+                where V: de::MapAccess<'de>
             {
-                let mvd = de::value::MapVisitorDeserializer::new(map);
+                let mvd = de::value::MapAccessDeserializer::new(map);
                 DetailedTomlDependency::deserialize(mvd).map(TomlDependency::Detailed)
             }
         }
 
-        deserializer.deserialize(TomlDependencyVisitor)
+        deserializer.deserialize_any(TomlDependencyVisitor)
     }
 }
 
@@ -282,13 +282,13 @@ pub struct TomlProfiles {
 #[derive(Clone)]
 pub struct TomlOptLevel(String);
 
-impl de::Deserialize for TomlOptLevel {
+impl<'de> de::Deserialize<'de> for TomlOptLevel {
     fn deserialize<D>(d: D) -> Result<TomlOptLevel, D::Error>
-        where D: de::Deserializer
+        where D: de::Deserializer<'de>
     {
         struct Visitor;
 
-        impl de::Visitor for Visitor {
+        impl<'de> de::Visitor<'de> for Visitor {
             type Value = TomlOptLevel;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -323,13 +323,13 @@ pub enum U32OrBool {
     Bool(bool),
 }
 
-impl de::Deserialize for U32OrBool {
+impl<'de> de::Deserialize<'de> for U32OrBool {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer
+        where D: de::Deserializer<'de>
     {
         struct Visitor;
 
-        impl de::Visitor for Visitor {
+        impl<'de> de::Visitor<'de> for Visitor {
             type Value = U32OrBool;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -355,7 +355,7 @@ impl de::Deserialize for U32OrBool {
             }
         }
 
-        deserializer.deserialize(Visitor)
+        deserializer.deserialize_any(Visitor)
     }
 }
 
@@ -381,13 +381,13 @@ pub enum StringOrBool {
     Bool(bool),
 }
 
-impl de::Deserialize for StringOrBool {
+impl<'de> de::Deserialize<'de> for StringOrBool {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer
+        where D: de::Deserializer<'de>
     {
         struct Visitor;
 
-        impl de::Visitor for Visitor {
+        impl<'de> de::Visitor<'de> for Visitor {
             type Value = StringOrBool;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -407,7 +407,7 @@ impl de::Deserialize for StringOrBool {
             }
         }
 
-        deserializer.deserialize(Visitor)
+        deserializer.deserialize_any(Visitor)
     }
 }
 
@@ -446,13 +446,13 @@ pub struct TomlVersion {
     version: semver::Version,
 }
 
-impl de::Deserialize for TomlVersion {
+impl<'de> de::Deserialize<'de> for TomlVersion {
     fn deserialize<D>(d: D) -> Result<TomlVersion, D::Error>
-        where D: de::Deserializer
+        where D: de::Deserializer<'de>
     {
         struct Visitor;
 
-        impl de::Visitor for Visitor {
+        impl<'de> de::Visitor<'de> for Visitor {
             type Value = TomlVersion;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -1100,9 +1100,9 @@ struct TomlTarget {
 #[derive(Clone)]
 struct PathValue(PathBuf);
 
-impl de::Deserialize for PathValue {
+impl<'de> de::Deserialize<'de> for PathValue {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer
+        where D: de::Deserializer<'de>
     {
         Ok(PathValue(String::deserialize(deserializer)?.into()))
     }

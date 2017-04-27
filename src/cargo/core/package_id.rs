@@ -36,9 +36,9 @@ impl ser::Serialize for PackageId {
     }
 }
 
-impl de::Deserialize for PackageId {
+impl<'de> de::Deserialize<'de> for PackageId {
     fn deserialize<D>(d: D) -> Result<PackageId, D::Error>
-        where D: de::Deserializer
+        where D: de::Deserializer<'de>
     {
         let string = String::deserialize(d)?;
         let mut s = string.splitn(3, ' ');
