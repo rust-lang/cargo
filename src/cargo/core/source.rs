@@ -355,9 +355,9 @@ impl ser::Serialize for SourceId {
     }
 }
 
-impl de::Deserialize for SourceId {
+impl<'de> de::Deserialize<'de> for SourceId {
     fn deserialize<D>(d: D) -> Result<SourceId, D::Error>
-        where D: de::Deserializer,
+        where D: de::Deserializer<'de>,
     {
         let string = String::deserialize(d)?;
         SourceId::from_url(&string).map_err(de::Error::custom)
