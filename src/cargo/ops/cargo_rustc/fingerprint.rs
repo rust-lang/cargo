@@ -150,8 +150,8 @@ fn serialize_deps<S>(deps: &Vec<(String, Arc<Fingerprint>)>, ser: S)
     }).collect::<Vec<_>>().serialize(ser)
 }
 
-fn deserialize_deps<D>(d: D) -> Result<Vec<(String, Arc<Fingerprint>)>, D::Error>
-    where D: de::Deserializer,
+fn deserialize_deps<'de, D>(d: D) -> Result<Vec<(String, Arc<Fingerprint>)>, D::Error>
+    where D: de::Deserializer<'de>,
 {
     let decoded = <Vec<(String, u64)>>::deserialize(d)?;
     Ok(decoded.into_iter().map(|(name, hash)| {
@@ -290,9 +290,9 @@ impl ser::Serialize for MtimeSlot {
     }
 }
 
-impl de::Deserialize for MtimeSlot {
+impl<'de> de::Deserialize<'de> for MtimeSlot {
     fn deserialize<D>(d: D) -> Result<MtimeSlot, D::Error>
-        where D: de::Deserializer,
+        where D: de::Deserializer<'de>,
     {
         let kind: Option<(u64, u32)> = de::Deserialize::deserialize(d)?;
         Ok(MtimeSlot(Mutex::new(kind.map(|(s, n)| {
