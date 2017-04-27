@@ -270,9 +270,9 @@ impl ser::Serialize for EncodablePackageId {
     }
 }
 
-impl de::Deserialize for EncodablePackageId {
+impl<'de> de::Deserialize<'de> for EncodablePackageId {
     fn deserialize<D>(d: D) -> Result<EncodablePackageId, D::Error>
-        where D: de::Deserializer,
+        where D: de::Deserializer<'de>,
     {
         String::deserialize(d).and_then(|string| {
             string.parse::<EncodablePackageId>()
