@@ -1,6 +1,6 @@
 [package]
 name = "cargo"
-version = "0.19.0"
+version = "0.20.0"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
            "Alex Crichton <alex@alexcrichton.com>"]
@@ -18,7 +18,7 @@ path = "src/cargo/lib.rs"
 
 [dependencies]
 chrono = "0.3.0"
-crates-io = { path = "src/crates-io", version = "0.8" }
+crates-io = { path = "src/crates-io", version = "0.9" }
 crossbeam = "0.2"
 curl = "0.4.6"
 docopt = "0.7"
