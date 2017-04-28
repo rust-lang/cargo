@@ -386,7 +386,7 @@ as:
 ```toml
 [workspace]
 
-# Optional key, inferred if not present
+# Must be specified if this workspace has any members
 members = ["path/to/member1", "path/to/member2"]
 
 # Optional key, empty if not present
