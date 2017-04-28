@@ -325,7 +325,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> C
     let err = match util::process(&command)
         .env(cargo::CARGO_ENV, cargo_exe)
         .args(&args[1..])
-        .exec() {
+        .exec_replace() {
         Ok(()) => return Ok(()),
         Err(e) => e,
     };
