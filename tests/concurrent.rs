@@ -385,16 +385,15 @@ fn killing_cargo_releases_the_lock() {
     let mut a = a.spawn().unwrap();
     l.accept().unwrap();
     a.kill().unwrap();
+    let a = a.wait().unwrap();
 
     // Spawn `b`, then just finish the output of a/b the same way the above
     // tests does.
     let b = b.spawn().unwrap();
-    let a = thread::spawn(move || a.wait_with_output().unwrap());
     let b = b.wait_with_output().unwrap();
-    let a = a.join().unwrap();
 
     // We killed `a`, so it shouldn't succeed, but `b` should have succeeded.
-    assert!(!a.status.success());
+    assert!(!a.success());
     assert_that(b, execs().with_status(0));
 }
 
