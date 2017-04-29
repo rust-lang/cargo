@@ -3,6 +3,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::slice;
 
+use glob::glob;
+
 use core::{Package, VirtualManifest, EitherManifest, SourceId};
 use core::{PackageIdSpec, Dependency, Profile, Profiles};
 use ops;
@@ -316,9 +318,16 @@ impl<'cfg> Workspace<'cfg> {
         };
 
         if let Some(list) = members {
+            let root = root_manifest.parent().unwrap();
+
+            let mut expanded_list = Vec::new();
             for path in list {
-                let root = root_manifest.parent().unwrap();
-                let manifest_path = root.join(path).join("Cargo.toml");
+                let expanded_paths = expand_member_path(&path, root)?;
+                expanded_list.extend(expanded_paths);
+            }
+
+            for path in expanded_list {
+                let manifest_path = path.join("Cargo.toml");
                 self.find_path_deps(&manifest_path, &root_manifest, false)?;
             }
         }
@@ -525,6 +534,19 @@ impl<'cfg> Workspace<'cfg> {
 
         Ok(())
     }
+}
+
+fn expand_member_path(member_path: &str, root_path: &Path) -> CargoResult<Vec<PathBuf>> {
+    let path = root_path.join(member_path);
+    let path = path.to_str().unwrap();
+    let res = glob(path).map_err(|e| {
+        human(format!("could not parse pattern `{}`: {}", &path, e))
+    })?;
+    res.map(|p| {
+        p.or_else(|e| {
+            Err(human(format!("unable to match path to pattern `{}`: {}", &path, e)))
+        })
+    }).collect()
 }
 
 fn is_excluded(members: &Option<Vec<String>>,
