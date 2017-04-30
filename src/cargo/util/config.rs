@@ -674,6 +674,10 @@ pub fn homedir(cwd: &Path) -> Option<PathBuf> {
         return cargo_home
     }
 
+    if cfg!(target_os = "haiku") {
+        return Some(PathBuf::from("/boot/home/config/settings/cargo"))
+    }
+
     // If `CARGO_HOME` wasn't defined then we want to fall back to
     // `$HOME/.cargo`. Note that currently, however, the implementation of
     // `env::home_dir()` uses the $HOME environment variable *on all platforms*.
