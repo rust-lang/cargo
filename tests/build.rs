@@ -3049,3 +3049,34 @@ fn rustc_wrapper() {
                     "[RUNNING] `/usr/bin/env rustc --crate-name foo [..]")
                 .with_status(0));
 }
+
+#[test]
+fn cdylib_not_lifted() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            authors = []
+            version = "0.1.0"
+
+            [lib]
+            crate-type = ["cdylib"]
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+
+    let files = if cfg!(windows) {
+        vec!["foo.dll.lib", "foo.dll.exp", "foo.dll"]
+    } else if cfg!(target_os = "macos") {
+        vec!["libfoo.dylib"]
+    } else {
+        vec!["libfoo.so"]
+    };
+
+    for file in files {
+        println!("checking: {}", file);
+        assert_that(&p.root().join("target/debug/deps").join(&file),
+                    existing_file());
+    }
+}
