@@ -7,6 +7,7 @@ use std::str;
 use cargo::util::process;
 use cargotest::is_nightly;
 use cargotest::support::paths::CargoPathExt;
+use cargotest::support::registry::Package;
 use cargotest::support::{project, execs, basic_bin_manifest, basic_lib_manifest};
 use hamcrest::{assert_that, existing_file};
 
@@ -1128,3 +1129,136 @@ test bench_bar ... bench:           0 ns/iter (+/- 0)
 test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 "));
 }
+
+#[test]
+fn bench_all_workspace() {
+    if !is_nightly() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [workspace]
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("benches/foo.rs", r#"
+            #![feature(test)]
+            extern crate test;
+
+            use test::Bencher;
+
+            #[bench]
+            fn bench_foo(_: &mut Bencher) -> () { () }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {}
+        "#)
+        .file("bar/benches/bar.rs", r#"
+            #![feature(test)]
+            extern crate test;
+
+            use test::Bencher;
+
+            #[bench]
+            fn bench_bar(_: &mut Bencher) -> () { () }
+        "#);
+
+    assert_that(p.cargo_process("bench")
+                 .arg("--all"),
+                execs().with_status(0)
+                       .with_stderr_contains("\
+[RUNNING] target[/]release[/]deps[/]bar-[..][EXE]")
+                       .with_stdout_contains("
+running 1 test
+test bench_bar ... bench:           0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+")
+                        .with_stderr_contains("\
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
+                       .with_stdout_contains("
+running 1 test
+test bench_foo ... bench:           0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+"));
+}
+
+#[test]
+fn bench_all_virtual_manifest() {
+    if !is_nightly() { return }
+
+    let p = project("workspace")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo", "bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("foo/src/lib.rs", r#"
+            pub fn foo() {}
+        "#)
+        .file("foo/benches/foo.rs", r#"
+            #![feature(test)]
+            extern crate test;
+
+            use test::Bencher;
+
+            #[bench]
+            fn bench_foo(_: &mut Bencher) -> () { () }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {}
+        "#)
+        .file("bar/benches/bar.rs", r#"
+            #![feature(test)]
+            extern crate test;
+
+            use test::Bencher;
+
+            #[bench]
+            fn bench_bar(_: &mut Bencher) -> () { () }
+        "#);
+
+    // The order in which foo and bar are built is not guaranteed
+    assert_that(p.cargo_process("bench")
+                 .arg("--all"),
+                execs().with_status(0)
+                       .with_stderr_contains("\
+[RUNNING] target[/]release[/]deps[/]bar-[..][EXE]")
+                       .with_stdout_contains("
+running 1 test
+test bench_bar ... bench:           0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+")
+                        .with_stderr_contains("\
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
+                       .with_stdout_contains("
+running 1 test
+test bench_foo ... bench:           0 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
+"));
+}
+
