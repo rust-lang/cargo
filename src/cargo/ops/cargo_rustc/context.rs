@@ -388,7 +388,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // just here for rustbuild. We need a more principled method
         // doing this eventually.
         if !unit.profile.test &&
-            unit.target.is_dylib() &&
+            (unit.target.is_dylib() || unit.target.is_cdylib()) &&
             unit.pkg.package_id().source_id().is_path() &&
             !env::var("__CARGO_DEFAULT_LIB_METADATA").is_ok() {
             return None;
@@ -940,7 +940,7 @@ fn env_args(config: &Config,
     let mut rustflags = Vec::new();
 
     let name = name.chars().flat_map(|c| c.to_lowercase()).collect::<String>();
-    // Then the target.*.rustflags value... 
+    // Then the target.*.rustflags value...
     let target = build_config.requested_target.as_ref().unwrap_or(&build_config.host_triple);
     let key = format!("target.{}.{}", target, name);
     if let Some(args) = config.get_list_or_split_string(&key)? {

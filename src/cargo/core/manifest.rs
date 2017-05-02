@@ -435,6 +435,19 @@ impl Target {
         }
     }
 
+    pub fn is_cdylib(&self) -> bool {
+        let libs = match self.kind {
+            TargetKind::Lib(ref libs) => libs,
+            _ => return false
+        };
+        libs.iter().any(|l| {
+            match *l {
+                LibKind::Other(ref s) => s == "cdylib",
+                _ => false,
+            }
+        })
+    }
+
     pub fn linkable(&self) -> bool {
         match self.kind {
             TargetKind::Lib(ref kinds) => {
