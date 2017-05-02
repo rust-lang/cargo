@@ -5,7 +5,6 @@ use std::collections::HashSet;
 use std::env;
 use std::fmt;
 use std::fs::{self, File};
-use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::mem;
 use std::path::{Path, PathBuf};
@@ -35,6 +34,10 @@ pub struct Config {
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
     locked: Cell<bool>,
+
+    // A temporary solution to point on an old configuration's usage.
+    // If it's true cargo will warn on it on publish.
+    token_in_main_config: Cell<bool>,
 }
 
 impl Config {
@@ -52,6 +55,7 @@ impl Config {
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
             locked: Cell::new(false),
+            token_in_main_config: Cell::new(false),
         }
     }
 
@@ -404,14 +408,19 @@ impl Config {
         !self.frozen.get() && !self.locked.get()
     }
 
+    pub fn is_token_in_main_config(&self) -> bool {
+        self.token_in_main_config.get()
+    }
+
     pub fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
 
-        walk_tree(&self.cwd, |mut file, path| {
+        walk_tree(&self.cwd, |path| {
             let mut contents = String::new();
+            let mut file = File::open(&path)?;
             file.read_to_string(&mut contents).chain_err(|| {
                 format!("failed to read configuration file `{}`",
-                         path.display())
+                              path.display())
             })?;
             let toml = cargo_toml::parse(&contents,
                                          &path,
@@ -429,11 +438,30 @@ impl Config {
             Ok(())
         }).chain_err(|| "Couldn't load Cargo configuration")?;
 
+        self.token_in_main_config.set(check_token_in_main_config("registry.token".into(), &cfg));
 
-        match cfg {
-            CV::Table(map, _) => Ok(map),
+        let mut map = match cfg {
+            CV::Table(map, _) => map,
             _ => unreachable!(),
+        };
+
+        let home_path = self.home_path.clone().into_path_unlocked();
+        let token = load_credentials(&home_path)?;
+        if let Some(t) = token {
+            if !t.is_empty() {
+                let mut registry = map.entry("registry".into())
+                                      .or_insert(CV::Table(HashMap::new(), PathBuf::from(".")));
+                match *registry {
+                    CV::Table(ref mut m, _) => {
+                        m.insert("token".into(),
+                                 CV::String(t, home_path.join("credentials")));
+                    }
+                    _ => unreachable!(),
+                }
+            }
         }
+
+        Ok(map)
     }
 
     /// Look for a path for `tool` in an environment variable or config path, but return `None`
@@ -651,21 +679,6 @@ impl ConfigValue {
                     wanted, self.desc(), key,
                     self.definition_path().display()).into())
     }
-
-    fn into_toml(self) -> toml::Value {
-        match self {
-            CV::Boolean(s, _) => toml::Value::Boolean(s),
-            CV::String(s, _) => toml::Value::String(s),
-            CV::Integer(i, _) => toml::Value::Integer(i),
-            CV::List(l, _) => toml::Value::Array(l
-                                          .into_iter()
-                                          .map(|(s, _)| toml::Value::String(s))
-                                          .collect()),
-            CV::Table(l, _) => toml::Value::Table(l.into_iter()
-                                          .map(|(k, v)| (k, v.into_toml()))
-                                          .collect()),
-        }
-    }
 }
 
 impl Definition {
@@ -737,17 +750,14 @@ pub fn homedir(cwd: &Path) -> Option<PathBuf> {
 }
 
 fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
-    where F: FnMut(File, &Path) -> CargoResult<()>
+    where F: FnMut(&Path) -> CargoResult<()>
 {
     let mut stash: HashSet<PathBuf> = HashSet::new();
 
     for current in paths::ancestors(pwd) {
         let possible = current.join(".cargo").join("config");
         if fs::metadata(&possible).is_ok() {
-            let file = File::open(&possible)?;
-
-            walk(file, &possible)?;
-
+            walk(&possible)?;
             stash.insert(possible);
         }
     }
@@ -761,40 +771,72 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     })?;
     let config = home.join("config");
     if !stash.contains(&config) && fs::metadata(&config).is_ok() {
-        let file = File::open(&config)?;
-        walk(file, &config)?;
+        walk(&config)?;
     }
 
     Ok(())
 }
 
-pub fn set_config(cfg: &Config,
-                  loc: Location,
-                  key: &str,
-                  value: ConfigValue) -> CargoResult<()> {
-    // TODO: There are a number of drawbacks here
-    //
-    // 1. Project is unimplemented
-    // 2. This blows away all comments in a file
-    // 3. This blows away the previous ordering of a file.
-    let mut file = match loc {
-        Location::Global => {
-            cfg.home_path.create_dir()?;
-            cfg.home_path.open_rw(Path::new("config"), cfg,
-                                       "the global config file")?
-        }
-        Location::Project => unimplemented!(),
+pub fn save_credentials(cfg: &Config,
+                       token: String) -> CargoResult<()> {
+    let mut file = {
+        cfg.home_path.create_dir()?;
+        cfg.home_path.open_rw(Path::new("credentials"), cfg,
+                                   "credentials' config file")?
     };
-    let mut contents = String::new();
-    let _ = file.read_to_string(&mut contents);
-    let mut toml = cargo_toml::parse(&contents, file.path(), cfg)?;
-    toml.as_table_mut()
-        .unwrap()
-        .insert(key.to_string(), value.into_toml());
 
-    let contents = toml.to_string();
-    file.seek(SeekFrom::Start(0))?;
-    file.write_all(contents.as_bytes())?;
-    file.file().set_len(contents.len() as u64)?;
-    Ok(())
+    file.write_all(token.as_bytes())?;
+    file.file().set_len(token.len() as u64)?;
+    set_permissions(file.file(), 0o600)?;
+
+    return Ok(());
+
+    #[cfg(unix)]
+    fn set_permissions(file: & File, mode: u32) -> CargoResult<()> {
+        use std::os::unix::fs::PermissionsExt;
+
+        let mut perms = file.metadata()?.permissions();
+        perms.set_mode(mode);
+        file.set_permissions(perms)?;
+        Ok(())
+    }
+
+    #[cfg(not(unix))]
+    #[allow(unused)]
+    fn set_permissions(file: & File, mode: u32) -> CargoResult<()> {
+        Ok(())
+    }
+}
+
+fn load_credentials(home: &PathBuf) -> CargoResult<Option<String>> {
+    let credentials = home.join("credentials");
+    if !fs::metadata(&credentials).is_ok() {
+        return Ok(None);
+    }
+
+    let mut token = String::new();
+    let mut file = File::open(&credentials)?;
+    file.read_to_string(&mut token).chain_err(|| {
+        format!("failed to read configuration file `{}`",
+                      credentials.display())
+    })?;
+
+    Ok(Some(token.trim().into()))
+}
+
+fn check_token_in_main_config(key: &str, cfg: &ConfigValue) -> bool {
+    let mut keys = key.split('.');
+    let k = keys.next().unwrap();
+    let keys: String = keys.map(String::from).collect();
+
+    match *cfg {
+        CV::Table(ref map, _) => {
+            match map.get(k) {
+                Some(ref v) => check_token_in_main_config(keys.as_str(), v),
+                None => return false,
+            }
+        }
+        CV::String(ref v, _) => !v.is_empty(),
+        _ => return false,
+    }
 }

@@ -57,7 +57,7 @@ fn simple() {
 
     assert_that(p.cargo_process("publish").arg("--no-verify")
                  .arg("--host").arg(registry().to_string()),
-                execs().with_status(0).with_stderr(&format!("\
+                execs().with_status(0).with_stderr_contains(&format!("\
 [UPDATING] registry `{reg}`
 [WARNING] manifest has no documentation, [..]
 See [..]
@@ -371,7 +371,7 @@ fn dry_run() {
 
     assert_that(p.cargo_process("publish").arg("--dry-run")
                  .arg("--host").arg(registry().to_string()),
-                execs().with_status(0).with_stderr(&format!("\
+                execs().with_status(0).with_stderr_contains(&format!("\
 [UPDATING] registry `[..]`
 [WARNING] manifest has no documentation, [..]
 See [..]
