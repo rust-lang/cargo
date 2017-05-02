@@ -90,7 +90,14 @@ fn plugin_to_the_max() {
 fn plugin_with_dynamic_native_dependency() {
     if !is_nightly() { return }
 
-    let build = project("builder")
+    let workspace = project("ws")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["builder", "foo"]
+        "#);
+    workspace.build();
+
+    let build = project("ws/builder")
         .file("Cargo.toml", r#"
             [package]
             name = "builder"
@@ -105,16 +112,9 @@ fn plugin_with_dynamic_native_dependency() {
             #[no_mangle]
             pub extern fn foo() {}
         "#);
-    assert_that(build.cargo_process("build"),
-                execs().with_status(0));
-    let src = build.root().join("target/debug");
-    let lib = fs::read_dir(&src).unwrap().map(|s| s.unwrap().path()).find(|lib| {
-        let lib = lib.file_name().unwrap().to_str().unwrap();
-        lib.starts_with(env::consts::DLL_PREFIX) &&
-            lib.ends_with(env::consts::DLL_SUFFIX)
-    }).unwrap();
+    build.build();
 
-    let foo = project("foo")
+    let foo = project("ws/foo")
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -165,8 +165,19 @@ fn plugin_with_dynamic_native_dependency() {
                 unsafe { foo() }
             }
         "#);
+    foo.build();
 
-    assert_that(foo.cargo_process("build").env("SRC", &lib).arg("-v"),
+    assert_that(build.cargo("build"),
+                execs().with_status(0));
+
+    let src = workspace.root().join("target/debug");
+    let lib = fs::read_dir(&src).unwrap().map(|s| s.unwrap().path()).find(|lib| {
+        let lib = lib.file_name().unwrap().to_str().unwrap();
+        lib.starts_with(env::consts::DLL_PREFIX) &&
+            lib.ends_with(env::consts::DLL_SUFFIX)
+    }).unwrap();
+
+    assert_that(foo.cargo("build").env("SRC", &lib).arg("-v"),
                 execs().with_status(0));
 }
 

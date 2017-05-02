@@ -1131,7 +1131,15 @@ fn test_dev_dep_build_script() {
 
 #[test]
 fn build_script_with_dynamic_native_dependency() {
-    let build = project("builder")
+
+    let workspace = project("ws")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["builder", "foo"]
+        "#);
+    workspace.build();
+
+    let build = project("ws/builder")
         .file("Cargo.toml", r#"
             [package]
             name = "builder"
@@ -1147,11 +1155,9 @@ fn build_script_with_dynamic_native_dependency() {
             #[no_mangle]
             pub extern fn foo() {}
         "#);
-    assert_that(build.cargo_process("build").arg("-v")
-                .env("RUST_LOG", "cargo::ops::cargo_rustc"),
-                execs().with_status(0));
+    build.build();
 
-    let foo = project("foo")
+    let foo = project("ws/foo")
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -1180,7 +1186,7 @@ fn build_script_with_dynamic_native_dependency() {
 
             fn main() {
                 let src = PathBuf::from(env::var("SRC").unwrap());
-                println!("cargo:rustc-link-search={}/target/debug/deps",
+                println!("cargo:rustc-link-search=native={}/target/debug/deps",
                          src.display());
             }
         "#)
@@ -1192,8 +1198,13 @@ fn build_script_with_dynamic_native_dependency() {
                 unsafe { foo() }
             }
         "#);
+    foo.build();
 
-    assert_that(foo.cargo_process("build").arg("-v").env("SRC", build.root())
+    assert_that(build.cargo("build").arg("-v")
+                .env("RUST_LOG", "cargo::ops::cargo_rustc"),
+                execs().with_status(0));
+
+    assert_that(foo.cargo("build").arg("-v").env("SRC", build.root())
                 .env("RUST_LOG", "cargo::ops::cargo_rustc"),
                 execs().with_status(0));
 }
