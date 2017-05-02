@@ -181,6 +181,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     fs::create_dir_all(&script_output)?;
     fs::create_dir_all(&build_output)?;
 
+    let root_output = cx.target_root().to_path_buf();
+
     // Prepare the unit of "dirty work" which will actually run the custom build
     // command.
     //
@@ -218,7 +220,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
             }
             if let Some(build_scripts) = build_scripts {
                 super::add_plugin_deps(&mut cmd, &build_state,
-                                            &build_scripts)?;
+                                            &build_scripts,
+                                            &root_output)?;
             }
         }
 
