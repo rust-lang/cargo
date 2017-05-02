@@ -1,5 +1,5 @@
 use cargo::core::Workspace;
-use cargo::ops::{self, MessageFormat};
+use cargo::ops::{self, MessageFormat, Packages};
 use cargo::util::{CliResult, CliError, Human, Config, human};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
@@ -29,6 +29,7 @@ pub struct Options {
     flag_frozen: bool,
     flag_locked: bool,
     arg_args: Vec<String>,
+    flag_all: bool,
 }
 
 pub const USAGE: &'static str = "
@@ -50,6 +51,7 @@ Options:
     --benches                    Benchmark all benches
     --no-run                     Compile, but don't run benchmarks
     -p SPEC, --package SPEC ...  Package to run benchmarks for
+    --all                        Benchmark all packages in the workspace
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --features FEATURES          Space-separated list of features to also build
     --all-features               Build all available features
@@ -72,6 +74,9 @@ which indicates which package should be benchmarked. If it is not given, then
 the current package is benchmarked. For more information on SPEC and its format,
 see the `cargo help pkgid` command.
 
+All packages in the workspace are benchmarked if the `--all` flag is supplied. The
+`--all` flag may be supplied in the presence of a virtual manifest.
+
 The --jobs argument affects the building of the benchmark executable but does
 not affect how many jobs are used when running the benchmarks.
 
@@ -80,6 +85,13 @@ Compilation can be customized with the `bench` profile in the manifest.
 
 pub fn execute(options: Options, config: &Config) -> CliResult {
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
+
+    let spec = if options.flag_all {
+        Packages::All
+    } else {
+        Packages::Packages(&options.flag_package)
+    };
+
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -96,7 +108,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             features: &options.flag_features,
             all_features: options.flag_all_features,
             no_default_features: options.flag_no_default_features,
-            spec: ops::Packages::Packages(&options.flag_package),
+            spec: spec,
             release: true,
             mode: ops::CompileMode::Bench,
             filter: ops::CompileFilter::new(options.flag_lib,
