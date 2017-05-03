@@ -394,7 +394,10 @@ impl Config {
 
         walk_tree(&self.cwd, |mut file, path| {
             let mut contents = String::new();
-            file.read_to_string(&mut contents)?;
+            file.read_to_string(&mut contents).chain_error(|| {
+                human(format!("failed to read configuration file `{}`",
+                              path.display()))
+            })?;
             let toml = cargo_toml::parse(&contents,
                                          &path,
                                          self).chain_error(|| {
@@ -405,7 +408,10 @@ impl Config {
                 human(format!("failed to load TOML configuration from `{}`",
                               path.display()))
             })?;
-            cfg.merge(value)?;
+            cfg.merge(value).chain_error(|| {
+                human(format!("failed to merge configuration at `{}`",
+                              path.display()))
+            })?;
             Ok(())
         }).chain_error(|| human("Couldn't load Cargo configuration"))?;
 
