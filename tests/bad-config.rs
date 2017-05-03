@@ -121,6 +121,9 @@ Caused by:
   Couldn't load Cargo configuration
 
 Caused by:
+  failed to merge configuration at `[..]`
+
+Caused by:
   failed to merge key `foo` between files:
   file 1: [..]foo[..]foo[..]config
   file 2: [..]foo[..]config
