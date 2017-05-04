@@ -356,6 +356,10 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
     fn supports_checksums(&self) -> bool {
         true
     }
+
+    fn requires_precise(&self) -> bool {
+        false
+    }
 }
 
 impl<'cfg> Source for RegistrySource<'cfg> {

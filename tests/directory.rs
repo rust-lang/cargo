@@ -11,9 +11,10 @@ use std::io::prelude::*;
 use std::str;
 
 use cargotest::cargo_process;
-use cargotest::support::{project, execs, ProjectBuilder};
+use cargotest::support::git;
 use cargotest::support::paths;
 use cargotest::support::registry::{Package, cksum};
+use cargotest::support::{project, execs, ProjectBuilder};
 use hamcrest::assert_that;
 
 fn setup() {
@@ -35,7 +36,7 @@ struct VendorPackage {
 
 #[derive(Serialize)]
 struct Checksum {
-    package: String,
+    package: Option<String>,
     files: HashMap<String, String>,
 }
 
@@ -44,7 +45,7 @@ impl VendorPackage {
         VendorPackage {
             p: Some(project(&format!("index/{}", name))),
             cksum: Checksum {
-                package: String::new(),
+                package: Some(String::new()),
                 files: HashMap::new(),
             },
         }
@@ -53,6 +54,11 @@ impl VendorPackage {
     fn file(&mut self, name: &str, contents: &str) -> &mut VendorPackage {
         self.p = Some(self.p.take().unwrap().file(name, contents));
         self.cksum.files.insert(name.to_string(), cksum(contents.as_bytes()));
+        self
+    }
+
+    fn disable_checksum(&mut self) -> &mut VendorPackage {
+        self.cksum.package = None;
         self
     }
 
@@ -373,7 +379,7 @@ fn crates_io_then_directory() {
         authors = []
     "#);
     v.file("src/lib.rs", "pub fn foo() -> u32 { 1 }");
-    v.cksum.package = cksum;
+    v.cksum.package = Some(cksum);
     v.build();
 
     assert_that(p.cargo("build"),
@@ -503,4 +509,125 @@ fn only_dot_files_ok() {
     p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
+}
+
+#[test]
+fn git_lock_file_doesnt_change() {
+
+    let git = git::new("git", |p| {
+        p.file("Cargo.toml", r#"
+            [project]
+            name = "git"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+    }).unwrap();
+
+    VendorPackage::new("git")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "git"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .disable_checksum()
+        .build();
+
+    let p = project("bar")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            git = {{ git = '{0}' }}
+        "#, git.url()))
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+
+    let mut lock1 = String::new();
+    t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lock1));
+
+    let root = paths::root();
+    t!(fs::create_dir(&root.join(".cargo")));
+    t!(t!(File::create(root.join(".cargo/config"))).write_all(&format!(r#"
+        [source.my-git-repo]
+        git = '{}'
+        replace-with = 'my-awesome-local-registry'
+
+        [source.my-awesome-local-registry]
+        directory = 'index'
+    "#, git.url()).as_bytes()));
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                       .with_stderr("\
+[COMPILING] [..]
+[COMPILING] [..]
+[FINISHED] [..]
+"));
+
+    let mut lock2 = String::new();
+    t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lock2));
+    assert!(lock1 == lock2, "lock files changed");
+}
+
+#[test]
+fn git_override_requires_lockfile() {
+    VendorPackage::new("git")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "git"
+            version = "0.5.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .disable_checksum()
+        .build();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            git = { git = 'https://example.com/' }
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    let root = paths::root();
+    t!(fs::create_dir(&root.join(".cargo")));
+    t!(t!(File::create(root.join(".cargo/config"))).write_all(br#"
+        [source.my-git-repo]
+        git = 'https://example.com/'
+        replace-with = 'my-awesome-local-registry'
+
+        [source.my-awesome-local-registry]
+        directory = 'index'
+    "#));
+
+    assert_that(p.cargo("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+error: failed to load source for a dependency on `git`
+
+Caused by:
+  Unable to update [..]
+
+Caused by:
+  the source my-git-repo requires a lock file to be present first before it can be
+used against vendored source code
+
+remove the source replacement configuration, generate a lock file, and then
+restore the source replacement configuration to continue the build
+
+"));
 }

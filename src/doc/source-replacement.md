@@ -68,6 +68,12 @@ replace-with = "another-source"
 registry = "https://example.com/path/to/index"
 local-registry = "path/to/registry"
 directory = "path/to/vendor"
+
+# Git sources can optionally specify a branch/tag/rev as well
+git = "https://example.com/path/to/repo"
+# branch = "master"
+# tag = "v1.0.1"
+# rev = "313f44e8"
 ```
 
 The `crates-io` represents the crates.io online registry (default source of
