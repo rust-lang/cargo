@@ -15,6 +15,7 @@ use core::{Summary, Manifest, Target, Dependency, DependencyInner, PackageId};
 use core::{EitherManifest, VirtualManifest};
 use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata};
+use ops::is_bad_artifact_name;
 use sources::CRATES_IO;
 use util::{self, CargoResult, human, ToUrl, ToSemver, ChainError, Config};
 
@@ -613,10 +614,8 @@ impl TomlManifest {
             None => inferred_bin_targets(&project.name, layout)
         };
 
-        let blacklist = vec!["build", "deps", "examples", "native"];
-
         for bin in bins.iter() {
-            if blacklist.iter().find(|&x| *x == bin.name()) != None {
+            if is_bad_artifact_name(&bin.name()) {
                 bail!("the binary target name `{}` is forbidden",
                       bin.name())
             }
