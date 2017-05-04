@@ -7,7 +7,6 @@ use std::str;
 use cargo::util::process;
 use cargotest::is_nightly;
 use cargotest::support::paths::CargoPathExt;
-use cargotest::support::registry::Package;
 use cargotest::support::{project, execs, basic_bin_manifest, basic_lib_manifest};
 use hamcrest::{assert_that, existing_file};
 

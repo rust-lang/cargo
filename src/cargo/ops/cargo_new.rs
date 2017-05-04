@@ -10,6 +10,7 @@ use git2::Config as GitConfig;
 use term::color::BLACK;
 
 use core::Workspace;
+use ops::is_bad_artifact_name;
 use util::{GitRepo, HgRepo, PijulRepo, CargoResult, human, ChainError, internal};
 use util::{Config, paths};
 
@@ -115,7 +116,7 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoR
     }
 }
 
-fn check_name(name: &str) -> CargoResult<()> {
+fn check_name(name: &str, is_bin: bool) -> CargoResult<()> {
 
     // Ban keywords + test list found at
     // https://doc.rust-lang.org/grammar.html#keywords
@@ -130,7 +131,7 @@ fn check_name(name: &str) -> CargoResult<()> {
         "super", "test", "trait", "true", "type", "typeof",
         "unsafe", "unsized", "use", "virtual", "where",
         "while", "yield"];
-    if blacklist.contains(&name) {
+    if blacklist.contains(&name) || (is_bin && is_bad_artifact_name(name)) {
         bail!("The name `{}` cannot be used as a crate name\n\
                use --name to override crate name",
                name)
@@ -274,7 +275,7 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     }
 
     let name = get_name(&path, &opts, config)?;
-    check_name(name)?;
+    check_name(name, opts.bin)?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
@@ -303,7 +304,7 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
     }
 
     let name = get_name(&path, &opts, config)?;
-    check_name(name)?;
+    check_name(name, opts.bin)?;
 
     let mut src_paths_types = vec![];
 

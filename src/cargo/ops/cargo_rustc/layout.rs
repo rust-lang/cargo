@@ -67,6 +67,13 @@ pub struct Layout {
     _lock: FileLock,
 }
 
+pub fn is_bad_artifact_name(name: &str) -> bool {
+    ["deps", "examples", "build", "native", "incremental"]
+        .iter()
+        .find(|&&reserved| reserved == name)
+        .is_some()
+}
+
 impl Layout {
     pub fn new(ws: &Workspace,
                triple: Option<&str>,
