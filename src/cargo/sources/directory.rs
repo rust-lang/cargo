@@ -23,7 +23,7 @@ pub struct DirectorySource<'cfg> {
 
 #[derive(Deserialize)]
 struct Checksum {
-    package: String,
+    package: Option<String>,
     files: HashMap<String, String>,
 }
 
@@ -58,6 +58,10 @@ impl<'cfg> Registry for DirectorySource<'cfg> {
     }
 
     fn supports_checksums(&self) -> bool {
+        true
+    }
+
+    fn requires_precise(&self) -> bool {
         true
     }
 }
@@ -133,8 +137,11 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             })?;
 
             let mut manifest = pkg.manifest().clone();
-            let summary = manifest.summary().clone();
-            manifest.set_summary(summary.set_checksum(cksum.package.clone()));
+            let mut summary = manifest.summary().clone();
+            if let Some(ref package) = cksum.package {
+                summary = summary.set_checksum(package.clone());
+            }
+            manifest.set_summary(summary);
             let pkg = Package::new(manifest, pkg.manifest_path());
             self.packages.insert(pkg.package_id().clone(), (pkg, cksum));
         }

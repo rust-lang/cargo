@@ -28,6 +28,8 @@ fn resolve(pkg: PackageId, deps: Vec<Dependency>, registry: &[Summary])
             }
             Ok(())
         }
+        fn supports_checksums(&self) -> bool { false }
+        fn requires_precise(&self) -> bool { false }
     }
     let mut registry = MyRegistry(registry);
     let summary = Summary::new(pkg.clone(), deps, HashMap::new()).unwrap();
