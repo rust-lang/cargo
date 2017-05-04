@@ -135,6 +135,15 @@ use --name to override crate name"));
 }
 
 #[test]
+fn reserved_binary_name() {
+    assert_that(cargo_process("new").arg("--bin").arg("incremental"),
+                execs().with_status(101)
+                       .with_stderr("\
+[ERROR] The name `incremental` cannot be used as a crate name\n\
+use --name to override crate name"));
+}
+
+#[test]
 fn keyword_name() {
     assert_that(cargo_process("new").arg("pub"),
                 execs().with_status(101)
