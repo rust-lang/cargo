@@ -1053,3 +1053,79 @@ fn platform_specific_variables_reflected_in_build_scripts() {
     assert_that(p.cargo("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(0));
 }
+
+#[test]
+fn cross_test_dylib() {
+    if disabled() { return }
+
+    let target = alternate();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "foo"
+            crate_type = ["dylib"]
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate bar as the_bar;
+
+            pub fn bar() { the_bar::baz(); }
+
+            #[test]
+            fn foo() { bar(); }
+        "#)
+        .file("tests/test.rs", r#"
+            extern crate foo as the_foo;
+
+            #[test]
+            fn foo() { the_foo::bar(); }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            name = "bar"
+            crate_type = ["dylib"]
+        "#)
+        .file("bar/src/lib.rs", &format!(r#"
+             use std::env;
+             pub fn baz() {{
+                assert_eq!(env::consts::ARCH, "{}");
+            }}
+        "#, alternate_arch()));
+
+    assert_that(p.cargo_process("test").arg("--target").arg(&target),
+                execs().with_status(0)
+                       .with_stderr(&format!("\
+[COMPILING] bar v0.0.1 ({dir}/bar)
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]{arch}[/]debug[/]deps[/]foo-[..][EXE]
+[RUNNING] target[/]{arch}[/]debug[/]deps[/]test-[..][EXE]",
+                        dir = p.url(), arch = alternate()))
+                       .with_stdout("
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+"));
+
+}

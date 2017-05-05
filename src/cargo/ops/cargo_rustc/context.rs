@@ -243,6 +243,24 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None
         };
 
+        if let Some(ref sysroot) = self.config.rustc()?.sysroot {
+            let mut rustlib = sysroot.clone();
+            if kind == Kind::Host {
+                if cfg!(windows) {
+                    rustlib.push("bin");
+                } else {
+                    rustlib.push("lib");
+                }
+                self.compilation.host_dylib_path = Some(rustlib);
+            } else {
+                rustlib.push("lib");
+                rustlib.push("rustlib");
+                rustlib.push(self.target_triple());
+                rustlib.push("lib");
+                self.compilation.target_dylib_path = Some(rustlib);
+            }
+        };
+
         let info = match kind {
             Kind::Target => &mut self.target_info,
             Kind::Host => &mut self.host_info,
