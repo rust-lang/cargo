@@ -121,7 +121,16 @@ fn read_nested_packages(path: &Path,
 
     let manifest_path = find_project_manifest_exact(path, "Cargo.toml")?;
 
-    let (manifest, nested) = read_manifest(&manifest_path, source_id, config)?;
+    let result = read_manifest(&manifest_path, source_id, config);
+
+    // Ignore malformed manifests
+    if result.is_err() {
+        info!("skipping malformed package found at `{}`",
+              path.to_string_lossy());
+        return Ok(());
+    }
+
+    let (manifest, nested) = result.unwrap();
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => return Ok(()),
