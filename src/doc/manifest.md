@@ -41,6 +41,15 @@ building native code. More information can be found in the build script
 build = "build.rs"
 ```
 
+## The `documentation` field (optional)
+
+This field specifies a URL to a website hosting the crate's documentation.
+If no URL is specified in the manifest file, [crates.io][cratesio] will
+automatically link your crate to the corresponding [docs.rs][docsrs] page.
+
+[docsrs]: https://docs.rs/
+[cratesio]: https://crates.io/
+
 ## The `exclude` and `include` fields (optional)
 
 You can explicitly specify to Cargo that a set of [globs][globs] should be
