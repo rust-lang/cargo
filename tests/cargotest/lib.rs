@@ -18,11 +18,12 @@ extern crate url;
 #[cfg(windows)] extern crate kernel32;
 #[cfg(windows)] extern crate winapi;
 
-use cargo::util::Rustc;
 use std::ffi::OsStr;
 use std::time::Duration;
-use std::path::PathBuf;
-use std::env;
+use std::path::{Path, PathBuf};
+
+use cargo::util::Rustc;
+use cargo::util::paths;
 
 pub mod support;
 pub mod install;
@@ -69,31 +70,21 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
 
     // We'll need dynamic libraries at some point in this test suite, so ensure
     // that the rustc libdir is somewhere in LD_LIBRARY_PATH as appropriate.
-    // Note that this isn't needed on Windows as we assume the bindir (with
-    // dlls) is in PATH.
-    if cfg!(unix) {
-        let var = if cfg!(target_os = "macos") {
-            "DYLD_LIBRARY_PATH"
-        } else {
-            "LD_LIBRARY_PATH"
-        };
-        let rustc = RUSTC.with(|r| r.path.clone());
-        let path = env::var_os("PATH").unwrap_or(Default::default());
-        let rustc = env::split_paths(&path)
-                        .map(|p| p.join(&rustc))
-                        .find(|p| p.exists())
-                        .unwrap();
-        let mut libdir = rustc.clone();
-        libdir.pop();
-        libdir.pop();
-        libdir.push("lib");
-        let prev = env::var_os(&var).unwrap_or(Default::default());
-        let mut paths = env::split_paths(&prev).collect::<Vec<_>>();
-        println!("libdir: {:?}", libdir);
-        if !paths.contains(&libdir) {
-            paths.push(libdir);
-            p.env(var, env::join_paths(&paths).unwrap());
-        }
+    let mut rustc = RUSTC.with(|r| r.process());
+    let output = rustc.arg("--print").arg("sysroot").exec_with_output().unwrap();
+    let libdir = String::from_utf8(output.stdout).unwrap();
+    let libdir = Path::new(libdir.trim());
+    let libdir = if cfg!(windows) {
+        libdir.join("bin")
+    } else {
+        libdir.join("lib")
+    };
+    let mut paths = paths::dylib_path();
+    println!("libdir: {:?}", libdir);
+    if !paths.contains(&libdir) {
+        paths.push(libdir);
+        p.env(paths::dylib_path_envvar(),
+              paths::join_paths(&paths, paths::dylib_path_envvar()).unwrap());
     }
     return p
 }
