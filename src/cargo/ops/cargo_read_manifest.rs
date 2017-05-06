@@ -121,16 +121,22 @@ fn read_nested_packages(path: &Path,
 
     let manifest_path = find_project_manifest_exact(path, "Cargo.toml")?;
 
-    let result = read_manifest(&manifest_path, source_id, config);
+    let (manifest, nested) = match read_manifest(&manifest_path, source_id, config) {
+        Err(_) => {
+            // Ignore malformed manifests found on git repositories
+            //
+            // git source try to find and read all manifests from the repository
+            // but since it's not possible to exclude folders from this search
+            // it's safer to ignore malformed manifests to avoid
+            //
+            // TODO: Add a way to exclude folders?
+            info!("skipping malformed package found at `{}`",
+                  path.to_string_lossy());
+            return Ok(());
+        }
+        Ok(tuple) => tuple
+    };
 
-    // Ignore malformed manifests
-    if result.is_err() {
-        info!("skipping malformed package found at `{}`",
-              path.to_string_lossy());
-        return Ok(());
-    }
-
-    let (manifest, nested) = result.unwrap();
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => return Ok(()),
