@@ -1442,3 +1442,27 @@ fn glob_syntax() {
     assert_that(&p.root().join("crates/baz/Cargo.lock"), is_not(existing_file()));
     assert_that(&p.root().join("crates/qux/Cargo.lock"), existing_file());
 }
+
+#[test]
+fn glob_syntax_non_cargo_folder() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["crates/*"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("crates/bar/src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("bar"), is_not(existing_file()));
+
+    assert_that(&p.root().join("Cargo.lock"), existing_file());
+}
+
