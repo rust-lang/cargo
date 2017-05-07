@@ -83,6 +83,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Err(_) => false,
         };
 
+        // -Z can only be used on nightly builds; other builds complain loudly.
+        // Since incremental builds only work on nightly anyway, we silently
+        // ignore CARGO_INCREMENTAL on anything but nightly. This allows users
+        // to always have CARGO_INCREMENTAL set without getting unexpected
+        // errors on stable/beta builds.
+        let incremental_enabled = incremental_enabled
+            && config.rustc()?.verbose_version.contains("nightly");
+
         Ok(Context {
             ws: ws,
             host: host_layout,
