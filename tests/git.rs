@@ -291,6 +291,61 @@ fn cargo_compile_with_nested_paths() {
 }
 
 #[test]
+fn cargo_compile_with_malformed_nested_paths() {
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [project]
+
+                name = "dep1"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+
+                [lib]
+
+                name = "dep1"
+            "#)
+            .file("src/dep1.rs", r#"
+                pub fn hello() -> &'static str {
+                    "hello world"
+                }
+            "#)
+            .file("vendor/dep2/Cargo.toml", r#"
+                !INVALID!
+            "#)
+    }).unwrap();
+
+    let p = project("parent")
+        .file("Cargo.toml", &format!(r#"
+            [project]
+
+            name = "parent"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.dep1]
+
+            version = "0.5.0"
+            git = '{}'
+
+            [[bin]]
+
+            name = "parent"
+        "#, git_project.url()))
+        .file("src/parent.rs",
+              &main_file(r#""{}", dep1::hello()"#, &["dep1"]));
+
+    p.cargo_process("build")
+        .exec_with_output()
+        .unwrap();
+
+    assert_that(&p.bin("parent"), existing_file());
+
+    assert_that(process(&p.bin("parent")),
+                execs().with_stdout("hello world\n"));
+}
+
+#[test]
 fn cargo_compile_with_meta_package() {
     let git_project = git::new("meta-dep", |project| {
         project
