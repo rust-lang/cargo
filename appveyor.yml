@@ -28,11 +28,7 @@ install:
   - if defined MINGW_URL 7z x -y %MINGW_ARCHIVE% > nul
   - if defined MINGW_URL set PATH=%CD%\%MINGW_DIR%\bin;C:\msys64\usr\bin;%PATH%
 
-  # FIXME(#3394) use master rustup
-  # for the purposes of testing this PR, use rustup 1.2.0 because there is possibly a 
-  # change https://github.com/rust-lang-nursery/rustup.rs/pull/1093 about to land
-  # nightly rustup that will also fix some of the failing windows tests.
-  - curl -sSfO https://static.rust-lang.org/rustup/archive/1.2.0/x86_64-pc-windows-msvc/rustup-init.exe
+  - appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
   - rustup-init.exe -y --default-host x86_64-pc-windows-msvc --default-toolchain nightly-2017-03-03
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
   - if NOT "%TARGET%" == "x86_64-pc-windows-msvc" rustup target add %TARGET%
