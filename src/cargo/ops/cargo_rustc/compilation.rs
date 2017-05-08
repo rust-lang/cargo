@@ -100,32 +100,9 @@ impl<'cfg> Compilation<'cfg> {
         let mut search_path = if is_host {
             vec![self.plugins_dylib_path.clone()]
         } else {
-            let mut search_path = vec![];
-
-            // Add -L arguments, after stripping off prefixes like "native="
-            // or "framework=" and filtering out directories *not* inside our
-            // output directory, since they are likely spurious and can cause
-            // clashes with system shared libraries (issue #3366).
-            for dir in self.native_dirs.iter() {
-                let dir = match dir.to_str() {
-                    Some(s) => {
-                        let mut parts = s.splitn(2, '=');
-                        match (parts.next(), parts.next()) {
-                            (Some("native"), Some(path)) |
-                            (Some("crate"), Some(path)) |
-                            (Some("dependency"), Some(path)) |
-                            (Some("framework"), Some(path)) |
-                            (Some("all"), Some(path)) => path.into(),
-                            _ => dir.clone(),
-                        }
-                    }
-                    None => dir.clone(),
-                };
-
-                if dir.starts_with(&self.root_output) {
-                    search_path.push(dir);
-                }
-            }
+            let mut search_path =
+                super::filter_dynamic_search_path(self.native_dirs.iter(),
+                                                  &self.root_output);
             search_path.push(self.root_output.clone());
             search_path.push(self.deps_output.clone());
             search_path

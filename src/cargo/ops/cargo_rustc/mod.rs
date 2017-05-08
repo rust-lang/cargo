@@ -297,6 +297,8 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
     exec.init(cx);
     let exec = exec.clone();
 
+    let root_output = cx.target_root().to_path_buf();
+
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
@@ -307,7 +309,8 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
             let build_state = build_state.outputs.lock().unwrap();
             add_native_deps(&mut rustc, &build_state, &build_deps,
                                  pass_l_flag, &current_id)?;
-            add_plugin_deps(&mut rustc, &build_state, &build_deps)?;
+            add_plugin_deps(&mut rustc, &build_state, &build_deps,
+                                 &root_output)?;
         }
 
         // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
@@ -492,7 +495,8 @@ fn load_build_deps(cx: &Context, unit: &Unit) -> Option<Arc<BuildScripts>> {
 // execute.
 fn add_plugin_deps(rustc: &mut ProcessBuilder,
                    build_state: &BuildMap,
-                   build_scripts: &BuildScripts)
+                   build_scripts: &BuildScripts,
+                   root_output: &PathBuf)
                    -> CargoResult<()> {
     let var = util::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or(OsString::new());
@@ -502,13 +506,45 @@ fn add_plugin_deps(rustc: &mut ProcessBuilder,
         let output = build_state.get(&key).chain_error(|| {
             internal(format!("couldn't find libs for plugin dep {}", id))
         })?;
-        for path in output.library_paths.iter() {
-            search_path.push(path.clone());
-        }
+        search_path.append(&mut filter_dynamic_search_path(output.library_paths.iter(),
+                                                           root_output));
     }
     let search_path = join_paths(&search_path, var)?;
     rustc.env(var, &search_path);
     Ok(())
+}
+
+// Determine paths to add to the dynamic search path from -L entries
+//
+// Strip off prefixes like "native=" or "framework=" and filter out directories
+// *not* inside our output directory since they are likely spurious and can cause
+// clashes with system shared libraries (issue #3366).
+fn filter_dynamic_search_path<'a, I>(paths :I, root_output: &PathBuf) -> Vec<PathBuf>
+        where I: Iterator<Item=&'a PathBuf> {
+    let mut search_path = vec![];
+    for dir in paths {
+        let dir = match dir.to_str() {
+            Some(s) => {
+                let mut parts = s.splitn(2, '=');
+                match (parts.next(), parts.next()) {
+                    (Some("native"), Some(path)) |
+                    (Some("crate"), Some(path)) |
+                    (Some("dependency"), Some(path)) |
+                    (Some("framework"), Some(path)) |
+                    (Some("all"), Some(path)) => path.into(),
+                    _ => dir.clone(),
+                }
+            }
+            None => dir.clone(),
+        };
+        if dir.starts_with(&root_output) {
+            search_path.push(dir);
+        } else {
+            debug!("Not including path {} in runtime library search path because it is \
+                    outside target root {}", dir.display(), root_output.display());
+        }
+    }
+    search_path
 }
 
 fn prepare_rustc(cx: &mut Context,

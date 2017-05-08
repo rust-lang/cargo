@@ -336,6 +336,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.host.deps()
     }
 
+    /// Return the root of the build output tree
+    pub fn target_root(&self) -> &Path {
+        self.host.dest()
+    }
+
     /// Returns the appropriate output directory for the specified package and
     /// target.
     pub fn out_dir(&mut self, unit: &Unit) -> PathBuf {
