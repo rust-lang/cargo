@@ -7,7 +7,6 @@ pub struct Rustc {
     pub wrapper: Option<PathBuf>,
     pub verbose_version: String,
     pub host: String,
-    pub sysroot: Option<PathBuf>,
 }
 
 impl Rustc {
@@ -36,20 +35,11 @@ impl Rustc {
             triple.to_string()
         };
 
-        let sysroot = {
-            let mut cmd = util::process(&path);
-            cmd.arg("--print=sysroot");      
-            cmd.exec_with_output().ok()
-                .and_then(|output| String::from_utf8(output.stdout).ok() )
-                .map(|s| PathBuf::from(s.trim()))
-        };
-
         Ok(Rustc {
             path: path,
             wrapper: wrapper,
             verbose_version: verbose_version,
             host: host,
-            sysroot: sysroot
         })
     }
 
