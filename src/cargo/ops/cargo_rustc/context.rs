@@ -206,11 +206,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         let mut with_cfg = process.clone();
+        with_cfg.arg("--print=sysroot");
         with_cfg.arg("--print=cfg");
 
-        let mut has_cfg = true;
+        let mut has_cfg_and_sysroot = true;
         let output = with_cfg.exec_with_output().or_else(|_| {
-            has_cfg = false;
+            has_cfg_and_sysroot = false;
             process.exec_with_output()
         }).chain_error(|| {
             human(format!("failed to run `rustc` to learn about \
@@ -247,7 +248,30 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             map.insert(crate_type.to_string(), Some((prefix.to_string(), suffix.to_string())));
         }
 
-        let cfg = if has_cfg {
+        if has_cfg_and_sysroot {
+            let line = match lines.next() {
+                Some(line) => line,
+                None => bail!("output of --print=sysroot missing when learning about \
+                               target-specific information from rustc"),
+            };
+            let mut rustlib = PathBuf::from(line);
+            if kind == Kind::Host {
+                if cfg!(windows) {
+                    rustlib.push("bin");
+                } else {
+                    rustlib.push("lib");
+                }
+                self.compilation.host_dylib_path = Some(rustlib);
+            } else {
+                rustlib.push("lib");
+                rustlib.push("rustlib");
+                rustlib.push(self.target_triple());
+                rustlib.push("lib");
+                self.compilation.target_dylib_path = Some(rustlib);
+            }
+        }
+
+        let cfg = if has_cfg_and_sysroot {
             Some(try!(lines.map(Cfg::from_str).collect()))
         } else {
             None

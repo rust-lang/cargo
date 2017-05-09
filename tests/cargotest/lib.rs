@@ -20,10 +20,9 @@ extern crate url;
 
 use std::ffi::OsStr;
 use std::time::Duration;
-use std::path::{Path, PathBuf};
 
 use cargo::util::Rustc;
-use cargo::util::paths;
+use std::path::PathBuf;
 
 pub mod support;
 pub mod install;
@@ -67,25 +66,6 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env_remove("GIT_COMMITTER_EMAIL")
      .env_remove("CARGO_TARGET_DIR")     // we assume 'target'
      .env_remove("MSYSTEM");             // assume cmd.exe everywhere on windows
-
-    // We'll need dynamic libraries at some point in this test suite, so ensure
-    // that the rustc libdir is somewhere in LD_LIBRARY_PATH as appropriate.
-    let mut rustc = RUSTC.with(|r| r.process());
-    let output = rustc.arg("--print").arg("sysroot").exec_with_output().unwrap();
-    let libdir = String::from_utf8(output.stdout).unwrap();
-    let libdir = Path::new(libdir.trim());
-    let libdir = if cfg!(windows) {
-        libdir.join("bin")
-    } else {
-        libdir.join("lib")
-    };
-    let mut paths = paths::dylib_path();
-    println!("libdir: {:?}", libdir);
-    if !paths.contains(&libdir) {
-        paths.push(libdir);
-        p.env(paths::dylib_path_envvar(),
-              paths::join_paths(&paths, paths::dylib_path_envvar()).unwrap());
-    }
     return p
 }
 
