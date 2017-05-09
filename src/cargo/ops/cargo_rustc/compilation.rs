@@ -35,6 +35,12 @@ pub struct Compilation<'cfg> {
     /// which have dynamic dependencies.
     pub plugins_dylib_path: PathBuf,
 
+    /// The path to rustc's own libstd
+    pub host_dylib_path: Option<PathBuf>,
+
+    /// The path to libstd for the target
+    pub target_dylib_path: Option<PathBuf>,
+
     /// Extra environment variables that were passed to compilations and should
     /// be passed to future invocations of programs.
     pub extra_env: HashMap<PackageId, Vec<(String, String)>>,
@@ -57,6 +63,8 @@ impl<'cfg> Compilation<'cfg> {
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
             plugins_dylib_path: PathBuf::from("/"),
+            host_dylib_path: None,
+            target_dylib_path: None,
             tests: Vec::new(),
             binaries: Vec::new(),
             extra_env: HashMap::new(),
@@ -98,13 +106,16 @@ impl<'cfg> Compilation<'cfg> {
                 -> CargoResult<ProcessBuilder> {
 
         let mut search_path = if is_host {
-            vec![self.plugins_dylib_path.clone()]
+            let mut search_path = vec![self.plugins_dylib_path.clone()];
+            search_path.push(self.host_dylib_path.iter().collect());
+            search_path
         } else {
             let mut search_path =
                 super::filter_dynamic_search_path(self.native_dirs.iter(),
                                                   &self.root_output);
             search_path.push(self.root_output.clone());
             search_path.push(self.deps_output.clone());
+            search_path.push(self.target_dylib_path.iter().collect());
             search_path
         };
 
