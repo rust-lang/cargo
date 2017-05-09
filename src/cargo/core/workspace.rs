@@ -322,8 +322,16 @@ impl<'cfg> Workspace<'cfg> {
 
             let mut expanded_list = Vec::new();
             for path in list {
-                let expanded_paths = expand_member_path(&path, root)?;
-                expanded_list.extend(expanded_paths);
+                let pathbuf = root.join(path);
+                let expanded_paths = expand_member_path(&pathbuf)?;
+
+                // If glob does not find any valid paths, then put the original
+                // path in the expanded list to maintain backwards compatibility.
+                if expanded_paths.is_empty() {
+                    expanded_list.push(pathbuf);
+                } else {
+                    expanded_list.extend(expanded_paths);
+                }
             }
 
             for path in expanded_list {
@@ -536,8 +544,7 @@ impl<'cfg> Workspace<'cfg> {
     }
 }
 
-fn expand_member_path(member_path: &str, root_path: &Path) -> CargoResult<Vec<PathBuf>> {
-    let path = root_path.join(member_path);
+fn expand_member_path(path: &Path) -> CargoResult<Vec<PathBuf>> {
     let path = path.to_str().unwrap();
     let res = glob(path).map_err(|e| {
         human(format!("could not parse pattern `{}`: {}", &path, e))
