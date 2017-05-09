@@ -88,8 +88,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // ignore CARGO_INCREMENTAL on anything but nightly. This allows users
         // to always have CARGO_INCREMENTAL set without getting unexpected
         // errors on stable/beta builds.
-        let incremental_enabled = incremental_enabled
-            && config.rustc()?.verbose_version.contains("nightly");
+        let is_nightly =
+            config.rustc()?.verbose_version.contains("-nightly") ||
+            config.rustc()?.verbose_version.contains("-dev");
+        let incremental_enabled = incremental_enabled && is_nightly;
 
         Ok(Context {
             ws: ws,
