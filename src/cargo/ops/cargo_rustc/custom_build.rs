@@ -431,7 +431,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
     return Ok(());
 
     // Recursive function to build up the map we're constructing. This function
-    // memoizes all of its return values as it goes along.
+    // memorizes all of its return values as it goes along.
     fn build<'a, 'b, 'cfg>(out: &'a mut HashMap<Unit<'b>, BuildScripts>,
                            cx: &Context<'b, 'cfg>,
                            unit: &Unit<'b>)
