@@ -1444,7 +1444,7 @@ fn glob_syntax() {
 }
 
 #[test]
-fn glob_syntax_non_cargo_folder() {
+fn glob_syntax_invalid_members() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -1459,10 +1459,13 @@ fn glob_syntax_non_cargo_folder() {
         .file("crates/bar/src/main.rs", "fn main() {}");
     p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), is_not(existing_file()));
+    assert_that(p.cargo("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+error: failed to read `[..]Cargo.toml`
 
-    assert_that(&p.root().join("Cargo.lock"), existing_file());
+Caused by:
+  [..]
+"));
 }
 
