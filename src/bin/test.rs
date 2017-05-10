@@ -1,3 +1,5 @@
+use std::env;
+
 use cargo::core::Workspace;
 use cargo::ops::{self, MessageFormat, Packages};
 use cargo::util::{CliResult, CliError, Config, CargoErrorKind};
@@ -109,6 +111,9 @@ To get the list of all options available for the test binaries use this:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult {
+    debug!("executing; cmd=cargo-test; args={:?}",
+           env::args().collect::<Vec<_>>());
+
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -116,6 +121,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_locked)?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
+    let ws = Workspace::new(&root, config)?;
 
     let empty = Vec::new();
     let (mode, filter);
@@ -132,9 +138,13 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                          &options.flag_bench, options.flag_benches);
     }
 
-    let spec = Packages::from_flags(options.flag_all,
-                                    &options.flag_exclude,
-                                    &options.flag_package)?;
+    let spec = if options.flag_all || ws.is_virtual() {
+        Packages::All
+    } else {
+    	Packages::from_flags(options.flag_all,
+                            &options.flag_exclude,
+                            &options.flag_package)?
+    };
 
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
@@ -157,7 +167,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         },
     };
 
-    let ws = Workspace::new(&root, config)?;
     let err = ops::run_tests(&ws, &ops, &options.arg_args)?;
     match err {
         None => Ok(()),
