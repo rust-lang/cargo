@@ -101,10 +101,6 @@ fn json_from_subcommand(subcommand: &str) -> Result<String, ProgramError> {
 
     let content = try!(String::from_utf8(output.stderr));
 
-    if !output.status.success() {
-        return Err(ProgramError::SubcommandError(format!("cargo {}", subcommand), content));
-    }
-
     Ok(content)
 }
 
