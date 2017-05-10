@@ -219,7 +219,8 @@ struct RegistryDependency {
 
 pub trait RegistryData {
     fn index_path(&self) -> &Filesystem;
-    fn config(&self) -> CargoResult<Option<RegistryConfig>>;
+    fn load(&self, root: &Path, path: &Path) -> CargoResult<Vec<u8>>;
+    fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
     fn download(&mut self,
                 pkg: &PackageId,
@@ -274,7 +275,7 @@ impl<'cfg> RegistrySource<'cfg> {
     /// Decode the configuration stored within the registry.
     ///
     /// This requires that the index has been at least checked out.
-    pub fn config(&self) -> CargoResult<Option<RegistryConfig>> {
+    pub fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
         self.ops.config()
     }
 
@@ -323,12 +324,12 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
         if dep.source_id().precise().is_some() && !self.updated {
-            if self.index.query(dep)?.is_empty() {
+            if self.index.query(dep, &mut *self.ops)?.is_empty() {
                 self.do_update()?;
             }
         }
 
-        self.index.query(dep)
+        self.index.query(dep, &mut *self.ops)
     }
 
     fn supports_checksums(&self) -> bool {
@@ -356,7 +357,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 
     fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
-        let hash = self.index.hash(package)?;
+        let hash = self.index.hash(package, &mut *self.ops)?;
         let path = self.ops.download(package, &hash)?;
         let path = self.unpack_package(package, &path).chain_error(|| {
             internal(format!("failed to unpack package `{}`", package))
@@ -369,7 +370,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // differ due to historical Cargo bugs. To paper over these we trash the
         // *summary* loaded from the Cargo.toml we just downloaded with the one
         // we loaded from the index.
-        let summaries = self.index.summaries(package.name())?;
+        let summaries = self.index.summaries(package.name(), &mut *self.ops)?;
         let summary = summaries.iter().map(|s| &s.0).find(|s| {
             s.package_id() == package
         }).expect("summary not found");

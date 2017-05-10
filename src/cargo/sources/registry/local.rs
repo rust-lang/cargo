@@ -6,8 +6,9 @@ use rustc_serialize::hex::ToHex;
 
 use core::PackageId;
 use sources::registry::{RegistryData, RegistryConfig};
-use util::{Config, CargoResult, ChainError, human, Sha256, Filesystem};
 use util::FileLock;
+use util::paths;
+use util::{Config, CargoResult, ChainError, human, Sha256, Filesystem};
 
 pub struct LocalRegistry<'cfg> {
     index_path: Filesystem,
@@ -34,7 +35,11 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         &self.index_path
     }
 
-    fn config(&self) -> CargoResult<Option<RegistryConfig>> {
+    fn load(&self, root: &Path, path: &Path) -> CargoResult<Vec<u8>> {
+        paths::read_bytes(&root.join(path))
+    }
+
+    fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
         // Local registries don't have configuration for remote APIs or anything
         // like that
         Ok(None)
