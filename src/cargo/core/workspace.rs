@@ -545,7 +545,10 @@ impl<'cfg> Workspace<'cfg> {
 }
 
 fn expand_member_path(path: &Path) -> CargoResult<Vec<PathBuf>> {
-    let path = path.to_str().unwrap();
+    let path = match path.to_str() {
+        Some(p) => p,
+        None => return Ok(Vec::new()),
+    };
     let res = glob(path).map_err(|e| {
         human(format!("could not parse pattern `{}`: {}", &path, e))
     })?;
