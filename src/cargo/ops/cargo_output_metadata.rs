@@ -37,6 +37,7 @@ fn metadata_no_deps(ws: &Workspace,
         packages: ws.members().cloned().collect(),
         workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
         resolve: None,
+        target_directory: ws.target_dir().display().to_string(),
         version: VERSION,
     })
 }
@@ -63,6 +64,7 @@ fn metadata_full(ws: &Workspace,
             resolve: resolve,
             root: ws.current_opt().map(|pkg| pkg.package_id().clone()),
         }),
+        target_directory: ws.target_dir().display().to_string(),
         version: VERSION,
     })
 }
@@ -72,6 +74,7 @@ pub struct ExportInfo {
     packages: Vec<Package>,
     workspace_members: Vec<PackageId>,
     resolve: Option<MetadataResolve>,
+    target_directory: String,
     version: u32,
 }
 
