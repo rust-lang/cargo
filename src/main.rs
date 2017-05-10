@@ -120,7 +120,7 @@ fn handle_suggestions(suggestions: &[Suggestion]) -> Result<(), ProgramError> {
         println!("\n\n{info}: {message}\n\
             {arrow} {file}:{range}\n\
             {suggestion}\n\n\
-            {text}\n\n\
+            {lead}{text}{tail}\n\n\
             {with}\n\n\
             {replacement}\n",
             info = "Info".green().bold(),
@@ -129,7 +129,9 @@ fn handle_suggestions(suggestions: &[Suggestion]) -> Result<(), ProgramError> {
             suggestion = "Suggestion - Replace:".yellow().bold(),
             file = suggestion.file_name,
             range = suggestion.line_range,
-            text = indent(4, &reset_indent(&suggestion.text)),
+            lead = indent(4, &suggestion.text.0),
+            text = suggestion.text.1.red(),
+            tail = suggestion.text.2,
             with = "with:".yellow().bold(),
             replacement = indent(4, &suggestion.replacement));
 
@@ -242,20 +244,6 @@ fn split_at_lint_name(s: &str) -> String {
     s.split(", #[")
         .collect::<Vec<_>>()
         .join("\n      #[") // Length of whitespace == length of "Info: "
-}
-
-fn reset_indent(s: &str) -> String {
-    let leading_whitespace = s.lines()
-        .nth(0)
-        .unwrap_or("")
-        .chars()
-        .take_while(|&c| char::is_whitespace(c))
-        .count();
-
-    s.lines()
-        .map(|line| String::from(&line[leading_whitespace..]))
-        .collect::<Vec<_>>()
-        .join("\n")
 }
 
 fn indent(size: u32, s: &str) -> String {

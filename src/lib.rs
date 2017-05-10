@@ -34,12 +34,38 @@ pub struct Suggestion {
     pub message: String,
     pub file_name: String,
     pub line_range: LineRange,
-    pub text: String,
+    /// leading surrounding text, text to replace, trailing surrounding text
+    ///
+    /// This split is useful for higlighting the part that gets replaced
+    pub text: (String, String, String),
     pub replacement: String,
 }
 
 fn collect_span(message: &str, span: &DiagnosticSpan) -> Option<Suggestion> {
     if let Some(replacement) = span.suggested_replacement.clone() {
+        // unindent the snippet
+        let indent = span.text.iter().map(|line| {
+            let indent = line.text
+                .chars()
+                .take_while(|&c| char::is_whitespace(c))
+                .count();
+            std::cmp::min(indent, line.highlight_start)
+        }).min().expect("text to replace is empty");
+        let start = span.text[0].highlight_start - 1;
+        let end = span.text[0].highlight_end - 1;
+        let lead = span.text[0].text[indent..start].to_string();
+        let mut body = span.text[0].text[start..end].to_string();
+        for line in span.text.iter().take(span.text.len() - 1).skip(1) {
+            body.push('\n');
+            body.push_str(&line.text[indent..]);
+        }
+        let mut tail = String::new();
+        let last = &span.text[span.text.len() - 1];
+        if span.text.len() > 1 {
+            body.push('\n');
+            body.push_str(&last.text[indent..last.highlight_end - 1]);
+        }
+        tail.push_str(&last.text[last.highlight_end - 1..]);
         Some(Suggestion {
             message: message.into(),
             file_name: span.file_name.clone(),
@@ -53,7 +79,7 @@ fn collect_span(message: &str, span: &DiagnosticSpan) -> Option<Suggestion> {
                     column: span.column_end,
                 },
             },
-            text: span.text.iter().map(|x| x.text.clone()).collect::<Vec<_>>().join("\n"),
+            text: (lead, body, tail),
             replacement: replacement,
         })
     } else {
