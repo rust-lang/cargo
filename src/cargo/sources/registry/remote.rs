@@ -16,6 +16,7 @@ use util::network;
 use util::paths;
 use util::{FileLock, Filesystem};
 use util::{Config, CargoResult, ChainError, human, Sha256, ToUrl};
+use util::errors::HttpError;
 
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
@@ -153,26 +154,32 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         // TODO: don't download into memory, but ensure that if we ctrl-c a
         //       download we should resume either from the start or the middle
         //       on the next time
+        let url = url.to_string();
         handle.get(true)?;
-        handle.url(&url.to_string())?;
+        handle.url(&url)?;
         handle.follow_location(true)?;
         let mut state = Sha256::new();
         let mut body = Vec::new();
         network::with_retry(self.config, || {
             state = Sha256::new();
             body = Vec::new();
-            let mut handle = handle.transfer();
-            handle.write_function(|buf| {
-                state.update(buf);
-                body.extend_from_slice(buf);
-                Ok(buf.len())
-            })?;
-            handle.perform()
+            {
+                let mut handle = handle.transfer();
+                handle.write_function(|buf| {
+                    state.update(buf);
+                    body.extend_from_slice(buf);
+                    Ok(buf.len())
+                })?;
+                handle.perform()?;
+            }
+            let code = handle.response_code()?;
+            if code != 200 && code != 0 {
+                let url = handle.effective_url()?.unwrap_or(&url);
+                Err(HttpError::Not200(code, url.to_string()))
+            } else {
+                Ok(())
+            }
         })?;
-        let code = handle.response_code()?;
-        if code != 200 && code != 0 {
-            bail!("failed to get 200 response from `{}`, got {}", url, code)
-        }
 
         // Verify what we just downloaded
         if state.finish().to_hex() != checksum {
