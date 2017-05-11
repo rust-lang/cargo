@@ -334,6 +334,7 @@ impl NetworkError for git2::Error {
         }
     }
 }
+
 impl NetworkError for curl::Error {
     fn maybe_spurious(&self) -> bool {
         self.is_couldnt_connect() ||
@@ -341,6 +342,63 @@ impl NetworkError for curl::Error {
             self.is_couldnt_resolve_host() ||
             self.is_operation_timedout() ||
             self.is_recv_error()
+    }
+}
+
+#[derive(Debug)]
+pub enum HttpError {
+    Not200(u32, String),
+    Curl(curl::Error),
+}
+
+impl fmt::Display for HttpError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            HttpError::Not200(code, ref url) => {
+                write!(f, "failed to get 200 response from `{}`, got {}",
+                       url, code)
+            }
+            HttpError::Curl(ref e) => e.fmt(f),
+        }
+    }
+}
+
+impl Error for HttpError {
+    fn description(&self) -> &str {
+        match *self {
+            HttpError::Not200(..) => "failed to get a 200 response",
+            HttpError::Curl(ref e) => e.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        match *self {
+            HttpError::Not200(..) => None,
+            HttpError::Curl(ref e) => e.cause(),
+        }
+    }
+}
+
+impl CargoError for HttpError {
+    fn is_human(&self) -> bool {
+        true
+    }
+}
+
+impl NetworkError for HttpError {
+    fn maybe_spurious(&self) -> bool {
+        match *self {
+            HttpError::Not200(code, ref _url) => {
+                500 <= code && code < 600
+            }
+            HttpError::Curl(ref e) => e.maybe_spurious(),
+        }
+    }
+}
+
+impl From<curl::Error> for HttpError {
+    fn from(err: curl::Error) -> HttpError {
+        HttpError::Curl(err)
     }
 }
 
