@@ -105,6 +105,7 @@ pub enum MessageFormat {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Packages<'a> {
     All,
+    OptOut(&'a [String]),
     Packages(&'a [String]),
 }
 
@@ -115,6 +116,13 @@ impl<'a> Packages<'a> {
                 ws.members()
                     .map(Package::package_id)
                     .map(PackageIdSpec::from_package_id)
+                    .collect()
+            }
+            Packages::OptOut(opt_out) => {
+                ws.members()
+                    .map(Package::package_id)
+                    .map(PackageIdSpec::from_package_id)
+                    .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
                     .collect()
             }
             Packages::Packages(packages) => {
