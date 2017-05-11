@@ -124,7 +124,9 @@ impl<'cfg> Workspace<'cfg> {
     ///
     /// This is currently only used in niche situations like `cargo install` or
     /// `cargo package`.
-    pub fn ephemeral(package: Package, config: &'cfg Config, target_dir: Option<Filesystem>,
+    pub fn ephemeral(package: Package,
+                     config: &'cfg Config,
+                     target_dir: Option<Filesystem>,
                      require_optional_deps: bool) -> CargoResult<Workspace<'cfg>> {
         let mut ws = Workspace {
             config: config,

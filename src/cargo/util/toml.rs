@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet, BTreeSet};
-use std::default::Default;
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::str;
 
 use toml;
 use semver::{self, VersionReq};
+use serde::ser;
 use serde::de::{self, Deserialize};
 use serde_ignored;
 
@@ -112,7 +113,11 @@ pub fn to_manifest(contents: &str,
         }
     })?;
 
-    return match manifest.to_real_manifest(source_id, &layout, config) {
+    let manifest = Rc::new(manifest);
+    return match TomlManifest::to_real_manifest(&manifest,
+                                                source_id,
+                                                &layout,
+                                                config) {
         Ok((mut manifest, paths)) => {
             for key in unused {
                 manifest.add_warning(format!("unused manifest key: {}", key));
@@ -125,7 +130,10 @@ pub fn to_manifest(contents: &str,
             Ok((EitherManifest::Real(manifest), paths))
         }
         Err(e) => {
-            match manifest.to_virtual_manifest(source_id, &layout, config) {
+            match TomlManifest::to_virtual_manifest(&manifest,
+                                                    source_id,
+                                                    &layout,
+                                                    config) {
                 Ok((m, paths)) => Ok((EitherManifest::Virtual(m), paths)),
                 Err(..) => Err(e),
             }
@@ -192,6 +200,8 @@ type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
 
+#[derive(Serialize)]
+#[serde(untagged)]
 pub enum TomlDependency {
     Simple(String),
     Detailed(DetailedTomlDependency)
@@ -229,7 +239,7 @@ impl<'de> de::Deserialize<'de> for TomlDependency {
     }
 }
 
-#[derive(Deserialize, Clone, Default)]
+#[derive(Deserialize, Serialize, Clone, Default)]
 pub struct DetailedTomlDependency {
     version: Option<String>,
     path: Option<String>,
@@ -245,7 +255,7 @@ pub struct DetailedTomlDependency {
     default_features2: Option<bool>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct TomlManifest {
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
@@ -271,7 +281,7 @@ pub struct TomlManifest {
     badges: Option<HashMap<String, HashMap<String, String>>>,
 }
 
-#[derive(Deserialize, Clone, Default)]
+#[derive(Deserialize, Serialize, Clone, Default)]
 pub struct TomlProfiles {
     test: Option<TomlProfile>,
     doc: Option<TomlProfile>,
@@ -318,7 +328,19 @@ impl<'de> de::Deserialize<'de> for TomlOptLevel {
     }
 }
 
-#[derive(Clone)]
+impl ser::Serialize for TomlOptLevel {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer,
+    {
+        match self.0.parse::<u32>() {
+            Ok(n) => n.serialize(serializer),
+            Err(_) => self.0.serialize(serializer),
+        }
+    }
+}
+
+#[derive(Clone, Serialize)]
+#[serde(untagged)]
 pub enum U32OrBool {
     U32(u32),
     Bool(bool),
@@ -360,7 +382,7 @@ impl<'de> de::Deserialize<'de> for U32OrBool {
     }
 }
 
-#[derive(Deserialize, Clone, Default)]
+#[derive(Deserialize, Serialize, Clone, Default)]
 pub struct TomlProfile {
     #[serde(rename = "opt-level")]
     opt_level: Option<TomlOptLevel>,
@@ -376,7 +398,8 @@ pub struct TomlProfile {
     overflow_checks: Option<bool>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
 pub enum StringOrBool {
     String(String),
     Bool(bool),
@@ -412,7 +435,7 @@ impl<'de> de::Deserialize<'de> for StringOrBool {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct TomlProject {
     name: String,
     version: TomlVersion,
@@ -437,12 +460,13 @@ pub struct TomlProject {
     repository: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct TomlWorkspace {
     members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
 }
 
+#[derive(Clone)]
 pub struct TomlVersion {
     version: semver::Version,
 }
@@ -473,6 +497,15 @@ impl<'de> de::Deserialize<'de> for TomlVersion {
         d.deserialize_str(Visitor)
     }
 }
+
+impl ser::Serialize for TomlVersion {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer,
+    {
+        self.version.to_string().serialize(s)
+    }
+}
+
 
 impl TomlProject {
     pub fn to_package_id(&self, source_id: &SourceId) -> CargoResult<PackageId> {
@@ -564,7 +597,72 @@ fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
 }
 
 impl TomlManifest {
-    fn to_real_manifest(&self,
+    pub fn prepare_for_publish(&self) -> TomlManifest {
+        let mut package = self.package.as_ref()
+                              .or(self.project.as_ref())
+                              .unwrap()
+                              .clone();
+        package.workspace = None;
+        return TomlManifest {
+            package: Some(package),
+            project: None,
+            profile: self.profile.clone(),
+            lib: self.lib.clone(),
+            bin: self.bin.clone(),
+            example: self.example.clone(),
+            test: self.test.clone(),
+            bench: self.bench.clone(),
+            dependencies: map_deps(self.dependencies.as_ref()),
+            dev_dependencies: map_deps(self.dev_dependencies.as_ref()
+                                         .or(self.dev_dependencies2.as_ref())),
+            dev_dependencies2: None,
+            build_dependencies: map_deps(self.build_dependencies.as_ref()
+                                         .or(self.build_dependencies2.as_ref())),
+            build_dependencies2: None,
+            features: self.features.clone(),
+            target: self.target.as_ref().map(|target_map| {
+                target_map.iter().map(|(k, v)| {
+                    (k.clone(), TomlPlatform {
+                        dependencies: map_deps(v.dependencies.as_ref()),
+                        dev_dependencies: map_deps(v.dev_dependencies.as_ref()
+                                                     .or(v.dev_dependencies2.as_ref())),
+                        dev_dependencies2: None,
+                        build_dependencies: map_deps(v.build_dependencies.as_ref()
+                                                     .or(v.build_dependencies2.as_ref())),
+                        build_dependencies2: None,
+                    })
+                }).collect()
+            }),
+            replace: None,
+            workspace: None,
+            badges: self.badges.clone(),
+        };
+
+        fn map_deps(deps: Option<&HashMap<String, TomlDependency>>)
+                        -> Option<HashMap<String, TomlDependency>>
+        {
+            let deps = match deps {
+                Some(deps) => deps,
+                None => return None
+            };
+            Some(deps.iter().map(|(k, v)| (k.clone(), map_dependency(v))).collect())
+        }
+
+        fn map_dependency(dep: &TomlDependency) -> TomlDependency {
+            match *dep {
+                TomlDependency::Detailed(ref d) => {
+                    let mut d = d.clone();
+                    d.path.take(); // path dependencies become crates.io deps
+                    TomlDependency::Detailed(d)
+                }
+                TomlDependency::Simple(ref s) => {
+                    TomlDependency::Simple(s.clone())
+                }
+            }
+        }
+    }
+
+    fn to_real_manifest(me: &Rc<TomlManifest>,
                         source_id: &SourceId,
                         layout: &Layout,
                         config: &Config)
@@ -572,7 +670,7 @@ impl TomlManifest {
         let mut nested_paths = vec![];
         let mut warnings = vec![];
 
-        let project = self.project.as_ref().or_else(|| self.package.as_ref());
+        let project = me.project.as_ref().or_else(|| me.package.as_ref());
         let project = project.chain_error(|| {
             human("no `package` or `project` section found.")
         })?;
@@ -587,7 +685,7 @@ impl TomlManifest {
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
 
-        let lib = match self.lib {
+        let lib = match me.lib {
             Some(ref lib) => {
                 lib.validate_library_name()?;
                 lib.validate_crate_type()?;
@@ -604,7 +702,7 @@ impl TomlManifest {
             None => inferred_lib_target(&project.name, layout),
         };
 
-        let bins = match self.bin {
+        let bins = match me.bin {
             Some(ref bins) => {
                 for target in bins {
                     target.validate_binary_name()?;
@@ -621,7 +719,7 @@ impl TomlManifest {
             }
         }
 
-        let examples = match self.example {
+        let examples = match me.example {
             Some(ref examples) => {
                 for target in examples {
                     target.validate_example_name()?;
@@ -631,7 +729,7 @@ impl TomlManifest {
             None => inferred_example_targets(layout)
         };
 
-        let tests = match self.test {
+        let tests = match me.test {
             Some(ref tests) => {
                 for target in tests {
                     target.validate_test_name()?;
@@ -641,7 +739,7 @@ impl TomlManifest {
             None => inferred_test_targets(layout)
         };
 
-        let benches = match self.bench {
+        let benches = match me.bench {
             Some(ref benches) => {
                 for target in benches {
                     target.validate_bench_name()?;
@@ -672,7 +770,7 @@ impl TomlManifest {
         }
 
         // processing the custom build script
-        let new_build = self.maybe_custom_build(&project.build, &layout.root);
+        let new_build = me.maybe_custom_build(&project.build, &layout.root);
 
         // Get targets
         let targets = normalize(&layout.root,
@@ -727,16 +825,16 @@ impl TomlManifest {
             }
 
             // Collect the deps
-            process_dependencies(&mut cx, self.dependencies.as_ref(),
+            process_dependencies(&mut cx, me.dependencies.as_ref(),
                                  None)?;
-            let dev_deps = self.dev_dependencies.as_ref()
-                               .or(self.dev_dependencies2.as_ref());
+            let dev_deps = me.dev_dependencies.as_ref()
+                               .or(me.dev_dependencies2.as_ref());
             process_dependencies(&mut cx, dev_deps, Some(Kind::Development))?;
-            let build_deps = self.build_dependencies.as_ref()
-                               .or(self.build_dependencies2.as_ref());
+            let build_deps = me.build_dependencies.as_ref()
+                               .or(me.build_dependencies2.as_ref());
             process_dependencies(&mut cx, build_deps, Some(Kind::Build))?;
 
-            for (name, platform) in self.target.iter().flat_map(|t| t) {
+            for (name, platform) in me.target.iter().flat_map(|t| t) {
                 cx.platform = Some(name.parse()?);
                 process_dependencies(&mut cx, platform.dependencies.as_ref(),
                                      None)?;
@@ -748,7 +846,7 @@ impl TomlManifest {
                 process_dependencies(&mut cx, dev_deps, Some(Kind::Development))?;
             }
 
-            replace = self.replace(&mut cx)?;
+            replace = me.replace(&mut cx)?;
         }
 
         {
@@ -767,7 +865,7 @@ impl TomlManifest {
         let exclude = project.exclude.clone().unwrap_or(Vec::new());
         let include = project.include.clone().unwrap_or(Vec::new());
 
-        let summary = Summary::new(pkgid, deps, self.features.clone()
+        let summary = Summary::new(pkgid, deps, me.features.clone()
             .unwrap_or_else(HashMap::new))?;
         let metadata = ManifestMetadata {
             description: project.description.clone(),
@@ -780,10 +878,10 @@ impl TomlManifest {
             repository: project.repository.clone(),
             keywords: project.keywords.clone().unwrap_or(Vec::new()),
             categories: project.categories.clone().unwrap_or(Vec::new()),
-            badges: self.badges.clone().unwrap_or_else(HashMap::new),
+            badges: me.badges.clone().unwrap_or_else(HashMap::new),
         };
 
-        let workspace_config = match (self.workspace.as_ref(),
+        let workspace_config = match (me.workspace.as_ref(),
                                       project.workspace.as_ref()) {
             (Some(config), None) => {
                 WorkspaceConfig::Root {
@@ -799,7 +897,7 @@ impl TomlManifest {
                        `[workspace]`, only one can be specified")
             }
         };
-        let profiles = build_profiles(&self.profile);
+        let profiles = build_profiles(&me.profile);
         let publish = project.publish.unwrap_or(true);
         let mut manifest = Manifest::new(summary,
                                          targets,
@@ -810,7 +908,8 @@ impl TomlManifest {
                                          profiles,
                                          publish,
                                          replace,
-                                         workspace_config);
+                                         workspace_config,
+                                         me.clone());
         if project.license_file.is_some() && project.license.is_some() {
             manifest.add_warning("only one of `license` or \
                                  `license-file` is necessary".to_string());
@@ -822,37 +921,37 @@ impl TomlManifest {
         Ok((manifest, nested_paths))
     }
 
-    fn to_virtual_manifest(&self,
+    fn to_virtual_manifest(me: &Rc<TomlManifest>,
                            source_id: &SourceId,
                            layout: &Layout,
                            config: &Config)
                            -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
-        if self.project.is_some() {
+        if me.project.is_some() {
             bail!("virtual manifests do not define [project]");
         }
-        if self.package.is_some() {
+        if me.package.is_some() {
             bail!("virtual manifests do not define [package]");
         }
-        if self.lib.is_some() {
+        if me.lib.is_some() {
             bail!("virtual manifests do not specifiy [lib]");
         }
-        if self.bin.is_some() {
+        if me.bin.is_some() {
             bail!("virtual manifests do not specifiy [[bin]]");
         }
-        if self.example.is_some() {
+        if me.example.is_some() {
             bail!("virtual manifests do not specifiy [[example]]");
         }
-        if self.test.is_some() {
+        if me.test.is_some() {
             bail!("virtual manifests do not specifiy [[test]]");
         }
-        if self.bench.is_some() {
+        if me.bench.is_some() {
             bail!("virtual manifests do not specifiy [[bench]]");
         }
 
         let mut nested_paths = Vec::new();
         let mut warnings = Vec::new();
         let mut deps = Vec::new();
-        let replace = self.replace(&mut Context {
+        let replace = me.replace(&mut Context {
             pkgid: None,
             deps: &mut deps,
             source_id: source_id,
@@ -862,8 +961,8 @@ impl TomlManifest {
             platform: None,
             layout: layout,
         })?;
-        let profiles = build_profiles(&self.profile);
-        let workspace_config = match self.workspace {
+        let profiles = build_profiles(&me.profile);
+        let workspace_config = match me.workspace {
             Some(ref config) => {
                 WorkspaceConfig::Root {
                     members: config.members.clone(),
@@ -1070,7 +1169,7 @@ impl TomlDependency {
     }
 }
 
-#[derive(Default, Deserialize, Debug, Clone)]
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
 struct TomlTarget {
     name: Option<String>,
 
@@ -1107,8 +1206,16 @@ impl<'de> de::Deserialize<'de> for PathValue {
     }
 }
 
+impl ser::Serialize for PathValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: ser::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct TomlPlatform {
     dependencies: Option<HashMap<String, TomlDependency>>,
     #[serde(rename = "build-dependencies")]
