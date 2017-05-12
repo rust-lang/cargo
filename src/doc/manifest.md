@@ -424,8 +424,8 @@ properties:
   root crate's `Cargo.toml`.
 * The lock file for all crates in the workspace resides next to the root crate's
   `Cargo.toml`.
-* The `[replace]` section in `Cargo.toml` is only recognized at the workspace
-  root crate, it's ignored in member crates' manifests.
+* The `[patch]` and `[replace]` sections in `Cargo.toml` are only recognized
+  at the workspace root crate, they are ignored in member crates' manifests.
 
 [RFC 1525]: https://github.com/rust-lang/rfcs/blob/master/text/1525-cargo-workspace.md
 
@@ -629,6 +629,42 @@ includes them.
 You can read more about the different crate types in the
 [Rust Reference Manual](https://doc.rust-lang.org/reference/linkage.html)
 
+# The `[patch]` Section
+
+This section of Cargo.toml can be used to [override dependencies][replace] with
+other copies. The syntax is similar to the `[dependencies]` section:
+
+```toml
+[patch.crates-io]
+foo = { git = 'https://github.com/example/foo' }
+bar = { path = 'my/local/bar' }
+```
+
+The `[patch]` table is made of dependency-like sub-tables. Each key after
+`[patch]` is a URL of the source that's being patched, or `crates-io` if
+you're modifying the https://crates.io registry. In the example above
+`crates-io` could be replaced with a git URL such as
+`https://github.com/rust-lang-nursery/log`.
+
+Each entry in these tables is a normal dependency specification, the same as
+found in the `[dependencies]` section of the manifest. The dependencies listed
+in the `[patch]` section are resolved and used to patch the source at the
+URL specified. The above manifest snippet patches the `crates-io` source (e.g.
+crates.io itself) with the `foo` crate and `bar` crate.
+
+Sources can be patched with versions of crates that do not exist, and they can
+also be patched with versions of crates that already exist. If a source is
+patched with a crate version that already exists in the source, then the
+source's original crate is replaced.
+
+More information about overriding dependencies can be found in the [overriding
+dependencies][replace] section of the documentation and [RFC 1969] for the
+technical specification of this feature. Note that the `[patch]` feature will
+first become available in Rust 1.20, set to be released on 2017-08-31.
+
+[RFC 1969]: https://github.com/rust-lang/rfcs/pull/1969
+[replace]: specifying-dependencies.html#overriding-dependencies
+
 # The `[replace]` Section
 
 This section of Cargo.toml can be used to [override dependencies][replace] with
@@ -650,5 +686,3 @@ source (e.g. git or a local path).
 
 More information about overriding dependencies can be found in the [overriding
 dependencies][replace] section of the documentation.
-
-[replace]: specifying-dependencies.html#overriding-dependencies

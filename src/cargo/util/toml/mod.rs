@@ -5,11 +5,12 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str;
 
-use toml;
 use semver::{self, VersionReq};
 use serde::ser;
 use serde::de::{self, Deserialize};
 use serde_ignored;
+use toml;
+use url::Url;
 
 use core::{SourceId, Profiles, PackageIdSpec, GitReference, WorkspaceConfig};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
@@ -218,6 +219,7 @@ pub struct TomlManifest {
     features: Option<HashMap<String, Vec<String>>>,
     target: Option<HashMap<String, TomlPlatform>>,
     replace: Option<HashMap<String, TomlDependency>>,
+    patch: Option<HashMap<String, HashMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
     badges: Option<HashMap<String, HashMap<String, String>>>,
 }
@@ -463,6 +465,7 @@ impl TomlManifest {
                 }).collect()
             }),
             replace: None,
+            patch: None,
             workspace: None,
             badges: self.badges.clone(),
         };
@@ -530,6 +533,7 @@ impl TomlManifest {
 
         let mut deps = Vec::new();
         let replace;
+        let patch;
 
         {
 
@@ -585,6 +589,7 @@ impl TomlManifest {
             }
 
             replace = me.replace(&mut cx)?;
+            patch = me.patch(&mut cx)?;
         }
 
         {
@@ -646,6 +651,7 @@ impl TomlManifest {
                                          profiles,
                                          publish,
                                          replace,
+                                         patch,
                                          workspace_config,
                                          me.clone());
         if project.license_file.is_some() && project.license.is_some() {
@@ -689,16 +695,19 @@ impl TomlManifest {
         let mut nested_paths = Vec::new();
         let mut warnings = Vec::new();
         let mut deps = Vec::new();
-        let replace = me.replace(&mut Context {
-            pkgid: None,
-            deps: &mut deps,
-            source_id: source_id,
-            nested_paths: &mut nested_paths,
-            config: config,
-            warnings: &mut warnings,
-            platform: None,
-            root: root
-        })?;
+        let (replace, patch) = {
+            let mut cx = Context {
+                pkgid: None,
+                deps: &mut deps,
+                source_id: source_id,
+                nested_paths: &mut nested_paths,
+                config: config,
+                warnings: &mut warnings,
+                platform: None,
+                root: root
+            };
+            (me.replace(&mut cx)?, me.patch(&mut cx)?)
+        };
         let profiles = build_profiles(&me.profile);
         let workspace_config = match me.workspace {
             Some(ref config) => {
@@ -711,11 +720,14 @@ impl TomlManifest {
                 bail!("virtual manifests must be configured with [workspace]");
             }
         };
-        Ok((VirtualManifest::new(replace, workspace_config, profiles), nested_paths))
+        Ok((VirtualManifest::new(replace, patch, workspace_config, profiles), nested_paths))
     }
 
     fn replace(&self, cx: &mut Context)
                -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
+        if self.patch.is_some() && self.replace.is_some() {
+            bail!("cannot specify both [replace] and [patch]");
+        }
         let mut replace = Vec::new();
         for (spec, replacement) in self.replace.iter().flat_map(|x| x) {
             let mut spec = PackageIdSpec::parse(spec).chain_err(|| {
@@ -748,6 +760,21 @@ impl TomlManifest {
             replace.push((spec, dep));
         }
         Ok(replace)
+    }
+
+    fn patch(&self, cx: &mut Context)
+             -> CargoResult<HashMap<Url, Vec<Dependency>>> {
+        let mut patch = HashMap::new();
+        for (url, deps) in self.patch.iter().flat_map(|x| x) {
+            let url = match &url[..] {
+                "crates-io" => CRATES_IO.parse().unwrap(),
+                _ => url.to_url()?,
+            };
+            patch.insert(url, deps.iter().map(|(name, dep)| {
+                dep.to_dependency(name, cx, None)
+            }).collect::<CargoResult<Vec<_>>>()?);
+        }
+        Ok(patch)
     }
 
     fn maybe_custom_build(&self,

@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::slice;
 
 use glob::glob;
+use url::Url;
 
 use core::{Package, VirtualManifest, EitherManifest, SourceId};
 use core::{PackageIdSpec, Dependency, Profile, Profiles};
@@ -219,6 +220,20 @@ impl<'cfg> Workspace<'cfg> {
         match *self.packages.get(path) {
             MaybePackage::Package(ref p) => p.manifest().replace(),
             MaybePackage::Virtual(ref v) => v.replace(),
+        }
+    }
+
+    /// Returns the root [patch] section of this workspace.
+    ///
+    /// This may be from a virtual crate or an actual crate.
+    pub fn root_patch(&self) -> &HashMap<Url, Vec<Dependency>> {
+        let path = match self.root_manifest {
+            Some(ref p) => p,
+            None => &self.current_manifest,
+        };
+        match *self.packages.get(path) {
+            MaybePackage::Package(ref p) => p.manifest().patch(),
+            MaybePackage::Virtual(ref v) => v.patch(),
         }
     }
 

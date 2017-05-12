@@ -165,138 +165,250 @@ hello_utils = { path = "hello_utils", version = "0.1.0" }
 
 # Overriding dependencies
 
-Sometimes you may want to override one of Cargo’s dependencies. For example
-let's say you're working on a project using the
-[`uuid`](https://crates.io/crates/uuid) crate which depends on
-[`rand`](https://crates.io/crates/rand). You've discovered there's a bug in
-`rand`, however, and it's already fixed upstream but hasn't been published yet.
-You'd like to test out the fix, so let's first take a look at what your
-`Cargo.toml` will look like:
+There are a number of methods in Cargo to support overriding dependencies and
+otherwise controlling the dependency graph. These options are typically, though,
+only available at the workspace level and aren't propagated through
+dependencies. In other words, "applications" have the ability to override
+dependencies but "libraries" do not.
+
+The desire to override a dependency or otherwise alter some dependencies can
+arise through a number of scenarios. Most of them, however, boil down to the
+ability to to work with a crate before it's been published to crates.io. For
+example:
+
+* A crate you're working on is also used in a much larger application you're
+  working on, and you'd like to test a bug fix to the library inside of the
+  larger application.
+* An upstream crate you don't work on has a new feature or a bug fix on the
+  master branch of its git repository which you'd like to test out.
+* You're about to publish a new major version of your crate, but you'd like to
+  do integration testing across an entire project to ensure the new major
+  version works.
+* You've submitted a fix to an upstream crate for a bug you found, but you'd
+  like to immediately have your application start depending on the fixed version
+  of the crate to avoid blocking on the bug fix getting merged.
+
+These scenarios are currently all solved with the [`[patch]` manifest
+section][patch-section]. Note that the `[patch]` feature is not yet currently
+stable and will be released on 2017-08-31. Historically some of these scenarios
+have been solved with [the `[replace]` section][replace-section], but we'll
+document the `[patch]` section here.
+
+[patch-section]: manifest.html#the-patch-section
+[replace-section]: manifest.html#the-replace-section
+
+### Testing a bugfix
+
+Let's say you're working with the [`uuid`] crate but while you're working on it
+you discover a bug. You are, however, quite enterprising so you decide to also
+try out to fix the bug! Originally your manifest will look like:
+
+[`uuid`](https://crates.io/crates/uuid)
 
 ```toml
 [package]
-name = "my-awesome-crate"
-version = "0.2.0"
-authors = ["The Rust Project Developers"]
+name = "my-library"
+version = "0.1.0"
+authors = ["..."]
 
 [dependencies]
-uuid = "0.2"
+uuid = "1.0"
 ```
 
-To override the `rand` dependency of `uuid`, we'll leverage the [`[replace]`
-section][replace-section] of `Cargo.toml` by appending this to the end:
+First thing we'll do is to clone the [`uuid` repository][uuid-repository]
+locally via:
 
-[replace-section]: manifest.html#the-replace-section
+```shell
+$ git clone https://github.com/rust-lang-nursery/uuid
+```
+
+Next we'll edit the manifest of `my-library` to contain:
 
 ```toml
-[replace]
-"rand:0.3.14" = { git = 'https://github.com/rust-lang-nursery/rand' }
+[patch.crates-io]
+uuid = { path = "../path/to/uuid" }
 ```
 
-This indicates that the version of `rand` we're currently using, 0.3.14, will be
-replaced with the master branch of `rand` on GitHub. Next time when you execute
-`cargo build` Cargo will take care of checking out this repository and hooking
-the `uuid` crate up to the new version.
+Here we declare that we're *patching* the source `crates-io` with a new
+dependency. This will effectively add the local checked out version of `uuid` to
+the crates.io registry for our local project.
 
-Note that a restriction of `[replace]`, however, is that the replaced crate must
-not only have the same name but also the same version. This means that if the
-`master` branch of `rand` has migrated to, for example, 0.4.3, you'll need to
-follow a few extra steps to test out the crate:
+Next up we need to ensure that our lock file is updated to use this new version
+of `uuid` so our project uses the locally checked out copy instead of one from
+crates.io. The way `[patch]` works is that it'll load the dependency at
+`../path/to/uuid` and then whenever crates.io is queried for versions of `uuid`
+it'll *also* return the local version.
 
-1. Fork the upstream repository to your account
-2. Create a branch which starts from the 0.3.14 release (likely tagged as
-   0.3.14)
-3. Identify the fix of the bug at hand and cherry-pick it onto your branch
-4. Update `[replace]` to point to your git repository and branch
+This means that the version number of the local checkout is significant and will
+affect whether the patch is used. Our manifest declared `uuid = "1.0"` which
+means we'll only resolve to `>= 1.0.0, < 2.0.0`, and Cargo's greedy resolution
+algorithm also means that we'll resolve to the maximum version within that
+range. Typically this doesn't matter as the version of the git repository will
+already be greater or match the maximum version published on crates.io, but it's
+important to keep this in mind!
 
-This technique can also be useful when testing out new features for a
-dependency. Following the workflow above you can have a branch where you add
-features, and then once it's ready to go you can send a PR to the upstream
-repository. While you're waiting for the PR to get merged you can continue to
-work locally with a `[replace]`, and then once the PR is merged and published
-you can remove `[replace]` and use the newly-published version.
+In any case, typically all you need to do now is:
 
-Note: The `Cargo.lock` file will list two versions of the replaced crate: one
-for the original crate, and one for the version specified in `[replace]`.
-`cargo build -v` can verify that only one version is used in the build.
+```shell
+$ cargo build
+   Compiling uuid v1.0.0 (file://.../uuid)
+   Compiling my-library v0.1.0 (file://.../my-library)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.32 secs
+```
+
+And that's it! You're now building with the local version of `uuid` (note the
+`file://` in the build output). If you don't see the `file://` version getting
+built then you may need to run `cargo update -p uuid --precise $version` where
+`$version` is the version of the locally checked out copy of `uuid`.
+
+Once you've fixed the bug you originally found the next thing you'll want to do
+is to likely submit that as a pull request to the `uuid` crate itself. Once
+you've done this then you can also update the `[patch]` section. The listing
+inside of `[patch]` is just like the `[dependencies]` section, so once your pull
+request is merged you could change your `path` dependency to:
+
+```toml
+[patch.crates-io]
+uuid = { git = 'https://github.com/rust-lang-nursery/uuid' }
+```
+
+[uuid-repository]: https://github.com/rust-lang-nursery/uuid
+
+### Working with an unpublished minor version
+
+Let's now shift gears a bit from bug fixes to adding features. While working on
+`my-library` you discover that a whole new feature is needed in the `uuid`
+crate. You've implemented this feature, tested it locally above with `[patch]`,
+and submitted a pull request. Let's go over how you continue to use and test it
+before it's actually published.
+
+Let's also say that the current version of `uuid` on crates.io is `1.0.0`, but
+since then the master branch of the git repository has updated to `1.0.1`. This
+branch includes your new feature you submitted previously. To use this
+repository we'll edit our `Cargo.toml` to look like
+
+```toml
+[package]
+name = "my-library"
+version = "0.1.0"
+authors = ["..."]
+
+[dependencies]
+uuid = "1.0.1"
+
+[patch.crates-io]
+uuid = { git = 'https://github.com/rust-lang-nursery/uuid' }
+```
+
+Note that our local dependency on `uuid` has been updated to `1.0.1` as it's
+what we'll actually require once the crate is published. This version doesn't
+exist on crates.io, though, so we provide it with the `[patch]` section of the
+manifest.
+
+Now when our library is built it'll fetch `uuid` from the git repository and
+resolve to 1.0.1 inside the repository instead of trying to download a version
+from crates.io. Once 1.0.1 is published on crates.io the `[patch]` section can
+be deleted.
+
+It's also worth nothing that `[patch]` applies *transitively*. Let's say you use
+`my-library` in a larger project, such as:
+
+```toml
+[package]
+name = "my-binary"
+version = "0.1.0"
+authors = ["..."]
+
+[dependencies]
+my-library = { git = 'https://example.com/git/my-library' }
+uuid = "1.0"
+
+[patch.crates-io]
+uuid = { git = 'https://github.com/rust-lang-nursery/uuid' }
+```
+
+Remember that `[patch]` is only applicable at the *top level* so we consumers of
+`my-library` have to repeat the `[patch]` section if necessary. Here, though,
+the new `uuid` crate applies to *both* our dependency on `uuid` and the
+`my-library -> uuid` dependency. The `uuid` crate will be resolved to one
+version for this entire crate graph, 1.0.1, and it'll be pulled from the git
+repository.
+
+### Prepublishing a breaking change
+
+As a final scenario, let's take a look at working with a new major version of a
+crate, typically accompanied with breaking changes. Sticking with our previous
+crates, this means that we're going to be creating version 2.0.0 of the `uuid`
+crate. After we've submitted all changes upstream we can update our manifest for
+`my-library` to look like:
+
+```toml
+[dependencies]
+uuid = "2.0"
+
+[patch.crates-io]
+uuid = { git = "https://github.com/rust-lang-nursery/uuid", branch = "2.0.0" }
+```
+
+And that's it! Like with the previous example the 2.0.0 version doesn't actually
+exist on crates.io but we can still put it in through a git dependency through
+the usage of the `[patch]` section. As a thought exercise let's take another
+look at the `my-binary` manifest from above again as well:
+
+```toml
+[package]
+name = "my-binary"
+version = "0.1.0"
+authors = ["..."]
+
+[dependencies]
+my-library = { git = 'https://example.com/git/my-library' }
+uuid = "1.0"
+
+[patch.crates-io]
+uuid = { git = 'https://github.com/rust-lang-nursery/uuid', version = '2.0.0' }
+```
+
+Note that this will actually resolve to two versions of the `uuid` crate. The
+`my-binary` crate will continue to use the 1.x.y series of the `uuid` crate but
+the `my-library` crate will use the 2.0.0 version of `uuid`. This will allow you
+to gradually roll out breaking changes to a crate through a dependency graph
+without being force to update everything all at once.
 
 ### Overriding with local dependencies
 
 Sometimes you're only temporarily working on a crate and you don't want to have
-to modify `Cargo.toml` like with the `[replace]` section above. For this use
+to modify `Cargo.toml` like with the `[patch]` section above. For this use
 case Cargo offers a much more limited version of overrides called **path
 overrides**.
 
-Similar to before, let’s say you’re working on a project,
-[`uuid`](https://crates.io/crates/uuid), which depends on
-[`rand`](https://crates.io/crates/rand). This time you're the one who finds a
-bug in `rand`, and you want to write a patch and be able to test out your patch
-by using your version of `rand` in `uuid`. Here’s what `uuid`’s `Cargo.toml`
-looks like:
+Path overrides are specified through `.cargo/config` instead of `Cargo.toml`,
+and you can find [more documentation about this configuration][config-docs].
+Inside of `.cargo/config` you'll specify a key called `paths`:
+
+[config-docs]: config.html
 
 ```toml
-[package]
-name = "uuid"
-version = "0.2.2"
-authors = ["The Rust Project Developers"]
-
-[dependencies]
-rand = { version = "0.3", optional = true }
-```
-
-You check out a local copy of `rand`, let’s say in your `~/src` directory:
-
-```shell
-$ cd ~/src
-$ git clone https://github.com/rust-lang-nursery/rand
-```
-
-A path override is communicated to Cargo through the `.cargo/config`
-configuration mechanism. If Cargo finds this configuration when building your
-package, it will use the override on your local machine instead of the source
-specified in your `Cargo.toml`.
-
-Cargo looks for a directory named `.cargo` up the directory hierarchy of
-your project. If your project is in `/path/to/project/uuid`,
-it will search for a `.cargo` in:
-
-* `/path/to/project/uuid`
-* `/path/to/project`
-* `/path/to`
-* `/path`
-* `/`
-
-This allows you to specify your overrides in a parent directory that
-includes commonly used packages that you work on locally and share them
-with all projects.
-
-To specify overrides, create a `.cargo/config` file in some ancestor of
-your project’s directory (common places to put it is in the root of
-your code directory or in your home directory).
-
-Inside that file, put this:
-
-```toml
-paths = ["/path/to/project/rand"]
+paths = ["/path/to/uuid"]
 ```
 
 This array should be filled with directories that contain a `Cargo.toml`. In
-this instance, we’re just adding `rand`, so it will be the only one that’s
-overridden. This path must be an absolute path.
+this instance, we’re just adding `uuid`, so it will be the only one that’s
+overridden. This path can be either absolute or relative to the directory that
+contains the `.cargo` folder.
 
-Path overrides are more restricted than the `[replace]` section, however, in
+Path overrides are more restricted than the `[patch]` section, however, in
 that they cannot change the structure of the dependency graph. When a
-replacement is applied it must be the case that the previous set of dependencies
-all match exactly and can be used for the replacement. For example this means
-that path overrides cannot be used to test out adding a dependency to a crate,
-instead `[replace]` must be used in that situation.
+path replacement is used then the previous set of dependencies
+must all match exactly to the new `Cargo.toml` specification. For example this
+means that path overrides cannot be used to test out adding a dependency to a
+crate, instead `[patch]` must be used in that situation. As a result usage of a
+path override is typically isolated to quick bug fixes rather than larger
+changes.
 
 Note: using a local configuration to override paths will only work for crates
 that have been published to [crates.io]. You cannot use this feature to tell
 Cargo how to find local unpublished crates.
-
-More information about local configuration can be found in the [configuration
-documentation](config.html).
 
 # Platform specific dependencies
 

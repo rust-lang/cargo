@@ -130,6 +130,13 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                         .filter(|s| !s.is_registry()));
     }
 
+    let ref keep = |p: &&'a PackageId| {
+        !to_avoid_sources.contains(&p.source_id()) && match to_avoid {
+            Some(set) => !set.contains(p),
+            None => true,
+        }
+    };
+
     // In the case where a previous instance of resolve is available, we
     // want to lock as many packages as possible to the previous version
     // without disturbing the graph structure. To this end we perform
@@ -153,12 +160,35 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     //    still matches the locked version.
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
-        for node in r.iter().filter(|p| keep(p, to_avoid, &to_avoid_sources)) {
+        for node in r.iter().filter(keep) {
             let deps = r.deps_not_replaced(node)
-                        .filter(|p| keep(p, to_avoid, &to_avoid_sources))
+                        .filter(keep)
                         .cloned().collect();
             registry.register_lock(node.clone(), deps);
         }
+    }
+
+    for (url, patches) in ws.root_patch() {
+        let previous = match previous {
+            Some(r) => r,
+            None => {
+                registry.patch(url, patches)?;
+                continue
+            }
+        };
+        let patches = patches.iter().map(|dep| {
+            let unused = previous.unused_patches();
+            let candidates = previous.iter().chain(unused);
+            match candidates.filter(keep).find(|id| dep.matches_id(id)) {
+                Some(id) => {
+                    let mut dep = dep.clone();
+                    dep.lock_to(id);
+                    dep
+                }
+                None => dep.clone(),
+            }
+        }).collect::<Vec<_>>();
+        registry.patch(url, &patches)?;
     }
 
     let mut summaries = Vec::new();
@@ -214,9 +244,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         Some(r) => {
             root_replace.iter().map(|&(ref spec, ref dep)| {
                 for (key, val) in r.replacements().iter() {
-                    if spec.matches(key) &&
-                       dep.matches_id(val) &&
-                       keep(&val, to_avoid, &to_avoid_sources) {
+                    if spec.matches(key) && dep.matches_id(val) && keep(&val) {
                         let mut dep = dep.clone();
                         dep.lock_to(val);
                         return (spec.clone(), dep)
@@ -228,21 +256,14 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => root_replace.to_vec(),
     };
 
-    let mut resolved = resolver::resolve(&summaries, &replace, registry)?;
+    let mut resolved = resolver::resolve(&summaries,
+                                         &replace,
+                                         registry)?;
+    resolved.register_used_patches(registry.patches());
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;
     }
     return Ok(resolved);
-
-    fn keep<'a>(p: &&'a PackageId,
-                to_avoid_packages: Option<&HashSet<&'a PackageId>>,
-                to_avoid_sources: &HashSet<&'a SourceId>)
-                -> bool {
-        !to_avoid_sources.contains(&p.source_id()) && match to_avoid_packages {
-            Some(set) => !set.contains(p),
-            None => true,
-        }
-    }
 }
 
 /// Read the `paths` configuration variable to discover all path overrides that

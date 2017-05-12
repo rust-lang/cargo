@@ -177,8 +177,12 @@ impl ProjectBuilder {
 
     pub fn file<B: AsRef<Path>>(mut self, path: B,
                                 body: &str) -> ProjectBuilder {
-        self.files.push(FileBuilder::new(self.root.join(path), body));
+        self._file(path.as_ref(), body);
         self
+    }
+
+    fn _file(&mut self, path: &Path, body: &str) {
+        self.files.push(FileBuilder::new(self.root.join(path), body));
     }
 
     pub fn change_file(&self, path: &str, body: &str) {
@@ -350,8 +354,12 @@ impl Execs {
     }
 
     pub fn with_stderr<S: ToString>(mut self, expected: S) -> Execs {
-        self.expect_stderr = Some(expected.to_string());
+        self._with_stderr(&expected);
         self
+    }
+
+    fn _with_stderr(&mut self, expected: &ToString) {
+        self.expect_stderr = Some(expected.to_string());
     }
 
     pub fn with_status(mut self, expected: i32) -> Execs {
