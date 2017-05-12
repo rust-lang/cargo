@@ -12,7 +12,7 @@ use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::shell::ColorConfig;
 use util::{self, CargoResult, ProcessBuilder, ProcessError, human, machine_message};
-use util::{Config, internal, ChainError, profile, join_paths, short_hash};
+use util::{Config, internal, ChainError, profile, join_paths};
 use util::Freshness;
 
 use self::job::{Job, Work};
@@ -280,7 +280,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
     let crate_name = unit.target.crate_name();
 
     // XXX(Rely on target_filenames iterator as source of truth rather than rederiving filestem)
-    let rustc_dep_info_loc = if do_rename && cx.target_metadata(unit).is_none() {
+    let rustc_dep_info_loc = if do_rename && !cx.target_metadata(unit).1 {
         root.join(&crate_name)
     } else {
         root.join(&cx.file_stem(unit))
@@ -749,12 +749,12 @@ fn build_base_args(cx: &mut Context,
     }
 
     match cx.target_metadata(unit) {
-        Some(m) => {
+        (m, true) => {
             cmd.arg("-C").arg(&format!("metadata={}", m));
             cmd.arg("-C").arg(&format!("extra-filename=-{}", m));
         }
-        None => {
-            cmd.arg("-C").arg(&format!("metadata={}", short_hash(unit.pkg)));
+        (m, false) => {
+            cmd.arg("-C").arg(&format!("metadata={}", m));
         }
     }
 
