@@ -428,17 +428,12 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
     // been put there by one of the `build_scripts`) to the command provided.
     fn add_custom_env(rustc: &mut ProcessBuilder,
                       build_state: &BuildMap,
-                      build_scripts: &BuildScripts,
+                      _: &BuildScripts,
                       current_id: &PackageId) -> CargoResult<()> {
-        for key in build_scripts.to_link.iter() {
-            let output = build_state.get(key).chain_error(|| {
-                internal(format!("couldn't find build state for {}/{:?}",
-                                 key.0, key.1))
-            })?;
-            if key.0 == *current_id {
-                for &(ref name, ref value) in output.env.iter() {
-                    rustc.env(name, value);
-                }
+        let key = (current_id.clone(), Kind::Host);
+        if let Some(output) = build_state.get(&key) {
+            for &(ref name, ref value) in output.env.iter() {
+                rustc.env(name, value);
             }
         }
         Ok(())

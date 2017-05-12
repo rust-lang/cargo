@@ -709,6 +709,12 @@ fn scrape_target_config(config: &Config, triple: &str)
                     let list = value.list(&k)?;
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
+                "rustc-env" => {
+                    for (name, val) in value.table(&k)?.0 {
+                        let val = val.string(name)?.0;
+                        output.env.push((name.clone(), val.to_string()));
+                    }
+                }
                 "warning" | "rerun-if-changed" => {
                     bail!("`{}` is not supported in build script overrides", k);
                 }

@@ -1587,7 +1587,9 @@ fn env_build() {
         "#)
         .file("src/main.rs", r#"
             const FOO: &'static str = env!("FOO");
-            fn main() {}
+            fn main() {
+                println!("{}", FOO);
+            }
         "#)
         .file("build.rs", r#"
             fn main() {
@@ -1596,6 +1598,8 @@ fn env_build() {
         "#);
     assert_that(build.cargo_process("build").arg("-v"),
                 execs().with_status(0));
+    assert_that(build.cargo("run").arg("-v"),
+                execs().with_status(0).with_stdout("foo\n"));
 }
 
 #[test]
