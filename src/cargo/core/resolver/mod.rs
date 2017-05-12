@@ -53,6 +53,7 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use semver;
+use url::Url;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
@@ -78,6 +79,7 @@ pub struct Resolve {
     features: HashMap<PackageId, HashSet<String>>,
     checksums: HashMap<PackageId, Option<String>>,
     metadata: Metadata,
+    unused_patches: Vec<PackageId>,
 }
 
 pub struct Deps<'a> {
@@ -111,6 +113,16 @@ struct Candidate {
 }
 
 impl Resolve {
+    pub fn register_used_patches(&mut self,
+                                 patches: &HashMap<Url, Vec<Summary>>) {
+        for summary in patches.values().flat_map(|v| v) {
+            if self.iter().any(|id| id == summary.package_id()) {
+                continue
+            }
+            self.unused_patches.push(summary.package_id().clone());
+        }
+    }
+
     pub fn merge_from(&mut self, previous: &Resolve) -> CargoResult<()> {
         // Given a previous instance of resolve, it should be forbidden to ever
         // have a checksums which *differ*. If the same package id has differing
@@ -223,6 +235,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
 
     pub fn query(&self, spec: &str) -> CargoResult<&PackageId> {
         PackageIdSpec::query_str(spec, self.iter())
+    }
+
+    pub fn unused_patches(&self) -> &[PackageId] {
+        &self.unused_patches
     }
 }
 
@@ -341,6 +357,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
         features: cx.resolve_features.iter().map(|(k, v)| {
             (k.clone(), v.clone())
         }).collect(),
+        unused_patches: Vec::new(),
     };
 
     for summary in cx.activations.values()

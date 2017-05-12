@@ -17,6 +17,14 @@ pub struct EncodableResolve {
     /// `root` is optional to allow forward compatibility.
     root: Option<EncodableDependency>,
     metadata: Option<Metadata>,
+
+    #[serde(default, skip_serializing_if = "Patch::is_empty")]
+    patch: Patch,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct Patch {
+    unused: Vec<EncodableDependency>,
 }
 
 pub type Metadata = BTreeMap<String, String>;
@@ -153,6 +161,15 @@ impl EncodableResolve {
             metadata.remove(&k);
         }
 
+        let mut unused_patches = Vec::new();
+        for pkg in self.patch.unused {
+            let id = match pkg.source.as_ref().or(path_deps.get(&pkg.name)) {
+                Some(src) => PackageId::new(&pkg.name, &pkg.version, src)?,
+                None => continue,
+            };
+            unused_patches.push(id);
+        }
+
         Ok(Resolve {
             graph: g,
             empty_features: HashSet::new(),
@@ -160,6 +177,7 @@ impl EncodableResolve {
             replacements: replacements,
             checksums: checksums,
             metadata: metadata,
+            unused_patches: unused_patches,
         })
     }
 }
@@ -190,10 +208,12 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
              config: &Config,
              ret: &mut HashMap<String, SourceId>,
              visited: &mut HashSet<SourceId>) {
-        let replace = pkg.manifest().replace();
+        let replace = pkg.manifest().replace().iter().map(|p| &p.1);
+        let patch = pkg.manifest().patch().values().flat_map(|v| v);
         let deps = pkg.dependencies()
                       .iter()
-                      .chain(replace.iter().map(|p| &p.1))
+                      .chain(replace)
+                      .chain(patch)
                       .map(|d| d.source_id())
                       .filter(|id| !visited.contains(id) && id.is_path())
                       .filter_map(|id| id.url().to_file_path().ok())
@@ -206,6 +226,12 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
             visited.insert(pkg.package_id().source_id().clone());
             build(&pkg, config, ret, visited);
         }
+    }
+}
+
+impl Patch {
+    fn is_empty(&self) -> bool {
+        self.unused.is_empty()
     }
 }
 
@@ -325,10 +351,23 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
             Some(root) if self.use_root_key => Some(encodable_resolve_node(&root, self.resolve)),
             _ => None,
         };
+
+        let patch = Patch {
+            unused: self.resolve.unused_patches().iter().map(|id| {
+                EncodableDependency {
+                    name: id.name().to_string(),
+                    version: id.version().to_string(),
+                    source: encode_source(id.source_id()),
+                    dependencies: None,
+                    replace: None,
+                }
+            }).collect(),
+        };
         EncodableResolve {
             package: Some(encodable),
             root: root,
             metadata: metadata,
+            patch: patch,
         }.serialize(s)
     }
 }
@@ -349,30 +388,27 @@ fn encodable_resolve_node(id: &PackageId, resolve: &Resolve)
         }
     };
 
-    let source = if id.source_id().is_path() {
-        None
-    } else {
-        Some(id.source_id().clone())
-    };
-
     EncodableDependency {
         name: id.name().to_string(),
         version: id.version().to_string(),
-        source: source,
+        source: encode_source(id.source_id()),
         dependencies: deps,
         replace: replace,
     }
 }
 
 fn encodable_package_id(id: &PackageId) -> EncodablePackageId {
-    let source = if id.source_id().is_path() {
-        None
-    } else {
-        Some(id.source_id().with_precise(None))
-    };
     EncodablePackageId {
         name: id.name().to_string(),
         version: id.version().to_string(),
-        source: source,
+        source: encode_source(id.source_id()).map(|s| s.with_precise(None)),
+    }
+}
+
+fn encode_source(id: &SourceId) -> Option<SourceId> {
+    if id.is_path() {
+        None
+    } else {
+        Some(id.clone())
     }
 }
