@@ -82,7 +82,7 @@ crate is built:
   of the directory itself (which corresponds to some types of changes within the
   directory, depending on platform) will trigger a rebuild. To request a re-run
   on any changes within an entire directory, print a line for the directory and
-  another line for everything inside it, recursively.)  
+  another line for everything inside it, recursively.)
   Note that if the build script itself (or one of its dependencies) changes,
   then it's rebuilt and rerun unconditionally, so
   `cargo:rerun-if-changed=build.rs` is almost always redundant (unless you
@@ -427,7 +427,7 @@ script is again to farm out as much of this as possible to make this as easy as
 possible for consumers.
 
 As an example to follow, let’s take a look at one of [Cargo’s own
-dependencies][git2-rs], [libgit2][libgit2]. This library has a number of
+dependencies][git2-rs], [libgit2][libgit2]. The C library has a number of
 constraints:
 
 [git2-rs]: https://github.com/alexcrichton/git2-rs/tree/master/libgit2-sys
@@ -441,7 +441,7 @@ constraints:
 * It can be built from source using `cmake`.
 
 To visualize what’s going on here, let’s take a look at the manifest for the
-relevant Cargo package.
+relevant Cargo package that links to the native C library.
 
 ```toml
 [package]
@@ -464,11 +464,12 @@ As the above manifests show, we’ve got a `build` script specified, but it’s
 worth noting that this example has a `links` entry which indicates that the
 crate (`libgit2-sys`) links to the `git2` native library.
 
-Here we also see the unconditional dependency on `libssh2` via the
-`libssh2-sys` crate, as well as a platform-specific dependency on `openssl-sys`
-for \*nix (other variants elided for now). It may seem a little counterintuitive
-to express *C dependencies* in the *Cargo manifest*, but this is actually using
-one of Cargo’s conventions in this space.
+Here we also see that we chose to have the Rust crate have an unconditional
+dependency on `libssh2` via the `libssh2-sys` crate, as well as a
+platform-specific dependency on `openssl-sys` for \*nix (other variants elided
+for now). It may seem a little counterintuitive to express *C dependencies* in
+the *Cargo manifest*, but this is actually using one of Cargo’s conventions in
+this space.
 
 ## `*-sys` Packages
 
