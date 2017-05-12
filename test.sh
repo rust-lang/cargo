@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cargo install clippy
+
 root_dir=$(pwd)
 
 cd tests/fixtures/libui-rs/ui
@@ -9,7 +11,7 @@ do
     git checkout .
     cargo clean
     cat $d/input.txt | cargo run --manifest-path=$root_dir/Cargo.toml -- --clippy > output.txt
-    if test "$1" == "apply"
+    if [ "$1" == "apply" ]
     then
         git diff > $d/diff.diff
         cp output.txt $d/output.txt
