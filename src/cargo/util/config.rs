@@ -215,23 +215,38 @@ impl Config {
         }
     }
 
+    fn string_to_path(&self, value: String, definition: &Definition) -> PathBuf {
+        let is_path = value.contains('/') ||
+                      (cfg!(windows) && value.contains('\\'));
+        if is_path {
+            definition.root(self).join(value)
+        } else {
+            // A pathless name
+            PathBuf::from(value)
+        }
+    }
+
     pub fn get_path(&self, key: &str) -> CargoResult<Option<Value<PathBuf>>> {
         if let Some(val) = self.get_string(key)? {
-            let is_path = val.val.contains('/') ||
-                          (cfg!(windows) && val.val.contains('\\'));
-            let path = if is_path {
-                val.definition.root(self).join(val.val)
-            } else {
-                // A pathless name
-                PathBuf::from(val.val)
-            };
             Ok(Some(Value {
-                val: path,
-                definition: val.definition,
+                val: self.string_to_path(val.val, &val.definition),
+                definition: val.definition
             }))
         } else {
             Ok(None)
         }
+    }
+
+    pub fn get_path_and_args(&self, key: &str) -> CargoResult<Option<Value<(PathBuf, Vec<String>)>>> {
+        if let Some(mut val) = self.get_list_or_split_string(key)? {
+            if !val.val.is_empty() {
+                return Ok(Some(Value {
+                    val: (self.string_to_path(val.val.remove(0), &val.definition), val.val),
+                    definition: val.definition
+                }));
+            }
+        }
+        Ok(None)
     }
 
     pub fn get_list(&self, key: &str)
