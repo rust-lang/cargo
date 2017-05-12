@@ -99,6 +99,17 @@ Here are some examples of inequality requirements:
 Multiple version requirements can also be separated with a comma, e.g. `>= 1.2,
 < 1.5`.
 
+# Specifying dependencies from a custom registry
+
+To use a custom registry (rather than crates.io) for a dependency, specify the
+url of the index:
+
+```toml
+[dependencies.rand]
+version = "0.1.11"
+registry = "https://github.com/my_awesome_fork/crates.io-index"
+```
+
 # Specifying dependencies from `git` repositories
 
 To depend on a library located in a `git` repository, the minimum information
