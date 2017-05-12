@@ -2,7 +2,7 @@
 //! 
 //! The following data types are copied from [rust-lang/rust](https://github.com/rust-lang/rust/blob/de78655bca47cac8e783dbb563e7e5c25c1fae40/src/libsyntax/json.rs)
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Diagnostic {
     /// The primary error message.
     pub message: String,
@@ -18,7 +18,7 @@ pub struct Diagnostic {
     rendered: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct DiagnosticSpan {
     pub file_name: String,
     byte_start: u32,
@@ -45,7 +45,7 @@ pub struct DiagnosticSpan {
     expansion: Option<Box<DiagnosticSpanMacroExpansion>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct DiagnosticSpanLine {
     pub text: String,
 
@@ -55,7 +55,7 @@ pub struct DiagnosticSpanLine {
     pub highlight_end: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct DiagnosticSpanMacroExpansion {
     /// span where macro was applied to generate this code; note that
     /// this may itself derive from a macro (if
@@ -69,7 +69,7 @@ struct DiagnosticSpanMacroExpansion {
     def_site_span: Option<DiagnosticSpan>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct DiagnosticCode {
     /// The code itself.
     code: String,
