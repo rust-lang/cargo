@@ -1,3 +1,5 @@
 language: rust
 rust:
 - nightly
+
+after_success: sh test.sh
