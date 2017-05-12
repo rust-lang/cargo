@@ -33,6 +33,7 @@ pub struct Options {
     flag_frozen: bool,
     flag_locked: bool,
     flag_all: bool,
+    flag_exclude: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -56,6 +57,7 @@ Options:
     --no-run                     Compile, but don't run tests
     -p SPEC, --package SPEC ...  Package to run tests for
     --all                        Test all packages in the workspace
+    --exclude SPEC ...           Exclude packages from the test
     -j N, --jobs N               Number of parallel builds, see below for details
     --release                    Build artifacts in release mode, with optimizations
     --features FEATURES          Space-separated list of features to also build
@@ -130,11 +132,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                          &options.flag_bench, options.flag_benches);
     }
 
-    let spec = if options.flag_all {
-        Packages::All
-    } else {
-        Packages::Packages(&options.flag_package)
-    };
+    let spec = Packages::from_flags(options.flag_all,
+                                    &options.flag_exclude,
+                                    &options.flag_package)?;
 
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
