@@ -18,7 +18,7 @@ use core::{Package, SourceId, Workspace};
 use core::dependency::Kind;
 use core::manifest::ManifestMetadata;
 use ops;
-use sources::{RegistrySource};
+use sources::RegistrySource;
 use util::config;
 use util::paths;
 use util::{CargoResult, human, ChainError, ToUrl};
@@ -51,6 +51,17 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
     let (mut registry, reg_id) = registry(opts.config,
                                                opts.token.clone(),
                                                opts.index.clone())?;
+
+    if let &Some(ref package_registry) = pkg.registry() {
+        if let Some(ref index) = opts.index {
+            if index != package_registry {
+                bail!("Package registry does not match current registry");
+            }
+        } else {
+            bail!("Custom registry in package definiton, but host not overridden");
+        }
+    }
+
     verify_dependencies(pkg, &reg_id)?;
 
     // Prepare a tarball, with a non-surpressable warning if metadata
@@ -80,12 +91,14 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
                        when publishing.\ndependency `{}` does not specify \
                        a version", dep.name())
             }
-        } else if dep.source_id() != registry_src {
-            bail!("crates cannot be published to crates.io with dependencies sourced from \
-                   a repository\neither publish `{}` as its own crate on crates.io and \
-                   specify a crates.io version as a dependency or pull it into this \
-                   repository and specify it with a path and version\n(crate `{}` has \
-                   repository path `{}`)", dep.name(), dep.name(),  dep.source_id());
+        } else if !dep.source_id().is_default_registry() {
+            if dep.source_id() != registry_src {
+                bail!("crates cannot be published to crates.io with dependencies sourced from \
+                       a repository\neither publish `{}` as its own crate on crates.io and \
+                       specify a crates.io version as a dependency or pull it into this \
+                       repository and specify it with a path and version\n(crate `{}` has \
+                       repository path `{}`)", dep.name(), dep.name(),  dep.source_id());
+            }
         }
     }
     Ok(())
