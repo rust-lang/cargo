@@ -54,7 +54,7 @@ pub struct Compilation<'cfg> {
 
     config: &'cfg Config,
 
-    target_runner: LazyCell<Option<PathBuf>>,
+    target_runner: LazyCell<Option<(PathBuf, Vec<String>)>>,
 }
 
 impl<'cfg> Compilation<'cfg> {
@@ -94,18 +94,19 @@ impl<'cfg> Compilation<'cfg> {
         self.fill_env(process(cmd), pkg, true)
     }
 
-    fn target_runner(&self) -> CargoResult<&Option<PathBuf>> {
+    fn target_runner(&self) -> CargoResult<&Option<(PathBuf, Vec<String>)>> {
         self.target_runner.get_or_try_init(|| {
             let key = format!("target.{}.runner", self.target);
-            Ok(self.config.get_path(&key)?.map(|v| v.val))
+            Ok(self.config.get_path_and_args(&key)?.map(|v| v.val))
         })
     }
 
     /// See `process`.
     pub fn target_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
                                            -> CargoResult<ProcessBuilder> {
-        let builder = if let &Some(ref runner) = self.target_runner()? {
+        let builder = if let &Some((ref runner, ref args)) = self.target_runner()? {
             let mut builder = process(runner);
+            builder.args(args);
             builder.arg(cmd);
             builder
         } else {

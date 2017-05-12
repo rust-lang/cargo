@@ -140,7 +140,7 @@ fn custom_runner() {
         .file("benches/bench.rs", "")
         .file(".cargo/config", &format!(r#"
             [target.{}]
-            runner = "nonexistent-runner"
+            runner = "nonexistent-runner -r"
         "#, target));
 
     foo.build();
@@ -149,7 +149,7 @@ fn custom_runner() {
                 execs().with_stderr_contains(&format!("\
 [COMPILING] foo v0.0.1 ({url})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner target[/]debug[/]foo[EXE] --param`
+[RUNNING] `nonexistent-runner -r target[/]debug[/]foo[EXE] --param`
 ", url = foo.url())));
 
     assert_that(foo.cargo("test").args(&["--test", "test", "--verbose", "--", "--param"]),
@@ -157,7 +157,7 @@ fn custom_runner() {
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `nonexistent-runner [..][/]target[/]debug[/]deps[/]test-[..][EXE] --param`
+[RUNNING] `nonexistent-runner -r [..][/]target[/]debug[/]deps[/]test-[..][EXE] --param`
 ", url = foo.url())));
 
     assert_that(foo.cargo("bench").args(&["--bench", "bench", "--verbose", "--", "--param"]),
@@ -166,6 +166,6 @@ fn custom_runner() {
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] `nonexistent-runner [..][/]target[/]release[/]deps[/]bench-[..][EXE] --param --bench`
+[RUNNING] `nonexistent-runner -r [..][/]target[/]release[/]deps[/]bench-[..][EXE] --param --bench`
 ", url = foo.url())));
 }
