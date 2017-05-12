@@ -93,13 +93,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
-    let spec = match (options.flag_all, &options.flag_exclude) {
-        (true, exclude) if exclude.is_empty() => Packages::All,
-        (true, exclude) => Packages::OptOut(exclude),
-        (false, exclude) if !exclude.is_empty() => panic!("--exclude can only be used together \
-                                                           with --all"),
-        _ => Packages::Packages(&options.flag_package),
-    };
+    let spec = Packages::from_flags(options.flag_all,
+                                    &options.flag_exclude,
+                                    &options.flag_package)?;
 
     let opts = CompileOptions {
         config: config,
