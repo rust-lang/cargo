@@ -55,13 +55,14 @@ fn try_main() -> Result<(), ProgramError> {
             .help("Use `cargo clippy` for suggestions"))
         .get_matches();
 
+    let mut extra_args = Vec::new();
+    
+    if !matches.is_present("clippy") {
+        extra_args.push("-Aclippy");
+    }
+
     // Get JSON output from rustc...
-        let subcommand = if matches.is_present("clippy") {
-            "clippy"
-        } else {
-            "rustc"
-        };
-        try!(json_from_subcommand(subcommand))
+    let json = get_json(&extra_args)?;
 
     let suggestions: Vec<Suggestion> = json.lines()
         .filter(not_empty)
@@ -81,14 +82,14 @@ struct CargoMessage {
     message: Diagnostic,
 }
 
-fn json_from_subcommand(subcommand: &str) -> Result<String, ProgramError> {
+fn get_json(extra_args: &[&str]) -> Result<String, ProgramError> {
     let output = try!(Command::new("cargo")
-        .args(&[subcommand, "--message-format", "json"])
+        .args(&["clippy", "--message-format", "json"])
+        .arg("--")
+        .args(extra_args)
         .output());
 
-    let content = try!(String::from_utf8(output.stderr));
-
-    Ok(content)
+    Ok(String::from_utf8(output.stdout)?)
 }
 
 fn handle_suggestions(suggestions: &[Suggestion]) -> Result<(), ProgramError> {
