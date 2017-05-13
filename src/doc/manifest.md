@@ -162,6 +162,17 @@ travis-ci = { repository = "...", branch = "master" }
 appveyor = { repository = "...", branch = "master", service = "github" }
 # GitLab: `repository` is required. `branch` is optional; default is `master`
 gitlab = { repository = "...", branch = "master" }
+# Is it maintained resolution time: `repository` is required.
+is-it-maintained-issue-resolution = { repository = "..." }
+# Is it maintained percentage of open issues: `repository` is required.
+is-it-maintained-open-issues = { repository = "..." }
+# Codecov: `repository` is required. `branch` is optional; default is `master`
+# `service` is optional; valid values are `github` (default), `bitbucket`, and
+# `gitlab`.
+codecov = { repository = "...", branch = "master", service = "github" }
+# Coveralls: `repository` is required. `branch` is optional; default is `master`
+# `service` is optional; valid values are `github` (default) and `bitbucket`.
+coveralls = { repository = "...", branch = "master", service = "github" }
 ```
 
 The [crates.io](https://crates.io) registry will render the description, display
