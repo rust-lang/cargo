@@ -1577,10 +1577,10 @@ fn cfg_override_doc() {
 
 #[test]
 fn env_build() {
-    let build = project("builder")
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
-            name = "builder"
+            name = "foo"
             version = "0.0.1"
             authors = []
             build = "build.rs"
@@ -1596,9 +1596,9 @@ fn env_build() {
                 println!("cargo:rustc-env=FOO=foo");
             }
         "#);
-    assert_that(build.cargo_process("build").arg("-v"),
+    assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
-    assert_that(build.cargo("run").arg("-v"),
+    assert_that(p.cargo("run").arg("-v"),
                 execs().with_status(0).with_stdout("foo\n"));
 }
 
@@ -1633,14 +1633,14 @@ fn env_test() {
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] [..] build.rs [..]
 [RUNNING] `[..][/]build-script-build`
-[RUNNING] [..] --cfg foo[..]
-[RUNNING] [..] --cfg foo[..]
-[RUNNING] [..] --cfg foo[..]
+[RUNNING] [..] --crate-name foo[..]
+[RUNNING] [..] --crate-name foo[..]
+[RUNNING] [..] --crate-name test[..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..][/]foo-[..][EXE]`
 [RUNNING] `[..][/]test-[..][EXE]`
 [DOCTEST] foo
-[RUNNING] [..] --cfg foo[..]", dir = p.url()))
+[RUNNING] [..] --crate-name foo[..]", dir = p.url()))
                        .with_stdout("
 running 0 tests
 
@@ -1652,7 +1652,35 @@ test test_foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
 "));
+}
+
+#[test]
+fn env_doc() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("src/main.rs", r#"
+            const FOO: &'static str = env!("FOO");
+            fn main() {}
+        "#)
+        .file("build.rs", r#"
+            fn main() {
+                println!("cargo:rustc-env=FOO=foo");
+            }
+        "#);
+    assert_that(p.cargo_process("doc").arg("-v"),
+                execs().with_status(0));
 }
 
 #[test]
