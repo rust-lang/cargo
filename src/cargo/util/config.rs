@@ -237,7 +237,8 @@ impl Config {
         }
     }
 
-    pub fn get_path_and_args(&self, key: &str) -> CargoResult<Option<Value<(PathBuf, Vec<String>)>>> {
+    pub fn get_path_and_args(&self, key: &str)
+                             -> CargoResult<Option<Value<(PathBuf, Vec<String>)>>> {
         if let Some(mut val) = self.get_list_or_split_string(key)? {
             if !val.val.is_empty() {
                 return Ok(Some(Value {
