@@ -557,11 +557,20 @@ fn generate_targets<'a>(pkg: &'a Package,
                         -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
     let build = if release {&profiles.release} else {&profiles.dev};
     let test = if release {&profiles.bench} else {&profiles.test};
+
+    let is_check_test = match *filter {
+        CompileFilter::Everything { .. } => true,
+        CompileFilter::Only { tests, .. } => match tests {
+            FilterRule::All => true,
+            FilterRule::Just(_) => false,
+        },
+    };
+
     let profile = match mode {
         CompileMode::Test => test,
         CompileMode::Bench => &profiles.bench,
         CompileMode::Build => build,
-        CompileMode::Check => &profiles.check,
+        CompileMode::Check => if is_check_test { &profiles.check_test } else { &profiles.check },
         CompileMode::Doc { .. } => &profiles.doc,
         CompileMode::Doctest => &profiles.doctest,
     };
