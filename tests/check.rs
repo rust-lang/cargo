@@ -393,3 +393,84 @@ fn check_all() {
         .with_stderr_contains("[..] --crate-name b b[/]src[/]main.rs [..]")
         );
 }
+
+#[test]
+fn check_unit_test_implicit() {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            #[cfg(test)]
+            mod tests {
+                fn test_fn(string: String) {
+                    println!("{}", string);
+                }
+
+                #[test]
+                fn it_works() {
+                    test_fn(1);
+                }
+            }
+        "#);
+
+    assert_that(foo.cargo_process("check"),
+                execs().with_status(101));
+}
+
+#[test]
+fn check_unit_test_explicit() {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            #[cfg(test)]
+            mod tests {
+                fn test_fn(string: String) {
+                    println!("{}", string);
+                }
+
+                #[test]
+                fn it_works() {
+                    test_fn(1);
+                }
+            }
+        "#);
+
+    assert_that(foo.cargo_process("check").arg("--lib").arg("--tests"),
+                execs().with_status(101));
+}
+
+#[test]
+fn check_no_unit_test() {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            #[cfg(test)]
+            mod tests {
+                fn test_fn(string: String) {
+                    println!("{}", string);
+                }
+
+                #[test]
+                fn it_works() {
+                    test_fn(1);
+                }
+            }
+        "#);
+
+    assert_that(foo.cargo_process("check").arg("--lib"),
+                execs().with_status(0));
+}
