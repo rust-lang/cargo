@@ -1422,11 +1422,25 @@ fn inferred_bin_path(bin: &TomlBinTarget,
         }
 
         return Path::new("src").join("bin").join(&format!("main.rs")).to_path_buf()
-
     }
 
-    // here we have multiple bins, so they are expected to be located inside src/bin
-    Path::new("src").join("bin").join(&format!("{}.rs", bin.name())).to_path_buf()
+    // bin_len > 1
+    let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
+    if package_root.join(&path).exists() {
+        return path.to_path_buf()
+    }
+
+    let path = Path::new("src").join(&format!("{}.rs", bin.name()));
+    if package_root.join(&path).exists() {
+        return path.to_path_buf()
+    }
+
+    let path = Path::new("src").join("bin").join(&format!("main.rs"));
+    if package_root.join(&path).exists() {
+        return path.to_path_buf()
+    }
+
+    return Path::new("src").join(&format!("main.rs")).to_path_buf()
 }
 
 fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
