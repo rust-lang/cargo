@@ -691,7 +691,7 @@ fn ambiguous_git_reference() {
         authors = []
 
         [dependencies.bar]
-        git = "https://example.com"
+        git = "https://127.0.0.1"
         branch = "master"
         tag = "some-tag"
     "#)
@@ -865,7 +865,7 @@ fn both_git_and_path_specified() {
         authors = []
 
         [dependencies.bar]
-        git = "https://example.com"
+        git = "https://127.0.0.1"
         path = "bar"
     "#)
         .file("src/lib.rs", "");
