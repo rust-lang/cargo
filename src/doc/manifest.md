@@ -443,7 +443,11 @@ Most of the time workspaces will not need to be dealt with as `cargo new` and
 If your project is an executable, name the main source file `src/main.rs`. If it
 is a library, name the main source file `src/lib.rs`.
 
-Cargo will also treat any files located in `src/bin/*.rs` as executables.
+Cargo will also treat any files located in `src/bin/*.rs` as executables.  Do
+note, however, once you add a `[[bin]]` section ([see
+below](#configuring-a-target)), Cargo will no longer automatically build files
+located in `src/bin/*.rs`.  Instead you must create a `[[bin]]` section for
+each file you want to build.
 
 Your project can optionally contain folders named `examples`, `tests`, and
 `benches`, which Cargo will treat as containing examples,
