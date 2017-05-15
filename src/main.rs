@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate serde_derive;
 extern crate serde_json;
 #[macro_use]
 extern crate quick_error;
@@ -51,33 +53,23 @@ fn try_main() -> Result<(), ProgramError> {
         .arg(Arg::with_name("clippy")
             .long("clippy")
             .help("Use `cargo clippy` for suggestions"))
-        .arg(Arg::with_name("from_file")
-            .long("from-file")
-            .value_name("FILE")
-            .takes_value(true)
-            .help("Read suggestions from file (each line is a JSON object)"))
         .get_matches();
 
+    let mut extra_args = Vec::new();
+    
+    if !matches.is_present("clippy") {
+        extra_args.push("-Aclippy");
+    }
+
     // Get JSON output from rustc...
-    let json = if let Some(file_name) = matches.value_of("from_file") {
-        // either by reading a file the user saved (probably only for debugging rustfix itself)...
-        try!(json_from_file(&file_name))
-    } else {
-        // or by spawning a subcommand that runs rustc.
-        let subcommand = if matches.is_present("clippy") {
-            "clippy"
-        } else {
-            "rustc"
-        };
-        try!(json_from_subcommand(subcommand))
-    };
+    let json = get_json(&extra_args)?;
 
     let suggestions: Vec<Suggestion> = json.lines()
         .filter(not_empty)
         // Convert JSON string (and eat parsing errors)
-        .flat_map(|line| serde_json::from_str::<Diagnostic>(line))
+        .flat_map(|line| serde_json::from_str::<CargoMessage>(line))
         // One diagnostic line might have multiple suggestions
-        .flat_map(|diagnostic| rustfix::collect_suggestions(&diagnostic, None))
+        .flat_map(|cargo_msg| rustfix::collect_suggestions(&cargo_msg.message, None))
         .collect();
 
     try!(handle_suggestions(&suggestions));
@@ -85,23 +77,19 @@ fn try_main() -> Result<(), ProgramError> {
     Ok(())
 }
 
-fn json_from_file(file_name: &str) -> Result<String, ProgramError> {
-    read_file_to_string(file_name).map_err(From::from)
+#[derive(Deserialize)]
+struct CargoMessage {
+    message: Diagnostic,
 }
 
-fn json_from_subcommand(subcommand: &str) -> Result<String, ProgramError> {
+fn get_json(extra_args: &[&str]) -> Result<String, ProgramError> {
     let output = try!(Command::new("cargo")
-        .args(&[subcommand,
-                "--quiet",
-                "--color", "never",
-                "--",
-                "-Z", "unstable-options",
-                "--error-format", "json"])
+        .args(&["clippy", "--message-format", "json"])
+        .arg("--")
+        .args(extra_args)
         .output());
 
-    let content = try!(String::from_utf8(output.stderr));
-
-    Ok(content)
+    Ok(String::from_utf8(output.stdout)?)
 }
 
 fn handle_suggestions(suggestions: &[Suggestion]) -> Result<(), ProgramError> {

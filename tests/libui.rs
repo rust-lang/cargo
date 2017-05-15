@@ -1,3 +1,0 @@
-#[test]
-fn test() {
-}

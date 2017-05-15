@@ -1,3 +1,7 @@
 language: rust
 rust:
 - nightly
+
+script:
+- cargo build
+- cargo test -- --nocapture
