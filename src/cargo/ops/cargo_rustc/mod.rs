@@ -195,6 +195,10 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             .or_insert_with(HashSet::new)
             .extend(output.cfgs.iter().cloned());
 
+        cx.compilation.extra_env.entry(pkg.clone())
+            .or_insert_with(Vec::new)
+            .extend(output.env.iter().cloned());
+
         for dir in output.library_paths.iter() {
             cx.compilation.native_dirs.insert(dir.clone());
         }
@@ -265,6 +269,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
 
     let filenames = cx.target_filenames(unit)?;
     let root = cx.out_dir(unit);
+    let kind = unit.kind;
 
     // Prepare the native lib state (extra -L and -l flags)
     let build_state = cx.build_state.clone();
@@ -305,12 +310,15 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
         // also need to be sure to add any -L paths for our plugins to the
         // dynamic library load path as a plugin's dynamic library may be
         // located somewhere in there.
+        // Finally, if custom environment variables have been produced by
+        // previous build scripts, we include them in the rustc invocation.
         if let Some(build_deps) = build_deps {
             let build_state = build_state.outputs.lock().unwrap();
             add_native_deps(&mut rustc, &build_state, &build_deps,
                                  pass_l_flag, &current_id)?;
             add_plugin_deps(&mut rustc, &build_state, &build_deps,
                                  &root_output)?;
+            add_custom_env(&mut rustc, &build_state, &current_id, kind)?;
         }
 
         // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
@@ -416,6 +424,21 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
                         rustc.arg("-l").arg(name);
                     }
                 }
+            }
+        }
+        Ok(())
+    }
+
+    // Add all custom environment variables present in `state` (after they've
+    // been put there by one of the `build_scripts`) to the command provided.
+    fn add_custom_env(rustc: &mut ProcessBuilder,
+                      build_state: &BuildMap,
+                      current_id: &PackageId,
+                      kind: Kind) -> CargoResult<()> {
+        let key = (current_id.clone(), kind);
+        if let Some(output) = build_state.get(&key) {
+            for &(ref name, ref value) in output.env.iter() {
+                rustc.env(name, value);
             }
         }
         Ok(())
@@ -598,6 +621,9 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
         if let Some(output) = build_state.outputs.lock().unwrap().get(&key) {
             for cfg in output.cfgs.iter() {
                 rustdoc.arg("--cfg").arg(cfg);
+            }
+            for &(ref name, ref value) in output.env.iter() {
+                rustdoc.env(name, value);
             }
         }
         state.running(&rustdoc);

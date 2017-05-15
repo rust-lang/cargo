@@ -673,6 +673,7 @@ fn scrape_target_config(config: &Config, triple: &str)
             library_paths: Vec::new(),
             library_links: Vec::new(),
             cfgs: Vec::new(),
+            env: Vec::new(),
             metadata: Vec::new(),
             rerun_if_changed: Vec::new(),
             warnings: Vec::new(),
@@ -710,6 +711,12 @@ fn scrape_target_config(config: &Config, triple: &str)
                 "rustc-cfg" => {
                     let list = value.list(&k)?;
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
+                }
+                "rustc-env" => {
+                    for (name, val) in value.table(&k)?.0 {
+                        let val = val.string(name)?.0;
+                        output.env.push((name.clone(), val.to_string()));
+                    }
                 }
                 "warning" | "rerun-if-changed" => {
                     bail!("`{}` is not supported in build script overrides", k);
