@@ -48,6 +48,7 @@ pub struct BuildScript<'a> {
     pub linked_libs: &'a [String],
     pub linked_paths: &'a [String],
     pub cfgs: &'a [String],
+    pub env: &'a [(String, String)],
 }
 
 impl<'a> Message for BuildScript<'a> {
