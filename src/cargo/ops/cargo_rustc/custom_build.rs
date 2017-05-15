@@ -120,6 +120,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         cmd.env("CARGO_MANIFEST_LINKS", links);
     }
 
+    if let Some(ws_dir) = cx.ws.workspace_dir() {
+        cmd.env("CARGO_WORKSPACE_DIR", ws_dir);
+    }
+
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
     for feat in cx.resolve.features(unit.pkg.package_id()).iter() {

@@ -201,6 +201,17 @@ impl<'cfg> Workspace<'cfg> {
         }.parent().unwrap()
     }
 
+    /// Returns the root path of this workspace.
+    ///
+    /// That is, this returns the path of the directory containing the
+    /// `Cargo.toml` which is the root of this workspace.
+    pub fn workspace_dir(&self) -> Option<&Path> {
+        match self.root_manifest {
+            Some(ref p) => p.parent(),
+            None => None
+        }
+    }
+
     pub fn target_dir(&self) -> Filesystem {
         self.target_dir.clone().unwrap_or_else(|| {
             Filesystem::new(self.root().join("target"))
