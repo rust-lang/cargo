@@ -3011,6 +3011,68 @@ fn run_proper_binary_main_rs() {
 }
 
 #[test]
+fn run_proper_alias_binary_from_src() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+            [[bin]]
+            name = "foo"
+            [[bin]]
+            name = "bar"
+        "#)
+        .file("src/foo.rs", r#"
+            fn main() {
+              println!("foo");
+            }
+        "#).file("src/bar.rs", r#"
+            fn main() {
+              println!("bar");
+            }
+        "#);
+
+    assert_that(p.cargo_process("build")
+                 .arg("--all"),
+                execs().with_status(0)
+                );
+    assert_that(process(&p.bin("foo")),
+                execs().with_status(0).with_stdout("foo\n"));
+    assert_that(process(&p.bin("bar")),
+                execs().with_status(0).with_stdout("bar\n"));
+}
+
+#[test]
+fn run_proper_alias_binary_main_rs() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+            [[bin]]
+            name = "foo"
+            [[bin]]
+            name = "bar"
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {
+              println!("main");
+            }
+        "#);
+
+    assert_that(p.cargo_process("build")
+                 .arg("--all"),
+                execs().with_status(0)
+                );
+    assert_that(process(&p.bin("foo")),
+                execs().with_status(0).with_stdout("main\n"));
+    assert_that(process(&p.bin("bar")),
+                execs().with_status(0).with_stdout("main\n"));
+}
+
+#[test]
 fn run_proper_binary_main_rs_as_foo() {
     let p = project("foo")
         .file("Cargo.toml", r#"
