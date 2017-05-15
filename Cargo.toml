@@ -1,9 +1,20 @@
 [package]
-authors = ["Pascal Hertleif <killercup@gmail.com>"]
+authors = [
+    "Pascal Hertleif <killercup@gmail.com>",
+    "Oliver Schneider <oli-obk@users.noreply.github.com>",
+]
 license = "Apache-2.0/MIT"
 name = "rustfix"
+description = "Automatically apply the suggestions made by rustc"
+repository = "https://github.com/killercup/rustfix"
+documentation = "https://docs.rs/rustfix"
 readme = "README.md"
 version = "0.1.0"
+exclude = [
+    "etc/*",
+    "examples/*",
+    "tests/*",
+]
 
 [dependencies]
 clap = "2.9.2"
