@@ -1,7 +1,8 @@
 language: rust
 rust:
 - nightly
+- stable
 
 script:
 - cargo build
-- cargo test -- --nocapture
+- if [ $TRAVIS_RUST_VERSION == nightly ]; then cargo test -- --nocapture ; fi
