@@ -53,6 +53,9 @@ fn try_main() -> Result<(), ProgramError> {
         .arg(Arg::with_name("clippy")
             .long("clippy")
             .help("Use `cargo clippy` for suggestions"))
+        .arg(Arg::with_name("yolo")
+            .long("yolo")
+            .help("Automatically apply all unambiguous suggestions"))
         .get_matches();
 
     let mut extra_args = Vec::new();
@@ -60,6 +63,12 @@ fn try_main() -> Result<(), ProgramError> {
     if !matches.is_present("clippy") {
         extra_args.push("-Aclippy");
     }
+
+    let mode = if matches.is_present("yolo") {
+        AutofixMode::Yolo
+    } else {
+        AutofixMode::None
+    };
 
     // Get JSON output from rustc...
     let json = get_json(&extra_args)?;
@@ -72,7 +81,7 @@ fn try_main() -> Result<(), ProgramError> {
         .flat_map(|cargo_msg| rustfix::collect_suggestions(&cargo_msg.message, None))
         .collect();
 
-    try!(handle_suggestions(&suggestions));
+    try!(handle_suggestions(&suggestions, mode));
 
     Ok(())
 }
@@ -92,7 +101,19 @@ fn get_json(extra_args: &[&str]) -> Result<String, ProgramError> {
     Ok(String::from_utf8(output.stdout)?)
 }
 
-fn handle_suggestions(suggestions: &[Suggestion]) -> Result<(), ProgramError> {
+#[derive(PartialEq, Eq, Debug)]
+enum AutofixMode {
+    /// Do not apply any fixes automatically
+    None,
+    // /// Only apply suggestions of a whitelist of lints
+    // Whitelist,
+    // /// Check the confidence flag supplied by rustc
+    // Confidence,
+    /// Automatically apply all unambiguous suggestions
+    Yolo,
+}
+
+fn handle_suggestions(suggestions: &[Suggestion], mode: AutofixMode) -> Result<(), ProgramError> {
     let mut accepted_suggestions: Vec<&Suggestion> = vec![];
 
     if suggestions.is_empty() {
@@ -118,6 +139,12 @@ fn handle_suggestions(suggestions: &[Suggestion]) -> Result<(), ProgramError> {
             tail = suggestion.text.2,
             with = "with:".yellow().bold(),
             replacement = indent(4, &suggestion.replacement));
+        
+        if mode == AutofixMode::Yolo {
+            accepted_suggestions.push(suggestion);
+            println!("automatically applying suggestion (--yolo)");
+            continue 'suggestions;
+        }
 
         'userinput: loop {
             print!("{arrow} {user_options}\n\

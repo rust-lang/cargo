@@ -19,6 +19,7 @@ fn fixtures() {
 
         for entry in tests {
             let test = entry.unwrap().path();
+            let yolo = test.file_name().unwrap() == "yolo";
 
             println!("---");
             println!("Running test: {:?}", test);
@@ -30,11 +31,13 @@ fn fixtures() {
 
             println!("Checking {:?} with clippy", test);
 
-            cmd!("cargo", "run",
-                format!("--manifest-path={}", &manifest[1..manifest.len() - 1]),
-                "--quiet",
-                "--", "--clippy")
-                .dir(&dir)
+            let manifest = format!("--manifest-path={}", &manifest[1..manifest.len() - 1]);
+            let cmd = if yolo {
+                cmd!("cargo", "run", manifest, "--quiet", "--", "--clippy", "--yolo")
+            } else {
+                cmd!("cargo", "run", manifest, "--quiet", "--", "--clippy")
+            };
+            cmd.dir(&dir)
                 .stdin(test.join("input.txt"))
                 .stdout(dir.join("output.txt"))
                 .run()
