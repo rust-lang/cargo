@@ -368,7 +368,7 @@ class="s1">     Running</span> target/test/hello_world-9c2b65bbb79eabce
 
 running 0 tests
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 </code></pre>
 
 If our project had tests, we would see more output with the correct number of

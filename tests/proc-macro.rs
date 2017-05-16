@@ -217,17 +217,6 @@ fn a() {
 
     assert_that(foo.cargo_process("test"),
                 execs().with_status(0)
-                       .with_stdout_contains("\
-running 1 test
-test a ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-").with_stdout_contains("\
-running 1 test
-test [..] ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                       .with_stdout_contains("test a ... ok")
+                       .with_stdout_contains_n("test [..] ... ok", 2));
 }
