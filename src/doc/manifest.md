@@ -607,7 +607,7 @@ compile packages (dependencies) based on the requirements of the project that
 includes them.
 
 You can read more about the different crate types in the
-[Rust Reference Manual](https://doc.rust-lang.org/reference.html#linkage)
+[Rust Reference Manual](https://doc.rust-lang.org/reference/linkage.html)
 
 # The `[replace]` Section
 
