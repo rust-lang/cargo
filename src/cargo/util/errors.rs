@@ -11,6 +11,7 @@ use core::TargetKind;
 
 use curl;
 use git2;
+use glob;
 use semver;
 use serde_json;
 use term;
@@ -428,6 +429,8 @@ from_error! {
     term::Error,
     num::ParseIntError,
     str::ParseBoolError,
+    glob::PatternError,
+    glob::GlobError,
 }
 
 impl From<string::ParseError> for Box<CargoError> {
@@ -459,6 +462,8 @@ impl CargoError for ffi::NulError {}
 impl CargoError for term::Error {}
 impl CargoError for num::ParseIntError {}
 impl CargoError for str::ParseBoolError {}
+impl CargoError for glob::PatternError {}
+impl CargoError for glob::GlobError {}
 
 // =============================================================================
 // Construction helpers
