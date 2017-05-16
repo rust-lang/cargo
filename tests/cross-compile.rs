@@ -550,19 +550,8 @@ fn cross_tests() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]bar-[..][EXE]", foo = p.url(), triple = target))
-                       .with_stdout("
-running 1 test
-test test_foo ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-
-running 1 test
-test test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                       .with_stdout_contains("test test_foo ... ok")
+                       .with_stdout_contains("test test ... ok"));
 }
 
 #[test]
@@ -1114,18 +1103,6 @@ fn cross_test_dylib() {
 [RUNNING] target[/]{arch}[/]debug[/]deps[/]foo-[..][EXE]
 [RUNNING] target[/]{arch}[/]debug[/]deps[/]test-[..][EXE]",
                         dir = p.url(), arch = alternate()))
-                       .with_stdout("
-running 1 test
-test foo ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-
-running 1 test
-test foo ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                       .with_stdout_contains_n("test foo ... ok", 2));
 
 }

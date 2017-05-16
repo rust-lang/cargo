@@ -268,13 +268,7 @@ fn test_default_features() {
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]", p.url()))
-                .with_stdout("
-running 1 test
-test test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                .with_stdout_contains("test test ... ok"));
 
     assert_that(p.cargo("test").arg("--no-default-features"),
                 execs().with_status(0).with_stderr(format!("\
@@ -285,13 +279,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
                 execs().with_status(0).with_stderr(format!("\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]"))
-                .with_stdout("
-running 1 test
-test test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                .with_stdout_contains("test test ... ok"));
 
     assert_that(p.cargo("test").arg("--test=foo").arg("--no-default-features"),
                 execs().with_status(101).with_stderr("\
@@ -324,13 +312,7 @@ fn test_arg_features() {
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]", p.url()))
-                .with_stdout("
-running 1 test
-test test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                .with_stdout_contains("test test ... ok"));
 }
 
 #[test]
@@ -365,13 +347,7 @@ fn test_multiple_required_features() {
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo_2-[..][EXE]", p.url()))
-                .with_stdout("
-running 1 test
-test test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                .with_stdout_contains("test test ... ok"));
 
     assert_that(p.cargo("test").arg("--features").arg("c"),
                 execs().with_status(0).with_stderr(format!("\
@@ -379,19 +355,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo_1-[..][EXE]
 [RUNNING] target[/]debug[/]deps[/]foo_2-[..][EXE]", p.url()))
-                .with_stdout("
-running 1 test
-test test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-
-running 1 test
-test test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                .with_stdout_contains_n("test test ... ok", 2));
 
     assert_that(p.cargo("test").arg("--no-default-features"),
                 execs().with_status(0).with_stderr(format!("\
@@ -434,13 +398,7 @@ fn bench_default_features() {
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
-                .with_stdout("
-running 1 test
-test bench ... bench: [..] 0 ns/iter (+/- 0)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-
-"));
+                .with_stdout_contains("test bench ... bench: [..]"));
 
     assert_that(p.cargo("bench").arg("--no-default-features"),
                 execs().with_status(0).with_stderr(format!("\
@@ -451,13 +409,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
                 execs().with_status(0).with_stderr(format!("\
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]"))
-                .with_stdout("
-running 1 test
-test bench ... bench: [..] 0 ns/iter (+/- 0)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-
-"));
+                .with_stdout_contains("test bench ... bench: [..]"));
 
     assert_that(p.cargo("bench").arg("--bench=foo").arg("--no-default-features"),
                 execs().with_status(101).with_stderr("\
@@ -500,13 +452,7 @@ fn bench_arg_features() {
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
-                .with_stdout("
-running 1 test
-test bench ... bench: [..] 0 ns/iter (+/- 0)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-
-"));
+                .with_stdout_contains("test bench ... bench: [..]"));
 }
 
 #[test]
@@ -557,13 +503,7 @@ fn bench_multiple_required_features() {
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo_2-[..][EXE]", p.url()))
-                .with_stdout("
-running 1 test
-test bench ... bench: [..] 0 ns/iter (+/- 0)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-
-"));
+                .with_stdout_contains("test bench ... bench: [..]"));
 
     assert_that(p.cargo("bench").arg("--features").arg("c"),
                 execs().with_status(0).with_stderr(format!("\
@@ -571,19 +511,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo_1-[..][EXE]
 [RUNNING] target[/]release[/]deps[/]foo_2-[..][EXE]", p.url()))
-                .with_stdout("
-running 1 test
-test bench ... bench: [..] 0 ns/iter (+/- 0)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-
-
-running 1 test
-test bench ... bench: [..] 0 ns/iter (+/- 0)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-
-"));
+                .with_stdout_contains_n("test bench ... bench: [..]", 2));
 
     assert_that(p.cargo("bench").arg("--no-default-features"),
                 execs().with_status(0).with_stderr(format!("\
@@ -815,13 +743,7 @@ fn dep_feature_in_toml() {
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]", p.url()))
-                .with_stdout("
-running 1 test
-test test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                .with_stdout_contains("test test ... ok"));
 
     // bench
     if is_nightly() {
@@ -831,13 +753,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 [COMPILING] foo v0.0.1 ({0})
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
-                    .with_stdout("
-running 1 test
-test bench ... bench: [..] 0 ns/iter (+/- 0)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-
-"));
+                    .with_stdout_contains("test bench ... bench: [..]"));
     }
 
     // install
@@ -934,13 +850,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]", p.url()))
-                .with_stdout("
-running 1 test
-test test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                .with_stdout_contains("test test ... ok"));
 
     // bench
     if is_nightly() {
@@ -955,13 +865,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 [COMPILING] foo v0.0.1 ({0})
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
-                    .with_stdout("
-running 1 test
-test bench ... bench: [..] 0 ns/iter (+/- 0)
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured
-
-"));
+                    .with_stdout_contains("test bench ... bench: [..]"));
     }
 
     // install
@@ -1007,12 +911,7 @@ fn test_skips_compiling_bin_with_missing_required_features() {
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]debug[/]deps[/]foo-[..][EXE]", p.url()))
-                .with_stdout("
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                .with_stdout_contains("running 0 tests"));
 
     assert_that(p.cargo("test").arg("--features").arg("a").arg("-j").arg("1"),
                 execs().with_status(101).with_stderr_contains(format!("\
@@ -1025,12 +924,7 @@ error[E0463]: can't find crate for `bar`", p.url())));
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
-                    .with_stdout("
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                    .with_stdout_contains("running 0 tests"));
 
         assert_that(p.cargo("bench").arg("--features").arg("a").arg("-j").arg("1"),
                     execs().with_status(101).with_stderr_contains(format!("\
