@@ -56,7 +56,7 @@ Options:
     --no-run                     Compile, but don't run tests
     -p SPEC, --package SPEC ...  Package to run tests for
     --all                        Test all packages in the workspace
-    -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
+    -j N, --jobs N               Number of parallel builds, see below for details
     --release                    Build artifacts in release mode, with optimizations
     --features FEATURES          Space-separated list of features to also build
     --all-features               Build all available features
@@ -86,7 +86,12 @@ All packages in the workspace are tested if the `--all` flag is supplied. The
 `--all` flag may be supplied in the presence of a virtual manifest.
 
 The --jobs argument affects the building of the test executable but does
-not affect how many jobs are used when running the tests.
+not affect how many jobs are used when running the tests. The default value
+for the --jobs argument is the number of CPUs. If you want to control the
+number of simultaneous running test cases, pass the `--test-threads` option
+to the test binaries:
+
+  cargo test -- --test-threads=1
 
 Compilation can be configured via the `test` profile in the manifest.
 
