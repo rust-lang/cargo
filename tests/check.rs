@@ -418,7 +418,7 @@ fn check_unit_test_implicit() {
         "#);
 
     assert_that(foo.cargo_process("check"),
-                execs().with_status(101));
+                execs().with_status(0));
 }
 
 #[test]
@@ -444,12 +444,12 @@ fn check_unit_test_explicit() {
             }
         "#);
 
-    assert_that(foo.cargo_process("check").arg("--lib").arg("--tests"),
+    assert_that(foo.cargo_process("check").arg("--tests"),
                 execs().with_status(101));
 }
 
 #[test]
-fn check_no_unit_test() {
+fn check_unit_test_specific() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -469,8 +469,9 @@ fn check_no_unit_test() {
                     test_fn(1);
                 }
             }
-        "#);
+        "#)
+        .file("tests/a.rs", "");
 
-    assert_that(foo.cargo_process("check").arg("--lib"),
+    assert_that(foo.cargo_process("check").arg("--test").arg("a"),
                 execs().with_status(0));
 }

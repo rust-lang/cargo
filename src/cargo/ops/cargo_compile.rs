@@ -559,7 +559,7 @@ fn generate_targets<'a>(pkg: &'a Package,
     let test = if release {&profiles.bench} else {&profiles.test};
 
     let is_check_test = match *filter {
-        CompileFilter::Everything { .. } => true,
+        CompileFilter::Everything { .. } => false,
         CompileFilter::Only { tests, .. } => match tests {
             FilterRule::All => true,
             FilterRule::Just(_) => false,
@@ -587,7 +587,7 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileFilter::Only { lib, bins, examples, tests, benches } => {
             let mut targets = Vec::new();
 
-            if lib {
+            if lib || is_check_test {
                 if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
                     targets.push(BuildProposal {
                         target: t,
