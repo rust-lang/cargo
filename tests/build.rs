@@ -2841,9 +2841,9 @@ fn build_all_exclude() {
                  .arg("--exclude")
                  .arg("baz"),
                 execs().with_status(0)
-                       .with_stderr("[..] Compiling bar v0.1.0 ([..])\n\
-                       [..] Compiling foo v0.1.0 ([..])\n\
-                       [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
+                       .with_stderr_contains("[..]Compiling foo v0.1.0 [..]")
+                       .with_stderr_contains("[..]Compiling bar v0.1.0 [..]")
+                       .with_stderr_does_not_contain("[..]Compiling baz v0.1.0 [..]"));
 }
 
 #[test]

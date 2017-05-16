@@ -2418,9 +2418,7 @@ fn test_all_exclude() {
                     .arg("baz"),
                 execs().with_status(0)
                     .with_stdout_contains("running 1 test
-test bar ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured"));
+test bar ... ok"));
 }
 
 #[test]
