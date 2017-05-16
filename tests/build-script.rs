@@ -502,17 +502,7 @@ fn testing_and_such() {
 [RUNNING] `[..][/]foo-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc --test [..]`")
-                       .with_stdout("
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                       .with_stdout_contains_n("running 0 tests", 2));
 
     println!("doc");
     assert_that(p.cargo("doc").arg("-v"),
@@ -1392,25 +1382,9 @@ fn cfg_test() {
 [RUNNING] `[..][/]test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]", dir = p.url()))
-                       .with_stdout("
-running 1 test
-test test_foo ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-
-running 1 test
-test test_bar ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-
-running 1 test
-test [..] ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                       .with_stdout_contains("test test_foo ... ok")
+                       .with_stdout_contains("test test_bar ... ok")
+                       .with_stdout_contains_n("test [..] ... ok", 3));
 }
 
 #[test]
@@ -1509,25 +1483,9 @@ fn cfg_override_test() {
 [RUNNING] `[..][/]test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --cfg foo[..]", dir = p.url()))
-                       .with_stdout("
-running 1 test
-test test_foo ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-
-running 1 test
-test test_bar ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-
-running 1 test
-test [..] ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                       .with_stdout_contains("test test_foo ... ok")
+                       .with_stdout_contains("test test_bar ... ok")
+                       .with_stdout_contains_n("test [..] ... ok", 3));
 }
 
 #[test]
@@ -1641,23 +1599,8 @@ fn env_test() {
 [RUNNING] `[..][/]test-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] [..] --crate-name foo[..]", dir = p.url()))
-                       .with_stdout("
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-
-running 1 test
-test test_foo ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                       .with_stdout_contains_n("running 0 tests", 2)
+                       .with_stdout_contains("test test_foo ... ok"));
 }
 
 #[test]
@@ -1734,12 +1677,7 @@ fn flags_go_into_tests() {
 [RUNNING] `rustc [..] tests[/]foo.rs [..] -L test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..][/]foo-[..][EXE]`")
-                       .with_stdout("
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                       .with_stdout_contains("running 0 tests"));
 
     assert_that(p.cargo("test").arg("-v").arg("-pb").arg("--lib"),
                 execs().with_status(0)
@@ -1749,12 +1687,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 [RUNNING] `rustc [..] b[/]src[/]lib.rs [..] -L test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..][/]b-[..][EXE]`")
-                       .with_stdout("
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                       .with_stdout_contains("running 0 tests"));
 }
 
 #[test]

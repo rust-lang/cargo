@@ -337,6 +337,7 @@ pub struct Execs {
     expect_exit_code: Option<i32>,
     expect_stdout_contains: Vec<String>,
     expect_stderr_contains: Vec<String>,
+    expect_stdout_contains_n: Vec<(String, usize)>,
     expect_stdout_not_contains: Vec<String>,
     expect_stderr_not_contains: Vec<String>,
     expect_json: Option<Vec<Value>>,
@@ -365,6 +366,11 @@ impl Execs {
 
     pub fn with_stderr_contains<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stderr_contains.push(expected.to_string());
+        self
+    }
+
+    pub fn with_stdout_contains_n<S: ToString>(mut self, expected: S, number: usize) -> Execs {
+        self.expect_stdout_contains_n.push((expected.to_string(), number));
         self
     }
 
@@ -415,6 +421,10 @@ impl Execs {
         for expect in self.expect_stderr_contains.iter() {
             self.match_std(Some(expect), &actual.stderr, "stderr",
                            &actual.stdout, MatchKind::Partial)?;
+        }
+        for &(ref expect, number) in self.expect_stdout_contains_n.iter() {
+            self.match_std(Some(&expect), &actual.stdout, "stdout",
+                           &actual.stderr, MatchKind::PartialN(number))?;
         }
         for expect in self.expect_stdout_not_contains.iter() {
             self.match_std(Some(expect), &actual.stdout, "stdout",
@@ -493,6 +503,26 @@ impl Execs {
                                      {}", out,
                                      actual))
             }
+            MatchKind::PartialN(number) => {
+                let mut a = actual.lines();
+                let e = out.lines();
+
+                let mut matches = 0;
+
+                while let Some(..) = { 
+                    if self.diff_lines(a.clone(), e.clone(), true).is_empty() {
+                        matches += 1;
+                    }
+                    a.next()
+                } {}
+                
+                ham::expect(matches == number,
+                            format!("expected to find {} occurences:\n\
+                                     {}\n\n\
+                                     did not find in output:\n\
+                                     {}", number, out,
+                                     actual))
+            }
             MatchKind::NotPresent => {
                 ham::expect(!actual.contains(out),
                             format!("expected not to find:\n\
@@ -554,6 +584,7 @@ impl Execs {
 enum MatchKind {
     Exact,
     Partial,
+    PartialN(usize),
     NotPresent,
 }
 
@@ -718,6 +749,7 @@ pub fn execs() -> Execs {
         expect_exit_code: None,
         expect_stdout_contains: Vec::new(),
         expect_stderr_contains: Vec::new(),
+        expect_stdout_contains_n: Vec::new(),
         expect_stdout_not_contains: Vec::new(),
         expect_stderr_not_contains: Vec::new(),
         expect_json: None,
