@@ -2678,30 +2678,8 @@ fn deterministic_rustc_dependency_flags() {
 
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0)
-                    .with_stderr("\
-[UPDATING] [..]
-[DOWNLOADING] [..]
-[DOWNLOADING] [..]
-[DOWNLOADING] [..]
-[DOWNLOADING] [..]
-[COMPILING] [..]
-[COMPILING] [..]
-[COMPILING] [..]
-[COMPILING] [..]
-[RUNNING] [..]
-[RUNNING] [..]
-[RUNNING] [..]
-[RUNNING] [..]
-[RUNNING] [..]
-[RUNNING] [..]
-[RUNNING] [..]
-[RUNNING] [..]
-[RUNNING] [..]
-[RUNNING] [..]
-[RUNNING] [..]
-[RUNNING] [..]
-[COMPILING] foo v0.1.0 [..]
+                    .with_stderr_contains("\
 [RUNNING] `rustc --crate-name foo [..] -L native=test1 -L native=test2 \
 -L native=test3 -L native=test4`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"));
+"));
 }

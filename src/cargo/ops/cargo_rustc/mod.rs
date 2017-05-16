@@ -770,6 +770,9 @@ fn build_base_args(cx: &mut Context,
         cmd.arg("--cfg").arg("test");
     }
 
+    // We ideally want deterministic invocations of rustc to ensure that
+    // rustc-caching strategies like sccache are able to cache more, so sort the
+    // feature list here.
     for feat in cx.resolve.features_sorted(unit.pkg.package_id()) {
         cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
