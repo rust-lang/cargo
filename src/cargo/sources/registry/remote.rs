@@ -55,13 +55,18 @@ impl<'cfg> RemoteRegistry<'cfg> {
         self.repo.get_or_try_init(|| {
             let path = self.index_path.clone().into_path_unlocked();
 
+            // Fast path without a lock
+            if let Ok(repo) = git2::Repository::open(&path) {
+                return Ok(repo)
+            }
+
+            // Ok, now we need to lock and try the whole thing over again.
+            let lock = self.index_path.open_rw(Path::new(INDEX_LOCK),
+                                               self.config,
+                                               "the registry index")?;
             match git2::Repository::open(&path) {
                 Ok(repo) => Ok(repo),
                 Err(_) => {
-                    self.index_path.create_dir()?;
-                    let lock = self.index_path.open_rw(Path::new(INDEX_LOCK),
-                                                       self.config,
-                                                       "the registry index")?;
                     let _ = lock.remove_siblings();
                     Ok(git2::Repository::init_bare(&path)?)
                 }
@@ -153,6 +158,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                                             "the registry index")?;
         self.config.shell().status("Updating",
              format!("registry `{}`", self.source_id.url()))?;
+        let mut needs_fetch = true;
 
         if self.source_id.url().host_str() == Some("github.com") {
             if let Ok(oid) = self.head() {
@@ -160,18 +166,21 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                 debug!("attempting github fast path for {}",
                        self.source_id.url());
                 if github_up_to_date(&mut handle, self.source_id.url(), &oid) {
-                    return Ok(())
+                    needs_fetch = false;
+                } else {
+                    debug!("fast path failed, falling back to a git fetch");
                 }
-                debug!("fast path failed, falling back to a git fetch");
             }
         }
 
-        // git fetch origin master
-        let url = self.source_id.url().to_string();
-        let refspec = "refs/heads/master:refs/remotes/origin/master";
-        git::fetch(&repo, &url, refspec, self.config).chain_error(|| {
-            human(format!("failed to fetch `{}`", url))
-        })?;
+        if needs_fetch {
+            // git fetch origin master
+            let url = self.source_id.url().to_string();
+            let refspec = "refs/heads/master:refs/remotes/origin/master";
+            git::fetch(&repo, &url, refspec, self.config).chain_error(|| {
+                human(format!("failed to fetch `{}`", url))
+            })?;
+        }
         self.head.set(None);
         *self.tree.borrow_mut() = None;
         Ok(())
