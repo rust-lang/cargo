@@ -3182,8 +3182,8 @@ fn deterministic_cfg_flags() {
 [RUNNING] [..]
 [RUNNING] [..]
 [RUNNING] `rustc --crate-name foo [..] \
---cfg 'feature=\"default\"' --cfg 'feature=\"f_a\"' --cfg 'feature=\"f_b\"' \
---cfg 'feature=\"f_c\"' --cfg 'feature=\"f_d\"' [..] \
+--cfg[..]default[..]--cfg[..]f_a[..]--cfg[..]f_b[..]\
+--cfg[..]f_c[..]--cfg[..]f_d[..] \
 --cfg cfg_a --cfg cfg_b --cfg cfg_c --cfg cfg_d --cfg cfg_e`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"));
 }

@@ -614,8 +614,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         let id = unit.pkg.package_id();
-        let deps = self.resolve.deps_sorted(id);
-        let mut ret = deps.iter().filter(|dep| {
+        let deps = self.resolve.deps(id);
+        let mut ret = deps.filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name() && d.version_req().matches(dep.version())
             }).any(|d| {
@@ -748,8 +748,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Returns the dependencies necessary to document a package
     fn doc_deps(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
-        let deps = self.resolve.deps_sorted(unit.pkg.package_id());
-        let deps = deps.iter().filter(|dep| {
+        let deps = self.resolve.deps(unit.pkg.package_id()).filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|dep| {
