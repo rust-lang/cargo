@@ -904,7 +904,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        if self.incremental_enabled {
+        // Only enable incremental compilation for sources the user can modify.
+        // For things that change infrequently, non-incremental builds yield
+        // better performance.
+        // (see also https://github.com/rust-lang/cargo/issues/3972)
+        if self.incremental_enabled && unit.pkg.package_id().source_id().is_path() {
             Ok(vec![format!("-Zincremental={}", self.layout(unit.kind).incremental().display())])
         } else {
             Ok(vec![])
