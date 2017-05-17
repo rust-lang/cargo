@@ -27,6 +27,7 @@ pub struct Manifest {
     publish: bool,
     replace: Vec<(PackageIdSpec, Dependency)>,
     workspace: WorkspaceConfig,
+    registry: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -222,7 +223,8 @@ impl Manifest {
                profiles: Profiles,
                publish: bool,
                replace: Vec<(PackageIdSpec, Dependency)>,
-               workspace: WorkspaceConfig) -> Manifest {
+               workspace: WorkspaceConfig,
+               registry: Option<String>) -> Manifest {
         Manifest {
             summary: summary,
             targets: targets,
@@ -235,6 +237,7 @@ impl Manifest {
             publish: publish,
             replace: replace,
             workspace: workspace,
+            registry: registry,
         }
     }
 
@@ -251,6 +254,7 @@ impl Manifest {
     pub fn profiles(&self) -> &Profiles { &self.profiles }
     pub fn publish(&self) -> bool { self.publish }
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] { &self.replace }
+    pub fn registry(&self) -> &Option<String> { &self.registry }
     pub fn links(&self) -> Option<&str> {
         self.links.as_ref().map(|s| &s[..])
     }

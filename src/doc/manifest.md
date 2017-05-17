@@ -150,6 +150,11 @@ license = "..."
 # (similar to the readme key).
 license-file = "..."
 
+# This optional URL points to a registry index. The package will then be
+# published to the registry specified rather than the default. When publishing,
+# this index must be given as the host.
+registry = "..."
+
 # Optional specification of badges to be displayed on crates.io. The badges
 # currently available are Travis CI, Appveyor, and GitLab latest build status,
 # specified using the following parameters:

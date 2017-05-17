@@ -243,6 +243,7 @@ pub struct DetailedTomlDependency {
     default_features: Option<bool>,
     #[serde(rename = "default_features")]
     default_features2: Option<bool>,
+    registry: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -435,6 +436,7 @@ pub struct TomlProject {
     #[serde(rename = "license-file")]
     license_file: Option<String>,
     repository: Option<String>,
+    registry: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -810,7 +812,8 @@ impl TomlManifest {
                                          profiles,
                                          publish,
                                          replace,
-                                         workspace_config);
+                                         workspace_config,
+                                         project.registry.clone());
         if project.license_file.is_some() && project.license.is_some() {
             manifest.add_warning("only one of `license` or \
                                  `license-file` is necessary".to_string());
@@ -1046,7 +1049,14 @@ impl TomlDependency {
                     cx.source_id.clone()
                 }
             },
-            (None, None) => SourceId::crates_io(cx.config)?,
+            (None, None) => {
+                if let Some(registry) = details.registry {
+                    let url = registry.to_url()?;
+                    SourceId::for_registry(&url)
+                } else {
+                    SourceId::crates_io(cx.config)?
+                }
+            },
         };
 
         let version = details.version.as_ref().map(|v| &v[..]);

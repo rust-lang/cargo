@@ -23,6 +23,7 @@ fn cargo_metadata_simple() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "registry": null,
                 "targets": [
                     {
                         "kind": [
@@ -94,6 +95,7 @@ crate-type = ["lib", "staticlib"]
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "registry": null,
                 "targets": [
                     {
                         "kind": [
@@ -164,6 +166,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "registry": null,
                 "targets": [
                     {
                         "kind": [
@@ -199,6 +202,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "registry": null,
                 "targets": [
                     {
                         "kind": [
@@ -234,6 +238,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "license": "MIT",
                 "license_file": null,
                 "description": "foo",
+                "registry": null,
                 "targets": [
                     {
                         "kind": [
@@ -302,6 +307,7 @@ name = "ex"
                 "description": null,
                 "source": null,
                 "dependencies": [],
+                "registry": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -364,6 +370,7 @@ crate-type = ["rlib", "dylib"]
                 "description": null,
                 "source": null,
                 "dependencies": [],
+                "registry": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -423,6 +430,7 @@ fn workspace_metadata() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "registry": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -443,6 +451,7 @@ fn workspace_metadata() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "registry": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -498,6 +507,7 @@ fn workspace_metadata_no_deps() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "registry": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -518,6 +528,7 @@ fn workspace_metadata_no_deps() {
                 "license": null,
                 "license_file": null,
                 "description": null,
+                "registry": null,
                 "targets": [
                     {
                         "kind": [ "lib" ],
@@ -562,6 +573,7 @@ const MANIFEST_OUTPUT: &'static str=
         "license": null,
         "license_file": null,
         "description": null,
+        "registry": null,
         "targets":[{
             "kind":["bin"],
             "crate_types":["bin"],

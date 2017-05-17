@@ -14,6 +14,7 @@ static MANIFEST_OUTPUT: &'static str = r#"
     "description": null,
     "source":null,
     "dependencies":[],
+    "registry": null,
     "targets":[{
         "kind":["bin"],
         "crate_types":["bin"],

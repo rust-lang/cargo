@@ -37,6 +37,7 @@ struct SerializedPackage<'a> {
     targets: &'a [Target],
     features: &'a HashMap<String, Vec<String>>,
     manifest_path: &'a str,
+    registry: &'a Option<String>,
 }
 
 impl ser::Serialize for Package {
@@ -49,6 +50,7 @@ impl ser::Serialize for Package {
         let license = manmeta.license.as_ref().map(String::as_ref);
         let license_file = manmeta.license_file.as_ref().map(String::as_ref);
         let description = manmeta.description.as_ref().map(String::as_ref);
+        let registry = self.manifest.registry();
 
         SerializedPackage {
             name: &package_id.name(),
@@ -62,6 +64,7 @@ impl ser::Serialize for Package {
             targets: &self.manifest.targets(),
             features: summary.features(),
             manifest_path: &self.manifest_path.display().to_string(),
+            registry: registry,
         }.serialize(s)
     }
 }
@@ -94,6 +97,7 @@ impl Package {
     pub fn version(&self) -> &Version { self.package_id().version() }
     pub fn authors(&self) -> &Vec<String> { &self.manifest.metadata().authors }
     pub fn publish(&self) -> bool { self.manifest.publish() }
+    pub fn registry(&self) -> &Option<String> { &self.manifest.registry() }
 
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())
