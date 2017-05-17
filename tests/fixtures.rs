@@ -11,10 +11,24 @@ fn fixtures() {
 
     for fixture in std::fs::read_dir(root_dir.join("tests/crates")).unwrap() {
         let fixture = fixture.unwrap();
+        if !fixture.file_type().unwrap().is_dir() {
+            continue;
+        }
         let fixture_path = fixture.path();
 
-        // FIXME: don't expect the crate to be in the `ui` subdir
-        let dir = fixture_path.join("ui");
+        let file = std::fs::File::open(fixture_path.with_extension("sub-path"))
+            .and_then(|mut file| {
+                use std::io::Read;
+                let mut contents = String::new();
+                file.read_to_string(&mut contents)?;
+                Ok(contents)
+            });
+        let dir = if let Ok(path) = file {
+            fixture_path.join(path.trim())
+        } else {
+            fixture_path.clone()
+        };
+        println!("Running tests for {:?}", dir);
         let tests = std::fs::read_dir(root_dir.join("tests/tests").join(fixture_path.file_name().unwrap())).unwrap();
 
         for entry in tests {
@@ -26,6 +40,8 @@ fn fixtures() {
 
             assert!(cmd!("git", "checkout", ".").dir(&dir).run().unwrap().status.success());
             assert!(cmd!("cargo", "clean").dir(&dir).run().unwrap().status.success());
+            // we only want to rustfix the final project, not any dependencies
+            assert!(cmd!("cargo", "build").dir(&dir).run().unwrap().status.success());
 
             let manifest = format!("{:?}", root_dir.join("Cargo.toml"));
 
@@ -50,12 +66,22 @@ fn fixtures() {
             } else {
                 cmd!("git", "diff").dir(&dir).stdout(dir.join("diff.diff")).run().unwrap();
 
-                if !cmd!("diff", "-q", dir.join("diff.diff"), test.join("diff.diff")).dir(&dir).unchecked().run().unwrap().status.success() {
-                    panic!("Unexpected changes applied by rustfix");
+                let diff = cmd!("diff", dir.join("diff.diff"), test.join("diff.diff"))
+                    .dir(&dir)
+                    .stdout_capture()
+                    .unchecked()
+                    .run().unwrap();
+                if !diff.status.success() {
+                    panic!("Unexpected changes by rustfix:\n{}", std::str::from_utf8(&diff.stdout).unwrap());
                 }
 
-                if !cmd!("diff", "-q", dir.join("output.txt"), test.join("output.txt")).dir(&dir).unchecked().run().unwrap().status.success() {
-                    panic!("Unexpected output by rustfix");
+                let output = cmd!("diff", dir.join("output.txt"), test.join("output.txt"))
+                    .dir(&dir)
+                    .stdout_capture()
+                    .unchecked()
+                    .run().unwrap();
+                if !output.status.success() {
+                    panic!("Unexpected output by rustfix:\n{}", std::str::from_utf8(&output.stdout).unwrap());
                 }
             }
 
