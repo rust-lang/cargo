@@ -845,34 +845,6 @@ url = p.url(),
 prefix = env::consts::DLL_PREFIX,
 suffix = env::consts::DLL_SUFFIX,
 )));
-
-    assert_that(p.cargo("clean"), execs().with_status(0));
-
-    // If you set the env-var, then we expect metadata on libbar
-    assert_that(p.cargo("build").arg("-v").env("__CARGO_DEFAULT_LIB_METADATA", "1"),
-                execs().with_status(0).with_stderr(&format!("\
-[COMPILING] bar v0.0.1 ({url}/bar)
-[RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type dylib \
-        --emit=dep-info,link \
-        -C prefer-dynamic -C debuginfo=2 \
-        -C metadata=[..] \
-        --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps`
-[COMPILING] foo v0.0.1 ({url})
-[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
-        --emit=dep-info,link -C debuginfo=2 \
-        -C metadata=[..] \
-        -C extra-filename=[..] \
-        --out-dir [..] \
-        -L dependency={dir}[/]target[/]debug[/]deps \
-        --extern bar={dir}[/]target[/]debug[/]deps[/]{prefix}bar-[..]{suffix}`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-dir = p.root().display(),
-url = p.url(),
-prefix = env::consts::DLL_PREFIX,
-suffix = env::consts::DLL_SUFFIX,
-)));
 }
 
 #[test]
