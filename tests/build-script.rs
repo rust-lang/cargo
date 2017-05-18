@@ -2525,3 +2525,94 @@ fn if_build_set_to_false_dont_treat_build_rs_as_build_script() {
     assert_that(p.cargo("run").arg("-v"),
                 execs().with_status(0));
 }
+
+#[test]
+fn deterministic_rustc_dependency_flags() {
+    // This bug is non-deterministic hence the large number of dependencies
+    // in the hopes it will have a much higher chance of triggering it.
+
+    Package::new("dep1", "0.1.0")
+            .file("Cargo.toml", r#"
+                [project]
+                name = "dep1"
+                version = "0.1.0"
+                authors = []
+                build = "build.rs"
+            "#)
+            .file("build.rs", r#"
+                fn main() {
+                    println!("cargo:rustc-flags=-L native=test1");
+                }
+            "#)
+            .file("src/lib.rs", "")
+            .publish();
+    Package::new("dep2", "0.1.0")
+            .file("Cargo.toml", r#"
+                [project]
+                name = "dep2"
+                version = "0.1.0"
+                authors = []
+                build = "build.rs"
+            "#)
+            .file("build.rs", r#"
+                fn main() {
+                    println!("cargo:rustc-flags=-L native=test2");
+                }
+            "#)
+            .file("src/lib.rs", "")
+            .publish();
+    Package::new("dep3", "0.1.0")
+            .file("Cargo.toml", r#"
+                [project]
+                name = "dep3"
+                version = "0.1.0"
+                authors = []
+                build = "build.rs"
+            "#)
+            .file("build.rs", r#"
+                fn main() {
+                    println!("cargo:rustc-flags=-L native=test3");
+                }
+            "#)
+            .file("src/lib.rs", "")
+            .publish();
+    Package::new("dep4", "0.1.0")
+            .file("Cargo.toml", r#"
+                [project]
+                name = "dep4"
+                version = "0.1.0"
+                authors = []
+                build = "build.rs"
+            "#)
+            .file("build.rs", r#"
+                fn main() {
+                    println!("cargo:rustc-flags=-L native=test4");
+                }
+            "#)
+            .file("src/lib.rs", "")
+            .publish();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            dep1 = "*"
+            dep2 = "*"
+            dep3 = "*"
+            dep4 = "*"
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                    .with_stderr_contains("\
+[RUNNING] `rustc --crate-name foo [..] -L native=test1 -L native=test2 \
+-L native=test3 -L native=test4`
+"));
+}
