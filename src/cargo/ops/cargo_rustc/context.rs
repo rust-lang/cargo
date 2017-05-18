@@ -20,7 +20,7 @@ use super::layout::Layout;
 use super::links::Links;
 use super::{Kind, Compilation, BuildConfig};
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Unit<'a> {
     pub pkg: &'a Package,
     pub target: &'a Target,

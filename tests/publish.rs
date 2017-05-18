@@ -88,6 +88,7 @@ See [..]
         let fname = file.header().path_bytes();
         let fname = &*fname;
         assert!(fname == b"foo-0.0.1/Cargo.toml" ||
+                fname == b"foo-0.0.1/Cargo.toml.orig" ||
                 fname == b"foo-0.0.1/src/main.rs",
                 "unexpected filename: {:?}", file.header().path());
     }
