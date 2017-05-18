@@ -464,7 +464,15 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
         if !unit.target.is_custom_build() && unit.pkg.has_custom_build() {
             add_to_link(&mut ret, unit.pkg.package_id(), unit.kind);
         }
-        for unit in cx.dep_targets(unit)?.iter() {
+
+        // We want to invoke the compiler deterministically to be cache-friendly
+        // to rustc invocation caching schemes, so be sure to generate the same
+        // set of build script dependency orderings via sorting the targets that
+        // come out of the `Context`.
+        let mut targets = cx.dep_targets(unit)?;
+        targets.sort_by_key(|u| u.pkg.package_id());
+
+        for unit in targets.iter() {
             let dep_scripts = build(out, cx, unit)?;
 
             if unit.target.for_host() {
