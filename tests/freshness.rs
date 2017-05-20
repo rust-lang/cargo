@@ -212,6 +212,8 @@ fn changing_profiles_caches_targets() {
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
+warning: The test/bench targets cannot have panic=abort because they'll all get compiled with \
+--test which requires the unwind runtime currently.
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
@@ -219,6 +221,8 @@ fn changing_profiles_caches_targets() {
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
+warning: The test/bench targets cannot have panic=abort because they'll all get compiled with \
+--test which requires the unwind runtime currently.
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
 [DOCTEST] foo
