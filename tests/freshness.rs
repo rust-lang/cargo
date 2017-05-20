@@ -211,18 +211,18 @@ fn changing_profiles_caches_targets() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
 warning: The test/bench targets cannot have panic=abort because they'll all get compiled with \
---test which requires the unwind runtime currently.
+--test which requires the unwind runtime currently. \n\
+[..]Compiling foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stderr("\
-[..]Compiling foo v0.0.1 ([..])
 warning: The test/bench targets cannot have panic=abort because they'll all get compiled with \
---test which requires the unwind runtime currently.
+--test which requires the unwind runtime currently. \n\
+[..]Compiling foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
 [DOCTEST] foo
@@ -233,12 +233,16 @@ warning: The test/bench targets cannot have panic=abort because they'll all get 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
+warning: The test/bench targets cannot have panic=abort because they'll all get compiled with \
+--test which requires the unwind runtime currently. \n\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
     assert_that(p.cargo("test").arg("foo"),
                 execs().with_status(0)
                        .with_stderr("\
+warning: The test/bench targets cannot have panic=abort because they'll all get compiled with \
+--test which requires the unwind runtime currently. \n\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[..]debug[..]deps[..]foo-[..][EXE]
 [DOCTEST] foo
