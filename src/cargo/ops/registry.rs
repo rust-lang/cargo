@@ -34,6 +34,7 @@ pub struct PublishOpts<'cfg> {
     pub verify: bool,
     pub allow_dirty: bool,
     pub jobs: Option<u32>,
+    pub target: Option<&'cfg str>,
     pub dry_run: bool,
 }
 
@@ -61,6 +62,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         list: false,
         check_metadata: true,
         allow_dirty: opts.allow_dirty,
+        target: opts.target,
         jobs: opts.jobs,
     })?.unwrap();
 

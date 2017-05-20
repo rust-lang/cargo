@@ -8,6 +8,7 @@ pub struct Options {
     flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
+    flag_target: Option<String>,
     flag_manifest_path: Option<String>,
     flag_no_verify: bool,
     flag_no_metadata: bool,
@@ -32,6 +33,7 @@ Options:
     --no-verify             Don't verify the contents by building them
     --no-metadata           Ignore warnings about a lack of human-usable metadata
     --allow-dirty           Allow dirty working directories to be packaged
+    --target TRIPLE         Build for the target triple
     --manifest-path PATH    Path to the manifest to compile
     -j N, --jobs N          Number of parallel jobs, defaults to # of CPUs
     -v, --verbose ...       Use verbose output (-vv very verbose/build.rs output)
@@ -57,6 +59,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         list: options.flag_list,
         check_metadata: !options.flag_no_metadata,
         allow_dirty: options.flag_allow_dirty,
+        target: options.flag_target.as_ref().map(|t| &t[..]),
         jobs: options.flag_jobs,
     })?;
     Ok(())

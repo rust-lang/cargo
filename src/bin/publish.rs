@@ -8,6 +8,7 @@ pub struct Options {
     flag_index: Option<String>,
     flag_host: Option<String>,  // TODO: Deprecated, remove
     flag_token: Option<String>,
+    flag_target: Option<String>,
     flag_manifest_path: Option<String>,
     flag_verbose: u32,
     flag_quiet: Option<bool>,
@@ -35,6 +36,7 @@ Options:
     --token TOKEN            Token to use when uploading
     --no-verify              Don't verify package tarball before publish
     --allow-dirty            Allow publishing with a dirty source directory
+    --target TRIPLE          Build for the target triple
     --manifest-path PATH     Path to the manifest of the package to publish
     -j N, --jobs N           Number of parallel jobs, defaults to # of CPUs
     --dry-run                Perform all checks without uploading
@@ -94,6 +96,7 @@ about this warning.";
             else { config.shell().warn(&msg)?; host },  // TODO: Deprecated, remove
         verify: !no_verify,
         allow_dirty: allow_dirty,
+        target: options.flag_target.as_ref().map(|t| &t[..]),
         jobs: jobs,
         dry_run: dry_run,
     })?;

@@ -22,6 +22,7 @@ pub struct PackageOpts<'cfg> {
     pub allow_dirty: bool,
     pub verify: bool,
     pub jobs: Option<u32>,
+    pub target: Option<&'cfg str>,
 }
 
 pub fn package(ws: &Workspace,
@@ -298,7 +299,7 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
     ops::compile_ws(&ws, None, &ops::CompileOptions {
         config: config,
         jobs: opts.jobs,
-        target: None,
+        target: opts.target,
         features: &[],
         no_default_features: false,
         all_features: false,
