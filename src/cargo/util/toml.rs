@@ -38,6 +38,32 @@ impl Layout {
     /// Returns a new `Layout` for a given root path.
     /// The `root_path` represents the directory that contains the `Cargo.toml` file.
     pub fn from_project_path(root_path: &Path) -> Layout {
+        fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
+            if fs::metadata(&file).is_ok() {
+                files.push(file);
+            }
+        }
+
+        fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
+            if let Ok(new) = fs::read_dir(&root) {
+                files.extend(new.filter_map(|dir| {
+                    dir.map(|d| d.path()).ok()
+                }).filter(|f| {
+                    f.extension().and_then(|s| s.to_str()) == Some("rs")
+                }).filter(|f| {
+                    // Some unix editors may create "dotfiles" next to original
+                    // source files while they're being edited, but these files are
+                    // rarely actually valid Rust source files and sometimes aren't
+                    // even valid UTF-8. Here we just ignore all of them and require
+                    // that they are explicitly specified in Cargo.toml if desired.
+                    f.file_name().and_then(|s| s.to_str()).map(|s| {
+                        !s.starts_with('.')
+                    }).unwrap_or(true)
+                }))
+            }
+            /* else just don't add anything if the directory doesn't exist, etc. */
+        }
+
         let mut lib = None;
         let mut bins = vec![];
         let mut examples = vec![];
@@ -66,31 +92,6 @@ impl Layout {
             benches: benches,
         }
     }
-}
-
-fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
-    if fs::metadata(&file).is_ok() {
-        files.push(file);
-    }
-}
-fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
-    if let Ok(new) = fs::read_dir(&root) {
-        files.extend(new.filter_map(|dir| {
-            dir.map(|d| d.path()).ok()
-        }).filter(|f| {
-            f.extension().and_then(|s| s.to_str()) == Some("rs")
-        }).filter(|f| {
-            // Some unix editors may create "dotfiles" next to original
-            // source files while they're being edited, but these files are
-            // rarely actually valid Rust source files and sometimes aren't
-            // even valid UTF-8. Here we just ignore all of them and require
-            // that they are explicitly specified in Cargo.toml if desired.
-            f.file_name().and_then(|s| s.to_str()).map(|s| {
-                !s.starts_with('.')
-            }).unwrap_or(true)
-        }))
-    }
-    /* else just don't add anything if the directory doesn't exist, etc. */
 }
 
 pub fn to_manifest(contents: &str,
@@ -199,6 +200,7 @@ type TomlBinTarget = TomlTarget;
 type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
+type Warnings = Vec<String>;
 
 #[derive(Serialize)]
 #[serde(untagged)]
@@ -506,7 +508,6 @@ impl ser::Serialize for TomlVersion {
     }
 }
 
-
 impl TomlProject {
     pub fn to_package_id(&self, source_id: &SourceId) -> CargoResult<PackageId> {
         PackageId::new(&self.name, self.version.version.clone(),
@@ -520,80 +521,9 @@ struct Context<'a, 'b> {
     source_id: &'a SourceId,
     nested_paths: &'a mut Vec<PathBuf>,
     config: &'b Config,
-    warnings: &'a mut Vec<String>,
+    warnings: &'a mut Warnings,
     platform: Option<Platform>,
     layout: &'a Layout,
-}
-
-// These functions produce the equivalent of specific manifest entries. One
-// wrinkle is that certain paths cannot be represented in the manifest due
-// to Toml's UTF-8 requirement. This could, in theory, mean that certain
-// otherwise acceptable executable names are not used when inside of
-// `src/bin/*`, but it seems ok to not build executables with non-UTF8
-// paths.
-fn inferred_lib_target(name: &str, layout: &Layout) -> Option<TomlTarget> {
-    layout.lib.as_ref().map(|lib| {
-        TomlTarget {
-            name: Some(name.to_string()),
-            path: Some(PathValue(lib.clone())),
-            .. TomlTarget::new()
-        }
-    })
-}
-
-fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
-    layout.bins.iter().filter_map(|bin| {
-        let name = if &**bin == Path::new("src/main.rs") ||
-                      *bin == layout.root.join("src").join("main.rs") {
-            Some(name.to_string())
-        } else {
-            bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
-        };
-
-        name.map(|name| {
-            TomlTarget {
-                name: Some(name),
-                path: Some(PathValue(bin.clone())),
-                .. TomlTarget::new()
-            }
-        })
-    }).collect()
-}
-
-fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
-    layout.examples.iter().filter_map(|ex| {
-        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
-            TomlTarget {
-                name: Some(name.to_string()),
-                path: Some(PathValue(ex.clone())),
-                .. TomlTarget::new()
-            }
-        })
-    }).collect()
-}
-
-fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
-    layout.tests.iter().filter_map(|ex| {
-        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
-            TomlTarget {
-                name: Some(name.to_string()),
-                path: Some(PathValue(ex.clone())),
-                .. TomlTarget::new()
-            }
-        })
-    }).collect()
-}
-
-fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
-    layout.benches.iter().filter_map(|ex| {
-        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
-            TomlTarget {
-                name: Some(name.to_string()),
-                path: Some(PathValue(ex.clone())),
-                .. TomlTarget::new()
-            }
-        })
-    }).collect()
 }
 
 impl TomlManifest {
@@ -662,13 +592,391 @@ impl TomlManifest {
         }
     }
 
+    fn build_profiles(profiles: &Option<TomlProfiles>, warnings: &mut Warnings) -> Profiles {
+        const UNWIND_PANIC_RUNTIME_NEEDED: &str = "The test/bench targets cannot have panic=abort \
+            because they'll all get compiled with --test which requires the unwind runtime \
+            currently. ";
+        fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
+            let &TomlProfile {
+                ref opt_level, lto, codegen_units, ref debug, debug_assertions, rpath,
+                ref panic, ref overflow_checks,
+            } = match toml {
+                Some(toml) => toml,
+                None => return profile,
+            };
+            let debug = match *debug {
+                Some(U32OrBool::U32(debug)) => Some(Some(debug)),
+                Some(U32OrBool::Bool(true)) => Some(Some(2)),
+                Some(U32OrBool::Bool(false)) => Some(None),
+                None => None,
+            };
+            Profile {
+                opt_level: opt_level.clone().unwrap_or(TomlOptLevel(profile.opt_level)).0,
+                lto: lto.unwrap_or(profile.lto),
+                codegen_units: codegen_units,
+                rustc_args: None,
+                rustdoc_args: None,
+                debuginfo: debug.unwrap_or(profile.debuginfo),
+                debug_assertions: debug_assertions.unwrap_or(profile.debug_assertions),
+                overflow_checks: overflow_checks.unwrap_or(profile.overflow_checks),
+                rpath: rpath.unwrap_or(profile.rpath),
+                test: profile.test,
+                doc: profile.doc,
+                run_custom_build: profile.run_custom_build,
+                check: profile.check,
+                panic: panic.clone().or(profile.panic),
+            }
+        }
+        let profiles = profiles.as_ref();
+        let mut profiles = Profiles {
+            release: merge(Profile::default_release(),
+                           profiles.and_then(|p| p.release.as_ref())),
+            dev: merge(Profile::default_dev(),
+                       profiles.and_then(|p| p.dev.as_ref())),
+            test: merge(Profile::default_test(),
+                        profiles.and_then(|p| p.test.as_ref())),
+            test_deps: merge(Profile::default_dev(),
+                             profiles.and_then(|p| p.dev.as_ref())),
+            bench: merge(Profile::default_bench(),
+                         profiles.and_then(|p| p.bench.as_ref())),
+            bench_deps: merge(Profile::default_release(),
+                              profiles.and_then(|p| p.release.as_ref())),
+            doc: merge(Profile::default_doc(),
+                       profiles.and_then(|p| p.doc.as_ref())),
+            custom_build: Profile::default_custom_build(),
+            check: merge(Profile::default_check(),
+                         profiles.and_then(|p| p.dev.as_ref())),
+            doctest: Profile::default_doctest(),
+        };
+        profiles.test.panic = profiles.test.panic.and_then(|_| {
+            warnings.push(UNWIND_PANIC_RUNTIME_NEEDED.into());
+            None
+        });
+        profiles.bench.panic = profiles.bench.panic.and_then(|_| {
+            warnings.push(UNWIND_PANIC_RUNTIME_NEEDED.into());
+            None
+        });
+        profiles.test_deps.panic = None;
+        profiles.bench_deps.panic = None;
+        profiles
+    }
+
     fn to_real_manifest(me: &Rc<TomlManifest>,
                         source_id: &SourceId,
                         layout: &Layout,
                         config: &Config)
                         -> CargoResult<(Manifest, Vec<PathBuf>)> {
+        fn normalize(package_root: &Path,
+                     lib: &Option<TomlLibTarget>,
+                     bins: &[TomlBinTarget],
+                     custom_build: Option<PathBuf>,
+                     examples: &[TomlExampleTarget],
+                     tests: &[TomlTestTarget],
+                     benches: &[TomlBenchTarget]) -> Vec<Target> {
+            fn configure(toml: &TomlTarget, target: &mut Target) {
+                let t2 = target.clone();
+                target.set_tested(toml.test.unwrap_or(t2.tested()))
+                    .set_doc(toml.doc.unwrap_or(t2.documented()))
+                    .set_doctest(toml.doctest.unwrap_or(t2.doctested()))
+                    .set_benched(toml.bench.unwrap_or(t2.benched()))
+                    .set_harness(toml.harness.unwrap_or(t2.harness()))
+                    .set_for_host(match (toml.plugin, toml.proc_macro()) {
+                        (None, None) => t2.for_host(),
+                        (Some(true), _) | (_, Some(true)) => true,
+                        (Some(false), _) | (_, Some(false)) => false,
+                    });
+            }
+
+            fn inferred_bin_path(bin: &TomlBinTarget,
+                                 package_root: &Path,
+                                 lib: bool,
+                                 bin_len: usize) -> PathBuf {
+                // we have a lib with multiple bins, so the bins are expected to be located
+                // inside src/bin
+                if lib && bin_len > 1 {
+                    return Path::new("src").join("bin").join(&format!("{}.rs", bin.name()))
+                        .to_path_buf()
+                }
+
+                // we have a lib with one bin, so it's either src/main.rs, src/bin/foo.rs or
+                // src/bin/main.rs
+                if lib && bin_len == 1 {
+                    let path = Path::new("src").join(&format!("main.rs"));
+                    if package_root.join(&path).exists() {
+                        return path.to_path_buf()
+                    }
+
+                    let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
+                    if package_root.join(&path).exists() {
+                        return path.to_path_buf()
+                    }
+
+                    return Path::new("src").join("bin").join(&format!("main.rs")).to_path_buf()
+                }
+
+                // here we have a single bin, so it may be located in src/main.rs, src/foo.rs,
+                // srb/bin/foo.rs or src/bin/main.rs
+                if bin_len == 1 {
+                    let path = Path::new("src").join(&format!("main.rs"));
+                    if package_root.join(&path).exists() {
+                        return path.to_path_buf()
+                    }
+
+                    let path = Path::new("src").join(&format!("{}.rs", bin.name()));
+                    if package_root.join(&path).exists() {
+                        return path.to_path_buf()
+                    }
+
+                    let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
+                    if package_root.join(&path).exists() {
+                        return path.to_path_buf()
+                    }
+
+                    return Path::new("src").join("bin").join(&format!("main.rs")).to_path_buf()
+                }
+
+                // bin_len > 1
+                let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
+                if package_root.join(&path).exists() {
+                    return path.to_path_buf()
+                }
+
+                let path = Path::new("src").join(&format!("{}.rs", bin.name()));
+                if package_root.join(&path).exists() {
+                    return path.to_path_buf()
+                }
+
+                let path = Path::new("src").join("bin").join(&format!("main.rs"));
+                if package_root.join(&path).exists() {
+                    return path.to_path_buf()
+                }
+
+                return Path::new("src").join(&format!("main.rs")).to_path_buf()
+            }
+
+            let lib_target = |dst: &mut Vec<Target>, l: &TomlLibTarget| {
+                let path = l.path.clone().unwrap_or_else(
+                    || PathValue(Path::new("src").join(&format!("{}.rs", l.name())))
+                );
+                let crate_types = l.crate_type.as_ref().or(l.crate_type2.as_ref());
+                let crate_types = match crate_types {
+                    Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
+                    None => {
+                        vec![ if l.plugin == Some(true) {LibKind::Dylib}
+                            else if l.proc_macro() == Some(true) {LibKind::ProcMacro}
+                                else {LibKind::Lib} ]
+                    }
+                };
+
+                let mut target = Target::lib_target(&l.name(), crate_types,
+                                                    package_root.join(&path.0));
+                configure(l, &mut target);
+                dst.push(target);
+            };
+
+            let bin_targets = |dst: &mut Vec<Target>, bins: &[TomlBinTarget],
+                               default: &mut FnMut(&TomlBinTarget) -> PathBuf| {
+                for bin in bins.iter() {
+                    let path = bin.path.clone().unwrap_or_else(|| {
+                        PathValue(default(bin))
+                    });
+                    let mut target = Target::bin_target(&bin.name(), package_root.join(&path.0),
+                                                        bin.required_features.clone());
+                    configure(bin, &mut target);
+                    dst.push(target);
+                }
+            };
+
+            let custom_build_target = |dst: &mut Vec<Target>, cmd: &Path| {
+                let name = format!("build-script-{}",
+                                   cmd.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
+
+                dst.push(Target::custom_build_target(&name, package_root.join(cmd)));
+            };
+
+            let example_targets = |dst: &mut Vec<Target>,
+                                   examples: &[TomlExampleTarget],
+                                   default: &mut FnMut(&TomlExampleTarget) -> PathBuf| {
+                for ex in examples.iter() {
+                    let path = ex.path.clone().unwrap_or_else(|| {
+                        PathValue(default(ex))
+                    });
+
+                    let crate_types = ex.crate_type.as_ref().or(ex.crate_type2.as_ref());
+                    let crate_types = match crate_types {
+                        Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
+                        None => Vec::new()
+                    };
+
+                    let mut target = Target::example_target(
+                        &ex.name(),
+                        crate_types,
+                        package_root.join(&path.0),
+                        ex.required_features.clone()
+                    );
+                    configure(ex, &mut target);
+                    dst.push(target);
+                }
+            };
+
+            let test_targets = |dst: &mut Vec<Target>,
+                                tests: &[TomlTestTarget],
+                                default: &mut FnMut(&TomlTestTarget) -> PathBuf| {
+                for test in tests.iter() {
+                    let path = test.path.clone().unwrap_or_else(|| {
+                        PathValue(default(test))
+                    });
+
+                    let mut target = Target::test_target(&test.name(), package_root.join(&path.0),
+                                                         test.required_features.clone());
+                    configure(test, &mut target);
+                    dst.push(target);
+                }
+            };
+
+            let bench_targets = |dst: &mut Vec<Target>,
+                                 benches: &[TomlBenchTarget],
+                                 default: &mut FnMut(&TomlBenchTarget) -> PathBuf| {
+                for bench in benches.iter() {
+                    let path = bench.path.clone().unwrap_or_else(|| {
+                        PathValue(default(bench))
+                    });
+
+                    let mut target = Target::bench_target(&bench.name(), package_root.join(&path.0),
+                                                          bench.required_features.clone());
+                    configure(bench, &mut target);
+                    dst.push(target);
+                }
+            };
+
+            let mut ret = Vec::new();
+
+            if let Some(ref lib) = *lib {
+                lib_target(&mut ret, lib);
+                bin_targets(&mut ret, bins,
+                            &mut |bin| inferred_bin_path(bin, package_root, true, bins.len()));
+            } else if bins.len() > 0 {
+                bin_targets(&mut ret, bins,
+                            &mut |bin| inferred_bin_path(bin, package_root, false, bins.len()));
+            }
+
+
+            if let Some(custom_build) = custom_build {
+                custom_build_target(&mut ret, &custom_build);
+            }
+
+            example_targets(&mut ret, examples,
+                            &mut |ex| Path::new("examples")
+                                .join(&format!("{}.rs", ex.name())));
+
+            test_targets(&mut ret, tests, &mut |test| {
+                Path::new("tests").join(&format!("{}.rs", test.name()))
+            });
+
+            bench_targets(&mut ret, benches, &mut |bench| {
+                Path::new("benches").join(&format!("{}.rs", bench.name()))
+            });
+
+            ret
+        }
+
+        // These `inferred_*` functions produce the equivalent of specific manifest entries. One
+        // wrinkle is that certain paths cannot be represented in the manifest due
+        // to Toml's UTF-8 requirement. This could, in theory, mean that certain
+        // otherwise acceptable executable names are not used when inside of
+        // `src/bin/*`, but it seems ok to not build executables with non-UTF-8
+        // paths.
+        fn inferred_lib_target(name: &str, layout: &Layout) -> Option<TomlTarget> {
+            layout.lib.as_ref().map(|lib| {
+                TomlTarget {
+                    name: Some(name.to_string()),
+                    path: Some(PathValue(lib.clone())),
+                    .. TomlTarget::new()
+                }
+            })
+        }
+
+        fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
+            layout.bins.iter().filter_map(|bin| {
+                let name = if &**bin == Path::new("src/main.rs") ||
+                    *bin == layout.root.join("src").join("main.rs") {
+                    Some(name.to_string())
+                } else {
+                    bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
+                };
+
+                name.map(|name| {
+                    TomlTarget {
+                        name: Some(name),
+                        path: Some(PathValue(bin.clone())),
+                        .. TomlTarget::new()
+                    }
+                })
+            }).collect()
+        }
+
+        fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
+            layout.examples.iter().filter_map(|ex| {
+                ex.file_stem().and_then(|s| s.to_str()).map(|name| {
+                    TomlTarget {
+                        name: Some(name.to_string()),
+                        path: Some(PathValue(ex.clone())),
+                        .. TomlTarget::new()
+                    }
+                })
+            }).collect()
+        }
+
+        fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
+            layout.tests.iter().filter_map(|ex| {
+                ex.file_stem().and_then(|s| s.to_str()).map(|name| {
+                    TomlTarget {
+                        name: Some(name.to_string()),
+                        path: Some(PathValue(ex.clone())),
+                        .. TomlTarget::new()
+                    }
+                })
+            }).collect()
+        }
+
+        fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
+            layout.benches.iter().filter_map(|ex| {
+                ex.file_stem().and_then(|s| s.to_str()).map(|name| {
+                    TomlTarget {
+                        name: Some(name.to_string()),
+                        path: Some(PathValue(ex.clone())),
+                        .. TomlTarget::new()
+                    }
+                })
+            }).collect()
+        }
+
+        /// Will check a list of toml targets, and make sure the target names are unique within a vector.
+        /// If not, the name of the offending binary target is returned.
+        fn unique_names_in_targets(targets: &[TomlTarget]) -> Result<(), String> {
+            let mut seen = HashSet::new();
+            for v in targets.iter().map(|e| e.name()) {
+                if !seen.insert(v.clone()) {
+                    return Err(v);
+                }
+            }
+            Ok(())
+        }
+
+        /// Will check a list of build targets, and make sure the target names are unique within a vector.
+        /// If not, the name of the offending build target is returned.
+        fn unique_build_targets(targets: &[Target], layout: &Layout) -> Result<(), String> {
+            let mut seen = HashSet::new();
+            for v in targets.iter().map(|e| layout.root.join(e.src_path())) {
+                if !seen.insert(v.clone()) {
+                    return Err(v.display().to_string());
+                }
+            }
+            Ok(())
+        }
+
         let mut nested_paths = vec![];
-        let mut warnings = vec![];
+        let mut warnings = Warnings::new();
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
         let project = project.chain_error(|| {
@@ -791,10 +1099,8 @@ impl TomlManifest {
         }
 
         let mut deps = Vec::new();
-        let replace;
-
+        let replace =
         {
-
             let mut cx = Context {
                 pkgid: Some(&pkgid),
                 deps: &mut deps,
@@ -846,8 +1152,8 @@ impl TomlManifest {
                 process_dependencies(&mut cx, dev_deps, Some(Kind::Development))?;
             }
 
-            replace = me.replace(&mut cx)?;
-        }
+            me.replace(&mut cx)?
+        };
 
         {
             let mut names_sources = HashMap::new();
@@ -897,7 +1203,7 @@ impl TomlManifest {
                        `[workspace]`, only one can be specified")
             }
         };
-        let profiles = build_profiles(&me.profile);
+        let profiles = Self::build_profiles(&me.profile, &mut warnings);
         let publish = project.publish.unwrap_or(true);
         let mut manifest = Manifest::new(summary,
                                          targets,
@@ -949,7 +1255,7 @@ impl TomlManifest {
         }
 
         let mut nested_paths = Vec::new();
-        let mut warnings = Vec::new();
+        let mut warnings = Warnings::new();
         let mut deps = Vec::new();
         let replace = me.replace(&mut Context {
             pkgid: None,
@@ -961,7 +1267,7 @@ impl TomlManifest {
             platform: None,
             layout: layout,
         })?;
-        let profiles = build_profiles(&me.profile);
+        let profiles = Self::build_profiles(&me.profile, &mut warnings);
         let workspace_config = match me.workspace {
             Some(ref config) => {
                 WorkspaceConfig::Root {
@@ -1033,30 +1339,6 @@ impl TomlManifest {
             }
         }
     }
-}
-
-/// Will check a list of toml targets, and make sure the target names are unique within a vector.
-/// If not, the name of the offending binary target is returned.
-fn unique_names_in_targets(targets: &[TomlTarget]) -> Result<(), String> {
-    let mut seen = HashSet::new();
-    for v in targets.iter().map(|e| e.name()) {
-        if !seen.insert(v.clone()) {
-            return Err(v);
-        }
-    }
-    Ok(())
-}
-
-/// Will check a list of build targets, and make sure the target names are unique within a vector.
-/// If not, the name of the offending build target is returned.
-fn unique_build_targets(targets: &[Target], layout: &Layout) -> Result<(), String> {
-    let mut seen = HashSet::new();
-    for v in targets.iter().map(|e| layout.root.join(e.src_path())) {
-        if !seen.insert(v.clone()) {
-            return Err(v.display().to_string());
-        }
-    }
-    Ok(())
 }
 
 impl TomlDependency {
@@ -1333,282 +1615,5 @@ impl TomlTarget {
 impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
-    }
-}
-
-fn normalize(package_root: &Path,
-             lib: &Option<TomlLibTarget>,
-             bins: &[TomlBinTarget],
-             custom_build: Option<PathBuf>,
-             examples: &[TomlExampleTarget],
-             tests: &[TomlTestTarget],
-             benches: &[TomlBenchTarget]) -> Vec<Target> {
-    fn configure(toml: &TomlTarget, target: &mut Target) {
-        let t2 = target.clone();
-        target.set_tested(toml.test.unwrap_or(t2.tested()))
-              .set_doc(toml.doc.unwrap_or(t2.documented()))
-              .set_doctest(toml.doctest.unwrap_or(t2.doctested()))
-              .set_benched(toml.bench.unwrap_or(t2.benched()))
-              .set_harness(toml.harness.unwrap_or(t2.harness()))
-              .set_for_host(match (toml.plugin, toml.proc_macro()) {
-                  (None, None) => t2.for_host(),
-                  (Some(true), _) | (_, Some(true)) => true,
-                  (Some(false), _) | (_, Some(false)) => false,
-              });
-    }
-
-    let lib_target = |dst: &mut Vec<Target>, l: &TomlLibTarget| {
-        let path = l.path.clone().unwrap_or_else(
-            || PathValue(Path::new("src").join(&format!("{}.rs", l.name())))
-        );
-        let crate_types = l.crate_type.as_ref().or(l.crate_type2.as_ref());
-        let crate_types = match crate_types {
-            Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
-            None => {
-                vec![ if l.plugin == Some(true) {LibKind::Dylib}
-                      else if l.proc_macro() == Some(true) {LibKind::ProcMacro}
-                      else {LibKind::Lib} ]
-            }
-        };
-
-        let mut target = Target::lib_target(&l.name(), crate_types,
-                                            package_root.join(&path.0));
-        configure(l, &mut target);
-        dst.push(target);
-    };
-
-    let bin_targets = |dst: &mut Vec<Target>, bins: &[TomlBinTarget],
-                       default: &mut FnMut(&TomlBinTarget) -> PathBuf| {
-        for bin in bins.iter() {
-            let path = bin.path.clone().unwrap_or_else(|| {
-                PathValue(default(bin))
-            });
-            let mut target = Target::bin_target(&bin.name(), package_root.join(&path.0),
-                                                bin.required_features.clone());
-            configure(bin, &mut target);
-            dst.push(target);
-        }
-    };
-
-    let custom_build_target = |dst: &mut Vec<Target>, cmd: &Path| {
-        let name = format!("build-script-{}",
-                           cmd.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
-
-        dst.push(Target::custom_build_target(&name, package_root.join(cmd)));
-    };
-
-    let example_targets = |dst: &mut Vec<Target>,
-                           examples: &[TomlExampleTarget],
-                           default: &mut FnMut(&TomlExampleTarget) -> PathBuf| {
-        for ex in examples.iter() {
-            let path = ex.path.clone().unwrap_or_else(|| {
-                PathValue(default(ex))
-            });
-
-            let crate_types = ex.crate_type.as_ref().or(ex.crate_type2.as_ref());
-            let crate_types = match crate_types {
-                Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
-                None => Vec::new()
-            };
-
-            let mut target = Target::example_target(
-                &ex.name(),
-                crate_types,
-                package_root.join(&path.0),
-                ex.required_features.clone()
-            );
-            configure(ex, &mut target);
-            dst.push(target);
-        }
-    };
-
-    let test_targets = |dst: &mut Vec<Target>,
-                        tests: &[TomlTestTarget],
-                        default: &mut FnMut(&TomlTestTarget) -> PathBuf| {
-        for test in tests.iter() {
-            let path = test.path.clone().unwrap_or_else(|| {
-                PathValue(default(test))
-            });
-
-            let mut target = Target::test_target(&test.name(), package_root.join(&path.0),
-                                                 test.required_features.clone());
-            configure(test, &mut target);
-            dst.push(target);
-        }
-    };
-
-    let bench_targets = |dst: &mut Vec<Target>,
-                         benches: &[TomlBenchTarget],
-                         default: &mut FnMut(&TomlBenchTarget) -> PathBuf| {
-        for bench in benches.iter() {
-            let path = bench.path.clone().unwrap_or_else(|| {
-                PathValue(default(bench))
-            });
-
-            let mut target = Target::bench_target(&bench.name(), package_root.join(&path.0),
-                                                  bench.required_features.clone());
-            configure(bench, &mut target);
-            dst.push(target);
-        }
-    };
-
-    let mut ret = Vec::new();
-
-    if let Some(ref lib) = *lib {
-        lib_target(&mut ret, lib);
-        bin_targets(&mut ret, bins,
-                    &mut |bin| inferred_bin_path(bin, package_root, true, bins.len()));
-    } else if bins.len() > 0 {
-        bin_targets(&mut ret, bins,
-                    &mut |bin| inferred_bin_path(bin, package_root, false, bins.len()));
-    }
-
-
-    if let Some(custom_build) = custom_build {
-        custom_build_target(&mut ret, &custom_build);
-    }
-
-    example_targets(&mut ret, examples,
-                    &mut |ex| Path::new("examples")
-                                   .join(&format!("{}.rs", ex.name())));
-
-    test_targets(&mut ret, tests, &mut |test| {
-        Path::new("tests").join(&format!("{}.rs", test.name()))
-    });
-
-    bench_targets(&mut ret, benches, &mut |bench| {
-        Path::new("benches").join(&format!("{}.rs", bench.name()))
-    });
-
-    ret
-}
-
-fn inferred_bin_path(bin: &TomlBinTarget,
-                     package_root: &Path,
-                     lib: bool,
-                     bin_len: usize) -> PathBuf {
-    // we have a lib with multiple bins, so the bins are expected to be located
-    // inside src/bin
-    if lib && bin_len > 1 {
-        return Path::new("src").join("bin").join(&format!("{}.rs", bin.name()))
-                    .to_path_buf()
-    }
-
-    // we have a lib with one bin, so it's either src/main.rs, src/bin/foo.rs or
-    // src/bin/main.rs
-    if lib && bin_len == 1 {
-        let path = Path::new("src").join(&format!("main.rs"));
-        if package_root.join(&path).exists() {
-            return path.to_path_buf()
-        }
-
-        let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
-        if package_root.join(&path).exists() {
-            return path.to_path_buf()
-        }
-
-        return Path::new("src").join("bin").join(&format!("main.rs")).to_path_buf()
-    }
-
-    // here we have a single bin, so it may be located in src/main.rs, src/foo.rs,
-    // srb/bin/foo.rs or src/bin/main.rs
-    if bin_len == 1 {
-        let path = Path::new("src").join(&format!("main.rs"));
-        if package_root.join(&path).exists() {
-            return path.to_path_buf()
-        }
-
-        let path = Path::new("src").join(&format!("{}.rs", bin.name()));
-        if package_root.join(&path).exists() {
-            return path.to_path_buf()
-        }
-
-        let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
-        if package_root.join(&path).exists() {
-            return path.to_path_buf()
-        }
-
-        return Path::new("src").join("bin").join(&format!("main.rs")).to_path_buf()
-    }
-
-    // bin_len > 1
-    let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
-    if package_root.join(&path).exists() {
-        return path.to_path_buf()
-    }
-
-    let path = Path::new("src").join(&format!("{}.rs", bin.name()));
-    if package_root.join(&path).exists() {
-        return path.to_path_buf()
-    }
-
-    let path = Path::new("src").join("bin").join(&format!("main.rs"));
-    if package_root.join(&path).exists() {
-        return path.to_path_buf()
-    }
-
-    return Path::new("src").join(&format!("main.rs")).to_path_buf()
-}
-
-fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
-    let profiles = profiles.as_ref();
-    let mut profiles = Profiles {
-        release: merge(Profile::default_release(),
-                       profiles.and_then(|p| p.release.as_ref())),
-        dev: merge(Profile::default_dev(),
-                   profiles.and_then(|p| p.dev.as_ref())),
-        test: merge(Profile::default_test(),
-                    profiles.and_then(|p| p.test.as_ref())),
-        test_deps: merge(Profile::default_dev(),
-                         profiles.and_then(|p| p.dev.as_ref())),
-        bench: merge(Profile::default_bench(),
-                     profiles.and_then(|p| p.bench.as_ref())),
-        bench_deps: merge(Profile::default_release(),
-                          profiles.and_then(|p| p.release.as_ref())),
-        doc: merge(Profile::default_doc(),
-                   profiles.and_then(|p| p.doc.as_ref())),
-        custom_build: Profile::default_custom_build(),
-        check: merge(Profile::default_check(),
-                     profiles.and_then(|p| p.dev.as_ref())),
-        doctest: Profile::default_doctest(),
-    };
-    // The test/bench targets cannot have panic=abort because they'll all get
-    // compiled with --test which requires the unwind runtime currently
-    profiles.test.panic = None;
-    profiles.bench.panic = None;
-    profiles.test_deps.panic = None;
-    profiles.bench_deps.panic = None;
-    return profiles;
-
-    fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
-        let &TomlProfile {
-            ref opt_level, lto, codegen_units, ref debug, debug_assertions, rpath,
-            ref panic, ref overflow_checks,
-        } = match toml {
-            Some(toml) => toml,
-            None => return profile,
-        };
-        let debug = match *debug {
-            Some(U32OrBool::U32(debug)) => Some(Some(debug)),
-            Some(U32OrBool::Bool(true)) => Some(Some(2)),
-            Some(U32OrBool::Bool(false)) => Some(None),
-            None => None,
-        };
-        Profile {
-            opt_level: opt_level.clone().unwrap_or(TomlOptLevel(profile.opt_level)).0,
-            lto: lto.unwrap_or(profile.lto),
-            codegen_units: codegen_units,
-            rustc_args: None,
-            rustdoc_args: None,
-            debuginfo: debug.unwrap_or(profile.debuginfo),
-            debug_assertions: debug_assertions.unwrap_or(profile.debug_assertions),
-            overflow_checks: overflow_checks.unwrap_or(profile.overflow_checks),
-            rpath: rpath.unwrap_or(profile.rpath),
-            test: profile.test,
-            doc: profile.doc,
-            run_custom_build: profile.run_custom_build,
-            check: profile.check,
-            panic: panic.clone().or(profile.panic),
-        }
     }
 }
