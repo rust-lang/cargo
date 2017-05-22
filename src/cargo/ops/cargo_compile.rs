@@ -561,7 +561,12 @@ fn generate_targets<'a>(pkg: &'a Package,
     let is_check_test = match *filter {
         CompileFilter::Everything { .. } => false,
         CompileFilter::Only { tests, .. } => match tests {
-            FilterRule::All => true,
+            FilterRule::All => {
+                match mode {
+                    CompileMode::Check => true,
+                    _ => false,
+                }
+            },
             FilterRule::Just(_) => false,
         },
     };
