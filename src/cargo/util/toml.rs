@@ -656,7 +656,10 @@ impl TomlManifest {
                     TomlDependency::Detailed(d)
                 }
                 TomlDependency::Simple(ref s) => {
-                    TomlDependency::Simple(s.clone())
+                    TomlDependency::Detailed(DetailedTomlDependency {
+                        version: Some(s.clone()),
+                        ..Default::default()
+                    })
                 }
             }
         }

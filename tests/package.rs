@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 use cargotest::{cargo_process, process};
 use cargotest::support::{project, execs, paths, git, path2url, cargo_exe};
+use cargotest::support::registry::Package;
 use flate2::read::GzDecoder;
 use hamcrest::{assert_that, existing_file, contains, equal_to};
 use tar::Archive;
@@ -663,6 +664,7 @@ fn ignore_workspace_specifier() {
             [project]
             name = "foo"
             version = "0.0.1"
+
             authors = []
 
             [workspace]
@@ -713,4 +715,25 @@ name = "bar"
 version = "0.1.0"
 authors = []
 "#));
+}
+
+#[test]
+fn package_two_kinds_of_deps() {
+    Package::new("other", "1.0.0").publish();
+    Package::new("other1", "1.0.0").publish();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            other = "1.0"
+            other1 = { version = "1.0" }
+        "#)
+        .file("src/main.rs", "");
+
+    assert_that(p.cargo_process("package").arg("--no-verify"),
+                execs().with_status(0));
 }
