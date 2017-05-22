@@ -1378,3 +1378,94 @@ fn exclude_but_also_depend() {
                 execs().with_status(0));
     assert_that(&p.root().join("foo/bar/target"), existing_dir());
 }
+
+#[test]
+fn glob_syntax() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["crates/*"]
+            exclude = ["crates/qux"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("crates/bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+            workspace = "../.."
+        "#)
+        .file("crates/bar/src/main.rs", "fn main() {}")
+        .file("crates/baz/Cargo.toml", r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+            authors = []
+            workspace = "../.."
+        "#)
+        .file("crates/baz/src/main.rs", "fn main() {}")
+        .file("crates/qux/Cargo.toml", r#"
+            [project]
+            name = "qux"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("crates/qux/src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("bar"), is_not(existing_file()));
+    assert_that(&p.bin("baz"), is_not(existing_file()));
+
+    assert_that(p.cargo("build").cwd(p.root().join("crates/bar")),
+                execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("bar"), existing_file());
+
+    assert_that(p.cargo("build").cwd(p.root().join("crates/baz")),
+                execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("baz"), existing_file());
+
+    assert_that(p.cargo("build").cwd(p.root().join("crates/qux")),
+                execs().with_status(0));
+    assert_that(&p.bin("qux"), is_not(existing_file()));
+
+    assert_that(&p.root().join("Cargo.lock"), existing_file());
+    assert_that(&p.root().join("crates/bar/Cargo.lock"), is_not(existing_file()));
+    assert_that(&p.root().join("crates/baz/Cargo.lock"), is_not(existing_file()));
+    assert_that(&p.root().join("crates/qux/Cargo.lock"), existing_file());
+}
+
+#[test]
+fn glob_syntax_invalid_members() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["crates/*"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("crates/bar/src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+error: failed to read `[..]Cargo.toml`
+
+Caused by:
+  [..]
+"));
+}
+

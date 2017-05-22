@@ -1,6 +1,5 @@
 extern crate cargo;
 extern crate cargotest;
-extern crate chrono;
 extern crate hamcrest;
 extern crate tempdir;
 

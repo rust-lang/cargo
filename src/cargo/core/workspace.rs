@@ -3,10 +3,12 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::slice;
 
+use glob::glob;
+
 use core::{Package, VirtualManifest, EitherManifest, SourceId};
 use core::{PackageIdSpec, Dependency, Profile, Profiles};
 use ops;
-use util::{Config, CargoResult, Filesystem, human};
+use util::{Config, CargoResult, Filesystem, human, ChainError};
 use util::paths;
 
 /// The core abstraction in Cargo for working with a workspace of crates.
@@ -124,7 +126,9 @@ impl<'cfg> Workspace<'cfg> {
     ///
     /// This is currently only used in niche situations like `cargo install` or
     /// `cargo package`.
-    pub fn ephemeral(package: Package, config: &'cfg Config, target_dir: Option<Filesystem>,
+    pub fn ephemeral(package: Package,
+                     config: &'cfg Config,
+                     target_dir: Option<Filesystem>,
                      require_optional_deps: bool) -> CargoResult<Workspace<'cfg>> {
         let mut ws = Workspace {
             config: config,
@@ -316,9 +320,24 @@ impl<'cfg> Workspace<'cfg> {
         };
 
         if let Some(list) = members {
+            let root = root_manifest.parent().unwrap();
+
+            let mut expanded_list = Vec::new();
             for path in list {
-                let root = root_manifest.parent().unwrap();
-                let manifest_path = root.join(path).join("Cargo.toml");
+                let pathbuf = root.join(path);
+                let expanded_paths = expand_member_path(&pathbuf)?;
+
+                // If glob does not find any valid paths, then put the original
+                // path in the expanded list to maintain backwards compatibility.
+                if expanded_paths.is_empty() {
+                    expanded_list.push(pathbuf);
+                } else {
+                    expanded_list.extend(expanded_paths);
+                }
+            }
+
+            for path in expanded_list {
+                let manifest_path = path.join("Cargo.toml");
                 self.find_path_deps(&manifest_path, &root_manifest, false)?;
             }
         }
@@ -526,6 +545,21 @@ impl<'cfg> Workspace<'cfg> {
 
         Ok(())
     }
+}
+
+fn expand_member_path(path: &Path) -> CargoResult<Vec<PathBuf>> {
+    let path = match path.to_str() {
+        Some(p) => p,
+        None => return Ok(Vec::new()),
+    };
+    let res = glob(path).chain_error(|| {
+        human(format!("could not parse pattern `{}`", &path))
+    })?;
+    res.map(|p| {
+        p.chain_error(|| {
+            human(format!("unable to match path to pattern `{}`", &path))
+        })
+    }).collect()
 }
 
 fn is_excluded(members: &Option<Vec<String>>,

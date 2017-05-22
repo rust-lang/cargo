@@ -601,7 +601,7 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
 
     rustdoc.arg("-o").arg(doc_dir);
 
-    for feat in cx.resolve.features(unit.pkg.package_id()) {
+    for feat in cx.resolve.features_sorted(unit.pkg.package_id()) {
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
@@ -770,7 +770,10 @@ fn build_base_args(cx: &mut Context,
         cmd.arg("--cfg").arg("test");
     }
 
-    for feat in cx.resolve.features(unit.pkg.package_id()).iter() {
+    // We ideally want deterministic invocations of rustc to ensure that
+    // rustc-caching strategies like sccache are able to cache more, so sort the
+    // feature list here.
+    for feat in cx.resolve.features_sorted(unit.pkg.package_id()) {
         cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 

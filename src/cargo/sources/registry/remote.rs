@@ -68,7 +68,19 @@ impl<'cfg> RemoteRegistry<'cfg> {
                 Ok(repo) => Ok(repo),
                 Err(_) => {
                     let _ = lock.remove_siblings();
-                    Ok(git2::Repository::init_bare(&path)?)
+
+                    // Note that we'd actually prefer to use a bare repository
+                    // here as we're not actually going to check anything out.
+                    // All versions of Cargo, though, share the same CARGO_HOME,
+                    // so for compatibility with older Cargo which *does* do
+                    // checkouts we make sure to initialize a new full
+                    // repository (not a bare one).
+                    //
+                    // We should change this to `init_bare` whenever we feel
+                    // like enough time has passed or if we change the directory
+                    // that the folder is located in, such as by changing the
+                    // hash at the end of the directory.
+                    Ok(git2::Repository::init(&path)?)
                 }
             }
         })

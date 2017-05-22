@@ -7,9 +7,9 @@ use std::sync::Arc;
 use flate2::read::GzDecoder;
 use flate2::{GzBuilder, Compression};
 use git2;
-use tar::{Archive, Builder, Header};
+use tar::{Archive, Builder, Header, EntryType};
 
-use core::{SourceId, Package, PackageId, Workspace, Source};
+use core::{Package, Workspace, Source, SourceId};
 use sources::PathSource;
 use util::{self, CargoResult, human, internal, ChainError, Config, FileLock};
 use ops::{self, DefaultExecutor};
@@ -202,9 +202,6 @@ fn tar(ws: &Workspace,
             human(format!("non-utf8 path in source directory: {}",
                           relative.display()))
         })?;
-        let mut file = File::open(file).chain_error(|| {
-            human(format!("failed to open for archiving: `{}`", file.display()))
-        })?;
         config.shell().verbose(|shell| {
             shell.status("Archiving", &relative)
         })?;
@@ -230,18 +227,41 @@ fn tar(ws: &Workspace,
         // unpack the selectors 0.4.0 crate on crates.io. Either that or take a
         // look at rust-lang/cargo#2326
         let mut header = Header::new_ustar();
-        let metadata = file.metadata().chain_error(|| {
-            human(format!("could not learn metadata for: `{}`", relative))
-        })?;
         header.set_path(&path).chain_error(|| {
             human(format!("failed to add to archive: `{}`", relative))
         })?;
-        header.set_metadata(&metadata);
-        header.set_cksum();
-
-        ar.append(&header, &mut file).chain_error(|| {
-            internal(format!("could not archive source file `{}`", relative))
+        let mut file = File::open(file).chain_error(|| {
+            human(format!("failed to open for archiving: `{}`", file.display()))
         })?;
+        let metadata = file.metadata().chain_error(|| {
+            human(format!("could not learn metadata for: `{}`", relative))
+        })?;
+        header.set_metadata(&metadata);
+
+        if relative == "Cargo.toml" {
+            let orig = Path::new(&path).with_file_name("Cargo.toml.orig");
+            header.set_path(&orig)?;
+            header.set_cksum();
+            ar.append(&header, &mut file).chain_error(|| {
+                internal(format!("could not archive source file `{}`", relative))
+            })?;
+
+            let mut header = Header::new_ustar();
+            let toml = pkg.to_registry_toml();
+            header.set_path(&path)?;
+            header.set_entry_type(EntryType::file());
+            header.set_mode(0o644);
+            header.set_size(toml.len() as u64);
+            header.set_cksum();
+            ar.append(&header, toml.as_bytes()).chain_error(|| {
+                internal(format!("could not archive source file `{}`", relative))
+            })?;
+        } else {
+            header.set_cksum();
+            ar.append(&header, &mut file).chain_error(|| {
+                internal(format!("could not archive source file `{}`", relative))
+            })?;
+        }
     }
     let encoder = ar.into_inner()?;
     encoder.finish()?;
@@ -262,30 +282,14 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
     }
     let mut archive = Archive::new(f);
     archive.unpack(dst.parent().unwrap())?;
-    let manifest_path = dst.join("Cargo.toml");
 
-    // When packages are uploaded to a registry, all path dependencies are
-    // implicitly converted to registry dependencies, so we rewrite those
-    // dependencies here.
-    //
-    // We also make sure to point all paths at `dst` instead of the previous
-    // location that the package was originally read from. In locking the
-    // `SourceId` we're telling it that the corresponding `PathSource` will be
-    // considered updated and we won't actually read any packages.
-    let cratesio = SourceId::crates_io(config)?;
-    let precise = Some("locked".to_string());
-    let new_src = SourceId::for_path(&dst)?.with_precise(precise);
-    let new_pkgid = PackageId::new(pkg.name(), pkg.version(), &new_src)?;
-    let new_summary = pkg.summary().clone().map_dependencies(|d| {
-        if !d.source_id().is_path() { return d }
-        d.clone_inner().set_source_id(cratesio.clone()).into_dependency()
-    });
-    let mut new_manifest = pkg.manifest().clone();
-    new_manifest.set_summary(new_summary.override_id(new_pkgid));
-    let new_pkg = Package::new(new_manifest, &manifest_path);
-
-    // Now that we've rewritten all our path dependencies, compile it!
+    // Manufacture an ephemeral workspace to ensure that even if the top-level
+    // package has a workspace we can still build our new crate.
+    let id = SourceId::for_path(&dst)?;
+    let mut src = PathSource::new(&dst, &id, ws.config());
+    let new_pkg = src.root_package()?;
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
+
     ops::compile_ws(&ws, None, &ops::CompileOptions {
         config: config,
         jobs: opts.jobs,
