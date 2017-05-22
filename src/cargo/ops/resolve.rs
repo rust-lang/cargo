@@ -28,9 +28,12 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
                                 no_default_features: bool,
                                 specs: &[PackageIdSpec])
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let features = features.iter().flat_map(|s| {
-        s.split_whitespace()
-    }).map(|s| s.to_string()).collect::<Vec<String>>();
+    let features = features.iter()
+        .flat_map(|s| s.split_whitespace())
+        .flat_map(|s| s.split(','))
+        .filter(|s| s.len() > 0)
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
 
     let mut registry = PackageRegistry::new(ws.config())?;
     if let Some(source) = source {
