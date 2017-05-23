@@ -164,7 +164,12 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     let pkg_name = unit.pkg.to_string();
     let build_state = cx.build_state.clone();
     let id = unit.pkg.package_id().clone();
-    let output_file = build_output.parent().unwrap().join("output");
+    let (output_file, err_file) = {
+        let build_output_parent = build_output.parent().unwrap();
+        let output_file = build_output_parent.join("output");
+        let err_file = build_output_parent.join("stderr");
+        (output_file, err_file)
+    };
     let all = (id.clone(), pkg_name.clone(), build_state.clone(),
                output_file.clone());
     let build_scripts = super::load_build_deps(cx, unit);
@@ -237,7 +242,9 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                              pkg_name, e.desc);
             Human(e)
         })?;
+
         paths::write(&output_file, &output.stdout)?;
+        paths::write(&err_file, &output.stderr)?;
 
         // After the build command has finished running, we need to be sure to
         // remember all of its output so we can later discover precisely what it
