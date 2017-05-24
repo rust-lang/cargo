@@ -8,7 +8,7 @@ use glob::Pattern;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{self, CargoResult, internal, internal_error, human, ChainError};
+use util::{self, CargoResult, internal, internal_error, human};
 use util::Config;
 
 pub struct PathSource<'cfg> {
@@ -154,7 +154,7 @@ impl<'cfg> PathSource<'cfg> {
                       -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
         let index = repo.index()?;
-        let root = repo.workdir().chain_error(|| {
+        let root = repo.workdir().ok_or_else(|| {
             internal_error("Can't list files on a bare repository.", "")
         })?;
         let pkg_path = pkg.root();
@@ -230,7 +230,7 @@ impl<'cfg> PathSource<'cfg> {
             if is_dir.unwrap_or_else(|| file_path.is_dir()) {
                 warn!("  found submodule {}", file_path.display());
                 let rel = util::without_prefix(&file_path, root).unwrap();
-                let rel = rel.to_str().chain_error(|| {
+                let rel = rel.to_str().ok_or_else(|| {
                     human(format!("invalid utf-8 filename: {}", rel.display()))
                 })?;
                 // Git submodules are currently only named through `/` path

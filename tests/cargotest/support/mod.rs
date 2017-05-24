@@ -15,7 +15,7 @@ use serde_json::{self, Value};
 use url::Url;
 use hamcrest as ham;
 use cargo::util::ProcessBuilder;
-use cargo::util::ProcessError;
+use cargo::util::{CargoError, CargoErrorKind, ProcessError};
 
 use support::paths::CargoPathExt;
 
@@ -719,7 +719,7 @@ impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
 
         match res {
             Ok(out) => self.match_output(&out),
-            Err(ProcessError { output: Some(ref out), .. }) => {
+            Err(CargoError(CargoErrorKind::ProcessErrorKind(ProcessError { output: Some(ref out), .. }), ..)) => {
                 self.match_output(out)
             }
             Err(e) => {

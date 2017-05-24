@@ -11,7 +11,8 @@ use toml;
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{Summary, SourceMap};
 use ops;
-use util::{CargoResult, Config, LazyCell, ChainError, internal, human, lev_distance};
+use util::{Config, LazyCell, internal, human, lev_distance};
+use util::errors::{CargoResult, CargoResultExt};
 
 /// Information about a package that is available somewhere in the file system.
 ///
@@ -181,7 +182,7 @@ impl<'cfg> PackageSet<'cfg> {
     }
 
     pub fn get(&self, id: &PackageId) -> CargoResult<&Package> {
-        let slot = self.packages.iter().find(|p| p.0 == *id).chain_error(|| {
+        let slot = self.packages.iter().find(|p| p.0 == *id).ok_or_else(|| {
             internal(format!("couldn't find `{}` in package set", id))
         })?;
         let slot = &slot.1;
@@ -189,10 +190,10 @@ impl<'cfg> PackageSet<'cfg> {
             return Ok(pkg)
         }
         let mut sources = self.sources.borrow_mut();
-        let source = sources.get_mut(id.source_id()).chain_error(|| {
+        let source = sources.get_mut(id.source_id()).ok_or_else(|| {
             internal(format!("couldn't find source for `{}`", id))
         })?;
-        let pkg = source.download(id).chain_error(|| {
+        let pkg = source.download(id).chain_err(|| {
             human("unable to get packages from source")
         })?;
         assert!(slot.fill(pkg).is_ok());

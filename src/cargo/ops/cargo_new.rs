@@ -11,8 +11,9 @@ use term::color::BLACK;
 
 use core::Workspace;
 use ops::is_bad_artifact_name;
-use util::{GitRepo, HgRepo, PijulRepo, CargoResult, human, ChainError, internal};
+use util::{GitRepo, HgRepo, PijulRepo, human, internal};
 use util::{Config, paths};
+use util::errors::{CargoResult, CargoResultExt};
 
 use toml;
 
@@ -97,7 +98,7 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoR
                               path.as_os_str());
     }
 
-    let dir_name = path.file_name().and_then(|s| s.to_str()).chain_error(|| {
+    let dir_name = path.file_name().and_then(|s| s.to_str()).ok_or_else(|| {
         human(&format!("cannot create a project with a non-unicode name: {:?}",
                        path.file_name().unwrap()))
     })?;
@@ -285,7 +286,7 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         bin: opts.bin,
     };
 
-    mk(config, &mkopts).chain_error(|| {
+    mk(config, &mkopts).chain_err(|| {
         human(format!("Failed to create project `{}` at `{}`",
                       name, path.display()))
     })
@@ -356,7 +357,7 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
         source_files: src_paths_types,
     };
 
-    mk(config, &mkopts).chain_error(|| {
+    mk(config, &mkopts).chain_err(|| {
         human(format!("Failed to create project `{}` at `{}`",
                       name, path.display()))
     })

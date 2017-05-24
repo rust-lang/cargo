@@ -56,9 +56,9 @@ use semver;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
-use util::{CargoResult, Graph, human, CargoError};
+use util::{Graph, human};
+use util::errors::{CargoResult, CargoError};
 use util::profile;
-use util::ChainError;
 use util::graph::{Nodes, Edges};
 
 pub use self::encode::{EncodableResolve, EncodableDependency, EncodablePackageId};
@@ -600,7 +600,7 @@ fn activation_error(cx: &Context,
                     parent: &Summary,
                     dep: &Dependency,
                     prev_active: &[Rc<Summary>],
-                    candidates: &[Candidate]) -> Box<CargoError> {
+                    candidates: &[Candidate]) -> CargoError {
     if candidates.len() > 0 {
         let mut msg = format!("failed to select a version for `{}` \
                                (required by `{}`):\n\
@@ -887,7 +887,7 @@ impl<'a> Context<'a> {
             debug!("found an override for {} {}", dep.name(), dep.version_req());
 
             let mut summaries = registry.query(dep)?.into_iter();
-            let s = summaries.next().chain_error(|| {
+            let s = summaries.next().ok_or_else(|| {
                 human(format!("no matching package for override `{}` found\n\
                                location searched: {}\n\
                                version required: {}",

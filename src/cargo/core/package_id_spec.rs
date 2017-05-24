@@ -5,7 +5,8 @@ use semver::Version;
 use url::Url;
 
 use core::PackageId;
-use util::{CargoResult, ToUrl, human, ToSemver, ChainError};
+use util::{ToUrl, human, ToSemver};
+use util::errors::{CargoResult, CargoResultExt};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct PackageIdSpec {
@@ -47,7 +48,7 @@ impl PackageIdSpec {
     pub fn query_str<'a, I>(spec: &str, i: I) -> CargoResult<&'a PackageId>
         where I: IntoIterator<Item=&'a PackageId>
     {
-        let spec = PackageIdSpec::parse(spec).chain_error(|| {
+        let spec = PackageIdSpec::parse(spec).chain_err(|| {
             human(format!("invalid package id specification: `{}`", spec))
         })?;
         spec.query(i)
@@ -68,10 +69,10 @@ impl PackageIdSpec {
         let frag = url.fragment().map(|s| s.to_owned());
         url.set_fragment(None);
         let (name, version) = {
-            let mut path = url.path_segments().chain_error(|| {
+            let mut path = url.path_segments().ok_or_else(|| {
                 human(format!("pkgid urls must have a path: {}", url))
             })?;
-            let path_name = path.next_back().chain_error(|| {
+            let path_name = path.next_back().ok_or_else(|| {
                 human(format!("pkgid urls must have at least one path \
                                component: {}", url))
             })?;

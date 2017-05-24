@@ -15,7 +15,8 @@ use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::shell::{Verbosity, ColorConfig};
 use core::MultiShell;
-use util::{CargoResult, CargoError, ChainError, Rustc, internal, human};
+use util::{CargoResult, CargoError, Rustc, internal, human};
+use util::errors::CargoResultExt;
 use util::{Filesystem, LazyCell};
 use util::paths;
 
@@ -56,10 +57,10 @@ impl Config {
 
     pub fn default() -> CargoResult<Config> {
         let shell = ::shell(Verbosity::Verbose, ColorConfig::Auto);
-        let cwd = env::current_dir().chain_error(|| {
+        let cwd = env::current_dir().chain_err(|| {
             human("couldn't get the current directory of the process")
         })?;
-        let homedir = homedir(&cwd).chain_error(|| {
+        let homedir = homedir(&cwd).ok_or_else(|| {
             human("Cargo couldn't find your home directory. \
                   This probably means that $HOME was not set.")
         })?;
@@ -100,7 +101,7 @@ impl Config {
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
         self.cargo_exe.get_or_try_init(||
             env::current_exe().and_then(|path| path.canonicalize())
-            .chain_error(|| {
+            .chain_err(|| {
                 human("couldn't get the path to cargo executable")
             })
         ).map(AsRef::as_ref)
@@ -165,7 +166,7 @@ impl Config {
     }
 
     fn get_env<V: FromStr>(&self, key: &str) -> CargoResult<Option<Value<V>>>
-        where Box<CargoError>: From<V::Err>
+        where CargoError: From<V::Err>
     {
         let key = key.replace(".", "_")
                      .replace("-", "_")
@@ -410,26 +411,26 @@ impl Config {
 
         walk_tree(&self.cwd, |mut file, path| {
             let mut contents = String::new();
-            file.read_to_string(&mut contents).chain_error(|| {
+            file.read_to_string(&mut contents).chain_err(|| {
                 human(format!("failed to read configuration file `{}`",
                               path.display()))
             })?;
             let toml = cargo_toml::parse(&contents,
                                          &path,
-                                         self).chain_error(|| {
+                                         self).chain_err(|| {
                 human(format!("could not parse TOML configuration in `{}`",
                               path.display()))
             })?;
-            let value = CV::from_toml(&path, toml).chain_error(|| {
+            let value = CV::from_toml(&path, toml).chain_err(|| {
                 human(format!("failed to load TOML configuration from `{}`",
                               path.display()))
             })?;
-            cfg.merge(value).chain_error(|| {
+            cfg.merge(value).chain_err(|| {
                 human(format!("failed to merge configuration at `{}`",
                               path.display()))
             })?;
             Ok(())
-        }).chain_error(|| human("Couldn't load Cargo configuration"))?;
+        }).chain_err(|| human("Couldn't load Cargo configuration"))?;
 
 
         match cfg {
@@ -541,7 +542,7 @@ impl ConfigValue {
             }
             toml::Value::Table(val) => {
                 Ok(CV::Table(val.into_iter().map(|(key, value)| {
-                    let value = CV::from_toml(path, value).chain_error(|| {
+                    let value = CV::from_toml(path, value).chain_err(|| {
                         human(format!("failed to parse key `{}`", key))
                     })?;
                     Ok((key, value))
@@ -568,7 +569,7 @@ impl ConfigValue {
                         Occupied(mut entry) => {
                             let path = value.definition_path().to_path_buf();
                             let entry = entry.get_mut();
-                            entry.merge(value).chain_error(|| {
+                            entry.merge(value).chain_err(|| {
                                 human(format!("failed to merge key `{}` between \
                                                files:\n  \
                                                file 1: {}\n  \
@@ -757,7 +758,7 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     // Once we're done, also be sure to walk the home directory even if it's not
     // in our history to be sure we pick up that standard location for
     // information.
-    let home = homedir(pwd).chain_error(|| {
+    let home = homedir(pwd).ok_or_else(|| {
         human("Cargo couldn't find your home directory. \
               This probably means that $HOME was not set.")
     })?;
