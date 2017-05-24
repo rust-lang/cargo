@@ -8,7 +8,8 @@ use glob::glob;
 use core::{Package, VirtualManifest, EitherManifest, SourceId};
 use core::{PackageIdSpec, Dependency, Profile, Profiles};
 use ops;
-use util::{Config, CargoResult, Filesystem, human, ChainError};
+use util::{Config, Filesystem, human};
+use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 
 /// The core abstraction in Cargo for working with a workspace of crates.
@@ -551,11 +552,11 @@ fn expand_member_path(path: &Path) -> CargoResult<Vec<PathBuf>> {
         Some(p) => p,
         None => return Ok(Vec::new()),
     };
-    let res = glob(path).chain_error(|| {
+    let res = glob(path).chain_err(|| {
         human(format!("could not parse pattern `{}`", &path))
     })?;
     res.map(|p| {
-        p.chain_error(|| {
+        p.chain_err(|| {
             human(format!("unable to match path to pattern `{}`", &path))
         })
     }).collect()

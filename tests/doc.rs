@@ -1,5 +1,6 @@
 extern crate cargotest;
 extern crate hamcrest;
+extern crate cargo;
 
 use std::str;
 use std::fs;
@@ -8,6 +9,7 @@ use cargotest::rustc_host;
 use cargotest::support::{project, execs, path2url};
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
+use cargo::util::{CargoError, CargoErrorKind};
 
 #[test]
 fn simple() {
@@ -357,11 +359,16 @@ fn output_not_captured() {
             pub fn foo() {}
         ");
 
-    let output = p.cargo_process("doc").exec_with_output().err().unwrap()
-                                                          .output.unwrap();
-    let stderr = str::from_utf8(&output.stderr).unwrap();
-    assert!(stderr.contains("☃"), "no snowman\n{}", stderr);
-    assert!(stderr.contains("unknown start of token"), "no message\n{}", stderr);
+    let error = p.cargo_process("doc").exec_with_output().err().unwrap();
+    if let CargoError(CargoErrorKind::ProcessErrorKind(perr), ..) = error {
+        let output = perr.output.unwrap();
+        let stderr = str::from_utf8(&output.stderr).unwrap();
+    
+        assert!(stderr.contains("☃"), "no snowman\n{}", stderr);
+        assert!(stderr.contains("unknown start of token"), "no message\n{}", stderr);
+    }else{
+        assert!(false, "an error kind other than ProcessErrorKind was encountered\n");
+    }
 }
 
 #[test]

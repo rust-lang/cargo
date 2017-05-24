@@ -9,7 +9,8 @@ use serde_json;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use sources::PathSource;
-use util::{CargoResult, human, ChainError, Config, Sha256};
+use util::{human, Config, Sha256};
+use util::errors::{CargoResult, CargoResultExt, CargoError};
 use util::paths;
 
 pub struct DirectorySource<'cfg> {
@@ -63,7 +64,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
     fn update(&mut self) -> CargoResult<()> {
         self.packages.clear();
-        let entries = self.root.read_dir().chain_error(|| {
+        let entries = self.root.read_dir().chain_err(|| {
             human(format!("failed to read root of directory source: {}",
                           self.root.display()))
         })?;
@@ -112,14 +113,15 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             let pkg = src.root_package()?;
 
             let cksum_file = path.join(".cargo-checksum.json");
-            let cksum = paths::read(&path.join(cksum_file)).chain_error(|| {
+            let cksum = paths::read(&path.join(cksum_file)).chain_err(|| {
                 human(format!("failed to load checksum `.cargo-checksum.json` \
                                of {} v{}",
                               pkg.package_id().name(),
                               pkg.package_id().version()))
 
             })?;
-            let cksum: Checksum = serde_json::from_str(&cksum).chain_error(|| {
+            let cksum: Checksum = serde_json::from_str(&cksum)
+                .map_err(CargoError::from).chain_err(|| {
                 human(format!("failed to decode `.cargo-checksum.json` of \
                                {} v{}",
                               pkg.package_id().name(),
@@ -137,7 +139,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     }
 
     fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
-        self.packages.get(id).map(|p| &p.0).cloned().chain_error(|| {
+        self.packages.get(id).map(|p| &p.0).cloned().ok_or_else(|| {
             human(format!("failed to find package with id: {}", id))
         })
     }
@@ -166,7 +168,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                         n => h.update(&buf[..n]),
                     }
                 }
-            }).chain_error(|| {
+            })().chain_err(|| {
                 human(format!("failed to calculate checksum of: {}",
                               file.display()))
             })?;

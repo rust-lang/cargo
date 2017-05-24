@@ -1,7 +1,8 @@
 use std::ffi::{OsString, OsStr};
 
 use ops::{self, Compilation};
-use util::{self, CargoResult, CargoTestError, Test, ProcessError};
+use util::{self, CargoTestError, Test, ProcessError};
+use util::errors::{CargoResult, CargoErrorKind, CargoError};
 use core::Workspace;
 
 pub struct TestOptions<'a> {
@@ -100,7 +101,7 @@ fn run_unit_tests(options: &TestOptions,
             shell.status("Running", cmd.to_string())
         })?;
 
-        if let Err(e) = cmd.exec() {
+        if let Err(CargoError(CargoErrorKind::ProcessErrorKind(e), .. )) = cmd.exec() {
             errors.push(e);
             if !options.no_fail_fast {
                 return Ok((Test::UnitTest(kind.clone(), test.clone()), errors))
@@ -178,7 +179,7 @@ fn run_doc_tests(options: &TestOptions,
             config.shell().verbose(|shell| {
                 shell.status("Running", p.to_string())
             })?;
-            if let Err(e) = p.exec() {
+            if let Err(CargoError(CargoErrorKind::ProcessErrorKind(e), .. )) = p.exec() {
                 errors.push(e);
                 if !options.no_fail_fast {
                     return Ok((Test::Doc, errors));

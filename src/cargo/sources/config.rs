@@ -11,8 +11,9 @@ use url::Url;
 
 use core::{Source, SourceId};
 use sources::ReplacedSource;
-use util::{CargoResult, Config, ChainError, human, ToUrl};
+use util::{Config, human, ToUrl};
 use util::config::ConfigValue;
+use util::errors::{CargoResult, CargoResultExt};
 
 pub struct SourceConfigMap<'cfg> {
     cfgs: HashMap<String, SourceConfig>,
@@ -155,7 +156,7 @@ a lock file compatible with `{orig}` cannot be generated in this situation
         }
 
         let mut srcs = srcs.into_iter();
-        let src = srcs.next().chain_error(|| {
+        let src = srcs.next().ok_or_else(|| {
             human(format!("no source URL specified for `source.{}`, need \
                            either `registry` or `local-registry` defined",
                           name))
@@ -181,7 +182,7 @@ a lock file compatible with `{orig}` cannot be generated in this situation
 
         fn url(cfg: &ConfigValue, key: &str) -> CargoResult<Url> {
             let (url, path) = cfg.string(key)?;
-            url.to_url().chain_error(|| {
+            url.to_url().chain_err(|| {
                 human(format!("configuration key `{}` specified an invalid \
                                URL (in {})", key, path.display()))
 

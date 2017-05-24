@@ -1,6 +1,6 @@
 use cargo::core::Workspace;
 use cargo::ops::{self, MessageFormat, Packages};
-use cargo::util::{CliResult, CliError, Human, human, Config};
+use cargo::util::{CliResult, CliError, human, Config, CargoErrorKind};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(RustcDecodable)]
@@ -164,7 +164,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
                 Some(i) => CliError::new(human(err.hint()), i),
-                None => CliError::new(Box::new(Human(err)), 101),
+                None => CliError::new(CargoErrorKind::CargoTestErrorKind(err).into(), 101),
             })
         }
     }

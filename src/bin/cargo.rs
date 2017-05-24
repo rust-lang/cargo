@@ -17,7 +17,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use cargo::core::shell::{Verbosity, ColorConfig};
-use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
+use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult, CargoError, CargoErrorKind};
 use cargo::util::CliError;
 
 #[derive(RustcDecodable)]
@@ -330,11 +330,12 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> C
         Err(e) => e,
     };
 
-    if let Some(code) = err.exit.as_ref().and_then(|c| c.code()) {
-        Err(CliError::code(code))
-    } else {
-        Err(CliError::new(Box::new(err), 101))
+    if let CargoError(CargoErrorKind::ProcessErrorKind(ref perr), ..) = err {
+        if let Some(code) = perr.exit.as_ref().and_then(|c| c.code()) {
+            return Err(CliError::code(code));
+        }
     }
+    Err(CliError::new(err, 101))    
 }
 
 /// List all runnable commands

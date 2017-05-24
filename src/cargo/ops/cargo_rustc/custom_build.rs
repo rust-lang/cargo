@@ -5,8 +5,9 @@ use std::str;
 use std::sync::{Mutex, Arc};
 
 use core::PackageId;
-use util::{CargoResult, Human, Freshness, Cfg};
-use util::{internal, ChainError, profile, paths};
+use util::{Freshness, Cfg};
+use util::errors::{CargoResult, CargoResultExt, CargoError};
+use util::{internal, profile, paths};
 use util::machine_message;
 
 use super::job::Work;
@@ -201,7 +202,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         // If we have an old build directory, then just move it into place,
         // otherwise create it!
         if fs::metadata(&build_output).is_err() {
-            fs::create_dir(&build_output).chain_error(|| {
+            fs::create_dir(&build_output).chain_err(|| {
                 internal("failed to create script output directory for \
                           build command")
             })?;
@@ -215,7 +216,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
             let build_state = build_state.outputs.lock().unwrap();
             for (name, id) in lib_deps {
                 let key = (id.clone(), kind);
-                let state = build_state.get(&key).chain_error(|| {
+                let state = build_state.get(&key).ok_or_else(|| {
                     internal(format!("failed to locate build state for env \
                                       vars: {}/{:?}", id, kind))
                 })?;
@@ -237,10 +238,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         let output = cmd.exec_with_streaming(
             &mut |out_line| { state.stdout(out_line); Ok(()) },
             &mut |err_line| { state.stderr(err_line); Ok(()) },
-        ).map_err(|mut e| {
-            e.desc = format!("failed to run custom build command for `{}`\n{}",
-                             pkg_name, e.desc);
-            Human(e)
+        ).map_err(|e| {
+            let desc = e.description().to_string();
+            CargoError::with_chain(e, format!("failed to run custom build command for `{}`\n{}",
+                             pkg_name, desc))
         })?;
 
         paths::write(&output_file, &output.stdout)?;
