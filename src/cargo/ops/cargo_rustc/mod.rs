@@ -11,8 +11,9 @@ use serde_json;
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::shell::ColorConfig;
-use util::{self, CargoResult, ProcessBuilder, ProcessError, human, machine_message};
-use util::{Config, internal, ChainError, profile, join_paths, short_hash};
+use util::{self, ProcessBuilder, human, machine_message};
+use util::{Config, internal, profile, join_paths, short_hash};
+use util::errors::{CargoResult, CargoResultExt};
 use util::Freshness;
 
 use self::job::{Job, Work};
@@ -67,7 +68,7 @@ pub trait Executor: Send + Sync + 'static {
     fn init(&self, _cx: &Context) {}
     /// If execution succeeds, the ContinueBuild value indicates whether Cargo
     /// should continue with the build process for this package.
-    fn exec(&self, cmd: ProcessBuilder, _id: &PackageId) -> Result<(), ProcessError> {
+    fn exec(&self, cmd: ProcessBuilder, _id: &PackageId) -> CargoResult<()> {
         cmd.exec()?;
         Ok(())
     }
@@ -77,7 +78,7 @@ pub trait Executor: Send + Sync + 'static {
                  _id: &PackageId,
                  handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
                  handle_stderr: &mut FnMut(&str) -> CargoResult<()>)
-                 -> Result<(), ProcessError> {
+                 -> CargoResult<()> {
         cmd.exec_with_streaming(handle_stdout, handle_stderr)?;
         Ok(())
     }
@@ -333,7 +334,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
             }
             for dst in &dsts {
                 if fs::metadata(dst).is_ok() {
-                    fs::remove_file(dst).chain_error(|| {
+                    fs::remove_file(dst).chain_err(|| {
                         human(format!("Could not remove file: {}.", dst.display()))
                     })?;
                 }
@@ -367,11 +368,11 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
                     }
                     Ok(())
                 }
-            ).chain_error(|| {
+            ).chain_err(|| {
                 human(format!("Could not compile `{}`.", name))
             })?;
         } else {
-            exec.exec(rustc, &package_id).chain_error(|| {
+            exec.exec(rustc, &package_id).map_err(|e| e.to_internal()).chain_err(|| {
                 human(format!("Could not compile `{}`.", name))
             })?;
         }
@@ -382,7 +383,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
                                             .to_str().unwrap()
                                             .replace(&real_name, &crate_name));
             if src.exists() && src.file_name() != dst.file_name() {
-                fs::rename(&src, &dst).chain_error(|| {
+                fs::rename(&src, &dst).chain_err(|| {
                     internal(format!("could not rename crate {:?}", src))
                 })?;
             }
@@ -390,7 +391,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
 
         if fs::metadata(&rustc_dep_info_loc).is_ok() {
             info!("Renaming dep_info {:?} to {:?}", rustc_dep_info_loc, dep_info_loc);
-            fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_error(|| {
+            fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_err(|| {
                 internal(format!("could not rename dep info: {:?}",
                               rustc_dep_info_loc))
             })?;
@@ -408,7 +409,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
                        pass_l_flag: bool,
                        current_id: &PackageId) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
-            let output = build_state.get(key).chain_error(|| {
+            let output = build_state.get(key).ok_or_else(|| {
                 internal(format!("couldn't find build state for {}/{:?}",
                                  key.0, key.1))
             })?;
@@ -480,7 +481,7 @@ fn link_targets(cx: &mut Context, unit: &Unit, fresh: bool) -> CargoResult<Work>
 
             debug!("linking {} to {}", src.display(), dst.display());
             if dst.exists() {
-                fs::remove_file(&dst).chain_error(|| {
+                fs::remove_file(&dst).chain_err(|| {
                     human(format!("failed to remove: {}", dst.display()))
                 })?;
             }
@@ -489,7 +490,7 @@ fn link_targets(cx: &mut Context, unit: &Unit, fresh: bool) -> CargoResult<Work>
                      debug!("hard link failed {}. falling back to fs::copy", err);
                      fs::copy(src, dst).map(|_| ())
                  })
-                 .chain_error(|| {
+                 .chain_err(|| {
                      human(format!("failed to link or copy `{}` to `{}`",
                                    src.display(), dst.display()))
             })?;
@@ -526,7 +527,7 @@ fn add_plugin_deps(rustc: &mut ProcessBuilder,
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for id in build_scripts.plugins.iter() {
         let key = (id.clone(), Kind::Host);
-        let output = build_state.get(&key).chain_error(|| {
+        let output = build_state.get(&key).ok_or_else(|| {
             internal(format!("couldn't find libs for plugin dep {}", id))
         })?;
         search_path.append(&mut filter_dynamic_search_path(output.library_paths.iter(),
@@ -627,7 +628,7 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
             }
         }
         state.running(&rustdoc);
-        rustdoc.exec().chain_error(|| {
+        rustdoc.exec().chain_err(|| {
             human(format!("Could not document `{}`.", name))
         })
     }))

@@ -38,7 +38,7 @@ struct Parser<'a> {
 }
 
 impl FromStr for Cfg {
-    type Err = Box<CargoError>;
+    type Err = CargoError;
 
     fn from_str(s: &str) -> CargoResult<Cfg> {
         let mut p = Parser::new(s);
@@ -71,7 +71,7 @@ impl CfgExpr {
 }
 
 impl FromStr for CfgExpr {
-    type Err = Box<CargoError>;
+    type Err = CargoError;
 
     fn from_str(s: &str) -> CargoResult<CfgExpr> {
         let mut p = Parser::new(s);

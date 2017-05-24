@@ -187,13 +187,12 @@ impl<'a> JobQueue<'a> {
 
                             if self.active > 0 {
                                 error = Some(human("build failed"));
-                                handle_error(&*e, &mut *cx.config.shell());
+                                handle_error(e, &mut *cx.config.shell());
                                 cx.config.shell().say(
                                             "Build failed, waiting for other \
                                              jobs to finish...", YELLOW)?;
                             }
-
-                            if error.is_none() {
+                            else {
                                 error = Some(e);
                             }
                         }

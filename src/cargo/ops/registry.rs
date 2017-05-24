@@ -21,8 +21,9 @@ use ops;
 use sources::{RegistrySource};
 use util::config;
 use util::paths;
-use util::{CargoResult, human, ChainError, ToUrl};
+use util::{human, ToUrl};
 use util::config::{Config, ConfigValue, Location};
+use util::errors::{CargoResult, CargoResultExt};
 use util::important_paths::find_root_manifest_for_wd;
 
 pub struct RegistryConfig {
@@ -200,7 +201,7 @@ pub fn registry(config: &Config,
     };
     let api_host = {
         let mut src = RegistrySource::remote(&sid, config);
-        src.update().chain_error(|| {
+        src.update().chain_err(|| {
             human(format!("failed to update {}", sid))
         })?;
         (src.config()?).unwrap().api

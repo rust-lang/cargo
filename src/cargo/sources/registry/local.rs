@@ -8,7 +8,8 @@ use core::PackageId;
 use sources::registry::{RegistryData, RegistryConfig};
 use util::FileLock;
 use util::paths;
-use util::{Config, CargoResult, ChainError, human, Sha256, Filesystem};
+use util::{Config, human, Sha256, Filesystem};
+use util::errors::{CargoResult, CargoResultExt};
 
 pub struct LocalRegistry<'cfg> {
     index_path: Filesystem,
@@ -83,7 +84,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         let mut state = Sha256::new();
         let mut buf = [0; 64 * 1024];
         loop {
-            let n = crate_file.read(&mut buf).chain_error(|| {
+            let n = crate_file.read(&mut buf).chain_err(|| {
                 human(format!("failed to read `{}`", crate_file.path().display()))
             })?;
             if n == 0 {

@@ -4,7 +4,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use core::{Package, SourceId, PackageId, EitherManifest};
-use util::{self, paths, CargoResult, human, Config, ChainError};
+use util::{self, paths, human, Config};
+use util::errors::{CargoResult, CargoResultExt};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::Layout;
 
@@ -15,7 +16,7 @@ pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
 
     let layout = Layout::from_project_path(path.parent().unwrap());
     let root = layout.root.clone();
-    util::toml::to_manifest(&contents, source_id, layout, config).chain_error(|| {
+    util::toml::to_manifest(&contents, source_id, layout, config).chain_err(|| {
         human(format!("failed to parse manifest at `{}`",
                       root.join("Cargo.toml").display()))
     })
@@ -94,7 +95,7 @@ fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>)
             return Ok(())
         }
         Err(e) => {
-            return Err(human(e)).chain_error(|| {
+            return Err(human(e)).chain_err(|| {
                 human(format!("failed to read directory `{}`", path.display()))
             })
         }
