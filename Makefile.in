@@ -27,7 +27,7 @@ CFG_BUILD_DATE = $(shell SOURCE_DATE_EPOCH="$${SOURCE_DATE_EPOCH:-$$(date +%s)}"
 
 ifneq ($(wildcard $(CFG_SRC_DIR)/.git),)
 CFG_COMMIT_DATE = $(shell git --git-dir='$(CFG_SRC_DIR).git' log -1 --date=short --pretty=format:'%cd')
-CFG_SHORT_COMMIT_HASH = $(shell git --git-dir='$(CFG_SRC_DIR).git' rev-parse --short HEAD)
+CFG_SHORT_COMMIT_HASH = $(shell git --git-dir='$(CFG_SRC_DIR).git' rev-parse --short=9 HEAD)
 CFG_COMMIT_HASH = $(shell git --git-dir='$(CFG_SRC_DIR).git' rev-parse HEAD)
 endif
 PKG_NAME = cargo-$(CFG_PACKAGE_VERS)
