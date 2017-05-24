@@ -16,8 +16,9 @@ use core::{SourceId, Source, Package, Dependency, PackageIdSpec};
 use core::{PackageId, Workspace};
 use ops::{self, CompileFilter, DefaultExecutor};
 use sources::{GitSource, PathSource, SourceConfigMap};
-use util::{CargoResult, ChainError, Config, human, internal};
+use util::{Config, human, internal};
 use util::{Filesystem, FileLock};
+use util::errors::{CargoResult, CargoResultExt};
 
 #[derive(Deserialize, Serialize)]
 #[serde(untagged)]
@@ -69,7 +70,7 @@ pub fn install(root: Option<&str>,
         let path = source_id.url().to_file_path().ok()
                             .expect("path sources must have a valid path");
         let mut src = PathSource::new(&path, source_id, config);
-        src.update().chain_error(|| {
+        src.update().chain_err(|| {
             human(format!("`{}` is not a crate root; specify a crate to \
                            install from crates.io, or use --path or --git to \
                            specify an alternate source", path.display()))
@@ -117,7 +118,7 @@ pub fn install(root: Option<&str>,
     let compile = ops::compile_ws(&ws,
                                   Some(source),
                                   opts,
-                                  Arc::new(DefaultExecutor)).chain_error(|| {
+                                  Arc::new(DefaultExecutor)).chain_err(|| {
         if let Some(td) = td_opt.take() {
             // preserve the temporary directory, so the user can inspect it
             td.into_path();
@@ -159,7 +160,7 @@ pub fn install(root: Option<&str>,
                 continue
             }
         }
-        fs::copy(src, &dst).chain_error(|| {
+        fs::copy(src, &dst).chain_err(|| {
             human(format!("failed to copy `{}` to `{}`", src.display(),
                           dst.display()))
         })?;
@@ -176,7 +177,7 @@ pub fn install(root: Option<&str>,
         let src = staging_dir.path().join(bin);
         let dst = dst.join(bin);
         config.shell().status("Installing", dst.display())?;
-        fs::rename(&src, &dst).chain_error(|| {
+        fs::rename(&src, &dst).chain_err(|| {
             human(format!("failed to move `{}` to `{}`", src.display(),
                           dst.display()))
         })?;
@@ -192,7 +193,7 @@ pub fn install(root: Option<&str>,
                 let src = staging_dir.path().join(bin);
                 let dst = dst.join(bin);
                 config.shell().status("Replacing", dst.display())?;
-                fs::rename(&src, &dst).chain_error(|| {
+                fs::rename(&src, &dst).chain_err(|| {
                     human(format!("failed to move `{}` to `{}`", src.display(),
                                   dst.display()))
                 })?;
@@ -234,7 +235,7 @@ pub fn install(root: Option<&str>,
     match write_result {
         // Replacement error (if any) isn't actually caused by write error
         // but this seems to be the only way to show both.
-        Err(err) => result.chain_error(|| err)?,
+        Err(err) => result.chain_err(|| err)?,
         Ok(_) => result?,
     }
 
@@ -429,7 +430,7 @@ fn read_crate_list(mut file: &File) -> CargoResult<CrateListingV1> {
     (|| -> CargoResult<_> {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        let listing = toml::from_str(&contents).chain_error(|| {
+        let listing = toml::from_str(&contents).chain_err(|| {
             internal("invalid TOML found for metadata")
         })?;
         match listing {
@@ -438,7 +439,7 @@ fn read_crate_list(mut file: &File) -> CargoResult<CrateListingV1> {
                 Ok(CrateListingV1 { v1: BTreeMap::new() })
             }
         }
-    }).chain_error(|| {
+    })().chain_err(|| {
         human("failed to parse crate metadata")
     })
 }
@@ -450,7 +451,7 @@ fn write_crate_list(mut file: &File, listing: CrateListingV1) -> CargoResult<()>
         let data = toml::to_string(&CrateListing::V1(listing))?;
         file.write_all(data.as_bytes())?;
         Ok(())
-    }).chain_error(|| {
+    })().chain_err(|| {
         human("failed to write crate metadata")
     })
 }

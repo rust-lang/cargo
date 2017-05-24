@@ -5,12 +5,13 @@ use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf, Component};
 
-use util::{human, internal, CargoResult, ChainError};
+use util::{human, internal, CargoResult};
+use util::errors::CargoResultExt;
 
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsString> {
     env::join_paths(paths.iter()).or_else(|e| {
         let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
-        internal(format!("failed to join path array: {:?}", paths)).chain_error(|| {
+        Err(internal(format!("failed to join path array: {:?}", paths))).chain_err(|| {
             human(format!("failed to join search paths together: {}\n\
                            Does ${} have an unterminated quote character?",
                           e, env))
@@ -73,7 +74,7 @@ pub fn read(path: &Path) -> CargoResult<String> {
         let mut f = File::open(path)?;
         f.read_to_string(&mut ret)?;
         Ok(ret)
-    })().map_err(human).chain_error(|| {
+    })().map_err(human).chain_err(|| {
         human(format!("failed to read `{}`", path.display()))
     })
 }
@@ -84,7 +85,7 @@ pub fn read_bytes(path: &Path) -> CargoResult<Vec<u8>> {
         let mut f = File::open(path)?;
         f.read_to_end(&mut ret)?;
         Ok(ret)
-    })().map_err(human).chain_error(|| {
+    })().map_err(human).chain_err(|| {
         human(format!("failed to read `{}`", path.display()))
     })
 }
@@ -94,7 +95,7 @@ pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
         let mut f = File::create(path)?;
         f.write_all(contents)?;
         Ok(())
-    })().map_err(human).chain_error(|| {
+    })().map_err(human).chain_err(|| {
         human(format!("failed to write `{}`", path.display()))
     })
 }
@@ -109,7 +110,7 @@ pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
 
         f.write_all(contents)?;
         Ok(())
-    }).chain_error(|| {
+    })().chain_err(|| {
         internal(format!("failed to write `{}`", path.display()))
     })
 }

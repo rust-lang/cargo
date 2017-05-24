@@ -1,5 +1,6 @@
 use core::{Source, Registry, PackageId, Package, Dependency, Summary, SourceId};
-use util::{CargoResult, ChainError, human};
+use util::{CargoResult, human};
+use util::errors::CargoResultExt;
 
 pub struct ReplacedSource<'cfg> {
     to_replace: SourceId,
@@ -22,7 +23,7 @@ impl<'cfg> ReplacedSource<'cfg> {
 impl<'cfg> Registry for ReplacedSource<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let dep = dep.clone().map_source(&self.to_replace, &self.replace_with);
-        let ret = self.inner.query(&dep).chain_error(|| {
+        let ret = self.inner.query(&dep).chain_err(|| {
             human(format!("failed to query replaced source `{}`",
                           self.to_replace))
         })?;
@@ -38,7 +39,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
     }
 
     fn update(&mut self) -> CargoResult<()> {
-        self.inner.update().chain_error(|| {
+        self.inner.update().chain_err(|| {
             human(format!("failed to update replaced source `{}`",
                           self.to_replace))
         })
@@ -46,7 +47,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
 
     fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
         let id = id.with_source_id(&self.replace_with);
-        let pkg = self.inner.download(&id).chain_error(|| {
+        let pkg = self.inner.download(&id).chain_err(|| {
             human(format!("failed to download replaced source `{}`",
                           self.to_replace))
         })?;

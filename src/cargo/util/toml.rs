@@ -18,7 +18,8 @@ use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use ops::is_bad_artifact_name;
 use sources::CRATES_IO;
-use util::{self, CargoResult, human, ToUrl, ToSemver, ChainError, Config};
+use util::{self, CargoResult, human, ToUrl, ToSemver, Config};
+use util::errors::CargoResultExt;
 
 /// Representation of the projects file layout.
 ///
@@ -189,7 +190,7 @@ in the future.", file.display());
         return Ok(ret)
     }
 
-    Err(first_error).chain_error(|| {
+    Err(first_error).chain_err(|| {
         human("could not parse input as TOML")
     })
 }
@@ -674,7 +675,7 @@ impl TomlManifest {
         let mut warnings = vec![];
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
-        let project = project.chain_error(|| {
+        let project = project.ok_or_else(|| {
             human("no `package` or `project` section found.")
         })?;
 
@@ -983,7 +984,7 @@ impl TomlManifest {
                -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
         let mut replace = Vec::new();
         for (spec, replacement) in self.replace.iter().flat_map(|x| x) {
-            let mut spec = PackageIdSpec::parse(spec).chain_error(|| {
+            let mut spec = PackageIdSpec::parse(spec).chain_err(|| {
                 human(format!("replacements must specify a valid semver \
                                version to replace, but `{}` does not",
                               spec))
@@ -1003,7 +1004,8 @@ impl TomlManifest {
 
             let dep = replacement.to_dependency(spec.name(), cx, None)?;
             let dep = {
-                let version = spec.version().chain_error(|| {
+                let version = spec.version().ok_or_else(||
+                {
                     human(format!("replacements must specify a version \
                                    to replace, but `{}` does not",
                                   spec))

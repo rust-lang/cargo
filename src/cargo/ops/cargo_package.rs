@@ -11,7 +11,8 @@ use tar::{Archive, Builder, Header, EntryType};
 
 use core::{Package, Workspace, Source, SourceId};
 use sources::PathSource;
-use util::{self, CargoResult, human, internal, ChainError, Config, FileLock};
+use util::{self, human, internal, Config, FileLock};
+use util::errors::{CargoResult, CargoResultExt};
 use ops::{self, DefaultExecutor};
 
 pub struct PackageOpts<'cfg> {
@@ -67,12 +68,12 @@ pub fn package(ws: &Workspace,
     // it exists.
     config.shell().status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
-    tar(ws, &src, dst.file(), &filename).chain_error(|| {
+    tar(ws, &src, dst.file(), &filename).chain_err(|| {
         human("failed to prepare local package for uploading")
     })?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
-        run_verify(ws, dst.file(), opts).chain_error(|| {
+        run_verify(ws, dst.file(), opts).chain_err(|| {
             human("failed to verify package tarball")
         })?
     }
@@ -80,7 +81,7 @@ pub fn package(ws: &Workspace,
     {
         let src_path = dst.path();
         let dst_path = dst.parent().join(&filename);
-        fs::rename(&src_path, &dst_path).chain_error(|| {
+        fs::rename(&src_path, &dst_path).chain_err(|| {
             human("failed to move temporary tarball into final location")
         })?;
     }
@@ -198,7 +199,7 @@ fn tar(ws: &Workspace,
     for file in src.list_files(pkg)?.iter() {
         let relative = util::without_prefix(&file, &root).unwrap();
         check_filename(relative)?;
-        let relative = relative.to_str().chain_error(|| {
+        let relative = relative.to_str().ok_or_else(|| {
             human(format!("non-utf8 path in source directory: {}",
                           relative.display()))
         })?;
@@ -227,13 +228,13 @@ fn tar(ws: &Workspace,
         // unpack the selectors 0.4.0 crate on crates.io. Either that or take a
         // look at rust-lang/cargo#2326
         let mut header = Header::new_ustar();
-        header.set_path(&path).chain_error(|| {
+        header.set_path(&path).chain_err(|| {
             human(format!("failed to add to archive: `{}`", relative))
         })?;
-        let mut file = File::open(file).chain_error(|| {
+        let mut file = File::open(file).chain_err(|| {
             human(format!("failed to open for archiving: `{}`", file.display()))
         })?;
-        let metadata = file.metadata().chain_error(|| {
+        let metadata = file.metadata().chain_err(|| {
             human(format!("could not learn metadata for: `{}`", relative))
         })?;
         header.set_metadata(&metadata);
@@ -242,7 +243,7 @@ fn tar(ws: &Workspace,
             let orig = Path::new(&path).with_file_name("Cargo.toml.orig");
             header.set_path(&orig)?;
             header.set_cksum();
-            ar.append(&header, &mut file).chain_error(|| {
+            ar.append(&header, &mut file).chain_err(|| {
                 internal(format!("could not archive source file `{}`", relative))
             })?;
 
@@ -253,12 +254,12 @@ fn tar(ws: &Workspace,
             header.set_mode(0o644);
             header.set_size(toml.len() as u64);
             header.set_cksum();
-            ar.append(&header, toml.as_bytes()).chain_error(|| {
+            ar.append(&header, toml.as_bytes()).chain_err(|| {
                 internal(format!("could not archive source file `{}`", relative))
             })?;
         } else {
             header.set_cksum();
-            ar.append(&header, &mut file).chain_error(|| {
+            ar.append(&header, &mut file).chain_err(|| {
                 internal(format!("could not archive source file `{}`", relative))
             })?;
         }

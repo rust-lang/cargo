@@ -1,7 +1,8 @@
 use std::path::Path;
 
 use ops::{self, Packages};
-use util::{self, human, CargoResult, ProcessError};
+use util::{self, human, CargoResult, CargoError, ProcessError};
+use util::errors::CargoErrorKind;
 use core::Workspace;
 
 pub fn run(ws: &Workspace,
@@ -60,5 +61,12 @@ pub fn run(ws: &Workspace,
     process.args(args).cwd(config.cwd());
 
     config.shell().status("Running", process.to_string())?;
-    Ok(process.exec_replace().err())
+
+    let result = process.exec_replace();
+
+    match result {
+        Ok(()) => Ok(None),
+        Err(CargoError(CargoErrorKind::ProcessErrorKind(e), ..)) => Ok(Some(e)),
+        Err(e) => Err(e)
+    }
 }

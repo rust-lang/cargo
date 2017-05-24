@@ -6,7 +6,8 @@ use serde::ser;
 use serde::de;
 
 use core::{Package, PackageId, SourceId, Workspace};
-use util::{CargoResult, Graph, Config, internal, ChainError, CargoError};
+use util::{Graph, Config, internal};
+use util::errors::{CargoResult, CargoResultExt, CargoError};
 
 use super::Resolve;
 
@@ -132,7 +133,7 @@ impl EncodableResolve {
         for (k, v) in metadata.iter().filter(|p| p.0.starts_with(prefix)) {
             to_remove.push(k.to_string());
             let k = &k[prefix.len()..];
-            let enc_id: EncodablePackageId = k.parse().chain_error(|| {
+            let enc_id: EncodablePackageId = k.parse().chain_err(|| {
                 internal("invalid encoding of checksum in lockfile")
             })?;
             let id = match lookup_id(&enc_id) {
@@ -235,12 +236,12 @@ impl fmt::Display for EncodablePackageId {
 }
 
 impl FromStr for EncodablePackageId {
-    type Err = Box<CargoError>;
+    type Err = CargoError;
 
     fn from_str(s: &str) -> CargoResult<EncodablePackageId> {
         let mut s = s.splitn(3, ' ');
         let name = s.next().unwrap();
-        let version = s.next().chain_error(|| {
+        let version = s.next().ok_or_else(|| {
             internal("invalid serialized PackageId")
         })?;
         let source_id = match s.next() {

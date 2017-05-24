@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate cargotest;
 extern crate flate2;
 extern crate git2;
