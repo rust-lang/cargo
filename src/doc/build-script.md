@@ -58,6 +58,9 @@ cargo:libdir=/path/to/foo/lib
 cargo:include=/path/to/foo/include
 ```
 
+On the other hand, lines printed to stderr are written to a file like
+`target/debug/build/<pkg>/stderr` but are not interpreted by cargo.
+
 There are a few special keys that Cargo recognizes, some affecting how the
 crate is built:
 
