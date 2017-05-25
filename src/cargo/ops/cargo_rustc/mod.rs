@@ -11,7 +11,7 @@ use serde_json;
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::shell::ColorConfig;
-use util::{self, ProcessBuilder, human, machine_message};
+use util::{self, ProcessBuilder, machine_message};
 use util::{Config, internal, profile, join_paths, short_hash};
 use util::errors::{CargoResult, CargoResultExt};
 use util::Freshness;
@@ -335,7 +335,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
             for dst in &dsts {
                 if fs::metadata(dst).is_ok() {
                     fs::remove_file(dst).chain_err(|| {
-                        human(format!("Could not remove file: {}.", dst.display()))
+                        format!("Could not remove file: {}.", dst.display())
                     })?;
                 }
             }
@@ -369,11 +369,11 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
                     Ok(())
                 }
             ).chain_err(|| {
-                human(format!("Could not compile `{}`.", name))
+                format!("Could not compile `{}`.", name)
             })?;
         } else {
             exec.exec(rustc, &package_id).map_err(|e| e.to_internal()).chain_err(|| {
-                human(format!("Could not compile `{}`.", name))
+                format!("Could not compile `{}`.", name)
             })?;
         }
 
@@ -482,7 +482,7 @@ fn link_targets(cx: &mut Context, unit: &Unit, fresh: bool) -> CargoResult<Work>
             debug!("linking {} to {}", src.display(), dst.display());
             if dst.exists() {
                 fs::remove_file(&dst).chain_err(|| {
-                    human(format!("failed to remove: {}", dst.display()))
+                    format!("failed to remove: {}", dst.display())
                 })?;
             }
             fs::hard_link(src, dst)
@@ -491,8 +491,8 @@ fn link_targets(cx: &mut Context, unit: &Unit, fresh: bool) -> CargoResult<Work>
                      fs::copy(src, dst).map(|_| ())
                  })
                  .chain_err(|| {
-                     human(format!("failed to link or copy `{}` to `{}`",
-                                   src.display(), dst.display()))
+                     format!("failed to link or copy `{}` to `{}`",
+                             src.display(), dst.display())
             })?;
         }
 
@@ -628,9 +628,7 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
             }
         }
         state.running(&rustdoc);
-        rustdoc.exec().chain_err(|| {
-            human(format!("Could not document `{}`.", name))
-        })
+        rustdoc.exec().chain_err(|| format!("Could not document `{}`.", name))
     }))
 }
 

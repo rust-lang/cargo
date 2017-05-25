@@ -11,9 +11,9 @@ use term::color::BLACK;
 
 use core::Workspace;
 use ops::is_bad_artifact_name;
-use util::{GitRepo, HgRepo, PijulRepo, human, internal};
+use util::{GitRepo, HgRepo, PijulRepo, internal};
 use util::{Config, paths};
-use util::errors::{CargoResult, CargoResultExt};
+use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 use toml;
 
@@ -99,8 +99,8 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoR
     }
 
     let dir_name = path.file_name().and_then(|s| s.to_str()).ok_or_else(|| {
-        human(&format!("cannot create a project with a non-unicode name: {:?}",
-                       path.file_name().unwrap()))
+        CargoError::from(format!("cannot create a project with a non-unicode name: {:?}",
+                                 path.file_name().unwrap()))
     })?;
 
     if opts.bin {
@@ -236,10 +236,10 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
             duplicates_checker.insert(i.target_name.as_ref(), i);
         } else {
             if let Some(plp) = previous_lib_relpath {
-                return Err(human(format!("cannot have a project with \
-                                         multiple libraries, \
-                                         found both `{}` and `{}`",
-                                         plp, i.relative_path)));
+                return Err(format!("cannot have a project with \
+                                    multiple libraries, \
+                                    found both `{}` and `{}`",
+                                   plp, i.relative_path).into());
             }
             previous_lib_relpath = Some(&i.relative_path);
         }
@@ -287,8 +287,8 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     };
 
     mk(config, &mkopts).chain_err(|| {
-        human(format!("Failed to create project `{}` at `{}`",
-                      name, path.display()))
+        format!("Failed to create project `{}` at `{}`",
+                name, path.display())
     })
 }
 
@@ -358,8 +358,8 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
     };
 
     mk(config, &mkopts).chain_err(|| {
-        human(format!("Failed to create project `{}` at `{}`",
-                      name, path.display()))
+        format!("Failed to create project `{}` at `{}`",
+                 name, path.display())
     })
 }
 

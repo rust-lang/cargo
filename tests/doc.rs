@@ -365,9 +365,9 @@ fn output_not_captured() {
         let stderr = str::from_utf8(&output.stderr).unwrap();
     
         assert!(stderr.contains("☃"), "no snowman\n{}", stderr);
-        assert!(stderr.contains("unknown start of token"), "no message\n{}", stderr);
-    }else{
-        assert!(false, "an error kind other than ProcessErrorKind was encountered\n");
+        assert!(stderr.contains("unknown start of token"), "no message{}", stderr);
+    } else {
+        assert!(false, "an error kind other than ProcessErrorKind was encountered");
     }
 }
 

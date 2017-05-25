@@ -56,7 +56,7 @@ use semver;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
-use util::{Graph, human};
+use util::Graph;
 use util::errors::{CargoResult, CargoError};
 use util::profile;
 use util::graph::{Nodes, Edges};
@@ -633,7 +633,7 @@ fn activation_error(cx: &Context,
                                         .collect::<Vec<_>>()
                                         .join(", ")));
 
-        return human(msg)
+        return msg.into()
     }
 
     // Once we're all the way down here, we're definitely lost in the
@@ -696,7 +696,7 @@ fn activation_error(cx: &Context,
                 dep.version_req())
     };
 
-    human(msg)
+    msg.into()
 }
 
 // Returns if `a` and `b` are compatible in the semver sense. This is a
@@ -888,10 +888,10 @@ impl<'a> Context<'a> {
 
             let mut summaries = registry.query(dep)?.into_iter();
             let s = summaries.next().ok_or_else(|| {
-                human(format!("no matching package for override `{}` found\n\
-                               location searched: {}\n\
-                               version required: {}",
-                              spec, dep.source_id(), dep.version_req()))
+                format!("no matching package for override `{}` found\n\
+                         location searched: {}\n\
+                         version required: {}",
+                         spec, dep.source_id(), dep.version_req())
             })?;
             let summaries = summaries.collect::<Vec<_>>();
             if summaries.len() > 0 {

@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use core::{Profiles, Workspace};
-use util::{human, Config};
+use util::Config;
 use util::errors::{CargoResult, CargoResultExt};
 use ops::{self, Context, BuildConfig, Kind, Unit};
 
@@ -97,11 +97,11 @@ fn rm_rf(path: &Path) -> CargoResult<()> {
     let m = fs::metadata(path);
     if m.as_ref().map(|s| s.is_dir()).unwrap_or(false) {
         fs::remove_dir_all(path).chain_err(|| {
-            human("could not remove build directory")
+            "could not remove build directory"
         })?;
     } else if m.is_ok() {
         fs::remove_file(path).chain_err(|| {
-            human("failed to remove build artifact")
+            "failed to remove build artifact"
         })?;
     }
     Ok(())

@@ -5,7 +5,7 @@ use core::registry::PackageRegistry;
 use core::resolver::{self, Resolve, Method};
 use sources::PathSource;
 use ops;
-use util::{profile, human};
+use util::profile;
 use util::errors::{CargoResult, CargoResultExt};
 
 /// Resolve all dependencies for the workspace using the previous
@@ -263,9 +263,9 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
         let id = SourceId::for_path(&path)?;
         let mut source = PathSource::new_recursive(&path, &id, ws.config());
         source.update().chain_err(|| {
-            human(format!("failed to update path override `{}` \
+            format!("failed to update path override `{}` \
                            (defined in `{}`)", path.display(),
-                          definition.display()))
+                          definition.display())
         })?;
         registry.add_override(Box::new(source));
     }

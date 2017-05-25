@@ -42,13 +42,13 @@ use core::{Shell, MultiShell, ShellConfig, Verbosity, ColorConfig};
 use core::shell::Verbosity::{Verbose};
 use term::color::{BLACK};
 
-pub use util::{CargoError, CargoErrorKind, CargoResult, CliError, CliResult, human, Config};
+pub use util::{CargoError, CargoErrorKind, CargoResult, CliError, CliResult, Config};
 
 pub const CARGO_ENV: &'static str = "CARGO";
 
 macro_rules! bail {
     ($($fmt:tt)*) => (
-        return Err(::util::human(&format_args!($($fmt)*)))
+        return Err(::util::errors::CargoError::from(format_args!($($fmt)*).to_string()))
     )
 }
 
@@ -116,7 +116,7 @@ pub fn call_main_without_stdin<Flags: Decodable>(
 
     let flags = docopt.decode().map_err(|e| {
         let code = if e.fatal() {1} else {0};
-        CliError::new(human(e.to_string()), code)
+        CliError::new(e.to_string().into(), code)
     })?;
 
     exec(flags, config)
@@ -212,8 +212,16 @@ fn handle_cause<E, EKind>(cargo_err: E, shell: &mut MultiShell) -> bool where E:
         let _ = shell.err().say(format!("  {}", error), BLACK);
     }
 
-    unsafe fn extend_lifetime(r: &Error) -> &'static Error {
-        std::mem::transmute::<&Error, &'static Error>(r)    
+    //Error inspection in non-verbose mode requires inspecting the
+    //error kind to avoid printing Internal errors. The downcasting
+    //machinery requires &(Error + 'static), but the iterator (and
+    //underlying `cause`) return &Error. Because the borrows are
+    //constrained to this handling method, and because the original
+    //error object is constrained to be 'static, we're casting away
+    //the borrow's actual lifetime for purposes of downcasting and
+    //inspecting the error chain
+    unsafe fn extend_lifetime(r: &Error) -> &(Error + 'static) {
+        std::mem::transmute::<&Error, &Error>(r)    
     }
 
     let verbose = shell.get_verbose();
@@ -224,8 +232,7 @@ fn handle_cause<E, EKind>(cargo_err: E, shell: &mut MultiShell) -> bool where E:
         for err in cargo_err.iter().skip(1) {
             print(err.to_string(), shell);
         }
-    }
-    else {
+    } else {
         //The first error has already been printed to the shell
         //Print remaining errors until one marked as Internal appears
         for err in cargo_err.iter().skip(1) {

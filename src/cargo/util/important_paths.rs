@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use util::{CargoResult, human};
+use util::errors::CargoResult;
 use util::paths;
 
 /// Iteratively search for `file` in `pwd` and its parents, returning
@@ -59,7 +59,7 @@ pub fn find_project_manifest_exact(pwd: &Path, file: &str) -> CargoResult<PathBu
     if fs::metadata(&manifest).is_ok() {
         Ok(manifest)
     } else {
-        Err(human(format!("Could not find `{}` in `{}`",
-                          file, pwd.display())))
+        Err(format!("Could not find `{}` in `{}`",
+                          file, pwd.display()).into())
     }
 }

@@ -9,7 +9,7 @@ use term::color::YELLOW;
 
 use core::{PackageId, Target, Profile};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
-use util::{CargoResult, ProcessBuilder, profile, internal, human};
+use util::{CargoResult, ProcessBuilder, profile, internal};
 use {handle_error};
 
 use super::{Context, Kind, Unit};
@@ -186,7 +186,7 @@ impl<'a> JobQueue<'a> {
                             self.emit_warnings(Some(msg), key, cx)?;
 
                             if self.active > 0 {
-                                error = Some(human("build failed"));
+                                error = Some("build failed".into());
                                 handle_error(e, &mut *cx.config.shell());
                                 cx.config.shell().say(
                                             "Build failed, waiting for other \

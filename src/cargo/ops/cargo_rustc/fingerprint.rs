@@ -509,7 +509,7 @@ fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint)
 
     let old_fingerprint_json = paths::read(&loc.with_extension("json"))?;
     let old_fingerprint = serde_json::from_str(&old_fingerprint_json)
-        .chain_err(|| {internal(format!("failed to deserialize json"))})?;
+        .chain_err(|| internal(format!("failed to deserialize json")))?;
     new_fingerprint.compare(&old_fingerprint)
 }
 

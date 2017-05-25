@@ -7,7 +7,7 @@ use semver::ReqParseError;
 use serde::ser;
 
 use core::{SourceId, Summary, PackageId};
-use util::{Cfg, CfgExpr, human, Config};
+use util::{Cfg, CfgExpr, Config};
 use util::errors::{CargoResult, CargoResultExt, CargoError};
 
 /// Information about a dependency requested by a Cargo manifest.
@@ -368,7 +368,7 @@ impl FromStr for Platform {
         if s.starts_with("cfg(") && s.ends_with(")") {
             let s = &s[4..s.len()-1];
             s.parse().map(Platform::Cfg).chain_err(|| {
-                human(format!("failed to parse `{}` as a cfg expression", s))
+                format!("failed to parse `{}` as a cfg expression", s)
             })
         } else {
             Ok(Platform::Name(s.to_string()))

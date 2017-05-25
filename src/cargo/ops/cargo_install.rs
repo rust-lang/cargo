@@ -16,9 +16,9 @@ use core::{SourceId, Source, Package, Dependency, PackageIdSpec};
 use core::{PackageId, Workspace};
 use ops::{self, CompileFilter, DefaultExecutor};
 use sources::{GitSource, PathSource, SourceConfigMap};
-use util::{Config, human, internal};
+use util::{Config, internal};
 use util::{Filesystem, FileLock};
-use util::errors::{CargoResult, CargoResultExt};
+use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 #[derive(Deserialize, Serialize)]
 #[serde(untagged)]
@@ -71,18 +71,18 @@ pub fn install(root: Option<&str>,
                             .expect("path sources must have a valid path");
         let mut src = PathSource::new(&path, source_id, config);
         src.update().chain_err(|| {
-            human(format!("`{}` is not a crate root; specify a crate to \
-                           install from crates.io, or use --path or --git to \
-                           specify an alternate source", path.display()))
+            format!("`{}` is not a crate root; specify a crate to \
+                     install from crates.io, or use --path or --git to \
+                     specify an alternate source", path.display())
         })?;
         select_pkg(PathSource::new(&path, source_id, config),
                    krate, vers, config, &mut |path| path.read_packages())?
     } else {
         select_pkg(map.load(source_id)?,
                    krate, vers, config,
-                   &mut |_| Err(human("must specify a crate to install from \
-                                       crates.io, or use --path or --git to \
-                                       specify alternate source")))?
+                   &mut |_| Err("must specify a crate to install from \
+                                 crates.io, or use --path or --git to \
+                                 specify alternate source".into()))?
     };
 
 
@@ -124,8 +124,8 @@ pub fn install(root: Option<&str>,
             td.into_path();
         }
 
-        human(format!("failed to compile `{}`, intermediate artifacts can be \
-                       found at `{}`", pkg, ws.target_dir().display()))
+        CargoError::from(format!("failed to compile `{}`, intermediate artifacts can be \
+                                  found at `{}`", pkg, ws.target_dir().display()))
     })?;
     let binaries: Vec<(&str, &Path)> = compile.binaries.iter().map(|bin| {
         let name = bin.file_name().unwrap();
@@ -161,8 +161,8 @@ pub fn install(root: Option<&str>,
             }
         }
         fs::copy(src, &dst).chain_err(|| {
-            human(format!("failed to copy `{}` to `{}`", src.display(),
-                          dst.display()))
+            format!("failed to copy `{}` to `{}`", src.display(),
+                    dst.display())
         })?;
     }
 
@@ -178,8 +178,8 @@ pub fn install(root: Option<&str>,
         let dst = dst.join(bin);
         config.shell().status("Installing", dst.display())?;
         fs::rename(&src, &dst).chain_err(|| {
-            human(format!("failed to move `{}` to `{}`", src.display(),
-                          dst.display()))
+            format!("failed to move `{}` to `{}`", src.display(),
+                    dst.display())
         })?;
         installed.bins.push(dst);
     }
@@ -194,8 +194,8 @@ pub fn install(root: Option<&str>,
                 let dst = dst.join(bin);
                 config.shell().status("Replacing", dst.display())?;
                 fs::rename(&src, &dst).chain_err(|| {
-                    human(format!("failed to move `{}` to `{}`", src.display(),
-                                  dst.display()))
+                    format!("failed to move `{}` to `{}`", src.display(),
+                            dst.display())
                 })?;
                 replaced_names.push(bin);
             }
@@ -304,8 +304,8 @@ fn select_pkg<'a, T>(mut source: T,
                 None => {
                     let vers_info = vers.map(|v| format!(" with version `{}`", v))
                                         .unwrap_or(String::new());
-                    Err(human(format!("could not find `{}` in `{}`{}", name,
-                                      source.source_id(), vers_info)))
+                    Err(format!("could not find `{}` in `{}`{}", name,
+                                source.source_id(), vers_info).into())
                 }
             }
         }
@@ -347,7 +347,7 @@ fn one<I, F>(mut i: I, f: F) -> CargoResult<Option<I::Item>>
         (Some(i1), Some(i2)) => {
             let mut v = vec![i1, i2];
             v.extend(i);
-            Err(human(f(v)))
+            Err(f(v).into())
         }
         (Some(i), None) => Ok(Some(i)),
         (None, _) => Ok(None)
@@ -382,7 +382,7 @@ fn check_overwrites(dst: &Path,
         }
     }
     msg.push_str("Add --force to overwrite");
-    Err(human(msg))
+    Err(msg.into())
 }
 
 fn find_duplicates(dst: &Path,
@@ -440,7 +440,7 @@ fn read_crate_list(mut file: &File) -> CargoResult<CrateListingV1> {
             }
         }
     })().chain_err(|| {
-        human("failed to parse crate metadata")
+        "failed to parse crate metadata"
     })
 }
 
@@ -452,7 +452,7 @@ fn write_crate_list(mut file: &File, listing: CrateListingV1) -> CargoResult<()>
         file.write_all(data.as_bytes())?;
         Ok(())
     })().chain_err(|| {
-        human("failed to write crate metadata")
+        "failed to write crate metadata"
     })
 }
 

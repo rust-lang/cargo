@@ -7,7 +7,6 @@ use std::str;
 use std::string;
 
 use core::TargetKind;
-use util::network::{NetworkError, NetworkErrorKind};
 
 use curl;
 use git2;
@@ -15,6 +14,7 @@ use semver;
 use serde_json;
 use term;
 use toml;
+use registry;
 
 error_chain! {
     types {
@@ -22,11 +22,12 @@ error_chain! {
     }
 
     links {
-        Network(NetworkError, NetworkErrorKind);
+        CrateRegistry(registry::Error, registry::ErrorKind);
     }
 
     foreign_links {
         ParseSemver(semver::ReqParseError);
+        Semver(semver::SemVerError);
         Io(io::Error);
         SerdeJson(serde_json::Error);
         TomlSer(toml::ser::Error);
@@ -40,7 +41,7 @@ error_chain! {
     }
 
     errors {
-        Internal(description: String, details: Option<String>){
+        Internal(description: String){
             description(&description)
             display("{}", &description)
         }
@@ -52,12 +53,16 @@ error_chain! {
             description(&test_err.desc)
             display("{}", &test_err.desc)
         }
+        HttpNot200(code: u32, url: String) {
+            description("failed to get a 200 response")
+            display("failed to get 200 response from `{}`, got {}", url, code)
+        }
     }
 }
 
 impl CargoError {
     pub fn to_internal(self) -> Self {
-        CargoError(CargoErrorKind::Internal(self.description().to_string(), None), self.1)
+        CargoError(CargoErrorKind::Internal(self.description().to_string()), self.1)
     }
 
     fn is_human(&self) -> bool {
@@ -66,14 +71,20 @@ impl CargoError {
             &CargoErrorKind::TomlSer(_) => true,
             &CargoErrorKind::TomlDe(_) => true,
             &CargoErrorKind::Curl(_) => true,
-            &CargoErrorKind::Network(ref net_err) => {
-                match net_err {
-                    &NetworkErrorKind::HttpNot200(_, _) => true,
-                    &NetworkErrorKind::Curl(_) => true,
-                    _ => false
-                }
-            },
-            _ => false
+            &CargoErrorKind::HttpNot200(..) => true,
+            &CargoErrorKind::CrateRegistry(_) |
+            &CargoErrorKind::ParseSemver(_) |
+            &CargoErrorKind::Semver(_) |
+            &CargoErrorKind::Io(_) |
+            &CargoErrorKind::SerdeJson(_) |
+            &CargoErrorKind::Term(_) |
+            &CargoErrorKind::ParseInt(_) |
+            &CargoErrorKind::ParseBool(_) |
+            &CargoErrorKind::Parse(_) |
+            &CargoErrorKind::Git(_) |
+            &CargoErrorKind::Internal(_) |
+            &CargoErrorKind::ProcessErrorKind(_) |
+            &CargoErrorKind::CargoTestErrorKind(_) => false
         }
     }
 }
@@ -265,22 +276,10 @@ pub fn process_error(msg: &str,
     }
 }
 
-pub fn internal_error(error: &str, detail: &str) -> CargoError {
-    CargoErrorKind::Internal(error.to_string(), Some(detail.to_string())).into()
-}
-
 pub fn internal<S: fmt::Display>(error: S) -> CargoError {
     _internal(&error)
 }
 
 fn _internal(error: &fmt::Display) -> CargoError {
-    CargoErrorKind::Internal(error.to_string(), None).into()
-}
-
-pub fn human<S: fmt::Display>(error: S) -> CargoError {
-    _human(&error)
-}
-
-fn _human(error: &fmt::Display) -> CargoError {
-    CargoErrorKind::Msg(error.to_string()).into()
+    CargoErrorKind::Internal(error.to_string()).into()
 }

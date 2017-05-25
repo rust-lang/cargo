@@ -21,9 +21,9 @@ use ops;
 use sources::{RegistrySource};
 use util::config;
 use util::paths;
-use util::{human, ToUrl};
+use util::ToUrl;
 use util::config::{Config, ConfigValue, Location};
-use util::errors::{CargoResult, CargoResultExt};
+use util::errors::{CargoError, CargoResult, CargoResultExt};
 use util::important_paths::find_root_manifest_for_wd;
 
 pub struct RegistryConfig {
@@ -176,7 +176,7 @@ fn transmit(config: &Config,
 
             Ok(())
         },
-        Err(e) => Err(human(e.to_string())),
+        Err(e) => Err(e.into()),
     }
 }
 
@@ -202,7 +202,7 @@ pub fn registry(config: &Config,
     let api_host = {
         let mut src = RegistrySource::remote(&sid, config);
         src.update().chain_err(|| {
-            human(format!("failed to update {}", sid))
+            format!("failed to update {}", sid)
         })?;
         (src.config()?).unwrap().api
     };
@@ -324,7 +324,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         config.shell().status("Owner", format!("adding {:?} to crate {}",
                                                     v, name))?;
         registry.add_owners(&name, &v).map_err(|e| {
-            human(format!("failed to add owners to crate {}: {}", name, e))
+            CargoError::from(format!("failed to add owners to crate {}: {}", name, e))
         })?;
     }
 
@@ -333,13 +333,13 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         config.shell().status("Owner", format!("removing {:?} from crate {}",
                                                     v, name))?;
         registry.remove_owners(&name, &v).map_err(|e| {
-            human(format!("failed to remove owners from crate {}: {}", name, e))
+            CargoError::from(format!("failed to remove owners from crate {}: {}", name, e))
         })?;
     }
 
     if opts.list {
         let owners = registry.list_owners(&name).map_err(|e| {
-            human(format!("failed to list owners of crate {}: {}", name, e))
+            CargoError::from(format!("failed to list owners of crate {}: {}", name, e))
         })?;
         for owner in owners.iter() {
             print!("{}", owner.login);
@@ -379,12 +379,12 @@ pub fn yank(config: &Config,
     if undo {
         config.shell().status("Unyank", format!("{}:{}", name, version))?;
         registry.unyank(&name, &version).map_err(|e| {
-            human(format!("failed to undo a yank: {}", e))
+            CargoError::from(format!("failed to undo a yank: {}", e))
         })?;
     } else {
         config.shell().status("Yank", format!("{}:{}", name, version))?;
         registry.yank(&name, &version).map_err(|e| {
-            human(format!("failed to yank: {}", e))
+            CargoError::from(format!("failed to yank: {}", e))
         })?;
     }
 
@@ -405,7 +405,7 @@ pub fn search(query: &str,
 
     let (mut registry, _) = registry(config, None, index)?;
     let (crates, total_crates) = registry.search(query, limit).map_err(|e| {
-        human(format!("failed to retrieve search results from the registry: {}", e))
+        CargoError::from(format!("failed to retrieve search results from the registry: {}", e))
     })?;
 
     let list_items = crates.iter()
