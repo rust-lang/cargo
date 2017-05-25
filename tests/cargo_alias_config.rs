@@ -13,7 +13,7 @@ fn alias_incorrect_config_type() {
         .file(".cargo/config",r#"
             [alias]
             b-cargo-test = 5
-        "#);;
+        "#);
 
     assert_that(p.cargo_process("b-cargo-test").arg("-v"),
                 execs().with_status(101).
@@ -33,7 +33,7 @@ fn alias_default_config_overrides_config() {
         .file(".cargo/config",r#"
             [alias]
             b = "not_build"
-        "#);;
+        "#);
 
     assert_that(p.cargo_process("b").arg("-v"),
                 execs().with_status(0).
@@ -50,7 +50,7 @@ fn alias_config() {
         .file(".cargo/config",r#"
             [alias]
             b-cargo-test = "build"
-        "#);;
+        "#);
 
     assert_that(p.cargo_process("b-cargo-test").arg("-v"),
                 execs().with_status(0).
@@ -68,7 +68,7 @@ fn alias_list_test() {
         .file(".cargo/config",r#"
             [alias]
             b-cargo-test = ["build", "--release"]
-         "#);;
+         "#);
 
     assert_that(p.cargo_process("b-cargo-test").arg("-v"),
                 execs().with_status(0).
@@ -87,7 +87,7 @@ fn alias_with_flags_config() {
         .file(".cargo/config",r#"
             [alias]
             b-cargo-test = "build --release"
-         "#);;
+         "#);
 
     assert_that(p.cargo_process("b-cargo-test").arg("-v"),
                 execs().with_status(0).
@@ -106,7 +106,7 @@ fn cant_shadow_builtin() {
         .file(".cargo/config",r#"
             [alias]
             build = "fetch"
-         "#);;
+         "#);
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0)
