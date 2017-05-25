@@ -11,7 +11,7 @@ use toml;
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{Summary, SourceMap};
 use ops;
-use util::{Config, LazyCell, internal, human, lev_distance};
+use util::{Config, LazyCell, internal, lev_distance};
 use util::errors::{CargoResult, CargoResultExt};
 
 /// Information about a package that is available somewhere in the file system.
@@ -194,7 +194,7 @@ impl<'cfg> PackageSet<'cfg> {
             internal(format!("couldn't find source for `{}`", id))
         })?;
         let pkg = source.download(id).chain_err(|| {
-            human("unable to get packages from source")
+            "unable to get packages from source"
         })?;
         assert!(slot.fill(pkg).is_ok());
         Ok(slot.borrow().unwrap())

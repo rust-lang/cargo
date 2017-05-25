@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use core::PackageSet;
-use util::{Config, human, profile};
+use util::{Config, profile};
 use util::errors::{CargoResult, CargoResultExt};
 use sources::config::SourceConfigMap;
 
@@ -190,7 +190,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             // Ensure the source has fetched all necessary remote data.
             let _p = profile::start(format!("updating: {}", source_id));
             self.sources.get_mut(source_id).unwrap().update()
-        })().chain_err(|| human(format!("Unable to update {}", source_id)))
+        })().chain_err(|| format!("Unable to update {}", source_id))
     }
 
     fn query_overrides(&mut self, dep: &Dependency)
@@ -338,8 +338,8 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         // Ensure the requested source_id is loaded
         self.ensure_loaded(dep.source_id(), Kind::Normal).chain_err(|| {
-            human(format!("failed to load source for a dependency \
-                           on `{}`", dep.name()))
+            format!("failed to load source for a dependency \
+                     on `{}`", dep.name())
         })?;
 
         let override_summary = self.query_overrides(&dep)?;

@@ -8,7 +8,7 @@ use fs2::{FileExt, lock_contended_error};
 #[allow(unused_imports)]
 use libc;
 
-use util::{Config, human};
+use util::Config;
 use util::errors::{CargoResult, CargoResultExt};
 
 pub struct FileLock {
@@ -213,7 +213,7 @@ impl Filesystem {
                 Err(e)
             }
         }).chain_err(|| {
-            human(format!("failed to open: {}", path.display()))
+            format!("failed to open: {}", path.display())
         })?;
         match state {
             State::Exclusive => {
@@ -282,8 +282,8 @@ fn acquire(config: &Config,
 
         Err(e) => {
             if e.raw_os_error() != lock_contended_error().raw_os_error() {
-                return Err(human(e)).chain_err(|| {
-                    human(format!("failed to lock file: {}", path.display()))
+                return Err(e).chain_err(|| {
+                    format!("failed to lock file: {}", path.display())
                 })
             }
         }
@@ -292,7 +292,7 @@ fn acquire(config: &Config,
     config.shell().err().say_status("Blocking", &msg, CYAN, true)?;
 
     return block().chain_err(|| {
-        human(format!("failed to lock file: {}", path.display()))
+        format!("failed to lock file: {}", path.display())
     });
 
     #[cfg(all(target_os = "linux", not(target_env = "musl")))]

@@ -4,7 +4,7 @@ use toml;
 
 use core::{Resolve, resolver, Workspace};
 use core::resolver::WorkspaceResolve;
-use util::{human, Filesystem};
+use util::Filesystem;
 use util::errors::{CargoResult, CargoResultExt};
 use util::toml as cargo_toml;
 
@@ -18,7 +18,7 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
 
     let mut s = String::new();
     f.read_to_string(&mut s).chain_err(|| {
-        human(format!("failed to read file: {}", f.path().display()))
+        format!("failed to read file: {}", f.path().display())
     })?;
 
     (|| -> CargoResult<Option<Resolve>> {
@@ -26,7 +26,7 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
         let v: resolver::EncodableResolve = resolve.try_into()?;
         Ok(Some(v.into_resolve(ws)?))
     })().chain_err(|| {
-        human(format!("failed to parse lock file at: {}", f.path().display()))
+        format!("failed to parse lock file at: {}", f.path().display())
     })
 }
 
@@ -100,8 +100,8 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
         f.write_all(out.as_bytes())?;
         Ok(())
     }).chain_err(|| {
-        human(format!("failed to write {}",
-                      ws.root().join("Cargo.lock").display()))
+        format!("failed to write {}",
+                ws.root().join("Cargo.lock").display())
     })
 }
 

@@ -8,7 +8,7 @@ use glob::glob;
 use core::{Package, VirtualManifest, EitherManifest, SourceId};
 use core::{PackageIdSpec, Dependency, Profile, Profiles};
 use ops;
-use util::{Config, Filesystem, human};
+use util::{Config, Filesystem};
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 
@@ -165,9 +165,9 @@ impl<'cfg> Workspace<'cfg> {
     /// indicating that something else should be passed.
     pub fn current(&self) -> CargoResult<&Package> {
         self.current_opt().ok_or_else(||
-            human(format!("manifest path `{}` is a virtual manifest, but this \
-                           command requires running against an actual package in \
-                           this workspace", self.current_manifest.display()))
+            format!("manifest path `{}` is a virtual manifest, but this \
+                     command requires running against an actual package in \
+                     this workspace", self.current_manifest.display()).into()
         )
     }
 
@@ -553,11 +553,11 @@ fn expand_member_path(path: &Path) -> CargoResult<Vec<PathBuf>> {
         None => return Ok(Vec::new()),
     };
     let res = glob(path).chain_err(|| {
-        human(format!("could not parse pattern `{}`", &path))
+        format!("could not parse pattern `{}`", &path)
     })?;
     res.map(|p| {
         p.chain_err(|| {
-            human(format!("unable to match path to pattern `{}`", &path))
+            format!("unable to match path to pattern `{}`", &path)
         })
     }).collect()
 }

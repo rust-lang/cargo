@@ -101,11 +101,20 @@ fn run_unit_tests(options: &TestOptions,
             shell.status("Running", cmd.to_string())
         })?;
 
-        if let Err(CargoError(CargoErrorKind::ProcessErrorKind(e), .. )) = cmd.exec() {
-            errors.push(e);
-            if !options.no_fail_fast {
-                return Ok((Test::UnitTest(kind.clone(), test.clone()), errors))
+        let result = cmd.exec();
+
+        match result {
+            Err(CargoError(CargoErrorKind::ProcessErrorKind(e), .. )) => {
+                 errors.push(e);
+                if !options.no_fail_fast {
+                    return Ok((Test::UnitTest(kind.clone(), test.clone()), errors))
+                }
             }
+            Err(e) => {
+                //This is an unexpected Cargo error rather than a test failure
+                return Err(e)
+            }
+            Ok(()) => {}
         }
     }
     Ok((Test::Multiple, errors))

@@ -8,7 +8,7 @@ use serde::ser::{self, Serialize};
 use url::Url;
 
 use core::GitReference;
-use util::{human, ToUrl, internal, Config, network};
+use util::{ToUrl, internal, Config, network};
 use util::errors::{CargoResult, CargoResultExt, CargoError};
 
 #[derive(PartialEq, Clone, Debug)]
@@ -92,13 +92,13 @@ impl GitRemote {
         let repo = match git2::Repository::open(into) {
             Ok(repo) => {
                 self.fetch_into(&repo, cargo_config).chain_err(|| {
-                    human(format!("failed to fetch into {}", into.display()))
+                    format!("failed to fetch into {}", into.display())
                 })?;
                 repo
             }
             Err(..) => {
                 self.clone_into(into, cargo_config).chain_err(|| {
-                    human(format!("failed to clone into: {}", into.display()))
+                    format!("failed to clone into: {}", into.display())
                 })?
             }
         };
@@ -133,7 +133,7 @@ impl GitRemote {
         }
         fs::create_dir_all(dst)?;
         let repo = git2::Repository::init_bare(dst)?;
-        fetch(&repo, &url, "refs/heads/*:refs/heads/*", cargo_config)?;            
+        fetch(&repo, &url, "refs/heads/*:refs/heads/*", cargo_config)?;
         Ok(repo)
     }
 }
@@ -171,17 +171,17 @@ impl GitDatabase {
                     let obj = obj.peel(ObjectType::Commit)?;
                     Ok(obj.id())
                 })().chain_err(|| {
-                    human(format!("failed to find tag `{}`", s))
+                    format!("failed to find tag `{}`", s)
                 })?
             }
             GitReference::Branch(ref s) => {
                 (|| {
                     let b = self.repo.find_branch(s, git2::BranchType::Local)?;
                     b.get().target().ok_or_else(|| {
-                        human(format!("branch `{}` did not have a target", s))
+                        CargoError::from(format!("branch `{}` did not have a target", s))
                     })
                 })().chain_err(|| {
-                    human(format!("failed to find branch `{}`", s))
+                    format!("failed to find branch `{}`", s)
                 })?
             }
             GitReference::Rev(ref s) => {
@@ -232,20 +232,19 @@ impl<'a> GitCheckout<'a> {
     fn clone_repo(source: &Path, into: &Path) -> CargoResult<git2::Repository> {
         let dirname = into.parent().unwrap();
 
-        fs::create_dir_all(&dirname).map_err(CargoError::from).chain_err(|| {
-            human(format!("Couldn't mkdir {}", dirname.display()))
+        fs::create_dir_all(&dirname).chain_err(|| {
+            format!("Couldn't mkdir {}", dirname.display())
         })?;
 
         if fs::metadata(&into).is_ok() {
-            fs::remove_dir_all(into).map_err(CargoError::from).chain_err(|| {
-                human(format!("Couldn't rmdir {}", into.display()))
+            fs::remove_dir_all(into).chain_err(|| {
+                format!("Couldn't rmdir {}", into.display())
             })?;
         }
 
         let url = source.to_url()?;
         let url = url.to_string();
         let repo = git2::Repository::clone(&url, into)            
-            .map_err(CargoError::from)
             .chain_err(|| {
                 internal(format!("failed to clone {} into {}", source.display(),
                              into.display()))
@@ -284,8 +283,8 @@ impl<'a> GitCheckout<'a> {
         let ok_file = self.location.join(".cargo-ok");
         let _ = fs::remove_file(&ok_file);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
-        self.repo.find_object(self.revision.0, None)
-            .and_then(|obj| {self.repo.reset(&obj, git2::ResetType::Hard, None)})?;
+        let object = self.repo.find_object(self.revision.0, None)?;
+        self.repo.reset(&object, git2::ResetType::Hard, None)?;
         File::create(ok_file)?;
         Ok(())
     }
@@ -298,8 +297,8 @@ impl<'a> GitCheckout<'a> {
 
             for mut child in repo.submodules()?.into_iter() {
                 update_submodule(repo, &mut child, cargo_config).chain_err(|| {
-                    human(format!("failed to update submodule `{}`",
-                                  child.name().unwrap_or("")))
+                    format!("failed to update submodule `{}`",
+                            child.name().unwrap_or(""))
                 })?;
             }
             Ok(())
@@ -552,7 +551,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
                               credentials were incorrect");
             }
         }
-        human(msg)
+        msg
     })
 }
 
@@ -577,7 +576,7 @@ pub fn fetch(repo: &git2::Repository,
 
         network::with_retry(config, || {
             remote.fetch(&[refspec], Some(&mut opts), None)
-                .map_err(network::NetworkError::from)
+                .map_err(CargoError::from)
         })?;
         Ok(())
     })

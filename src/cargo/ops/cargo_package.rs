@@ -11,7 +11,7 @@ use tar::{Archive, Builder, Header, EntryType};
 
 use core::{Package, Workspace, Source, SourceId};
 use sources::PathSource;
-use util::{self, human, internal, Config, FileLock};
+use util::{self, internal, Config, FileLock};
 use util::errors::{CargoResult, CargoResultExt};
 use ops::{self, DefaultExecutor};
 
@@ -69,12 +69,12 @@ pub fn package(ws: &Workspace,
     config.shell().status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
     tar(ws, &src, dst.file(), &filename).chain_err(|| {
-        human("failed to prepare local package for uploading")
+        "failed to prepare local package for uploading"
     })?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
         run_verify(ws, dst.file(), opts).chain_err(|| {
-            human("failed to verify package tarball")
+            "failed to verify package tarball"
         })?
     }
     dst.seek(SeekFrom::Start(0))?;
@@ -82,7 +82,7 @@ pub fn package(ws: &Workspace,
         let src_path = dst.path();
         let dst_path = dst.parent().join(&filename);
         fs::rename(&src_path, &dst_path).chain_err(|| {
-            human("failed to move temporary tarball into final location")
+            "failed to move temporary tarball into final location"
         })?;
     }
     Ok(Some(dst))
@@ -200,8 +200,8 @@ fn tar(ws: &Workspace,
         let relative = util::without_prefix(&file, &root).unwrap();
         check_filename(relative)?;
         let relative = relative.to_str().ok_or_else(|| {
-            human(format!("non-utf8 path in source directory: {}",
-                          relative.display()))
+            format!("non-utf8 path in source directory: {}",
+                    relative.display())
         })?;
         config.shell().verbose(|shell| {
             shell.status("Archiving", &relative)
@@ -229,13 +229,13 @@ fn tar(ws: &Workspace,
         // look at rust-lang/cargo#2326
         let mut header = Header::new_ustar();
         header.set_path(&path).chain_err(|| {
-            human(format!("failed to add to archive: `{}`", relative))
+            format!("failed to add to archive: `{}`", relative)
         })?;
         let mut file = File::open(file).chain_err(|| {
-            human(format!("failed to open for archiving: `{}`", file.display()))
+            format!("failed to open for archiving: `{}`", file.display())
         })?;
         let metadata = file.metadata().chain_err(|| {
-            human(format!("could not learn metadata for: `{}`", relative))
+            format!("could not learn metadata for: `{}`", relative)
         })?;
         header.set_metadata(&metadata);
 

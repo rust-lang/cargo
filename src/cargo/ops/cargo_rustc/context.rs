@@ -11,7 +11,7 @@ use std::sync::Arc;
 use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, Profiles, Dependency, Workspace};
 use core::dependency::Kind as DepKind;
-use util::{self, internal, Config, profile, Cfg, CfgExpr, human};
+use util::{self, internal, Config, profile, Cfg, CfgExpr};
 use util::errors::{CargoResult, CargoResultExt};
 
 use super::TargetConfig;
@@ -215,8 +215,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             has_cfg_and_sysroot = false;
             process.exec_with_output()
         }).chain_err(|| {
-            human(format!("failed to run `rustc` to learn about \
-                           target-specific information"))
+            format!("failed to run `rustc` to learn about \
+                     target-specific information")
         })?;
 
         let error = str::from_utf8(&output.stderr).unwrap();

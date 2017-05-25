@@ -8,8 +8,7 @@ use core::dependency::{Dependency, DependencyInner, Kind};
 use core::{SourceId, Summary, PackageId, Registry};
 use sources::registry::{RegistryPackage, RegistryDependency, INDEX_LOCK};
 use sources::registry::RegistryData;
-use util::{CargoResult, internal, Filesystem, Config};
-use util::human;
+use util::{CargoError, CargoResult, internal, Filesystem, Config};
 
 pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
@@ -107,7 +106,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         match load.load(&root, Path::new(&path)) {
             Ok(contents) => {
                 let contents = str::from_utf8(&contents).map_err(|_| {
-                    human("registry index file was not valid utf-8")
+                    CargoError::from("registry index file was not valid utf-8")
                 })?;
                 let lines = contents.lines()
                                     .map(|s| s.trim())

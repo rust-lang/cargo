@@ -4,7 +4,7 @@ use std::io;
 use cargo::ops;
 use cargo::core::{SourceId, Source};
 use cargo::sources::RegistrySource;
-use cargo::util::{CliResult, CargoResultExt, Config, human};
+use cargo::util::{CliResult, CargoResultExt, Config};
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -52,7 +52,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             let mut line = String::new();
             let input = io::stdin();
             input.lock().read_line(&mut line).chain_err(|| {
-                human("failed to read stdin")
+                "failed to read stdin"
             })?;
             line
         }

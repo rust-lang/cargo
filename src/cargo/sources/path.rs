@@ -8,7 +8,7 @@ use glob::Pattern;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{self, CargoResult, internal, internal_error, human};
+use util::{self, CargoError, CargoResult, internal};
 use util::Config;
 
 pub struct PathSource<'cfg> {
@@ -90,7 +90,7 @@ impl<'cfg> PathSource<'cfg> {
 
         let parse = |p: &String| {
             Pattern::new(p).map_err(|e| {
-                human(format!("could not parse pattern `{}`: {}", p, e))
+                CargoError::from(format!("could not parse pattern `{}`: {}", p, e))
             })
         };
 
@@ -155,7 +155,7 @@ impl<'cfg> PathSource<'cfg> {
         warn!("list_files_git {}", pkg.package_id());
         let index = repo.index()?;
         let root = repo.workdir().ok_or_else(|| {
-            internal_error("Can't list files on a bare repository.", "")
+            internal("Can't list files on a bare repository.")
         })?;
         let pkg_path = pkg.root();
 
@@ -231,7 +231,7 @@ impl<'cfg> PathSource<'cfg> {
                 warn!("  found submodule {}", file_path.display());
                 let rel = util::without_prefix(&file_path, root).unwrap();
                 let rel = rel.to_str().ok_or_else(|| {
-                    human(format!("invalid utf-8 filename: {}", rel.display()))
+                    CargoError::from(format!("invalid utf-8 filename: {}", rel.display()))
                 })?;
                 // Git submodules are currently only named through `/` path
                 // separators, explicitly not `\` which windows uses. Who knew?
@@ -348,7 +348,7 @@ impl<'cfg> Source for PathSource<'cfg> {
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
         if !self.updated {
-            return Err(internal_error("BUG: source was not updated", ""));
+            return Err(internal("BUG: source was not updated"));
         }
 
         let mut max = FileTime::zero();

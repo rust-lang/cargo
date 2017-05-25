@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use ops::{self, Packages};
-use util::{self, human, CargoResult, CargoError, ProcessError};
+use util::{self, CargoResult, CargoError, ProcessError};
 use util::errors::CargoErrorKind;
 use core::Workspace;
 
@@ -16,9 +16,10 @@ pub fn run(ws: &Workspace,
             0 => ws.current()?,
             1 => ws.members()
                 .find(|pkg| pkg.name() == xs[0])
-                .ok_or_else(|| human(
-                    format!("package `{}` is not a member of the workspace", xs[0])
-                ))?,
+                .ok_or_else(|| 
+                    CargoError::from(
+                        format!("package `{}` is not a member of the workspace", xs[0]))
+                )?,
             _ => unreachable!("cargo run supports single package only"),
         }
     };
