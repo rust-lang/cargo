@@ -384,7 +384,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let path = opts.path;
     let name = opts.name;
     let cfg = global_config(config)?;
-    let ignore = ["target/\n", "**/*.rs.bk\n",
+    let ignore = ["/target/\n", "**/*.rs.bk\n",
         if !opts.bin { "Cargo.lock\n" } else { "" }]
         .concat();
 
