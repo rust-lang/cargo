@@ -1,3 +1,5 @@
+use std::env;
+
 use cargo::core::Workspace;
 use cargo::ops::{self, MessageFormat, Packages};
 use cargo::util::{CliResult, CliError, Human, Config, human};
@@ -84,19 +86,24 @@ Compilation can be customized with the `bench` profile in the manifest.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult {
-    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
-
-    let spec = if options.flag_all {
-        Packages::All
-    } else {
-        Packages::Packages(&options.flag_package)
-    };
+    debug!("executing; cmd=cargo-bench; args={:?}",
+           env::args().collect::<Vec<_>>());
 
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
                      options.flag_frozen,
                      options.flag_locked)?;
+
+    let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
+    let ws = Workspace::new(&root, config)?;
+
+    let spec = if options.flag_all || ws.is_virtual() {
+        Packages::All
+    } else {
+        Packages::Packages(&options.flag_package)
+    };
+
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
         no_fail_fast: false,
@@ -122,7 +129,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         },
     };
 
-    let ws = Workspace::new(&root, config)?;
     let err = ops::run_benches(&ws, &ops, &options.arg_args)?;
     match err {
         None => Ok(()),
