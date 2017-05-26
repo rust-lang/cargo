@@ -288,7 +288,7 @@ fn acquire(config: &Config,
         }
     }
     let msg = format!("waiting for file lock on {}", msg);
-    config.shell().err().say_status("Blocking", &msg, CYAN, true)?;
+    config.shell().status_with_color("Blocking", &msg, CYAN)?;
 
     return block().chain_error(|| {
         human(format!("failed to lock file: {}", path.display()))
