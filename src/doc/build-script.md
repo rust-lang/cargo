@@ -51,11 +51,15 @@ All the lines printed to stdout by a build script are written to a file like `ta
 cargo:rustc-link-lib=static=foo
 cargo:rustc-link-search=native=/path/to/foo
 cargo:rustc-cfg=foo
+cargo:rustc-env=FOO=bar
 # arbitrary user-defined metadata
 cargo:root=/path/to/foo
 cargo:libdir=/path/to/foo/lib
 cargo:include=/path/to/foo/include
 ```
+
+On the other hand, lines printed to stderr are written to a file like
+`target/debug/build/<pkg>/stderr` but are not interpreted by cargo.
 
 There are a few special keys that Cargo recognizes, some affecting how the
 crate is built:
@@ -73,6 +77,12 @@ crate is built:
 * `rustc-cfg=FEATURE` indicates that the specified feature will be passed as a
   `--cfg` flag to the compiler. This is often useful for performing compile-time
   detection of various features.
+* `rustc-env=VAR=VALUE` indicates that the specified environment variable
+  will be added to the environment which the compiler is run within.
+  The value can be then retrieved by the `env!` macro in the compiled crate.
+  This is useful for embedding additional metadata in crate's code,
+  such as the hash of Git HEAD or the unique identifier of a continuous
+  integration server.
 * `rerun-if-changed=PATH` is a path to a file or directory which indicates that
   the build script should be re-run if it changes (detected by a more-recent
   last-modified timestamp on the file). Normally build scripts are re-run if
@@ -82,7 +92,7 @@ crate is built:
   of the directory itself (which corresponds to some types of changes within the
   directory, depending on platform) will trigger a rebuild. To request a re-run
   on any changes within an entire directory, print a line for the directory and
-  another line for everything inside it, recursively.)  
+  another line for everything inside it, recursively.)
   Note that if the build script itself (or one of its dependencies) changes,
   then it's rebuilt and rerun unconditionally, so
   `cargo:rerun-if-changed=build.rs` is almost always redundant (unless you
@@ -427,7 +437,7 @@ script is again to farm out as much of this as possible to make this as easy as
 possible for consumers.
 
 As an example to follow, let’s take a look at one of [Cargo’s own
-dependencies][git2-rs], [libgit2][libgit2]. This library has a number of
+dependencies][git2-rs], [libgit2][libgit2]. The C library has a number of
 constraints:
 
 [git2-rs]: https://github.com/alexcrichton/git2-rs/tree/master/libgit2-sys
@@ -441,7 +451,7 @@ constraints:
 * It can be built from source using `cmake`.
 
 To visualize what’s going on here, let’s take a look at the manifest for the
-relevant Cargo package.
+relevant Cargo package that links to the native C library.
 
 ```toml
 [package]
@@ -464,11 +474,12 @@ As the above manifests show, we’ve got a `build` script specified, but it’s
 worth noting that this example has a `links` entry which indicates that the
 crate (`libgit2-sys`) links to the `git2` native library.
 
-Here we also see the unconditional dependency on `libssh2` via the
-`libssh2-sys` crate, as well as a platform-specific dependency on `openssl-sys`
-for \*nix (other variants elided for now). It may seem a little counterintuitive
-to express *C dependencies* in the *Cargo manifest*, but this is actually using
-one of Cargo’s conventions in this space.
+Here we also see that we chose to have the Rust crate have an unconditional
+dependency on `libssh2` via the `libssh2-sys` crate, as well as a
+platform-specific dependency on `openssl-sys` for \*nix (other variants elided
+for now). It may seem a little counterintuitive to express *C dependencies* in
+the *Cargo manifest*, but this is actually using one of Cargo’s conventions in
+this space.
 
 ## `*-sys` Packages
 

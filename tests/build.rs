@@ -3045,6 +3045,68 @@ fn run_proper_binary_main_rs() {
 }
 
 #[test]
+fn run_proper_alias_binary_from_src() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+            [[bin]]
+            name = "foo"
+            [[bin]]
+            name = "bar"
+        "#)
+        .file("src/foo.rs", r#"
+            fn main() {
+              println!("foo");
+            }
+        "#).file("src/bar.rs", r#"
+            fn main() {
+              println!("bar");
+            }
+        "#);
+
+    assert_that(p.cargo_process("build")
+                 .arg("--all"),
+                execs().with_status(0)
+                );
+    assert_that(process(&p.bin("foo")),
+                execs().with_status(0).with_stdout("foo\n"));
+    assert_that(process(&p.bin("bar")),
+                execs().with_status(0).with_stdout("bar\n"));
+}
+
+#[test]
+fn run_proper_alias_binary_main_rs() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+            [[bin]]
+            name = "foo"
+            [[bin]]
+            name = "bar"
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {
+              println!("main");
+            }
+        "#);
+
+    assert_that(p.cargo_process("build")
+                 .arg("--all"),
+                execs().with_status(0)
+                );
+    assert_that(process(&p.bin("foo")),
+                execs().with_status(0).with_stdout("main\n"));
+    assert_that(process(&p.bin("bar")),
+                execs().with_status(0).with_stdout("main\n"));
+}
+
+#[test]
 fn run_proper_binary_main_rs_as_foo() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -3113,4 +3175,49 @@ fn cdylib_not_lifted() {
         assert_that(&p.root().join("target/debug/deps").join(&file),
                     existing_file());
     }
+}
+
+#[test]
+fn deterministic_cfg_flags() {
+    // This bug is non-deterministic
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            build = "build.rs"
+
+            [features]
+            default = ["f_a", "f_b", "f_c", "f_d"]
+            f_a = []
+            f_b = []
+            f_c = []
+            f_d = []
+        "#)
+        .file("build.rs", r#"
+                fn main() {
+                    println!("cargo:rustc-cfg=cfg_a");
+                    println!("cargo:rustc-cfg=cfg_b");
+                    println!("cargo:rustc-cfg=cfg_c");
+                    println!("cargo:rustc-cfg=cfg_d");
+                    println!("cargo:rustc-cfg=cfg_e");
+                }
+            "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#);
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(0)
+                    .with_stderr("\
+[COMPILING] foo v0.1.0 [..]
+[RUNNING] [..]
+[RUNNING] [..]
+[RUNNING] `rustc --crate-name foo [..] \
+--cfg[..]default[..]--cfg[..]f_a[..]--cfg[..]f_b[..]\
+--cfg[..]f_c[..]--cfg[..]f_d[..] \
+--cfg cfg_a --cfg cfg_b --cfg cfg_c --cfg cfg_d --cfg cfg_e`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"));
 }

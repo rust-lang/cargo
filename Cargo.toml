@@ -17,7 +17,6 @@ name = "cargo"
 path = "src/cargo/lib.rs"
 
 [dependencies]
-chrono = "0.3.0"
 crates-io = { path = "src/crates-io", version = "0.9" }
 crossbeam = "0.2"
 curl = "0.4.6"
@@ -57,10 +56,10 @@ psapi-sys = "0.1"
 winapi = "0.2"
 
 [dev-dependencies]
-hamcrest = "=0.1.1"
 bufstream = "0.1"
-filetime = "0.1"
 cargotest = { path = "tests/cargotest" }
+filetime = "0.1"
+hamcrest = "=0.1.1"
 
 [[bin]]
 name = "cargo"

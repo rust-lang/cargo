@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::path::{PathBuf, Path};
+use std::rc::Rc;
 
 use semver::Version;
 use serde::ser;
 
 use core::{Dependency, PackageId, Summary, SourceId, PackageIdSpec};
 use core::WorkspaceConfig;
+use util::toml::TomlManifest;
 
 pub enum EitherManifest {
     Real(Manifest),
@@ -14,7 +16,7 @@ pub enum EitherManifest {
 }
 
 /// Contains all the information about a package, as loaded from a Cargo.toml.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
@@ -27,6 +29,7 @@ pub struct Manifest {
     publish: bool,
     replace: Vec<(PackageIdSpec, Dependency)>,
     workspace: WorkspaceConfig,
+    original: Rc<TomlManifest>,
 }
 
 #[derive(Clone, Debug)]
@@ -222,7 +225,8 @@ impl Manifest {
                profiles: Profiles,
                publish: bool,
                replace: Vec<(PackageIdSpec, Dependency)>,
-               workspace: WorkspaceConfig) -> Manifest {
+               workspace: WorkspaceConfig,
+               original: Rc<TomlManifest>) -> Manifest {
         Manifest {
             summary: summary,
             targets: targets,
@@ -235,6 +239,7 @@ impl Manifest {
             publish: publish,
             replace: replace,
             workspace: workspace,
+            original: original,
         }
     }
 
@@ -251,6 +256,7 @@ impl Manifest {
     pub fn profiles(&self) -> &Profiles { &self.profiles }
     pub fn publish(&self) -> bool { self.publish }
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] { &self.replace }
+    pub fn original(&self) -> &TomlManifest { &self.original }
     pub fn links(&self) -> Option<&str> {
         self.links.as_ref().map(|s| &s[..])
     }

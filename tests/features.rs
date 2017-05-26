@@ -1007,3 +1007,121 @@ fn all_features_flag_enables_all_features() {
     assert_that(p.cargo_process("build").arg("--all-features"),
                 execs().with_status(0));
 }
+
+#[test]
+fn many_cli_features_comma_delimited() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+            optional = true
+
+            [dependencies.baz]
+            path = "baz"
+            optional = true
+        "#)
+        .file("src/main.rs", r#"
+            extern crate bar;
+            extern crate baz;
+            fn main() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("baz/src/lib.rs", "pub fn baz() {}");
+
+    assert_that(p.cargo_process("build").arg("--features").arg("bar,baz"),
+                execs().with_status(0).with_stderr(format!("\
+[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+", dir = p.url())));
+}
+
+#[test]
+fn many_cli_features_comma_and_space_delimited() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+            optional = true
+
+            [dependencies.baz]
+            path = "baz"
+            optional = true
+
+            [dependencies.bam]
+            path = "bam"
+            optional = true
+
+            [dependencies.bap]
+            path = "bap"
+            optional = true
+        "#)
+        .file("src/main.rs", r#"
+            extern crate bar;
+            extern crate baz;
+            extern crate bam;
+            extern crate bap;
+            fn main() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("baz/Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .file("bam/Cargo.toml", r#"
+            [package]
+            name = "bam"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bam/src/lib.rs", "pub fn bam() {}")
+        .file("bap/Cargo.toml", r#"
+            [package]
+            name = "bap"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bap/src/lib.rs", "pub fn bap() {}");
+
+    assert_that(p.cargo_process("build").arg("--features").arg("bar,baz bam bap"),
+                execs().with_status(0).with_stderr(format!("\
+[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+", dir = p.url())));
+}

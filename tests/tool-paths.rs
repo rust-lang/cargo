@@ -124,3 +124,48 @@ fn relative_tools() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", url = foo_url, ar = output.0, linker = output.1)))
 }
+
+#[test]
+fn custom_runner() {
+    let target = rustc_host();
+
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("tests/test.rs", "")
+        .file("benches/bench.rs", "")
+        .file(".cargo/config", &format!(r#"
+            [target.{}]
+            runner = "nonexistent-runner -r"
+        "#, target));
+
+    foo.build();
+
+    assert_that(foo.cargo("run").args(&["--", "--param"]),
+                execs().with_stderr_contains(&format!("\
+[COMPILING] foo v0.0.1 ({url})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `nonexistent-runner -r target[/]debug[/]foo[EXE] --param`
+", url = foo.url())));
+
+    assert_that(foo.cargo("test").args(&["--test", "test", "--verbose", "--", "--param"]),
+                execs().with_stderr_contains(&format!("\
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] `nonexistent-runner -r [..][/]target[/]debug[/]deps[/]test-[..][EXE] --param`
+", url = foo.url())));
+
+    assert_that(foo.cargo("bench").args(&["--bench", "bench", "--verbose", "--", "--param"]),
+                execs().with_stderr_contains(&format!("\
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc [..]`
+[RUNNING] `rustc [..]`
+[FINISHED] release [optimized] target(s) in [..]
+[RUNNING] `nonexistent-runner -r [..][/]target[/]release[/]deps[/]bench-[..][EXE] --param --bench`
+", url = foo.url())));
+}
