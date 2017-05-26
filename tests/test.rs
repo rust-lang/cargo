@@ -2456,6 +2456,49 @@ fn test_all_virtual_manifest() {
 }
 
 #[test]
+fn test_virtual_manifest_all_implied() {
+    let p = project("workspace")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["a", "b"]
+        "#)
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.1.0"
+        "#)
+        .file("a/src/lib.rs", r#"
+            #[test]
+            fn a() {}
+        "#)
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.1.0"
+        "#)
+        .file("b/src/lib.rs", r#"
+            #[test]
+            fn b() {}
+        "#);
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0).with_stdout_contains("\
+running 1 test
+test b ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+")
+                .with_stdout_contains("\
+running 1 test
+test b ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+"));
+}
+
+#[test]
 fn test_all_member_dependency_same_name() {
     let p = project("workspace")
         .file("Cargo.toml", r#"

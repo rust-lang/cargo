@@ -693,6 +693,37 @@ fn doc_all_virtual_manifest() {
 }
 
 #[test]
+fn doc_virtual_manifest_all_implied() {
+    let p = project("workspace")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo", "bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("foo/src/lib.rs", r#"
+            pub fn foo() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {}
+        "#);
+
+    // The order in which foo and bar are documented is not guaranteed
+    assert_that(p.cargo_process("doc"),
+                execs().with_status(0)
+                       .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+                       .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])"));
+}
+
+#[test]
 fn doc_all_member_dependency_same_name() {
     let p = project("workspace")
         .file("Cargo.toml", r#"
