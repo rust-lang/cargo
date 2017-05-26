@@ -90,13 +90,20 @@ impl MultiShell {
         }
     }
 
-    pub fn status<T, U>(&mut self, status: T, message: U) -> CargoResult<()>
+    pub fn status_with_color<T, U>(&mut self, status: T, message: U, color: Color)
+                                   -> CargoResult<()>
         where T: fmt::Display, U: fmt::Display
     {
         match self.verbosity {
             Quiet => Ok(()),
-            _ => self.err().say_status(status, message, GREEN, true)
+            _ => self.err().say_status(status, message, color, true)
         }
+    }
+
+    pub fn status<T, U>(&mut self, status: T, message: U) -> CargoResult<()>
+        where T: fmt::Display, U: fmt::Display
+    {
+        self.status_with_color(status, message, GREEN)
     }
 
     pub fn verbose<F>(&mut self, mut callback: F) -> CargoResult<()>
