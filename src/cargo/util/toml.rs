@@ -18,7 +18,7 @@ use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use ops::is_bad_artifact_name;
 use sources::CRATES_IO;
-use util::{self, CargoResult, human, ToUrl, ToSemver, ChainError, Config};
+use util::{self, CargoResult, human, ToUrl, ChainError, Config};
 
 /// Representation of the projects file layout.
 ///
@@ -438,7 +438,7 @@ impl<'de> de::Deserialize<'de> for StringOrBool {
 #[derive(Deserialize, Serialize, Clone)]
 pub struct TomlProject {
     name: String,
-    version: TomlVersion,
+    version: semver::Version,
     authors: Option<Vec<String>>,
     build: Option<StringOrBool>,
     links: Option<String>,
@@ -466,51 +466,9 @@ pub struct TomlWorkspace {
     exclude: Option<Vec<String>>,
 }
 
-#[derive(Clone)]
-pub struct TomlVersion {
-    version: semver::Version,
-}
-
-impl<'de> de::Deserialize<'de> for TomlVersion {
-    fn deserialize<D>(d: D) -> Result<TomlVersion, D::Error>
-        where D: de::Deserializer<'de>
-    {
-        struct Visitor;
-
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = TomlVersion;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a semver version")
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<TomlVersion, E>
-                where E: de::Error
-            {
-                match value.to_semver() {
-                    Ok(s) => Ok(TomlVersion { version: s}),
-                    Err(e) => Err(E::custom(e)),
-                }
-            }
-        }
-
-        d.deserialize_str(Visitor)
-    }
-}
-
-impl ser::Serialize for TomlVersion {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer,
-    {
-        self.version.to_string().serialize(s)
-    }
-}
-
-
 impl TomlProject {
     pub fn to_package_id(&self, source_id: &SourceId) -> CargoResult<PackageId> {
-        PackageId::new(&self.name, self.version.version.clone(),
-                       source_id)
+        PackageId::new(&self.name, self.version.clone(), source_id)
     }
 }
 
