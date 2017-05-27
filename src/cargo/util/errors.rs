@@ -62,6 +62,7 @@ error_chain! {
 
 impl CargoError {
     pub fn to_internal(self) -> Self {
+        //This is actually bad, because it loses the cause information for foreign_link
         CargoError(CargoErrorKind::Internal(self.description().to_string()), self.1)
     }
 
@@ -72,6 +73,7 @@ impl CargoError {
             &CargoErrorKind::TomlDe(_) => true,
             &CargoErrorKind::Curl(_) => true,
             &CargoErrorKind::HttpNot200(..) => true,
+            &CargoErrorKind::ProcessErrorKind(_) => true,
             &CargoErrorKind::CrateRegistry(_) |
             &CargoErrorKind::ParseSemver(_) |
             &CargoErrorKind::Semver(_) |
@@ -83,7 +85,6 @@ impl CargoError {
             &CargoErrorKind::Parse(_) |
             &CargoErrorKind::Git(_) |
             &CargoErrorKind::Internal(_) |
-            &CargoErrorKind::ProcessErrorKind(_) |
             &CargoErrorKind::CargoTestErrorKind(_) => false
         }
     }

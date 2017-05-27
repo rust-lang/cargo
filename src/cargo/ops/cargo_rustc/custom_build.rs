@@ -239,9 +239,10 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
             &mut |out_line| { state.stdout(out_line); Ok(()) },
             &mut |err_line| { state.stderr(err_line); Ok(()) },
         ).map_err(|e| {
-            let desc = e.description().to_string();
-            CargoError::with_chain(e, format!("failed to run custom build command for `{}`\n{}",
-                             pkg_name, desc))
+            CargoError::from(
+                format!("failed to run custom build command for `{}`\n{}",
+                        pkg_name, e.description()))
+
         })?;
 
         paths::write(&output_file, &output.stdout)?;

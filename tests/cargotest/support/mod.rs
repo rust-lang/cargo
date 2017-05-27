@@ -719,7 +719,8 @@ impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
 
         match res {
             Ok(out) => self.match_output(&out),
-            Err(CargoError(CargoErrorKind::ProcessErrorKind(ProcessError { output: Some(ref out), .. }), ..)) => {
+            Err(CargoError(CargoErrorKind::ProcessErrorKind(
+                ProcessError { output: Some(ref out), .. }), ..)) => {
                 self.match_output(out)
             }
             Err(e) => {
