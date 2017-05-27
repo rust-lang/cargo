@@ -34,10 +34,6 @@ pub struct Config {
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
     locked: Cell<bool>,
-
-    // A temporary solution to point on an old configuration's usage.
-    // If it's true cargo will warn on it on publish.
-    token_in_main_config: Cell<bool>,
 }
 
 impl Config {
@@ -55,7 +51,6 @@ impl Config {
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
             locked: Cell::new(false),
-            token_in_main_config: Cell::new(false),
         }
     }
 
@@ -408,10 +403,6 @@ impl Config {
         !self.frozen.get() && !self.locked.get()
     }
 
-    pub fn is_token_in_main_config(&self) -> bool {
-        self.token_in_main_config.get()
-    }
-
     pub fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
 
@@ -437,8 +428,6 @@ impl Config {
             })?;
             Ok(())
         }).chain_err(|| "Couldn't load Cargo configuration")?;
-
-        self.token_in_main_config.set(check_token_in_main_config("registry.token".into(), &cfg));
 
         let mut map = match cfg {
             CV::Table(map, _) => map,
@@ -822,21 +811,4 @@ fn load_credentials(home: &PathBuf) -> CargoResult<Option<String>> {
     })?;
 
     Ok(Some(token.trim().into()))
-}
-
-fn check_token_in_main_config(key: &str, cfg: &ConfigValue) -> bool {
-    let mut keys = key.split('.');
-    let k = keys.next().unwrap();
-    let keys: String = keys.map(String::from).collect();
-
-    match *cfg {
-        CV::Table(ref map, _) => {
-            match map.get(k) {
-                Some(ref v) => check_token_in_main_config(keys.as_str(), v),
-                None => return false,
-            }
-        }
-        CV::String(ref v, _) => !v.is_empty(),
-        _ => return false,
-    }
 }
