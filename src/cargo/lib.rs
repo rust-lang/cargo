@@ -206,7 +206,8 @@ pub fn handle_error(err: CargoError, shell: &mut MultiShell) {
     handle_cause(err, shell);
 }
 
-fn handle_cause<E, EKind>(cargo_err: E, shell: &mut MultiShell) -> bool where E: ChainedError<ErrorKind=EKind> + 'static {
+fn handle_cause<E, EKind>(cargo_err: E, shell: &mut MultiShell) -> bool
+    where E: ChainedError<ErrorKind=EKind> + 'static {
     fn print(error: String, shell: &mut MultiShell) {
         let _ = shell.err().say("\nCaused by:", BLACK);
         let _ = shell.err().say(format!("  {}", error), BLACK);
@@ -237,7 +238,8 @@ fn handle_cause<E, EKind>(cargo_err: E, shell: &mut MultiShell) -> bool where E:
         //Print remaining errors until one marked as Internal appears
         for err in cargo_err.iter().skip(1) {
             let err = unsafe { extend_lifetime(err) };
-            if let Some(&CargoError(CargoErrorKind::Internal(..), ..)) = err.downcast_ref::<CargoError>() {
+            if let Some(&CargoError(CargoErrorKind::Internal(..), ..)) =
+                err.downcast_ref::<CargoError>() {
                 return false;
             }
 

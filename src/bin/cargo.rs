@@ -84,7 +84,9 @@ fn main() {
     let result = (|| {
         let args: Vec<_> = try!(env::args_os()
             .map(|s| {
-                s.into_string().map_err(|s| CargoError::from(format!("invalid unicode in argument: {:?}", s)))
+                s.into_string().map_err(|s| {
+                    CargoError::from(format!("invalid unicode in argument: {:?}", s))
+                })
             })
             .collect());
         let rest = &args;

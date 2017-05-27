@@ -84,9 +84,9 @@ impl ProcessBuilder {
         if exit.success() {
             Ok(())
         } else {
-            Err(CargoErrorKind::ProcessErrorKind(process_error(&format!("process didn't exit successfully: `{}`",
-                                       self.debug_string()),
-                              Some(&exit), None)).into())
+            Err(CargoErrorKind::ProcessErrorKind(process_error(
+                &format!("process didn't exit successfully: `{}`", self.debug_string()),
+                Some(&exit), None)).into())
         }
     }
 
@@ -97,9 +97,8 @@ impl ProcessBuilder {
         let mut command = self.build_command();
         let error = command.exec();
         Err(CargoError::with_chain(error,
-            CargoErrorKind::ProcessErrorKind(
-                process_error(&format!("could not execute process `{}`",
-                self.debug_string()), None, None))))
+            CargoErrorKind::ProcessErrorKind(process_error(
+                &format!("could not execute process `{}`", self.debug_string()), None, None))))
     }
 
     #[cfg(windows)]
@@ -120,9 +119,9 @@ impl ProcessBuilder {
         if output.status.success() {
             Ok(output)
         } else {
-            Err(CargoErrorKind::ProcessErrorKind(process_error(&format!("process didn't exit successfully: `{}`",
-                                       self.debug_string()),
-                              Some(&output.status), Some(&output))).into())
+            Err(CargoErrorKind::ProcessErrorKind(process_error(
+                &format!("process didn't exit successfully: `{}`", self.debug_string()),
+                Some(&output.status), Some(&output))).into())
         }
     }
 
@@ -181,14 +180,14 @@ impl ProcessBuilder {
             status: status,
         };
         if !output.status.success() {
-            Err(CargoErrorKind::ProcessErrorKind(process_error(&format!("process didn't exit successfully: `{}`",
-                                       self.debug_string()),
-                              Some(&output.status), Some(&output))).into())
+            Err(CargoErrorKind::ProcessErrorKind(process_error(
+                &format!("process didn't exit successfully: `{}`", self.debug_string()),
+                Some(&output.status), Some(&output))).into())
         } else if let Some(e) = callback_error {
             Err(CargoError::with_chain(e,
-                CargoErrorKind::ProcessErrorKind(
-                    process_error(&format!("failed to parse process output: `{}`",
-                    self.debug_string()), Some(&output.status), Some(&output)))))
+                CargoErrorKind::ProcessErrorKind(process_error(
+                    &format!("failed to parse process output: `{}`", self.debug_string()),
+                    Some(&output.status), Some(&output)))))
         } else {
             Ok(output)
         }
