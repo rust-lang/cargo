@@ -111,6 +111,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             spec: spec,
             release: true,
             mode: ops::CompileMode::Bench,
+            deps_only: false,
             filter: ops::CompileFilter::new(options.flag_lib,
                                             &options.flag_bin, options.flag_bins,
                                             &options.flag_test, options.flag_tests,

@@ -108,6 +108,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                             &options.flag_bench, options.flag_benches,),
             message_format: options.flag_message_format,
             mode: ops::CompileMode::Doc { deps: false },
+            deps_only: false,
             target_rustdoc_args: Some(&options.arg_opts),
             target_rustc_args: None,
         },

@@ -300,6 +300,7 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
         spec: ops::Packages::Packages(&[]),
         filter: ops::CompileFilter::Everything { required_features_filterable: true },
         release: false,
+        deps_only: false,
         message_format: ops::MessageFormat::Human,
         mode: ops::CompileMode::Build,
         target_rustdoc_args: None,

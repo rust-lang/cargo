@@ -47,7 +47,10 @@ pub struct BuildConfig {
     pub jobs: u32,
     pub release: bool,
     pub test: bool,
-    pub doc_all: bool,
+    /// If set no action is taken for the main units only for their dependencies
+    pub deps_only: bool,
+    /// If set and units are documented, their dependencies are documented also
+    pub doc_deps: bool,
     pub json_messages: bool,
 }
 
@@ -117,6 +120,8 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         })
     }).collect::<Vec<_>>();
 
+    let deps_only = build_config.deps_only;
+
     let mut cx = Context::new(ws, resolve, packages, config,
                                    build_config, profiles)?;
 
@@ -127,13 +132,21 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
     cx.build_used_in_plugin_map(&units)?;
     custom_build::build_map(&mut cx, &units)?;
 
-    for unit in units.iter() {
-        // Build up a list of pending jobs, each of which represent
-        // compiling a particular package. No actual work is executed as
-        // part of this, that's all done next as part of the `execute`
-        // function which will run everything in order with proper
-        // parallelism.
-        compile(&mut cx, &mut queue, unit, exec.clone())?;
+    if deps_only {
+        for unit in &units {
+            for dep in &cx.dep_targets(unit)? {
+                compile(&mut cx, &mut queue, dep, exec.clone())?;
+            }
+        }
+    } else {
+        for unit in units.iter() {
+            // Build up a list of pending jobs, each of which represent
+            // compiling a particular package. No actual work is executed as
+            // part of this, that's all done next as part of the `execute`
+            // function which will run everything in order with proper
+            // parallelism.
+            compile(&mut cx, &mut queue, unit, exec.clone())?;
+        }
     }
 
     // Now that we've figured out everything that we're going to do, do it!

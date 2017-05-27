@@ -104,6 +104,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         no_default_features: options.flag_no_default_features,
         spec: spec,
         mode: ops::CompileMode::Check,
+        deps_only: false,
         release: options.flag_release,
         filter: ops::CompileFilter::new(options.flag_lib,
                                         &options.flag_bin, options.flag_bins,

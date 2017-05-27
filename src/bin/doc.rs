@@ -12,6 +12,7 @@ pub struct Options {
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
     flag_no_deps: bool,
+    flag_deps_only: bool,
     flag_open: bool,
     flag_release: bool,
     flag_verbose: u32,
@@ -39,6 +40,7 @@ Options:
     -p SPEC, --package SPEC ...  Package to document
     --all                        Document all packages in the workspace
     --no-deps                    Don't build documentation for dependencies
+    --deps-only                  Build documentation only for dependencies
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --lib                        Document only this package's library
     --bin NAME                   Document only the specified binary
@@ -104,6 +106,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             mode: ops::CompileMode::Doc {
                 deps: !options.flag_no_deps,
             },
+            deps_only: options.flag_deps_only,
             target_rustc_args: None,
             target_rustdoc_args: None,
         },

@@ -56,6 +56,8 @@ pub struct CompileOptions<'a> {
     pub release: bool,
     /// Mode for this compile.
     pub mode: CompileMode,
+    /// Whether only dependencies of the package should be compiled
+    pub deps_only: bool,
     /// `--error_format` flag for the compiler.
     pub message_format: MessageFormat,
     /// Extra arguments to be passed to rustdoc (for main crate and dependencies)
@@ -77,6 +79,7 @@ impl<'a> CompileOptions<'a> {
             no_default_features: false,
             spec: ops::Packages::Packages(&[]),
             mode: mode,
+            deps_only: false,
             release: false,
             filter: CompileFilter::Everything { required_features_filterable: false },
             message_format: MessageFormat::Human,
@@ -169,7 +172,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                       -> CargoResult<ops::Compilation<'a>> {
     let CompileOptions { config, jobs, target, spec, features,
                          all_features, no_default_features,
-                         release, mode, message_format,
+                         release, mode, deps_only, message_format,
                          ref filter,
                          ref target_rustdoc_args,
                          ref target_rustc_args } = *options;
@@ -272,8 +275,9 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
         build_config.json_messages = message_format == MessageFormat::Json;
         if let CompileMode::Doc { deps } = mode {
-            build_config.doc_all = deps;
+            build_config.doc_deps = deps;
         }
+        build_config.deps_only = deps_only;
 
         ops::compile_targets(ws,
                              &package_targets,

@@ -150,6 +150,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             spec: spec,
             release: options.flag_release,
             mode: mode,
+            deps_only: false,
             filter: filter,
             message_format: options.flag_message_format,
             target_rustdoc_args: None,
