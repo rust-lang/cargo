@@ -105,16 +105,38 @@ pub enum MessageFormat {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Packages<'a> {
     All,
+    OptOut(&'a [String]),
     Packages(&'a [String]),
 }
 
 impl<'a> Packages<'a> {
+    pub fn from_flags(all: bool, exclude: &'a Vec<String>, package: &'a Vec<String>)
+        -> CargoResult<Self>
+    {
+        let packages = match (all, &exclude) {
+            (true, exclude) if exclude.is_empty() => Packages::All,
+            (true, exclude) => Packages::OptOut(exclude),
+            (false, exclude) if !exclude.is_empty() => bail!("--exclude can only be used together \
+                                                           with --all"),
+            _ => Packages::Packages(package),
+        };
+
+        Ok(packages)
+    }
+
     pub fn into_package_id_specs(self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
         let specs = match self {
             Packages::All => {
                 ws.members()
                     .map(Package::package_id)
                     .map(PackageIdSpec::from_package_id)
+                    .collect()
+            }
+            Packages::OptOut(opt_out) => {
+                ws.members()
+                    .map(Package::package_id)
+                    .map(PackageIdSpec::from_package_id)
+                    .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
                     .collect()
             }
             Packages::Packages(packages) => {
