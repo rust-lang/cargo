@@ -408,6 +408,79 @@ will not fail your overall build. Please see the [Travis CI Rust
 documentation](https://docs.travis-ci.com/user/languages/rust/) for more
 information.
 
+# Benchmarks
+
+**Caveat**: At present, running benchmark tests requires a nightly version of Rust.
+
+Cargo can also run benchmark tests with the `cargo bench` command. Similarly to
+`cargo test`, it will attempt to find benchmark tests in each of your `src`
+files, and in `benches/`.
+
+Due to the unstable nature of Rust's benchmarking functionality, it requires
+some more explicit opt-in to be used.
+
+To test this out, let's create a new benchmark test in `benches/greeting.rs`:
+
+```rust
+#![feature(test)]
+extern crate test;
+
+use test::Bencher;
+
+fn greet(thing: &str) -> String {
+    format!("Hello, {}!", thing)
+}
+
+#[bench]
+fn bench_greet(b: &mut Bencher) {
+    b.iter(|| greet("world"))
+}
+```
+
+There's a few new bits here - we need to add the `#![feature(test)]` attribute
+at the root of this file to allow use of the unstable functionality, and
+specify `extern crate test` to make the benchmarking tools available.
+
+Benchmark tests are tagged with the `bench` attribute, and take an `&mut
+Bencher` as an argument. This provides an `iter` method, which takes a closure.
+We run the code we'd like to benchmark inside this closure.
+
+This works well as a self-contained example. If we were working on a library,
+we could also make it available in this benchmark test with `extern crate hello_world`.
+
+Let's run the benchmark we just wrote:
+
+<pre><code class="language-shell"><span class="gp">$</span> cargo bench
+<span style="font-weight: bold"
+class="s1">   Compiling</span> rand v0.1.0 (https://github.com/rust-lang-nursery/rand.git#9f35b8e)
+<span style="font-weight: bold"
+class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
+<span style="font-weight: bold"
+class="s1">    Finished</span> release [optimized] target(s) in 0.20 secs
+<span style="font-weight: bold"
+class="s1">     Running</span> target/release/deps/hello_world-c62ac321c6b61439
+
+running 0 tests
+
+test result: <span class="s1">ok</span>. 0 passed; 0 failed; 0 ignored; 0 measured
+
+<span style="font-weight: bold"
+class="s1">     Running</span> target/release/deps/greeting-0398256bcf23d726
+
+running 1 test
+test bench_square ... bench:         122 ns/iter (+/- 21)
+
+test result: <span class="s1">ok</span>. 0 passed; 0 failed; 0 ignored; 1 measured
+</code></pre>
+
+As the output shows, Cargo found, compiled, and ran our benchmark tests.
+It reported the average nanoseconds taken per iteration, along with a variance.
+
+For more information, please see the [benchmarking guide][benches] in the Rust
+documentation.
+
+[benches]: https://doc.rust-lang.org/book/benchmark-tests.html
+
 # Further reading
 
 Now that you have an overview of how to use cargo and have created your first crate, you may be interested in:
