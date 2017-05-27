@@ -66,14 +66,6 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
     opts.config.shell().status("Uploading", pkg.package_id().to_string())?;
     transmit(opts.config, pkg, tarball.file(), &mut registry, opts.dry_run)?;
 
-    if opts.config.is_token_in_main_config() {
-        let _ = opts.config
-                    .shell()
-                    .warn("API token detected in ~/.cargo/config under `registry.token`.\n \
-                          You should remove it and do `login` again in order to \
-                          save token in ~/.cargo/credentials");
-    }
-
     Ok(())
 }
 
