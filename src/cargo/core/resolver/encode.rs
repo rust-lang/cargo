@@ -299,11 +299,12 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
         }).map(Package::package_id);
 
         let encodable = ids.iter().filter_map(|&id| {
-            if self.use_root_key && root.unwrap() == id {
-                return None
+            match root {
+                Some(ref root) if !(self.use_root_key && *root == id) => {
+                    Some(encodable_resolve_node(id, self.resolve))
+                },
+                _ => None,
             }
-
-            Some(encodable_resolve_node(id, self.resolve))
         }).collect::<Vec<_>>();
 
         let mut metadata = self.resolve.metadata.clone();
