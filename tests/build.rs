@@ -2804,6 +2804,49 @@ fn build_all_workspace() {
 }
 
 #[test]
+fn build_all_exclude() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [workspace]
+            members = ["bar", "baz"]
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {}
+        "#)
+        .file("baz/Cargo.toml", r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+        "#)
+        .file("baz/src/lib.rs", r#"
+            pub fn baz() {
+                break_the_build();
+            }
+        "#);
+
+    assert_that(p.cargo_process("build")
+                 .arg("--all")
+                 .arg("--exclude")
+                 .arg("baz"),
+                execs().with_status(0)
+                       .with_stderr_contains("[..]Compiling foo v0.1.0 [..]")
+                       .with_stderr_contains("[..]Compiling bar v0.1.0 [..]")
+                       .with_stderr_does_not_contain("[..]Compiling baz v0.1.0 [..]"));
+}
+
+#[test]
 fn build_all_workspace_implicit_examples() {
     let p = project("foo")
         .file("Cargo.toml", r#"

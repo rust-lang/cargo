@@ -30,6 +30,7 @@ pub struct Options {
     flag_locked: bool,
     arg_args: Vec<String>,
     flag_all: bool,
+    flag_exclude: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -52,6 +53,7 @@ Options:
     --no-run                     Compile, but don't run benchmarks
     -p SPEC, --package SPEC ...  Package to run benchmarks for
     --all                        Benchmark all packages in the workspace
+    --exclude SPEC ...           Exclude packages from the benchmark
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --features FEATURES          Space-separated list of features to also build
     --all-features               Build all available features
@@ -86,11 +88,9 @@ Compilation can be customized with the `bench` profile in the manifest.
 pub fn execute(options: Options, config: &Config) -> CliResult {
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
-    let spec = if options.flag_all {
-        Packages::All
-    } else {
-        Packages::Packages(&options.flag_package)
-    };
+    let spec = Packages::from_flags(options.flag_all,
+                                    &options.flag_exclude,
+                                    &options.flag_package)?;
 
     config.configure(options.flag_verbose,
                      options.flag_quiet,
