@@ -179,7 +179,7 @@ fn cargo_compile_with_invalid_version() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  cannot parse '1.0' as a semver for key `project.version`
+  Expected dot for key `project.version`
 "))
 
 }
