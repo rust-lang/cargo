@@ -203,7 +203,7 @@ fn ssh_something_happens() {
 ", addr = addr))
                     .with_stderr_contains("\
 Caused by:
-  [[..]] Failed to start SSH session: Failed getting banner
+  [[..]] failed to start SSH session: Failed getting banner
 "));
     t.join().ok().unwrap();
 }
