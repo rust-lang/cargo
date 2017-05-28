@@ -113,7 +113,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             // bad and we always want to forward that up.
             let exit = match err.exit.clone() {
                 Some(exit) => exit,
-                None => return Err(CliError::new(CargoErrorKind::ProcessErrorKind(err).into(), 101)),
+                None => return Err(
+                    CliError::new(CargoErrorKind::ProcessErrorKind(err).into(), 101)),
             };
 
             // If `-q` was passed then we suppress extra error information about
