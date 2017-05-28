@@ -31,6 +31,7 @@ pub struct Options {
     flag_locked: bool,
     flag_frozen: bool,
     flag_all: bool,
+    flag_exclude: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -43,6 +44,7 @@ Options:
     -h, --help                   Print this message
     -p SPEC, --package SPEC ...  Package to build
     --all                        Build all packages in the workspace
+    --exclude SPEC ...           Exclude packages from the build
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --lib                        Build only this package's library
     --bin NAME                   Build only the specified binary
@@ -73,6 +75,7 @@ current package is built. For more information on SPEC and its format, see the
 
 All packages in the workspace are built if the `--all` flag is supplied. The
 `--all` flag may be supplied in the presence of a virtual manifest.
+Note that `--exclude` has to be specified in conjunction with the `--all` flag.
 
 Compilation can be configured via the use of profiles which are configured in
 the manifest. The default profile for this command is `dev`, but passing
@@ -90,11 +93,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 
-    let spec = if options.flag_all {
-        Packages::All
-    } else {
-        Packages::Packages(&options.flag_package)
-    };
+    let spec = Packages::from_flags(options.flag_all,
+                                    &options.flag_exclude,
+                                    &options.flag_package)?;
 
     let opts = CompileOptions {
         config: config,
