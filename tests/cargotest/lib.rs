@@ -51,7 +51,6 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env("HOME", support::paths::home())
      .env("CARGO_HOME", support::paths::home().join(".cargo"))
      .env("__CARGO_TEST_ROOT", support::paths::root())
-     .env_remove("__CARGO_DEFAULT_LIB_METADATA")
      .env_remove("RUSTC")
      .env_remove("RUSTDOC")
      .env_remove("RUSTC_WRAPPER")

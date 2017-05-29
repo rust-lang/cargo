@@ -11,7 +11,7 @@ use std::sync::Arc;
 use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, Profiles, Dependency, Workspace};
 use core::dependency::Kind as DepKind;
-use util::{self, CargoResult, ChainError, internal, Config, profile, Cfg, CfgExpr, human};
+use util::{CargoResult, ChainError, internal, Config, profile, Cfg, CfgExpr, human};
 
 use super::TargetConfig;
 use super::custom_build::{BuildState, BuildScripts};
@@ -383,10 +383,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     fn pkg_dir(&mut self, unit: &Unit) -> String {
         let name = unit.pkg.package_id().name();
-        match self.target_metadata(unit) {
-            Some(meta) => format!("{}-{}", name, meta),
-            None => format!("{}-{}", name, util::short_hash(unit.pkg)),
-        }
+        format!("{}-{}", name, self.target_metadata(unit).0)
     }
 
     /// Return the host triple for this context
@@ -408,31 +405,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// We build to the path: "{filename}-{target_metadata}"
     /// We use a linking step to link/copy to a predictable filename
     /// like `target/debug/libfoo.{a,so,rlib}` and such.
-    pub fn target_metadata(&mut self, unit: &Unit) -> Option<Metadata> {
-        // No metadata for dylibs because of a couple issues
-        // - OSX encodes the dylib name in the executable
-        // - Windows rustc multiple files of which we can't easily link all of them
-        //
-        // Two expeptions
-        // 1) Upstream dependencies (we aren't exporting + need to resolve name conflict)
-        // 2) __CARGO_DEFAULT_LIB_METADATA env var
-        //
-        // Note, though, that the compiler's build system at least wants
-        // path dependencies (eg libstd) to have hashes in filenames. To account for
-        // that we have an extra hack here which reads the
-        // `__CARGO_DEFAULT_METADATA` environment variable and creates a
-        // hash in the filename if that's present.
-        //
-        // This environment variable should not be relied on! It's
-        // just here for rustbuild. We need a more principled method
-        // doing this eventually.
-        if !unit.profile.test &&
-            (unit.target.is_dylib() || unit.target.is_cdylib()) &&
-            unit.pkg.package_id().source_id().is_path() &&
-            !env::var("__CARGO_DEFAULT_LIB_METADATA").is_ok() {
-            return None;
-        }
-
+    pub fn target_metadata(&mut self, unit: &Unit) -> (Metadata, bool) {
         let mut hasher = SipHasher::new_with_keys(0, 0);
 
         // Unique metadata per (name, source, version) triple. This'll allow us
@@ -460,15 +433,24 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         unit.target.name().hash(&mut hasher);
         unit.target.kind().hash(&mut hasher);
 
-        Some(Metadata(hasher.finish()))
+        // No metadata suffix for dylibs because of a couple issues
+        // - OSX encodes the dylib name in the executable
+        // - Windows rustc multiple files of which we can't easily link all of them
+        //
+        // Exceptions:
+        // Upstream dependencies (we aren't exporting + need to resolve name conflict)
+        let extra_filename = unit.profile.test ||
+            !(unit.target.is_dylib() || unit.target.is_cdylib()) ||
+            !unit.pkg.package_id().source_id().is_path();
+        (Metadata(hasher.finish()), extra_filename)
     }
 
     /// Returns the file stem for a given target/profile combo (with metadata)
     pub fn file_stem(&mut self, unit: &Unit) -> String {
         match self.target_metadata(unit) {
-            Some(ref metadata) => format!("{}-{}", unit.target.crate_name(),
+            (ref metadata, true) => format!("{}-{}", unit.target.crate_name(),
                                           metadata),
-            None => self.bin_stem(unit),
+            (_, false) => self.bin_stem(unit),
         }
     }
 
