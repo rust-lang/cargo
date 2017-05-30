@@ -1,7 +1,7 @@
 use std::cell::{RefCell, RefMut, Cell};
+use std::collections::HashSet;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::HashMap;
-use std::collections::HashSet;
 use std::env;
 use std::fmt;
 use std::fs::{self, File};
@@ -10,15 +10,17 @@ use std::io::prelude::*;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::sync::{Once, ONCE_INIT};
 
+use core::MultiShell;
+use core::shell::{Verbosity, ColorConfig};
+use jobserver;
 use rustc_serialize::{Encodable,Encoder};
 use toml;
-use core::shell::{Verbosity, ColorConfig};
-use core::MultiShell;
 use util::Rustc;
 use util::errors::{CargoResult, CargoResultExt, CargoError, internal};
-use util::{Filesystem, LazyCell};
 use util::paths;
+use util::{Filesystem, LazyCell};
 
 use util::toml as cargo_toml;
 
@@ -35,12 +37,24 @@ pub struct Config {
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
     locked: Cell<bool>,
+    jobserver: Option<jobserver::Client>,
 }
 
 impl Config {
     pub fn new(shell: MultiShell,
                cwd: PathBuf,
                homedir: PathBuf) -> Config {
+        static mut GLOBAL_JOBSERVER: *mut jobserver::Client = 0 as *mut _;
+        static INIT: Once = ONCE_INIT;
+
+        // This should be called early on in the process, so in theory the
+        // unsafety is ok here. (taken ownership of random fds)
+        INIT.call_once(|| unsafe {
+            if let Some(client) = jobserver::Client::from_env() {
+                GLOBAL_JOBSERVER = Box::into_raw(Box::new(client));
+            }
+        });
+
         Config {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
@@ -52,6 +66,13 @@ impl Config {
             extra_verbose: Cell::new(false),
             frozen: Cell::new(false),
             locked: Cell::new(false),
+            jobserver: unsafe {
+                if GLOBAL_JOBSERVER.is_null() {
+                    None
+                } else {
+                    Some((*GLOBAL_JOBSERVER).clone())
+                }
+            },
         }
     }
 
@@ -457,6 +478,10 @@ impl Config {
     fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
         self.maybe_get_tool(tool)
             .map(|t| t.unwrap_or(PathBuf::from(tool)))
+    }
+
+    pub fn jobserver_from_env(&self) -> Option<&jobserver::Client> {
+        self.jobserver.as_ref()
     }
 }
 

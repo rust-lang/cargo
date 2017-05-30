@@ -66,6 +66,7 @@ pub type PackagesToBuild<'a> = [(&'a Package, Vec<(&'a Target, &'a Profile)>)];
 /// the build calls.
 pub trait Executor: Send + Sync + 'static {
     fn init(&self, _cx: &Context) {}
+
     /// If execution succeeds, the ContinueBuild value indicates whether Cargo
     /// should continue with the build process for this package.
     fn exec(&self, cmd: ProcessBuilder, _id: &PackageId) -> CargoResult<()> {
@@ -575,6 +576,7 @@ fn prepare_rustc(cx: &mut Context,
                  crate_types: Vec<&str>,
                  unit: &Unit) -> CargoResult<ProcessBuilder> {
     let mut base = cx.compilation.rustc_process(unit.pkg)?;
+    base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, &crate_types);
     build_deps_args(&mut base, cx, unit)?;
     Ok(base)
@@ -583,6 +585,7 @@ fn prepare_rustc(cx: &mut Context,
 
 fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg)?;
+    rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name())
            .cwd(cx.config.cwd())
            .arg(&root_path(cx, unit));
