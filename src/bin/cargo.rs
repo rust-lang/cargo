@@ -17,7 +17,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use cargo::core::shell::{Verbosity, ColorConfig};
-use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
+use cargo::util::{self, CliResult, lev_distance, Config, CargoResult, CargoError, CargoErrorKind};
 use cargo::util::CliError;
 
 #[derive(RustcDecodable)]
@@ -84,7 +84,9 @@ fn main() {
     let result = (|| {
         let args: Vec<_> = try!(env::args_os()
             .map(|s| {
-                s.into_string().map_err(|s| human(format!("invalid unicode in argument: {:?}", s)))
+                s.into_string().map_err(|s| {
+                    CargoError::from(format!("invalid unicode in argument: {:?}", s))
+                })
             })
             .collect());
         let rest = &args;
@@ -180,7 +182,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
 
     if let Some(ref code) = flags.flag_explain {
         let mut procss = config.rustc()?.process();
-        procss.arg("--explain").arg(code).exec().map_err(human)?;
+        procss.arg("--explain").arg(code).exec()?;
         return Ok(());
     }
 
@@ -309,7 +311,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> C
     let command = match path {
         Some(command) => command,
         None => {
-            return Err(human(match find_closest(config, cmd) {
+            return Err(CargoError::from(match find_closest(config, cmd) {
                     Some(closest) => {
                         format!("no such subcommand: `{}`\n\n\tDid you mean `{}`?\n",
                                 cmd,
@@ -330,11 +332,12 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> C
         Err(e) => e,
     };
 
-    if let Some(code) = err.exit.as_ref().and_then(|c| c.code()) {
-        Err(CliError::code(code))
-    } else {
-        Err(CliError::new(Box::new(err), 101))
+    if let &CargoErrorKind::ProcessErrorKind(ref perr) = err.kind() {
+        if let Some(code) = perr.exit.as_ref().and_then(|c| c.code()) {
+            return Err(CliError::code(code));
+        }
     }
+    Err(CliError::new(err, 101))    
 }
 
 /// List all runnable commands

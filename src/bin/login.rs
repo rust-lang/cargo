@@ -4,7 +4,7 @@ use std::io;
 use cargo::ops;
 use cargo::core::{SourceId, Source};
 use cargo::sources::RegistrySource;
-use cargo::util::{CliResult, Config, human, ChainError};
+use cargo::util::{CliResult, CargoResultExt, Config};
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -51,8 +51,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             println!("please visit {}me and paste the API Token below", host);
             let mut line = String::new();
             let input = io::stdin();
-            input.lock().read_line(&mut line).chain_error(|| {
-                human("failed to read stdin")
+            input.lock().read_line(&mut line).chain_err(|| {
+                "failed to read stdin"
             })?;
             line
         }

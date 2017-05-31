@@ -1,10 +1,9 @@
 pub use self::cfg::{Cfg, CfgExpr};
 pub use self::config::{Config, ConfigValue, homedir};
 pub use self::dependency_queue::{DependencyQueue, Fresh, Dirty, Freshness};
-pub use self::errors::{CargoResult, CargoError, Test, ChainError, CliResult};
+pub use self::errors::{CargoResult, CargoResultExt, CargoError, CargoErrorKind, Test, CliResult};
 pub use self::errors::{CliError, ProcessError, CargoTestError};
-pub use self::errors::{Human, caused_human};
-pub use self::errors::{process_error, internal_error, internal, human};
+pub use self::errors::{process_error, internal};
 pub use self::flock::{FileLock, Filesystem};
 pub use self::graph::Graph;
 pub use self::hex::{to_hex, short_hash, hash_u64};

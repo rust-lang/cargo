@@ -11,7 +11,8 @@ use std::sync::Arc;
 use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, Profiles, Dependency, Workspace};
 use core::dependency::Kind as DepKind;
-use util::{self, CargoResult, ChainError, internal, Config, profile, Cfg, CfgExpr, human};
+use util::{self, internal, Config, profile, Cfg, CfgExpr};
+use util::errors::{CargoResult, CargoResultExt};
 
 use super::TargetConfig;
 use super::custom_build::{BuildState, BuildScripts};
@@ -121,12 +122,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn prepare(&mut self) -> CargoResult<()> {
         let _p = profile::start("preparing layout");
 
-        self.host.prepare().chain_error(|| {
+        self.host.prepare().chain_err(|| {
             internal(format!("couldn't prepare build directories"))
         })?;
         match self.target {
             Some(ref mut target) => {
-                target.prepare().chain_error(|| {
+                target.prepare().chain_err(|| {
                     internal(format!("couldn't prepare build directories"))
                 })?;
             }
@@ -213,9 +214,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let output = with_cfg.exec_with_output().or_else(|_| {
             has_cfg_and_sysroot = false;
             process.exec_with_output()
-        }).chain_error(|| {
-            human(format!("failed to run `rustc` to learn about \
-                           target-specific information"))
+        }).chain_err(|| {
+            format!("failed to run `rustc` to learn about \
+                     target-specific information")
         })?;
 
         let error = str::from_utf8(&output.stderr).unwrap();

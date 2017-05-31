@@ -5,7 +5,8 @@ use semver::Version;
 use url::Url;
 
 use core::PackageId;
-use util::{CargoResult, ToUrl, human, ToSemver, ChainError};
+use util::{ToUrl, ToSemver};
+use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct PackageIdSpec {
@@ -29,7 +30,7 @@ impl PackageIdSpec {
         let mut parts = spec.splitn(2, ':');
         let name = parts.next().unwrap();
         let version = match parts.next() {
-            Some(version) => Some(Version::parse(version).map_err(human)?),
+            Some(version) => Some(Version::parse(version)?),
             None => None,
         };
         for ch in name.chars() {
@@ -47,8 +48,8 @@ impl PackageIdSpec {
     pub fn query_str<'a, I>(spec: &str, i: I) -> CargoResult<&'a PackageId>
         where I: IntoIterator<Item=&'a PackageId>
     {
-        let spec = PackageIdSpec::parse(spec).chain_error(|| {
-            human(format!("invalid package id specification: `{}`", spec))
+        let spec = PackageIdSpec::parse(spec).chain_err(|| {
+            format!("invalid package id specification: `{}`", spec)
         })?;
         spec.query(i)
     }
@@ -68,12 +69,12 @@ impl PackageIdSpec {
         let frag = url.fragment().map(|s| s.to_owned());
         url.set_fragment(None);
         let (name, version) = {
-            let mut path = url.path_segments().chain_error(|| {
-                human(format!("pkgid urls must have a path: {}", url))
+            let mut path = url.path_segments().ok_or_else(|| {
+                CargoError::from(format!("pkgid urls must have a path: {}", url))
             })?;
-            let path_name = path.next_back().chain_error(|| {
-                human(format!("pkgid urls must have at least one path \
-                               component: {}", url))
+            let path_name = path.next_back().ok_or_else(|| {
+                CargoError::from(format!("pkgid urls must have at least one path \
+                                          component: {}", url))
             })?;
             match frag {
                 Some(fragment) => {
@@ -81,7 +82,7 @@ impl PackageIdSpec {
                     let name_or_version = parts.next().unwrap();
                     match parts.next() {
                         Some(part) => {
-                            let version = part.to_semver().map_err(human)?;
+                            let version = part.to_semver()?;
                             (name_or_version.to_string(), Some(version))
                         }
                         None => {
@@ -89,8 +90,7 @@ impl PackageIdSpec {
                                               .is_alphabetic() {
                                 (name_or_version.to_string(), None)
                             } else {
-                                let version = name_or_version.to_semver()
-                                                                  .map_err(human)?;
+                                let version = name_or_version.to_semver()?;
                                 (path_name.to_string(), Some(version))
                             }
                         }
@@ -149,7 +149,7 @@ impl PackageIdSpec {
                 let mut vec = vec![ret, other];
                 vec.extend(ids);
                 minimize(&mut msg, vec, self);
-                Err(human(msg))
+                Err(msg.into())
             }
             None => Ok(ret)
         };

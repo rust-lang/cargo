@@ -168,7 +168,8 @@ use tar::Archive;
 use core::{Source, SourceId, PackageId, Package, Summary, Registry};
 use core::dependency::Dependency;
 use sources::PathSource;
-use util::{CargoResult, Config, internal, ChainError, FileLock, Filesystem};
+use util::{CargoResult, Config, internal, FileLock, Filesystem};
+use util::errors::CargoResultExt;
 use util::hex;
 
 const INDEX_LOCK: &'static str = ".cargo-index-lock";
@@ -359,7 +360,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
         let hash = self.index.hash(package, &mut *self.ops)?;
         let path = self.ops.download(package, &hash)?;
-        let path = self.unpack_package(package, &path).chain_error(|| {
+        let path = self.unpack_package(package, &path).chain_err(|| {
             internal(format!("failed to unpack package `{}`", package))
         })?;
         let mut src = PathSource::new(&path, &self.source_id, self.config);

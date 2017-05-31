@@ -3,7 +3,7 @@ use std::env;
 use cargo::core::Workspace;
 use cargo::ops::{self, CompileOptions, CompileMode, MessageFormat, Packages};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
-use cargo::util::{CliResult, CliError, Config, human};
+use cargo::util::{CliResult, CliError, Config};
 
 #[derive(RustcDecodable)]
 pub struct Options {
@@ -98,8 +98,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         Some("bench") => CompileMode::Bench,
         Some("check") => CompileMode::Check,
         Some(mode) => {
-            let err = human(format!("unknown profile: `{}`, use dev,
-                                     test, or bench", mode));
+            let err = format!("unknown profile: `{}`, use dev,
+                                     test, or bench", mode).into();
             return Err(CliError::new(err, 101))
         }
     };

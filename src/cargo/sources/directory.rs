@@ -9,7 +9,8 @@ use serde_json;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use sources::PathSource;
-use util::{CargoResult, human, ChainError, Config, Sha256};
+use util::{Config, Sha256};
+use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 
 pub struct DirectorySource<'cfg> {
@@ -63,9 +64,9 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
     fn update(&mut self) -> CargoResult<()> {
         self.packages.clear();
-        let entries = self.root.read_dir().chain_error(|| {
-            human(format!("failed to read root of directory source: {}",
-                          self.root.display()))
+        let entries = self.root.read_dir().chain_err(|| {
+            format!("failed to read root of directory source: {}",
+                    self.root.display())
         })?;
 
         for entry in entries {
@@ -112,18 +113,18 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             let pkg = src.root_package()?;
 
             let cksum_file = path.join(".cargo-checksum.json");
-            let cksum = paths::read(&path.join(cksum_file)).chain_error(|| {
-                human(format!("failed to load checksum `.cargo-checksum.json` \
-                               of {} v{}",
-                              pkg.package_id().name(),
-                              pkg.package_id().version()))
+            let cksum = paths::read(&path.join(cksum_file)).chain_err(|| {
+                format!("failed to load checksum `.cargo-checksum.json` \
+                         of {} v{}",
+                        pkg.package_id().name(),
+                        pkg.package_id().version())
 
             })?;
-            let cksum: Checksum = serde_json::from_str(&cksum).chain_error(|| {
-                human(format!("failed to decode `.cargo-checksum.json` of \
-                               {} v{}",
-                              pkg.package_id().name(),
-                              pkg.package_id().version()))
+            let cksum: Checksum = serde_json::from_str(&cksum).chain_err(|| {
+                format!("failed to decode `.cargo-checksum.json` of \
+                         {} v{}",
+                        pkg.package_id().name(),
+                        pkg.package_id().version())
             })?;
 
             let mut manifest = pkg.manifest().clone();
@@ -137,8 +138,8 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     }
 
     fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
-        self.packages.get(id).map(|p| &p.0).cloned().chain_error(|| {
-            human(format!("failed to find package with id: {}", id))
+        self.packages.get(id).map(|p| &p.0).cloned().ok_or_else(|| {
+            format!("failed to find package with id: {}", id).into()
         })
     }
 
@@ -166,9 +167,9 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                         n => h.update(&buf[..n]),
                     }
                 }
-            }).chain_error(|| {
-                human(format!("failed to calculate checksum of: {}",
-                              file.display()))
+            })().chain_err(|| {
+                format!("failed to calculate checksum of: {}",
+                        file.display())
             })?;
 
             let actual = h.finish().to_hex();

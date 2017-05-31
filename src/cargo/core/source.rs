@@ -16,7 +16,7 @@ use ops;
 use sources::git;
 use sources::{PathSource, GitSource, RegistrySource, CRATES_IO};
 use sources::DirectorySource;
-use util::{human, Config, CargoResult, ToUrl};
+use util::{Config, CargoResult, ToUrl};
 
 /// A Source finds and downloads remote packages based on names and
 /// versions.
@@ -138,7 +138,7 @@ impl SourceId {
     pub fn from_url(string: &str) -> CargoResult<SourceId> {
         let mut parts = string.splitn(2, '+');
         let kind = parts.next().unwrap();
-        let url = parts.next().ok_or(human(format!("invalid source `{}`", string)))?;
+        let url = parts.next().ok_or_else(|| format!("invalid source `{}`", string))?;
 
         match kind {
             "git" => {
@@ -169,7 +169,7 @@ impl SourceId {
                 let url = url.to_url()?;
                 Ok(SourceId::new(Kind::Path, url))
             }
-            kind => Err(human(format!("unsupported source protocol: {}", kind)))
+            kind => Err(format!("unsupported source protocol: {}", kind).into())
         }
     }
 

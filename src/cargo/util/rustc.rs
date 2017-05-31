@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use util::{self, CargoResult, internal, ChainError, ProcessBuilder};
+use util::{self, CargoResult, internal, ProcessBuilder};
 
 pub struct Rustc {
     pub path: PathBuf,
@@ -28,10 +28,7 @@ impl Rustc {
         let host = {
             let triple = verbose_version.lines().find(|l| {
                 l.starts_with("host: ")
-            }).map(|l| &l[6..]);
-            let triple = triple.chain_error(|| {
-                internal("rustc -v didn't have a line for `host:`")
-            })?;
+            }).map(|l| &l[6..]).ok_or(internal("rustc -v didn't have a line for `host:`"))?;
             triple.to_string()
         };
 

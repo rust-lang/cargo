@@ -18,7 +18,8 @@ use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use ops::is_bad_artifact_name;
 use sources::CRATES_IO;
-use util::{self, CargoResult, human, ToUrl, ChainError, Config};
+use util::{self, ToUrl, Config};
+use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 /// Representation of the projects file layout.
 ///
@@ -189,8 +190,8 @@ in the future.", file.display());
         return Ok(ret)
     }
 
-    Err(first_error).chain_error(|| {
-        human("could not parse input as TOML")
+    Err(first_error).chain_err(|| {
+        "could not parse input as TOML"
     })
 }
 
@@ -632,8 +633,8 @@ impl TomlManifest {
         let mut warnings = vec![];
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
-        let project = project.chain_error(|| {
-            human("no `package` or `project` section found.")
+        let project = project.ok_or_else(|| {
+            CargoError::from("no `package` or `project` section found.")
         })?;
 
         if project.name.trim().is_empty() {
@@ -941,10 +942,10 @@ impl TomlManifest {
                -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
         let mut replace = Vec::new();
         for (spec, replacement) in self.replace.iter().flat_map(|x| x) {
-            let mut spec = PackageIdSpec::parse(spec).chain_error(|| {
-                human(format!("replacements must specify a valid semver \
-                               version to replace, but `{}` does not",
-                              spec))
+            let mut spec = PackageIdSpec::parse(spec).chain_err(|| {
+                format!("replacements must specify a valid semver \
+                         version to replace, but `{}` does not",
+                        spec)
             })?;
             if spec.url().is_none() {
                 spec.set_url(CRATES_IO.parse().unwrap());
@@ -961,10 +962,10 @@ impl TomlManifest {
 
             let dep = replacement.to_dependency(spec.name(), cx, None)?;
             let dep = {
-                let version = spec.version().chain_error(|| {
-                    human(format!("replacements must specify a version \
-                                   to replace, but `{}` does not",
-                                  spec))
+                let version = spec.version().ok_or_else(|| {
+                    CargoError::from(format!("replacements must specify a version \
+                             to replace, but `{}` does not",
+                            spec))
                 })?;
                 let req = VersionReq::exact(version);
                 dep.clone_inner().set_version_req(req)
@@ -1205,10 +1206,10 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err(human("library target names cannot be empty.".to_string()))
+                    Err("library target names cannot be empty.".into())
                 } else if name.contains('-') {
-                    Err(human(format!("library target names cannot contain hyphens: {}",
-                                      name)))
+                    Err(format!("library target names cannot contain hyphens: {}",
+                                 name).into())
                 } else {
                     Ok(())
                 }
@@ -1221,12 +1222,12 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err(human("binary target names cannot be empty.".to_string()))
+                    Err("binary target names cannot be empty.".into())
                 } else {
                     Ok(())
                 }
             },
-            None => Err(human("binary target bin.name is required".to_string()))
+            None => Err("binary target bin.name is required".into())
         }
     }
 
@@ -1234,12 +1235,12 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err(human("example target names cannot be empty".to_string()))
+                    Err("example target names cannot be empty".into())
                 } else {
                     Ok(())
                 }
             },
-            None => Err(human("example target example.name is required".to_string()))
+            None => Err("example target example.name is required".into())
         }
     }
 
@@ -1247,12 +1248,12 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err(human("test target names cannot be empty".to_string()))
+                    Err("test target names cannot be empty".into())
                 } else {
                     Ok(())
                 }
             },
-            None => Err(human("test target test.name is required".to_string()))
+            None => Err("test target test.name is required".into())
         }
     }
 
@@ -1260,12 +1261,12 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err(human("bench target names cannot be empty".to_string()))
+                    Err("bench target names cannot be empty".into())
                 } else {
                     Ok(())
                 }
             },
-            None => Err(human("bench target bench.name is required".to_string()))
+            None => Err("bench target bench.name is required".into())
         }
     }
 
@@ -1280,7 +1281,7 @@ impl TomlTarget {
         // A plugin requires exporting plugin_registrar so a crate cannot be
         // both at once.
         if self.plugin == Some(true) && self.proc_macro() == Some(true) {
-            Err(human("lib.plugin and lib.proc-macro cannot both be true".to_string()))
+            Err("lib.plugin and lib.proc-macro cannot both be true".into())
         } else {
             Ok(())
         }

@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::error::Error;
 use std::fmt::{self, Formatter};
 use std::hash::Hash;
 use std::hash;
@@ -9,7 +8,7 @@ use semver;
 use serde::de;
 use serde::ser;
 
-use util::{CargoResult, CargoError, ToSemver};
+use util::{CargoResult, ToSemver};
 use core::source::SourceId;
 
 /// Identifier for a specific version of a package in a specific source.
@@ -96,41 +95,10 @@ impl Ord for PackageId {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum PackageIdError {
-    InvalidVersion(String),
-    InvalidNamespace(String)
-}
-
-impl Error for PackageIdError {
-    fn description(&self) -> &str { "failed to parse package id" }
-}
-
-impl fmt::Display for PackageIdError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            PackageIdError::InvalidVersion(ref v) => {
-                write!(f, "invalid version: {}", *v)
-            }
-            PackageIdError::InvalidNamespace(ref ns) => {
-                write!(f, "invalid namespace: {}", *ns)
-            }
-        }
-    }
-}
-
-impl CargoError for PackageIdError {
-    fn is_human(&self) -> bool { true }
-}
-
-impl From<PackageIdError> for Box<CargoError> {
-    fn from(t: PackageIdError) -> Box<CargoError> { Box::new(t) }
-}
-
 impl PackageId {
     pub fn new<T: ToSemver>(name: &str, version: T,
                              sid: &SourceId) -> CargoResult<PackageId> {
-        let v = version.to_semver().map_err(PackageIdError::InvalidVersion)?;
+        let v = version.to_semver()?;
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
                 name: name.to_string(),

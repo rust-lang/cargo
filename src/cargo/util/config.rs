@@ -15,7 +15,8 @@ use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::shell::{Verbosity, ColorConfig};
 use core::MultiShell;
-use util::{CargoResult, CargoError, ChainError, Rustc, internal, human};
+use util::Rustc;
+use util::errors::{CargoResult, CargoResultExt, CargoError, internal};
 use util::{Filesystem, LazyCell};
 use util::paths;
 
@@ -56,12 +57,12 @@ impl Config {
 
     pub fn default() -> CargoResult<Config> {
         let shell = ::shell(Verbosity::Verbose, ColorConfig::Auto);
-        let cwd = env::current_dir().chain_error(|| {
-            human("couldn't get the current directory of the process")
+        let cwd = env::current_dir().chain_err(|| {
+            "couldn't get the current directory of the process"
         })?;
-        let homedir = homedir(&cwd).chain_error(|| {
-            human("Cargo couldn't find your home directory. \
-                  This probably means that $HOME was not set.")
+        let homedir = homedir(&cwd).ok_or_else(|| {
+            "Cargo couldn't find your home directory. \
+             This probably means that $HOME was not set."
         })?;
         Ok(Config::new(shell, cwd, homedir))
     }
@@ -100,9 +101,7 @@ impl Config {
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
         self.cargo_exe.get_or_try_init(||
             env::current_exe().and_then(|path| path.canonicalize())
-            .chain_error(|| {
-                human("couldn't get the path to cargo executable")
-            })
+            .chain_err(|| "couldn't get the path to cargo executable")
         ).map(AsRef::as_ref)
     }
 
@@ -112,11 +111,11 @@ impl Config {
 
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
         if self.values.borrow().is_some() {
-            return Err(human("Config values already found"));
+            return Err("Config values already found".into());
         }
         match self.values.fill(values) {
             Ok(()) => Ok(()),
-            Err(_) => Err(human("Could not fill values")),
+            Err(_) => Err("Could not fill values".into()),
         }
     }
 
@@ -165,7 +164,7 @@ impl Config {
     }
 
     fn get_env<V: FromStr>(&self, key: &str) -> CargoResult<Option<Value<V>>>
-        where Box<CargoError>: From<V::Err>
+        where CargoError: From<V::Err>
     {
         let key = key.replace(".", "_")
                      .replace("-", "_")
@@ -341,7 +340,7 @@ impl Config {
 
     pub fn expected<T>(&self, ty: &str, key: &str, val: CV) -> CargoResult<T> {
         val.expected(ty, key).map_err(|e| {
-            human(format!("invalid configuration for key `{}`\n{}", key, e))
+            format!("invalid configuration for key `{}`\n{}", key, e).into()
         })
     }
 
@@ -410,26 +409,25 @@ impl Config {
 
         walk_tree(&self.cwd, |mut file, path| {
             let mut contents = String::new();
-            file.read_to_string(&mut contents).chain_error(|| {
-                human(format!("failed to read configuration file `{}`",
-                              path.display()))
+            file.read_to_string(&mut contents).chain_err(|| {
+                format!("failed to read configuration file `{}`",
+                         path.display())
             })?;
             let toml = cargo_toml::parse(&contents,
                                          &path,
-                                         self).chain_error(|| {
-                human(format!("could not parse TOML configuration in `{}`",
-                              path.display()))
+                                         self).chain_err(|| {
+                format!("could not parse TOML configuration in `{}`",
+                        path.display())
             })?;
-            let value = CV::from_toml(&path, toml).chain_error(|| {
-                human(format!("failed to load TOML configuration from `{}`",
-                              path.display()))
+            let value = CV::from_toml(&path, toml).chain_err(|| {
+                format!("failed to load TOML configuration from `{}`",
+                        path.display())
             })?;
-            cfg.merge(value).chain_error(|| {
-                human(format!("failed to merge configuration at `{}`",
-                              path.display()))
+            cfg.merge(value).chain_err(|| {
+                format!("failed to merge configuration at `{}`", path.display())
             })?;
             Ok(())
-        }).chain_error(|| human("Couldn't load Cargo configuration"))?;
+        }).chain_err(|| "Couldn't load Cargo configuration")?;
 
 
         match cfg {
@@ -534,15 +532,15 @@ impl ConfigValue {
                 Ok(CV::List(val.into_iter().map(|toml| {
                     match toml {
                         toml::Value::String(val) => Ok((val, path.to_path_buf())),
-                        v => Err(human(format!("expected string but found {} \
-                                                in list", v.type_str()))),
+                        v => Err(format!("expected string but found {} \
+                                                in list", v.type_str()).into()),
                     }
                 }).collect::<CargoResult<_>>()?, path.to_path_buf()))
             }
             toml::Value::Table(val) => {
                 Ok(CV::Table(val.into_iter().map(|(key, value)| {
-                    let value = CV::from_toml(path, value).chain_error(|| {
-                        human(format!("failed to parse key `{}`", key))
+                    let value = CV::from_toml(path, value).chain_err(|| {
+                        format!("failed to parse key `{}`", key)
                     })?;
                     Ok((key, value))
                 }).collect::<CargoResult<_>>()?, path.to_path_buf()))
@@ -568,14 +566,14 @@ impl ConfigValue {
                         Occupied(mut entry) => {
                             let path = value.definition_path().to_path_buf();
                             let entry = entry.get_mut();
-                            entry.merge(value).chain_error(|| {
-                                human(format!("failed to merge key `{}` between \
-                                               files:\n  \
-                                               file 1: {}\n  \
-                                               file 2: {}",
-                                              key,
-                                              entry.definition_path().display(),
-                                              path.display()))
+                            entry.merge(value).chain_err(|| {
+                                format!("failed to merge key `{}` between \
+                                         files:\n  \
+                                         file 1: {}\n  \
+                                         file 2: {}",
+                                        key,
+                                        entry.definition_path().display(),
+                                        path.display())
 
                             })?;
                         }
@@ -649,9 +647,9 @@ impl ConfigValue {
     }
 
     fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
-        Err(human(format!("expected a {}, but found a {} for `{}` in {}",
-                          wanted, self.desc(), key,
-                          self.definition_path().display())))
+        Err(format!("expected a {}, but found a {} for `{}` in {}",
+                    wanted, self.desc(), key,
+                    self.definition_path().display()).into())
     }
 
     fn into_toml(self) -> toml::Value {
@@ -757,9 +755,9 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     // Once we're done, also be sure to walk the home directory even if it's not
     // in our history to be sure we pick up that standard location for
     // information.
-    let home = homedir(pwd).chain_error(|| {
-        human("Cargo couldn't find your home directory. \
-              This probably means that $HOME was not set.")
+    let home = homedir(pwd).ok_or_else(|| {
+        CargoError::from("Cargo couldn't find your home directory. \
+                          This probably means that $HOME was not set.")
     })?;
     let config = home.join("config");
     if !stash.contains(&config) && fs::metadata(&config).is_ok() {

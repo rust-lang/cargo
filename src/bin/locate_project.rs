@@ -1,5 +1,5 @@
 use cargo;
-use cargo::util::{CliResult, CliError, human, ChainError, Config};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
 #[derive(RustcDecodable)]
@@ -28,9 +28,9 @@ pub fn execute(flags: LocateProjectFlags,
     let root = find_root_manifest_for_wd(flags.flag_manifest_path, config.cwd())?;
 
     let string = root.to_str()
-                      .chain_error(|| human("Your project path contains \
+                      .ok_or_else(|| "Your project path contains \
                                              characters not representable in \
-                                             Unicode"))
+                                             Unicode".into())
                       .map_err(|e| CliError::new(e, 1))?;
 
     let location = ProjectLocation { root: string.to_string() };

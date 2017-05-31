@@ -2,7 +2,7 @@ use std::str::{self, FromStr};
 use std::iter;
 use std::fmt;
 
-use util::{CargoError, CargoResult, human};
+use util::{CargoError, CargoResult};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Cfg {
@@ -38,7 +38,7 @@ struct Parser<'a> {
 }
 
 impl FromStr for Cfg {
-    type Err = Box<CargoError>;
+    type Err = CargoError;
 
     fn from_str(s: &str) -> CargoResult<Cfg> {
         let mut p = Parser::new(s);
@@ -71,7 +71,7 @@ impl CfgExpr {
 }
 
 impl FromStr for CfgExpr {
-    type Err = Box<CargoError>;
+    type Err = CargoError;
 
     fn from_str(s: &str) -> CargoResult<CfgExpr> {
         let mut p = Parser::new(s);
@@ -215,7 +215,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                             return Some(Ok(Token::String(&self.orig[start+1..end])))
                         }
                     }
-                    return Some(Err(human("unterminated string in cfg".to_string())))
+                    return Some(Err("unterminated string in cfg".into()))
                 }
                 Some((start, ch)) if is_ident_start(ch) => {
                     while let Some(&(end, ch)) = self.s.peek() {
@@ -228,10 +228,10 @@ impl<'a> Iterator for Tokenizer<'a> {
                     return Some(Ok(Token::Ident(&self.orig[start..])))
                 }
                 Some((_, ch)) => {
-                    return Some(Err(human(format!("unexpected character in \
+                    return Some(Err(format!("unexpected character in \
                                                    cfg `{}`, expected parens, \
                                                    a comma, an identifier, or \
-                                                   a string", ch))))
+                                                   a string", ch).into()))
                 }
                 None => return None
             }
