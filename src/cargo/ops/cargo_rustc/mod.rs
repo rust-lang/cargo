@@ -372,7 +372,7 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
                 format!("Could not compile `{}`.", name)
             })?;
         } else {
-            exec.exec(rustc, &package_id).map_err(|e| e.to_internal()).chain_err(|| {
+            exec.exec(rustc, &package_id).map_err(|e| e.into_internal()).chain_err(|| {
                 format!("Could not compile `{}`.", name)
             })?;
         }

@@ -332,7 +332,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> C
         Err(e) => e,
     };
 
-    if let CargoError(CargoErrorKind::ProcessErrorKind(ref perr), ..) = err {
+    if let &CargoErrorKind::ProcessErrorKind(ref perr) = err.kind() {
         if let Some(code) = perr.exit.as_ref().and_then(|c| c.code()) {
             return Err(CliError::code(code));
         }

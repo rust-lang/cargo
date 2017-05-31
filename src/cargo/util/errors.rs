@@ -41,9 +41,9 @@ error_chain! {
     }
 
     errors {
-        Internal(description: String){
-            description(&description)
-            display("{}", &description)
+        Internal(err: Box<CargoErrorKind>) {
+            description(err.description())
+            display("{}", *err)
         }
         ProcessErrorKind(proc_err: ProcessError) {
             description(&proc_err.desc)
@@ -61,9 +61,8 @@ error_chain! {
 }
 
 impl CargoError {
-    pub fn to_internal(self) -> Self {
-        //This is actually bad, because it loses the cause information for foreign_link
-        CargoError(CargoErrorKind::Internal(self.description().to_string()), self.1)
+    pub fn into_internal(self) -> Self {
+        CargoError(CargoErrorKind::Internal(Box::new(self.0)), self.1)
     }
 
     fn is_human(&self) -> bool {
@@ -282,5 +281,5 @@ pub fn internal<S: fmt::Display>(error: S) -> CargoError {
 }
 
 fn _internal(error: &fmt::Display) -> CargoError {
-    CargoErrorKind::Internal(error.to_string()).into()
+    CargoError::from_kind(error.to_string().into()).into_internal()
 }

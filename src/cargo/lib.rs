@@ -33,6 +33,7 @@ extern crate url;
 use std::io;
 use std::fmt;
 use std::error::Error;
+
 use error_chain::ChainedError;
 use rustc_serialize::Decodable;
 use serde::ser;

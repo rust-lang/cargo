@@ -148,7 +148,7 @@ impl<'cfg> Source for GitSource<'cfg> {
             trace!("updating git source `{:?}`", self.remote);
 
             let repo = self.remote.checkout(&db_path, self.config)?;
-            let rev = repo.rev_for(&self.reference).map_err(CargoError::to_internal)?;
+            let rev = repo.rev_for(&self.reference).map_err(CargoError::into_internal)?;
             (repo, rev)
         } else {
             (self.remote.db_at(&db_path)?, actual_rev.unwrap())
