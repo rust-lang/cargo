@@ -297,7 +297,7 @@ impl<'a> GitCheckout<'a> {
 
             for mut child in repo.submodules()?.into_iter() {
                 update_submodule(repo, &mut child, cargo_config)
-                    .map_err(CargoError::to_internal)
+                    .map_err(CargoError::into_internal)
                     .chain_err(|| {
                         format!("failed to update submodule `{}`",
                                 child.name().unwrap_or(""))
@@ -532,7 +532,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
     // In the case of an authentication failure (where we tried something) then
     // we try to give a more helpful error message about precisely what we
     // tried.
-    res.map_err(CargoError::from).map_err(|e| e.to_internal()).chain_err(|| {
+    res.map_err(CargoError::from).map_err(|e| e.into_internal()).chain_err(|| {
         let mut msg = "failed to authenticate when downloading \
                        repository".to_string();
         if !ssh_agent_attempts.is_empty() {

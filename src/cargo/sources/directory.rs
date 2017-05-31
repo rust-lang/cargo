@@ -120,8 +120,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                         pkg.package_id().version())
 
             })?;
-            let cksum: Checksum = serde_json::from_str(&cksum)
-                .chain_err(|| {
+            let cksum: Checksum = serde_json::from_str(&cksum).chain_err(|| {
                 format!("failed to decode `.cargo-checksum.json` of \
                          {} v{}",
                         pkg.package_id().name(),
