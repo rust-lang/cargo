@@ -2,7 +2,7 @@ use std::iter::FromIterator;
 
 use cargo::core::Workspace;
 use cargo::ops::{self, MessageFormat, Packages};
-use cargo::util::{CliResult, CliError, Config, Human};
+use cargo::util::{CliResult, CliError, Config, CargoErrorKind};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
 #[derive(RustcDecodable)]
@@ -113,7 +113,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             // bad and we always want to forward that up.
             let exit = match err.exit.clone() {
                 Some(exit) => exit,
-                None => return Err(CliError::new(Box::new(Human(err)), 101)),
+                None => return Err(
+                    CliError::new(CargoErrorKind::ProcessErrorKind(err).into(), 101)),
             };
 
             // If `-q` was passed then we suppress extra error information about
@@ -123,7 +124,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             Err(if options.flag_quiet == Some(true) {
                 CliError::code(exit_code)
             } else {
-                CliError::new(Box::new(Human(err)), exit_code)
+                CliError::new(CargoErrorKind::ProcessErrorKind(err).into(), exit_code)
             })
         }
     }

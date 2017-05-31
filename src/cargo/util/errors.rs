@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::ffi;
 use std::fmt;
 use std::io;
 use std::num;
@@ -11,134 +10,100 @@ use core::TargetKind;
 
 use curl;
 use git2;
-use glob;
 use semver;
 use serde_json;
 use term;
 use toml;
-use url;
+use registry;
 
-pub type CargoResult<T> = Result<T, Box<CargoError>>;
-
-// =============================================================================
-// CargoError trait
-
-pub trait CargoError: Error + Send + 'static {
-    fn is_human(&self) -> bool { false }
-    fn cargo_cause(&self) -> Option<&CargoError>{ None }
-    fn as_error(&self) -> &Error where Self: Sized { self as &Error }
-}
-
-impl Error for Box<CargoError> {
-    fn description(&self) -> &str { (**self).description() }
-    fn cause(&self) -> Option<&Error> { (**self).cause() }
-}
-
-impl CargoError for Box<CargoError> {
-    fn is_human(&self) -> bool { (**self).is_human() }
-    fn cargo_cause(&self) -> Option<&CargoError> { (**self).cargo_cause() }
-}
-
-// =============================================================================
-// Chaining errors
-
-pub trait ChainError<T> {
-    fn chain_error<E, F>(self, callback: F) -> CargoResult<T>
-                         where E: CargoError, F: FnOnce() -> E;
-}
-
-#[derive(Debug)]
-struct ChainedError<E> {
-    error: E,
-    cause: Box<CargoError>,
-}
-
-impl<'a, T, F> ChainError<T> for F where F: FnOnce() -> CargoResult<T> {
-    fn chain_error<E, C>(self, callback: C) -> CargoResult<T>
-                         where E: CargoError, C: FnOnce() -> E {
-        self().chain_error(callback)
+error_chain! {
+    types {
+        CargoError, CargoErrorKind, CargoResultExt, CargoResult;
     }
-}
 
-impl<T, E: CargoError + 'static> ChainError<T> for Result<T, E> {
-    fn chain_error<E2: 'static, C>(self, callback: C) -> CargoResult<T>
-                         where E2: CargoError, C: FnOnce() -> E2 {
-        self.map_err(move |err| {
-            Box::new(ChainedError {
-                error: callback(),
-                cause: Box::new(err),
-            }) as Box<CargoError>
-        })
+    links {
+        CrateRegistry(registry::Error, registry::ErrorKind);
     }
-}
 
-impl<T> ChainError<T> for Box<CargoError> {
-    fn chain_error<E2, C>(self, callback: C) -> CargoResult<T>
-                         where E2: CargoError, C: FnOnce() -> E2 {
-        Err(Box::new(ChainedError {
-            error: callback(),
-            cause: self,
-        }))
+    foreign_links {
+        ParseSemver(semver::ReqParseError);
+        Semver(semver::SemVerError);
+        Io(io::Error);
+        SerdeJson(serde_json::Error);
+        TomlSer(toml::ser::Error);
+        TomlDe(toml::de::Error);
+        Term(term::Error);
+        ParseInt(num::ParseIntError);
+        ParseBool(str::ParseBoolError);
+        Parse(string::ParseError);
+        Git(git2::Error);
+        Curl(curl::Error);
     }
-}
 
-impl<T> ChainError<T> for Option<T> {
-    fn chain_error<E: 'static, C>(self, callback: C) -> CargoResult<T>
-                         where E: CargoError, C: FnOnce() -> E {
-        match self {
-            Some(t) => Ok(t),
-            None => Err(Box::new(callback())),
+    errors {
+        Internal(err: Box<CargoErrorKind>) {
+            description(err.description())
+            display("{}", *err)
+        }
+        ProcessErrorKind(proc_err: ProcessError) {
+            description(&proc_err.desc)
+            display("{}", &proc_err.desc)
+        }
+        CargoTestErrorKind(test_err: CargoTestError) {
+            description(&test_err.desc)
+            display("{}", &test_err.desc)
+        }
+        HttpNot200(code: u32, url: String) {
+            description("failed to get a 200 response")
+            display("failed to get 200 response from `{}`, got {}", url, code)
         }
     }
 }
 
-impl<E: Error> Error for ChainedError<E> {
-    fn description(&self) -> &str { self.error.description() }
-}
+impl CargoError {
+    pub fn into_internal(self) -> Self {
+        CargoError(CargoErrorKind::Internal(Box::new(self.0)), self.1)
+    }
 
-impl<E: fmt::Display> fmt::Display for ChainedError<E> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.error, f)
+    fn is_human(&self) -> bool {
+        match &self.0 {
+            &CargoErrorKind::Msg(_) => true,
+            &CargoErrorKind::TomlSer(_) => true,
+            &CargoErrorKind::TomlDe(_) => true,
+            &CargoErrorKind::Curl(_) => true,
+            &CargoErrorKind::HttpNot200(..) => true,
+            &CargoErrorKind::ProcessErrorKind(_) => true,
+            &CargoErrorKind::CrateRegistry(_) |
+            &CargoErrorKind::ParseSemver(_) |
+            &CargoErrorKind::Semver(_) |
+            &CargoErrorKind::Io(_) |
+            &CargoErrorKind::SerdeJson(_) |
+            &CargoErrorKind::Term(_) |
+            &CargoErrorKind::ParseInt(_) |
+            &CargoErrorKind::ParseBool(_) |
+            &CargoErrorKind::Parse(_) |
+            &CargoErrorKind::Git(_) |
+            &CargoErrorKind::Internal(_) |
+            &CargoErrorKind::CargoTestErrorKind(_) => false
+        }
     }
 }
 
-impl<E: CargoError> CargoError for ChainedError<E> {
-    fn is_human(&self) -> bool { self.error.is_human() }
-    fn cargo_cause(&self) -> Option<&CargoError> { Some(&*self.cause) }
-}
 
 // =============================================================================
 // Process errors
-
+#[derive(Debug)]
 pub struct ProcessError {
     pub desc: String,
     pub exit: Option<ExitStatus>,
     pub output: Option<Output>,
-    cause: Option<Box<CargoError>>,
-}
-
-impl Error for ProcessError {
-    fn description(&self) -> &str { &self.desc }
-    fn cause(&self) -> Option<&Error> {
-        self.cause.as_ref().map(|e| e.as_error())
-    }
-}
-
-impl fmt::Display for ProcessError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.desc, f)
-    }
-}
-impl fmt::Debug for ProcessError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
 }
 
 // =============================================================================
 // Cargo test errors.
 
 /// Error when testcases fail
+#[derive(Debug)]
 pub struct CargoTestError {
     pub test: Test,
     pub desc: String,
@@ -146,6 +111,7 @@ pub struct CargoTestError {
     pub causes: Vec<ProcessError>,
 }
 
+#[derive(Debug)]
 pub enum Test {
     Multiple,
     Doc,
@@ -187,88 +153,6 @@ impl CargoTestError {
     }
 }
 
-impl fmt::Display for CargoTestError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.desc, f)
-    }
-}
-
-impl fmt::Debug for CargoTestError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
-}
-
-impl Error for CargoTestError {
-    fn description(&self) -> &str { &self.desc }
-    fn cause(&self) -> Option<&Error> {
-        self.causes.get(0).map(|s| s as &Error)
-    }
-}
-
-
-// =============================================================================
-// Concrete errors
-
-struct ConcreteCargoError {
-    description: String,
-    detail: Option<String>,
-    cause: Option<Box<Error+Send>>,
-    is_human: bool,
-}
-
-impl fmt::Display for ConcreteCargoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.description)?;
-        if let Some(ref s) = self.detail {
-            write!(f, " ({})", s)?;
-        }
-        Ok(())
-    }
-}
-impl fmt::Debug for ConcreteCargoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
-}
-
-impl Error for ConcreteCargoError {
-    fn description(&self) -> &str { &self.description }
-    fn cause(&self) -> Option<&Error> {
-        self.cause.as_ref().map(|c| {
-            let e: &Error = &**c; e
-        })
-    }
-}
-
-impl CargoError for ConcreteCargoError {
-    fn is_human(&self) -> bool {
-        self.is_human
-    }
-}
-
-// =============================================================================
-// Human errors
-
-#[derive(Debug)]
-pub struct Human<E>(pub E);
-
-impl<E: Error> Error for Human<E> {
-    fn description(&self) -> &str { self.0.description() }
-    fn cause(&self) -> Option<&Error> { self.0.cause() }
-}
-
-impl<E: fmt::Display> fmt::Display for Human<E> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.0, f)
-    }
-}
-
-impl<E: CargoError> CargoError for Human<E> {
-    fn is_human(&self) -> bool { true }
-    fn cargo_cause(&self) -> Option<&CargoError> { self.0.cargo_cause() }
-}
-
 // =============================================================================
 // CLI errors
 
@@ -276,7 +160,7 @@ pub type CliResult = Result<(), CliError>;
 
 #[derive(Debug)]
 pub struct CliError {
-    pub error: Option<Box<CargoError>>,
+    pub error: Option<CargoError>,
     pub unknown: bool,
     pub exit_code: i32
 }
@@ -303,8 +187,8 @@ impl fmt::Display for CliError {
 }
 
 impl CliError {
-    pub fn new(error: Box<CargoError>, code: i32) -> CliError {
-        let human = error.is_human();
+    pub fn new(error: CargoError, code: i32) -> CliError {
+        let human = &error.is_human();
         CliError { error: Some(error), exit_code: code, unknown: !human }
     }
 
@@ -313,163 +197,17 @@ impl CliError {
     }
 }
 
-impl From<Box<CargoError>> for CliError {
-    fn from(err: Box<CargoError>) -> CliError {
+impl From<CargoError> for CliError {
+    fn from(err: CargoError) -> CliError {
         CliError::new(err, 101)
     }
 }
 
-// =============================================================================
-// NetworkError trait
-
-pub trait NetworkError: CargoError {
-    fn maybe_spurious(&self) -> bool;
-}
-
-impl NetworkError for git2::Error {
-    fn maybe_spurious(&self) -> bool {
-        match self.class() {
-            git2::ErrorClass::Net |
-            git2::ErrorClass::Os => true,
-            _ => false
-        }
-    }
-}
-
-impl NetworkError for curl::Error {
-    fn maybe_spurious(&self) -> bool {
-        self.is_couldnt_connect() ||
-            self.is_couldnt_resolve_proxy() ||
-            self.is_couldnt_resolve_host() ||
-            self.is_operation_timedout() ||
-            self.is_recv_error()
-    }
-}
-
-#[derive(Debug)]
-pub enum HttpError {
-    Not200(u32, String),
-    Curl(curl::Error),
-}
-
-impl fmt::Display for HttpError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            HttpError::Not200(code, ref url) => {
-                write!(f, "failed to get 200 response from `{}`, got {}",
-                       url, code)
-            }
-            HttpError::Curl(ref e) => e.fmt(f),
-        }
-    }
-}
-
-impl Error for HttpError {
-    fn description(&self) -> &str {
-        match *self {
-            HttpError::Not200(..) => "failed to get a 200 response",
-            HttpError::Curl(ref e) => e.description(),
-        }
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        match *self {
-            HttpError::Not200(..) => None,
-            HttpError::Curl(ref e) => e.cause(),
-        }
-    }
-}
-
-impl CargoError for HttpError {
-    fn is_human(&self) -> bool {
-        true
-    }
-}
-
-impl NetworkError for HttpError {
-    fn maybe_spurious(&self) -> bool {
-        match *self {
-            HttpError::Not200(code, ref _url) => {
-                500 <= code && code < 600
-            }
-            HttpError::Curl(ref e) => e.maybe_spurious(),
-        }
-    }
-}
-
-impl From<curl::Error> for HttpError {
-    fn from(err: curl::Error) -> HttpError {
-        HttpError::Curl(err)
-    }
-}
-
-// =============================================================================
-// various impls
-
-macro_rules! from_error {
-    ($($p:ty,)*) => (
-        $(impl From<$p> for Box<CargoError> {
-            fn from(t: $p) -> Box<CargoError> { Box::new(t) }
-        })*
-    )
-}
-
-from_error! {
-    semver::ReqParseError,
-    io::Error,
-    ProcessError,
-    git2::Error,
-    serde_json::Error,
-    curl::Error,
-    CliError,
-    url::ParseError,
-    toml::ser::Error,
-    toml::de::Error,
-    ffi::NulError,
-    term::Error,
-    num::ParseIntError,
-    str::ParseBoolError,
-    glob::PatternError,
-    glob::GlobError,
-}
-
-impl From<string::ParseError> for Box<CargoError> {
-    fn from(t: string::ParseError) -> Box<CargoError> {
-        match t {}
-    }
-}
-
-impl<E: CargoError> From<Human<E>> for Box<CargoError> {
-    fn from(t: Human<E>) -> Box<CargoError> { Box::new(t) }
-}
-
-impl CargoError for semver::ReqParseError {}
-impl CargoError for io::Error {}
-impl CargoError for git2::Error {}
-impl CargoError for serde_json::Error {}
-impl CargoError for curl::Error {}
-impl CargoError for ProcessError {}
-impl CargoError for CargoTestError {}
-impl CargoError for CliError {}
-impl CargoError for toml::ser::Error {
-    fn is_human(&self) -> bool { true }
-}
-impl CargoError for toml::de::Error {
-    fn is_human(&self) -> bool { true }
-}
-impl CargoError for url::ParseError {}
-impl CargoError for ffi::NulError {}
-impl CargoError for term::Error {}
-impl CargoError for num::ParseIntError {}
-impl CargoError for str::ParseBoolError {}
-impl CargoError for glob::PatternError {}
-impl CargoError for glob::GlobError {}
 
 // =============================================================================
 // Construction helpers
 
 pub fn process_error(msg: &str,
-                     cause: Option<Box<CargoError>>,
                      status: Option<&ExitStatus>,
                      output: Option<&Output>) -> ProcessError
 {
@@ -500,7 +238,6 @@ pub fn process_error(msg: &str,
         desc: desc,
         exit: status.cloned(),
         output: output.cloned(),
-        cause: cause,
     };
 
     #[cfg(unix)]
@@ -539,49 +276,10 @@ pub fn process_error(msg: &str,
     }
 }
 
-pub fn internal_error(error: &str, detail: &str) -> Box<CargoError> {
-    Box::new(ConcreteCargoError {
-        description: error.to_string(),
-        detail: Some(detail.to_string()),
-        cause: None,
-        is_human: false
-    })
-}
-
-pub fn internal<S: fmt::Display>(error: S) -> Box<CargoError> {
+pub fn internal<S: fmt::Display>(error: S) -> CargoError {
     _internal(&error)
 }
 
-fn _internal(error: &fmt::Display) -> Box<CargoError> {
-    Box::new(ConcreteCargoError {
-        description: error.to_string(),
-        detail: None,
-        cause: None,
-        is_human: false
-    })
-}
-
-pub fn human<S: fmt::Display>(error: S) -> Box<CargoError> {
-    _human(&error)
-}
-
-fn _human(error: &fmt::Display) -> Box<CargoError> {
-    Box::new(ConcreteCargoError {
-        description: error.to_string(),
-        detail: None,
-        cause: None,
-        is_human: true
-    })
-}
-
-pub fn caused_human<S, E>(error: S, cause: E) -> Box<CargoError>
-    where S: fmt::Display,
-          E: Error + Send + 'static
-{
-    Box::new(ConcreteCargoError {
-        description: error.to_string(),
-        detail: None,
-        cause: Some(Box::new(cause)),
-        is_human: true
-    })
+fn _internal(error: &fmt::Display) -> CargoError {
+    CargoError::from_kind(error.to_string().into()).into_internal()
 }

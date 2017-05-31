@@ -5,7 +5,8 @@ use std::fmt;
 use std::path::Path;
 use std::process::{Command, Stdio, Output};
 
-use util::{CargoResult, ProcessError, process_error, read2};
+use util::{CargoResult, CargoResultExt, CargoError, process_error, read2};
+use util::errors::CargoErrorKind;
 use shell_escape::escape;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -72,61 +73,62 @@ impl ProcessBuilder {
 
     pub fn get_envs(&self) -> &HashMap<String, Option<OsString>> { &self.env }
 
-    pub fn exec(&self) -> Result<(), ProcessError> {
+    pub fn exec(&self) -> CargoResult<()> {
         let mut command = self.build_command();
-        let exit = command.status().map_err(|e| {
-            process_error(&format!("could not execute process `{}`",
-                                   self.debug_string()),
-                          Some(Box::new(e)), None, None)
+        let exit = command.status().chain_err(|| {
+            CargoErrorKind::ProcessErrorKind(
+                process_error(&format!("could not execute process `{}`",
+                                   self.debug_string()), None, None))
         })?;
 
         if exit.success() {
             Ok(())
         } else {
-            Err(process_error(&format!("process didn't exit successfully: `{}`",
-                                       self.debug_string()),
-                              None, Some(&exit), None))
+            Err(CargoErrorKind::ProcessErrorKind(process_error(
+                &format!("process didn't exit successfully: `{}`", self.debug_string()),
+                Some(&exit), None)).into())
         }
     }
 
     #[cfg(unix)]
-    pub fn exec_replace(&self) -> Result<(), ProcessError> {
+    pub fn exec_replace(&self) -> CargoResult<()> {
         use std::os::unix::process::CommandExt;
 
         let mut command = self.build_command();
         let error = command.exec();
-        Err(process_error(&format!("could not execute process `{}`",
-                                   self.debug_string()),
-                          Some(Box::new(error)), None, None))
+        Err(CargoError::with_chain(error,
+            CargoErrorKind::ProcessErrorKind(process_error(
+                &format!("could not execute process `{}`", self.debug_string()), None, None))))
     }
 
     #[cfg(windows)]
-    pub fn exec_replace(&self) -> Result<(), ProcessError> {
+    pub fn exec_replace(&self) -> CargoResult<()> {
         self.exec()
     }
 
-    pub fn exec_with_output(&self) -> Result<Output, ProcessError> {
+    pub fn exec_with_output(&self) -> CargoResult<Output> {
         let mut command = self.build_command();
 
-        let output = command.output().map_err(|e| {
-            process_error(&format!("could not execute process `{}`",
-                                   self.debug_string()),
-                          Some(Box::new(e)), None, None)
+        let output = command.output().chain_err(|| {
+            CargoErrorKind::ProcessErrorKind(
+                process_error(
+                    &format!("could not execute process `{}`", self.debug_string()),
+                          None, None))
         })?;
 
         if output.status.success() {
             Ok(output)
         } else {
-            Err(process_error(&format!("process didn't exit successfully: `{}`",
-                                       self.debug_string()),
-                              None, Some(&output.status), Some(&output)))
+            Err(CargoErrorKind::ProcessErrorKind(process_error(
+                &format!("process didn't exit successfully: `{}`", self.debug_string()),
+                Some(&output.status), Some(&output))).into())
         }
     }
 
     pub fn exec_with_streaming(&self,
                                on_stdout_line: &mut FnMut(&str) -> CargoResult<()>,
                                on_stderr_line: &mut FnMut(&str) -> CargoResult<()>)
-                               -> Result<Output, ProcessError> {
+                               -> CargoResult<Output> {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
 
@@ -166,10 +168,11 @@ impl ProcessBuilder {
                 }
             })?;
             child.wait()
-        })().map_err(|e| {
-            process_error(&format!("could not execute process `{}`",
-                                   self.debug_string()),
-                          Some(Box::new(e)), None, None)
+        })().chain_err(|| {
+            CargoErrorKind::ProcessErrorKind(
+                process_error(&format!("could not execute process `{}`",
+                    self.debug_string()),
+                None, None))
         })?;
         let output = Output {
             stdout: stdout,
@@ -177,13 +180,14 @@ impl ProcessBuilder {
             status: status,
         };
         if !output.status.success() {
-            Err(process_error(&format!("process didn't exit successfully: `{}`",
-                                       self.debug_string()),
-                              None, Some(&output.status), Some(&output)))
+            Err(CargoErrorKind::ProcessErrorKind(process_error(
+                &format!("process didn't exit successfully: `{}`", self.debug_string()),
+                Some(&output.status), Some(&output))).into())
         } else if let Some(e) = callback_error {
-            Err(process_error(&format!("failed to parse process output: `{}`",
-                                       self.debug_string()),
-                              Some(Box::new(e)), Some(&output.status), Some(&output)))
+            Err(CargoError::with_chain(e,
+                CargoErrorKind::ProcessErrorKind(process_error(
+                    &format!("failed to parse process output: `{}`", self.debug_string()),
+                    Some(&output.status), Some(&output)))))
         } else {
             Ok(output)
         }

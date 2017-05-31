@@ -16,8 +16,8 @@ use sources::git;
 use sources::registry::{RegistryData, RegistryConfig, INDEX_LOCK};
 use util::network;
 use util::{FileLock, Filesystem, LazyCell};
-use util::{Config, CargoResult, ChainError, human, Sha256, ToUrl};
-use util::errors::HttpError;
+use util::{Config, Sha256, ToUrl};
+use util::errors::{CargoErrorKind, CargoResult, CargoResultExt};
 
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
@@ -189,10 +189,11 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             // git fetch origin master
             let url = self.source_id.url().to_string();
             let refspec = "refs/heads/master:refs/remotes/origin/master";
-            git::fetch(&repo, &url, refspec, self.config).chain_error(|| {
-                human(format!("failed to fetch `{}`", url))
+            git::fetch(&repo, &url, refspec, self.config).chain_err(|| {
+                format!("failed to fetch `{}`", url)
             })?;
         }
+
         self.head.set(None);
         *self.tree.borrow_mut() = None;
         Ok(())
@@ -254,7 +255,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             let code = handle.response_code()?;
             if code != 200 && code != 0 {
                 let url = handle.effective_url()?.unwrap_or(&url);
-                Err(HttpError::Not200(code, url.to_string()))
+                Err(CargoErrorKind::HttpNot200(code, url.to_string()).into())
             } else {
                 Ok(())
             }

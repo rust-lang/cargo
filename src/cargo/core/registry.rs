@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use core::PackageSet;
-use util::{CargoResult, ChainError, Config, human, profile};
+use util::{Config, profile};
+use util::errors::{CargoResult, CargoResultExt};
 use sources::config::SourceConfigMap;
 
 /// Source of information about a group of packages.
@@ -189,7 +190,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             // Ensure the source has fetched all necessary remote data.
             let _p = profile::start(format!("updating: {}", source_id));
             self.sources.get_mut(source_id).unwrap().update()
-        }).chain_error(|| human(format!("Unable to update {}", source_id)))
+        })().chain_err(|| format!("Unable to update {}", source_id))
     }
 
     fn query_overrides(&mut self, dep: &Dependency)
@@ -336,9 +337,9 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
 impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         // Ensure the requested source_id is loaded
-        self.ensure_loaded(dep.source_id(), Kind::Normal).chain_error(|| {
-            human(format!("failed to load source for a dependency \
-                           on `{}`", dep.name()))
+        self.ensure_loaded(dep.source_id(), Kind::Normal).chain_err(|| {
+            format!("failed to load source for a dependency \
+                     on `{}`", dep.name())
         })?;
 
         let override_summary = self.query_overrides(&dep)?;

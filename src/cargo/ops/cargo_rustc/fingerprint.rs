@@ -12,7 +12,8 @@ use serde_json;
 
 use core::{Package, TargetKind};
 use util;
-use util::{CargoResult, Fresh, Dirty, Freshness, internal, profile, ChainError};
+use util::{Fresh, Dirty, Freshness, internal, profile};
+use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 
 use super::job::Work;
@@ -72,7 +73,7 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     if compare.is_err() {
         let source_id = unit.pkg.package_id().source_id();
         let sources = cx.packages.sources();
-        let source = sources.get(source_id).chain_error(|| {
+        let source = sources.get(source_id).ok_or_else(|| {
             internal("missing package source")
         })?;
         source.verify(unit.pkg.package_id())?;
@@ -180,9 +181,10 @@ impl Fingerprint {
     fn update_local(&self) -> CargoResult<()> {
         match self.local {
             LocalFingerprint::MtimeBased(ref slot, ref path) => {
-                let meta = fs::metadata(path).chain_error(|| {
-                    internal(format!("failed to stat `{}`", path.display()))
-                })?;
+                let meta = fs::metadata(path)
+                    .chain_err(|| {
+                        internal(format!("failed to stat `{}`", path.display()))
+                    })?;
                 let mtime = FileTime::from_last_modification_time(&meta);
                 *slot.0.lock().unwrap() = Some(mtime);
             }
@@ -506,26 +508,20 @@ fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint)
     }
 
     let old_fingerprint_json = paths::read(&loc.with_extension("json"))?;
-    let old_fingerprint = serde_json::from_str(&old_fingerprint_json).chain_error(|| {
-        internal(format!("failed to deserialize json"))
-    })?;
+    let old_fingerprint = serde_json::from_str(&old_fingerprint_json)
+        .chain_err(|| internal(format!("failed to deserialize json")))?;
     new_fingerprint.compare(&old_fingerprint)
 }
 
 fn log_compare(unit: &Unit, compare: &CargoResult<()>) {
-    let mut e = match *compare {
+    let ce = match *compare {
         Ok(..) => return,
-        Err(ref e) => &**e,
+        Err(ref e) => e,
     };
-    info!("fingerprint error for {}: {}", unit.pkg, e);
-    while let Some(cause) = e.cargo_cause() {
+    info!("fingerprint error for {}: {}", unit.pkg, ce);
+
+    for cause in ce.iter() {
         info!("  cause: {}", cause);
-        e = cause;
-    }
-    let mut e = e.cause();
-    while let Some(cause) = e {
-        info!("  cause: {}", cause);
-        e = cause.cause();
     }
 }
 
@@ -545,7 +541,7 @@ pub fn parse_dep_info(dep_info: &Path) -> CargoResult<Option<Vec<PathBuf>>> {
         Some(Ok(line)) => line,
         _ => return Ok(None),
     };
-    let pos = line.find(": ").chain_error(|| {
+    let pos = line.find(": ").ok_or_else(|| {
         internal(format!("dep-info not in an understood format: {}",
                          dep_info.display()))
     })?;
@@ -558,7 +554,7 @@ pub fn parse_dep_info(dep_info: &Path) -> CargoResult<Option<Vec<PathBuf>>> {
         while file.ends_with('\\') {
             file.pop();
             file.push(' ');
-            file.push_str(deps.next().chain_error(|| {
+            file.push_str(deps.next().ok_or_else(|| {
                 internal("malformed dep-info format, trailing \\".to_string())
             })?);
         }
@@ -578,7 +574,8 @@ fn dep_info_mtime_if_fresh(dep_info: &Path) -> CargoResult<Option<FileTime>> {
 fn pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String> {
     let source_id = pkg.package_id().source_id();
     let sources = cx.packages.sources();
-    let source = sources.get(source_id).chain_error(|| {
+
+    let source = sources.get(source_id).ok_or_else(|| {
         internal("missing package source")
     })?;
     source.fingerprint(pkg)

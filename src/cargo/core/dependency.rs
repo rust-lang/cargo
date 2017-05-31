@@ -7,7 +7,8 @@ use semver::ReqParseError;
 use serde::ser;
 
 use core::{SourceId, Summary, PackageId};
-use util::{CargoError, CargoResult, Cfg, CfgExpr, ChainError, human, Config};
+use util::{Cfg, CfgExpr, Config};
+use util::errors::{CargoResult, CargoResultExt, CargoError};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
@@ -145,7 +146,7 @@ this warning.
 
                         Ok(requirement)
                     }
-                    e => Err(From::from(e)),
+                    e => Err(e.into()),
                 }
             },
             Ok(v) => Ok(v),
@@ -361,13 +362,13 @@ impl ser::Serialize for Platform {
 }
 
 impl FromStr for Platform {
-    type Err = Box<CargoError>;
+    type Err = CargoError;
 
     fn from_str(s: &str) -> CargoResult<Platform> {
         if s.starts_with("cfg(") && s.ends_with(")") {
             let s = &s[4..s.len()-1];
-            s.parse().map(Platform::Cfg).chain_error(|| {
-                human(format!("failed to parse `{}` as a cfg expression", s))
+            s.parse().map(Platform::Cfg).chain_err(|| {
+                format!("failed to parse `{}` as a cfg expression", s)
             })
         } else {
             Ok(Platform::Name(s.to_string()))
