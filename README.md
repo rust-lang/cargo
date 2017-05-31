@@ -34,22 +34,6 @@ With `cargo` already installed, you can simply run:
 cargo build --release
 ```
 
-Otherwise, you can also use a more traditional approach:
-
-```sh
-./configure
-make
-make install
-```
-
-More options can be discovered through `./configure`, such as compiling cargo
-for more than one target. For example, if you'd like to compile both 32 and 64
-bit versions of cargo on unix you would use:
-
-```
-$ ./configure --target=i686-unknown-linux-gnu,x86_64-unknown-linux-gnu
-```
-
 ## Running the tests
 
 To run cargo's tests, use `cargo test`. If you do not have the cross-compilers
@@ -71,8 +55,7 @@ the `src/doc` directory. To view the rendered version of changes you have
 made locally, run:
 
 ```sh
-./configure
-make doc
+sh src/ci/dox.sh
 open target/doc/index.html
 ```
 
