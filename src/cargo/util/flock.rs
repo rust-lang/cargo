@@ -271,10 +271,11 @@ fn acquire(config: &Config,
     match try() {
         Ok(()) => return Ok(()),
 
-        // Like above, where we ignore file locking on NFS mounts on Linux, we
-        // do the same on OSX here. Note that ENOTSUP is an OSX_specific
-        // constant.
-        #[cfg(target_os = "macos")]
+        // In addition to ignoring NFS which is commonly not working we also
+        // just ignore locking on filesystems that look like they don't
+        // implement file locking. We detect that here via the return value of
+        // locking (e.g. inspecting errno).
+        #[cfg(unix)]
         Err(ref e) if e.raw_os_error() == Some(libc::ENOTSUP) => return Ok(()),
 
         #[cfg(target_os = "linux")]
