@@ -107,7 +107,7 @@ impl<'cfg> Debug for GitSource<'cfg> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "git repo at {}", self.remote.url())?;
 
-        match self.reference.to_ref_string() {
+        match self.reference.pretty_ref() {
             Some(s) => write!(f, " ({})", s),
             None => Ok(())
         }
