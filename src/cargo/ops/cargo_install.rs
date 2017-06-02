@@ -295,7 +295,7 @@ fn select_pkg<'a, T>(mut source: T,
             };
             let vers = vers.as_ref().map(|s| &**s);
             let dep = Dependency::parse_no_deprecated(name, vers, source.source_id())?;
-            let deps = source.query(&dep)?;
+            let deps = source.query_vec(&dep)?;
             match deps.iter().map(|p| p.package_id()).max() {
                 Some(pkgid) => {
                     let pkg = source.download(pkgid)?;

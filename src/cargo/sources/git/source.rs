@@ -115,10 +115,12 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Registry for GitSource<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
         let src = self.path_source.as_mut()
                       .expect("BUG: update() must be called before query()");
-        src.query(dep)
+        src.query(dep, f)
     }
 }
 

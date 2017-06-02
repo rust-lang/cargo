@@ -320,18 +320,27 @@ impl<'cfg> RegistrySource<'cfg> {
 }
 
 impl<'cfg> Registry for RegistrySource<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
         // If this is a precise dependency, then it came from a lockfile and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
         if dep.source_id().precise().is_some() && !self.updated {
-            if self.index.query(dep, &mut *self.ops)?.is_empty() {
+            let mut called = false;
+            self.index.query(dep, &mut *self.ops, &mut |s| {
+                called = true;
+                f(s);
+            })?;
+            if called {
+                return Ok(())
+            } else {
                 self.do_update()?;
             }
         }
 
-        self.index.query(dep, &mut *self.ops)
+        self.index.query(dep, &mut *self.ops, f)
     }
 
     fn supports_checksums(&self) -> bool {
