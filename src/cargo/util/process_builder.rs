@@ -5,16 +5,19 @@ use std::fmt;
 use std::path::Path;
 use std::process::{Command, Stdio, Output};
 
-use util::{CargoResult, CargoResultExt, CargoError, process_error, read2};
-use util::errors::CargoErrorKind;
+use jobserver::Client;
 use shell_escape::escape;
 
-#[derive(Clone, PartialEq, Debug)]
+use util::{CargoResult, CargoResultExt, CargoError, process_error, read2};
+use util::errors::CargoErrorKind;
+
+#[derive(Clone, Debug)]
 pub struct ProcessBuilder {
     program: OsString,
     args: Vec<OsString>,
     env: HashMap<String, Option<OsString>>,
     cwd: Option<OsString>,
+    jobserver: Option<Client>,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -72,6 +75,11 @@ impl ProcessBuilder {
     }
 
     pub fn get_envs(&self) -> &HashMap<String, Option<OsString>> { &self.env }
+
+    pub fn inherit_jobserver(&mut self, jobserver: &Client) -> &mut Self {
+        self.jobserver = Some(jobserver.clone());
+        self
+    }
 
     pub fn exec(&self) -> CargoResult<()> {
         let mut command = self.build_command();
@@ -207,6 +215,9 @@ impl ProcessBuilder {
                 None => { command.env_remove(k); }
             }
         }
+        if let Some(ref c) = self.jobserver {
+            c.configure(&mut command);
+        }
         command
     }
 
@@ -226,5 +237,6 @@ pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
         args: Vec::new(),
         cwd: None,
         env: HashMap::new(),
+        jobserver: None,
     }
 }

@@ -639,6 +639,11 @@ fn scrape_build_config(config: &Config,
                        jobs: Option<u32>,
                        target: Option<String>)
                        -> CargoResult<ops::BuildConfig> {
+    if jobs.is_some() && config.jobserver_from_env().is_some() {
+        config.shell().warn("a `-j` argument was passed to Cargo but Cargo is \
+                             also configured with an external jobserver in \
+                             its environment, ignoring the `-j` parameter")?;
+    }
     let cfg_jobs = match config.get_i64("build.jobs")? {
         Some(v) => {
             if v.val <= 0 {

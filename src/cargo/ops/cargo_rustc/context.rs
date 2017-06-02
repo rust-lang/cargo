@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 use std::sync::Arc;
 
+use jobserver::Client;
+
 use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
 use core::{TargetKind, Profiles, Dependency, Workspace};
 use core::dependency::Kind as DepKind;
@@ -43,6 +45,7 @@ pub struct Context<'a, 'cfg: 'a> {
     pub build_scripts: HashMap<Unit<'a>, Arc<BuildScripts>>,
     pub links: Links<'a>,
     pub used_in_plugin: HashSet<Unit<'a>>,
+    pub jobserver: Client,
 
     host: Layout,
     target: Option<Layout>,
@@ -94,6 +97,21 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             config.rustc()?.verbose_version.contains("-dev");
         let incremental_enabled = incremental_enabled && is_nightly;
 
+        // Load up the jobserver that we'll use to manage our parallelism. This
+        // is the same as the GNU make implementation of a jobserver, and
+        // intentionally so! It's hoped that we can interact with GNU make and
+        // all share the same jobserver.
+        //
+        // Note that if we don't have a jobserver in our environment then we
+        // create our own, and we create it with `n-1` tokens because one token
+        // is ourself, a running process.
+        let jobserver = match config.jobserver_from_env() {
+            Some(c) => c.clone(),
+            None => Client::new(build_config.jobs as usize - 1).chain_err(|| {
+                "failed to create jobserver"
+            })?,
+        };
+
         Ok(Context {
             ws: ws,
             host: host_layout,
@@ -114,6 +132,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             links: Links::new(),
             used_in_plugin: HashSet::new(),
             incremental_enabled: incremental_enabled,
+            jobserver: jobserver,
         })
     }
 

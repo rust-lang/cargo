@@ -60,6 +60,8 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env_remove("XDG_CONFIG_HOME")      // see #2345
      .env("GIT_CONFIG_NOSYSTEM", "1")    // keep trying to sandbox ourselves
      .env_remove("EMAIL")
+     .env_remove("MFLAGS")
+     .env_remove("MAKEFLAGS")
      .env_remove("GIT_AUTHOR_NAME")
      .env_remove("GIT_AUTHOR_EMAIL")
      .env_remove("GIT_COMMITTER_NAME")

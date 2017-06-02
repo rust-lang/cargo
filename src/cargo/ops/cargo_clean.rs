@@ -37,6 +37,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
                                        host_triple: host_triple,
                                        requested_target: opts.target.map(|s| s.to_owned()),
                                        release: opts.release,
+                                       jobs: 1,
                                        ..BuildConfig::default()
                                    },
                                    profiles)?;
