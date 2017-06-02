@@ -5,7 +5,7 @@ use std::str;
 use serde_json;
 
 use core::dependency::{Dependency, DependencyInner, Kind};
-use core::{SourceId, Summary, PackageId, Registry};
+use core::{SourceId, Summary, PackageId};
 use sources::registry::{RegistryPackage, RegistryDependency, INDEX_LOCK};
 use sources::registry::RegistryData;
 use util::{CargoError, CargoResult, internal, Filesystem, Config};
@@ -181,21 +181,21 @@ impl<'cfg> RegistryIndex<'cfg> {
 
     pub fn query(&mut self,
                  dep: &Dependency,
-                 load: &mut RegistryData)
-                 -> CargoResult<Vec<Summary>> {
-        let mut summaries = {
-            let summaries = self.summaries(dep.name(), load)?;
-            summaries.iter().filter(|&&(_, yanked)| {
-                dep.source_id().precise().is_some() || !yanked
-            }).map(|s| s.0.clone()).collect::<Vec<_>>()
-        };
+                 load: &mut RegistryData,
+                 f: &mut FnMut(Summary))
+                 -> CargoResult<()> {
+        let source_id = self.source_id.clone();
+        let summaries = self.summaries(dep.name(), load)?;
+        let summaries = summaries.iter().filter(|&&(_, yanked)| {
+            dep.source_id().precise().is_some() || !yanked
+        }).map(|s| s.0.clone());
 
         // Handle `cargo update --precise` here. If specified, our own source
         // will have a precise version listed of the form `<pkg>=<req>` where
         // `<pkg>` is the name of a crate on this source and `<req>` is the
         // version requested (agument to `--precise`).
-        summaries.retain(|s| {
-            match self.source_id.precise() {
+        let summaries = summaries.filter(|s| {
+            match source_id.precise() {
                 Some(p) if p.starts_with(dep.name()) &&
                            p[dep.name().len()..].starts_with('=') => {
                     let vers = &p[dep.name().len() + 1..];
@@ -204,6 +204,12 @@ impl<'cfg> RegistryIndex<'cfg> {
                 _ => true,
             }
         });
-        summaries.query(dep)
+
+        for summary in summaries {
+            if dep.matches(&summary) {
+                f(summary);
+            }
+        }
+        Ok(())
     }
 }

@@ -718,7 +718,7 @@ fn activation_error(cx: &Context,
     let all_req = semver::VersionReq::parse("*").unwrap();
     let mut new_dep = dep.clone();
     new_dep.set_version_req(all_req);
-    let mut candidates = match registry.query(&new_dep) {
+    let mut candidates = match registry.query_vec(&new_dep) {
         Ok(candidates) => candidates,
         Err(e) => return e,
     };
@@ -949,21 +949,23 @@ impl<'a> Context<'a> {
     fn query(&self,
              registry: &mut Registry,
              dep: &Dependency) -> CargoResult<Vec<Candidate>> {
-        let summaries = registry.query(dep)?;
-        summaries.into_iter().map(|summary| {
-            // get around lack of non-lexical lifetimes
-            let summary2 = summary.clone();
+        let mut ret = Vec::new();
+        registry.query(dep, &mut |s| {
+            ret.push(Candidate { summary: s, replace: None });
+        })?;
+        for candidate in ret.iter_mut() {
+            let summary = &candidate.summary;
 
             let mut potential_matches = self.replacements.iter()
-                .filter(|&&(ref spec, _)| spec.matches(summary2.package_id()));
+                .filter(|&&(ref spec, _)| spec.matches(summary.package_id()));
 
             let &(ref spec, ref dep) = match potential_matches.next() {
-                None => return Ok(Candidate { summary: summary, replace: None }),
+                None => continue,
                 Some(replacement) => replacement,
             };
             debug!("found an override for {} {}", dep.name(), dep.version_req());
 
-            let mut summaries = registry.query(dep)?.into_iter();
+            let mut summaries = registry.query_vec(dep)?.into_iter();
             let s = summaries.next().ok_or_else(|| {
                 format!("no matching package for override `{}` found\n\
                          location searched: {}\n\
@@ -1005,8 +1007,9 @@ impl<'a> Context<'a> {
                 debug!("\t{} => {}", dep.name(), dep.version_req());
             }
 
-            Ok(Candidate { summary: summary, replace: replace })
-        }).collect()
+            candidate.replace = replace;
+        }
+        Ok(ret)
     }
 
     fn prev_active(&self, dep: &Dependency) -> &[Summary] {

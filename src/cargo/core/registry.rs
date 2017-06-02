@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
@@ -11,7 +12,15 @@ use sources::config::SourceConfigMap;
 /// See also `core::Source`.
 pub trait Registry {
     /// Attempt to find the packages that match a dependency request.
-    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>>;
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()>;
+
+    fn query_vec(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+        let mut ret = Vec::new();
+        self.query(dep, &mut |s| ret.push(s))?;
+        Ok(ret)
+    }
 
     /// Returns whether or not this registry will return summaries with
     /// checksums listed.
@@ -23,22 +32,34 @@ pub trait Registry {
 }
 
 impl Registry for Vec<Summary> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        Ok(self.iter().filter(|summary| dep.matches(*summary))
-               .cloned().collect())
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
+        for summary in self.iter().filter(|summary| dep.matches(*summary)) {
+            f(summary.clone());
+        }
+        Ok(())
     }
 }
 
 impl Registry for Vec<Package> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        Ok(self.iter().filter(|pkg| dep.matches(pkg.summary()))
-               .map(|pkg| pkg.summary().clone()).collect())
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
+        for summary in self.iter()
+                           .map(|p| p.summary())
+                           .filter(|summary| dep.matches(*summary)) {
+            f(summary.clone());
+        }
+        Ok(())
     }
 }
 
 impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
-    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
-        (**self).query(name)
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
+        (**self).query(dep, f)
     }
 }
 
@@ -56,7 +77,7 @@ impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
 /// a `Source`. Each `Source` in the map has been updated (using network
 /// operations if necessary) and is ready to be queried for packages.
 pub struct PackageRegistry<'cfg> {
-    sources: SourceMap<'cfg>,
+    sources: RefCell<SourceMap<'cfg>>,
 
     // A list of sources which are considered "overrides" which take precedent
     // when querying for packages.
@@ -94,7 +115,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     pub fn new(config: &'cfg Config) -> CargoResult<PackageRegistry<'cfg>> {
         let source_config = SourceConfigMap::new(config)?;
         Ok(PackageRegistry {
-            sources: SourceMap::new(),
+            sources: RefCell::new(SourceMap::new()),
             source_ids: HashMap::new(),
             overrides: Vec::new(),
             source_config: source_config,
@@ -103,8 +124,9 @@ impl<'cfg> PackageRegistry<'cfg> {
     }
 
     pub fn get(self, package_ids: &[PackageId]) -> PackageSet<'cfg> {
-        trace!("getting packages; sources={}", self.sources.len());
-        PackageSet::new(package_ids, self.sources)
+        let sources = self.sources.into_inner();
+        trace!("getting packages; sources={}", sources.len());
+        PackageSet::new(package_ids, sources)
     }
 
     fn ensure_loaded(&mut self, namespace: &SourceId, kind: Kind) -> CargoResult<()> {
@@ -156,7 +178,7 @@ impl<'cfg> PackageRegistry<'cfg> {
 
     fn add_source(&mut self, source: Box<Source + 'cfg>, kind: Kind) {
         let id = source.source_id().clone();
-        self.sources.insert(source);
+        self.sources.get_mut().insert(source);
         self.source_ids.insert(id.clone(), (id, kind));
     }
 
@@ -189,16 +211,16 @@ impl<'cfg> PackageRegistry<'cfg> {
 
             // Ensure the source has fetched all necessary remote data.
             let _p = profile::start(format!("updating: {}", source_id));
-            self.sources.get_mut(source_id).unwrap().update()
+            self.sources.get_mut().get_mut(source_id).unwrap().update()
         })().chain_err(|| format!("Unable to update {}", source_id))
     }
 
     fn query_overrides(&mut self, dep: &Dependency)
                        -> CargoResult<Option<Summary>> {
         for s in self.overrides.iter() {
-            let src = self.sources.get_mut(s).unwrap();
+            let src = self.sources.get_mut().get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.name(), s);
-            let mut results = src.query(&dep)?;
+            let mut results = src.query_vec(&dep)?;
             if results.len() > 0 {
                 return Ok(Some(results.remove(0)))
             }
@@ -335,35 +357,58 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
 }
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
         // Ensure the requested source_id is loaded
         self.ensure_loaded(dep.source_id(), Kind::Normal).chain_err(|| {
             format!("failed to load source for a dependency \
                      on `{}`", dep.name())
         })?;
 
+        // Look for an override and get ready to query the real source
         let override_summary = self.query_overrides(&dep)?;
-        let real_summaries = match self.sources.get_mut(dep.source_id()) {
-            Some(src) => Some(src.query(&dep)?),
-            None => None,
-        };
-
-        let ret = match (override_summary, real_summaries) {
-            (Some(candidate), Some(summaries)) => {
-                if summaries.len() != 1 {
-                    bail!("found an override with a non-locked list");
+        let mut sources = self.sources.borrow_mut();
+        let source = match sources.get_mut(dep.source_id()) {
+            Some(src) => src,
+            None => {
+                if override_summary.is_some() {
+                    bail!("override found but no real ones");
                 }
-                self.warn_bad_override(&candidate, &summaries[0])?;
-                vec![candidate]
+                return Ok(())
             }
-            (Some(_), None) => bail!("override found but no real ones"),
-            (None, Some(summaries)) => summaries,
-            (None, None) => Vec::new(),
         };
 
-        // post-process all returned summaries to ensure that we lock all
-        // relevant summaries to the right versions and sources
-        Ok(ret.into_iter().map(|summary| self.lock(summary)).collect())
+        // Query the real source, keeping track of some extra info. If we've got
+        // an override we don't actually ship up summaries. If we do ship up
+        // summaries though we be sure to postprocess them to a locked version
+        // to assist with lockfiles and conservative updates.
+        let mut n = 0;
+        let mut to_warn = None;
+        source.query(dep, &mut |summary| {
+            n += 1;
+            if override_summary.is_none() {
+                f(self.lock(summary))
+            } else {
+                to_warn = Some(summary);
+            }
+        })?;
+
+        // After all that's said and done we need to check the override summary
+        // itself. If present we'll do some more validation and yield it up,
+        // otherwise we're done.
+        let override_summary = match override_summary {
+            Some(s) => s,
+            None => return Ok(())
+        };
+
+        if n > 1 {
+            bail!("found an override with a non-locked list");
+        } else if let Some(summary) = to_warn {
+            self.warn_bad_override(&override_summary, &summary)?;
+        }
+        f(self.lock(override_summary));
+        Ok(())
     }
 }
 
@@ -411,15 +456,20 @@ pub mod test {
     }
 
     impl Registry for RegistryBuilder {
-        fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+        fn query(&mut self,
+                 dep: &Dependency,
+                 f: &mut FnMut(Summary)) -> CargoResult<()> {
             debug!("querying; dep={:?}", dep);
 
             let overrides = self.query_overrides(dep);
 
             if overrides.is_empty() {
-                self.summaries.query(dep)
+                self.summaries.query(dep, f)
             } else {
-                Ok(overrides)
+                for s in overrides {
+                    f(s);
+                }
+                Ok(())
             }
         }
     }

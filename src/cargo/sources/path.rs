@@ -317,8 +317,10 @@ impl<'cfg> Debug for PathSource<'cfg> {
 }
 
 impl<'cfg> Registry for PathSource<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        self.packages.query(dep)
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
+        self.packages.query(dep, f)
     }
 }
 
