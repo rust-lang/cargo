@@ -1,15 +1,17 @@
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
 use std::fmt;
-use std::io::Write;
+use std::io::{self, Write};
+use std::mem;
 use std::sync::mpsc::{channel, Sender, Receiver};
 
 use crossbeam::{self, Scope};
+use jobserver::{Acquired, HelperThread};
 use term::color::YELLOW;
 
 use core::{PackageId, Target, Profile};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
-use util::{CargoResult, ProcessBuilder, profile, internal};
+use util::{CargoResult, ProcessBuilder, profile, internal, CargoResultExt};
 use {handle_error};
 
 use super::{Context, Kind, Unit};
@@ -21,10 +23,9 @@ use super::job::Job;
 /// actual compilation step of each package. Packages enqueue units of work and
 /// then later on the entire graph is processed and compiled.
 pub struct JobQueue<'a> {
-    jobs: usize,
     queue: DependencyQueue<Key<'a>, Vec<(Job, Freshness)>>,
-    tx: Sender<(Key<'a>, Message)>,
-    rx: Receiver<(Key<'a>, Message)>,
+    tx: Sender<Message<'a>>,
+    rx: Receiver<Message<'a>>,
     active: usize,
     pending: HashMap<Key<'a>, PendingBuild>,
     compiled: HashSet<&'a PackageId>,
@@ -51,28 +52,28 @@ struct Key<'a> {
 }
 
 pub struct JobState<'a> {
-    tx: Sender<(Key<'a>, Message)>,
-    key: Key<'a>,
+    tx: Sender<Message<'a>>,
 }
 
-enum Message {
+enum Message<'a> {
     Run(String),
     Stdout(String),
     Stderr(String),
-    Finish(CargoResult<()>),
+    Token(io::Result<Acquired>),
+    Finish(Key<'a>, CargoResult<()>),
 }
 
 impl<'a> JobState<'a> {
     pub fn running(&self, cmd: &ProcessBuilder) {
-        let _ = self.tx.send((self.key, Message::Run(cmd.to_string())));
+        let _ = self.tx.send(Message::Run(cmd.to_string()));
     }
 
     pub fn stdout(&self, out: &str) {
-        let _ = self.tx.send((self.key, Message::Stdout(out.to_string())));
+        let _ = self.tx.send(Message::Stdout(out.to_string()));
     }
 
     pub fn stderr(&self, err: &str) {
-        let _ = self.tx.send((self.key, Message::Stderr(err.to_string())));
+        let _ = self.tx.send(Message::Stderr(err.to_string()));
     }
 }
 
@@ -80,7 +81,6 @@ impl<'a> JobQueue<'a> {
     pub fn new<'cfg>(cx: &Context<'a, 'cfg>) -> JobQueue<'a> {
         let (tx, rx) = channel();
         JobQueue {
-            jobs: cx.jobs() as usize,
             queue: DependencyQueue::new(),
             tx: tx,
             rx: rx,
@@ -113,23 +113,51 @@ impl<'a> JobQueue<'a> {
     pub fn execute(&mut self, cx: &mut Context) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
 
+        // We need to give a handle to the send half of our message queue to the
+        // jobserver helper thrad. Unfortunately though we need the handle to be
+        // `'static` as that's typically what's required when spawning a
+        // thread!
+        //
+        // To work around this we transmute the `Sender` to a static lifetime.
+        // we're only sending "longer living" messages and we should also
+        // destroy all references to the channel before this function exits as
+        // the destructor for the `helper` object will ensure the associated
+        // thread i sno longer running.
+        //
+        // As a result, this `transmute` to a longer lifetime should be safe in
+        // practice.
+        let tx = self.tx.clone();
+        let tx = unsafe {
+            mem::transmute::<Sender<Message<'a>>, Sender<Message<'static>>>(tx)
+        };
+        let helper = cx.jobserver.clone().into_helper_thread(move |token| {
+            drop(tx.send(Message::Token(token)));
+        }).chain_err(|| {
+            "failed to create helper thread for jobserver management"
+        })?;
+
         crossbeam::scope(|scope| {
-            self.drain_the_queue(cx, scope)
+            self.drain_the_queue(cx, scope, &helper)
         })
     }
 
-    fn drain_the_queue(&mut self, cx: &mut Context, scope: &Scope<'a>)
+    fn drain_the_queue(&mut self,
+                       cx: &mut Context,
+                       scope: &Scope<'a>,
+                       jobserver_helper: &HelperThread)
                        -> CargoResult<()> {
         use std::time::Instant;
 
+        let mut tokens = Vec::new();
         let mut queue = Vec::new();
         trace!("queue: {:#?}", self.queue);
 
         // Iteratively execute the entire dependency graph. Each turn of the
         // loop starts out by scheduling as much work as possible (up to the
-        // maximum number of parallel jobs). A local queue is maintained
-        // separately from the main dependency queue as one dequeue may actually
-        // dequeue quite a bit of work (e.g. 10 binaries in one project).
+        // maximum number of parallel jobs we have tokens for). A local queue
+        // is maintained separately from the main dependency queue as one
+        // dequeue may actually dequeue quite a bit of work (e.g. 10 binaries
+        // in one project).
         //
         // After a job has finished we update our internal state if it was
         // successful and otherwise wait for pending work to finish if it failed
@@ -137,32 +165,48 @@ impl<'a> JobQueue<'a> {
         let mut error = None;
         let start_time = Instant::now();
         loop {
-            while error.is_none() && self.active < self.jobs {
-                if !queue.is_empty() {
-                    let (key, job, fresh) = queue.remove(0);
-                    self.run(key, fresh, job, cx.config, scope)?;
-                } else if let Some((fresh, key, jobs)) = self.queue.dequeue() {
-                    let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f)| {
-                        f.combine(fresh)
-                    });
-                    self.pending.insert(key, PendingBuild {
-                        amt: jobs.len(),
-                        fresh: total_fresh,
-                    });
-                    queue.extend(jobs.into_iter().map(|(job, f)| {
-                        (key, job, f.combine(fresh))
-                    }));
-                } else {
-                    break
+            // Dequeue as much work as we can, learning about everything
+            // possible that can run. Note that this is also the point where we
+            // start requesting job tokens. Each job after the first needs to
+            // request a token.
+            while let Some((fresh, key, jobs)) = self.queue.dequeue() {
+                let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f)| {
+                    f.combine(fresh)
+                });
+                self.pending.insert(key, PendingBuild {
+                    amt: jobs.len(),
+                    fresh: total_fresh,
+                });
+                for (job, f) in jobs {
+                    queue.push((key, job, f.combine(fresh)));
+                    if self.active + queue.len() > 0 {
+                        jobserver_helper.request_token();
+                    }
                 }
             }
+
+            // Now that we've learned of all possible work that we can execute
+            // try to spawn it so long as we've got a jobserver token which says
+            // we're able to perform some parallel work.
+            while error.is_none() && self.active < tokens.len() + 1 && !queue.is_empty() {
+                let (key, job, fresh) = queue.remove(0);
+                self.run(key, fresh, job, cx.config, scope)?;
+            }
+
+            // If after all that we're not actually running anything then we're
+            // done!
             if self.active == 0 {
                 break
             }
 
-            let (key, msg) = self.rx.recv().unwrap();
+            // And finally, before we block waiting for the next event, drop any
+            // excess tokens we may have accidentally acquired. Due to how our
+            // jobserver interface is architected we may acquire a token that we
+            // don't actually use, and if this happens just relinquish it back
+            // to the jobserver itself.
+            tokens.truncate(self.active - 1);
 
-            match msg {
+            match self.rx.recv().unwrap() {
                 Message::Run(cmd) => {
                     cx.config.shell().verbose(|c| c.status("Running", &cmd))?;
                 }
@@ -176,9 +220,13 @@ impl<'a> JobQueue<'a> {
                         writeln!(cx.config.shell().err(), "{}", err)?;
                     }
                 }
-                Message::Finish(result) => {
+                Message::Finish(key, result) => {
                     info!("end: {:?}", key);
                     self.active -= 1;
+                    if self.active > 0 {
+                        assert!(tokens.len() > 0);
+                        drop(tokens.pop());
+                    }
                     match result {
                         Ok(()) => self.finish(key, cx)?,
                         Err(e) => {
@@ -197,6 +245,11 @@ impl<'a> JobQueue<'a> {
                             }
                         }
                     }
+                }
+                Message::Token(acquired_token) => {
+                    tokens.push(acquired_token.chain_err(|| {
+                        "failed to acquire jobserver token"
+                    })?);
                 }
             }
         }
@@ -244,9 +297,8 @@ impl<'a> JobQueue<'a> {
         scope.spawn(move || {
             let res = job.run(fresh, &JobState {
                 tx: my_tx.clone(),
-                key: key,
             });
-            my_tx.send((key, Message::Finish(res))).unwrap();
+            my_tx.send(Message::Finish(key, res)).unwrap();
         });
 
         // Print out some nice progress information

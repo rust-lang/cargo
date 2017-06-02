@@ -88,7 +88,14 @@ let out_dir = env::var("OUT_DIR").unwrap();
              triples can be found in [clang’s own documentation][clang].
 * `HOST` - the host triple of the rust compiler.
 * `NUM_JOBS` - the parallelism specified as the top-level parallelism. This can
-               be useful to pass a `-j` parameter to a system like `make`.
+               be useful to pass a `-j` parameter to a system like `make`. Note
+               that care should be taken when interpreting this environment
+               variable. For historical purposes this is still provided but
+               recent versions of Cargo, for example, do not need to run `make
+               -j` as it'll automatically happen. Cargo implements its own
+               [jobserver] and will allow build scripts to inherit this
+               information, so programs compatible with GNU make jobservers will
+               already have appropriately configured parallelism.
 * `OPT_LEVEL`, `DEBUG` - values of the corresponding variables for the
                          profile currently being built.
 * `PROFILE` - `release` for release builds, `debug` for other builds.
@@ -101,6 +108,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [links]: build-script.html#the-links-manifest-key
 [profile]: manifest.html#the-profile-sections
 [clang]:http://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[jobserver]: http://make.mad-scientist.net/papers/jobserver-implementation/
 
 # Environment variables Cargo sets for 3rd party subcommands
 
