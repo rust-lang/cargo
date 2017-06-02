@@ -63,9 +63,6 @@ impl<'cfg> RegistryIndex<'cfg> {
             return Ok(&self.cache[name]);
         }
         let summaries = self.load_summaries(name, load)?;
-        let summaries = summaries.into_iter().filter(|summary| {
-            summary.0.package_id().name() == name
-        }).collect();
         self.cache.insert(name.to_string(), summaries);
         Ok(&self.cache[name])
     }
@@ -98,31 +95,38 @@ impl<'cfg> RegistryIndex<'cfg> {
             2 => format!("2/{}", fs_name),
             3 => format!("3/{}/{}", &fs_name[..1], fs_name),
             _ => format!("{}/{}/{}", &fs_name[0..2], &fs_name[2..4], fs_name),
-            // 1 => Path::new("1").join(fs_name),
-            // 2 => Path::new("2").join(fs_name),
-            // 3 => Path::new("3").join(&fs_name[..1]).join(fs_name),
-            // _ => Path::new(&fs_name[0..2]).join(&fs_name[2..4]).join(fs_name),
         };
-        match load.load(&root, Path::new(&path)) {
-            Ok(contents) => {
-                let contents = str::from_utf8(&contents).map_err(|_| {
-                    CargoError::from("registry index file was not valid utf-8")
-                })?;
-                let lines = contents.lines()
-                                    .map(|s| s.trim())
-                                    .filter(|l| !l.is_empty());
+        let mut ret = Vec::new();
+        let mut hit_closure = false;
+        let err = load.load(&root, Path::new(&path), &mut |contents| {
+            hit_closure = true;
+            let contents = str::from_utf8(contents).map_err(|_| {
+                CargoError::from("registry index file was not valid utf-8")
+            })?;
+            let lines = contents.lines()
+                                .map(|s| s.trim())
+                                .filter(|l| !l.is_empty());
 
-                // Attempt forwards-compatibility on the index by ignoring
-                // everything that we ourselves don't understand, that should
-                // allow future cargo implementations to break the
-                // interpretation of each line here and older cargo will simply
-                // ignore the new lines.
-                Ok(lines.filter_map(|line| {
-                    self.parse_registry_package(line).ok()
-                }).collect())
-            }
-            Err(..) => Ok(Vec::new()),
+            // Attempt forwards-compatibility on the index by ignoring
+            // everything that we ourselves don't understand, that should
+            // allow future cargo implementations to break the
+            // interpretation of each line here and older cargo will simply
+            // ignore the new lines.
+            ret.extend(lines.filter_map(|line| {
+                self.parse_registry_package(line).ok()
+            }));
+
+            Ok(())
+        });
+
+        // We ignore lookup failures as those are just crates which don't exist
+        // or we haven't updated the registry yet. If we actually ran the
+        // closure though then we care about those errors.
+        if hit_closure {
+            err?;
         }
+
+        Ok(ret)
     }
 
     /// Parse a line from the registry's index file into a Summary for a
