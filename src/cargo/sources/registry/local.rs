@@ -36,8 +36,11 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         &self.index_path
     }
 
-    fn load(&self, root: &Path, path: &Path) -> CargoResult<Vec<u8>> {
-        paths::read_bytes(&root.join(path))
+    fn load(&self,
+            root: &Path,
+            path: &Path,
+            data: &mut FnMut(&[u8]) -> CargoResult<()>) -> CargoResult<()> {
+        data(&paths::read_bytes(&root.join(path))?)
     }
 
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {

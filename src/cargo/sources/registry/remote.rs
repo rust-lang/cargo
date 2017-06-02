@@ -130,7 +130,10 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         &self.index_path
     }
 
-    fn load(&self, _root: &Path, path: &Path) -> CargoResult<Vec<u8>> {
+    fn load(&self,
+            _root: &Path,
+            path: &Path,
+            data: &mut FnMut(&[u8]) -> CargoResult<()>) -> CargoResult<()> {
         // Note that the index calls this method and the filesystem is locked
         // in the index, so we don't need to worry about an `update_index`
         // happening in a different process.
@@ -142,7 +145,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             Some(blob) => blob,
             None => bail!("path `{}` is not a blob in the git repo", path.display()),
         };
-        Ok(blob.content().to_vec())
+        data(blob.content())
     }
 
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>> {
@@ -150,9 +153,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let _lock = self.index_path.open_ro(Path::new(INDEX_LOCK),
                                             self.config,
                                             "the registry index")?;
-        let json = self.load(Path::new(""), Path::new("config.json"))?;
-        let config = serde_json::from_slice(&json)?;
-        Ok(Some(config))
+        let mut config = None;
+        self.load(Path::new(""), Path::new("config.json"), &mut |json| {
+            config = Some(serde_json::from_slice(&json)?);
+            Ok(())
+        })?;
+        Ok(config)
     }
 
     fn update_index(&mut self) -> CargoResult<()> {

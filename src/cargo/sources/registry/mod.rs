@@ -221,7 +221,10 @@ struct RegistryDependency<'a> {
 
 pub trait RegistryData {
     fn index_path(&self) -> &Filesystem;
-    fn load(&self, root: &Path, path: &Path) -> CargoResult<Vec<u8>>;
+    fn load(&self,
+            _root: &Path,
+            path: &Path,
+            data: &mut FnMut(&[u8]) -> CargoResult<()>) -> CargoResult<()>;
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
     fn download(&mut self,
