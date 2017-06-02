@@ -5,6 +5,7 @@
 #[cfg(test)] extern crate hamcrest;
 #[macro_use] extern crate error_chain;
 #[macro_use] extern crate log;
+#[macro_use] extern crate scoped_tls;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate serde_json;
 extern crate crates_io as registry;
