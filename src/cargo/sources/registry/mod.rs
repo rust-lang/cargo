@@ -158,6 +158,7 @@
 //!         ...
 //! ```
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::{PathBuf, Path};
@@ -198,24 +199,24 @@ pub struct RegistryConfig {
 }
 
 #[derive(Deserialize)]
-struct RegistryPackage {
+struct RegistryPackage<'a> {
     name: String,
     vers: String,
-    deps: Vec<RegistryDependency>,
+    deps: Vec<RegistryDependency<'a>>,
     features: HashMap<String, Vec<String>>,
     cksum: String,
     yanked: Option<bool>,
 }
 
 #[derive(Deserialize)]
-struct RegistryDependency {
-    name: String,
-    req: String,
+struct RegistryDependency<'a> {
+    name: Cow<'a, str>,
+    req: Cow<'a, str>,
     features: Vec<String>,
     optional: bool,
     default_features: bool,
-    target: Option<String>,
-    kind: Option<String>,
+    target: Option<Cow<'a, str>>,
+    kind: Option<Cow<'a, str>>,
 }
 
 pub trait RegistryData {
