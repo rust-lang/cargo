@@ -3,10 +3,11 @@ use std::path::Path;
 use std::str;
 
 use serde_json;
+use semver::Version;
 
-use core::dependency::{Dependency, DependencyInner, Kind};
+use core::dependency::Dependency;
 use core::{SourceId, Summary, PackageId};
-use sources::registry::{RegistryPackage, RegistryDependency, INDEX_LOCK};
+use sources::registry::{RegistryPackage, INDEX_LOCK};
 use sources::registry::RegistryData;
 use util::{CargoError, CargoResult, internal, Filesystem, Config};
 
@@ -14,7 +15,7 @@ pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
     path: Filesystem,
     cache: HashMap<String, Vec<(Summary, bool)>>,
-    hashes: HashMap<(String, String), String>, // (name, vers) => cksum
+    hashes: HashMap<String, HashMap<Version, String>>, // (name, vers) => cksum
     config: &'cfg Config,
     locked: bool,
 }
@@ -40,13 +41,14 @@ impl<'cfg> RegistryIndex<'cfg> {
                 pkg: &PackageId,
                 load: &mut RegistryData)
                 -> CargoResult<String> {
-        let key = (pkg.name().to_string(), pkg.version().to_string());
-        if let Some(s) = self.hashes.get(&key) {
+        let name = pkg.name();
+        let version = pkg.version();
+        if let Some(s) = self.hashes.get(name).and_then(|v| v.get(version)) {
             return Ok(s.clone())
         }
         // Ok, we're missing the key, so parse the index file to load it.
-        self.summaries(pkg.name(), load)?;
-        self.hashes.get(&key).ok_or_else(|| {
+        self.summaries(name, load)?;
+        self.hashes.get(name).and_then(|v| v.get(version)).ok_or_else(|| {
             internal(format!("no hash listed for {}", pkg))
         }).map(|s| s.clone())
     }
@@ -103,6 +105,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             let contents = str::from_utf8(contents).map_err(|_| {
                 CargoError::from("registry index file was not valid utf-8")
             })?;
+            ret.reserve(contents.lines().count());
             let lines = contents.lines()
                                 .map(|s| s.trim())
                                 .filter(|l| !l.is_empty());
@@ -137,50 +140,20 @@ impl<'cfg> RegistryIndex<'cfg> {
                               -> CargoResult<(Summary, bool)> {
         let RegistryPackage {
             name, vers, cksum, deps, features, yanked
-        } = serde_json::from_str::<RegistryPackage>(line)?;
+        } = super::DEFAULT_ID.set(&self.source_id, || {
+            serde_json::from_str::<RegistryPackage>(line)
+        })?;
         let pkgid = PackageId::new(&name, &vers, &self.source_id)?;
-        let deps: CargoResult<Vec<Dependency>> = deps.into_iter().map(|dep| {
-            self.parse_registry_dependency(dep)
-        }).collect();
-        let deps = deps?;
-        let summary = Summary::new(pkgid, deps, features)?;
+        let summary = Summary::new(pkgid, deps.inner, features)?;
         let summary = summary.set_checksum(cksum.clone());
-        self.hashes.insert((name, vers), cksum);
+        if self.hashes.contains_key(&name[..]) {
+            self.hashes.get_mut(&name[..]).unwrap().insert(vers, cksum);
+        } else {
+            self.hashes.entry(name.into_owned())
+                .or_insert_with(HashMap::new)
+                .insert(vers, cksum);
+        }
         Ok((summary, yanked.unwrap_or(false)))
-    }
-
-    /// Converts an encoded dependency in the registry to a cargo dependency
-    fn parse_registry_dependency(&self, dep: RegistryDependency)
-                                 -> CargoResult<Dependency> {
-        let RegistryDependency {
-            name, req, features, optional, default_features, target, kind
-        } = dep;
-
-        let mut dep = DependencyInner::parse(&name, Some(&req), &self.source_id, None)?;
-        let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
-            "dev" => Kind::Development,
-            "build" => Kind::Build,
-            _ => Kind::Normal,
-        };
-
-        let platform = match target {
-            Some(target) => Some(target.parse()?),
-            None => None,
-        };
-
-        // Unfortunately older versions of cargo and/or the registry ended up
-        // publishing lots of entries where the features array contained the
-        // empty feature, "", inside. This confuses the resolution process much
-        // later on and these features aren't actually valid, so filter them all
-        // out here.
-        let features = features.into_iter().filter(|s| !s.is_empty()).collect();
-
-        dep.set_optional(optional)
-           .set_default_features(default_features)
-           .set_features(features)
-           .set_platform(platform)
-           .set_kind(kind);
-        Ok(dep.into_dependency())
     }
 
     pub fn query(&mut self,
