@@ -960,17 +960,15 @@ impl TomlManifest {
                        requirement, but found one for `{}`", spec);
             }
 
-            let dep = replacement.to_dependency(spec.name(), cx, None)?;
-            let dep = {
+            let mut dep = replacement.to_dependency(spec.name(), cx, None)?;
+            {
                 let version = spec.version().ok_or_else(|| {
                     CargoError::from(format!("replacements must specify a version \
                              to replace, but `{}` does not",
                             spec))
                 })?;
-                let req = VersionReq::exact(version);
-                dep.clone_inner().set_version_req(req)
-                   .into_dependency()
-            };
+                dep.set_version_req(VersionReq::exact(version));
+            }
             replace.push((spec, dep));
         }
         Ok(replace)
@@ -1118,14 +1116,14 @@ impl TomlDependency {
             }
             None => DependencyInner::parse(name, version, &new_source_id, None)?,
         };
-        dep = dep.set_features(details.features.unwrap_or(Vec::new()))
-                 .set_default_features(details.default_features
-                                              .or(details.default_features2)
-                                              .unwrap_or(true))
-                 .set_optional(details.optional.unwrap_or(false))
-                 .set_platform(cx.platform.clone());
+        dep.set_features(details.features.unwrap_or(Vec::new()))
+           .set_default_features(details.default_features
+                                        .or(details.default_features2)
+                                        .unwrap_or(true))
+           .set_optional(details.optional.unwrap_or(false))
+           .set_platform(cx.platform.clone());
         if let Some(kind) = kind {
-            dep = dep.set_kind(kind);
+            dep.set_kind(kind);
         }
         Ok(dep.into_dependency())
     }

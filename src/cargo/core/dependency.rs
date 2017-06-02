@@ -180,49 +180,49 @@ this warning.
         self.platform.as_ref()
     }
 
-    pub fn set_kind(mut self, kind: Kind) -> DependencyInner {
+    pub fn set_kind(&mut self, kind: Kind) -> &mut DependencyInner {
         self.kind = kind;
         self
     }
 
     /// Sets the list of features requested for the package.
-    pub fn set_features(mut self, features: Vec<String>) -> DependencyInner {
+    pub fn set_features(&mut self, features: Vec<String>) -> &mut DependencyInner {
         self.features = features;
         self
     }
 
     /// Sets whether the dependency requests default features of the package.
-    pub fn set_default_features(mut self, default_features: bool) -> DependencyInner {
+    pub fn set_default_features(&mut self, default_features: bool) -> &mut DependencyInner {
         self.default_features = default_features;
         self
     }
 
     /// Sets whether the dependency is optional.
-    pub fn set_optional(mut self, optional: bool) -> DependencyInner {
+    pub fn set_optional(&mut self, optional: bool) -> &mut DependencyInner {
         self.optional = optional;
         self
     }
 
     /// Set the source id for this dependency
-    pub fn set_source_id(mut self, id: SourceId) -> DependencyInner {
+    pub fn set_source_id(&mut self, id: SourceId) -> &mut DependencyInner {
         self.source_id = id;
         self
     }
 
     /// Set the version requirement for this dependency
-    pub fn set_version_req(mut self, req: VersionReq) -> DependencyInner {
+    pub fn set_version_req(&mut self, req: VersionReq) -> &mut DependencyInner {
         self.req = req;
         self
     }
 
-    pub fn set_platform(mut self, platform: Option<Platform>)
-                        -> DependencyInner {
+    pub fn set_platform(&mut self, platform: Option<Platform>)
+                        -> &mut DependencyInner {
         self.platform = platform;
         self
     }
 
     /// Lock this dependency to depending on the specified package id
-    pub fn lock_to(self, id: &PackageId) -> DependencyInner {
+    pub fn lock_to(&mut self, id: &PackageId) -> &mut DependencyInner {
         assert_eq!(self.source_id, *id.source_id());
         assert!(self.req.matches(id.version()));
         self.set_version_req(VersionReq::exact(id.version()))
@@ -303,8 +303,20 @@ impl Dependency {
     }
 
     /// Lock this dependency to depending on the specified package id
-    pub fn lock_to(self, id: &PackageId) -> Dependency {
-        self.clone_inner().lock_to(id).into_dependency()
+    pub fn lock_to(mut self, id: &PackageId) -> Dependency {
+        Rc::make_mut(&mut self.inner).lock_to(id);
+        self
+    }
+
+    /// Set the version requirement for this dependency
+    pub fn set_version_req(&mut self, req: VersionReq) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).set_version_req(req);
+        self
+    }
+
+    pub fn set_kind(&mut self, kind: Kind) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).set_kind(kind);
+        self
     }
 
     /// Returns false if the dependency is only used to build the local package.
@@ -327,14 +339,14 @@ impl Dependency {
         self.inner.matches_id(id)
     }
 
-    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
+    pub fn map_source(mut self, to_replace: &SourceId, replace_with: &SourceId)
                       -> Dependency {
         if self.source_id() != to_replace {
             self
         } else {
-            Rc::try_unwrap(self.inner).unwrap_or_else(|r| (*r).clone())
-               .set_source_id(replace_with.clone())
-               .into_dependency()
+            Rc::make_mut(&mut self.inner)
+                .set_source_id(replace_with.clone());
+            self
         }
     }
 }

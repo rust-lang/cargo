@@ -152,7 +152,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             name, req, features, optional, default_features, target, kind
         } = dep;
 
-        let dep = DependencyInner::parse(&name, Some(&req), &self.source_id, None)?;
+        let mut dep = DependencyInner::parse(&name, Some(&req), &self.source_id, None)?;
         let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
             "dev" => Kind::Development,
             "build" => Kind::Build,
@@ -171,12 +171,12 @@ impl<'cfg> RegistryIndex<'cfg> {
         // out here.
         let features = features.into_iter().filter(|s| !s.is_empty()).collect();
 
-        Ok(dep.set_optional(optional)
-              .set_default_features(default_features)
-              .set_features(features)
-              .set_platform(platform)
-              .set_kind(kind)
-              .into_dependency())
+        dep.set_optional(optional)
+           .set_default_features(default_features)
+           .set_features(features)
+           .set_platform(platform)
+           .set_kind(kind);
+        Ok(dep.into_dependency())
     }
 
     pub fn query(&mut self,

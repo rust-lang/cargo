@@ -109,7 +109,7 @@ fn dep_loc(name: &str, location: &str) -> Dependency {
     Dependency::parse_no_deprecated(name, Some("1.0.0"), &source_id).unwrap()
 }
 fn dep_kind(name: &str, kind: Kind) -> Dependency {
-    dep(name).clone_inner().set_kind(kind).into_dependency()
+    dep(name).set_kind(kind).clone()
 }
 
 fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {
