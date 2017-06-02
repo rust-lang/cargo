@@ -53,6 +53,7 @@ pub struct Context<'a, 'cfg: 'a> {
     host_info: TargetInfo,
     profiles: &'a Profiles,
     incremental_enabled: bool,
+    target_filenames: HashMap<Unit<'a>, Arc<Vec<(PathBuf, Option<PathBuf>, bool)>>>,
 }
 
 #[derive(Clone, Default)]
@@ -133,6 +134,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             used_in_plugin: HashSet::new(),
             incremental_enabled: incremental_enabled,
             jobserver: jobserver,
+            target_filenames: HashMap::new(),
         })
     }
 
@@ -544,8 +546,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// filename: filename rustc compiles to. (Often has metadata suffix).
     /// link_dst: Optional file to link/copy the result to (without metadata suffix)
     /// linkable: Whether possible to link against file (eg it's a library)
-    pub fn target_filenames(&mut self, unit: &Unit)
-                            -> CargoResult<Vec<(PathBuf, Option<PathBuf>, bool)>> {
+    pub fn target_filenames(&mut self, unit: &Unit<'a>)
+                            -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, bool)>>> {
+        if let Some(cache) = self.target_filenames.get(unit) {
+            return Ok(cache.clone())
+        }
+
         let out_dir = self.out_dir(unit);
         let stem = self.file_stem(unit);
         let link_stem = self.link_stem(unit);
@@ -621,6 +627,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                   unit.pkg, self.target_triple());
         }
         info!("Target filenames: {:?}", ret);
+
+        let ret = Arc::new(ret);
+        self.target_filenames.insert(*unit, ret.clone());
         Ok(ret)
     }
 

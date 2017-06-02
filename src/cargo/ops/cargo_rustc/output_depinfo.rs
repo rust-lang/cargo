@@ -61,8 +61,8 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
     let mut visited = HashSet::new();
     let success = add_deps_for_unit(&mut deps, context, unit, &mut visited).is_ok();
     let basedir = None; // TODO
-    for (_filename, link_dst, _linkable) in context.target_filenames(unit)? {
-        if let Some(link_dst) = link_dst {
+    for &(_, ref link_dst, _) in context.target_filenames(unit)?.iter() {
+        if let Some(ref link_dst) = *link_dst {
             let output_path = link_dst.with_extension("d");
             if success {
                 let mut outfile = BufWriter::new(File::create(output_path)?);

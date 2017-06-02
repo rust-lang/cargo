@@ -142,23 +142,23 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
     queue.execute(&mut cx)?;
 
     for unit in units.iter() {
-        for (dst, link_dst, _linkable) in cx.target_filenames(unit)? {
-            let bindst = match link_dst {
-                Some(link_dst) => link_dst,
-                None => dst.clone(),
+        for &(ref dst, ref link_dst, _) in cx.target_filenames(unit)?.iter() {
+            let bindst = match *link_dst {
+                Some(ref link_dst) => link_dst,
+                None => dst,
             };
 
             if unit.profile.test {
                 cx.compilation.tests.push((unit.pkg.clone(),
                                            unit.target.kind().clone(),
                                            unit.target.name().to_string(),
-                                           dst));
+                                           dst.clone()));
             } else if unit.target.is_bin() || unit.target.is_example() {
-                cx.compilation.binaries.push(bindst);
+                cx.compilation.binaries.push(bindst.clone());
             } else if unit.target.is_lib() {
                 let pkgid = unit.pkg.package_id().clone();
                 cx.compilation.libraries.entry(pkgid).or_insert(HashSet::new())
-                  .insert((unit.target.clone(), dst));
+                  .insert((unit.target.clone(), dst.clone()));
             }
         }
 
@@ -179,8 +179,8 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             cx.compilation.libraries
                 .entry(unit.pkg.package_id().clone())
                 .or_insert(HashSet::new())
-                .extend(v.into_iter().map(|(f, _, _)| {
-                    (dep.target.clone(), f)
+                .extend(v.iter().map(|&(ref f, _, _)| {
+                    (dep.target.clone(), f.clone())
                 }));
         }
 
@@ -252,7 +252,9 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     Ok(())
 }
 
-fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work> {
+fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
+                   unit: &Unit<'a>,
+                   exec: Arc<Executor>) -> CargoResult<Work> {
     let crate_types = unit.target.rustc_crate_types();
     let mut rustc = prepare_rustc(cx, crate_types, unit)?;
 
@@ -449,7 +451,9 @@ fn rustc(cx: &mut Context, unit: &Unit, exec: Arc<Executor>) -> CargoResult<Work
 
 /// Link the compiled target (often of form foo-{metadata_hash}) to the
 /// final target. This must happen during both "Fresh" and "Compile"
-fn link_targets(cx: &mut Context, unit: &Unit, fresh: bool) -> CargoResult<Work> {
+fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
+                          unit: &Unit<'a>,
+                          fresh: bool) -> CargoResult<Work> {
     let filenames = cx.target_filenames(unit)?;
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
@@ -572,9 +576,9 @@ fn filter_dynamic_search_path<'a, I>(paths :I, root_output: &PathBuf) -> Vec<Pat
     search_path
 }
 
-fn prepare_rustc(cx: &mut Context,
-                 crate_types: Vec<&str>,
-                 unit: &Unit) -> CargoResult<ProcessBuilder> {
+fn prepare_rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
+                           crate_types: Vec<&str>,
+                           unit: &Unit<'a>) -> CargoResult<ProcessBuilder> {
     let mut base = cx.compilation.rustc_process(unit.pkg)?;
     base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, &crate_types);
@@ -583,7 +587,8 @@ fn prepare_rustc(cx: &mut Context,
 }
 
 
-fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
+fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
+                     unit: &Unit<'a>) -> CargoResult<Work> {
     let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name())
@@ -813,8 +818,9 @@ fn build_base_args(cx: &mut Context,
 }
 
 
-fn build_deps_args(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit)
-                   -> CargoResult<()> {
+fn build_deps_args<'a, 'cfg>(cmd: &mut ProcessBuilder,
+                             cx: &mut Context<'a, 'cfg>,
+                             unit: &Unit<'a>) -> CargoResult<()> {
     cmd.arg("-L").arg(&{
         let mut deps = OsString::from("dependency=");
         deps.push(cx.deps_dir(unit));
@@ -842,10 +848,11 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit)
 
     return Ok(());
 
-    fn link_to(cmd: &mut ProcessBuilder, cx: &mut Context, unit: &Unit)
-               -> CargoResult<()> {
-        for (dst, _link_dst, linkable) in cx.target_filenames(unit)? {
-            if !linkable {
+    fn link_to<'a, 'cfg>(cmd: &mut ProcessBuilder,
+                         cx: &mut Context<'a, 'cfg>,
+                         unit: &Unit<'a>) -> CargoResult<()> {
+        for &(ref dst, _, ref linkable) in cx.target_filenames(unit)?.iter() {
+            if !*linkable {
                 continue
             }
             let mut v = OsString::new();
