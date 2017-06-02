@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::mem;
+use std::rc::Rc;
 
 use semver::Version;
 use core::{Dependency, PackageId, SourceId};
@@ -10,8 +11,13 @@ use util::CargoResult;
 /// a package.
 ///
 /// Summaries are cloned, and should not be mutated after creation
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Summary {
+    inner: Rc<Inner>,
+}
+
+#[derive(Debug, Clone)]
+struct Inner {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
     features: HashMap<String, Vec<String>>,
@@ -58,37 +64,42 @@ impl Summary {
             }
         }
         Ok(Summary {
-            package_id: pkg_id,
-            dependencies: dependencies,
-            features: features,
-            checksum: None,
+            inner: Rc::new(Inner {
+                package_id: pkg_id,
+                dependencies: dependencies,
+                features: features,
+                checksum: None,
+            }),
         })
     }
 
-    pub fn package_id(&self) -> &PackageId { &self.package_id }
+    pub fn package_id(&self) -> &PackageId { &self.inner.package_id }
     pub fn name(&self) -> &str { self.package_id().name() }
     pub fn version(&self) -> &Version { self.package_id().version() }
-    pub fn source_id(&self) -> &SourceId { self.package_id.source_id() }
-    pub fn dependencies(&self) -> &[Dependency] { &self.dependencies }
-    pub fn features(&self) -> &HashMap<String, Vec<String>> { &self.features }
+    pub fn source_id(&self) -> &SourceId { self.package_id().source_id() }
+    pub fn dependencies(&self) -> &[Dependency] { &self.inner.dependencies }
+    pub fn features(&self) -> &HashMap<String, Vec<String>> { &self.inner.features }
     pub fn checksum(&self) -> Option<&str> {
-        self.checksum.as_ref().map(|s| &s[..])
+        self.inner.checksum.as_ref().map(|s| &s[..])
     }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
-        self.package_id = id;
+        Rc::make_mut(&mut self.inner).package_id = id;
         self
     }
 
     pub fn set_checksum(mut self, cksum: String) -> Summary {
-        self.checksum = Some(cksum);
+        Rc::make_mut(&mut self.inner).checksum = Some(cksum);
         self
     }
 
     pub fn map_dependencies<F>(mut self, f: F) -> Summary
                                where F: FnMut(Dependency) -> Dependency {
-        let deps = mem::replace(&mut self.dependencies, Vec::new());
-        self.dependencies = deps.into_iter().map(f).collect();
+        {
+            let slot = &mut Rc::make_mut(&mut self.inner).dependencies;
+            let deps = mem::replace(slot, Vec::new());
+            *slot = deps.into_iter().map(f).collect();
+        }
         self
     }
 
@@ -108,6 +119,6 @@ impl Summary {
 
 impl PartialEq for Summary {
     fn eq(&self, other: &Summary) -> bool {
-        self.package_id == other.package_id
+        self.inner.package_id == other.inner.package_id
     }
 }
