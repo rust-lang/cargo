@@ -77,6 +77,9 @@ impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
 /// a `Source`. Each `Source` in the map has been updated (using network
 /// operations if necessary) and is ready to be queried for packages.
 pub struct PackageRegistry<'cfg> {
+    // Note that in general we don't have interior mutability but the
+    // implementation of `query` below necessitates the need for this `RefCell`,
+    // see comments there for more.
     sources: RefCell<SourceMap<'cfg>>,
 
     // A list of sources which are considered "overrides" which take precedent
@@ -368,7 +371,12 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                      on `{}`", dep.name())
         })?;
 
-        // Look for an override and get ready to query the real source
+        // Look for an override and get ready to query the real source.
+        //
+        // Note that we're not using `&mut self` to load `self.sources` here but
+        // rather we're going through `RefCell::borrow_mut`. This is currently
+        // done to have access to both the `lock` function and the
+        // `warn_bad_override` functions we call below.
         let override_summary = self.query_overrides(&dep)?;
         let mut sources = self.sources.borrow_mut();
         let source = match sources.get_mut(dep.source_id()) {
@@ -381,27 +389,25 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
             }
         };
 
-        // Query the real source, keeping track of some extra info. If we've got
-        // an override we don't actually ship up summaries. If we do ship up
-        // summaries though we be sure to postprocess them to a locked version
-        // to assist with lockfiles and conservative updates.
-        let mut n = 0;
-        let mut to_warn = None;
-        source.query(dep, &mut |summary| {
-            n += 1;
-            if override_summary.is_none() {
-                f(self.lock(summary))
-            } else {
-                to_warn = Some(summary);
+        let (override_summary, n, to_warn) = match override_summary {
+            // If we have an override summary then we query the source to sanity
+            // check its results. We don't actually use any of the summaries it
+            // gives us though.
+            Some(s) => {
+                let mut n = 0;
+                let mut to_warn = None;
+                source.query(dep, &mut |summary| {
+                    n += 1;
+                    to_warn = Some(summary);
+                })?;
+                (s, n, to_warn)
             }
-        })?;
 
-        // After all that's said and done we need to check the override summary
-        // itself. If present we'll do some more validation and yield it up,
-        // otherwise we're done.
-        let override_summary = match override_summary {
-            Some(s) => s,
-            None => return Ok(())
+            // If we don't have an override then we just ship everything
+            // upstairs after locking the summary
+            None => {
+                return source.query(dep, &mut |summary| f(self.lock(summary)))
+            }
         };
 
         if n > 1 {
