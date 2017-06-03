@@ -12,7 +12,7 @@ use serde::de::{self, Deserialize};
 use serde_ignored;
 
 use core::{SourceId, Profiles, PackageIdSpec, GitReference, WorkspaceConfig};
-use core::{Summary, Manifest, Target, Dependency, DependencyInner, PackageId};
+use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::{EitherManifest, VirtualManifest};
 use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata};
@@ -1111,10 +1111,10 @@ impl TomlDependency {
         let version = details.version.as_ref().map(|v| &v[..]);
         let mut dep = match cx.pkgid {
             Some(id) => {
-                DependencyInner::parse(name, version, &new_source_id,
-                                            Some((id, cx.config)))?
+                Dependency::parse(name, version, &new_source_id,
+                                  id, cx.config)?
             }
-            None => DependencyInner::parse(name, version, &new_source_id, None)?,
+            None => Dependency::parse_no_deprecated(name, version, &new_source_id)?,
         };
         dep.set_features(details.features.unwrap_or(Vec::new()))
            .set_default_features(details.default_features
@@ -1125,7 +1125,7 @@ impl TomlDependency {
         if let Some(kind) = kind {
             dep.set_kind(kind);
         }
-        Ok(dep.into_dependency())
+        Ok(dep)
     }
 }
 

@@ -170,7 +170,7 @@ use serde::de;
 use tar::Archive;
 
 use core::{Source, SourceId, PackageId, Package, Summary, Registry};
-use core::dependency::{Dependency, DependencyInner, Kind};
+use core::dependency::{Dependency, Kind};
 use sources::PathSource;
 use util::{CargoResult, Config, internal, FileLock, Filesystem};
 use util::errors::CargoResultExt;
@@ -459,7 +459,7 @@ fn parse_registry_dependency(dep: RegistryDependency)
     } = dep;
 
     let mut dep = DEFAULT_ID.with(|id| {
-        DependencyInner::parse(&name, Some(&req), id, None)
+        Dependency::parse_no_deprecated(&name, Some(&req), id)
     })?;
     let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
         "dev" => Kind::Development,
@@ -484,5 +484,5 @@ fn parse_registry_dependency(dep: RegistryDependency)
        .set_features(features)
        .set_platform(platform)
        .set_kind(kind);
-    Ok(dep.into_dependency())
+    Ok(dep)
 }
