@@ -72,7 +72,6 @@ mod encode;
 ///
 /// Each instance of `Resolve` also understands the full set of features used
 /// for each package.
-#[derive(Clone)]
 pub struct Resolve {
     graph: Graph<PackageId>,
     replacements: HashMap<PackageId, PackageId>,
