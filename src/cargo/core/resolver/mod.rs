@@ -49,7 +49,6 @@ use std::cmp::Ordering;
 use std::collections::{HashSet, HashMap, BinaryHeap, BTreeMap};
 use std::iter::FromIterator;
 use std::fmt;
-use std::mem;
 use std::ops::Range;
 use std::rc::Rc;
 
@@ -256,28 +255,37 @@ impl<'a> Iterator for DepsNotReplaced<'a> {
     }
 }
 
-enum RcList<T> {
-    Data(Rc<(T, RcList<T>)>),
-    Empty,
+struct RcList<T> {
+    head: Option<Rc<(T, RcList<T>)>>
 }
 
 impl<T> RcList<T> {
     fn new() -> RcList<T> {
-        RcList::Empty
+        RcList { head: None }
     }
 
     fn push(&mut self, data: T) {
-        let node = Rc::new((data, mem::replace(self, RcList::Empty)));
-        *self = RcList::Data(node);
+        let node = Rc::new((data, RcList { head: self.head.take() }));
+        self.head = Some(node);
     }
 }
 
 // Not derived to avoid `T: Clone`
 impl<T> Clone for RcList<T> {
     fn clone(&self) -> RcList<T> {
-        match *self {
-            RcList::Data(ref d) => RcList::Data(d.clone()),
-            RcList::Empty => RcList::Empty,
+        RcList { head: self.head.clone() }
+    }
+}
+
+// Avoid stack overflows on drop by turning recursion into a loop
+impl<T> Drop for RcList<T> {
+    fn drop(&mut self) {
+        let mut cur = self.head.take();
+        while let Some(head) = cur {
+            match Rc::try_unwrap(head) {
+                Ok((_data, mut next)) => cur = next.head.take(),
+                Err(_) => break,
+            }
         }
     }
 }
@@ -1085,10 +1093,10 @@ impl<'a> Context<'a> {
     fn resolve_replacements(&self) -> HashMap<PackageId, PackageId> {
         let mut replacements = HashMap::new();
         let mut cur = &self.resolve_replacements;
-        while let RcList::Data(ref d) = *cur {
-            let (k, v) = d.0.clone();
+        while let Some(ref node) = cur.head {
+            let (k, v) = node.0.clone();
             replacements.insert(k, v);
-            cur = &d.1;
+            cur = &node.1;
         }
         return replacements
     }
@@ -1096,12 +1104,12 @@ impl<'a> Context<'a> {
     fn graph(&self) -> Graph<PackageId> {
         let mut graph = Graph::new();
         let mut cur = &self.resolve_graph;
-        while let RcList::Data(ref d) = *cur {
-            match d.0 {
+        while let Some(ref node) = cur.head {
+            match node.0 {
                 GraphNode::Add(ref p) => graph.add(p.clone(), &[]),
                 GraphNode::Link(ref a, ref b) => graph.link(a.clone(), b.clone()),
             }
-            cur = &d.1;
+            cur = &node.1;
         }
         return graph
     }
