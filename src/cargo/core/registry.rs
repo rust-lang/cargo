@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
+use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId};
 use core::PackageSet;
 use util::{Config, profile};
 use util::errors::{CargoResult, CargoResultExt};
@@ -28,30 +28,6 @@ pub trait Registry {
     /// By default, registries do not support checksums.
     fn supports_checksums(&self) -> bool {
         false
-    }
-}
-
-impl Registry for Vec<Summary> {
-    fn query(&mut self,
-             dep: &Dependency,
-             f: &mut FnMut(Summary)) -> CargoResult<()> {
-        for summary in self.iter().filter(|summary| dep.matches(*summary)) {
-            f(summary.clone());
-        }
-        Ok(())
-    }
-}
-
-impl Registry for Vec<Package> {
-    fn query(&mut self,
-             dep: &Dependency,
-             f: &mut FnMut(Summary)) -> CargoResult<()> {
-        for summary in self.iter()
-                           .map(|p| p.summary())
-                           .filter(|summary| dep.matches(*summary)) {
-            f(summary.clone());
-        }
-        Ok(())
     }
 }
 
