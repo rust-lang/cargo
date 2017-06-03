@@ -295,12 +295,24 @@ enum GraphNode {
     Link(PackageId, PackageId),
 }
 
+// A `Context` is basically a bunch of local resolution information which is
+// kept around for all `BacktrackFrame` instances. As a result, this runs the
+// risk of being cloned *a lot* so we want to make this as cheap to clone as
+// possible.
 #[derive(Clone)]
 struct Context<'a> {
+    // TODO: Both this and the map below are super expensive to clone. We should
+    //       switch to persistent hash maps if we can at some point or otherwise
+    //       make these much cheaper to clone in general.
     activations: Activations,
-    resolve_graph: RcList<GraphNode>,
     resolve_features: HashMap<PackageId, HashSet<String>>,
+
+    // These are two cheaply-cloneable lists (O(1) clone) which are effectively
+    // hash maps but are built up as "construction lists". We'll iterate these
+    // at the very end and actually construct the map that we're making.
+    resolve_graph: RcList<GraphNode>,
     resolve_replacements: RcList<(PackageId, PackageId)>,
+
     replacements: &'a [(PackageIdSpec, Dependency)],
 }
 
