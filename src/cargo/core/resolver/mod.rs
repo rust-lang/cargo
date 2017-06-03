@@ -297,12 +297,14 @@ enum GraphNode {
 
 #[derive(Clone)]
 struct Context<'a> {
-    activations: HashMap<String, HashMap<SourceId, Vec<Summary>>>,
+    activations: Activations,
     resolve_graph: RcList<GraphNode>,
     resolve_features: HashMap<PackageId, HashSet<String>>,
     resolve_replacements: RcList<(PackageId, PackageId)>,
     replacements: &'a [(PackageIdSpec, Dependency)],
 }
+
+type Activations = HashMap<String, HashMap<SourceId, Vec<Summary>>>;
 
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summaries: &[(Summary, Method)],
@@ -1115,8 +1117,7 @@ impl<'a> Context<'a> {
     }
 }
 
-fn check_cycles(resolve: &Resolve,
-                activations: &HashMap<String, HashMap<SourceId, Vec<Summary>>>)
+fn check_cycles(resolve: &Resolve, activations: &Activations)
                 -> CargoResult<()> {
     let summaries: HashMap<&PackageId, &Summary> = activations.values()
         .flat_map(|v| v.values())
