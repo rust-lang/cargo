@@ -1,4 +1,4 @@
-pub use self::dependency::{Dependency, DependencyInner};
+pub use self::dependency::Dependency;
 pub use self::manifest::{Manifest, Target, TargetKind, Profile, LibKind, Profiles};
 pub use self::manifest::{EitherManifest, VirtualManifest};
 pub use self::package::{Package, PackageSet};

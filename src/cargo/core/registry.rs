@@ -259,7 +259,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             Some(&(ref precise, _)) => summary.override_id(precise.clone()),
             None => summary,
         };
-        summary.map_dependencies(|dep| {
+        summary.map_dependencies(|mut dep| {
             trace!("\t{}/{}/{}", dep.name(), dep.version_req(),
                    dep.source_id());
 
@@ -286,7 +286,8 @@ impl<'cfg> PackageRegistry<'cfg> {
                 let locked = locked_deps.iter().find(|id| dep.matches_id(id));
                 if let Some(locked) = locked {
                     trace!("\tfirst hit on {}", locked);
-                    return dep.lock_to(locked)
+                    dep.lock_to(locked);
+                    return dep
                 }
             }
 
@@ -301,7 +302,8 @@ impl<'cfg> PackageRegistry<'cfg> {
             match v {
                 Some(&(ref id, _)) => {
                     trace!("\tsecond hit on {}", id);
-                    dep.lock_to(id)
+                    dep.lock_to(id);
+                    return dep
                 }
                 None => {
                     trace!("\tremaining unlocked");
