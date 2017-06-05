@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
+use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId};
 use core::PackageSet;
 use util::{Config, profile};
 use util::errors::{CargoResult, CargoResultExt};
@@ -11,7 +11,15 @@ use sources::config::SourceConfigMap;
 /// See also `core::Source`.
 pub trait Registry {
     /// Attempt to find the packages that match a dependency request.
-    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>>;
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()>;
+
+    fn query_vec(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+        let mut ret = Vec::new();
+        self.query(dep, &mut |s| ret.push(s))?;
+        Ok(ret)
+    }
 
     /// Returns whether or not this registry will return summaries with
     /// checksums listed.
@@ -22,23 +30,11 @@ pub trait Registry {
     }
 }
 
-impl Registry for Vec<Summary> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        Ok(self.iter().filter(|summary| dep.matches(*summary))
-               .cloned().collect())
-    }
-}
-
-impl Registry for Vec<Package> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        Ok(self.iter().filter(|pkg| dep.matches(pkg.summary()))
-               .map(|pkg| pkg.summary().clone()).collect())
-    }
-}
-
 impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
-    fn query(&mut self, name: &Dependency) -> CargoResult<Vec<Summary>> {
-        (**self).query(name)
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
+        (**self).query(dep, f)
     }
 }
 
@@ -79,9 +75,11 @@ pub struct PackageRegistry<'cfg> {
     // what exactly the key is.
     source_ids: HashMap<SourceId, (SourceId, Kind)>,
 
-    locked: HashMap<SourceId, HashMap<String, Vec<(PackageId, Vec<PackageId>)>>>,
+    locked: LockedMap,
     source_config: SourceConfigMap<'cfg>,
 }
+
+type LockedMap = HashMap<SourceId, HashMap<String, Vec<(PackageId, Vec<PackageId>)>>>;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum Kind {
@@ -198,7 +196,7 @@ impl<'cfg> PackageRegistry<'cfg> {
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.name(), s);
-            let mut results = src.query(&dep)?;
+            let mut results = src.query_vec(&dep)?;
             if results.len() > 0 {
                 return Ok(Some(results.remove(0)))
             }
@@ -224,69 +222,7 @@ impl<'cfg> PackageRegistry<'cfg> {
     /// possible. If we're unable to map a dependency though, we just pass it on
     /// through.
     pub fn lock(&self, summary: Summary) -> Summary {
-        let pair = self.locked.get(summary.source_id()).and_then(|map| {
-            map.get(summary.name())
-        }).and_then(|vec| {
-            vec.iter().find(|&&(ref id, _)| id == summary.package_id())
-        });
-
-        trace!("locking summary of {}", summary.package_id());
-
-        // Lock the summary's id if possible
-        let summary = match pair {
-            Some(&(ref precise, _)) => summary.override_id(precise.clone()),
-            None => summary,
-        };
-        summary.map_dependencies(|dep| {
-            trace!("\t{}/{}/{}", dep.name(), dep.version_req(),
-                   dep.source_id());
-
-            // If we've got a known set of overrides for this summary, then
-            // one of a few cases can arise:
-            //
-            // 1. We have a lock entry for this dependency from the same
-            //    source as it's listed as coming from. In this case we make
-            //    sure to lock to precisely the given package id.
-            //
-            // 2. We have a lock entry for this dependency, but it's from a
-            //    different source than what's listed, or the version
-            //    requirement has changed. In this case we must discard the
-            //    locked version because the dependency needs to be
-            //    re-resolved.
-            //
-            // 3. We don't have a lock entry for this dependency, in which
-            //    case it was likely an optional dependency which wasn't
-            //    included previously so we just pass it through anyway.
-            //
-            // Cases 1/2 are handled by `matches_id` and case 3 is handled by
-            // falling through to the logic below.
-            if let Some(&(_, ref locked_deps)) = pair {
-                let locked = locked_deps.iter().find(|id| dep.matches_id(id));
-                if let Some(locked) = locked {
-                    trace!("\tfirst hit on {}", locked);
-                    return dep.lock_to(locked)
-                }
-            }
-
-            // If this dependency did not have a locked version, then we query
-            // all known locked packages to see if they match this dependency.
-            // If anything does then we lock it to that and move on.
-            let v = self.locked.get(dep.source_id()).and_then(|map| {
-                map.get(dep.name())
-            }).and_then(|vec| {
-                vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
-            });
-            match v {
-                Some(&(ref id, _)) => {
-                    trace!("\tsecond hit on {}", id);
-                    dep.lock_to(id)
-                }
-                None => {
-                    trace!("\tremaining unlocked");
-                    dep
-                }
-            }
-        })
+        lock(&self.locked, summary)
     }
 
     fn warn_bad_override(&self,
@@ -335,36 +271,122 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
 }
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
         // Ensure the requested source_id is loaded
         self.ensure_loaded(dep.source_id(), Kind::Normal).chain_err(|| {
             format!("failed to load source for a dependency \
                      on `{}`", dep.name())
         })?;
 
-        let override_summary = self.query_overrides(&dep)?;
-        let real_summaries = match self.sources.get_mut(dep.source_id()) {
-            Some(src) => Some(src.query(&dep)?),
-            None => None,
-        };
 
-        let ret = match (override_summary, real_summaries) {
-            (Some(candidate), Some(summaries)) => {
-                if summaries.len() != 1 {
-                    bail!("found an override with a non-locked list");
+        let (override_summary, n, to_warn) = {
+            // Look for an override and get ready to query the real source.
+            let override_summary = self.query_overrides(&dep)?;
+            let source = self.sources.get_mut(dep.source_id());
+            match (override_summary, source) {
+                (Some(_), None) => bail!("override found but no real ones"),
+                (None, None) => return Ok(()),
+
+                // If we don't have an override then we just ship everything
+                // upstairs after locking the summary
+                (None, Some(source)) => {
+                    let locked = &self.locked;
+                    return source.query(dep, &mut |summary| f(lock(locked, summary)))
                 }
-                self.warn_bad_override(&candidate, &summaries[0])?;
-                vec![candidate]
+
+                // If we have an override summary then we query the source to sanity
+                // check its results. We don't actually use any of the summaries it
+                // gives us though.
+                (Some(override_summary), Some(source)) => {
+                    let mut n = 0;
+                    let mut to_warn = None;
+                    source.query(dep, &mut |summary| {
+                        n += 1;
+                        to_warn = Some(summary);
+                    })?;
+                    (override_summary, n, to_warn)
+                }
             }
-            (Some(_), None) => bail!("override found but no real ones"),
-            (None, Some(summaries)) => summaries,
-            (None, None) => Vec::new(),
         };
 
-        // post-process all returned summaries to ensure that we lock all
-        // relevant summaries to the right versions and sources
-        Ok(ret.into_iter().map(|summary| self.lock(summary)).collect())
+        if n > 1 {
+            bail!("found an override with a non-locked list");
+        } else if let Some(summary) = to_warn {
+            self.warn_bad_override(&override_summary, &summary)?;
+        }
+        f(self.lock(override_summary));
+        Ok(())
     }
+}
+
+fn lock(locked: &LockedMap, summary: Summary) -> Summary {
+    let pair = locked.get(summary.source_id()).and_then(|map| {
+        map.get(summary.name())
+    }).and_then(|vec| {
+        vec.iter().find(|&&(ref id, _)| id == summary.package_id())
+    });
+
+    trace!("locking summary of {}", summary.package_id());
+
+    // Lock the summary's id if possible
+    let summary = match pair {
+        Some(&(ref precise, _)) => summary.override_id(precise.clone()),
+        None => summary,
+    };
+    summary.map_dependencies(|mut dep| {
+        trace!("\t{}/{}/{}", dep.name(), dep.version_req(),
+               dep.source_id());
+
+        // If we've got a known set of overrides for this summary, then
+        // one of a few cases can arise:
+        //
+        // 1. We have a lock entry for this dependency from the same
+        //    source as it's listed as coming from. In this case we make
+        //    sure to lock to precisely the given package id.
+        //
+        // 2. We have a lock entry for this dependency, but it's from a
+        //    different source than what's listed, or the version
+        //    requirement has changed. In this case we must discard the
+        //    locked version because the dependency needs to be
+        //    re-resolved.
+        //
+        // 3. We don't have a lock entry for this dependency, in which
+        //    case it was likely an optional dependency which wasn't
+        //    included previously so we just pass it through anyway.
+        //
+        // Cases 1/2 are handled by `matches_id` and case 3 is handled by
+        // falling through to the logic below.
+        if let Some(&(_, ref locked_deps)) = pair {
+            let locked = locked_deps.iter().find(|id| dep.matches_id(id));
+            if let Some(locked) = locked {
+                trace!("\tfirst hit on {}", locked);
+                dep.lock_to(locked);
+                return dep
+            }
+        }
+
+        // If this dependency did not have a locked version, then we query
+        // all known locked packages to see if they match this dependency.
+        // If anything does then we lock it to that and move on.
+        let v = locked.get(dep.source_id()).and_then(|map| {
+            map.get(dep.name())
+        }).and_then(|vec| {
+            vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
+        });
+        match v {
+            Some(&(ref id, _)) => {
+                trace!("\tsecond hit on {}", id);
+                dep.lock_to(id);
+                return dep
+            }
+            None => {
+                trace!("\tremaining unlocked");
+                dep
+            }
+        }
+    })
 }
 
 #[cfg(test)]
@@ -411,15 +433,25 @@ pub mod test {
     }
 
     impl Registry for RegistryBuilder {
-        fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+        fn query(&mut self,
+                 dep: &Dependency,
+                 f: &mut FnMut(Summary)) -> CargoResult<()> {
             debug!("querying; dep={:?}", dep);
 
             let overrides = self.query_overrides(dep);
 
             if overrides.is_empty() {
-                self.summaries.query(dep)
+                for s in self.summaries.iter() {
+                    if dep.matches(s) {
+                        f(s.clone());
+                    }
+                }
+                Ok(())
             } else {
-                Ok(overrides)
+                for s in overrides {
+                    f(s);
+                }
+                Ok(())
             }
         }
     }

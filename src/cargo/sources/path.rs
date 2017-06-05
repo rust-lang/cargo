@@ -317,8 +317,15 @@ impl<'cfg> Debug for PathSource<'cfg> {
 }
 
 impl<'cfg> Registry for PathSource<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        self.packages.query(dep)
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
+        for s in self.packages.iter().map(|p| p.summary()) {
+            if dep.matches(s) {
+                f(s.clone())
+            }
+        }
+        Ok(())
     }
 }
 

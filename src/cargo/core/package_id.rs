@@ -28,10 +28,10 @@ impl ser::Serialize for PackageId {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
         where S: ser::Serializer
     {
-        let source = self.inner.source_id.to_url();
-        let encoded = format!("{} {} ({})", self.inner.name, self.inner.version,
-                              source);
-        encoded.serialize(s)
+        s.collect_str(&format_args!("{} {} ({})",
+                                    self.inner.name,
+                                    self.inner.version,
+                                    self.inner.source_id.to_url()))
     }
 }
 

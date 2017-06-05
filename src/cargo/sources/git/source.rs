@@ -107,7 +107,7 @@ impl<'cfg> Debug for GitSource<'cfg> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "git repo at {}", self.remote.url())?;
 
-        match self.reference.to_ref_string() {
+        match self.reference.pretty_ref() {
             Some(s) => write!(f, " ({})", s),
             None => Ok(())
         }
@@ -115,10 +115,12 @@ impl<'cfg> Debug for GitSource<'cfg> {
 }
 
 impl<'cfg> Registry for GitSource<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
         let src = self.path_source.as_mut()
                       .expect("BUG: update() must be called before query()");
-        src.query(dep)
+        src.query(dep, f)
     }
 }
 

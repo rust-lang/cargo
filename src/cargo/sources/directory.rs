@@ -45,11 +45,15 @@ impl<'cfg> Debug for DirectorySource<'cfg> {
 }
 
 impl<'cfg> Registry for DirectorySource<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
         let packages = self.packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
-        let summaries = matches.map(|pkg| pkg.summary().clone());
-        Ok(summaries.collect())
+        for summary in matches.map(|pkg| pkg.summary().clone()) {
+            f(summary);
+        }
+        Ok(())
     }
 
     fn supports_checksums(&self) -> bool {

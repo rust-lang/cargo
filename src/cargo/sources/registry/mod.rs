@@ -158,15 +158,19 @@
 //!         ...
 //! ```
 
+use std::borrow::Cow;
 use std::collections::HashMap;
+use std::fmt;
 use std::fs::File;
 use std::path::{PathBuf, Path};
 
 use flate2::read::GzDecoder;
+use semver::Version;
+use serde::de;
 use tar::Archive;
 
 use core::{Source, SourceId, PackageId, Package, Summary, Registry};
-use core::dependency::Dependency;
+use core::dependency::{Dependency, Kind};
 use sources::PathSource;
 use util::{CargoResult, Config, internal, FileLock, Filesystem};
 use util::errors::CargoResultExt;
@@ -198,29 +202,36 @@ pub struct RegistryConfig {
 }
 
 #[derive(Deserialize)]
-struct RegistryPackage {
-    name: String,
-    vers: String,
-    deps: Vec<RegistryDependency>,
+struct RegistryPackage<'a> {
+    name: Cow<'a, str>,
+    vers: Version,
+    deps: DependencyList,
     features: HashMap<String, Vec<String>>,
     cksum: String,
     yanked: Option<bool>,
 }
 
+struct DependencyList {
+    inner: Vec<Dependency>,
+}
+
 #[derive(Deserialize)]
-struct RegistryDependency {
-    name: String,
-    req: String,
+struct RegistryDependency<'a> {
+    name: Cow<'a, str>,
+    req: Cow<'a, str>,
     features: Vec<String>,
     optional: bool,
     default_features: bool,
-    target: Option<String>,
-    kind: Option<String>,
+    target: Option<Cow<'a, str>>,
+    kind: Option<Cow<'a, str>>,
 }
 
 pub trait RegistryData {
     fn index_path(&self) -> &Filesystem;
-    fn load(&self, root: &Path, path: &Path) -> CargoResult<Vec<u8>>;
+    fn load(&self,
+            _root: &Path,
+            path: &Path,
+            data: &mut FnMut(&[u8]) -> CargoResult<()>) -> CargoResult<()>;
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
     fn download(&mut self,
@@ -319,18 +330,27 @@ impl<'cfg> RegistrySource<'cfg> {
 }
 
 impl<'cfg> Registry for RegistrySource<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
         // If this is a precise dependency, then it came from a lockfile and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
         if dep.source_id().precise().is_some() && !self.updated {
-            if self.index.query(dep, &mut *self.ops)?.is_empty() {
+            let mut called = false;
+            self.index.query(dep, &mut *self.ops, &mut |s| {
+                called = true;
+                f(s);
+            })?;
+            if called {
+                return Ok(())
+            } else {
                 self.do_update()?;
             }
         }
 
-        self.index.query(dep, &mut *self.ops)
+        self.index.query(dep, &mut *self.ops, f)
     }
 
     fn supports_checksums(&self) -> bool {
@@ -383,4 +403,86 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
         Ok(pkg.package_id().version().to_string())
     }
+}
+
+// TODO: this is pretty unfortunate, ideally we'd use `DeserializeSeed` which
+//       is intended for "deserializing with context" but that means we couldn't
+//       use `#[derive(Deserialize)]` on `RegistryPackage` unfortunately.
+//
+// I'm told, however, that https://github.com/serde-rs/serde/pull/909 will solve
+// all our problems here. Until that lands this thread local is just a
+// workaround in the meantime.
+//
+// If you're reading this and find this thread local funny, check to see if that
+// PR is merged. If it is then let's ditch this thread local!
+scoped_thread_local!(static DEFAULT_ID: SourceId);
+
+impl<'de> de::Deserialize<'de> for DependencyList {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: de::Deserializer<'de>,
+    {
+        return deserializer.deserialize_seq(Visitor);
+
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = DependencyList;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                write!(formatter, "a list of dependencies")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<DependencyList, A::Error>
+                where A: de::SeqAccess<'de>,
+            {
+                let mut ret = Vec::new();
+                if let Some(size) = seq.size_hint() {
+                    ret.reserve(size);
+                }
+                while let Some(element) = seq.next_element::<RegistryDependency>()? {
+                    ret.push(parse_registry_dependency(element).map_err(|e| {
+                        de::Error::custom(e)
+                    })?);
+                }
+
+                Ok(DependencyList { inner: ret })
+            }
+        }
+    }
+}
+
+/// Converts an encoded dependency in the registry to a cargo dependency
+fn parse_registry_dependency(dep: RegistryDependency)
+                             -> CargoResult<Dependency> {
+    let RegistryDependency {
+        name, req, features, optional, default_features, target, kind
+    } = dep;
+
+    let mut dep = DEFAULT_ID.with(|id| {
+        Dependency::parse_no_deprecated(&name, Some(&req), id)
+    })?;
+    let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
+        "dev" => Kind::Development,
+        "build" => Kind::Build,
+        _ => Kind::Normal,
+    };
+
+    let platform = match target {
+        Some(target) => Some(target.parse()?),
+        None => None,
+    };
+
+    // Unfortunately older versions of cargo and/or the registry ended up
+    // publishing lots of entries where the features array contained the
+    // empty feature, "", inside. This confuses the resolution process much
+    // later on and these features aren't actually valid, so filter them all
+    // out here.
+    let features = features.into_iter().filter(|s| !s.is_empty()).collect();
+
+    dep.set_optional(optional)
+       .set_default_features(default_features)
+       .set_features(features)
+       .set_platform(platform)
+       .set_kind(kind);
+    Ok(dep)
 }

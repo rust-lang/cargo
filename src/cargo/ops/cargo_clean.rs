@@ -83,10 +83,10 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
             continue
         }
 
-        for (src, link_dst, _) in cx.target_filenames(unit)? {
-            rm_rf(&src)?;
-            if let Some(dst) = link_dst {
-                rm_rf(&dst)?;
+        for &(ref src, ref link_dst, _) in cx.target_filenames(unit)?.iter() {
+            rm_rf(src)?;
+            if let Some(ref dst) = *link_dst {
+                rm_rf(dst)?;
             }
         }
     }

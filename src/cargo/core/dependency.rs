@@ -14,12 +14,12 @@ use util::errors::{CargoResult, CargoResultExt, CargoError};
 /// Cheap to copy.
 #[derive(PartialEq, Clone, Debug)]
 pub struct Dependency {
-    inner: Rc<DependencyInner>,
+    inner: Rc<Inner>,
 }
 
 /// The data underlying a Dependency.
 #[derive(PartialEq, Clone, Debug)]
-pub struct DependencyInner {
+struct Inner {
     name: String,
     source_id: SourceId,
     req: VersionReq,
@@ -79,6 +79,40 @@ pub enum Kind {
     Build,
 }
 
+fn parse_req_with_deprecated(req: &str,
+                             extra: Option<(&PackageId, &Config)>)
+                             -> CargoResult<VersionReq> {
+    match VersionReq::parse(req) {
+        Err(e) => {
+            let (inside, config) = match extra {
+                Some(pair) => pair,
+                None => return Err(e.into()),
+            };
+            match e {
+                ReqParseError::DeprecatedVersionRequirement(requirement) => {
+                    let msg = format!("\
+parsed version requirement `{}` is no longer valid
+
+Previous versions of Cargo accepted this malformed requirement,
+but it is being deprecated. This was found when parsing the manifest
+of {} {}, and the correct version requirement is `{}`.
+
+This will soon become a hard error, so it's either recommended to
+update to a fixed version or contact the upstream maintainer about
+this warning.
+",
+req, inside.name(), inside.version(), requirement);
+                    config.shell().warn(&msg)?;
+
+                    Ok(requirement)
+                }
+                e => Err(e.into()),
+            }
+        },
+        Ok(v) => Ok(v),
+    }
+}
+
 impl ser::Serialize for Kind {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
         where S: ser::Serializer,
@@ -91,177 +125,6 @@ impl ser::Serialize for Kind {
     }
 }
 
-impl DependencyInner {
-    /// Attempt to create a `Dependency` from an entry in the manifest.
-    ///
-    /// The `deprecated_extra` information is set to `Some` when this method
-    /// should *also* parse historically deprecated semver requirements. This
-    /// information allows providing diagnostic information about what's going
-    /// on.
-    ///
-    /// If set to `None`, then historically deprecated semver requirements will
-    /// all be rejected.
-    pub fn parse(name: &str,
-                 version: Option<&str>,
-                 source_id: &SourceId,
-                 deprecated_extra: Option<(&PackageId, &Config)>)
-                 -> CargoResult<DependencyInner> {
-        let (specified_req, version_req) = match version {
-            Some(v) => (true, DependencyInner::parse_with_deprecated(v, deprecated_extra)?),
-            None => (false, VersionReq::any())
-        };
-
-        Ok(DependencyInner {
-            only_match_name: false,
-            req: version_req,
-            specified_req: specified_req,
-            .. DependencyInner::new_override(name, source_id)
-        })
-    }
-
-    fn parse_with_deprecated(req: &str,
-                             extra: Option<(&PackageId, &Config)>)
-                             -> CargoResult<VersionReq> {
-        match VersionReq::parse(req) {
-            Err(e) => {
-                let (inside, config) = match extra {
-                    Some(pair) => pair,
-                    None => return Err(e.into()),
-                };
-                match e {
-                    ReqParseError::DeprecatedVersionRequirement(requirement) => {
-                        let msg = format!("\
-parsed version requirement `{}` is no longer valid
-
-Previous versions of Cargo accepted this malformed requirement,
-but it is being deprecated. This was found when parsing the manifest
-of {} {}, and the correct version requirement is `{}`.
-
-This will soon become a hard error, so it's either recommended to
-update to a fixed version or contact the upstream maintainer about
-this warning.
-",
-    req, inside.name(), inside.version(), requirement);
-                        config.shell().warn(&msg)?;
-
-                        Ok(requirement)
-                    }
-                    e => Err(e.into()),
-                }
-            },
-            Ok(v) => Ok(v),
-        }
-    }
-
-    pub fn new_override(name: &str, source_id: &SourceId) -> DependencyInner {
-        DependencyInner {
-            name: name.to_string(),
-            source_id: source_id.clone(),
-            req: VersionReq::any(),
-            kind: Kind::Normal,
-            only_match_name: true,
-            optional: false,
-            features: Vec::new(),
-            default_features: true,
-            specified_req: false,
-            platform: None,
-        }
-    }
-
-    pub fn version_req(&self) -> &VersionReq { &self.req }
-    pub fn name(&self) -> &str { &self.name }
-    pub fn source_id(&self) -> &SourceId { &self.source_id }
-    pub fn kind(&self) -> Kind { self.kind }
-    pub fn specified_req(&self) -> bool { self.specified_req }
-
-    /// If none, this dependency must be built for all platforms.
-    /// If some, it must only be built for matching platforms.
-    pub fn platform(&self) -> Option<&Platform> {
-        self.platform.as_ref()
-    }
-
-    pub fn set_kind(mut self, kind: Kind) -> DependencyInner {
-        self.kind = kind;
-        self
-    }
-
-    /// Sets the list of features requested for the package.
-    pub fn set_features(mut self, features: Vec<String>) -> DependencyInner {
-        self.features = features;
-        self
-    }
-
-    /// Sets whether the dependency requests default features of the package.
-    pub fn set_default_features(mut self, default_features: bool) -> DependencyInner {
-        self.default_features = default_features;
-        self
-    }
-
-    /// Sets whether the dependency is optional.
-    pub fn set_optional(mut self, optional: bool) -> DependencyInner {
-        self.optional = optional;
-        self
-    }
-
-    /// Set the source id for this dependency
-    pub fn set_source_id(mut self, id: SourceId) -> DependencyInner {
-        self.source_id = id;
-        self
-    }
-
-    /// Set the version requirement for this dependency
-    pub fn set_version_req(mut self, req: VersionReq) -> DependencyInner {
-        self.req = req;
-        self
-    }
-
-    pub fn set_platform(mut self, platform: Option<Platform>)
-                        -> DependencyInner {
-        self.platform = platform;
-        self
-    }
-
-    /// Lock this dependency to depending on the specified package id
-    pub fn lock_to(self, id: &PackageId) -> DependencyInner {
-        assert_eq!(self.source_id, *id.source_id());
-        assert!(self.req.matches(id.version()));
-        self.set_version_req(VersionReq::exact(id.version()))
-            .set_source_id(id.source_id().clone())
-    }
-
-    /// Returns false if the dependency is only used to build the local package.
-    pub fn is_transitive(&self) -> bool {
-        match self.kind {
-            Kind::Normal | Kind::Build => true,
-            Kind::Development => false,
-        }
-    }
-    pub fn is_build(&self) -> bool {
-        match self.kind { Kind::Build => true, _ => false }
-    }
-    pub fn is_optional(&self) -> bool { self.optional }
-    /// Returns true if the default features of the dependency are requested.
-    pub fn uses_default_features(&self) -> bool { self.default_features }
-    /// Returns the list of features that are requested by the dependency.
-    pub fn features(&self) -> &[String] { &self.features }
-
-    /// Returns true if the package (`sum`) can fulfill this dependency request.
-    pub fn matches(&self, sum: &Summary) -> bool {
-        self.matches_id(sum.package_id())
-    }
-
-    /// Returns true if the package (`id`) can fulfill this dependency request.
-    pub fn matches_id(&self, id: &PackageId) -> bool {
-        self.name == id.name() &&
-            (self.only_match_name || (self.req.matches(id.version()) &&
-                                      &self.source_id == id.source_id()))
-    }
-
-    pub fn into_dependency(self) -> Dependency {
-        Dependency {inner: Rc::new(self)}
-    }
-}
-
 impl Dependency {
     /// Attempt to create a `Dependency` from an entry in the manifest.
     pub fn parse(name: &str,
@@ -270,71 +133,179 @@ impl Dependency {
                  inside: &PackageId,
                  config: &Config) -> CargoResult<Dependency> {
         let arg = Some((inside, config));
-        DependencyInner::parse(name, version, source_id, arg).map(|di| {
-            di.into_dependency()
-        })
+        let (specified_req, version_req) = match version {
+            Some(v) => (true, parse_req_with_deprecated(v, arg)?),
+            None => (false, VersionReq::any())
+        };
+
+        let mut ret = Dependency::new_override(name, source_id);
+        {
+            let ptr = Rc::make_mut(&mut ret.inner);
+            ptr.only_match_name = false;
+            ptr.req = version_req;
+            ptr.specified_req = specified_req;
+        }
+        Ok(ret)
     }
 
     /// Attempt to create a `Dependency` from an entry in the manifest.
     pub fn parse_no_deprecated(name: &str,
                                version: Option<&str>,
                                source_id: &SourceId) -> CargoResult<Dependency> {
-        DependencyInner::parse(name, version, source_id, None).map(|di| {
-            di.into_dependency()
-        })
+        let (specified_req, version_req) = match version {
+            Some(v) => (true, parse_req_with_deprecated(v, None)?),
+            None => (false, VersionReq::any())
+        };
+
+        let mut ret = Dependency::new_override(name, source_id);
+        {
+            let ptr = Rc::make_mut(&mut ret.inner);
+            ptr.only_match_name = false;
+            ptr.req = version_req;
+            ptr.specified_req = specified_req;
+        }
+        Ok(ret)
     }
 
     pub fn new_override(name: &str, source_id: &SourceId) -> Dependency {
-        DependencyInner::new_override(name, source_id).into_dependency()
+        Dependency {
+            inner: Rc::new(Inner {
+                name: name.to_string(),
+                source_id: source_id.clone(),
+                req: VersionReq::any(),
+                kind: Kind::Normal,
+                only_match_name: true,
+                optional: false,
+                features: Vec::new(),
+                default_features: true,
+                specified_req: false,
+                platform: None,
+            }),
+        }
     }
 
-    pub fn clone_inner(&self) -> DependencyInner { (*self.inner).clone() }
+    pub fn version_req(&self) -> &VersionReq {
+        &self.inner.req
+    }
 
-    pub fn version_req(&self) -> &VersionReq { self.inner.version_req() }
-    pub fn name(&self) -> &str { self.inner.name() }
-    pub fn source_id(&self) -> &SourceId { self.inner.source_id() }
-    pub fn kind(&self) -> Kind { self.inner.kind() }
-    pub fn specified_req(&self) -> bool { self.inner.specified_req() }
+    pub fn name(&self) -> &str {
+        &self.inner.name
+    }
+
+    pub fn source_id(&self) -> &SourceId {
+        &self.inner.source_id
+    }
+
+    pub fn kind(&self) -> Kind {
+        self.inner.kind
+    }
+
+    pub fn specified_req(&self) -> bool {
+        self.inner.specified_req
+    }
 
     /// If none, this dependencies must be built for all platforms.
     /// If some, it must only be built for the specified platform.
     pub fn platform(&self) -> Option<&Platform> {
-        self.inner.platform()
+        self.inner.platform.as_ref()
+    }
+
+    pub fn set_kind(&mut self, kind: Kind) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).kind = kind;
+        self
+    }
+
+    /// Sets the list of features requested for the package.
+    pub fn set_features(&mut self, features: Vec<String>) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).features = features;
+        self
+    }
+
+    /// Sets whether the dependency requests default features of the package.
+    pub fn set_default_features(&mut self, default_features: bool) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).default_features = default_features;
+        self
+    }
+
+    /// Sets whether the dependency is optional.
+    pub fn set_optional(&mut self, optional: bool) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).optional = optional;
+        self
+    }
+
+    /// Set the source id for this dependency
+    pub fn set_source_id(&mut self, id: SourceId) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).source_id = id;
+        self
+    }
+
+    /// Set the version requirement for this dependency
+    pub fn set_version_req(&mut self, req: VersionReq) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).req = req;
+        self
+    }
+
+    pub fn set_platform(&mut self, platform: Option<Platform>) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).platform = platform;
+        self
     }
 
     /// Lock this dependency to depending on the specified package id
-    pub fn lock_to(self, id: &PackageId) -> Dependency {
-        self.clone_inner().lock_to(id).into_dependency()
+    pub fn lock_to(&mut self, id: &PackageId) -> &mut Dependency {
+        assert_eq!(self.inner.source_id, *id.source_id());
+        assert!(self.inner.req.matches(id.version()));
+        self.set_version_req(VersionReq::exact(id.version()))
+            .set_source_id(id.source_id().clone())
     }
 
+
     /// Returns false if the dependency is only used to build the local package.
-    pub fn is_transitive(&self) -> bool { self.inner.is_transitive() }
-    pub fn is_build(&self) -> bool { self.inner.is_build() }
-    pub fn is_optional(&self) -> bool { self.inner.is_optional() }
+    pub fn is_transitive(&self) -> bool {
+        match self.inner.kind {
+            Kind::Normal | Kind::Build => true,
+            Kind::Development => false,
+        }
+    }
+
+    pub fn is_build(&self) -> bool {
+        match self.inner.kind {
+            Kind::Build => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_optional(&self) -> bool {
+        self.inner.optional
+    }
 
     /// Returns true if the default features of the dependency are requested.
     pub fn uses_default_features(&self) -> bool {
-        self.inner.uses_default_features()
+        self.inner.default_features
     }
     /// Returns the list of features that are requested by the dependency.
-    pub fn features(&self) -> &[String] { self.inner.features() }
+    pub fn features(&self) -> &[String] {
+        &self.inner.features
+    }
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
-    pub fn matches(&self, sum: &Summary) -> bool { self.inner.matches(sum) }
+    pub fn matches(&self, sum: &Summary) -> bool {
+        self.matches_id(sum.package_id())
+    }
 
     /// Returns true if the package (`id`) can fulfill this dependency request.
     pub fn matches_id(&self, id: &PackageId) -> bool {
-        self.inner.matches_id(id)
+        self.inner.name == id.name() &&
+            (self.inner.only_match_name || (self.inner.req.matches(id.version()) &&
+                                      &self.inner.source_id == id.source_id()))
     }
 
-    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
+    pub fn map_source(mut self, to_replace: &SourceId, replace_with: &SourceId)
                       -> Dependency {
         if self.source_id() != to_replace {
             self
         } else {
-            Rc::try_unwrap(self.inner).unwrap_or_else(|r| (*r).clone())
-               .set_source_id(replace_with.clone())
-               .into_dependency()
+            self.set_source_id(replace_with.clone());
+            self
         }
     }
 }

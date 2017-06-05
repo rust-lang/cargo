@@ -294,12 +294,16 @@ impl<'a> JobQueue<'a> {
         *self.counts.get_mut(key.pkg).unwrap() -= 1;
 
         let my_tx = self.tx.clone();
-        scope.spawn(move || {
+        let doit = move || {
             let res = job.run(fresh, &JobState {
                 tx: my_tx.clone(),
             });
             my_tx.send(Message::Finish(key, res)).unwrap();
-        });
+        };
+        match fresh {
+            Freshness::Fresh => doit(),
+            Freshness::Dirty => { scope.spawn(doit); }
+        }
 
         // Print out some nice progress information
         self.note_working_on(config, &key, fresh)?;

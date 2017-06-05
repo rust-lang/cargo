@@ -35,6 +35,7 @@ libgit2-sys = "0.6"
 log = "0.3"
 num_cpus = "1.0"
 rustc-serialize = "0.3"
+scoped-tls = "0.1"
 semver = { version = "0.7.0", features = ["serde"] }
 serde = "1.0"
 serde_derive = "1.0"

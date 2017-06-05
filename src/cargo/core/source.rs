@@ -173,34 +173,8 @@ impl SourceId {
         }
     }
 
-    pub fn to_url(&self) -> String {
-        match *self.inner {
-            SourceIdInner { kind: Kind::Path, ref url, .. } => {
-                format!("path+{}", url)
-            }
-            SourceIdInner {
-                kind: Kind::Git(ref reference), ref url, ref precise, ..
-            } => {
-                let ref_str = reference.url_ref();
-
-                let precise_str = if precise.is_some() {
-                    format!("#{}", precise.as_ref().unwrap())
-                } else {
-                    "".to_string()
-                };
-
-                format!("git+{}{}{}", url, ref_str, precise_str)
-            }
-            SourceIdInner { kind: Kind::Registry, ref url, .. } => {
-                format!("registry+{}", url)
-            }
-            SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
-                format!("local-registry+{}", url)
-            }
-            SourceIdInner { kind: Kind::Directory, ref url, .. } => {
-                format!("directory+{}", url)
-            }
-        }
+    pub fn to_url(&self) -> SourceIdToUrl {
+        SourceIdToUrl { inner: &*self.inner }
     }
 
     // Pass absolute path
@@ -350,7 +324,7 @@ impl ser::Serialize for SourceId {
         if self.is_path() {
             None::<String>.serialize(s)
         } else {
-            Some(self.to_url()).serialize(s)
+            s.collect_str(&self.to_url())
         }
     }
 }
@@ -372,7 +346,10 @@ impl fmt::Display for SourceId {
             }
             SourceIdInner { kind: Kind::Git(ref reference), ref url,
                             ref precise, .. } => {
-                write!(f, "{}{}", url, reference.url_ref())?;
+                write!(f, "{}", url)?;
+                if let Some(pretty) = reference.pretty_ref() {
+                    write!(f, "?{}", pretty)?;
+                }
 
                 if let Some(ref s) = *precise {
                     let len = cmp::min(s.len(), 8);
@@ -452,25 +429,60 @@ impl hash::Hash for SourceId {
     }
 }
 
-impl GitReference {
-    pub fn to_ref_string(&self) -> Option<String> {
-        match *self {
-            GitReference::Branch(ref s) => {
-                if *s == "master" {
-                    None
-                } else {
-                    Some(format!("branch={}", s))
-                }
+pub struct SourceIdToUrl<'a> {
+    inner: &'a SourceIdInner,
+}
+
+impl<'a> fmt::Display for SourceIdToUrl<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self.inner {
+            SourceIdInner { kind: Kind::Path, ref url, .. } => {
+                write!(f, "path+{}", url)
             }
-            GitReference::Tag(ref s) => Some(format!("tag={}", s)),
-            GitReference::Rev(ref s) => Some(format!("rev={}", s)),
+            SourceIdInner {
+                kind: Kind::Git(ref reference), ref url, ref precise, ..
+            } => {
+                write!(f, "git+{}", url)?;
+                if let Some(pretty) = reference.pretty_ref() {
+                    write!(f, "?{}", pretty)?;
+                }
+                if let Some(precise) = precise.as_ref() {
+                    write!(f, "#{}", precise)?;
+                }
+                Ok(())
+            }
+            SourceIdInner { kind: Kind::Registry, ref url, .. } => {
+                write!(f, "registry+{}", url)
+            }
+            SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
+                write!(f, "local-registry+{}", url)
+            }
+            SourceIdInner { kind: Kind::Directory, ref url, .. } => {
+                write!(f, "directory+{}", url)
+            }
         }
     }
+}
 
-    fn url_ref(&self) -> String {
-        match self.to_ref_string() {
-            None => "".to_string(),
-            Some(s) => format!("?{}", s),
+impl GitReference {
+    pub fn pretty_ref(&self) -> Option<PrettyRef> {
+        match *self {
+            GitReference::Branch(ref s) if *s == "master" => None,
+            _ => Some(PrettyRef { inner: self }),
+        }
+    }
+}
+
+pub struct PrettyRef<'a> {
+    inner: &'a GitReference,
+}
+
+impl<'a> fmt::Display for PrettyRef<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self.inner {
+            GitReference::Branch(ref b) => write!(f, "branch={}", b),
+            GitReference::Tag(ref s) => write!(f, "tag={}", s),
+            GitReference::Rev(ref s) => write!(f, "rev={}", s),
         }
     }
 }

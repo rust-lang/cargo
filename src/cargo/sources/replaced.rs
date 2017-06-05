@@ -20,15 +20,18 @@ impl<'cfg> ReplacedSource<'cfg> {
 }
 
 impl<'cfg> Registry for ReplacedSource<'cfg> {
-    fn query(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
-        let dep = dep.clone().map_source(&self.to_replace, &self.replace_with);
-        let ret = self.inner.query(&dep).chain_err(|| {
+    fn query(&mut self,
+             dep: &Dependency,
+             f: &mut FnMut(Summary)) -> CargoResult<()> {
+        let (replace_with, to_replace) = (&self.replace_with, &self.to_replace);
+        let dep = dep.clone().map_source(to_replace, replace_with);
+
+        self.inner.query(&dep, &mut |summary| {
+            f(summary.map_source(replace_with, to_replace))
+        }).chain_err(|| {
             format!("failed to query replaced source `{}`",
                     self.to_replace)
-        })?;
-        Ok(ret.into_iter().map(|summary| {
-            summary.map_source(&self.replace_with, &self.to_replace)
-        }).collect())
+        })
     }
 }
 
