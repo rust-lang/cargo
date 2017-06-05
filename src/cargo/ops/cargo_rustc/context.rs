@@ -17,7 +17,7 @@ use util::{self, internal, Config, profile, Cfg, CfgExpr};
 use util::errors::{CargoResult, CargoResultExt};
 
 use super::TargetConfig;
-use super::custom_build::{BuildState, BuildScripts};
+use super::custom_build::{BuildState, BuildScripts, BuildDeps};
 use super::fingerprint::Fingerprint;
 use super::layout::Layout;
 use super::links::Links;
@@ -38,7 +38,7 @@ pub struct Context<'a, 'cfg: 'a> {
     pub compilation: Compilation<'cfg>,
     pub packages: &'a PackageSet<'cfg>,
     pub build_state: Arc<BuildState>,
-    pub build_explicit_deps: HashMap<Unit<'a>, (PathBuf, Vec<String>)>,
+    pub build_explicit_deps: HashMap<Unit<'a>, BuildDeps>,
     pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
     pub compiled: HashSet<Unit<'a>>,
     pub build_config: BuildConfig,

@@ -703,6 +703,7 @@ fn scrape_target_config(config: &Config, triple: &str)
             env: Vec::new(),
             metadata: Vec::new(),
             rerun_if_changed: Vec::new(),
+            rerun_if_env_changed: Vec::new(),
             warnings: Vec::new(),
         };
         // We require deterministic order of evaluation, so we must sort the pairs by key first.
@@ -745,7 +746,9 @@ fn scrape_target_config(config: &Config, triple: &str)
                         output.env.push((name.clone(), val.to_string()));
                     }
                 }
-                "warning" | "rerun-if-changed" => {
+                "warning" |
+                "rerun-if-changed" |
+                "rerun-if-env-changed" => {
                     bail!("`{}` is not supported in build script overrides", k);
                 }
                 _ => {
