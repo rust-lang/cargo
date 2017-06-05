@@ -217,7 +217,9 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                     if spec.matches(key) &&
                        dep.matches_id(val) &&
                        keep(&val, to_avoid, &to_avoid_sources) {
-                        return (spec.clone(), dep.clone().lock_to(val))
+                        let mut dep = dep.clone();
+                        dep.lock_to(val);
+                        return (spec.clone(), dep)
                     }
                 }
                 (spec.clone(), dep.clone())

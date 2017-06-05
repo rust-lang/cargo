@@ -69,20 +69,19 @@ pub fn without_prefix<'a>(a: &'a Path, b: &'a Path) -> Option<&'a Path> {
 }
 
 pub fn read(path: &Path) -> CargoResult<String> {
-    (|| -> CargoResult<_> {
-        let mut ret = String::new();
-        let mut f = File::open(path)?;
-        f.read_to_string(&mut ret)?;
-        Ok(ret)
-    })().chain_err(|| {
-        format!("failed to read `{}`", path.display())
-    })
+    match String::from_utf8(read_bytes(path)?) {
+        Ok(s) => Ok(s),
+        Err(_) => bail!("path at `{}` was not valid utf-8", path.display()),
+    }
 }
 
 pub fn read_bytes(path: &Path) -> CargoResult<Vec<u8>> {
     (|| -> CargoResult<_> {
         let mut ret = Vec::new();
         let mut f = File::open(path)?;
+        if let Ok(m) = f.metadata() {
+            ret.reserve(m.len() as usize + 1);
+        }
         f.read_to_end(&mut ret)?;
         Ok(ret)
     })().chain_err(|| {

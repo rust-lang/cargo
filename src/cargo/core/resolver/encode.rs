@@ -267,7 +267,7 @@ impl ser::Serialize for EncodablePackageId {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
         where S: ser::Serializer,
     {
-        self.to_string().serialize(s)
+        s.collect_str(self)
     }
 }
 

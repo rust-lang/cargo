@@ -13,12 +13,28 @@ use cargo::core::{Dependency, PackageId, Summary, Registry};
 use cargo::util::{CargoResult, ToUrl};
 use cargo::core::resolver::{self, Method};
 
-fn resolve<R: Registry>(pkg: PackageId, deps: Vec<Dependency>,
-                        registry: &mut R)
-                        -> CargoResult<Vec<PackageId>> {
+fn resolve(pkg: PackageId, deps: Vec<Dependency>, registry: &[Summary])
+    -> CargoResult<Vec<PackageId>>
+{
+    struct MyRegistry<'a>(&'a [Summary]);
+    impl<'a> Registry for MyRegistry<'a> {
+        fn query(&mut self,
+                 dep: &Dependency,
+                 f: &mut FnMut(Summary)) -> CargoResult<()> {
+            for summary in self.0.iter() {
+                if dep.matches(summary) {
+                    f(summary.clone());
+                }
+            }
+            Ok(())
+        }
+    }
+    let mut registry = MyRegistry(registry);
     let summary = Summary::new(pkg.clone(), deps, HashMap::new()).unwrap();
     let method = Method::Everything;
-    Ok(resolver::resolve(&[(summary, method)], &[], registry)?.iter().cloned().collect())
+    let resolve = resolver::resolve(&[(summary, method)], &[], &mut registry)?;
+    let res = resolve.iter().cloned().collect();
+    Ok(res)
 }
 
 trait ToDep {
@@ -107,7 +123,7 @@ fn dep_loc(name: &str, location: &str) -> Dependency {
     Dependency::parse_no_deprecated(name, Some("1.0.0"), &source_id).unwrap()
 }
 fn dep_kind(name: &str, kind: Kind) -> Dependency {
-    dep(name).clone_inner().set_kind(kind).into_dependency()
+    dep(name).set_kind(kind).clone()
 }
 
 fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {

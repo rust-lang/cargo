@@ -337,7 +337,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> C
             return Err(CliError::code(code));
         }
     }
-    Err(CliError::new(err, 101))    
+    Err(CliError::new(err, 101))
 }
 
 /// List all runnable commands

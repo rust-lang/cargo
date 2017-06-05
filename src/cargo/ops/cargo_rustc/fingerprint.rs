@@ -85,9 +85,9 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         missing_outputs = !root.join(unit.target.crate_name())
                                .join("index.html").exists();
     } else {
-        for (src, link_dst, _) in cx.target_filenames(unit)? {
+        for &(ref src, ref link_dst, _) in cx.target_filenames(unit)?.iter() {
             missing_outputs |= !src.exists();
-            if let Some(link_dst) = link_dst {
+            if let Some(ref link_dst) = *link_dst {
                 missing_outputs |= !link_dst.exists();
             }
         }
