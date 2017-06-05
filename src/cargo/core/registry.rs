@@ -441,7 +441,12 @@ pub mod test {
             let overrides = self.query_overrides(dep);
 
             if overrides.is_empty() {
-                self.summaries.query(dep, f)
+                for s in self.summaries.iter() {
+                    if dep.matches(s) {
+                        f(s.clone());
+                    }
+                }
+                Ok(())
             } else {
                 for s in overrides {
                     f(s);
