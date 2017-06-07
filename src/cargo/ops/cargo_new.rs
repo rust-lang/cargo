@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 use rustc_serialize::{Decodable, Decoder};
 
 use git2::Config as GitConfig;
+use git2::Repository as GitRepository;
 
 use term::color::BLACK;
 
@@ -515,7 +516,12 @@ fn get_environment_variable(variables: &[&str] ) -> Option<String>{
 }
 
 fn discover_author() -> CargoResult<(String, Option<String>)> {
-    let git_config = GitConfig::open_default().ok();
+    let cwd = env::current_dir()?;
+    let git_config = if let Ok(repo) = GitRepository::discover(&cwd) {
+        repo.config().ok().or_else(|| GitConfig::open_default().ok())
+    } else {
+        GitConfig::open_default().ok()
+    };
     let git_config = git_config.as_ref();
     let name_variables = ["CARGO_NAME", "GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME",
                          "USER", "USERNAME", "NAME"];

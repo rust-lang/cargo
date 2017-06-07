@@ -281,6 +281,29 @@ fn finds_author_git() {
 }
 
 #[test]
+fn finds_local_author_git() {
+    process("git").args(&["init"])
+        .exec().unwrap();
+    process("git").args(&["config", "--global", "user.name", "foo"])
+                  .exec().unwrap();
+    process("git").args(&["config", "--global", "user.email", "foo@bar"])
+                  .exec().unwrap();
+
+    // Set local git user config
+    process("git").args(&["config", "user.name", "bar"])
+                  .exec().unwrap();
+    process("git").args(&["config", "user.email", "baz"])
+                  .exec().unwrap();
+    assert_that(cargo_process("init").env("USER", "foo"),
+                execs().with_status(0));
+
+    let toml = paths::root().join("Cargo.toml");
+    let mut contents = String::new();
+    File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
+    assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
+}
+
+#[test]
 fn finds_git_email() {
     let td = TempDir::new("cargo").unwrap();
     assert_that(cargo_process("new").arg("foo")
