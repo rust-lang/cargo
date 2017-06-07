@@ -2358,6 +2358,8 @@ fn custom_target_dir() {
 
 #[test]
 fn rustc_no_trans() {
+    if !is_nightly() { return }
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -2689,16 +2691,13 @@ r#"[ERROR] Could not match 'xml' with any of the allowed variants: ["Human", "Js
 
 #[test]
 fn message_format_json_forward_stderr() {
-    if is_nightly() { return }
-
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() { let unused = 0; }");
 
     assert_that(p.cargo_process("rustc").arg("--bin").arg("foo")
-                .arg("--message-format").arg("JSON").arg("--").arg("-Zno-trans"),
+                .arg("--message-format").arg("JSON"),
                 execs().with_status(0)
-                .with_stderr_contains("[WARNING] the option `Z` is unstable [..]")
                 .with_json(r#"
     {
         "reason":"compiler-message",
@@ -2729,7 +2728,7 @@ fn message_format_json_forward_stderr() {
             "test":false
         },
         "features":[],
-        "filenames":[],
+        "filenames":["[..]"],
         "fresh": false
     }
 "#));
