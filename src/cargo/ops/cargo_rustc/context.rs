@@ -482,6 +482,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         unit.target.name().hash(&mut hasher);
         unit.target.kind().hash(&mut hasher);
 
+        if let Ok(ref rustc) = self.config.rustc() {
+            rustc.verbose_version.hash(&mut hasher);
+        }
+
         Some(Metadata(hasher.finish()))
     }
 
