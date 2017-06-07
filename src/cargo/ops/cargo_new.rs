@@ -517,7 +517,7 @@ fn get_environment_variable(variables: &[&str] ) -> Option<String>{
 fn discover_author() -> CargoResult<(String, Option<String>)> {
     let cwd = env::current_dir()?;
     let git_config = if let Ok(repo) = GitRepository::discover(&cwd) {
-        repo.config().ok()
+        repo.config().ok().or_else(|| GitConfig::open_default().ok())
     } else {
         GitConfig::open_default().ok()
     };
