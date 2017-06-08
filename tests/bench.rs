@@ -1061,7 +1061,7 @@ fn bench_all_exclude() {
                 execs().with_status(0)
                     .with_stdout_contains("\
 running 1 test
-test bar ... bench:           0 ns/iter (+/- 0)"));
+test bar ... bench:           [..] ns/iter (+/- [..])"));
 }
 
 #[test]
