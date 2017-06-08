@@ -2,9 +2,8 @@ use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::Path;
 
-use rustc_serialize::hex::ToHex;
-
 use core::PackageId;
+use hex::ToHex;
 use sources::registry::{RegistryData, RegistryConfig};
 use util::FileLock;
 use util::paths;

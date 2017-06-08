@@ -2,7 +2,7 @@ use cargo;
 use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct LocateProjectFlags {
     flag_manifest_path: Option<String>,
 }

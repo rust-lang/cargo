@@ -5,7 +5,7 @@ use cargo::ops::{self, MessageFormat, Packages};
 use cargo::util::{CliResult, CliError, Config, CargoErrorKind};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Options {
     flag_bin: Option<String>,
     flag_example: Option<String>,

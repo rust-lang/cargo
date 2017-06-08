@@ -6,7 +6,7 @@ use std::path::{PathBuf, Path};
 use flate2::Compression::Default;
 use flate2::write::GzEncoder;
 use git2;
-use rustc_serialize::hex::ToHex;
+use hex::ToHex;
 use tar::{Builder, Header};
 use url::Url;
 

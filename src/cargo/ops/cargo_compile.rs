@@ -96,7 +96,7 @@ pub enum CompileMode {
     Doctest,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, RustcDecodable)]
+#[derive(Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum MessageFormat {
     Human,
     Json

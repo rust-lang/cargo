@@ -1,14 +1,14 @@
 #[macro_use]
 extern crate cargotest;
 extern crate hamcrest;
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::str;
-
-use rustc_serialize::json;
 
 use cargotest::cargo_process;
 use cargotest::support::{project, execs, ProjectBuilder};
@@ -33,7 +33,7 @@ struct VendorPackage {
     cksum: Checksum,
 }
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 struct Checksum {
     package: String,
     files: HashMap<String, String>,
@@ -58,7 +58,7 @@ impl VendorPackage {
 
     fn build(&mut self) {
         let p = self.p.take().unwrap();
-        let json = json::encode(&self.cksum).unwrap();
+        let json = serde_json::to_string(&self.cksum).unwrap();
         let p = p.file(".cargo-checksum.json", &json);
         p.build();
     }

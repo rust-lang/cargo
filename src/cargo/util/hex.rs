@@ -1,8 +1,7 @@
 #![allow(deprecated)]
 
+use hex::ToHex;
 use std::hash::{Hasher, Hash, SipHasher};
-
-use rustc_serialize::hex::ToHex;
 
 pub fn to_hex(num: u64) -> String {
     [
