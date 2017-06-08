@@ -114,6 +114,20 @@ impl<'cfg> PathSource<'cfg> {
             }
         };
 
+        if let Some(result) = self.discover_git_and_list_files(pkg, root, &mut filter) {
+            return result;
+        }
+
+        self.list_files_walk(pkg, &mut filter)
+    }
+
+    // Returns Some(_) if found sibling Cargo.toml and .git folder;
+    // otherwise caller should fall back on full file list.
+    fn discover_git_and_list_files(&self,
+                                   pkg: &Package,
+                                   root: &Path,
+                                   filter: &mut FnMut(&Path) -> bool)
+                                   -> Option<CargoResult<Vec<PathBuf>>> {
         // If this package is in a git repository, then we really do want to
         // query the git repository as it takes into account items such as
         // .gitignore. We're not quite sure where the git repository is,
@@ -129,11 +143,14 @@ impl<'cfg> PathSource<'cfg> {
                 // check to see if we are indeed part of the index. If not, then
                 // this is likely an unrelated git repo, so keep going.
                 if let Ok(repo) = git2::Repository::open(cur) {
-                    let index = repo.index()?;
+                    let index = match repo.index() {
+                        Ok(index) => index,
+                        Err(err) => return Some(Err(err.into())),
+                    };
                     let path = util::without_prefix(root, cur)
                                     .unwrap().join("Cargo.toml");
                     if index.get_path(&path, 0).is_some() {
-                        return self.list_files_git(pkg, repo, &mut filter);
+                        return Some(self.list_files_git(pkg, repo, filter));
                     }
                 }
             }
@@ -146,7 +163,7 @@ impl<'cfg> PathSource<'cfg> {
                 None => break,
             }
         }
-        self.list_files_walk(pkg, &mut filter)
+        return None;
     }
 
     fn list_files_git(&self, pkg: &Package, repo: git2::Repository,
