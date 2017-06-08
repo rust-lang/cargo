@@ -2,7 +2,7 @@ use cargo::ops;
 use cargo::core::{SourceId, GitReference};
 use cargo::util::{CliResult, Config, ToUrl};
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Options {
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,

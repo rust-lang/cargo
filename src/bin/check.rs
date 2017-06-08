@@ -49,7 +49,7 @@ the manifest. The default profile for this command is `dev`, but passing
 the --release flag will use the `release` profile instead.
 ";
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Options {
     flag_package: Vec<String>,
     flag_jobs: Option<u32>,

@@ -2,7 +2,6 @@ extern crate cargo;
 extern crate url;
 extern crate env_logger;
 extern crate git2_curl;
-extern crate rustc_serialize;
 extern crate toml;
 #[macro_use]
 extern crate log;
@@ -20,7 +19,7 @@ use cargo::core::shell::{Verbosity, ColorConfig};
 use cargo::util::{self, CliResult, lev_distance, Config, CargoResult, CargoError, CargoErrorKind};
 use cargo::util::CliError;
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Flags {
     flag_list: bool,
     flag_version: bool,

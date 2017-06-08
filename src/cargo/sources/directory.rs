@@ -4,7 +4,8 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use rustc_serialize::hex::ToHex;
+use hex::ToHex;
+
 use serde_json;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};

@@ -6,7 +6,7 @@ use cargo::core::{SourceId, Source};
 use cargo::sources::RegistrySource;
 use cargo::util::{CliResult, CargoResultExt, Config};
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Options {
     flag_host: Option<String>,
     arg_token: Option<String>,

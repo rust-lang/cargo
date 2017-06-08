@@ -3,7 +3,7 @@ use cargo::ops::{self, MessageFormat, Packages};
 use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Options {
     flag_target: Option<String>,
     flag_features: Vec<String>,

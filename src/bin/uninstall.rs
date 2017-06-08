@@ -1,7 +1,7 @@
 use cargo::ops;
 use cargo::util::{CliResult, Config};
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Options {
     flag_bin: Vec<String>,
     flag_root: Option<String>,
