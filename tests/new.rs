@@ -155,7 +155,7 @@ use --name to override crate name"));
 fn rust_prefix_stripped() {
     assert_that(cargo_process("new").arg("--lib").arg("rust-foo").env("USER", "foo"),
                 execs().with_status(0)
-                       .with_stdout("note: package will be named `foo`; use --name to override"));
+                       .with_stderr_contains("note: package will be named `foo`; use --name to override"));
     let toml = paths::root().join("rust-foo/Cargo.toml");
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();

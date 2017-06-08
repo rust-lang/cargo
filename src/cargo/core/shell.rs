@@ -1,13 +1,8 @@
 use std::fmt;
 use std::io::prelude::*;
-use std::io;
 
-use term::color::{Color, BLACK, RED, GREEN, YELLOW};
-use term::{self, Terminal, TerminfoTerminal, color, Attr};
-
-use self::AdequateTerminal::{NoColor, Colored};
-use self::Verbosity::{Verbose, Quiet};
-use self::ColorConfig::{Auto, Always, Never};
+use termcolor::{self, StandardStream, Color, ColorSpec, WriteColor};
+use termcolor::Color::{Green, Red, Yellow};
 
 use util::errors::CargoResult;
 
@@ -18,120 +13,97 @@ pub enum Verbosity {
     Quiet
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum ColorConfig {
-    Auto,
-    Always,
-    Never
-}
-
-impl fmt::Display for ColorConfig {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            ColorConfig::Auto => "auto",
-            ColorConfig::Always => "always",
-            ColorConfig::Never => "never",
-        }.fmt(f)
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct ShellConfig {
-    pub color_config: ColorConfig,
-    pub tty: bool
-}
-
-enum AdequateTerminal {
-    NoColor(Box<Write + Send>),
-    Colored(Box<Terminal<Output=Box<Write + Send>> + Send>)
-}
-
 pub struct Shell {
-    terminal: AdequateTerminal,
-    config: ShellConfig,
+    err: StandardStream,
+    verbosity: Verbosity,
+    choice: ColorChoice,
 }
 
-pub struct MultiShell {
-    out: Shell,
-    err: Shell,
-    verbosity: Verbosity
+#[derive(PartialEq, Clone, Copy)]
+pub enum ColorChoice {
+    Always,
+    Never,
+    CargoAuto,
 }
 
-impl MultiShell {
-    pub fn new(out: Shell, err: Shell, verbosity: Verbosity) -> MultiShell {
-        MultiShell { out: out, err: err, verbosity: verbosity }
-    }
-
-    // Create a quiet, basic shell from supplied writers.
-    pub fn from_write(out: Box<Write + Send>, err: Box<Write + Send>) -> MultiShell {
-        let config = ShellConfig { color_config: ColorConfig::Never, tty: false };
-        let out = Shell { terminal: NoColor(out), config: config.clone() };
-        let err = Shell { terminal: NoColor(err), config: config };
-        MultiShell {
-            out: out,
-            err: err,
-            verbosity: Verbosity::Quiet,
+impl Shell {
+    pub fn new() -> Shell {
+        Shell {
+            err: StandardStream::stderr(ColorChoice::CargoAuto.to_termcolor_color_choice()),
+            verbosity: Verbosity::Verbose,
+            choice: ColorChoice::CargoAuto,
         }
     }
 
-    pub fn out(&mut self) -> &mut Shell {
-        &mut self.out
+    fn print(&mut self,
+             status: &fmt::Display,
+             message: &fmt::Display,
+             color: Color,
+             justified: bool) -> CargoResult<()> {
+        match self.verbosity {
+            Verbosity::Quiet => Ok(()),
+            _ => {
+                self.err.reset()?;
+                self.err.set_color(ColorSpec::new()
+                                        .set_bold(true)
+                                        .set_fg(Some(color)))?;
+                if justified {
+                    write!(self.err, "{:>12}", status)?;
+                } else {
+                    write!(self.err, "{}", status)?;
+                }
+                self.err.reset()?;
+                write!(self.err, " {}\n", message)?;
+                Ok(())
+            }
+        }
     }
 
-    pub fn err(&mut self) -> &mut Shell {
+    pub fn err(&mut self) -> &mut StandardStream {
         &mut self.err
-    }
-
-    pub fn say<T: ToString>(&mut self, message: T, color: Color)
-                            -> CargoResult<()> {
-        match self.verbosity {
-            Quiet => Ok(()),
-            _ => self.out().say(message, color)
-        }
-    }
-
-    pub fn status_with_color<T, U>(&mut self, status: T, message: U, color: Color)
-                                   -> CargoResult<()>
-        where T: fmt::Display, U: fmt::Display
-    {
-        match self.verbosity {
-            Quiet => Ok(()),
-            _ => self.err().say_status(status, message, color, true)
-        }
     }
 
     pub fn status<T, U>(&mut self, status: T, message: U) -> CargoResult<()>
         where T: fmt::Display, U: fmt::Display
     {
-        self.status_with_color(status, message, GREEN)
+        self.print(&status, &message, Green, true)
+    }
+
+    pub fn status_with_color<T, U>(&mut self,
+                                   status: T,
+                                   message: U,
+                                   color: Color) -> CargoResult<()>
+        where T: fmt::Display, U: fmt::Display
+    {
+        self.print(&status, &message, color, true)
     }
 
     pub fn verbose<F>(&mut self, mut callback: F) -> CargoResult<()>
-        where F: FnMut(&mut MultiShell) -> CargoResult<()>
+        where F: FnMut(&mut Shell) -> CargoResult<()>
     {
         match self.verbosity {
-            Verbose => callback(self),
+            Verbosity::Verbose => callback(self),
             _ => Ok(())
         }
     }
 
     pub fn concise<F>(&mut self, mut callback: F) -> CargoResult<()>
-        where F: FnMut(&mut MultiShell) -> CargoResult<()>
+        where F: FnMut(&mut Shell) -> CargoResult<()>
     {
         match self.verbosity {
-            Verbose => Ok(()),
+            Verbosity::Verbose => Ok(()),
             _ => callback(self)
         }
     }
 
     pub fn error<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        self.err().say_status("error:", message, RED, false)
+        self.print(&"error:", &message, Red, false)
     }
 
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
         match self.verbosity {
-            Quiet => Ok(()),
-            _ => self.err().say_status("warning:", message, YELLOW, false),
+            Verbosity::Quiet => Ok(()),
+            _ => self.print(&"warning:", &message, Yellow, false),
         }
     }
 
@@ -139,179 +111,57 @@ impl MultiShell {
         self.verbosity = verbosity;
     }
 
-    pub fn set_color_config(&mut self, color: Option<&str>) -> CargoResult<()> {
-        let cfg = match color {
-            Some("auto") => Auto,
-            Some("always") => Always,
-            Some("never") => Never,
+    pub fn verbosity(&self) -> Verbosity {
+        self.verbosity
+    }
 
-            None => Auto,
+    pub fn set_color_choice(&mut self, color: Option<&str>) -> CargoResult<()> {
+        let cfg = match color {
+            Some("always") => ColorChoice::Always,
+            Some("never") => ColorChoice::Never,
+
+            Some("auto") |
+            None => ColorChoice::CargoAuto,
 
             Some(arg) => bail!("argument for --color must be auto, always, or \
                                 never, but found `{}`", arg),
         };
-        self.out.set_color_config(cfg);
-        self.err.set_color_config(cfg);
-        Ok(())
+        self.choice = cfg;
+        self.err = StandardStream::stderr(cfg.to_termcolor_color_choice());
+        return Ok(());
     }
 
-    pub fn get_verbose(&self) -> Verbosity {
-        self.verbosity
-    }
-
-    pub fn color_config(&self) -> ColorConfig {
-        assert!(self.out.config.color_config == self.err.config.color_config);
-        self.out.config.color_config
+    pub fn color_choice(&self) -> ColorChoice {
+        self.choice
     }
 }
 
-impl Shell {
-    pub fn create<T: FnMut() -> Box<Write + Send>>(mut out_fn: T, config: ShellConfig) -> Shell {
-        let term = match Shell::get_term(out_fn()) {
-            Ok(t) => t,
-            Err(_) => NoColor(out_fn())
+impl ColorChoice {
+    fn to_termcolor_color_choice(&self) -> termcolor::ColorChoice {
+        return match *self {
+            ColorChoice::Always => termcolor::ColorChoice::Always,
+            ColorChoice::Never => termcolor::ColorChoice::Never,
+            ColorChoice::CargoAuto if isatty() => termcolor::ColorChoice::Auto,
+            ColorChoice::CargoAuto => termcolor::ColorChoice::Never,
         };
 
-        Shell {
-            terminal: term,
-            config: config,
-        }
-    }
+        #[cfg(unix)]
+        fn isatty() -> bool {
+            extern crate libc;
 
-    #[cfg(any(windows))]
-    fn get_term(out: Box<Write + Send>) -> CargoResult<AdequateTerminal> {
-        // Check if the creation of a console will succeed
-        if ::term::WinConsole::new(vec![0u8; 0]).is_ok() {
-            let t = ::term::WinConsole::new(out)?;
-            if !t.supports_color() {
-                Ok(NoColor(Box::new(t)))
-            } else {
-                Ok(Colored(Box::new(t)))
+            unsafe { libc::isatty(libc::STDERR_FILENO) != 0 }
+        }
+
+        #[cfg(windows)]
+        fn isatty() -> bool {
+            extern crate kernel32;
+            extern crate winapi;
+
+            unsafe {
+                let handle = kernel32::GetStdHandle(winapi::STD_ERROR_HANDLE);
+                let mut out = 0;
+                kernel32::GetConsoleMode(handle, &mut out) != 0
             }
-        } else {
-            // If we fail to get a windows console, we try to get a `TermInfo` one
-            Ok(Shell::get_terminfo_term(out))
-        }
-    }
-
-    #[cfg(any(unix))]
-    fn get_term(out: Box<Write + Send>) -> CargoResult<AdequateTerminal> {
-        Ok(Shell::get_terminfo_term(out))
-    }
-
-    fn get_terminfo_term(out: Box<Write + Send>) -> AdequateTerminal {
-        // Use `TermInfo::from_env()` and `TerminfoTerminal::supports_color()`
-        // to determine if creation of a TerminfoTerminal is possible regardless
-        // of the tty status. --color options are parsed after Shell creation so
-        // always try to create a terminal that supports color output. Fall back
-        // to a no-color terminal regardless of whether or not a tty is present
-        // and if color output is not possible.
-        match ::term::terminfo::TermInfo::from_env() {
-            Ok(ti) => {
-                let term = TerminfoTerminal::new_with_terminfo(out, ti);
-                if !term.supports_color() {
-                    NoColor(term.into_inner())
-                } else {
-                    // Color output is possible.
-                    Colored(Box::new(term))
-                }
-            },
-            Err(_) => NoColor(out),
-        }
-    }
-
-    pub fn set_color_config(&mut self, color_config: ColorConfig) {
-        self.config.color_config = color_config;
-    }
-
-    pub fn say<T: ToString>(&mut self, message: T, color: Color) -> CargoResult<()> {
-        self.reset()?;
-        if color != BLACK { self.fg(color)?; }
-        write!(self, "{}\n", message.to_string())?;
-        self.reset()?;
-        self.flush()?;
-        Ok(())
-    }
-
-    pub fn say_status<T, U>(&mut self,
-                            status: T,
-                            message: U,
-                            color: Color,
-                            justified: bool)
-                            -> CargoResult<()>
-        where T: fmt::Display, U: fmt::Display
-    {
-        self.reset()?;
-        if color != BLACK { self.fg(color)?; }
-        if self.supports_attr(Attr::Bold) { self.attr(Attr::Bold)?; }
-        if justified {
-            write!(self, "{:>12}", status.to_string())?;
-        } else {
-            write!(self, "{}", status)?;
-        }
-        self.reset()?;
-        write!(self, " {}\n", message)?;
-        self.flush()?;
-        Ok(())
-    }
-
-    fn fg(&mut self, color: color::Color) -> CargoResult<bool> {
-        let colored = self.colored();
-
-        match self.terminal {
-            Colored(ref mut c) if colored => c.fg(color)?,
-            _ => return Ok(false),
-        }
-        Ok(true)
-    }
-
-    fn attr(&mut self, attr: Attr) -> CargoResult<bool> {
-        let colored = self.colored();
-
-        match self.terminal {
-            Colored(ref mut c) if colored => c.attr(attr)?,
-            _ => return Ok(false)
-        }
-        Ok(true)
-    }
-
-    fn supports_attr(&self, attr: Attr) -> bool {
-        let colored = self.colored();
-
-        match self.terminal {
-            Colored(ref c) if colored => c.supports_attr(attr),
-            _ => false
-        }
-    }
-
-    fn reset(&mut self) -> term::Result<()> {
-        let colored = self.colored();
-
-        match self.terminal {
-            Colored(ref mut c) if colored => c.reset()?,
-            _ => ()
-        }
-        Ok(())
-    }
-
-    fn colored(&self) -> bool {
-        self.config.tty && Auto == self.config.color_config
-            || Always == self.config.color_config
-    }
-}
-
-impl Write for Shell {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        match self.terminal {
-            Colored(ref mut c) => c.write(buf),
-            NoColor(ref mut n) => n.write(buf)
-        }
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        match self.terminal {
-            Colored(ref mut c) => c.flush(),
-            NoColor(ref mut n) => n.flush()
         }
     }
 }

@@ -1,12 +1,12 @@
 use std::env;
 use std::fs::{self, File};
+use std::io::Write;
 use std::iter::repeat;
 use std::time::Duration;
 
 use curl::easy::{Easy, SslOpt};
 use git2;
 use registry::{Registry, NewCrate, NewCrateDependency};
-use term::color::BLACK;
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
@@ -424,25 +424,19 @@ pub fn search(query: &str,
             }
             None => name
         };
-        config.shell().say(line, BLACK)?;
+        writeln!(config.shell().err(), "{}", line)?;
     }
 
     let search_max_limit = 100;
     if total_crates > limit as u32 && limit < search_max_limit {
-        config.shell().say(
-            format!("... and {} crates more (use --limit N to see more)",
-                    total_crates - limit as u32),
-            BLACK)
-        ?;
+        writeln!(config.shell().err(),
+                 "... and {} crates more (use --limit N to see more)",
+                 total_crates - limit as u32)?;
     } else if total_crates > limit as u32 && limit >= search_max_limit {
-        config.shell().say(
-            format!(
-                "... and {} crates more (go to http://crates.io/search?q={} to see more)",
-                total_crates - limit as u32,
-                percent_encode(query.as_bytes(), QUERY_ENCODE_SET)
-            ),
-            BLACK)
-        ?;
+        writeln!(config.shell().err(),
+                 "... and {} crates more (go to http://crates.io/search?q={} to see more)",
+                 total_crates - limit as u32,
+                 percent_encode(query.as_bytes(), QUERY_ENCODE_SET))?;
     }
 
     Ok(())
