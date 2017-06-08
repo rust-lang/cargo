@@ -1,0 +1,841 @@
+{
+    "packages": [
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": "build",
+                    "name": "gcc",
+                    "optional": false,
+                    "req": "^0.3.27",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "compiler_builtins 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcompiler_builtins)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libcompiler_builtins/Cargo.toml",
+            "name": "compiler_builtins",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "compiler_builtins",
+                    "src_path": "lib.rs"
+                },
+                {
+                    "kind": [
+                        "custom-build"
+                    ],
+                    "name": "build-script-build",
+                    "src_path": "build.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "alloc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liballoc)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/liballoc/Cargo.toml",
+            "name": "alloc",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "alloc",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "alloc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "unwind",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "libc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "panic_unwind 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libpanic_unwind)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libpanic_unwind/Cargo.toml",
+            "name": "panic_unwind",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "panic_unwind",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "panic_abort",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "collections",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "alloc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rand",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_unicode",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "unwind",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "alloc_system",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "panic_unwind",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "alloc_jemalloc",
+                    "optional": true,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "compiler_builtins",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "libc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": "build",
+                    "name": "build_helper",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": "build",
+                    "name": "gcc",
+                    "optional": false,
+                    "req": "^0.3.27",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {
+                "backtrace": [],
+                "debug-jemalloc": [
+                    "alloc_jemalloc/debug"
+                ],
+                "jemalloc": [
+                    "alloc_jemalloc"
+                ]
+            },
+            "id": "std 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libstd)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libstd/Cargo.toml",
+            "name": "std",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib",
+                        "rlib"
+                    ],
+                    "name": "std",
+                    "src_path": "lib.rs"
+                },
+                {
+                    "kind": [
+                        "custom-build"
+                    ],
+                    "name": "build-script-build",
+                    "src_path": "build.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "libc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "unwind 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libunwind)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libunwind/Cargo.toml",
+            "name": "unwind",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "unwind",
+                    "src_path": "lib.rs"
+                },
+                {
+                    "kind": [
+                        "custom-build"
+                    ],
+                    "name": "build-script-build",
+                    "src_path": "build.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "std",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {
+                "backtrace": [
+                    "std/backtrace"
+                ],
+                "debug-jemalloc": [
+                    "std/debug-jemalloc"
+                ],
+                "jemalloc": [
+                    "std/jemalloc"
+                ]
+            },
+            "id": "std_shim 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/std_shim)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/rustc/std_shim/Cargo.toml",
+            "name": "std_shim",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "std_shim",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.1.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rand 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librand)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librand/Cargo.toml",
+            "name": "rand",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "rand",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": "dev",
+                    "name": "tempdir",
+                    "optional": false,
+                    "req": "^0.3",
+                    "source": "registry+https://github.com/rust-lang/crates.io-index",
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "gcc 0.3.27 (registry+https://github.com/rust-lang/crates.io-index)",
+            "manifest_path": "/Users/acharles/.cargo/registry/src/github.com-1ecc6299db9ec823/gcc-0.3.27/Cargo.toml",
+            "name": "gcc",
+            "source": "registry+https://github.com/rust-lang/crates.io-index",
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "gcc",
+                    "src_path": "/Users/acharles/.cargo/registry/src/github.com-1ecc6299db9ec823/gcc-0.3.27/src/lib.rs"
+                },
+                {
+                    "kind": [
+                        "bin"
+                    ],
+                    "name": "gcc-shim",
+                    "src_path": "/Users/acharles/.cargo/registry/src/github.com-1ecc6299db9ec823/gcc-0.3.27/src/bin/gcc-shim.rs"
+                },
+                {
+                    "kind": [
+                        "test"
+                    ],
+                    "name": "cc_env",
+                    "src_path": "/Users/acharles/.cargo/registry/src/github.com-1ecc6299db9ec823/gcc-0.3.27/tests/cc_env.rs"
+                },
+                {
+                    "kind": [
+                        "test"
+                    ],
+                    "name": "test",
+                    "src_path": "/Users/acharles/.cargo/registry/src/github.com-1ecc6299db9ec823/gcc-0.3.27/tests/test.rs"
+                }
+            ],
+            "version": "0.3.27"
+        },
+        {
+            "dependencies": [],
+            "features": {},
+            "id": "build_helper 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/build_helper)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/build_helper/Cargo.toml",
+            "name": "build_helper",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "build_helper",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.1.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "rustc_unicode 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_unicode)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/librustc_unicode/Cargo.toml",
+            "name": "rustc_unicode",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "rustc_unicode",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "libc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/libc_shim)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/rustc/libc_shim/Cargo.toml",
+            "name": "libc",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "libc",
+                    "src_path": "../../liblibc/src/lib.rs"
+                },
+                {
+                    "kind": [
+                        "custom-build"
+                    ],
+                    "name": "build-script-build",
+                    "src_path": "build.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "libc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "panic_abort 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libpanic_abort)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libpanic_abort/Cargo.toml",
+            "name": "panic_abort",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "panic_abort",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "libc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "alloc_system 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liballoc_system)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/liballoc_system/Cargo.toml",
+            "name": "alloc_system",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "alloc_system",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "core",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "alloc",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "rustc_unicode",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "collections 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcollections)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libcollections/Cargo.toml",
+            "name": "collections",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "collections",
+                    "src_path": "lib.rs"
+                },
+                {
+                    "kind": [
+                        "test"
+                    ],
+                    "name": "collectionstest",
+                    "src_path": "../libcollectionstest/lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [],
+            "features": {},
+            "id": "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libcore/Cargo.toml",
+            "name": "core",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "core",
+                    "src_path": "lib.rs"
+                },
+                {
+                    "kind": [
+                        "test"
+                    ],
+                    "name": "coretest",
+                    "src_path": "../libcoretest/lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        }
+    ],
+    "resolve": {
+        "nodes": [
+            {
+                "dependencies": [
+                    "gcc 0.3.27 (registry+https://github.com/rust-lang/crates.io-index)",
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "compiler_builtins 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcompiler_builtins)"
+            },
+            {
+                "dependencies": [
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "alloc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liballoc)"
+            },
+            {
+                "dependencies": [
+                    "alloc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liballoc)",
+                    "unwind 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libunwind)",
+                    "libc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/libc_shim)",
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "panic_unwind 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libpanic_unwind)"
+            },
+            {
+                "dependencies": [
+                    "compiler_builtins 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcompiler_builtins)",
+                    "alloc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liballoc)",
+                    "panic_unwind 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libpanic_unwind)",
+                    "unwind 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libunwind)",
+                    "rand 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librand)",
+                    "gcc 0.3.27 (registry+https://github.com/rust-lang/crates.io-index)",
+                    "build_helper 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/build_helper)",
+                    "rustc_unicode 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_unicode)",
+                    "libc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/libc_shim)",
+                    "panic_abort 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libpanic_abort)",
+                    "alloc_system 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liballoc_system)",
+                    "collections 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcollections)",
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "std 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libstd)"
+            },
+            {
+                "dependencies": [
+                    "libc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/libc_shim)",
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "unwind 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libunwind)"
+            },
+            {
+                "dependencies": [
+                    "std 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libstd)",
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "std_shim 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/std_shim)"
+            },
+            {
+                "dependencies": [
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "rand 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librand)"
+            },
+            {
+                "dependencies": [],
+                "id": "gcc 0.3.27 (registry+https://github.com/rust-lang/crates.io-index)"
+            },
+            {
+                "dependencies": [],
+                "id": "build_helper 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/build_helper)"
+            },
+            {
+                "dependencies": [
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "rustc_unicode 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_unicode)"
+            },
+            {
+                "dependencies": [
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "libc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/libc_shim)"
+            },
+            {
+                "dependencies": [
+                    "libc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/libc_shim)",
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "panic_abort 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libpanic_abort)"
+            },
+            {
+                "dependencies": [
+                    "libc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/libc_shim)",
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "alloc_system 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liballoc_system)"
+            },
+            {
+                "dependencies": [
+                    "alloc 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/liballoc)",
+                    "rustc_unicode 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/librustc_unicode)",
+                    "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+                ],
+                "id": "collections 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcollections)"
+            },
+            {
+                "dependencies": [],
+                "id": "core 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libcore)"
+            }
+        ],
+        "root": "std_shim 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/std_shim)"
+    },
+    "version": 1
+}

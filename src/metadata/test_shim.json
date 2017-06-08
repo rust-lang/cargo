@@ -1,0 +1,138 @@
+{
+    "packages": [
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "test",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "test_shim 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/test_shim)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/rustc/test_shim/Cargo.toml",
+            "name": "test_shim",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "lib"
+                    ],
+                    "name": "test_shim",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.1.0"
+        },
+        {
+            "dependencies": [],
+            "features": {},
+            "id": "getopts 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgetopts)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libgetopts/Cargo.toml",
+            "name": "getopts",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib",
+                        "rlib"
+                    ],
+                    "name": "getopts",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "term",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                },
+                {
+                    "features": [],
+                    "kind": null,
+                    "name": "getopts",
+                    "optional": false,
+                    "req": "*",
+                    "source": null,
+                    "target": null,
+                    "uses_default_features": true
+                }
+            ],
+            "features": {},
+            "id": "test 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libtest)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libtest/Cargo.toml",
+            "name": "test",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib",
+                        "rlib"
+                    ],
+                    "name": "test",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        },
+        {
+            "dependencies": [],
+            "features": {},
+            "id": "term 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libterm)",
+            "manifest_path": "/Users/acharles/rust/rustc/src/src/libterm/Cargo.toml",
+            "name": "term",
+            "source": null,
+            "targets": [
+                {
+                    "kind": [
+                        "dylib",
+                        "rlib"
+                    ],
+                    "name": "term",
+                    "src_path": "lib.rs"
+                }
+            ],
+            "version": "0.0.0"
+        }
+    ],
+    "resolve": {
+        "nodes": [
+            {
+                "dependencies": [
+                    "test 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libtest)"
+                ],
+                "id": "test_shim 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/test_shim)"
+            },
+            {
+                "dependencies": [],
+                "id": "getopts 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgetopts)"
+            },
+            {
+                "dependencies": [
+                    "getopts 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libgetopts)",
+                    "term 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libterm)"
+                ],
+                "id": "test 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libtest)"
+            },
+            {
+                "dependencies": [],
+                "id": "term 0.0.0 (path+file:///Users/acharles/rust/rustc/src/src/libterm)"
+            }
+        ],
+        "root": "test_shim 0.1.0 (path+file:///Users/acharles/rust/rustc/src/src/rustc/test_shim)"
+    },
+    "version": 1
+}
