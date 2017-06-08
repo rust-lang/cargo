@@ -13,7 +13,6 @@ extern crate serde;
 extern crate serde_json;
 extern crate tar;
 extern crate tempdir;
-extern crate term;
 extern crate url;
 #[cfg(windows)] extern crate kernel32;
 #[cfg(windows)] extern crate winapi;

@@ -29,7 +29,7 @@ Options:
 pub fn execute(options: Options, config: &Config) -> CliResult {
     debug!("executing; cmd=cargo-read-manifest; args={:?}",
            env::args().collect::<Vec<_>>());
-    config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..]))?;
+    config.shell().set_color_choice(options.flag_color.as_ref().map(|s| &s[..]))?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 

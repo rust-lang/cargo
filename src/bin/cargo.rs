@@ -15,7 +15,7 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use cargo::core::shell::{Verbosity, ColorConfig};
+use cargo::core::shell::{Shell, Verbosity};
 use cargo::util::{self, CliResult, lev_distance, Config, CargoResult, CargoError, CargoErrorKind};
 use cargo::util::CliError;
 
@@ -75,7 +75,7 @@ fn main() {
     let config = match Config::default() {
         Ok(cfg) => cfg,
         Err(e) => {
-            let mut shell = cargo::shell(Verbosity::Verbose, ColorConfig::Auto);
+            let mut shell = Shell::new();
             cargo::exit_with_error(e.into(), &mut shell)
         }
     };

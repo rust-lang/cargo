@@ -12,8 +12,8 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Once, ONCE_INIT};
 
-use core::MultiShell;
-use core::shell::{Verbosity, ColorConfig};
+use core::Shell;
+use core::shell::Verbosity;
 use jobserver;
 use serde::{Serialize, Serializer};
 use toml;
@@ -28,7 +28,7 @@ use self::ConfigValue as CV;
 
 pub struct Config {
     home_path: Filesystem,
-    shell: RefCell<MultiShell>,
+    shell: RefCell<Shell>,
     rustc: LazyCell<Rustc>,
     values: LazyCell<HashMap<String, ConfigValue>>,
     cwd: PathBuf,
@@ -41,7 +41,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(shell: MultiShell,
+    pub fn new(shell: Shell,
                cwd: PathBuf,
                homedir: PathBuf) -> Config {
         static mut GLOBAL_JOBSERVER: *mut jobserver::Client = 0 as *mut _;
@@ -77,7 +77,7 @@ impl Config {
     }
 
     pub fn default() -> CargoResult<Config> {
-        let shell = ::shell(Verbosity::Verbose, ColorConfig::Auto);
+        let shell = Shell::new();
         let cwd = env::current_dir().chain_err(|| {
             "couldn't get the current directory of the process"
         })?;
@@ -106,7 +106,7 @@ impl Config {
         self.home_path.join("registry").join("src")
     }
 
-    pub fn shell(&self) -> RefMut<MultiShell> {
+    pub fn shell(&self) -> RefMut<Shell> {
         self.shell.borrow_mut()
     }
 
@@ -405,7 +405,7 @@ impl Config {
         };
 
         self.shell().set_verbosity(verbosity);
-        self.shell().set_color_config(color.map(|s| &s[..]))?;
+        self.shell().set_color_choice(color.map(|s| &s[..]))?;
         self.extra_verbose.set(extra_verbose);
         self.frozen.set(frozen);
         self.locked.set(locked);
