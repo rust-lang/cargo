@@ -786,8 +786,12 @@ fn build_base_args(cx: &mut Context,
 
     match cx.target_metadata(unit) {
         Some(m) => {
+            // Allow setting a "prefix" to the extra-filename parameter to avoid possible collisions
+            // If __CARGO_EXTRA_FILENAME_PREFIX is "stable" the produced library will be named e.g.
+            // libbitflags-stable-66ffeb5c24615f6c.rlib instead of libbitflags-66ffeb5c24615f6c.rlib
+            let extra_prefix = env::var("__CARGO_EXTRA_FILENAME_PREFIX").unwrap_or_else(|_| "".to_string());
             cmd.arg("-C").arg(&format!("metadata={}", m));
-            cmd.arg("-C").arg(&format!("extra-filename=-{}", m));
+            cmd.arg("-C").arg(&format!("extra-filename={}-{}", extra_prefix, m));
         }
         None => {
             cmd.arg("-C").arg(&format!("metadata={}", short_hash(unit.pkg)));
