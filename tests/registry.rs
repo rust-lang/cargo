@@ -581,8 +581,7 @@ fn dev_dependency_not_used() {
 fn login_with_no_cargo_dir() {
     let home = paths::home().join("new-home");
     t!(fs::create_dir(&home));
-    assert_that(cargo_process().arg("login").arg("--host").arg(registry().to_string())
-                .arg("foo").arg("-v"),
+    assert_that(cargo_process().arg("login").arg("foo").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -591,14 +590,11 @@ fn login_with_differently_sized_token() {
     // Verify that the configuration file gets properly trunchated.
     let home = paths::home().join("new-home");
     t!(fs::create_dir(&home));
-    assert_that(cargo_process().arg("login").arg("--host").arg(registry().to_string())
-                .arg("lmaolmaolmao").arg("-v"),
+    assert_that(cargo_process().arg("login").arg("lmaolmaolmao").arg("-v"),
                 execs().with_status(0));
-    assert_that(cargo_process().arg("login").arg("--host").arg(registry().to_string())
-                .arg("lmao").arg("-v"),
+    assert_that(cargo_process().arg("login").arg("lmao").arg("-v"),
                 execs().with_status(0));
-    assert_that(cargo_process().arg("login").arg("--host").arg(registry().to_string())
-                .arg("lmaolmaolmao").arg("-v"),
+    assert_that(cargo_process().arg("login").arg("lmaolmaolmao").arg("-v"),
                 execs().with_status(0));
 }
 
