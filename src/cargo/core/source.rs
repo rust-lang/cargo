@@ -232,7 +232,7 @@ impl SourceId {
     /// This is the main cargo registry by default, but it can be overridden in
     /// a `.cargo/config`.
     pub fn crates_io(config: &Config) -> CargoResult<SourceId> {
-        let cfg = ops::registry_configuration(config, "https://crates.io")?;
+        let cfg = ops::registry_configuration(config)?;
         let url = if let Some(ref index) = cfg.index {
             static WARNED: AtomicBool = ATOMIC_BOOL_INIT;
             if !WARNED.swap(true, SeqCst) {

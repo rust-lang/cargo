@@ -177,39 +177,25 @@ fn transmit(config: &Config,
     }
 }
 
-pub fn registry_configuration(config: &Config,
-                              host: &str) -> CargoResult<RegistryConfig> {
-    let mut index = None;
-    let mut token = None;
-
-    if !host.is_empty() {
-        index = config.get_string(&format!("registry.{}.index", host))?;
-        token = config.get_string(&format!("registry.{}.token", host))?;
-    }
-
-    // FIXME: Checking out for the values which were picked up from
-    // $CARGO_HOME/config. This section should be removed after all the users
-    // start to use $CARGO_HOME/credentials for token configuration.
-    if index.is_none() && token.is_none() {
-        index = config.get_string("registry.index")?;
-        token = config.get_string("registry.token")?;
-    }
-
-    Ok(RegistryConfig {
-        index: index.map(|p| p.val),
-        token: token.map(|p| p.val)
-    })
+pub fn registry_configuration(config: &Config) -> CargoResult<RegistryConfig> {
+    let index = config.get_string("registry.index")?.map(|p| p.val);
+    let token = config.get_string("registry.token")?.map(|p| p.val);
+    Ok(RegistryConfig { index: index, token: token })
 }
 
 pub fn registry(config: &Config,
                 token: Option<String>,
                 index: Option<String>) -> CargoResult<(Registry, SourceId)> {
     // Parse all configuration options
+    let RegistryConfig {
+        token: token_config,
+        index: _index_config,
+    } = registry_configuration(config)?;
+    let token = token.or(token_config);
     let sid = match index {
         Some(index) => SourceId::for_registry(&index.to_url()?),
         None => SourceId::crates_io(config)?,
     };
-
     let api_host = {
         let mut src = RegistrySource::remote(&sid, config);
         src.update().chain_err(|| {
@@ -217,12 +203,6 @@ pub fn registry(config: &Config,
         })?;
         (src.config()?).unwrap().api
     };
-
-    let RegistryConfig {
-        token: token_config,
-        index: _index_config,
-    } = registry_configuration(config, &api_host)?;
-    let token = token.or(token_config);
     let handle = http_handle(config)?;
     Ok((Registry::new_handle(api_host, token, handle), sid))
 }
@@ -301,31 +281,15 @@ pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
     Ok(env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
 }
 
-pub fn registry_login(config: &Config,
-                      token: String,
-                      host: String) -> CargoResult<()> {
-    let host = match host.to_url()?.host_str() {
-        Some(h) => h.to_string(),
-        None => host,
-    };
-    let host: String = host.chars()
-                           .map(|x| match x {
-                               '\\'|'/'|':'|'.'|'-' => '_',
-                               _ => x,
-                           }).collect();
-
-    let RegistryConfig {
-        index: _,
-        token: old_token
-    } = registry_configuration(config, &host)?;
-
+pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
+    let RegistryConfig { index: _, token: old_token } = registry_configuration(config)?;
     if let Some(old_token) = old_token {
         if old_token == token {
             return Ok(());
         }
     }
 
-    config::save_credentials(config, token, host)
+    config::save_credentials(config, token)
 }
 
 pub struct OwnersOptions {
