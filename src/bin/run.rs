@@ -98,7 +98,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                     &bins, false,
                                     &[], false,
                                     &examples, false,
-                                    &[], false)
+                                    &[], false,
+                                    false)
         },
         message_format: options.flag_message_format,
         target_rustdoc_args: None,

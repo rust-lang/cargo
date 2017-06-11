@@ -24,6 +24,7 @@ pub struct Options {
     flag_tests: bool,
     flag_bench: Vec<String>,
     flag_benches: bool,
+    flag_all_targets: bool,
     flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
@@ -54,6 +55,7 @@ Options:
     --tests                      Test all tests
     --bench NAME ...             Test only the specified bench target
     --benches                    Test all benches
+    --all-targets                Test all targets (default)
     --no-run                     Compile, but don't run tests
     -p SPEC, --package SPEC ...  Package to run tests for
     --all                        Test all packages in the workspace
@@ -122,14 +124,16 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
     if options.flag_doc {
         mode = ops::CompileMode::Doctest;
         filter = ops::CompileFilter::new(true, &empty, false, &empty, false,
-                                               &empty, false, &empty, false);
+                                               &empty, false, &empty, false,
+                                         false);
     } else {
         mode = ops::CompileMode::Test;
         filter = ops::CompileFilter::new(options.flag_lib,
                                          &options.flag_bin, options.flag_bins,
                                          &options.flag_test, options.flag_tests,
                                          &options.flag_example, options.flag_examples,
-                                         &options.flag_bench, options.flag_benches);
+                                         &options.flag_bench, options.flag_benches,
+                                         options.flag_all_targets);
     }
 
     let spec = Packages::from_flags(options.flag_all,

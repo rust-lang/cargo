@@ -367,13 +367,20 @@ impl<'a> CompileFilter<'a> {
                bins: &'a [String], all_bins: bool,
                tsts: &'a [String], all_tsts: bool,
                exms: &'a [String], all_exms: bool,
-               bens: &'a [String], all_bens: bool) -> CompileFilter<'a> {
+               bens: &'a [String], all_bens: bool,
+               all_targets: bool) -> CompileFilter<'a> {
         let rule_bins = FilterRule::new(bins, all_bins);
         let rule_tsts = FilterRule::new(tsts, all_tsts);
         let rule_exms = FilterRule::new(exms, all_exms);
         let rule_bens = FilterRule::new(bens, all_bens);
 
-        if lib_only || rule_bins.is_specific() || rule_tsts.is_specific()
+        if all_targets {
+            CompileFilter::Only {
+                lib: true, bins: FilterRule::All,
+                examples: FilterRule::All, benches: FilterRule::All,
+                tests: FilterRule::All,
+            }
+        } else if lib_only || rule_bins.is_specific() || rule_tsts.is_specific()
                     || rule_exms.is_specific() || rule_bens.is_specific() {
             CompileFilter::Only {
                 lib: lib_only, bins: rule_bins,
