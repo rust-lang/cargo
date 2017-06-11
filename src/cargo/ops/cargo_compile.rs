@@ -78,7 +78,7 @@ impl<'a> CompileOptions<'a> {
             spec: ops::Packages::Packages(&[]),
             mode: mode,
             release: false,
-            filter: CompileFilter::Everything { required_features_filterable: false },
+            filter: CompileFilter::Default { required_features_filterable: false },
             message_format: MessageFormat::Human,
             target_rustdoc_args: None,
             target_rustc_args: None,
@@ -154,7 +154,7 @@ pub enum FilterRule<'a> {
 }
 
 pub enum CompileFilter<'a> {
-    Everything {
+    Default {
         /// Flag whether targets can be safely skipped when required-features are not satisfied.
         required_features_filterable: bool,
     },
@@ -381,7 +381,7 @@ impl<'a> CompileFilter<'a> {
                 tests: rule_tsts,
             }
         } else {
-            CompileFilter::Everything {
+            CompileFilter::Default {
                 required_features_filterable: true,
             }
         }
@@ -389,7 +389,7 @@ impl<'a> CompileFilter<'a> {
 
     pub fn matches(&self, target: &Target) -> bool {
         match *self {
-            CompileFilter::Everything { .. } => true,
+            CompileFilter::Default { .. } => true,
             CompileFilter::Only { lib, bins, examples, tests, benches } => {
                 let rule = match *target.kind() {
                     TargetKind::Bin => bins,
@@ -407,7 +407,7 @@ impl<'a> CompileFilter<'a> {
 
     pub fn is_specific(&self) -> bool {
         match *self {
-            CompileFilter::Everything { .. } => false,
+            CompileFilter::Default { .. } => false,
             CompileFilter::Only { .. } => true,
         }
     }
@@ -589,7 +589,7 @@ fn generate_targets<'a>(pkg: &'a Package,
     };
 
     let targets = match *filter {
-        CompileFilter::Everything { required_features_filterable } => {
+        CompileFilter::Default { required_features_filterable } => {
             let deps = if release {
                 &profiles.bench_deps
             } else {
