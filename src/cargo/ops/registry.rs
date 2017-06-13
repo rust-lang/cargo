@@ -1,8 +1,6 @@
-use std::collections::HashMap;
 use std::env;
 use std::fs::{self, File};
 use std::iter::repeat;
-use std::path::PathBuf;
 use std::time::Duration;
 
 use curl::easy::{Easy, SslOpt};
@@ -19,10 +17,9 @@ use core::dependency::Kind;
 use core::manifest::ManifestMetadata;
 use ops;
 use sources::{RegistrySource};
-use util::config;
+use util::config::{self, Config};
 use util::paths;
 use util::ToUrl;
-use util::config::{Config, ConfigValue, Location};
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 use util::important_paths::find_root_manifest_for_wd;
 
@@ -285,16 +282,14 @@ pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
 }
 
 pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
-    let RegistryConfig { index, token: _ } = registry_configuration(config)?;
-    let mut map = HashMap::new();
-    let p = config.cwd().to_path_buf();
-    if let Some(index) = index {
-        map.insert("index".to_string(), ConfigValue::String(index, p.clone()));
+    let RegistryConfig { index: _, token: old_token } = registry_configuration(config)?;
+    if let Some(old_token) = old_token {
+        if old_token == token {
+            return Ok(());
+        }
     }
-    map.insert("token".to_string(), ConfigValue::String(token, p));
 
-    config::set_config(config, Location::Global, "registry",
-                       ConfigValue::Table(map, PathBuf::from(".")))
+    config::save_credentials(config, token)
 }
 
 pub struct OwnersOptions {
