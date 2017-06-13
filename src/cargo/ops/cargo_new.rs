@@ -3,7 +3,8 @@ use std::fs;
 use std::path::Path;
 use std::collections::BTreeMap;
 
-use rustc_serialize::{Decodable, Decoder};
+use serde::{Deserialize, Deserializer};
+use serde::de;
 
 use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
@@ -43,16 +44,17 @@ struct MkOptions<'a> {
     bin: bool,
 }
 
-impl Decodable for VersionControl {
-    fn decode<D: Decoder>(d: &mut D) -> Result<VersionControl, D::Error> {
-        Ok(match &d.read_str()?[..] {
+impl<'de> Deserialize<'de> for VersionControl {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<VersionControl, D::Error> {
+        Ok(match &String::deserialize(d)?[..] {
             "git" => VersionControl::Git,
             "hg" => VersionControl::Hg,
             "pijul" => VersionControl::Pijul,
             "none" => VersionControl::NoVcs,
             n => {
-                let err = format!("could not decode '{}' as version control", n);
-                return Err(d.error(&err));
+                let value = de::Unexpected::Str(n);
+                let msg = "unsupported version control system";
+                return Err(de::Error::invalid_value(value, &msg));
             }
         })
     }

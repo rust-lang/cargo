@@ -2,7 +2,7 @@ use cargo::core::source::{Source, SourceId, GitReference};
 use cargo::sources::git::{GitSource};
 use cargo::util::{Config, CliResult, ToUrl};
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Options {
     flag_url: String,
     flag_reference: String,

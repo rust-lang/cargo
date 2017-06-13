@@ -15,7 +15,7 @@ use std::sync::{Once, ONCE_INIT};
 use core::MultiShell;
 use core::shell::{Verbosity, ColorConfig};
 use jobserver;
-use rustc_serialize::{Encodable,Encoder};
+use serde::{Serialize, Serializer};
 use toml;
 use util::Rustc;
 use util::errors::{CargoResult, CargoResultExt, CargoError, internal};
@@ -572,17 +572,17 @@ impl fmt::Debug for ConfigValue {
     }
 }
 
-impl Encodable for ConfigValue {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl Serialize for ConfigValue {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         match *self {
-            CV::String(ref string, _) => string.encode(s),
+            CV::String(ref string, _) => string.serialize(s),
             CV::List(ref list, _) => {
                 let list: Vec<&String> = list.iter().map(|s| &s.0).collect();
-                list.encode(s)
+                list.serialize(s)
             }
-            CV::Table(ref table, _) => table.encode(s),
-            CV::Boolean(b, _) => b.encode(s),
-            CV::Integer(i, _) => i.encode(s),
+            CV::Table(ref table, _) => table.serialize(s),
+            CV::Boolean(b, _) => b.serialize(s),
+            CV::Integer(i, _) => i.serialize(s),
         }
     }
 }

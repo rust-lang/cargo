@@ -3,8 +3,8 @@ use std::env;
 use cargo;
 use cargo::util::{CliResult, Config};
 
-#[derive(RustcDecodable)]
-pub struct Options;
+#[derive(Deserialize)]
+pub struct Options {}
 
 pub const USAGE: &'static str = "
 Show version information

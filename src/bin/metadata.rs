@@ -4,7 +4,7 @@ use cargo::ops::{output_metadata, OutputMetadataOptions};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::util::{CliResult, Config};
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Options {
     flag_color: Option<String>,
     flag_features: Vec<String>,
