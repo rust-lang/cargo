@@ -3,7 +3,7 @@ use cargo::util::{CliResult, Config};
 
 use std::cmp;
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Options {
     flag_host: Option<String>,
     flag_verbose: u32,

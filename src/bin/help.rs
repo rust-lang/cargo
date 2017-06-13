@@ -1,6 +1,6 @@
 use cargo::util::{CliResult, CliError, Config};
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Options;
 
 pub const USAGE: &'static str = "

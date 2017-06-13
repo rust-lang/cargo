@@ -17,11 +17,11 @@ extern crate flate2;
 extern crate fs2;
 extern crate git2;
 extern crate glob;
+extern crate hex;
 extern crate jobserver;
 extern crate libc;
 extern crate libgit2_sys;
 extern crate num_cpus;
-extern crate rustc_serialize;
 extern crate semver;
 extern crate serde;
 extern crate serde_ignored;
@@ -37,7 +37,7 @@ use std::fmt;
 use std::error::Error;
 
 use error_chain::ChainedError;
-use rustc_serialize::Decodable;
+use serde::Deserialize;
 use serde::ser;
 use docopt::Docopt;
 
@@ -105,7 +105,7 @@ impl fmt::Display for VersionInfo {
     }
 }
 
-pub fn call_main_without_stdin<Flags: Decodable>(
+pub fn call_main_without_stdin<'de, Flags: Deserialize<'de>>(
             exec: fn(Flags, &Config) -> CliResult,
             config: &Config,
             usage: &str,
@@ -117,7 +117,7 @@ pub fn call_main_without_stdin<Flags: Decodable>(
         .argv(args.iter().map(|s| &s[..]))
         .help(true);
 
-    let flags = docopt.decode().map_err(|e| {
+    let flags = docopt.deserialize().map_err(|e| {
         let code = if e.fatal() {1} else {0};
         CliError::new(e.to_string().into(), code)
     })?;

@@ -6,7 +6,7 @@ use std::path::Path;
 
 use curl::easy::{Easy, List};
 use git2;
-use rustc_serialize::hex::ToHex;
+use hex::ToHex;
 use serde_json;
 use url::Url;
 

@@ -1,7 +1,6 @@
 extern crate cargo;
 extern crate cargotest;
 extern crate hamcrest;
-extern crate rustc_serialize;
 
 use cargotest::support::{project, execs};
 use hamcrest::assert_that;

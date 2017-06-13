@@ -3,7 +3,7 @@ use std::env;
 use cargo::ops;
 use cargo::util::{CliResult, Config};
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Options {
     flag_verbose: u32,
     flag_quiet: Option<bool>,

@@ -9,7 +9,7 @@ use cargo::util::{CliResult, Config};
 use serde_json;
 use toml;
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Flags {
     flag_manifest_path: Option<String>,
     flag_verbose: u32,
