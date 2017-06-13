@@ -49,7 +49,7 @@ id. Source is the place where the source code for package comes
 from. Typical sources are crates.io, a git repository or a folder on
 the local hard drive.
 
-`Resolve` is the representation of a direct acyclic graph of package
+`Resolve` is the representation of a directed acyclic graph of package
 dependencies, which uses `PackageId`s for nodes. This is the data
 structure that is saved to the lock file. If there is no lockfile,
 Cargo constructs a resolve by finding a graph of packages which
@@ -69,11 +69,13 @@ the registry storage format.
 
 ## Concurrency
 
-Cargo itself is mostly single hreaded, but it schedules compiler jobs
-in parallel if possible. However there can be several different
-instances of Cargo running concurrently on the system, so Cargo uses
-file locking when accessing potentially shared data like the registry
-or the target directory.
+Cargo is mostly single threaded. The only concurrency inside a single
+instance of Cargo happens during compilation, when several instances
+of `rustc` are invoked in parallel to build independent
+targets. However there can be several different instances of Cargo
+process running concurrently on the system. Cargo guarantees that this
+is always safe by using file locks when accessing potentially shared
+data like the registry or the target directory.
 
 
 ## Tests
