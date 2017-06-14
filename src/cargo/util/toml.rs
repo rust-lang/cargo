@@ -109,9 +109,7 @@ pub fn to_manifest(contents: &str,
     let manifest: TomlManifest = serde_ignored::deserialize(root, |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
-        if !key.starts_with("package.metadata") {
-            unused.insert(key);
-        }
+        unused.insert(key);
     })?;
 
     let manifest = Rc::new(manifest);
@@ -459,6 +457,7 @@ pub struct TomlProject {
     #[serde(rename = "license-file")]
     license_file: Option<String>,
     repository: Option<String>,
+    metadata: Option<toml::Value>,
 }
 
 #[derive(Deserialize, Serialize)]

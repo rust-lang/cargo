@@ -604,6 +604,9 @@ fn generated_manifest() {
             license = "MIT"
             description = "foo"
 
+            [project.metadata]
+            foo = 'bar'
+
             [workspace]
 
             [dependencies]
@@ -652,6 +655,9 @@ authors = []
 exclude = ["*.txt"]
 description = "foo"
 license = "MIT"
+
+[package.metadata]
+foo = "bar"
 [dependencies.bar]
 version = "0.1"
 "#));
