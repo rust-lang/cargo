@@ -12,7 +12,6 @@ use curl;
 use git2;
 use semver;
 use serde_json;
-use term;
 use toml;
 use registry;
 
@@ -32,7 +31,6 @@ error_chain! {
         SerdeJson(serde_json::Error);
         TomlSer(toml::ser::Error);
         TomlDe(toml::de::Error);
-        Term(term::Error);
         ParseInt(num::ParseIntError);
         ParseBool(str::ParseBoolError);
         Parse(string::ParseError);
@@ -78,7 +76,6 @@ impl CargoError {
             &CargoErrorKind::Semver(_) |
             &CargoErrorKind::Io(_) |
             &CargoErrorKind::SerdeJson(_) |
-            &CargoErrorKind::Term(_) |
             &CargoErrorKind::ParseInt(_) |
             &CargoErrorKind::ParseBool(_) |
             &CargoErrorKind::Parse(_) |

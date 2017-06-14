@@ -10,7 +10,7 @@ use serde_json;
 
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
-use core::shell::ColorConfig;
+use core::shell::ColorChoice;
 use util::{self, ProcessBuilder, machine_message};
 use util::{Config, internal, profile, join_paths, short_hash};
 use util::errors::{CargoResult, CargoResultExt};
@@ -679,9 +679,10 @@ fn build_base_args(cx: &mut Context,
 
     cmd.arg(&root_path(cx, unit));
 
-    let color_config = cx.config.shell().color_config();
-    if color_config != ColorConfig::Auto {
-        cmd.arg("--color").arg(&color_config.to_string());
+    match cx.config.shell().color_choice() {
+        ColorChoice::Always => { cmd.arg("--color").arg("always"); }
+        ColorChoice::Never => { cmd.arg("--color").arg("never"); }
+        ColorChoice::CargoAuto => {}
     }
 
     if cx.build_config.json_messages {
