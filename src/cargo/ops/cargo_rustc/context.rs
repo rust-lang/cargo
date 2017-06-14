@@ -477,6 +477,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // settings like debuginfo and whatnot.
         unit.profile.hash(&mut hasher);
 
+        // Artifacts compiled for the host should have a different metadata
+        // piece than those compiled for the target, so make sure we throw in
+        // the unit's `kind` as well
+        unit.kind.hash(&mut hasher);
+
         // Finally throw in the target name/kind. This ensures that concurrent
         // compiles of targets in the same crate don't collide.
         unit.target.name().hash(&mut hasher);
