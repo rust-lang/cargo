@@ -16,7 +16,7 @@ pub use self::rustc::Rustc;
 pub use self::sha256::Sha256;
 pub use self::to_semver::ToSemver;
 pub use self::to_url::ToUrl;
-pub use self::vcs::{GitRepo, HgRepo, PijulRepo};
+pub use self::vcs::{GitRepo, HgRepo, PijulRepo, FossilRepo};
 pub use self::read2::read2;
 
 pub mod config;

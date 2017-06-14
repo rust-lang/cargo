@@ -27,8 +27,9 @@ Usage:
 Options:
     -h, --help          Print this message
     --vcs VCS           Initialize a new repository for the given version
-                        control system (git, hg, or pijul) or do not initialize any version
-                        control at all (none) overriding a global configuration.
+                        control system (git, hg, pijul, or fossil) or do not
+                        initialize any version control at all (none), overriding
+                        a global configuration.
     --bin               Use a binary (application) template
     --lib               Use a library template [default]
     --name NAME         Set the resulting package name, defaults to the value of <path>
