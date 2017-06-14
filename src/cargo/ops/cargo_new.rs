@@ -9,8 +9,6 @@ use serde::de;
 use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
 
-use term::color::BLACK;
-
 use core::Workspace;
 use ops::is_bad_artifact_name;
 use util::{GitRepo, HgRepo, PijulRepo, FossilRepo, internal};
@@ -112,10 +110,11 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoR
     } else {
         let new_name = strip_rust_affixes(dir_name);
         if new_name != dir_name {
+            let color = config.shell().styles.default;
             let message = format!(
                 "note: package will be named `{}`; use --name to override",
                 new_name);
-            config.shell().say(&message, BLACK)?;
+            config.shell().say(&message, color)?;
         }
         Ok(new_name)
     }
