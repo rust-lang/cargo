@@ -410,6 +410,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
             if !fs::metadata(&path.join(".hg")).is_ok() {
                 HgRepo::init(path, config.cwd())?;
             }
+            let ignore = format!("syntax: glob\n{}", ignore);
             paths::append(&path.join(".hgignore"), ignore.as_bytes())?;
         },
         VersionControl::Pijul => {
