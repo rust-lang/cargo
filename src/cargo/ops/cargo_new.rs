@@ -13,14 +13,14 @@ use term::color::BLACK;
 
 use core::Workspace;
 use ops::is_bad_artifact_name;
-use util::{GitRepo, HgRepo, PijulRepo, internal};
+use util::{GitRepo, HgRepo, PijulRepo, FossilRepo, internal};
 use util::{Config, paths};
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 use toml;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum VersionControl { Git, Hg, Pijul, NoVcs }
+pub enum VersionControl { Git, Hg, Pijul, Fossil, NoVcs }
 
 pub struct NewOptions<'a> {
     pub version_control: Option<VersionControl>,
@@ -50,6 +50,7 @@ impl<'de> Deserialize<'de> for VersionControl {
             "git" => VersionControl::Git,
             "hg" => VersionControl::Hg,
             "pijul" => VersionControl::Pijul,
+            "fossil" => VersionControl::Fossil,
             "none" => VersionControl::NoVcs,
             n => {
                 let value = de::Unexpected::Str(n);
@@ -342,13 +343,17 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
             num_detected_vsces += 1;
         }
 
+        if fs::metadata(&path.join(".fossil")).is_ok() {
+            version_control = Some(VersionControl::Fossil);
+            num_detected_vsces += 1;
+        }
+
         // if none exists, maybe create git, like in `cargo new`
 
         if num_detected_vsces > 1 {
-            bail!("more than one of .hg, .git, or .pijul directories found \
-                              and the ignore file can't be \
-                              filled in as a result, \
-                              specify --vcs to override detection");
+            bail!("more than one of .hg, .git, .pijul, .fossil configurations \
+                              found and the ignore file can't be filled in as \
+                              a result. specify --vcs to override detection");
         }
     }
 
@@ -416,6 +421,11 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
         VersionControl::Pijul => {
             if !fs::metadata(&path.join(".pijul")).is_ok() {
                 PijulRepo::init(path, config.cwd())?;
+            }
+        },
+        VersionControl::Fossil => {
+            if !fs::metadata(&path.join(".fossil")).is_ok() {
+                FossilRepo::init(path, config.cwd())?;
             }
         },
         VersionControl::NoVcs => {
