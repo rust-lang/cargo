@@ -1,15 +1,14 @@
+use std::collections::BTreeMap;
 use std::env;
 use std::fs;
+use std::io::Write;
 use std::path::Path;
-use std::collections::BTreeMap;
 
 use serde::{Deserialize, Deserializer};
 use serde::de;
 
 use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
-
-use term::color::BLACK;
 
 use core::Workspace;
 use ops::is_bad_artifact_name;
@@ -112,10 +111,9 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoR
     } else {
         let new_name = strip_rust_affixes(dir_name);
         if new_name != dir_name {
-            let message = format!(
-                "note: package will be named `{}`; use --name to override",
-                new_name);
-            config.shell().say(&message, BLACK)?;
+            writeln!(config.shell().err(),
+                     "note: package will be named `{}`; use --name to override",
+                     new_name)?;
         }
         Ok(new_name)
     }

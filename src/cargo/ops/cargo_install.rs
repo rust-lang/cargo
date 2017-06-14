@@ -460,12 +460,10 @@ pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
     let dst = resolve_root(dst, config)?;
     let dst = metadata(config, &dst)?;
     let list = read_crate_list(dst.file())?;
-    let mut shell = config.shell();
-    let out = shell.out();
     for (k, v) in list.v1.iter() {
-        writeln!(out, "{}:", k)?;
+        println!("{}:", k);
         for bin in v {
-            writeln!(out, "    {}", bin)?;
+            println!("    {}", bin);
         }
     }
     Ok(())
