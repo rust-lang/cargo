@@ -8,6 +8,7 @@
 #[macro_use] extern crate scoped_tls;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate serde_json;
+extern crate atty;
 extern crate crates_io as registry;
 extern crate crossbeam;
 extern crate curl;
