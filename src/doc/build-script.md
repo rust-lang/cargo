@@ -97,6 +97,15 @@ crate is built:
   then it's rebuilt and rerun unconditionally, so
   `cargo:rerun-if-changed=build.rs` is almost always redundant (unless you
   want to ignore changes in all other files except for `build.rs`).
+* `rerun-if-env-changed=VAR` is the name of an environment variable which
+  indicates that if the environment variable's value changes the build script
+  should be rerun. This basically behaves the same as `rerun-if-changed` except
+  that it works with environment variables instead. Note that the environment
+  variables here are intended for global environment variables like `CC` and
+  such, it's not necessary to use this for env vars like `TARGET` that Cargo
+  sets. Also note that if `rerun-if-env-changed` is printed out then Cargo will
+  *only* rerun the build script if those environment variables change or if
+  files printed out by `rerun-if-changed` change.
 
 * `warning=MESSAGE` is a message that will be printed to the main console after
   a build script has finished running. Warnings are only shown for path
