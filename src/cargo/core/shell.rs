@@ -1,8 +1,9 @@
 use std::fmt;
 use std::io::prelude::*;
 
-use termcolor::{self, StandardStream, Color, ColorSpec, WriteColor};
+use atty;
 use termcolor::Color::{Green, Red, Yellow};
+use termcolor::{self, StandardStream, Color, ColorSpec, WriteColor};
 
 use util::errors::CargoResult;
 
@@ -138,29 +139,15 @@ impl Shell {
 
 impl ColorChoice {
     fn to_termcolor_color_choice(&self) -> termcolor::ColorChoice {
-        return match *self {
+        match *self {
             ColorChoice::Always => termcolor::ColorChoice::Always,
             ColorChoice::Never => termcolor::ColorChoice::Never,
-            ColorChoice::CargoAuto if isatty() => termcolor::ColorChoice::Auto,
-            ColorChoice::CargoAuto => termcolor::ColorChoice::Never,
-        };
-
-        #[cfg(unix)]
-        fn isatty() -> bool {
-            extern crate libc;
-
-            unsafe { libc::isatty(libc::STDERR_FILENO) != 0 }
-        }
-
-        #[cfg(windows)]
-        fn isatty() -> bool {
-            extern crate kernel32;
-            extern crate winapi;
-
-            unsafe {
-                let handle = kernel32::GetStdHandle(winapi::STD_ERROR_HANDLE);
-                let mut out = 0;
-                kernel32::GetConsoleMode(handle, &mut out) != 0
+            ColorChoice::CargoAuto => {
+                if atty::is(atty::Stream::Stderr) {
+                    termcolor::ColorChoice::Auto
+                } else {
+                    termcolor::ColorChoice::Never
+                }
             }
         }
     }
