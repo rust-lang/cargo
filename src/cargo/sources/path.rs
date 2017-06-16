@@ -114,8 +114,11 @@ impl<'cfg> PathSource<'cfg> {
             }
         };
 
-        if let Some(result) = self.discover_git_and_list_files(pkg, root, &mut filter) {
-            return result;
+        // attempt git-prepopulate only if no `include` (rust-lang/cargo#4135)
+        if include.is_empty() {
+            if let Some(result) = self.discover_git_and_list_files(pkg, root, &mut filter) {
+                return result;
+            }
         }
 
         self.list_files_walk(pkg, &mut filter)
