@@ -1415,12 +1415,9 @@ fn normalize(package_root: &Path,
 
     if let Some(ref lib) = *lib {
         lib_target(&mut ret, lib);
-        bin_targets(&mut ret, bins,
-                    &mut |bin| inferred_bin_path(bin, package_root, true, bins.len()));
-    } else if bins.len() > 0 {
-        bin_targets(&mut ret, bins,
-                    &mut |bin| inferred_bin_path(bin, package_root, false, bins.len()));
     }
+    bin_targets(&mut ret, bins,
+                &mut |bin| inferred_bin_path(bin, package_root, bins.len()));
 
 
     if let Some(custom_build) = custom_build {
@@ -1444,31 +1441,7 @@ fn normalize(package_root: &Path,
 
 fn inferred_bin_path(bin: &TomlBinTarget,
                      package_root: &Path,
-                     lib: bool,
                      bin_len: usize) -> PathBuf {
-    // we have a lib with multiple bins, so the bins are expected to be located
-    // inside src/bin
-    if lib && bin_len > 1 {
-        return Path::new("src").join("bin").join(&format!("{}.rs", bin.name()))
-                    .to_path_buf()
-    }
-
-    // we have a lib with one bin, so it's either src/main.rs, src/bin/foo.rs or
-    // src/bin/main.rs
-    if lib && bin_len == 1 {
-        let path = Path::new("src").join(&format!("main.rs"));
-        if package_root.join(&path).exists() {
-            return path.to_path_buf()
-        }
-
-        let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
-        if package_root.join(&path).exists() {
-            return path.to_path_buf()
-        }
-
-        return Path::new("src").join("bin").join(&format!("main.rs")).to_path_buf()
-    }
-
     // here we have a single bin, so it may be located in src/main.rs, src/foo.rs,
     // srb/bin/foo.rs or src/bin/main.rs
     if bin_len == 1 {
