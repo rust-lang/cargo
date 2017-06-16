@@ -15,9 +15,13 @@ pub enum Verbosity {
 }
 
 pub struct Shell {
-    err: StandardStream,
+    err: ShellOut,
     verbosity: Verbosity,
-    choice: ColorChoice,
+}
+
+enum ShellOut {
+    Write(Box<Write>),
+    Stream(StandardStream, ColorChoice),
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -30,9 +34,18 @@ pub enum ColorChoice {
 impl Shell {
     pub fn new() -> Shell {
         Shell {
-            err: StandardStream::stderr(ColorChoice::CargoAuto.to_termcolor_color_choice()),
+            err: ShellOut::Stream(
+                StandardStream::stderr(ColorChoice::CargoAuto.to_termcolor_color_choice()),
+                ColorChoice::CargoAuto,
+            ),
             verbosity: Verbosity::Verbose,
-            choice: ColorChoice::CargoAuto,
+        }
+    }
+
+    pub fn from_write(out: Box<Write>) -> Shell {
+        Shell {
+            err: ShellOut::Write(out),
+            verbosity: Verbosity::Verbose,
         }
     }
 
@@ -44,24 +57,13 @@ impl Shell {
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
             _ => {
-                self.err.reset()?;
-                self.err.set_color(ColorSpec::new()
-                                        .set_bold(true)
-                                        .set_fg(Some(color)))?;
-                if justified {
-                    write!(self.err, "{:>12}", status)?;
-                } else {
-                    write!(self.err, "{}", status)?;
-                }
-                self.err.reset()?;
-                write!(self.err, " {}\n", message)?;
-                Ok(())
+                self.err.print(status, message, color, justified)
             }
         }
     }
 
-    pub fn err(&mut self) -> &mut StandardStream {
-        &mut self.err
+    pub fn err(&mut self) -> &mut Write {
+        self.err.as_write()
     }
 
     pub fn status<T, U>(&mut self, status: T, message: U) -> CargoResult<()>
@@ -117,23 +119,68 @@ impl Shell {
     }
 
     pub fn set_color_choice(&mut self, color: Option<&str>) -> CargoResult<()> {
-        let cfg = match color {
-            Some("always") => ColorChoice::Always,
-            Some("never") => ColorChoice::Never,
+        if let ShellOut::Stream(ref mut err, ref mut cc) =  self.err {
+            let cfg = match color {
+                Some("always") => ColorChoice::Always,
+                Some("never") => ColorChoice::Never,
 
-            Some("auto") |
-            None => ColorChoice::CargoAuto,
+                Some("auto") |
+                None => ColorChoice::CargoAuto,
 
-            Some(arg) => bail!("argument for --color must be auto, always, or \
-                                never, but found `{}`", arg),
-        };
-        self.choice = cfg;
-        self.err = StandardStream::stderr(cfg.to_termcolor_color_choice());
-        return Ok(());
+                Some(arg) => bail!("argument for --color must be auto, always, or \
+                                    never, but found `{}`", arg),
+            };
+            *cc = cfg;
+            *err = StandardStream::stderr(cfg.to_termcolor_color_choice());
+        }
+        Ok(())
     }
 
     pub fn color_choice(&self) -> ColorChoice {
-        self.choice
+        match self.err {
+            ShellOut::Stream(_, cc) => cc,
+            ShellOut::Write(_) => ColorChoice::Never,
+        }
+    }
+}
+
+impl ShellOut {
+    fn print(&mut self,
+             status: &fmt::Display,
+             message: &fmt::Display,
+             color: Color,
+             justified: bool) -> CargoResult<()> {
+        match *self {
+            ShellOut::Stream(ref mut err, _) => {
+                err.reset()?;
+                err.set_color(ColorSpec::new()
+                                    .set_bold(true)
+                                    .set_fg(Some(color)))?;
+                if justified {
+                    write!(err, "{:>12}", status)?;
+                } else {
+                    write!(err, "{}", status)?;
+                }
+                err.reset()?;
+                write!(err, " {}\n", message)?;
+            }
+            ShellOut::Write(ref mut w) => {
+                if justified {
+                    write!(w, "{:>12}", status)?;
+                } else {
+                    write!(w, "{}", status)?;
+                }
+                write!(w, " {}\n", message)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn as_write(&mut self) -> &mut Write {
+        match *self {
+            ShellOut::Stream(ref mut err, _) => err,
+            ShellOut::Write(ref mut w) => w,
+        }
     }
 }
 
