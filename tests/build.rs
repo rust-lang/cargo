@@ -3269,5 +3269,5 @@ fn no_bin_in_src_with_lib() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr_contains(r#"[ERROR] couldn't read "src[/]bin[/]main.rs"[..]"#));
+                       .with_stderr_contains(r#"[ERROR] couldn't read "[..]main.rs"[..]"#));
 }
