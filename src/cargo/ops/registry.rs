@@ -1,6 +1,5 @@
 use std::env;
 use std::fs::{self, File};
-use std::io::Write;
 use std::iter::repeat;
 use std::time::Duration;
 
