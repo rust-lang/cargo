@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::collections::hash_map::HashMap;
 use std::fmt;
-use std::io::{self, Write};
+use std::io;
 use std::mem;
 use std::sync::mpsc::{channel, Sender, Receiver};
 
