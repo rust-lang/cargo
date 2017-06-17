@@ -113,7 +113,7 @@ impl<'a> JobQueue<'a> {
         let _p = profile::start("executing the job graph");
 
         // We need to give a handle to the send half of our message queue to the
-        // jobserver helper thrad. Unfortunately though we need the handle to be
+        // jobserver helper thread. Unfortunately though we need the handle to be
         // `'static` as that's typically what's required when spawning a
         // thread!
         //
