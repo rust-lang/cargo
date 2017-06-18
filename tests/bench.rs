@@ -242,10 +242,10 @@ fn cargo_bench_failing_test() {
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
 thread '[..]' panicked at 'assertion failed: \
-    `(left == right)`", p.url()))
-                       .with_stderr_contains("left: `\"hello\"`")
-                       .with_stderr_contains("right: `\"nope\"`")
-                       .with_stderr_contains("src[/]foo.rs:14")
+    `(left == right)`[..]", p.url()))
+                       .with_stderr_contains("[..]left: `\"hello\"`[..]")
+                       .with_stderr_contains("[..]right: `\"nope\"`[..]")
+                       .with_stderr_contains("[..]src[/]foo.rs:14")
                        .with_status(101));
 }
 
