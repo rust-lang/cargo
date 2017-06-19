@@ -8,6 +8,7 @@ pub struct Options {
     flag_features: Vec<String>,
     flag_all_features: bool,
     flag_no_default_features: bool,
+    flag_no_target_cpu: bool,
     flag_debug: bool,
     flag_bin: Vec<String>,
     flag_bins: bool,
@@ -55,6 +56,7 @@ Build and install options:
     --features FEATURES       Space-separated list of features to activate
     --all-features            Build all available features
     --no-default-features     Do not build the `default` feature
+    --no-target-cpu           Do not build with specific optimizations for this CPU
     --debug                   Build in debug mode instead of release mode
     --bin NAME                Install only the specified binary
     --bins                    Install all binaries
@@ -123,7 +125,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                         &options.flag_example, options.flag_examples,
                                         &[], false),
         message_format: ops::MessageFormat::Human,
-        target_rustc_args: Some(&target_rustc_args),
+        target_rustc_args: if options.flag_no_target_cpu { None }
+                           else { Some(&target_rustc_args) },
         target_rustdoc_args: None,
     };
 
