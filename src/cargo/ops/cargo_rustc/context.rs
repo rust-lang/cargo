@@ -491,6 +491,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             rustc.verbose_version.hash(&mut hasher);
         }
 
+        if let Ok(ref channel) = env::var("CFG_RELEASE_CHANNEL") {
+            channel.hash(&mut hasher);
+        }
+
         Some(Metadata(hasher.finish()))
     }
 
