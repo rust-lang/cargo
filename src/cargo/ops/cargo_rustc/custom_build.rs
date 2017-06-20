@@ -123,7 +123,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
        .env("PROFILE", if cx.build_config.release { "release" } else { "debug" })
        .env("HOST", cx.host_triple())
        .env("RUSTC", &cx.config.rustc()?.path)
-       .env("RUSTDOC", &*cx.config.rustdoc()?)
+       .env("RUSTDOC", &cx.config.rustdoc()?.path)
        .inherit_jobserver(&cx.jobserver);
 
     if let Some(links) = unit.pkg.manifest().links() {
