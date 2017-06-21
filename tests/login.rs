@@ -11,6 +11,8 @@ use cargotest::cargo_process;
 use cargotest::support::execs;
 use cargotest::support::registry::registry;
 use cargotest::install::cargo_home;
+use cargo::util::config::Config;
+use cargo::core::Shell;
 use hamcrest::{assert_that, existing_file, is_not};
 
 const TOKEN: &str = "test-token";
@@ -109,4 +111,18 @@ fn login_without_credentials() {
     let mut contents = String::new();
     File::open(&credentials).unwrap().read_to_string(&mut contents).unwrap();
     assert!(check_host_token(contents.parse().unwrap()));
+}
+
+#[test]
+fn new_credentials_is_used_instead_old() {
+    setup_old_credentials();
+    setup_new_credentials();
+
+    assert_that(cargo_process().arg("login")
+                .arg("--host").arg(registry().to_string()).arg(TOKEN),
+                execs().with_status(0));
+
+    let config = Config::new(Shell::new(), cargo_home(), cargo_home());
+    let token = config.get_string("registry.token").unwrap().map(|p| p.val);
+    assert!(token.unwrap() == TOKEN);
 }
