@@ -486,13 +486,18 @@ impl Config {
             _ => unreachable!(),
         };
 
-        let mut registry = cfg.entry("registry".into())
-            .or_insert(CV::Table(HashMap::new(),
-                                 PathBuf::from(".")));
-        registry.merge(value).chain_err(|| {
-            format!("failed to merge configuration at `{}`",
-                          credentials.display())
-        })?;
+        let registry = cfg.entry("registry".into())
+                          .or_insert(CV::Table(HashMap::new(), PathBuf::from(".")));
+
+        match (registry, value) {
+            (&mut CV::Table(ref mut old, _), CV::Table(ref mut new, _)) => {
+                let new = mem::replace(new, HashMap::new());
+                for (key, value) in new.into_iter() {
+                    old.insert(key, value);
+                }
+            }
+            _ => unreachable!(),
+        }
 
         Ok(())
     }
