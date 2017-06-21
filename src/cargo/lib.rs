@@ -33,7 +33,6 @@ extern crate termcolor;
 extern crate toml;
 extern crate url;
 
-use std::io::Write;
 use std::fmt;
 use std::error::Error;
 

@@ -436,13 +436,12 @@ impl Execs {
         }
 
         if let Some(ref objects) = self.expect_json {
-            let lines = match str::from_utf8(&actual.stdout) {
-                Err(..) => return Err("stdout was not utf8 encoded".to_owned()),
-                Ok(stdout) => stdout.lines().collect::<Vec<_>>(),
-            };
+            let stdout = str::from_utf8(&actual.stdout)
+                .map_err(|_| "stdout was not utf8 encoded".to_owned())?;
+            let lines = stdout.lines().collect::<Vec<_>>();
             if lines.len() != objects.len() {
-                return Err(format!("expected {} json lines, got {}",
-                                   objects.len(), lines.len()));
+                return Err(format!("expected {} json lines, got {}, stdout:\n{}",
+                                   objects.len(), lines.len(), stdout));
             }
             for (obj, line) in objects.iter().zip(lines) {
                 self.match_json(obj, line)?;

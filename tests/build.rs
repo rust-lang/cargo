@@ -3229,3 +3229,45 @@ fn deterministic_cfg_flags() {
 --cfg cfg_a --cfg cfg_b --cfg cfg_c --cfg cfg_d --cfg cfg_e`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"));
 }
+
+#[test]
+fn explicit_bins_without_paths() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [[bin]]
+            name = "foo"
+
+            [[bin]]
+            name = "bar"
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
+        .file("src/bin/bar.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+}
+
+#[test]
+fn no_bin_in_src_with_lib() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [[bin]]
+            name = "foo"
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/foo.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101)
+                       .with_stderr_contains(r#"[ERROR] couldn't read "[..]main.rs"[..]"#));
+}
