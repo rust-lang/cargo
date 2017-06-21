@@ -71,7 +71,7 @@ impl CargoError {
             &CargoErrorKind::Curl(_) => true,
             &CargoErrorKind::HttpNot200(..) => true,
             &CargoErrorKind::ProcessErrorKind(_) => true,
-            &CargoErrorKind::CrateRegistry(_) |
+            &CargoErrorKind::CrateRegistry(_) => true,
             &CargoErrorKind::ParseSemver(_) |
             &CargoErrorKind::Semver(_) |
             &CargoErrorKind::Io(_) |
