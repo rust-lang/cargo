@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use cargotest::support::git::repo;
 use cargotest::support::paths;
 use cargotest::support::{project, execs};
+use cargotest::install::cargo_home;
 use flate2::read::GzDecoder;
 use hamcrest::assert_that;
 use tar::Archive;
@@ -24,13 +25,20 @@ fn upload_path() -> PathBuf { paths::root().join("upload") }
 fn upload() -> Url { Url::from_file_path(&*upload_path()).ok().unwrap() }
 
 fn setup() {
-    let config = paths::root().join(".cargo/config");
+    let config = cargo_home().join("config");
     t!(fs::create_dir_all(config.parent().unwrap()));
     t!(t!(File::create(&config)).write_all(br#"
         [registry]
-            token = "api-token"
+        token = "api-token"
     "#));
     t!(fs::create_dir_all(&upload_path().join("api/v1/crates")));
+
+    let credentials = cargo_home().join("credentials");
+    t!(t!(File::create(&credentials)).write_all(format!(r#"
+        ["{registry}"]
+        token = "api-token"
+    "#, registry = registry().to_string())
+    .as_bytes()));
 
     repo(&registry_path())
         .file("config.json", &format!(r#"{{

@@ -16,7 +16,7 @@ use core::dependency::Kind;
 use core::manifest::ManifestMetadata;
 use ops;
 use sources::{RegistrySource};
-use util::config::{self, Config};
+use util::config::{self, Config, Value, Definition};
 use util::paths;
 use util::ToUrl;
 use util::errors::{CargoError, CargoResult, CargoResultExt};
@@ -176,10 +176,24 @@ fn transmit(config: &Config,
     }
 }
 
-pub fn registry_configuration(config: &Config) -> CargoResult<RegistryConfig> {
-    let index = config.get_string("registry.index")?.map(|p| p.val);
-    let token = config.get_string("registry.token")?.map(|p| p.val);
-    Ok(RegistryConfig { index: index, token: token })
+pub fn registry_configuration(config: &Config,
+                              host: Option<String>) -> CargoResult<RegistryConfig> {
+    let (index, token) = match host {
+        Some(host) => {
+            (Some(Value { val: host.clone(), definition: Definition::Environment }),
+             config.get_string(&format!("registry.{}.token", host))?)
+        }
+        None => {
+            // Checking out for default index and token
+            (config.get_string("registry.index")?,
+             config.get_string("registry.token")?)
+        }
+    };
+
+    Ok(RegistryConfig {
+        index: index.map(|p| p.val),
+        token: token.map(|p| p.val)
+    })
 }
 
 pub fn registry(config: &Config,
@@ -189,7 +203,7 @@ pub fn registry(config: &Config,
     let RegistryConfig {
         token: token_config,
         index: _index_config,
-    } = registry_configuration(config)?;
+    } = registry_configuration(config, index.clone())?;
     let token = token.or(token_config);
     let sid = match index {
         Some(index) => SourceId::for_registry(&index.to_url()?),
@@ -280,15 +294,21 @@ pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
     Ok(env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
 }
 
-pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
-    let RegistryConfig { index: _, token: old_token } = registry_configuration(config)?;
+pub fn registry_login(config: &Config,
+                      token: String,
+                      host: Option<String>) -> CargoResult<()> {
+    let RegistryConfig {
+        index: _,
+        token: old_token
+    } = registry_configuration(config, host.clone())?;
+
     if let Some(old_token) = old_token {
         if old_token == token {
             return Ok(());
         }
     }
 
-    config::save_credentials(config, token)
+    config::save_credentials(config, token, host)
 }
 
 pub struct OwnersOptions {
