@@ -94,6 +94,8 @@ See [..]
     }
 }
 
+// TODO: Deprecated
+// remove once it has been decided --host can be removed
 #[test]
 fn simple_with_host() {
     setup();
@@ -158,6 +160,8 @@ See [..]
     }
 }
 
+// TODO: Deprecated
+// remove once it has been decided --host can be removed
 #[test]
 fn simple_with_index_and_host() {
     setup();
