@@ -5,6 +5,7 @@ use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(Deserialize)]
 pub struct Options {
+    flag_index: Option<String>,
     flag_host: Option<String>,
     flag_token: Option<String>,
     flag_manifest_path: Option<String>,
@@ -27,7 +28,8 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    --host HOST              Host to upload the package to
+    --index INDEX            Host to upload the package to
+    --host HOST              DEPRECATED
     --token TOKEN            Token to use when uploading
     --no-verify              Don't verify package tarball before publish
     --allow-dirty            Allow publishing with a dirty source directory
@@ -48,8 +50,12 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      &options.flag_color,
                      options.flag_frozen,
                      options.flag_locked)?;
+
+
+
     let Options {
         flag_token: token,
+        flag_index: index,
         flag_host: host,
         flag_manifest_path,
         flag_no_verify: no_verify,
@@ -59,12 +65,26 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         ..
     } = options;
 
+
+    let msg = "The flag '--host' is no longer valid.
+
+Previous versions of Cargo accepted this flag, but it is being
+deprecated. The flag is being renamed to 'index', as the flag
+wants the location of the index to which to publish. Please
+use '--index' instead.
+
+This will soon become a hard error, so it's either recommended
+to update to a fixed version or contact the upstream maintainer
+about this warning.";
+
     let root = find_root_manifest_for_wd(flag_manifest_path.clone(), config.cwd())?;
     let ws = Workspace::new(&root, config)?;
     ops::publish(&ws, &ops::PublishOpts {
         config: config,
         token: token,
-        index: host,
+        index:
+            if host.clone().is_none() || host.clone().unwrap().is_empty() { index }
+            else { config.shell().warn(&msg)?; host },
         verify: !no_verify,
         allow_dirty: allow_dirty,
         jobs: jobs,
