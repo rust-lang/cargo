@@ -159,6 +159,71 @@ See [..]
 }
 
 #[test]
+fn simple_with_index_and_host() {
+    setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("publish").arg("--no-verify")
+                 .arg("--index").arg(registry().to_string())
+                 .arg("--host").arg(registry().to_string()),
+                execs().with_status(0).with_stderr(&format!("\
+[WARNING] The flag '--host' is no longer valid.
+
+Previous versions of Cargo accepted this flag, but it is being
+deprecated. The flag is being renamed to 'index', as the flag
+wants the location of the index to which to publish. Please
+use '--index' instead.
+
+This will soon become a hard error, so it's either recommended
+to update to a fixed version or contact the upstream maintainer
+about this warning.
+[UPDATING] registry `{reg}`
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ({dir})
+[UPLOADING] foo v0.0.1 ({dir})
+",
+        dir = p.url(),
+        reg = registry())));
+
+    let mut f = File::open(&upload_path().join("api/v1/crates/new")).unwrap();
+    // Skip the metadata payload and the size of the tarball
+    let mut sz = [0; 4];
+    assert_eq!(f.read(&mut sz).unwrap(), 4);
+    let sz = ((sz[0] as u32) <<  0) |
+             ((sz[1] as u32) <<  8) |
+             ((sz[2] as u32) << 16) |
+             ((sz[3] as u32) << 24);
+    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
+
+    // Verify the tarball
+    let mut rdr = GzDecoder::new(f).unwrap();
+    assert_eq!(rdr.header().filename().unwrap(), "foo-0.0.1.crate".as_bytes());
+    let mut contents = Vec::new();
+    rdr.read_to_end(&mut contents).unwrap();
+    let mut ar = Archive::new(&contents[..]);
+    for file in ar.entries().unwrap() {
+        let file = file.unwrap();
+        let fname = file.header().path_bytes();
+        let fname = &*fname;
+        assert!(fname == b"foo-0.0.1/Cargo.toml" ||
+                fname == b"foo-0.0.1/Cargo.toml.orig" ||
+                fname == b"foo-0.0.1/src/main.rs",
+                "unexpected filename: {:?}", file.header().path());
+    }
+}
+
+#[test]
 fn git_deps() {
     setup();
 
