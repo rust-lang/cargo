@@ -58,6 +58,7 @@ pub fn install(root: Option<&str>,
                krate: Option<&str>,
                source_id: &SourceId,
                vers: Option<&str>,
+               range: Option<&str>,
                opts: &ops::CompileOptions,
                force: bool) -> CargoResult<()> {
     let config = opts.config;
@@ -65,7 +66,7 @@ pub fn install(root: Option<&str>,
     let map = SourceConfigMap::new(config)?;
     let (pkg, source) = if source_id.is_git() {
         select_pkg(GitSource::new(source_id, config),
-                   krate, vers, config, &mut |git| git.read_packages())?
+                   krate, vers, range, config, &mut |git| git.read_packages())?
     } else if source_id.is_path() {
         let path = source_id.url().to_file_path().ok()
                             .expect("path sources must have a valid path");
@@ -76,10 +77,10 @@ pub fn install(root: Option<&str>,
                      specify an alternate source", path.display())
         })?;
         select_pkg(PathSource::new(&path, source_id, config),
-                   krate, vers, config, &mut |path| path.read_packages())?
+                   krate, vers, range, config, &mut |path| path.read_packages())?
     } else {
         select_pkg(map.load(source_id)?,
-                   krate, vers, config,
+                   krate, vers, range, config,
                    &mut |_| Err("must specify a crate to install from \
                                  crates.io, or use --path or --git to \
                                  specify alternate source".into()))?
@@ -266,6 +267,7 @@ pub fn install(root: Option<&str>,
 fn select_pkg<'a, T>(mut source: T,
                      name: Option<&str>,
                      vers: Option<&str>,
+                     range: Option<&str>,
                      config: &Config,
                      list_all: &mut FnMut(&mut T) -> CargoResult<Vec<Package>>)
                      -> CargoResult<(Package, Box<Source + 'a>)>
@@ -293,7 +295,7 @@ fn select_pkg<'a, T>(mut source: T,
                 }
                 None => None,
             };
-            let vers = vers.as_ref().map(|s| &**s);
+            let vers = vers.as_ref().map(|s| &**s).or(range);
             let dep = Dependency::parse_no_deprecated(name, vers, source.source_id())?;
             let deps = source.query_vec(&dep)?;
             match deps.iter().map(|p| p.package_id()).max() {
