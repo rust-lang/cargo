@@ -4,9 +4,10 @@ use std::env;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::io::SeekFrom;
+use std::io::{self, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT, Ordering};
 
 use semver::Version;
 use tempdir::TempDir;
@@ -55,20 +56,57 @@ impl Drop for Transaction {
 }
 
 pub fn install(root: Option<&str>,
+               krates: Vec<&str>,
+               source_id: &SourceId,
+               vers: Option<&str>,
+               opts: &ops::CompileOptions,
+               force: bool) -> CargoResult<()> {
+    let root = resolve_root(root, opts.config)?;
+    let map = SourceConfigMap::new(opts.config)?;
+
+    if krates.is_empty() {
+        install_one(root, map, None, source_id, vers, opts, force)
+    } else {
+        let mut success = vec![];
+        let mut errors = vec![];
+        for krate in krates {
+            let root = root.clone();
+            let map = map.clone();
+            match install_one(root, map, Some(krate), source_id, vers, opts, force) {
+                Ok(()) => success.push(krate),
+                Err(e) => errors.push(format!("{}: {}", krate, e))
+            }
+        }
+
+        writeln!(io::stderr(),
+                 "\n\nSUMMARY\n\nSuccessfully installed: {}\n\nErrors:\n\t{}",
+                 success.join(", "),
+                 errors.join("\n\t"))?;
+
+        Ok(())
+    }
+}
+
+fn install_one(root: Filesystem,
+               map: SourceConfigMap,
                krate: Option<&str>,
                source_id: &SourceId,
                vers: Option<&str>,
                opts: &ops::CompileOptions,
                force: bool) -> CargoResult<()> {
+
+    static ALREADY_UPDATED: AtomicBool = ATOMIC_BOOL_INIT;
+    let needs_update = !ALREADY_UPDATED.load(Ordering::SeqCst);
+
     let config = opts.config;
-    let root = resolve_root(root, config)?;
-    let map = SourceConfigMap::new(config)?;
+
     let (pkg, source) = if source_id.is_git() {
         select_pkg(GitSource::new(source_id, config),
-                   krate, vers, config, &mut |git| git.read_packages())?
+                   krate, vers, config, needs_update,
+                   &mut |git| git.read_packages())?
     } else if source_id.is_path() {
-        let path = source_id.url().to_file_path().ok()
-                            .expect("path sources must have a valid path");
+        let path = source_id.url().to_file_path()
+                            .map_err(|()| CargoError::from("path sources must have a valid path"))?;
         let mut src = PathSource::new(&path, source_id, config);
         src.update().chain_err(|| {
             format!("`{}` is not a crate root; specify a crate to \
@@ -76,15 +114,17 @@ pub fn install(root: Option<&str>,
                      specify an alternate source", path.display())
         })?;
         select_pkg(PathSource::new(&path, source_id, config),
-                   krate, vers, config, &mut |path| path.read_packages())?
+                   krate, vers, config, needs_update,
+                   &mut |path| path.read_packages())?
     } else {
         select_pkg(map.load(source_id)?,
-                   krate, vers, config,
+                   krate, vers, config, needs_update,
                    &mut |_| Err("must specify a crate to install from \
                                  crates.io, or use --path or --git to \
                                  specify alternate source".into()))?
     };
 
+    ALREADY_UPDATED.store(true, Ordering::SeqCst);
 
     let mut td_opt = None;
     let overidden_target_dir = if source_id.is_path() {
@@ -267,11 +307,15 @@ fn select_pkg<'a, T>(mut source: T,
                      name: Option<&str>,
                      vers: Option<&str>,
                      config: &Config,
+                     needs_update: bool,
                      list_all: &mut FnMut(&mut T) -> CargoResult<Vec<Package>>)
                      -> CargoResult<(Package, Box<Source + 'a>)>
     where T: Source + 'a
 {
-    source.update()?;
+    if needs_update {
+        source.update()?;
+    }
+
     match name {
         Some(name) => {
             let vers = match vers {
