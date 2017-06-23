@@ -3271,3 +3271,29 @@ fn no_bin_in_src_with_lib() {
                 execs().with_status(101)
                        .with_stderr_contains(r#"[ERROR] couldn't read "[..]main.rs"[..]"#));
 }
+
+
+#[test]
+fn dirs_in_bin_dir_with_main_rs() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("src/bin/bar.rs", "fn main() {}")
+        .file("src/bin/bar2.rs", "fn main() {}")
+        .file("src/bin/main.rs", "fn main() {}")
+        .file("src/bin/bar3/main.rs", "fn main() {}")
+        .file("src/bin/bar4/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("bar"), existing_file());
+    assert_that(&p.bin("bar2"), existing_file());
+    assert_that(&p.bin("bar3"), existing_file());
+    assert_that(&p.bin("bar4"), existing_file());
+    assert_that(&p.bin("main"), existing_file());
+}
