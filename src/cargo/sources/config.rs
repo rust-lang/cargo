@@ -15,6 +15,7 @@ use util::{Config, ToUrl};
 use util::config::ConfigValue;
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 
+#[derive(Clone)]
 pub struct SourceConfigMap<'cfg> {
     cfgs: HashMap<String, SourceConfig>,
     id2name: HashMap<SourceId, String>,
@@ -28,6 +29,7 @@ pub struct SourceConfigMap<'cfg> {
 /// registry = 'https://github.com/rust-lang/crates.io-index'
 /// replace-with = 'foo'    # optional
 /// ```
+#[derive(Clone)]
 struct SourceConfig {
     // id this source corresponds to, inferred from the various defined keys in
     // the configuration
