@@ -84,7 +84,7 @@ fn simple() {
     assert_that(cargo_process("search").arg("postgres")
                     .arg("--host").arg(registry().to_string()),
                 execs().with_status(0)
-                       .with_stderr_contains("\
+                       .with_stdout_contains("\
 hoare = \"0.1.1\"    # Design by contract style assertions for Rust"));
 }
 
@@ -134,7 +134,7 @@ fn multiple_query_params() {
     assert_that(cargo_process("search").arg("postgres").arg("sql")
                     .arg("--host").arg(registry().to_string()),
                 execs().with_status(0)
-                       .with_stderr_contains("\
+                       .with_stdout_contains("\
 hoare = \"0.1.1\"    # Design by contract style assertions for Rust"));
 }
 

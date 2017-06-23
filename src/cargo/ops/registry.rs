@@ -423,19 +423,17 @@ pub fn search(query: &str,
             }
             None => name
         };
-        writeln!(config.shell().err(), "{}", line)?;
+        println!("{}", line);
     }
 
     let search_max_limit = 100;
     if total_crates > limit as u32 && limit < search_max_limit {
-        writeln!(config.shell().err(),
-                 "... and {} crates more (use --limit N to see more)",
-                 total_crates - limit as u32)?;
+        println!("... and {} crates more (use --limit N to see more)",
+                 total_crates - limit as u32);
     } else if total_crates > limit as u32 && limit >= search_max_limit {
-        writeln!(config.shell().err(),
-                 "... and {} crates more (go to http://crates.io/search?q={} to see more)",
+        println!("... and {} crates more (go to http://crates.io/search?q={} to see more)",
                  total_crates - limit as u32,
-                 percent_encode(query.as_bytes(), QUERY_ENCODE_SET))?;
+                 percent_encode(query.as_bytes(), QUERY_ENCODE_SET));
     }
 
     Ok(())
