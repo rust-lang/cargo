@@ -55,45 +55,54 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 }
 
 #[test]
-test!(multiple_pkgs {
+fn multiple_pkgs() {
     pkg("foo", "0.0.1");
     pkg("bar", "0.0.1");
 
     assert_that(cargo_process("install").arg("foo").arg("bar"),
-                execs().with_status(0).with_stdout(&format!("\
-{updating} registry `[..]`
-{downloading} foo v0.0.1 (registry file://[..])
-{compiling} foo v0.0.1 (registry file://[..])
-{installing} {home}[..]bin[..]foo[..]
-{downloading} bar v0.0.1 (registry file://[..])
-{compiling} bar v0.0.1 (registry file://[..])
-{installing} {home}[..]bin[..]bar[..]
+                execs().with_status(0).with_stderr(&format!("\
+[UPDATING] registry `[..]`
+[DOWNLOADING] foo v0.0.1 (registry file://[..])
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] {home}[..]bin[..]foo[..]
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+[DOWNLOADING] bar v0.0.1 (registry file://[..])
+[INSTALLING] bar v0.0.1
+[COMPILING] bar v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] {home}[..]bin[..]bar[..]
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+
+
+SUMMARY
+
+Successfully installed: foo, bar
+
+Errors:
+<tab>
 ",
-        updating = UPDATING,
-        downloading = DOWNLOADING,
-        compiling = COMPILING,
-        installing = INSTALLING,
         home = cargo_home().display())));
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_home(), has_installed_exe("bar"));
 
     assert_that(cargo_process("uninstall").arg("foo"),
-                execs().with_status(0).with_stdout(&format!("\
-{removing} {home}[..]bin[..]foo[..]
+                execs().with_status(0).with_stderr(&format!("\
+[REMOVING] {home}[..]bin[..]foo[..]
 ",
-        removing = REMOVING,
         home = cargo_home().display())));
     assert_that(cargo_process("uninstall").arg("bar"),
-                execs().with_status(0).with_stdout(&format!("\
-{removing} {home}[..]bin[..]bar[..]
+                execs().with_status(0).with_stderr(&format!("\
+[REMOVING] {home}[..]bin[..]bar[..]
 ",
-        removing = REMOVING,
         home = cargo_home().display())));
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
     assert_that(cargo_home(), is_not(has_installed_exe("bar")));
-});
+}
 
-test!(pick_max_version {
+#[test]
+fn pick_max_version() {
     pkg("foo", "0.0.1");
     pkg("foo", "0.0.2");
 
