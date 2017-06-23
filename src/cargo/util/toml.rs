@@ -52,6 +52,7 @@ impl Layout {
 
         try_add_file(&mut bins, root_path.join("src").join("main.rs"));
         try_add_files(&mut bins, root_path.join("src").join("bin"));
+        try_add_mains_from_dirs(&mut bins, root_path.join("src").join("bin"));
 
         try_add_files(&mut examples, root_path.join("examples"));
 
@@ -74,6 +75,26 @@ fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
         files.push(file);
     }
 }
+
+// Add directories form src/bin which contain main.rs file
+fn try_add_mains_from_dirs(files: &mut Vec<PathBuf>, root: PathBuf) {
+    if let Ok(new) = fs::read_dir(&root) {
+        let new: Vec<PathBuf> = new.filter_map(|i| i.ok())
+            // Filter only directories
+            .filter(|i| {
+                i.file_type().map(|f| f.is_dir()).unwrap_or(false)
+                // Convert DirEntry into PathBuf and append "main.rs"
+            }).map(|i| {
+            i.path().join("main.rs")
+            // Filter only directories where main.rs is present
+        }).filter(|f| {
+            f.as_path()
+                .exists()
+        }).collect();
+        files.extend(new);
+    }
+}
+
 fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
     if let Ok(new) = fs::read_dir(&root) {
         files.extend(new.filter_map(|dir| {
@@ -505,7 +526,23 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
                       *bin == layout.root.join("src").join("main.rs") {
             Some(name.to_string())
         } else {
-            bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
+            // bin is either a source file or a directory with main.rs inside.
+            if bin.ends_with("main.rs") {
+                if let Some(parent) = bin.parent() {
+                    // if the path ends with main.rs it is probably a directory, but it can also be
+                    // a file directly inside src/bin
+                    if parent.ends_with("src/bin") {
+                        bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
+                    } else {
+                        parent.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
+                    }
+                } else {
+                    None
+                }
+            } else {
+                // regular case, just a file in the bin directory
+                bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
+            }
         };
 
         name.map(|name| {
