@@ -616,7 +616,7 @@ fn bad_license_file() {
         "#);
     assert_that(p.cargo_process("publish")
                  .arg("-v")
-                 .arg("--host").arg(registry().to_string()),
+                 .arg("--index").arg(registry().to_string()),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [ERROR] the license file `foo` does not exist"));
