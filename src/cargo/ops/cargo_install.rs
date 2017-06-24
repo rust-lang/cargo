@@ -64,8 +64,8 @@ pub fn install(root: Option<&str>,
     let root = resolve_root(root, opts.config)?;
     let map = SourceConfigMap::new(opts.config)?;
 
-    if krates.is_empty() {
-        install_one(root, map, None, source_id, vers, opts, force)
+    if krates.len() <= 1 {
+        install_one(root, map, krates.into_iter().next(), source_id, vers, opts, force)
     } else {
         let mut success = vec![];
         let mut errors = vec![];
@@ -97,6 +97,7 @@ fn install_one(root: Filesystem,
 
     static ALREADY_UPDATED: AtomicBool = ATOMIC_BOOL_INIT;
     let needs_update = !ALREADY_UPDATED.load(Ordering::SeqCst);
+    ALREADY_UPDATED.store(true, Ordering::SeqCst);
 
     let config = opts.config;
 
@@ -123,8 +124,6 @@ fn install_one(root: Filesystem,
                                  crates.io, or use --path or --git to \
                                  specify alternate source".into()))?
     };
-
-    ALREADY_UPDATED.store(true, Ordering::SeqCst);
 
     let mut td_opt = None;
     let overidden_target_dir = if source_id.is_path() {
