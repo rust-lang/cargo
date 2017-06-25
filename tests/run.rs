@@ -138,6 +138,27 @@ fn simple_with_args() {
 }
 
 #[test]
+fn set_env() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {
+                println!("{}", std::env::var("PONIES").expect("env::var"));
+                println!("{}", std::env::var("UNICORNS").expect("env::var"));
+            }
+        "#);
+
+    assert_that(p.cargo_process("run")
+                    .arg("--set-env=PONIES=pink").arg("-e").arg("UNICORNS=rainbow"),
+                execs().with_status(0).with_stdout("pink\nrainbow\n"));
+}
+
+#[test]
 fn exit_code() {
     let p = project("foo")
         .file("Cargo.toml", r#"

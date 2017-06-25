@@ -48,6 +48,35 @@ fn cargo_bench_simple() {
 }
 
 #[test]
+fn set_env() {
+    if !is_nightly() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/foo.rs", r#"
+            #![feature(test)]
+            extern crate test;
+
+            #[bench]
+            fn bench_ponies(_b: &mut test::Bencher) {
+                assert_eq!("pink", &::std::env::var("PONIES").expect("env::var")[..]);
+            }"#)
+        .file("benches/bar.rs", r#"
+            #![feature(test)]
+            extern crate test;
+
+            #[bench]
+            fn bench_unicorns(_b: &mut test::Bencher) {
+                assert_eq!("rainbow", &::std::env::var("UNICORNS").expect("env::var")[..]);
+            }"#);
+
+    assert_that(p.cargo_process("bench").arg("-ePONIES=pink").arg("--set-env=UNICORNS=rainbow"),
+                execs().with_status(0)
+               .with_stdout_contains("test bench_ponies ... bench[..]")
+               .with_stdout_contains("test bench_unicorns ... bench[..]"));
+}
+
+#[test]
 fn bench_bench_implicit() {
     if !is_nightly() { return }
 

@@ -7,7 +7,8 @@ use core::Workspace;
 
 pub fn run(ws: &Workspace,
            options: &ops::CompileOptions,
-           args: &[String]) -> CargoResult<Option<ProcessError>> {
+           args: &[String],
+           env_vars: &[(String, String)]) -> CargoResult<Option<ProcessError>> {
     let config = ws.config();
 
     let pkg = match options.spec {
@@ -61,6 +62,8 @@ pub fn run(ws: &Workspace,
     };
     let mut process = compile.target_process(exe, &pkg)?;
     process.args(args).cwd(config.cwd());
+
+    process.env_all(env_vars);
 
     config.shell().status("Running", process.to_string())?;
 

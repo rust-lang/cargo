@@ -14,7 +14,8 @@ pub struct TestOptions<'a> {
 
 pub fn run_tests(ws: &Workspace,
                  options: &TestOptions,
-                 test_args: &[String]) -> CargoResult<Option<CargoTestError>> {
+                 test_args: &[String],
+                 env_vars: &[(String, String)]) -> CargoResult<Option<CargoTestError>> {
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
@@ -22,9 +23,9 @@ pub fn run_tests(ws: &Workspace,
     }
     let (test, mut errors) = if options.only_doc {
         assert!(options.compile_opts.filter.is_specific());
-        run_doc_tests(options, test_args, &compilation)?
+        run_doc_tests(options, test_args, env_vars, &compilation)?
     } else {
-        run_unit_tests(options, test_args, &compilation)?
+        run_unit_tests(options, test_args, env_vars, &compilation)?
     };
 
     // If we have an error and want to fail fast, return
@@ -41,7 +42,7 @@ pub fn run_tests(ws: &Workspace,
         }
     }
 
-    let (doctest, docerrors) = run_doc_tests(options, test_args, &compilation)?;
+    let (doctest, docerrors) = run_doc_tests(options, test_args, env_vars, &compilation)?;
     errors.extend(docerrors);
     if errors.is_empty() {
         Ok(None)
@@ -52,7 +53,8 @@ pub fn run_tests(ws: &Workspace,
 
 pub fn run_benches(ws: &Workspace,
                    options: &TestOptions,
-                   args: &[String]) -> CargoResult<Option<CargoTestError>> {
+                   args: &[String],
+                   env_vars: &[(String, String)]) -> CargoResult<Option<CargoTestError>> {
     let mut args = args.to_vec();
     args.push("--bench".to_string());
     let compilation = compile_tests(ws, options)?;
@@ -60,7 +62,7 @@ pub fn run_benches(ws: &Workspace,
     if options.no_run {
         return Ok(None)
     }
-    let (test, errors) = run_unit_tests(options, &args, &compilation)?;
+    let (test, errors) = run_unit_tests(options, &args, env_vars, &compilation)?;
     match errors.len() {
         0 => Ok(None),
         _ => Ok(Some(CargoTestError::new(test, errors))),
@@ -80,6 +82,7 @@ fn compile_tests<'a>(ws: &Workspace<'a>,
 /// Run the unit and integration tests of a project.
 fn run_unit_tests(options: &TestOptions,
                   test_args: &[String],
+                  env_vars: &[(String, String)],
                   compilation: &Compilation)
                   -> CargoResult<(Test, Vec<ProcessError>)> {
     let config = options.compile_opts.config;
@@ -100,6 +103,8 @@ fn run_unit_tests(options: &TestOptions,
         config.shell().verbose(|shell| {
             shell.status("Running", cmd.to_string())
         })?;
+
+        cmd.env_all(env_vars);
 
         let result = cmd.exec();
 
@@ -122,6 +127,7 @@ fn run_unit_tests(options: &TestOptions,
 
 fn run_doc_tests(options: &TestOptions,
                  test_args: &[String],
+                 env_vars: &[(String, String)],
                  compilation: &Compilation)
                  -> CargoResult<(Test, Vec<ProcessError>)> {
     let mut errors = Vec::new();
@@ -184,6 +190,8 @@ fn run_doc_tests(options: &TestOptions,
                 arg.push(lib);
                 p.arg("--extern").arg(&arg);
             }
+
+            p.env_all(env_vars);
 
             config.shell().verbose(|shell| {
                 shell.status("Running", p.to_string())

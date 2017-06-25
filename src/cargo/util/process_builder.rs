@@ -56,6 +56,15 @@ impl ProcessBuilder {
         self
     }
 
+    pub fn env_all<K: AsRef<str>, V: AsRef<OsStr>>(&mut self,
+                                                   env_vars: &[(K, V)]) -> &mut ProcessBuilder {
+        for &(ref n, ref v) in env_vars {
+            self.env(n.as_ref(), v);
+        }
+        self
+    }
+
+
     pub fn env_remove(&mut self, key: &str) -> &mut ProcessBuilder {
         self.env.insert(key.to_string(), None);
         self

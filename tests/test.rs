@@ -46,6 +46,37 @@ fn cargo_test_simple() {
 }
 
 #[test]
+fn set_env() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", r#"
+            /// ```rust
+            /// assert_eq!("red", &::std::env::var("DRAGONS").expect("env::var")[..]);
+            /// ```
+            pub fn dragons() {
+            }
+
+            #[test]
+            fn test_ponies() {
+                assert_eq!("pink", &::std::env::var("PONIES").expect("env::var")[..]);
+            }"#)
+        .file("tests/bar.rs", r#"
+            #[test]
+            fn test_unicorns() {
+                assert_eq!("rainbow", &::std::env::var("UNICORNS").expect("env::var")[..]);
+            }"#);
+
+    assert_that(p.cargo_process("test")
+                    .arg("-ePONIES=pink")
+                    .arg("-e").arg("DRAGONS=red")
+                    .arg("--set-env=UNICORNS=rainbow"),
+                execs().with_status(0)
+               .with_stdout_contains("test src[/]lib.rs - dragons [..] ... ok")
+               .with_stdout_contains("test test_ponies ... ok")
+               .with_stdout_contains("test test_unicorns ... ok"));
+}
+
+#[test]
 fn cargo_test_release() {
     let p = project("foo")
         .file("Cargo.toml", r#"
