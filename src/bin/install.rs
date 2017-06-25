@@ -24,6 +24,7 @@ pub struct Options {
 
     arg_crate: Option<String>,
     flag_vers: Option<String>,
+    flag_range: Option<String>,
 
     flag_git: Option<String>,
     flag_branch: Option<String>,
@@ -42,6 +43,7 @@ Usage:
 
 Specifying what crate to install:
     --vers VERS               Specify a version to install from crates.io
+    --range RANGE             Specify a semver range to install the latest version compatible
     --git URL                 Git URL to install the specified crate from
     --branch BRANCH           Branch to use when installing from git
     --tag TAG                 Tag to use when installing from git
@@ -81,11 +83,11 @@ repository with multiple crates) the `<crate>` argument is required to indicate
 which crate should be installed.
 
 Crates from crates.io can optionally specify the version they wish to install
-via the `--vers` flags, and similarly packages from git repositories can
-optionally specify the branch, tag, or revision that should be installed. If a
-crate has multiple binaries, the `--bin` argument can selectively install only
-one of them, and if you'd rather install examples the `--example` argument can
-be used as well.
+via the `--vers` flag or a semver range via the `--range` flag, and similarly packages
+from git repositories can optionally specify the branch, tag, or revision that
+should be installed. If a crate has multiple binaries, the `--bin` argument can
+selectively install only one of them, and if you'd rather install examples the
+`--example` argument can be used as well.
 
 By default cargo will refuse to overwrite existing binaries. The `--force` flag
 enables overwriting existing binaries. Thus you can reinstall a crate with
@@ -147,12 +149,13 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
 
     let krate = options.arg_crate.as_ref().map(|s| &s[..]);
     let vers = options.flag_vers.as_ref().map(|s| &s[..]);
+    let range = options.flag_range.as_ref().map(|s| &s[..]);
     let root = options.flag_root.as_ref().map(|s| &s[..]);
 
     if options.flag_list {
         ops::install_list(root, config)?;
     } else {
-        ops::install(root, krate, &source, vers, &compile_opts, options.flag_force)?;
+        ops::install(root, krate, &source, vers, range, &compile_opts, options.flag_force)?;
     }
     Ok(())
 }
