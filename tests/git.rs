@@ -1986,6 +1986,7 @@ fn two_at_rev_instead_of_tag() {
 }
 
 #[test]
+#[ignore] // accesses crates.io
 fn include_overrides_gitignore() {
     let p = git::new("reduction", |repo| {
         repo.file("Cargo.toml", r#"
