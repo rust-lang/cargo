@@ -135,7 +135,8 @@ impl ProcessBuilder {
 
     pub fn exec_with_streaming(&self,
                                on_stdout_line: &mut FnMut(&str) -> CargoResult<()>,
-                               on_stderr_line: &mut FnMut(&str) -> CargoResult<()>)
+                               on_stderr_line: &mut FnMut(&str) -> CargoResult<()>,
+                               print_output: bool)
                                -> CargoResult<Output> {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
@@ -187,18 +188,26 @@ impl ProcessBuilder {
             stderr: stderr,
             status: status,
         };
-        if !output.status.success() {
-            Err(CargoErrorKind::ProcessErrorKind(process_error(
-                &format!("process didn't exit successfully: `{}`", self.debug_string()),
-                Some(&output.status), Some(&output))).into())
-        } else if let Some(e) = callback_error {
-            Err(CargoError::with_chain(e,
-                CargoErrorKind::ProcessErrorKind(process_error(
-                    &format!("failed to parse process output: `{}`", self.debug_string()),
-                    Some(&output.status), Some(&output)))))
-        } else {
-            Ok(output)
+
+        {
+            let to_print = if print_output {
+                Some(&output)
+            } else {
+                None
+            };
+            if !output.status.success() {
+                return Err(CargoErrorKind::ProcessErrorKind(process_error(
+                            &format!("process didn't exit successfully: `{}`", self.debug_string()),
+                            Some(&output.status), to_print)).into())
+            } else if let Some(e) = callback_error {
+                return Err(CargoError::with_chain(e,
+                        CargoErrorKind::ProcessErrorKind(process_error(
+                                &format!("failed to parse process output: `{}`", self.debug_string()),
+                                Some(&output.status), to_print))))
+            }
         }
+
+        Ok(output)
     }
 
     pub fn build_command(&self) -> Command {
