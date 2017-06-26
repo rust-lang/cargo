@@ -80,7 +80,7 @@ pub trait Executor: Send + Sync + 'static {
                  handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
                  handle_stderr: &mut FnMut(&str) -> CargoResult<()>)
                  -> CargoResult<()> {
-        cmd.exec_with_streaming(handle_stdout, handle_stderr)?;
+        cmd.exec_with_streaming(handle_stdout, handle_stderr, false)?;
         Ok(())
     }
 }
