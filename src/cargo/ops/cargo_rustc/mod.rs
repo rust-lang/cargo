@@ -50,6 +50,7 @@ pub struct BuildConfig {
     pub test: bool,
     pub doc_all: bool,
     pub json_messages: bool,
+    pub target_cpu: Option<String>,
 }
 
 #[derive(Clone, Default)]
@@ -269,6 +270,10 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     // don't fail compilation.
     } else if !unit.pkg.package_id().source_id().is_path() {
         rustc.arg("--cap-lints").arg("warn");
+    }
+
+    if let Some(ref target_cpu) = cx.build_config.target_cpu {
+        rustc.arg(String::from("-Ctarget-cpu=") + target_cpu);
     }
 
     let filenames = cx.target_filenames(unit)?;

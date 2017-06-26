@@ -110,6 +110,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             mode: ops::CompileMode::Doc { deps: false },
             target_rustdoc_args: Some(&options.arg_opts),
             target_rustc_args: None,
+            target_cpu: None,
         },
     };
 

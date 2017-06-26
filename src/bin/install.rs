@@ -107,8 +107,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_frozen,
                      options.flag_locked)?;
     
-    let target_rustc_args = ["-Ctarget-cpu=native".to_string()];
-
     let compile_opts = ops::CompileOptions {
         config: config,
         jobs: options.flag_jobs,
@@ -125,9 +123,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                         &options.flag_example, options.flag_examples,
                                         &[], false),
         message_format: ops::MessageFormat::Human,
-        target_rustc_args: if options.flag_no_target_cpu { None }
-                           else { Some(&target_rustc_args) },
+        target_rustc_args: None,
         target_rustdoc_args: None,
+        target_cpu: if options.flag_no_target_cpu { None }
+                    else { Some("native".to_string()) },
     };
 
     let source = if let Some(url) = options.flag_git {

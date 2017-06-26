@@ -63,6 +63,8 @@ pub struct CompileOptions<'a> {
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
     pub target_rustc_args: Option<&'a [String]>,
+    /// The value of the -Ctarget-cpu rustc flag
+    pub target_cpu: Option<String>,
 }
 
 impl<'a> CompileOptions<'a> {
@@ -82,6 +84,7 @@ impl<'a> CompileOptions<'a> {
             message_format: MessageFormat::Human,
             target_rustdoc_args: None,
             target_rustc_args: None,
+            target_cpu: None,
         }
     }
 }
@@ -194,7 +197,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                          release, mode, message_format,
                          ref filter,
                          ref target_rustdoc_args,
-                         ref target_rustc_args } = *options;
+                         ref target_rustc_args,
+                         ref target_cpu } = *options;
 
     let target = target.map(|s| s.to_string());
 
@@ -293,6 +297,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         build_config.release = release;
         build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
         build_config.json_messages = message_format == MessageFormat::Json;
+        build_config.target_cpu = target_cpu.clone();
         if let CompileMode::Doc { deps } = mode {
             build_config.doc_all = deps;
         }
