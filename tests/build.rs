@@ -29,6 +29,16 @@ fn cargo_compile_simple() {
                 execs().with_status(0).with_stdout("i am foo\n"));
 }
 
+#[test]
+fn cargo_fail_with_no_stderr() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &String::from("refusal"));
+    let p = p.build();
+    assert_that(p.cargo("build").arg("--message-format=json"), execs().with_status(101)
+        .with_stderr_does_not_contain("--- stderr"));
+}
+
 /// Check that the `CARGO_INCREMENTAL` environment variable results in
 /// `rustc` getting `-Zincremental` passed to it.
 #[test]

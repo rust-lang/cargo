@@ -244,6 +244,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         let output = cmd.exec_with_streaming(
             &mut |out_line| { state.stdout(out_line); Ok(()) },
             &mut |err_line| { state.stderr(err_line); Ok(()) },
+            true,
         ).map_err(|e| {
             CargoError::from(
                 format!("failed to run custom build command for `{}`\n{}",
