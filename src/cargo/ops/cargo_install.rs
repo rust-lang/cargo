@@ -314,11 +314,9 @@ fn select_pkg<'a, T>(mut source: T,
                                 }
                                 config.shell().warn(&msg)?;
                                 Some(v.to_string())
-                            },
-                        },
+                            }
+                        }
                     }
-
-
                 }
                 None => None,
             };
