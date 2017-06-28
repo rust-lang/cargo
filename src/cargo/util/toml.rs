@@ -531,12 +531,8 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
                     // if the path ends with main.rs it is probably a directory, but it can also be
                     // a file directly inside src/bin
                     if parent.ends_with("src/bin") {
-                        // This would always return name "main"
-                        // Fixme: Is this what we want? based on what @matklad said, I don't think so
-                        // bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
-
-                        // This seems to be the right solution based on the inferred_bin_paths function
-                        Some(name.to_string())
+                        // This will always return name "main"
+                        bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
                     } else {
                         parent.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
                     }
