@@ -8,7 +8,7 @@ use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use semver::Version;
+use semver::{Version, VersionReq};
 use tempdir::TempDir;
 use toml;
 
@@ -276,18 +276,45 @@ fn select_pkg<'a, T>(mut source: T,
         Some(name) => {
             let vers = match vers {
                 Some(v) => {
-                    match v.parse::<Version>() {
-                        Ok(v) => Some(format!("={}", v)),
-                        Err(_) => {
-                            let msg = format!("the `--vers` provided, `{}`, is \
-                                               not a valid semver version\n\n\
-                                               historically Cargo treated this \
-                                               as a semver version requirement \
-                                               accidentally\nand will continue \
-                                               to do so, but this behavior \
-                                               will be removed eventually", v);
-                            config.shell().warn(&msg)?;
-                            Some(v.to_string())
+
+                    // If the version begins with character <, >, =, ^, ~ parse it as a
+                    // version range, otherwise parse it as a specific version
+                    let first = v.chars()
+                        .nth(0)
+                        .ok_or("no version provided for the `--vers` flag")?;
+
+                    match first {
+                        '<' | '>' | '=' | '^' | '~' => match v.parse::<VersionReq>() {
+                            Ok(v) => Some(v.to_string()),
+                            Err(_) => {
+                                let msg = format!("the `--vers` provided, `{}`, is \
+                                                   not a valid semver version requirement\n\n
+                                                   Please have a look at \
+                                                   http://doc.crates.io/specifying-dependencies.html \
+                                                   for the correct format", v);
+                                return Err(msg.into());
+                            }
+                        },
+                        _ => match v.parse::<Version>() {
+                            Ok(v) => Some(format!("={}", v)),
+                            Err(_) => {
+                                let mut msg = format!("the `--vers` provided, `{}`, is \
+                                                       not a valid semver version\n\n\
+                                                       historically Cargo treated this \
+                                                       as a semver version requirement \
+                                                       accidentally\nand will continue \
+                                                       to do so, but this behavior \
+                                                       will be removed eventually", v);
+
+                                // If it is not a valid version but it is a valid version
+                                // requirement, add a note to the warning
+                                if v.parse::<VersionReq>().is_ok() {
+                                    msg.push_str(&format!("\nif you want to specify semver range, \
+                                                  add an explicit qualifier, like ^{}", v));
+                                }
+                                config.shell().warn(&msg)?;
+                                Some(v.to_string())
+                            }
                         }
                     }
                 }
