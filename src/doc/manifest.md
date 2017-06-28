@@ -48,6 +48,11 @@ This field specifies a URL to a website hosting the crate's documentation.
 If no URL is specified in the manifest file, [crates.io][cratesio] will
 automatically link your crate to the corresponding [docs.rs][docsrs] page.
 
+Documentation links from specific domainss are blacklisted. Currently, any link
+from rust-ci.org will be blacklisted since this domain is no longer used for
+legitimate documentation hosting. URLs from this domain will have no reported
+documentation link on crates.io.
+
 [docsrs]: https://docs.rs/
 [cratesio]: https://crates.io/
 
