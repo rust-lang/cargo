@@ -942,15 +942,26 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        // Only enable incremental compilation for sources the user can modify.
-        // For things that change infrequently, non-incremental builds yield
-        // better performance.
-        // (see also https://github.com/rust-lang/cargo/issues/3972)
-        if self.incremental_enabled && unit.pkg.package_id().source_id().is_path() {
-            Ok(vec![format!("-Zincremental={}", self.layout(unit.kind).incremental().display())])
-        } else {
-            Ok(vec![])
+        if self.incremental_enabled {
+            if unit.pkg.package_id().source_id().is_path() {
+                // Only enable incremental compilation for sources the user can modify.
+                // For things that change infrequently, non-incremental builds yield
+                // better performance.
+                // (see also https://github.com/rust-lang/cargo/issues/3972)
+                return Ok(vec![format!("-Zincremental={}",
+                                       self.layout(unit.kind).incremental().display())]);
+            } else {
+                if unit.profile.codegen_units.is_none() {
+                    // For non-incremental builds we set a higher number of
+                    // codegen units so we get faster compiles. It's OK to do
+                    // so because the user has already opted into slower
+                    // runtime code by setting CARGO_INCREMENTAL.
+                    return Ok(vec![format!("-Ccodegen-units={}", ::num_cpus::get())]);
+                }
+            }
         }
+
+        Ok(vec![])
     }
 
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
