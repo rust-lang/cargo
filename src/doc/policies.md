@@ -41,7 +41,14 @@ is hosted.
 
 The Rust project has a [Code of Conduct] which governs appropriate conduct for
 the Rust community. In general, any content on Crates.io that violates the Code
-of Conduct may be removed. There are two important, related aspects:
+of Conduct may be removed. Here, content can refer to but is not limited to:
+
+- Package Name
+- Package Metadata
+- Documentation
+- Code
+
+There are two important, related aspects:
 
 - We will not be pro-actively monitoring the site for these kinds of violations,
   but relying on the community to draw them to our attention.
@@ -49,5 +56,16 @@ of Conduct may be removed. There are two important, related aspects:
   cannot be directly answered in the hypothetical sense. All of the details
   must be taken into consideration in these kinds of situations.
 
+# Security
+
+Cargo and crates.io are projects that are governed by the Rust Programming 
+Language Team. Safety is one of the core principles of Rust, and to that end,
+we would like to ensure that cargo and crates.io have secure implementations.
+To learn more about disclosing security vulnerabilities, please reference the 
+[Rust Security policy] for more details.
+
+Thank you for taking the time to responsibly disclose any issues you find.
+
+[Rust Security policy]: https://www.rust-lang.org/security.html
 [Code of Conduct]: https://www.rust-lang.org/conduct.html
 [sending us an email]: mailto:help@crates.io
