@@ -41,7 +41,14 @@ is hosted.
 
 The Rust project has a [Code of Conduct] which governs appropriate conduct for
 the Rust community. In general, any content on Crates.io that violates the Code
-of Conduct may be removed. There are two important, related aspects:
+of Conduct may be removed. Here, content can refer to but is not limited to:
+
+- Package Name
+- Package Metadata
+- Documentation
+- Code
+
+There are two important, related aspects:
 
 - We will not be pro-actively monitoring the site for these kinds of violations,
   but relying on the community to draw them to our attention.
