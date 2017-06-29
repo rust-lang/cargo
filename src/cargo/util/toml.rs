@@ -526,16 +526,10 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
             Some(name.to_string())
         } else {
             // bin is either a source file or a directory with main.rs inside.
-            if bin.ends_with("main.rs") {
+            if bin.ends_with("main.rs") && !bin.ends_with("src/bin/main.rs") {
                 if let Some(parent) = bin.parent() {
-                    // if the path ends with main.rs it is probably a directory, but it can also be
-                    // a file directly inside src/bin
-                    if parent.ends_with("src/bin") {
-                        // This will always return name "main"
-                        bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
-                    } else {
-                        parent.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
-                    }
+                    // Use a name of this directory as a name for binary
+                    parent.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
                 } else {
                     None
                 }
@@ -1483,7 +1477,7 @@ fn inferred_bin_path(bin: &TomlBinTarget,
     // here we have a single bin, so it may be located in src/main.rs, src/foo.rs,
     // src/bin/foo.rs, src/bin/foo/main.rs or src/bin/main.rs
     if bin_len == 1 {
-        let path = Path::new("src").join(&format!("main.rs"));
+        let path = Path::new("src").join("main.rs");
         if package_root.join(&path).exists() {
             return path.to_path_buf()
         }
@@ -1501,12 +1495,12 @@ fn inferred_bin_path(bin: &TomlBinTarget,
         }
 
         // check for the case where src/bin/foo/main.rs is present
-        let path = Path::new("src").join("bin").join(bin.name()).join(&format!("main.rs"));
+        let path = Path::new("src").join("bin").join(bin.name()).join("main.rs");
         if package_root.join(&path).exists() {
             return path.to_path_buf()
         }
 
-        return Path::new("src").join("bin").join(&format!("main.rs")).to_path_buf()
+        return Path::new("src").join("bin").join("main.rs").to_path_buf()
     }
 
     // bin_len > 1
@@ -1516,7 +1510,7 @@ fn inferred_bin_path(bin: &TomlBinTarget,
     }
 
     // we can also have src/bin/foo/main.rs, but the former one is preferred
-    let path = Path::new("src").join("bin").join(bin.name()).join(&format!("main.rs"));
+    let path = Path::new("src").join("bin").join(bin.name()).join("main.rs");
     if package_root.join(&path).exists() {
         return path.to_path_buf()
     }
@@ -1528,12 +1522,12 @@ fn inferred_bin_path(bin: &TomlBinTarget,
         }
     }
 
-    let path = Path::new("src").join("bin").join(&format!("main.rs"));
+    let path = Path::new("src").join("bin").join("main.rs");
     if package_root.join(&path).exists() {
         return path.to_path_buf()
     }
 
-    return Path::new("src").join(&format!("main.rs")).to_path_buf()
+    return Path::new("src").join("main.rs").to_path_buf()
 }
 
 fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
