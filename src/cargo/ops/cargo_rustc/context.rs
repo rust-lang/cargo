@@ -442,16 +442,17 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // Note, though, that the compiler's build system at least wants
         // path dependencies (eg libstd) to have hashes in filenames. To account for
         // that we have an extra hack here which reads the
-        // `__CARGO_DEFAULT_METADATA` environment variable and creates a
+        // `__CARGO_DEFAULT_LIB_METADATA` environment variable and creates a
         // hash in the filename if that's present.
         //
         // This environment variable should not be relied on! It's
         // just here for rustbuild. We need a more principled method
         // doing this eventually.
+        let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
         if !unit.profile.test &&
             (unit.target.is_dylib() || unit.target.is_cdylib()) &&
             unit.pkg.package_id().source_id().is_path() &&
-            !env::var("__CARGO_DEFAULT_LIB_METADATA").is_ok() {
+            !__cargo_default_lib_metadata.is_ok() {
             return None;
         }
 
@@ -489,6 +490,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         if let Ok(ref rustc) = self.config.rustc() {
             rustc.verbose_version.hash(&mut hasher);
+        }
+
+        // Seed the contents of __CARGO_DEFAULT_LIB_METADATA to the hasher if present.
+        // This should be the release channel, to get a different hash for each channel.
+        if let Ok(ref channel) = __cargo_default_lib_metadata {
+            channel.hash(&mut hasher);
         }
 
         Some(Metadata(hasher.finish()))
