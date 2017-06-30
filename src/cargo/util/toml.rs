@@ -52,6 +52,7 @@ impl Layout {
 
         try_add_file(&mut bins, root_path.join("src").join("main.rs"));
         try_add_files(&mut bins, root_path.join("src").join("bin"));
+        try_add_mains_from_dirs(&mut bins, root_path.join("src").join("bin"));
 
         try_add_files(&mut examples, root_path.join("examples"));
 
@@ -74,6 +75,25 @@ fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
         files.push(file);
     }
 }
+
+// Add directories form src/bin which contain main.rs file
+fn try_add_mains_from_dirs(files: &mut Vec<PathBuf>, root: PathBuf) {
+    if let Ok(new) = fs::read_dir(&root) {
+        let new: Vec<PathBuf> = new.filter_map(|i| i.ok())
+            // Filter only directories
+            .filter(|i| {
+                i.file_type().map(|f| f.is_dir()).unwrap_or(false)
+            // Convert DirEntry into PathBuf and append "main.rs"
+            }).map(|i| {
+                i.path().join("main.rs")
+            // Filter only directories where main.rs is present
+            }).filter(|f| {
+                f.as_path().exists()
+        }).collect();
+        files.extend(new);
+    }
+}
+
 fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
     if let Ok(new) = fs::read_dir(&root) {
         files.extend(new.filter_map(|dir| {
@@ -505,7 +525,18 @@ fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
                       *bin == layout.root.join("src").join("main.rs") {
             Some(name.to_string())
         } else {
-            bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
+            // bin is either a source file or a directory with main.rs inside.
+            if bin.ends_with("main.rs") && !bin.ends_with("src/bin/main.rs") {
+                if let Some(parent) = bin.parent() {
+                    // Use a name of this directory as a name for binary
+                    parent.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
+                } else {
+                    None
+                }
+            } else {
+                // regular case, just a file in the bin directory
+                bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
+            }
         };
 
         name.map(|name| {
@@ -1444,9 +1475,9 @@ fn inferred_bin_path(bin: &TomlBinTarget,
                      package_root: &Path,
                      bin_len: usize) -> PathBuf {
     // here we have a single bin, so it may be located in src/main.rs, src/foo.rs,
-    // srb/bin/foo.rs or src/bin/main.rs
+    // src/bin/foo.rs, src/bin/foo/main.rs or src/bin/main.rs
     if bin_len == 1 {
-        let path = Path::new("src").join(&format!("main.rs"));
+        let path = Path::new("src").join("main.rs");
         if package_root.join(&path).exists() {
             return path.to_path_buf()
         }
@@ -1463,11 +1494,23 @@ fn inferred_bin_path(bin: &TomlBinTarget,
             return path.to_path_buf()
         }
 
-        return Path::new("src").join("bin").join(&format!("main.rs")).to_path_buf()
+        // check for the case where src/bin/foo/main.rs is present
+        let path = Path::new("src").join("bin").join(bin.name()).join("main.rs");
+        if package_root.join(&path).exists() {
+            return path.to_path_buf()
+        }
+
+        return Path::new("src").join("bin").join("main.rs").to_path_buf()
     }
 
     // bin_len > 1
     let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
+    if package_root.join(&path).exists() {
+        return path.to_path_buf()
+    }
+
+    // we can also have src/bin/foo/main.rs, but the former one is preferred
+    let path = Path::new("src").join("bin").join(bin.name()).join("main.rs");
     if package_root.join(&path).exists() {
         return path.to_path_buf()
     }
@@ -1479,12 +1522,12 @@ fn inferred_bin_path(bin: &TomlBinTarget,
         }
     }
 
-    let path = Path::new("src").join("bin").join(&format!("main.rs"));
+    let path = Path::new("src").join("bin").join("main.rs");
     if package_root.join(&path).exists() {
         return path.to_path_buf()
     }
 
-    return Path::new("src").join(&format!("main.rs")).to_path_buf()
+    return Path::new("src").join("main.rs").to_path_buf()
 }
 
 fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
