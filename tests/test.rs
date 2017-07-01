@@ -215,10 +215,11 @@ test test_hello ... FAILED
 failures:
 
 ---- test_hello stdout ----
-<tab>thread 'test_hello' panicked at 'assertion failed: \
-    `(left == right)` (left: \
-    `\"hello\"`, right: `\"nope\"`)', src[/]foo.rs:12
-")
+<tab>thread 'test_hello' panicked at 'assertion failed:[..]")
+                       .with_stdout_contains("[..]`(left == right)`[..]")
+                       .with_stdout_contains("[..]left: `\"hello\"`,[..]")
+                       .with_stdout_contains("[..]right: `\"nope\"`[..]")
+                       .with_stdout_contains("[..]src[/]foo.rs:12[..]")
                        .with_stdout_contains("\
 failures:
     test_hello
