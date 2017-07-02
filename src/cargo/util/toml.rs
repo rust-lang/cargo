@@ -42,9 +42,9 @@ impl Layout {
         let mut tests = vec![];
         let mut benches = vec![];
 
-        let lib_canidate = root_path.join("src").join("lib.rs");
-        if fs::metadata(&lib_canidate).is_ok() {
-            lib = Some(lib_canidate);
+        let lib_candidate = root_path.join("src").join("lib.rs");
+        if fs::metadata(&lib_candidate).is_ok() {
+            lib = Some(lib_candidate);
         }
 
         try_add_file(&mut bins, root_path.join("src").join("main.rs"));
