@@ -122,20 +122,20 @@ pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
 }
 
 fn do_read_manifest(contents: &str,
-                    path: &Path,
+                    manifest_file: &Path,
                     source_id: &SourceId,
                     config: &Config)
                     -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
+    let root = manifest_file.parent().unwrap();
+    let layout = Layout::from_project_path(root);
 
-    let layout = Layout::from_project_path(path.parent().unwrap());
-
-    let root = {
-        let pretty_filename = util::without_prefix(path, config.cwd()).unwrap_or(path);
+    let toml = {
+        let pretty_filename = util::without_prefix(manifest_file, config.cwd()).unwrap_or(manifest_file);
         parse(contents, pretty_filename, config)?
     };
 
     let mut unused = BTreeSet::new();
-    let manifest: TomlManifest = serde_ignored::deserialize(root, |path| {
+    let manifest: TomlManifest = serde_ignored::deserialize(toml, |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
         unused.insert(key);
@@ -160,7 +160,7 @@ fn do_read_manifest(contents: &str,
         Err(e) => {
             match TomlManifest::to_virtual_manifest(&manifest,
                                                     source_id,
-                                                    &layout,
+                                                    &root,
                                                     config) {
                 Ok((m, paths)) => Ok((EitherManifest::Virtual(m), paths)),
                 Err(..) => Err(e),
@@ -509,7 +509,7 @@ struct Context<'a, 'b> {
     config: &'b Config,
     warnings: &'a mut Vec<String>,
     platform: Option<Platform>,
-    layout: &'a Layout,
+    root: &'a Path,
 }
 
 // These functions produce the equivalent of specific manifest entries. One
@@ -804,7 +804,7 @@ impl TomlManifest {
                 config: config,
                 warnings: &mut warnings,
                 platform: None,
-                layout: layout,
+                root: &layout.root,
             };
 
             fn process_dependencies(
@@ -924,7 +924,7 @@ impl TomlManifest {
 
     fn to_virtual_manifest(me: &Rc<TomlManifest>,
                            source_id: &SourceId,
-                           layout: &Layout,
+                           root: &Path,
                            config: &Config)
                            -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
         if me.project.is_some() {
@@ -960,7 +960,7 @@ impl TomlManifest {
             config: config,
             warnings: &mut warnings,
             platform: None,
-            layout: layout,
+            root: root
         })?;
         let profiles = build_profiles(&me.profile);
         let workspace_config = match me.workspace {
@@ -1137,7 +1137,7 @@ impl TomlDependency {
                 // always end up hashing to the same value no matter where it's
                 // built from.
                 if cx.source_id.is_path() {
-                    let path = cx.layout.root.join(path);
+                    let path = cx.root.join(path);
                     let path = util::normalize_path(&path);
                     SourceId::for_path(&path)?
                 } else {
