@@ -124,6 +124,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         message_format: options.flag_message_format,
         target_rustdoc_args: None,
         target_rustc_args: options.arg_opts.as_ref().map(|a| &a[..]),
+        target_cpu: None,
     };
 
     let ws = Workspace::new(&root, config)?;

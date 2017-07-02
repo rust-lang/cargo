@@ -154,6 +154,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             message_format: options.flag_message_format,
             target_rustdoc_args: None,
             target_rustc_args: None,
+            target_cpu: None,
         },
     };
 

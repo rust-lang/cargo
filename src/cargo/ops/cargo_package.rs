@@ -305,6 +305,7 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
         mode: ops::CompileMode::Build,
         target_rustdoc_args: None,
         target_rustc_args: None,
+        target_cpu: None,
     }, Arc::new(DefaultExecutor))?;
 
     Ok(())

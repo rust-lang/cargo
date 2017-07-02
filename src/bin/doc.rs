@@ -106,6 +106,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             },
             target_rustc_args: None,
             target_rustdoc_args: None,
+            target_cpu: None,
         },
     };
 
