@@ -18,16 +18,13 @@ use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use ops::is_bad_artifact_name;
 use sources::CRATES_IO;
+use util::paths;
 use util::{self, ToUrl, Config};
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 
-/// Representation of the projects file layout.
-///
-/// This structure is used to hold references to all project files that are relevant to cargo.
-
-#[derive(Clone)]
-pub struct Layout {
-    pub root: PathBuf,
+/// Implicit Cargo targets, defined by conventions.
+struct Layout {
+    root: PathBuf,
     lib: Option<PathBuf>,
     bins: Vec<PathBuf>,
     examples: Vec<PathBuf>,
@@ -38,7 +35,7 @@ pub struct Layout {
 impl Layout {
     /// Returns a new `Layout` for a given root path.
     /// The `root_path` represents the directory that contains the `Cargo.toml` file.
-    pub fn from_project_path(root_path: &Path) -> Layout {
+    fn from_project_path(root_path: &Path) -> Layout {
         let mut lib = None;
         let mut bins = vec![];
         let mut examples = vec![];
@@ -114,11 +111,24 @@ fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
     /* else just don't add anything if the directory doesn't exist, etc. */
 }
 
-pub fn to_manifest(contents: &str,
-                   source_id: &SourceId,
-                   layout: Layout,
-                   config: &Config)
-                   -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
+pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
+                     -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
+    trace!("read_manifest; path={}; source-id={}", path.display(), source_id);
+    let contents = paths::read(path)?;
+
+    let layout = Layout::from_project_path(path.parent().unwrap());
+    let root = layout.root.clone();
+    to_manifest(&contents, source_id, layout, config).chain_err(|| {
+        format!("failed to parse manifest at `{}`",
+                root.join("Cargo.toml").display())
+    })
+}
+
+fn to_manifest(contents: &str,
+               source_id: &SourceId,
+               layout: Layout,
+               config: &Config)
+               -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     let manifest = layout.root.join("Cargo.toml");
     let manifest = match util::without_prefix(&manifest, config.cwd()) {
         Some(path) => path.to_path_buf(),
