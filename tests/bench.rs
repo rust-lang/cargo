@@ -245,7 +245,7 @@ thread '[..]' panicked at 'assertion failed: \
     `(left == right)`[..]", p.url()))
                        .with_stderr_contains("[..]left: `\"hello\"`[..]")
                        .with_stderr_contains("[..]right: `\"nope\"`[..]")
-                       .with_stderr_contains("[..]src[/]foo.rs:14")
+                       .with_stderr_contains("[..]src[/]foo.rs:14[..]")
                        .with_status(101));
 }
 
@@ -295,7 +295,7 @@ fn bench_with_lib_dep() {
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
 [RUNNING] target[/]release[/]deps[/]baz-[..][EXE]", p.url()))
-                       .with_stdout_contains("test lib_bench ... bench: [..]")                     
+                       .with_stdout_contains("test lib_bench ... bench: [..]")
                        .with_stdout_contains("test bin_bench ... bench: [..]"));
 }
 
@@ -695,7 +695,7 @@ fn bench_dylib() {
 [RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE] --bench`
 [RUNNING] `[..]target[/]release[/]deps[/]bench-[..][EXE] --bench`", dir = p.url()))
                        .with_stdout_contains_n("test foo ... bench: [..]", 2));
-    
+
     p.root().move_into_the_past();
     assert_that(p.cargo("bench").arg("-v"),
                 execs().with_status(0)
