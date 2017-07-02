@@ -117,10 +117,8 @@ pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
     let contents = paths::read(path)?;
 
     let layout = Layout::from_project_path(path.parent().unwrap());
-    let root = layout.root.clone();
     to_manifest(&contents, source_id, layout, config).chain_err(|| {
-        format!("failed to parse manifest at `{}`",
-                root.join("Cargo.toml").display())
+        format!("failed to parse manifest at `{}`", path.display())
     })
 }
 
