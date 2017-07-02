@@ -116,23 +116,24 @@ pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
     trace!("read_manifest; path={}; source-id={}", path.display(), source_id);
     let contents = paths::read(path)?;
 
-    let layout = Layout::from_project_path(path.parent().unwrap());
-    to_manifest(&contents, source_id, layout, config).chain_err(|| {
+    do_read_manifest(&contents, path, source_id, config).chain_err(|| {
         format!("failed to parse manifest at `{}`", path.display())
     })
 }
 
-fn to_manifest(contents: &str,
-               source_id: &SourceId,
-               layout: Layout,
-               config: &Config)
-               -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
-    let manifest = layout.root.join("Cargo.toml");
-    let manifest = match util::without_prefix(&manifest, config.cwd()) {
-        Some(path) => path.to_path_buf(),
-        None => manifest.clone(),
+fn do_read_manifest(contents: &str,
+                    path: &Path,
+                    source_id: &SourceId,
+                    config: &Config)
+                    -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
+
+    let layout = Layout::from_project_path(path.parent().unwrap());
+
+    let root = {
+        let pretty_filename = util::without_prefix(path, config.cwd()).unwrap_or(path);
+        parse(contents, pretty_filename, config)?
     };
-    let root = parse(contents, &manifest, config)?;
+
     let mut unused = BTreeSet::new();
     let manifest: TomlManifest = serde_ignored::deserialize(root, |path| {
         let mut key = String::new();
