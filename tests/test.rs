@@ -263,7 +263,7 @@ failures:
 
 ---- test_hello stdout ----
 <tab>thread 'test_hello' panicked at 'assertion failed: false', \
-      tests[/]footest.rs:4
+      tests[/]footest.rs:4[..]
 ")
                        .with_stdout_contains("\
 failures:
@@ -295,7 +295,7 @@ failures:
 
 ---- test_hello stdout ----
 <tab>thread 'test_hello' panicked at 'assertion failed: false', \
-      src[/]lib.rs:4
+      src[/]lib.rs:4[..]
 ")
                        .with_stdout_contains("\
 failures:
