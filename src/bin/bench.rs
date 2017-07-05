@@ -26,6 +26,7 @@ pub struct Options {
     flag_tests: bool,
     flag_bench: Vec<String>,
     flag_benches: bool,
+    flag_no_fail_fast: bool,
     flag_frozen: bool,
     flag_locked: bool,
     arg_args: Vec<String>,
@@ -64,6 +65,7 @@ Options:
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
     --message-format FMT         Error format: human, json [default: human]
+    --no-fail-fast               Run all benchmarks regardless of failure
     --frozen                     Require Cargo.lock and cache are up to date
     --locked                     Require Cargo.lock is up to date
 
@@ -99,7 +101,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_locked)?;
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
-        no_fail_fast: false,
+        no_fail_fast: options.flag_no_fail_fast,
         only_doc: false,
         compile_opts: ops::CompileOptions {
             config: config,
