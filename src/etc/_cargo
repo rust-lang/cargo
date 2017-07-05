@@ -348,6 +348,15 @@ case $state in
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--color=:colorization option:(auto always never)' \
                     '1: :_test_names' \
+                    '(--doc --bin --example --test --bench)--lib[only test library]' \
+                    '(--lib --bin --example --test --bench)--doc[only test documentation]' \
+                    '(--lib --doc --example --test --bench)--bin=[binary name]' \
+                    '(--lib --doc --bin --test --bench)--example=[example name]' \
+                    '(--lib --doc --bin --example --bench)--test=[test name]' \
+                    '(--lib --doc --bin --example --test)--bench=[benchmark name]' \
+                    '--message-format:error format:(human json)' \
+                    '--frozen[require lock and cache up to date]' \
+                    '--locked[require lock up to date]'
                     ;;
 
             uninstall)
