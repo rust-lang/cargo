@@ -4,11 +4,13 @@ use cargo::core::Workspace;
 use cargo::ops::{self, MessageFormat, Packages};
 use cargo::util::{CliResult, CliError, Config, CargoErrorKind};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
+use cargo::util::parse_set_env;
 
 #[derive(Deserialize)]
 pub struct Options {
     flag_bin: Option<String>,
     flag_example: Option<String>,
+    flag_set_env: Vec<String>,
     flag_package: Option<String>,
     flag_jobs: Option<u32>,
     flag_features: Vec<String>,
@@ -36,6 +38,7 @@ Options:
     -h, --help                   Print this message
     --bin NAME                   Name of the bin target to run
     --example NAME               Name of the example target to run
+    -e NV, --set-env NV ...      Set environment variable (NAME=VALUE) when running executable
     -p SPEC, --package SPEC      Package with the target to run
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --release                    Build artifacts in release mode, with optimizations
@@ -105,8 +108,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         target_rustc_args: None,
     };
 
+    let env_vars = parse_set_env(&options.flag_set_env)?;
+
     let ws = Workspace::new(&root, config)?;
-    match ops::run(&ws, &compile_opts, &options.arg_args)? {
+    match ops::run(&ws, &compile_opts, &options.arg_args, &env_vars)? {
         None => Ok(()),
         Some(err) => {
             // If we never actually spawned the process then that sounds pretty

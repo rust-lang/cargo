@@ -2,6 +2,7 @@ use cargo::core::Workspace;
 use cargo::ops::{self, MessageFormat, Packages};
 use cargo::util::{CliResult, CliError, Config, CargoErrorKind};
 use cargo::util::important_paths::find_root_manifest_for_wd;
+use cargo::util::parse_set_env;
 
 #[derive(Deserialize)]
 pub struct Options {
@@ -24,6 +25,7 @@ pub struct Options {
     flag_tests: bool,
     flag_bench: Vec<String>,
     flag_benches: bool,
+    flag_set_env: Vec<String>,
     flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
@@ -54,6 +56,7 @@ Options:
     --tests                      Test all tests
     --bench NAME ...             Test only the specified bench target
     --benches                    Test all benches
+    -e NV, --set-env NV ...      Set environment variable (NAME=VALUE) when running executable
     --no-run                     Compile, but don't run tests
     -p SPEC, --package SPEC ...  Package to run tests for
     --all                        Test all packages in the workspace
@@ -157,8 +160,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         },
     };
 
+    let env_vars = parse_set_env(&options.flag_set_env)?;
+
     let ws = Workspace::new(&root, config)?;
-    let err = ops::run_tests(&ws, &ops, &options.arg_args)?;
+    let err = ops::run_tests(&ws, &ops, &options.arg_args, &env_vars)?;
     match err {
         None => Ok(()),
         Some(err) => {
