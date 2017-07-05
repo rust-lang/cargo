@@ -880,6 +880,44 @@ fn test_bench_no_run() {
 }
 
 #[test]
+fn test_bench_no_fail_fast() {
+    if !is_nightly() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            fn hello() -> &'static str {
+                "hello"
+            }
+
+            pub fn main() {
+                println!("{}", hello())
+            }
+
+            #[bench]
+            fn bench_hello(_b: &mut test::Bencher) {
+                assert_eq!(hello(), "hello")
+            }
+
+            #[bench]
+            fn bench_nope(_b: &mut test::Bencher) {
+                assert_eq!("nope", hello())
+            }"#);
+
+    assert_that(p.cargo_process("bench").arg("--no-fail-fast"),
+                execs().with_status(101)
+                    .with_stderr_contains("\
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
+                    .with_stdout_contains("running 2 tests")
+                    .with_stderr_contains("\
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
+                    .with_stdout_contains("test bench_hello [..]")
+                    .with_stdout_contains("test bench_nope [..]"));
+}
+
+#[test]
 fn test_bench_multiple_packages() {
     if !is_nightly() { return }
 
