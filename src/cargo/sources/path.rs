@@ -106,11 +106,27 @@ impl<'cfg> PathSource<'cfg> {
                          .map(|p| parse(p))
                          .collect::<Result<Vec<_>, _>>()?;
 
+        fn matches_path_or_parents(pattern: &Pattern, target: &Path) -> bool {
+            if pattern.matches_path(target) {
+                return true;
+            }
+            let mut current = target;
+            while let Some(parent) = current.parent() {
+                if pattern.matches_path(parent) {
+                    return true;
+                }
+                current = parent;
+            }
+            false
+        }
+
         let mut filter = |p: &Path| {
             let relative_path = util::without_prefix(p, root).unwrap();
-            include.iter().any(|p| p.matches_path(relative_path)) || {
-                include.is_empty() &&
-                 !exclude.iter().any(|p| p.matches_path(relative_path))
+            // mutually exclusive: setting include will override exclude
+            if include.is_empty() {
+                !exclude.iter().any(|exc| matches_path_or_parents(exc, relative_path))
+            } else {
+                include.iter().any(|inc| matches_path_or_parents(inc, relative_path))
             }
         };
 
