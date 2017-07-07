@@ -251,21 +251,132 @@ fn exclude() {
             name = "foo"
             version = "0.0.1"
             authors = []
-            exclude = ["*.txt"]
+            exclude = [
+                "*.txt",
+                # file in root
+                "file_root_1",       # NO_CHANGE (ignored)
+                "/file_root_2",      # CHANGING (packaged -> ignored)
+                "file_root_3/",      # NO_CHANGE (packaged)
+                "file_root_4/*",     # NO_CHANGE (packaged)
+                "file_root_5/**",    # NO_CHANGE (packaged)
+                # file in sub-dir
+                "file_deep_1",       # CHANGING (packaged -> ignored)
+                "/file_deep_2",      # NO_CHANGE (packaged)
+                "file_deep_3/",      # NO_CHANGE (packaged)
+                "file_deep_4/*",     # NO_CHANGE (packaged)
+                "file_deep_5/**",    # NO_CHANGE (packaged)
+                # dir in root
+                "dir_root_1",        # CHANGING (packaged -> ignored)
+                "/dir_root_2",       # CHANGING (packaged -> ignored)
+                "dir_root_3/",       # CHANGING (packaged -> ignored)
+                "dir_root_4/*",      # NO_CHANGE (ignored)
+                "dir_root_5/**",     # NO_CHANGE (ignored)
+                # dir in sub-dir
+                "dir_deep_1",        # CHANGING (packaged -> ignored)
+                "/dir_deep_2",       # NO_CHANGE
+                "dir_deep_3/",       # CHANGING (packaged -> ignored)
+                "dir_deep_4/*",      # CHANGING (packaged -> ignored)
+                "dir_deep_5/**",     # CHANGING (packaged -> ignored)
+            ]
         "#)
         .file("src/main.rs", r#"
             fn main() { println!("hello"); }
         "#)
         .file("bar.txt", "")
-        .file("src/bar.txt", "");
+        .file("src/bar.txt", "")
+        // file in root
+        .file("file_root_1", "")
+        .file("file_root_2", "")
+        .file("file_root_3", "")
+        .file("file_root_4", "")
+        .file("file_root_5", "")
+        // file in sub-dir
+        .file("some_dir/file_deep_1", "")
+        .file("some_dir/file_deep_2", "")
+        .file("some_dir/file_deep_3", "")
+        .file("some_dir/file_deep_4", "")
+        .file("some_dir/file_deep_5", "")
+        // dir in root
+        .file("dir_root_1/some_dir/file", "")
+        .file("dir_root_2/some_dir/file", "")
+        .file("dir_root_3/some_dir/file", "")
+        .file("dir_root_4/some_dir/file", "")
+        .file("dir_root_5/some_dir/file", "")
+        // dir in sub-dir
+        .file("some_dir/dir_deep_1/some_dir/file", "")
+        .file("some_dir/dir_deep_2/some_dir/file", "")
+        .file("some_dir/dir_deep_3/some_dir/file", "")
+        .file("some_dir/dir_deep_4/some_dir/file", "")
+        .file("some_dir/dir_deep_5/some_dir/file", "")
+        ;
 
     assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
-                execs().with_status(0).with_stderr("\
+                execs().with_status(0).with_stdout("").with_stderr("\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
+[WARNING] [..] file `dir_root_1[/]some_dir[/]file` WILL be excluded [..]
+See [..]
+[WARNING] [..] file `dir_root_2[/]some_dir[/]file` WILL be excluded [..]
+See [..]
+[WARNING] [..] file `dir_root_3[/]some_dir[/]file` WILL be excluded [..]
+See [..]
+[WARNING] [..] file `file_root_2` WILL be excluded [..]
+See [..]
+[WARNING] [..] file `some_dir[/]dir_deep_1[/]some_dir[/]file` WILL be excluded [..]
+See [..]
+[WARNING] [..] file `some_dir[/]dir_deep_3[/]some_dir[/]file` WILL be excluded [..]
+See [..]
+[WARNING] [..] file `some_dir[/]dir_deep_4[/]some_dir[/]file` WILL be excluded [..]
+See [..]
+[WARNING] [..] file `some_dir[/]dir_deep_5[/]some_dir[/]file` WILL be excluded [..]
+See [..]
+[WARNING] [..] file `some_dir[/]file_deep_1` WILL be excluded [..]
+See [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+"));
+
+    assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
+
+    assert_that(p.cargo("package").arg("-l"),
+                execs().with_status(0).with_stdout("\
+Cargo.toml
+dir_root_1[/]some_dir[/]file
+dir_root_2[/]some_dir[/]file
+dir_root_3[/]some_dir[/]file
+file_root_2
+file_root_3
+file_root_4
+file_root_5
+some_dir[/]dir_deep_1[/]some_dir[/]file
+some_dir[/]dir_deep_2[/]some_dir[/]file
+some_dir[/]dir_deep_3[/]some_dir[/]file
+some_dir[/]dir_deep_4[/]some_dir[/]file
+some_dir[/]dir_deep_5[/]some_dir[/]file
+some_dir[/]file_deep_1
+some_dir[/]file_deep_2
+some_dir[/]file_deep_3
+some_dir[/]file_deep_4
+some_dir[/]file_deep_5
+src[/]main.rs
 "));
 }
 
