@@ -894,7 +894,6 @@ impl TomlDependency {
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
-pub
 struct TomlTarget {
     name: Option<String>,
 
