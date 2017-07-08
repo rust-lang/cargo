@@ -20,6 +20,112 @@ use super::{TomlTarget, LibKind, PathValue, TomlManifest, StringOrBool,
             TomlLibTarget, TomlBinTarget, TomlBenchTarget, TomlExampleTarget, TomlTestTarget};
 
 
+pub fn targets(manifest: &TomlManifest,
+               project_name: &str,
+               project_root: &Path,
+               custom_build: &Option<StringOrBool>)
+               -> CargoResult<Vec<Target>> {
+    let layout = Layout::from_project_path(project_root);
+
+    let lib = match manifest.lib {
+        Some(ref lib) => {
+            lib.validate_library_name()?;
+            lib.validate_crate_type()?;
+            Some(
+                TomlTarget {
+                    name: lib.name.clone().or(Some(project_name.to_owned())),
+                    path: lib.path.clone().or_else(
+                        || layout.lib.as_ref().map(|p| PathValue(p.clone()))
+                    ),
+                    ..lib.clone()
+                }
+            )
+        }
+        None => inferred_lib_target(project_name, &layout),
+    };
+
+    let bins = match manifest.bin {
+        Some(ref bins) => {
+            for target in bins {
+                target.validate_binary_name()?;
+            };
+            bins.clone()
+        }
+        None => inferred_bin_targets(project_name, &layout)
+    };
+
+    for bin in bins.iter() {
+        if is_bad_artifact_name(&bin.name()) {
+            bail!("the binary target name `{}` is forbidden",
+                      bin.name())
+        }
+    }
+
+    let examples = match manifest.example {
+        Some(ref examples) => {
+            for target in examples {
+                target.validate_example_name()?;
+            }
+            examples.clone()
+        }
+        None => inferred_example_targets(&layout)
+    };
+
+    let tests = match manifest.test {
+        Some(ref tests) => {
+            for target in tests {
+                target.validate_test_name()?;
+            }
+            tests.clone()
+        }
+        None => inferred_test_targets(&layout)
+    };
+
+    let benches = match manifest.bench {
+        Some(ref benches) => {
+            for target in benches {
+                target.validate_bench_name()?;
+            }
+            benches.clone()
+        }
+        None => inferred_bench_targets(&layout)
+    };
+
+    if let Err(e) = unique_names_in_targets(&bins) {
+        bail!("found duplicate binary name {}, but all binary targets \
+               must have a unique name", e);
+    }
+
+    if let Err(e) = unique_names_in_targets(&examples) {
+        bail!("found duplicate example name {}, but all binary targets \
+               must have a unique name", e);
+    }
+
+    if let Err(e) = unique_names_in_targets(&benches) {
+        bail!("found duplicate bench name {}, but all binary targets \
+               must have a unique name", e);
+    }
+
+    if let Err(e) = unique_names_in_targets(&tests) {
+        bail!("found duplicate test name {}, but all binary targets \
+               must have a unique name", e)
+    }
+
+    // processing the custom build script
+    let new_build = manifest.maybe_custom_build(custom_build, &layout.root);
+
+    // Get targets
+    let targets = normalize(&layout.root,
+                            &lib,
+                            &bins,
+                            new_build,
+                            &examples,
+                            &tests,
+                            &benches);
+    Ok(targets)
+}
+
+
 /// Implicit Cargo targets, defined by conventions.
 struct Layout {
     root: PathBuf,
@@ -33,7 +139,7 @@ struct Layout {
 impl Layout {
     /// Returns a new `Layout` for a given root path.
     /// The `root_path` represents the directory that contains the `Cargo.toml` file.
-    pub fn from_project_path(root_path: &Path) -> Layout {
+    fn from_project_path(root_path: &Path) -> Layout {
         let mut lib = None;
         let mut bins = vec![];
         let mut examples = vec![];
@@ -54,160 +160,148 @@ impl Layout {
         try_add_files(&mut tests, root_path.join("tests"));
         try_add_files(&mut benches, root_path.join("benches"));
 
-        Layout {
+        return Layout {
             root: root_path.to_path_buf(),
             lib: lib,
             bins: bins,
             examples: examples,
             tests: tests,
             benches: benches,
+        };
+
+        fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
+            if fs::metadata(&file).is_ok() {
+                files.push(file);
+            }
+        }
+
+        // Add directories form src/bin which contain main.rs file
+        fn try_add_mains_from_dirs(files: &mut Vec<PathBuf>, root: PathBuf) {
+            if let Ok(new) = fs::read_dir(&root) {
+                let new: Vec<PathBuf> = new.filter_map(|i| i.ok())
+                    // Filter only directories
+                    .filter(|i| {
+                        i.file_type().map(|f| f.is_dir()).unwrap_or(false)
+                        // Convert DirEntry into PathBuf and append "main.rs"
+                    }).map(|i| {
+                    i.path().join("main.rs")
+                    // Filter only directories where main.rs is present
+                }).filter(|f| {
+                    f.as_path().exists()
+                }).collect();
+                files.extend(new);
+            }
+        }
+
+        fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
+            if let Ok(new) = fs::read_dir(&root) {
+                files.extend(new.filter_map(|dir| {
+                    dir.map(|d| d.path()).ok()
+                }).filter(|f| {
+                    f.extension().and_then(|s| s.to_str()) == Some("rs")
+                }).filter(|f| {
+                    // Some unix editors may create "dotfiles" next to original
+                    // source files while they're being edited, but these files are
+                    // rarely actually valid Rust source files and sometimes aren't
+                    // even valid UTF-8. Here we just ignore all of them and require
+                    // that they are explicitly specified in Cargo.toml if desired.
+                    f.file_name().and_then(|s| s.to_str()).map(|s| {
+                        !s.starts_with('.')
+                    }).unwrap_or(true)
+                }))
+            }
+            /* else just don't add anything if the directory doesn't exist, etc. */
         }
     }
 }
 
-fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
-    if fs::metadata(&file).is_ok() {
-        files.push(file);
-    }
-}
-
-// Add directories form src/bin which contain main.rs file
-fn try_add_mains_from_dirs(files: &mut Vec<PathBuf>, root: PathBuf) {
-    if let Ok(new) = fs::read_dir(&root) {
-        let new: Vec<PathBuf> = new.filter_map(|i| i.ok())
-            // Filter only directories
-            .filter(|i| {
-                i.file_type().map(|f| f.is_dir()).unwrap_or(false)
-                // Convert DirEntry into PathBuf and append "main.rs"
-            }).map(|i| {
-            i.path().join("main.rs")
-            // Filter only directories where main.rs is present
-        }).filter(|f| {
-            f.as_path().exists()
-        }).collect();
-        files.extend(new);
-    }
-}
-
-fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
-    if let Ok(new) = fs::read_dir(&root) {
-        files.extend(new.filter_map(|dir| {
-            dir.map(|d| d.path()).ok()
-        }).filter(|f| {
-            f.extension().and_then(|s| s.to_str()) == Some("rs")
-        }).filter(|f| {
-            // Some unix editors may create "dotfiles" next to original
-            // source files while they're being edited, but these files are
-            // rarely actually valid Rust source files and sometimes aren't
-            // even valid UTF-8. Here we just ignore all of them and require
-            // that they are explicitly specified in Cargo.toml if desired.
-            f.file_name().and_then(|s| s.to_str()).map(|s| {
-                !s.starts_with('.')
-            }).unwrap_or(true)
-        }))
-    }
-    /* else just don't add anything if the directory doesn't exist, etc. */
-}
-
-pub fn targets(me: &TomlManifest, project_root: &Path, project_name: &str, custom_build: &Option<StringOrBool>) -> CargoResult<Vec<Target>> {
-    let layout = Layout::from_project_path(project_root);
-    let lib = match me.lib {
-        Some(ref lib) => {
-            lib.validate_library_name()?;
-            lib.validate_crate_type()?;
-            Some(
-                TomlTarget {
-                    name: lib.name.clone().or(Some(project_name.to_owned())),
-                    path: lib.path.clone().or_else(
-                        || layout.lib.as_ref().map(|p| PathValue(p.clone()))
-                    ),
-                    ..lib.clone()
+impl TomlTarget {
+    fn validate_library_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err("library target names cannot be empty.".into())
+                } else if name.contains('-') {
+                    Err(format!("library target names cannot contain hyphens: {}",
+                                name).into())
+                } else {
+                    Ok(())
                 }
-            )
-        }
-        None => inferred_lib_target(project_name, &layout),
-    };
-
-    let bins = match me.bin {
-        Some(ref bins) => {
-            for target in bins {
-                target.validate_binary_name()?;
-            };
-            bins.clone()
-        }
-        None => inferred_bin_targets(project_name, &layout)
-    };
-
-    for bin in bins.iter() {
-        if is_bad_artifact_name(&bin.name()) {
-            bail!("the binary target name `{}` is forbidden",
-                      bin.name())
+            },
+            None => Ok(())
         }
     }
 
-    let examples = match me.example {
-        Some(ref examples) => {
-            for target in examples {
-                target.validate_example_name()?;
-            }
-            examples.clone()
+    fn validate_binary_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err("binary target names cannot be empty.".into())
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err("binary target bin.name is required".into())
         }
-        None => inferred_example_targets(&layout)
-    };
+    }
 
-    let tests = match me.test {
-        Some(ref tests) => {
-            for target in tests {
-                target.validate_test_name()?;
-            }
-            tests.clone()
+    fn validate_example_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err("example target names cannot be empty".into())
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err("example target example.name is required".into())
         }
-        None => inferred_test_targets(&layout)
-    };
+    }
 
-    let benches = match me.bench {
-        Some(ref benches) => {
-            for target in benches {
-                target.validate_bench_name()?;
-            }
-            benches.clone()
+    fn validate_test_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err("test target names cannot be empty".into())
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err("test target test.name is required".into())
         }
-        None => inferred_bench_targets(&layout)
-    };
-
-    if let Err(e) = unique_names_in_targets(&bins) {
-        bail!("found duplicate binary name {}, but all binary targets \
-                   must have a unique name", e);
     }
 
-    if let Err(e) = unique_names_in_targets(&examples) {
-        bail!("found duplicate example name {}, but all binary targets \
-                   must have a unique name", e);
+    fn validate_bench_name(&self) -> CargoResult<()> {
+        match self.name {
+            Some(ref name) => {
+                if name.trim().is_empty() {
+                    Err("bench target names cannot be empty".into())
+                } else {
+                    Ok(())
+                }
+            },
+            None => Err("bench target bench.name is required".into())
+        }
     }
 
-    if let Err(e) = unique_names_in_targets(&benches) {
-        bail!("found duplicate bench name {}, but all binary targets must \
-                   have a unique name", e);
+    fn validate_crate_type(&self) -> CargoResult<()> {
+        // Per the Macros 1.1 RFC:
+        //
+        // > Initially if a crate is compiled with the proc-macro crate type
+        // > (and possibly others) it will forbid exporting any items in the
+        // > crate other than those functions tagged #[proc_macro_derive] and
+        // > those functions must also be placed at the crate root.
+        //
+        // A plugin requires exporting plugin_registrar so a crate cannot be
+        // both at once.
+        if self.plugin == Some(true) && self.proc_macro() == Some(true) {
+            Err("lib.plugin and lib.proc-macro cannot both be true".into())
+        } else {
+            Ok(())
+        }
     }
-
-    if let Err(e) = unique_names_in_targets(&tests) {
-        bail!("found duplicate test name {}, but all binary targets must \
-                   have a unique name", e)
-    }
-
-    // processing the custom build script
-    let new_build = me.maybe_custom_build(custom_build, &layout.root);
-
-    // Get targets
-    let targets = normalize(&layout.root,
-                            &lib,
-                            &bins,
-                            new_build,
-                            &examples,
-                            &tests,
-                            &benches);
-    Ok(targets)
 }
+
 
 fn normalize(package_root: &Path,
              lib: &Option<TomlLibTarget>,
@@ -234,11 +328,15 @@ fn normalize(package_root: &Path,
         let path = l.path.clone().unwrap_or_else(
             || PathValue(Path::new("src").join(&format!("{}.rs", l.name())))
         );
-        let crate_types = l.crate_type.as_ref().or(l.crate_type2.as_ref());
-        let crate_types = match crate_types {
+        let crate_types = match l.crate_types() {
             Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
             None => {
-                vec![if l.plugin == Some(true) { LibKind::Dylib } else if l.proc_macro() == Some(true) { LibKind::ProcMacro } else { LibKind::Lib }]
+                let lib_kind = match (l.plugin, l.proc_macro()) {
+                    (Some(true), _) => LibKind::Dylib,
+                    (_, Some(true)) => LibKind::ProcMacro,
+                    _ => LibKind::Lib
+                };
+                vec![lib_kind]
             }
         };
 
@@ -276,8 +374,7 @@ fn normalize(package_root: &Path,
                 PathValue(default(ex))
             });
 
-            let crate_types = ex.crate_type.as_ref().or(ex.crate_type2.as_ref());
-            let crate_types = match crate_types {
+            let crate_types = match ex.crate_types() {
                 Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
                 None => Vec::new()
             };

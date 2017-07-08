@@ -42,7 +42,8 @@ fn do_read_manifest(contents: &str,
     let project_root = manifest_file.parent().unwrap();
 
     let toml = {
-        let pretty_filename = util::without_prefix(manifest_file, config.cwd()).unwrap_or(manifest_file);
+        let pretty_filename =
+            util::without_prefix(manifest_file, config.cwd()).unwrap_or(manifest_file);
         parse(contents, pretty_filename, config)?
     };
 
@@ -516,7 +517,7 @@ impl TomlManifest {
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
-        let targets = targets(me, project_root, project_name, &project.build)?;
+        let targets = targets(me, project_name, project_root, &project.build)?;
 
         if targets.is_empty() {
             debug!("manifest has no build targets");
@@ -964,93 +965,12 @@ impl TomlTarget {
         }
     }
 
-    fn validate_library_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    Err("library target names cannot be empty.".into())
-                } else if name.contains('-') {
-                    Err(format!("library target names cannot contain hyphens: {}",
-                                 name).into())
-                } else {
-                    Ok(())
-                }
-            },
-            None => Ok(())
-        }
-    }
-
-    fn validate_binary_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    Err("binary target names cannot be empty.".into())
-                } else {
-                    Ok(())
-                }
-            },
-            None => Err("binary target bin.name is required".into())
-        }
-    }
-
-    fn validate_example_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    Err("example target names cannot be empty".into())
-                } else {
-                    Ok(())
-                }
-            },
-            None => Err("example target example.name is required".into())
-        }
-    }
-
-    fn validate_test_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    Err("test target names cannot be empty".into())
-                } else {
-                    Ok(())
-                }
-            },
-            None => Err("test target test.name is required".into())
-        }
-    }
-
-    fn validate_bench_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    Err("bench target names cannot be empty".into())
-                } else {
-                    Ok(())
-                }
-            },
-            None => Err("bench target bench.name is required".into())
-        }
-    }
-
-    fn validate_crate_type(&self) -> CargoResult<()> {
-        // Per the Macros 1.1 RFC:
-        //
-        // > Initially if a crate is compiled with the proc-macro crate type
-        // > (and possibly others) it will forbid exporting any items in the
-        // > crate other than those functions tagged #[proc_macro_derive] and
-        // > those functions must also be placed at the crate root.
-        //
-        // A plugin requires exporting plugin_registrar so a crate cannot be
-        // both at once.
-        if self.plugin == Some(true) && self.proc_macro() == Some(true) {
-            Err("lib.plugin and lib.proc-macro cannot both be true".into())
-        } else {
-            Ok(())
-        }
-    }
-
     fn proc_macro(&self) -> Option<bool> {
         self.proc_macro.or(self.proc_macro2)
+    }
+
+    fn crate_types(&self) -> Option<&Vec<String>> {
+        self.crate_type.as_ref().or(self.crate_type2.as_ref())
     }
 }
 
