@@ -27,22 +27,16 @@ pub fn targets(manifest: &TomlManifest,
                -> CargoResult<Vec<Target>> {
     let layout = Layout::from_package_path(package_root);
 
-    let lib = match manifest.lib {
-        Some(ref lib) => {
-            lib.validate_library_name()?;
-            lib.validate_crate_type()?;
-            Some(
-                TomlTarget {
-                    name: lib.name.clone().or(Some(package_name.to_owned())),
-                    path: lib.path.clone().or_else(
-                        || layout.lib.as_ref().map(|p| PathValue(p.clone()))
-                    ),
-                    ..lib.clone()
-                }
-            )
-        }
-        None => inferred_lib_target(package_name, &layout),
-    };
+    let mut targets = Vec::new();
+
+    let has_lib;
+
+    if let Some(target) = clean_lib(manifest.lib.as_ref(), package_name, package_root, &layout)? {
+        targets.push(target);
+        has_lib = true;
+    } else {
+        has_lib = false;
+    }
 
     let bins = match manifest.bin {
         Some(ref bins) => {
@@ -115,13 +109,7 @@ pub fn targets(manifest: &TomlManifest,
     let new_build = manifest.maybe_custom_build(custom_build, package_root);
 
     // Get targets
-    let targets = normalize(package_root,
-                            &lib,
-                            &bins,
-                            new_build,
-                            &examples,
-                            &tests,
-                            &benches);
+    targets.extend(normalize(package_root, has_lib, &bins, new_build, &examples, &tests, &benches));
     Ok(targets)
 }
 
@@ -225,7 +213,7 @@ impl TomlTarget {
                 } else {
                     Ok(())
                 }
-            },
+            }
             None => Ok(())
         }
     }
@@ -238,7 +226,7 @@ impl TomlTarget {
                 } else {
                     Ok(())
                 }
-            },
+            }
             None => Err("binary target bin.name is required".into())
         }
     }
@@ -251,7 +239,7 @@ impl TomlTarget {
                 } else {
                     Ok(())
                 }
-            },
+            }
             None => Err("example target example.name is required".into())
         }
     }
@@ -264,7 +252,7 @@ impl TomlTarget {
                 } else {
                     Ok(())
                 }
-            },
+            }
             None => Err("test target test.name is required".into())
         }
     }
@@ -277,7 +265,7 @@ impl TomlTarget {
                 } else {
                     Ok(())
                 }
-            },
+            }
             None => Err("bench target bench.name is required".into())
         }
     }
@@ -300,50 +288,81 @@ impl TomlTarget {
     }
 }
 
+fn clean_lib(toml_lib: Option<&TomlLibTarget>,
+             package_name: &str,
+             package_root: &Path,
+             layout: &Layout) -> CargoResult<Option<Target>> {
+    let lib = match toml_lib {
+        Some(lib) => {
+            lib.validate_library_name()?; // XXX: other code paths dodge this validation
+            lib.validate_crate_type()?;
+            Some(
+                TomlTarget {
+                    name: lib.name.clone().or(Some(package_name.to_owned())),
+                    path: lib.path.clone().or_else(
+                        || layout.lib.as_ref().map(|p| PathValue(p.clone()))
+                    ),
+                    ..lib.clone()
+                }
+            )
+        }
+        None => layout.lib.as_ref().map(|lib| {
+            TomlTarget {
+                name: Some(package_name.to_string()),
+                path: Some(PathValue(lib.clone())),
+                ..TomlTarget::new()
+            }
+        })
+    };
+
+    let lib = match lib {
+        Some(ref lib) => lib,
+        None => return Ok(None)
+    };
+
+    let path = lib.path.clone().unwrap_or_else(
+        || PathValue(Path::new("src").join(&format!("{}.rs", lib.name())))
+    );
+
+    let crate_types = match lib.crate_types() {
+        Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
+        None => {
+            let lib_kind = match (lib.plugin, lib.proc_macro()) {
+                (Some(true), _) => LibKind::Dylib,
+                (_, Some(true)) => LibKind::ProcMacro,
+                _ => LibKind::Lib
+            };
+            vec![lib_kind]
+        }
+    };
+
+    let mut target = Target::lib_target(&lib.name(), crate_types, package_root.join(&path.0));
+    configure(lib, &mut target);
+    Ok(Some(target))
+}
+
+
+fn configure(toml: &TomlTarget, target: &mut Target) {
+    let t2 = target.clone();
+    target.set_tested(toml.test.unwrap_or(t2.tested()))
+        .set_doc(toml.doc.unwrap_or(t2.documented()))
+        .set_doctest(toml.doctest.unwrap_or(t2.doctested()))
+        .set_benched(toml.bench.unwrap_or(t2.benched()))
+        .set_harness(toml.harness.unwrap_or(t2.harness()))
+        .set_for_host(match (toml.plugin, toml.proc_macro()) {
+            (None, None) => t2.for_host(),
+            (Some(true), _) | (_, Some(true)) => true,
+            (Some(false), _) | (_, Some(false)) => false,
+        });
+}
 
 fn normalize(package_root: &Path,
-             lib: &Option<TomlLibTarget>,
+             has_lib: bool,
              bins: &[TomlBinTarget],
              custom_build: Option<PathBuf>,
              examples: &[TomlExampleTarget],
              tests: &[TomlTestTarget],
              benches: &[TomlBenchTarget]) -> Vec<Target> {
-    fn configure(toml: &TomlTarget, target: &mut Target) {
-        let t2 = target.clone();
-        target.set_tested(toml.test.unwrap_or(t2.tested()))
-            .set_doc(toml.doc.unwrap_or(t2.documented()))
-            .set_doctest(toml.doctest.unwrap_or(t2.doctested()))
-            .set_benched(toml.bench.unwrap_or(t2.benched()))
-            .set_harness(toml.harness.unwrap_or(t2.harness()))
-            .set_for_host(match (toml.plugin, toml.proc_macro()) {
-                (None, None) => t2.for_host(),
-                (Some(true), _) | (_, Some(true)) => true,
-                (Some(false), _) | (_, Some(false)) => false,
-            });
-    }
-
-    let lib_target = |dst: &mut Vec<Target>, l: &TomlLibTarget| {
-        let path = l.path.clone().unwrap_or_else(
-            || PathValue(Path::new("src").join(&format!("{}.rs", l.name())))
-        );
-        let crate_types = match l.crate_types() {
-            Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
-            None => {
-                let lib_kind = match (l.plugin, l.proc_macro()) {
-                    (Some(true), _) => LibKind::Dylib,
-                    (_, Some(true)) => LibKind::ProcMacro,
-                    _ => LibKind::Lib
-                };
-                vec![lib_kind]
-            }
-        };
-
-        let mut target = Target::lib_target(&l.name(), crate_types,
-                                            package_root.join(&path.0));
-        configure(l, &mut target);
-        dst.push(target);
-    };
-
     let bin_targets = |dst: &mut Vec<Target>, bins: &[TomlBinTarget],
                        default: &mut FnMut(&TomlBinTarget) -> PathBuf| {
         for bin in bins.iter() {
@@ -420,11 +439,8 @@ fn normalize(package_root: &Path,
 
     let mut ret = Vec::new();
 
-    if let Some(ref lib) = *lib {
-        lib_target(&mut ret, lib);
-    }
     bin_targets(&mut ret, bins,
-                &mut |bin| inferred_bin_path(bin, lib.is_some(), package_root, bins.len()));
+                &mut |bin| inferred_bin_path(bin, has_lib, package_root, bins.len()));
 
 
     if let Some(custom_build) = custom_build {
@@ -513,16 +529,6 @@ fn inferred_bin_path(bin: &TomlBinTarget,
 // otherwise acceptable executable names are not used when inside of
 // `src/bin/*`, but it seems ok to not build executables with non-UTF8
 // paths.
-fn inferred_lib_target(name: &str, layout: &Layout) -> Option<TomlTarget> {
-    layout.lib.as_ref().map(|lib| {
-        TomlTarget {
-            name: Some(name.to_string()),
-            path: Some(PathValue(lib.clone())),
-            ..TomlTarget::new()
-        }
-    })
-}
-
 fn inferred_bin_targets(name: &str, layout: &Layout, project_root: &Path) -> Vec<TomlTarget> {
     layout.bins.iter().filter_map(|bin| {
         let name = if &**bin == Path::new("src/main.rs") ||
