@@ -153,72 +153,6 @@ impl Layout {
 }
 
 impl TomlTarget {
-    fn validate_library_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    bail!("library target names cannot be empty")
-                }
-                if name.contains('-') {
-                    bail!("library target names cannot contain hyphens: {}", name)
-                }
-                Ok(())
-            }
-            None => Ok(())
-        }
-    }
-
-    fn validate_binary_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    bail!("binary target names cannot be empty")
-                }
-                if is_bad_artifact_name(name) {
-                    bail!("the binary target name `{}` is forbidden", name)
-                }
-                Ok(())
-            }
-            None => bail!("binary target bin.name is required")
-        }
-    }
-
-    fn validate_example_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    bail!("example target names cannot be empty")
-                }
-                Ok(())
-            }
-            None => bail!("example target example.name is required")
-        }
-    }
-
-    fn validate_test_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    bail!("test target names cannot be empty")
-                }
-                Ok(())
-            }
-            None => bail!("test target test.name is required")
-        }
-    }
-
-    fn validate_bench_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    bail!("bench target names cannot be empty")
-                }
-                Ok(())
-            }
-            None => bail!("bench target bench.name is required")
-        }
-    }
-
     fn validate_crate_type(&self) -> CargoResult<()> {
         // Per the Macros 1.1 RFC:
         //
@@ -243,7 +177,13 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
              package_name: &str) -> CargoResult<Option<Target>> {
     let lib = match toml_lib {
         Some(lib) => {
-            lib.validate_library_name()?; // XXX: other code paths dodge this validation
+            if let Some(ref name) = lib.name {
+                // XXX: other code paths dodge this validation
+                if name.contains('-') {
+                    bail!("library target names cannot contain hyphens: {}", name)
+                }
+            }
+
             lib.validate_crate_type()?;
             Some(
                 TomlTarget {
@@ -268,6 +208,8 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
         Some(ref lib) => lib,
         None => return Ok(None)
     };
+
+    validate_has_name(&lib, "library", "lib")?;
 
     let path = lib.path.clone().unwrap_or_else(
         || PathValue(Path::new("src").join(&format!("{}.rs", lib.name())))
@@ -301,7 +243,12 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
     };
 
     for bin in bins.iter() {
-        bin.validate_binary_name()?;
+        validate_has_name(bin, "binary", "bin")?;
+
+        let name = bin.name();
+        if is_bad_artifact_name(&name) {
+            bail!("the binary target name `{}` is forbidden", name)
+        }
     }
 
     validate_unique_names(&bins, "binary")?;
@@ -329,7 +276,7 @@ fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
     };
 
     for target in examples.iter() {
-        target.validate_example_name()?;
+        validate_has_name(target, "example", "example")?;
     }
 
     validate_unique_names(&examples, "example")?;
@@ -367,7 +314,7 @@ fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
     };
 
     for target in tests.iter() {
-        target.validate_test_name()?;
+        validate_has_name(target, "test", "test")?;
     }
 
     validate_unique_names(&tests, "test")?;
@@ -395,7 +342,7 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
     };
 
     for target in benches.iter() {
-        target.validate_bench_name()?;
+        validate_has_name(target, "benchmark", "bench")?;
     }
 
     validate_unique_names(&benches, "bench")?;
@@ -560,6 +507,16 @@ fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
     }).collect()
 }
 
+fn validate_has_name(target: &TomlTarget, target_name: &str, target_kind: &str) -> CargoResult<()> {
+    match target.name {
+        Some(ref name) => if name.trim().is_empty() {
+            bail!("{} target names cannot be empty", target_name)
+        },
+        None => bail!("{} target {}.name is required", target_name, target_kind)
+    }
+
+    Ok(())
+}
 
 /// Will check a list of toml targets, and make sure the target names are unique within a vector.
 fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResult<()> {

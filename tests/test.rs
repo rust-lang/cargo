@@ -790,7 +790,7 @@ fn bench_without_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  bench target bench.name is required"));
+  benchmark target bench.name is required"));
 }
 
 #[test]
