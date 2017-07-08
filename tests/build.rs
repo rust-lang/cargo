@@ -235,7 +235,7 @@ fn cargo_compile_with_invalid_bin_target_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  binary target names cannot be empty.
+  binary target names cannot be empty
 "))
 }
 
@@ -283,7 +283,7 @@ fn cargo_compile_with_invalid_lib_target_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  library target names cannot be empty.
+  library target names cannot be empty
 "))
 }
 
