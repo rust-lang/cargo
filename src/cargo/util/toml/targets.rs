@@ -51,7 +51,7 @@ pub fn targets(manifest: &TomlManifest,
             };
             bins.clone()
         }
-        None => inferred_bin_targets(package_name, &layout)
+        None => inferred_bin_targets(package_name, &layout, package_root)
     };
 
     for bin in bins.iter() {
@@ -112,10 +112,10 @@ pub fn targets(manifest: &TomlManifest,
     }
 
     // processing the custom build script
-    let new_build = manifest.maybe_custom_build(custom_build, &layout.root);
+    let new_build = manifest.maybe_custom_build(custom_build, package_root);
 
     // Get targets
-    let targets = normalize(&layout.root,
+    let targets = normalize(package_root,
                             &lib,
                             &bins,
                             new_build,
@@ -128,7 +128,6 @@ pub fn targets(manifest: &TomlManifest,
 
 /// Implicit Cargo targets, defined by conventions.
 struct Layout {
-    root: PathBuf,
     lib: Option<PathBuf>,
     bins: Vec<PathBuf>,
     examples: Vec<PathBuf>,
@@ -161,7 +160,6 @@ impl Layout {
         try_add_files(&mut benches, package_root.join("benches"));
 
         return Layout {
-            root: package_root.to_path_buf(),
             lib: lib,
             bins: bins,
             examples: examples,
@@ -525,10 +523,10 @@ fn inferred_lib_target(name: &str, layout: &Layout) -> Option<TomlTarget> {
     })
 }
 
-fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
+fn inferred_bin_targets(name: &str, layout: &Layout, project_root: &Path) -> Vec<TomlTarget> {
     layout.bins.iter().filter_map(|bin| {
         let name = if &**bin == Path::new("src/main.rs") ||
-            *bin == layout.root.join("src").join("main.rs") {
+            *bin == project_root.join("src").join("main.rs") {
             Some(name.to_string())
         } else {
             // bin is either a source file or a directory with main.rs inside.
