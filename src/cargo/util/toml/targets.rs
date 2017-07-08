@@ -21,11 +21,11 @@ use super::{TomlTarget, LibKind, PathValue, TomlManifest, StringOrBool,
 
 
 pub fn targets(manifest: &TomlManifest,
-               project_name: &str,
-               project_root: &Path,
+               package_name: &str,
+               package_root: &Path,
                custom_build: &Option<StringOrBool>)
                -> CargoResult<Vec<Target>> {
-    let layout = Layout::from_project_path(project_root);
+    let layout = Layout::from_package_path(package_root);
 
     let lib = match manifest.lib {
         Some(ref lib) => {
@@ -33,7 +33,7 @@ pub fn targets(manifest: &TomlManifest,
             lib.validate_crate_type()?;
             Some(
                 TomlTarget {
-                    name: lib.name.clone().or(Some(project_name.to_owned())),
+                    name: lib.name.clone().or(Some(package_name.to_owned())),
                     path: lib.path.clone().or_else(
                         || layout.lib.as_ref().map(|p| PathValue(p.clone()))
                     ),
@@ -41,7 +41,7 @@ pub fn targets(manifest: &TomlManifest,
                 }
             )
         }
-        None => inferred_lib_target(project_name, &layout),
+        None => inferred_lib_target(package_name, &layout),
     };
 
     let bins = match manifest.bin {
@@ -51,7 +51,7 @@ pub fn targets(manifest: &TomlManifest,
             };
             bins.clone()
         }
-        None => inferred_bin_targets(project_name, &layout)
+        None => inferred_bin_targets(package_name, &layout)
     };
 
     for bin in bins.iter() {
@@ -138,30 +138,30 @@ struct Layout {
 
 impl Layout {
     /// Returns a new `Layout` for a given root path.
-    /// The `root_path` represents the directory that contains the `Cargo.toml` file.
-    fn from_project_path(root_path: &Path) -> Layout {
+    /// The `package_root` represents the directory that contains the `Cargo.toml` file.
+    fn from_package_path(package_root: &Path) -> Layout {
         let mut lib = None;
         let mut bins = vec![];
         let mut examples = vec![];
         let mut tests = vec![];
         let mut benches = vec![];
 
-        let lib_candidate = root_path.join("src").join("lib.rs");
+        let lib_candidate = package_root.join("src").join("lib.rs");
         if fs::metadata(&lib_candidate).is_ok() {
             lib = Some(lib_candidate);
         }
 
-        try_add_file(&mut bins, root_path.join("src").join("main.rs"));
-        try_add_files(&mut bins, root_path.join("src").join("bin"));
-        try_add_mains_from_dirs(&mut bins, root_path.join("src").join("bin"));
+        try_add_file(&mut bins, package_root.join("src").join("main.rs"));
+        try_add_files(&mut bins, package_root.join("src").join("bin"));
+        try_add_mains_from_dirs(&mut bins, package_root.join("src").join("bin"));
 
-        try_add_files(&mut examples, root_path.join("examples"));
+        try_add_files(&mut examples, package_root.join("examples"));
 
-        try_add_files(&mut tests, root_path.join("tests"));
-        try_add_files(&mut benches, root_path.join("benches"));
+        try_add_files(&mut tests, package_root.join("tests"));
+        try_add_files(&mut benches, package_root.join("benches"));
 
         return Layout {
-            root: root_path.to_path_buf(),
+            root: package_root.to_path_buf(),
             lib: lib,
             bins: bins,
             examples: examples,
