@@ -31,7 +31,7 @@ pub fn targets(manifest: &TomlManifest,
 
     let has_lib;
 
-    if let Some(target) = clean_lib(manifest.lib.as_ref(), package_name, package_root, &layout)? {
+    if let Some(target) = clean_lib(manifest.lib.as_ref(), package_root, &layout, package_name)? {
         targets.push(target);
         has_lib = true;
     } else {
@@ -39,7 +39,7 @@ pub fn targets(manifest: &TomlManifest,
     }
 
     targets.extend(
-        clean_bins(manifest.bin.as_ref(), package_name, package_root, &layout, has_lib)?
+        clean_bins(manifest.bin.as_ref(), package_root, &layout, package_name, has_lib)?
     );
 
     targets.extend(
@@ -238,9 +238,9 @@ impl TomlTarget {
 }
 
 fn clean_lib(toml_lib: Option<&TomlLibTarget>,
-             package_name: &str,
              package_root: &Path,
-             layout: &Layout) -> CargoResult<Option<Target>> {
+             layout: &Layout,
+             package_name: &str) -> CargoResult<Option<Target>> {
     let lib = match toml_lib {
         Some(lib) => {
             lib.validate_library_name()?; // XXX: other code paths dodge this validation
@@ -291,9 +291,9 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
 }
 
 fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
-              package_name: &str,
               package_root: &Path,
               layout: &Layout,
+              package_name: &str,
               has_lib: bool) -> CargoResult<Vec<Target>> {
     let bins = match toml_bins {
         Some(bins) => bins.clone(),
