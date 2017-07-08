@@ -157,7 +157,7 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    bail!("library target names cannot be empty.")
+                    bail!("library target names cannot be empty")
                 }
                 if name.contains('-') {
                     bail!("library target names cannot contain hyphens: {}", name)
@@ -172,7 +172,7 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    bail!("binary target names cannot be empty.")
+                    bail!("binary target names cannot be empty")
                 }
                 if is_bad_artifact_name(name) {
                     bail!("the binary target name `{}` is forbidden", name)
