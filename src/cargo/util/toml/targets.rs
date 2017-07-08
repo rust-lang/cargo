@@ -42,16 +42,9 @@ pub fn targets(manifest: &TomlManifest,
         clean_bins(manifest.bin.as_ref(), package_name, package_root, &layout, has_lib)?
     );
 
-
-    let examples = match manifest.example {
-        Some(ref examples) => {
-            for target in examples {
-                target.validate_example_name()?;
-            }
-            examples.clone()
-        }
-        None => inferred_example_targets(&layout)
-    };
+    targets.extend(
+        clean_examples(manifest.example.as_ref(), package_root, &layout)?
+    );
 
     let tests = match manifest.test {
         Some(ref tests) => {
@@ -73,11 +66,6 @@ pub fn targets(manifest: &TomlManifest,
         None => inferred_bench_targets(&layout)
     };
 
-    if let Err(e) = unique_names_in_targets(&examples) {
-        bail!("found duplicate example name {}, but all binary targets \
-               must have a unique name", e);
-    }
-
     if let Err(e) = unique_names_in_targets(&benches) {
         bail!("found duplicate bench name {}, but all binary targets \
                must have a unique name", e);
@@ -92,7 +80,7 @@ pub fn targets(manifest: &TomlManifest,
     let new_build = manifest.maybe_custom_build(custom_build, package_root);
 
     // Get targets
-    targets.extend(normalize(package_root, new_build, &examples, &tests, &benches));
+    targets.extend(normalize(package_root, new_build, &tests, &benches));
     Ok(targets)
 }
 
@@ -219,12 +207,11 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err("example target names cannot be empty".into())
-                } else {
-                    Ok(())
+                    bail!("example target names cannot be empty")
                 }
+                Ok(())
             }
-            None => Err("example target example.name is required".into())
+            None => bail!("example target example.name is required")
         }
     }
 
@@ -356,6 +343,48 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
     Ok(result)
 }
 
+fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
+                  package_root: &Path,
+                  layout: &Layout)
+                  -> CargoResult<Vec<Target>> {
+    let examples = match toml_examples {
+        Some(examples) => examples.clone(),
+        None => inferred_example_targets(&layout)
+    };
+
+    for target in examples.iter() {
+        target.validate_example_name()?;
+    }
+
+    if let Err(e) = unique_names_in_targets(&examples) {
+        bail!("found duplicate example name {}, but all binary targets \
+                   must have a unique name", e);
+    }
+
+    let mut result = Vec::new();
+    for ex in examples.iter() {
+        let path = ex.path.clone().unwrap_or_else(|| {
+            PathValue(Path::new("examples").join(&format!("{}.rs", ex.name())))
+        });
+
+        let crate_types = match ex.crate_types() {
+            Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
+            None => Vec::new()
+        };
+
+        let mut target = Target::example_target(
+            &ex.name(),
+            crate_types,
+            package_root.join(&path.0),
+            ex.required_features.clone()
+        );
+        configure(ex, &mut target);
+        result.push(target);
+    }
+
+    Ok(result)
+}
+
 fn configure(toml: &TomlTarget, target: &mut Target) {
     let t2 = target.clone();
     target.set_tested(toml.test.unwrap_or(t2.tested()))
@@ -372,7 +401,6 @@ fn configure(toml: &TomlTarget, target: &mut Target) {
 
 fn normalize(package_root: &Path,
              custom_build: Option<PathBuf>,
-             examples: &[TomlExampleTarget],
              tests: &[TomlTestTarget],
              benches: &[TomlBenchTarget]) -> Vec<Target> {
     let custom_build_target = |dst: &mut Vec<Target>, cmd: &Path| {
@@ -380,30 +408,6 @@ fn normalize(package_root: &Path,
                            cmd.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
 
         dst.push(Target::custom_build_target(&name, package_root.join(cmd)));
-    };
-
-    let example_targets = |dst: &mut Vec<Target>,
-                           examples: &[TomlExampleTarget],
-                           default: &mut FnMut(&TomlExampleTarget) -> PathBuf| {
-        for ex in examples.iter() {
-            let path = ex.path.clone().unwrap_or_else(|| {
-                PathValue(default(ex))
-            });
-
-            let crate_types = match ex.crate_types() {
-                Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
-                None => Vec::new()
-            };
-
-            let mut target = Target::example_target(
-                &ex.name(),
-                crate_types,
-                package_root.join(&path.0),
-                ex.required_features.clone()
-            );
-            configure(ex, &mut target);
-            dst.push(target);
-        }
     };
 
     let test_targets = |dst: &mut Vec<Target>,
@@ -442,10 +446,6 @@ fn normalize(package_root: &Path,
     if let Some(custom_build) = custom_build {
         custom_build_target(&mut ret, &custom_build);
     }
-
-    example_targets(&mut ret, examples,
-                    &mut |ex| Path::new("examples")
-                        .join(&format!("{}.rs", ex.name())));
 
     test_targets(&mut ret, tests, &mut |test| {
         Path::new("tests").join(&format!("{}.rs", test.name()))
