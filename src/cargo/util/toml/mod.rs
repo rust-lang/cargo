@@ -22,7 +22,7 @@ use util::{self, ToUrl, Config};
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 mod targets;
-use self::targets::{Layout, targets};
+use self::targets::targets;
 
 pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
                      -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
@@ -39,8 +39,7 @@ fn do_read_manifest(contents: &str,
                     source_id: &SourceId,
                     config: &Config)
                     -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
-    let root = manifest_file.parent().unwrap();
-    let layout = Layout::from_project_path(root);
+    let project_root = manifest_file.parent().unwrap();
 
     let toml = {
         let pretty_filename = util::without_prefix(manifest_file, config.cwd()).unwrap_or(manifest_file);
@@ -57,7 +56,7 @@ fn do_read_manifest(contents: &str,
     let manifest = Rc::new(manifest);
     return match TomlManifest::to_real_manifest(&manifest,
                                                 source_id,
-                                                &layout,
+                                                project_root,
                                                 config) {
         Ok((mut manifest, paths)) => {
             for key in unused {
@@ -73,7 +72,7 @@ fn do_read_manifest(contents: &str,
         Err(e) => {
             match TomlManifest::to_virtual_manifest(&manifest,
                                                     source_id,
-                                                    &root,
+                                                    project_root,
                                                     config) {
                 Ok((m, paths)) => Ok((EitherManifest::Virtual(m), paths)),
                 Err(..) => Err(e),
@@ -496,7 +495,7 @@ impl TomlManifest {
 
     fn to_real_manifest(me: &Rc<TomlManifest>,
                         source_id: &SourceId,
-                        layout: &Layout,
+                        project_root: &Path,
                         config: &Config)
                         -> CargoResult<(Manifest, Vec<PathBuf>)> {
         let mut nested_paths = vec![];
@@ -517,13 +516,13 @@ impl TomlManifest {
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
-        let targets = targets(me, layout, project_name, &project.build)?;
+        let targets = targets(me, project_root, project_name, &project.build)?;
 
         if targets.is_empty() {
             debug!("manifest has no build targets");
         }
 
-        if let Err(e) = unique_build_targets(&targets, layout) {
+        if let Err(e) = unique_build_targets(&targets, project_root) {
             warnings.push(format!("file found to be present in multiple \
                                    build targets: {}", e));
         }
@@ -541,7 +540,7 @@ impl TomlManifest {
                 config: config,
                 warnings: &mut warnings,
                 platform: None,
-                root: &layout.root,
+                root: project_root,
             };
 
             fn process_dependencies(
@@ -773,9 +772,9 @@ impl TomlManifest {
 
 /// Will check a list of build targets, and make sure the target names are unique within a vector.
 /// If not, the name of the offending build target is returned.
-fn unique_build_targets(targets: &[Target], layout: &Layout) -> Result<(), String> {
+fn unique_build_targets(targets: &[Target], project_root: &Path) -> Result<(), String> {
     let mut seen = HashSet::new();
-    for v in targets.iter().map(|e| layout.root.join(e.src_path())) {
+    for v in targets.iter().map(|e| project_root.join(e.src_path())) {
         if !seen.insert(v.clone()) {
             return Err(v.display().to_string());
         }
@@ -894,6 +893,7 @@ impl TomlDependency {
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
+pub
 struct TomlTarget {
     name: Option<String>,
 
