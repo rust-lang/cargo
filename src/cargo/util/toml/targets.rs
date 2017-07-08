@@ -38,22 +38,10 @@ pub fn targets(manifest: &TomlManifest,
         has_lib = false;
     }
 
-    let bins = match manifest.bin {
-        Some(ref bins) => {
-            for target in bins {
-                target.validate_binary_name()?;
-            };
-            bins.clone()
-        }
-        None => inferred_bin_targets(package_name, &layout, package_root)
-    };
+    targets.extend(
+        clean_bins(manifest.bin.as_ref(), package_name, package_root, &layout, has_lib)?
+    );
 
-    for bin in bins.iter() {
-        if is_bad_artifact_name(&bin.name()) {
-            bail!("the binary target name `{}` is forbidden",
-                      bin.name())
-        }
-    }
 
     let examples = match manifest.example {
         Some(ref examples) => {
@@ -85,11 +73,6 @@ pub fn targets(manifest: &TomlManifest,
         None => inferred_bench_targets(&layout)
     };
 
-    if let Err(e) = unique_names_in_targets(&bins) {
-        bail!("found duplicate binary name {}, but all binary targets \
-               must have a unique name", e);
-    }
-
     if let Err(e) = unique_names_in_targets(&examples) {
         bail!("found duplicate example name {}, but all binary targets \
                must have a unique name", e);
@@ -109,7 +92,7 @@ pub fn targets(manifest: &TomlManifest,
     let new_build = manifest.maybe_custom_build(custom_build, package_root);
 
     // Get targets
-    targets.extend(normalize(package_root, has_lib, &bins, new_build, &examples, &tests, &benches));
+    targets.extend(normalize(package_root, new_build, &examples, &tests, &benches));
     Ok(targets)
 }
 
@@ -206,13 +189,12 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err("library target names cannot be empty.".into())
-                } else if name.contains('-') {
-                    Err(format!("library target names cannot contain hyphens: {}",
-                                name).into())
-                } else {
-                    Ok(())
+                    bail!("library target names cannot be empty.")
                 }
+                if name.contains('-') {
+                    bail!("library target names cannot contain hyphens: {}", name)
+                }
+                Ok(())
             }
             None => Ok(())
         }
@@ -222,12 +204,14 @@ impl TomlTarget {
         match self.name {
             Some(ref name) => {
                 if name.trim().is_empty() {
-                    Err("binary target names cannot be empty.".into())
-                } else {
-                    Ok(())
+                    bail!("binary target names cannot be empty.")
                 }
+                if is_bad_artifact_name(name) {
+                    bail!("the binary target name `{}` is forbidden", name)
+                }
+                Ok(())
             }
-            None => Err("binary target bin.name is required".into())
+            None => bail!("binary target bin.name is required")
         }
     }
 
@@ -341,6 +325,36 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
     Ok(Some(target))
 }
 
+fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
+              package_name: &str,
+              package_root: &Path,
+              layout: &Layout,
+              has_lib: bool) -> CargoResult<Vec<Target>> {
+    let bins = match toml_bins {
+        Some(bins) => bins.clone(),
+        None => inferred_bin_targets(package_name, &layout, package_root)
+    };
+
+    for bin in bins.iter() {
+        bin.validate_binary_name()?;
+    }
+
+    if let Err(e) = unique_names_in_targets(&bins) {
+        bail!("found duplicate binary name {}, but all binary targets must have a unique name", e);
+    }
+
+    let mut result = Vec::new();
+    for bin in bins.iter() {
+        let path = bin.path.clone().unwrap_or_else(|| {
+            PathValue(inferred_bin_path(bin, has_lib, package_root, bins.len()))
+        });
+        let mut target = Target::bin_target(&bin.name(), package_root.join(&path.0),
+                                            bin.required_features.clone());
+        configure(bin, &mut target);
+        result.push(target);
+    }
+    Ok(result)
+}
 
 fn configure(toml: &TomlTarget, target: &mut Target) {
     let t2 = target.clone();
@@ -357,25 +371,10 @@ fn configure(toml: &TomlTarget, target: &mut Target) {
 }
 
 fn normalize(package_root: &Path,
-             has_lib: bool,
-             bins: &[TomlBinTarget],
              custom_build: Option<PathBuf>,
              examples: &[TomlExampleTarget],
              tests: &[TomlTestTarget],
              benches: &[TomlBenchTarget]) -> Vec<Target> {
-    let bin_targets = |dst: &mut Vec<Target>, bins: &[TomlBinTarget],
-                       default: &mut FnMut(&TomlBinTarget) -> PathBuf| {
-        for bin in bins.iter() {
-            let path = bin.path.clone().unwrap_or_else(|| {
-                PathValue(default(bin))
-            });
-            let mut target = Target::bin_target(&bin.name(), package_root.join(&path.0),
-                                                bin.required_features.clone());
-            configure(bin, &mut target);
-            dst.push(target);
-        }
-    };
-
     let custom_build_target = |dst: &mut Vec<Target>, cmd: &Path| {
         let name = format!("build-script-{}",
                            cmd.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
@@ -438,9 +437,6 @@ fn normalize(package_root: &Path,
     };
 
     let mut ret = Vec::new();
-
-    bin_targets(&mut ret, bins,
-                &mut |bin| inferred_bin_path(bin, has_lib, package_root, bins.len()));
 
 
     if let Some(custom_build) = custom_build {
