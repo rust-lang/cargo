@@ -21,13 +21,13 @@ use super::{TomlTarget, LibKind, PathValue, TomlManifest, StringOrBool,
 
 
 /// Implicit Cargo targets, defined by conventions.
-pub struct Layout {
-    pub root: PathBuf,
-    pub lib: Option<PathBuf>,
-    pub bins: Vec<PathBuf>,
-    pub examples: Vec<PathBuf>,
-    pub tests: Vec<PathBuf>,
-    pub benches: Vec<PathBuf>,
+struct Layout {
+    root: PathBuf,
+    lib: Option<PathBuf>,
+    bins: Vec<PathBuf>,
+    examples: Vec<PathBuf>,
+    tests: Vec<PathBuf>,
+    benches: Vec<PathBuf>,
 }
 
 impl Layout {
@@ -109,7 +109,8 @@ fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
     /* else just don't add anything if the directory doesn't exist, etc. */
 }
 
-pub fn targets(me: &TomlManifest, layout: &Layout, project_name: &str, custom_build: &Option<StringOrBool>) -> CargoResult<Vec<Target>> {
+pub fn targets(me: &TomlManifest, project_root: &Path, project_name: &str, custom_build: &Option<StringOrBool>) -> CargoResult<Vec<Target>> {
+    let layout = Layout::from_project_path(project_root);
     let lib = match me.lib {
         Some(ref lib) => {
             lib.validate_library_name()?;
@@ -124,7 +125,7 @@ pub fn targets(me: &TomlManifest, layout: &Layout, project_name: &str, custom_bu
                 }
             )
         }
-        None => inferred_lib_target(project_name, layout),
+        None => inferred_lib_target(project_name, &layout),
     };
 
     let bins = match me.bin {
@@ -134,7 +135,7 @@ pub fn targets(me: &TomlManifest, layout: &Layout, project_name: &str, custom_bu
             };
             bins.clone()
         }
-        None => inferred_bin_targets(project_name, layout)
+        None => inferred_bin_targets(project_name, &layout)
     };
 
     for bin in bins.iter() {
@@ -151,7 +152,7 @@ pub fn targets(me: &TomlManifest, layout: &Layout, project_name: &str, custom_bu
             }
             examples.clone()
         }
-        None => inferred_example_targets(layout)
+        None => inferred_example_targets(&layout)
     };
 
     let tests = match me.test {
@@ -161,7 +162,7 @@ pub fn targets(me: &TomlManifest, layout: &Layout, project_name: &str, custom_bu
             }
             tests.clone()
         }
-        None => inferred_test_targets(layout)
+        None => inferred_test_targets(&layout)
     };
 
     let benches = match me.bench {
@@ -171,7 +172,7 @@ pub fn targets(me: &TomlManifest, layout: &Layout, project_name: &str, custom_bu
             }
             benches.clone()
         }
-        None => inferred_bench_targets(layout)
+        None => inferred_bench_targets(&layout)
     };
 
     if let Err(e) = unique_names_in_targets(&bins) {
