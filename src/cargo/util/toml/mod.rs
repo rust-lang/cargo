@@ -39,7 +39,7 @@ fn do_read_manifest(contents: &str,
                     source_id: &SourceId,
                     config: &Config)
                     -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
-    let project_root = manifest_file.parent().unwrap();
+    let package_root = manifest_file.parent().unwrap();
 
     let toml = {
         let pretty_filename =
@@ -57,7 +57,7 @@ fn do_read_manifest(contents: &str,
     let manifest = Rc::new(manifest);
     return match TomlManifest::to_real_manifest(&manifest,
                                                 source_id,
-                                                project_root,
+                                                package_root,
                                                 config) {
         Ok((mut manifest, paths)) => {
             for key in unused {
@@ -73,7 +73,7 @@ fn do_read_manifest(contents: &str,
         Err(e) => {
             match TomlManifest::to_virtual_manifest(&manifest,
                                                     source_id,
-                                                    project_root,
+                                                    package_root,
                                                     config) {
                 Ok((m, paths)) => Ok((EitherManifest::Virtual(m), paths)),
                 Err(..) => Err(e),
@@ -496,7 +496,7 @@ impl TomlManifest {
 
     fn to_real_manifest(me: &Rc<TomlManifest>,
                         source_id: &SourceId,
-                        project_root: &Path,
+                        package_root: &Path,
                         config: &Config)
                         -> CargoResult<(Manifest, Vec<PathBuf>)> {
         let mut nested_paths = vec![];
@@ -507,8 +507,8 @@ impl TomlManifest {
             CargoError::from("no `package` or `project` section found.")
         })?;
 
-        let project_name = project.name.trim();
-        if project_name.is_empty() {
+        let package_name = project.name.trim();
+        if package_name.is_empty() {
             bail!("package name cannot be an empty string.")
         }
 
@@ -517,13 +517,13 @@ impl TomlManifest {
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
-        let targets = targets(me, project_name, project_root, &project.build)?;
+        let targets = targets(me, package_name, package_root, &project.build)?;
 
         if targets.is_empty() {
             debug!("manifest has no build targets");
         }
 
-        if let Err(e) = unique_build_targets(&targets, project_root) {
+        if let Err(e) = unique_build_targets(&targets, package_root) {
             warnings.push(format!("file found to be present in multiple \
                                    build targets: {}", e));
         }
@@ -541,7 +541,7 @@ impl TomlManifest {
                 config: config,
                 warnings: &mut warnings,
                 platform: None,
-                root: project_root,
+                root: package_root,
             };
 
             fn process_dependencies(
@@ -752,9 +752,9 @@ impl TomlManifest {
 
     fn maybe_custom_build(&self,
                           build: &Option<StringOrBool>,
-                          project_dir: &Path)
+                          package_root: &Path)
                           -> Option<PathBuf> {
-        let build_rs = project_dir.join("build.rs");
+        let build_rs = package_root.join("build.rs");
         match *build {
             Some(StringOrBool::Bool(false)) => None,        // explicitly no build script
             Some(StringOrBool::Bool(true)) => Some(build_rs.into()),
@@ -773,9 +773,9 @@ impl TomlManifest {
 
 /// Will check a list of build targets, and make sure the target names are unique within a vector.
 /// If not, the name of the offending build target is returned.
-fn unique_build_targets(targets: &[Target], project_root: &Path) -> Result<(), String> {
+fn unique_build_targets(targets: &[Target], package_root: &Path) -> Result<(), String> {
     let mut seen = HashSet::new();
-    for v in targets.iter().map(|e| project_root.join(e.src_path())) {
+    for v in targets.iter().map(|e| package_root.join(e.src_path())) {
         if !seen.insert(v.clone()) {
             return Err(v.display().to_string());
         }
