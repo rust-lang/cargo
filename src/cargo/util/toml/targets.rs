@@ -46,15 +46,9 @@ pub fn targets(manifest: &TomlManifest,
         clean_examples(manifest.example.as_ref(), package_root, &layout)?
     );
 
-    let tests = match manifest.test {
-        Some(ref tests) => {
-            for target in tests {
-                target.validate_test_name()?;
-            }
-            tests.clone()
-        }
-        None => inferred_test_targets(&layout)
-    };
+    targets.extend(
+        clean_tests(manifest.test.as_ref(), package_root, &layout)?
+    );
 
     let benches = match manifest.bench {
         Some(ref benches) => {
@@ -71,16 +65,11 @@ pub fn targets(manifest: &TomlManifest,
                must have a unique name", e);
     }
 
-    if let Err(e) = unique_names_in_targets(&tests) {
-        bail!("found duplicate test name {}, but all binary targets \
-               must have a unique name", e)
-    }
-
     // processing the custom build script
     let new_build = manifest.maybe_custom_build(custom_build, package_root);
 
     // Get targets
-    targets.extend(normalize(package_root, new_build, &tests, &benches));
+    targets.extend(normalize(package_root, new_build, &benches));
     Ok(targets)
 }
 
@@ -385,6 +374,37 @@ fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
     Ok(result)
 }
 
+fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
+               package_root: &Path,
+               layout: &Layout) -> CargoResult<Vec<Target>> {
+
+    let tests = match toml_tests {
+        Some(tests) => tests.clone(),
+        None => inferred_test_targets(&layout)
+    };
+
+    for target in tests.iter() {
+        target.validate_test_name()?;
+    }
+    if let Err(e) = unique_names_in_targets(&tests) {
+        bail!("found duplicate test name {}, but all binary targets \
+               must have a unique name", e)
+    }
+
+    let mut result = Vec::new();
+    for test in tests.iter() {
+        let path = test.path.clone().unwrap_or_else(|| {
+            PathValue(Path::new("tests").join(&format!("{}.rs", test.name())))
+        });
+
+        let mut target = Target::test_target(&test.name(), package_root.join(&path.0),
+                                             test.required_features.clone());
+        configure(test, &mut target);
+        result.push(target);
+    }
+    Ok(result)
+}
+
 fn configure(toml: &TomlTarget, target: &mut Target) {
     let t2 = target.clone();
     target.set_tested(toml.test.unwrap_or(t2.tested()))
@@ -401,28 +421,12 @@ fn configure(toml: &TomlTarget, target: &mut Target) {
 
 fn normalize(package_root: &Path,
              custom_build: Option<PathBuf>,
-             tests: &[TomlTestTarget],
              benches: &[TomlBenchTarget]) -> Vec<Target> {
     let custom_build_target = |dst: &mut Vec<Target>, cmd: &Path| {
         let name = format!("build-script-{}",
                            cmd.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
 
         dst.push(Target::custom_build_target(&name, package_root.join(cmd)));
-    };
-
-    let test_targets = |dst: &mut Vec<Target>,
-                        tests: &[TomlTestTarget],
-                        default: &mut FnMut(&TomlTestTarget) -> PathBuf| {
-        for test in tests.iter() {
-            let path = test.path.clone().unwrap_or_else(|| {
-                PathValue(default(test))
-            });
-
-            let mut target = Target::test_target(&test.name(), package_root.join(&path.0),
-                                                 test.required_features.clone());
-            configure(test, &mut target);
-            dst.push(target);
-        }
     };
 
     let bench_targets = |dst: &mut Vec<Target>,
@@ -446,10 +450,6 @@ fn normalize(package_root: &Path,
     if let Some(custom_build) = custom_build {
         custom_build_target(&mut ret, &custom_build);
     }
-
-    test_targets(&mut ret, tests, &mut |test| {
-        Path::new("tests").join(&format!("{}.rs", test.name()))
-    });
 
     bench_targets(&mut ret, benches, &mut |bench| {
         Path::new("benches").join(&format!("{}.rs", bench.name()))
