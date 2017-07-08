@@ -55,10 +55,12 @@ pub fn targets(manifest: &TomlManifest,
     );
 
     // processing the custom build script
-    let new_build = manifest.maybe_custom_build(custom_build, package_root);
+    if let Some(custom_build) = manifest.maybe_custom_build(custom_build, package_root) {
+        let name = format!("build-script-{}",
+                           custom_build.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
+        targets.push(Target::custom_build_target(&name, package_root.join(custom_build)));
+    }
 
-    // Get targets
-    targets.extend(normalize(package_root, new_build));
     Ok(targets)
 }
 
@@ -436,26 +438,6 @@ fn configure(toml: &TomlTarget, target: &mut Target) {
             (Some(false), _) | (_, Some(false)) => false,
         });
 }
-
-fn normalize(package_root: &Path,
-             custom_build: Option<PathBuf>) -> Vec<Target> {
-    let custom_build_target = |dst: &mut Vec<Target>, cmd: &Path| {
-        let name = format!("build-script-{}",
-                           cmd.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
-
-        dst.push(Target::custom_build_target(&name, package_root.join(cmd)));
-    };
-
-
-    let mut ret = Vec::new();
-
-    if let Some(custom_build) = custom_build {
-        custom_build_target(&mut ret, &custom_build);
-    }
-
-    ret
-}
-
 
 fn inferred_bin_path(bin: &TomlBinTarget,
                      has_lib: bool,
