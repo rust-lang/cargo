@@ -304,9 +304,7 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
         bin.validate_binary_name()?;
     }
 
-    if let Err(e) = unique_names_in_targets(&bins) {
-        bail!("found duplicate binary name {}, but all binary targets must have a unique name", e);
-    }
+    validate_unique_names(&bins, "binary")?;
 
     let mut result = Vec::new();
     for bin in bins.iter() {
@@ -334,10 +332,7 @@ fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
         target.validate_example_name()?;
     }
 
-    if let Err(e) = unique_names_in_targets(&examples) {
-        bail!("found duplicate example name {}, but all binary targets \
-                   must have a unique name", e);
-    }
+    validate_unique_names(&examples, "example")?;
 
     let mut result = Vec::new();
     for ex in examples.iter() {
@@ -366,7 +361,6 @@ fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
 fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
                package_root: &Path,
                layout: &Layout) -> CargoResult<Vec<Target>> {
-
     let tests = match toml_tests {
         Some(tests) => tests.clone(),
         None => inferred_test_targets(&layout)
@@ -375,10 +369,8 @@ fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
     for target in tests.iter() {
         target.validate_test_name()?;
     }
-    if let Err(e) = unique_names_in_targets(&tests) {
-        bail!("found duplicate test name {}, but all binary targets \
-               must have a unique name", e)
-    }
+
+    validate_unique_names(&tests, "test")?;
 
     let mut result = Vec::new();
     for test in tests.iter() {
@@ -406,10 +398,7 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
         target.validate_bench_name()?;
     }
 
-    if let Err(e) = unique_names_in_targets(&benches) {
-        bail!("found duplicate bench name {}, but all binary targets \
-               must have a unique name", e);
-    }
+    validate_unique_names(&benches, "bench")?;
 
     let mut result = Vec::new();
     for bench in benches.iter() {
@@ -571,13 +560,15 @@ fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
     }).collect()
 }
 
+
 /// Will check a list of toml targets, and make sure the target names are unique within a vector.
-/// If not, the name of the offending binary target is returned.
-fn unique_names_in_targets(targets: &[TomlTarget]) -> Result<(), String> {
+fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResult<()> {
     let mut seen = HashSet::new();
-    for v in targets.iter().map(|e| e.name()) {
-        if !seen.insert(v.clone()) {
-            return Err(v);
+    for name in targets.iter().map(|e| e.name()) {
+        if !seen.insert(name.clone()) {
+            bail!("found duplicate {target_kind} name {name}, \
+                   but all {target_kind} targets must have a unique name",
+                   target_kind = target_kind, name = name);
         }
     }
     Ok(())

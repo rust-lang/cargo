@@ -485,7 +485,7 @@ fn duplicate_example_names() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  found duplicate example name ex, but all binary targets must have a unique name
+  found duplicate example name ex, but all example targets must have a unique name
 "));
 }
 
@@ -514,7 +514,7 @@ fn duplicate_bench_names() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  found duplicate bench name ex, but all binary targets must have a unique name
+  found duplicate bench name ex, but all bench targets must have a unique name
 "));
 }
 
