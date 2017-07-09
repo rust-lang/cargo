@@ -134,25 +134,6 @@ fn inferred_examples(package_root: &Path) -> Vec<(String, PathBuf)> {
     infer_from_directory(&package_root.join("examples"))
 }
 
-impl TomlTarget {
-    fn validate_crate_type(&self) -> CargoResult<()> {
-        // Per the Macros 1.1 RFC:
-        //
-        // > Initially if a crate is compiled with the proc-macro crate type
-        // > (and possibly others) it will forbid exporting any items in the
-        // > crate other than those functions tagged #[proc_macro_derive] and
-        // > those functions must also be placed at the crate root.
-        //
-        // A plugin requires exporting plugin_registrar so a crate cannot be
-        // both at once.
-        if self.plugin == Some(true) && self.proc_macro() == Some(true) {
-            Err("lib.plugin and lib.proc-macro cannot both be true".into())
-        } else {
-            Ok(())
-        }
-    }
-}
-
 fn clean_lib(toml_lib: Option<&TomlLibTarget>,
              package_root: &Path,
              package_name: &str,
@@ -166,17 +147,10 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
                     bail!("library target names cannot contain hyphens: {}", name)
                 }
             }
-
-            lib.validate_crate_type()?;
-            Some(
-                TomlTarget {
-                    name: lib.name.clone().or(Some(package_name.to_owned())),
-                    path: lib.path.clone().or_else(
-                        || inferred.as_ref().map(|p| PathValue(p.clone()))
-                    ),
-                    ..lib.clone()
-                }
-            )
+            Some(TomlTarget {
+                name: lib.name.clone().or(Some(package_name.to_owned())),
+                ..lib.clone()
+            })
         }
         None => inferred.as_ref().map(|lib| {
             TomlTarget {
@@ -218,16 +192,21 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
         }
     };
 
-    let crate_types = match lib.crate_types() {
-        Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
-        None => {
-            let lib_kind = match (lib.plugin, lib.proc_macro()) {
-                (Some(true), _) => LibKind::Dylib,
-                (_, Some(true)) => LibKind::ProcMacro,
-                _ => LibKind::Lib
-            };
-            vec![lib_kind]
-        }
+    // Per the Macros 1.1 RFC:
+    //
+    // > Initially if a crate is compiled with the proc-macro crate type
+    // > (and possibly others) it will forbid exporting any items in the
+    // > crate other than those functions tagged #[proc_macro_derive] and
+    // > those functions must also be placed at the crate root.
+    //
+    // A plugin requires exporting plugin_registrar so a crate cannot be
+    // both at once.
+    let crate_types = match (lib.crate_types(), lib.plugin, lib.proc_macro()) {
+        (_, Some(true), Some(true)) => bail!("lib.plugin and lib.proc-macro cannot both be true"),
+        (Some(kinds), _, _) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
+        (None, Some(true), _) => vec![LibKind::Dylib],
+        (None, _, Some(true)) => vec![LibKind::ProcMacro],
+        (None, _, _) => vec![LibKind::Lib],
     };
 
     let mut target = Target::lib_target(&lib.name(), crate_types, path);
@@ -317,40 +296,20 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
 fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
                   package_root: &Path)
                   -> CargoResult<Vec<Target>> {
-    let inferred = inferred_examples(package_root);
-    let examples = match toml_examples {
-        Some(examples) => examples.clone(),
-        None => inferred.iter().map(|&(ref name, ref path)| {
-            TomlTarget {
-                name: Some(name.clone()),
-                path: Some(PathValue(path.clone())),
-                ..TomlTarget::new()
-            }
-        }).collect()
-    };
-
-    for target in examples.iter() {
-        validate_has_name(target, "example", "example")?;
-    }
-
-    validate_unique_names(&examples, "example")?;
+    let targets = clean_targets("example", "example",
+                                toml_examples, inferred_examples(package_root),
+                                package_root)?;
 
     let mut result = Vec::new();
-    for ex in examples.iter() {
-        let path = target_path(ex, &inferred, "example", package_root)?;
-
-        let crate_types = match ex.crate_types() {
+    for (path, toml) in targets {
+        let crate_types = match toml.crate_types() {
             Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
             None => Vec::new()
         };
 
-        let mut target = Target::example_target(
-            &ex.name(),
-            crate_types,
-            path,
-            ex.required_features.clone()
-        );
-        configure(ex, &mut target);
+        let mut target = Target::example_target(&toml.name(), crate_types, path,
+                                                toml.required_features.clone());
+        configure(&toml, &mut target);
         result.push(target);
     }
 
@@ -359,31 +318,15 @@ fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
 
 fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
                package_root: &Path) -> CargoResult<Vec<Target>> {
-    let inferred = inferred_tests(package_root);
-    let tests = match toml_tests {
-        Some(tests) => tests.clone(),
-        None => inferred.iter().map(|&(ref name, ref path)| {
-            TomlTarget {
-                name: Some(name.clone()),
-                path: Some(PathValue(path.clone())),
-                ..TomlTarget::new()
-            }
-        }).collect()
-    };
-
-    for target in tests.iter() {
-        validate_has_name(target, "test", "test")?;
-    }
-
-    validate_unique_names(&tests, "test")?;
+    let targets = clean_targets("test", "test",
+                                toml_tests, inferred_tests(package_root),
+                                package_root)?;
 
     let mut result = Vec::new();
-    for test in tests.iter() {
-        let path = target_path(test, &inferred, "test", package_root)?;
-
-        let mut target = Target::test_target(&test.name(), path,
-                                             test.required_features.clone());
-        configure(test, &mut target);
+    for (path, toml) in targets {
+        let mut target = Target::test_target(&toml.name(), path,
+                                             toml.required_features.clone());
+        configure(&toml, &mut target);
         result.push(target);
     }
     Ok(result)
@@ -391,9 +334,28 @@ fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
 
 fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
                  package_root: &Path) -> CargoResult<Vec<Target>> {
-    let inferred = inferred_benches(package_root);
-    let benches = match toml_benches {
-        Some(benches) => benches.clone(),
+    let targets = clean_targets("benchmark", "bench",
+                                toml_benches, inferred_benches(package_root),
+                                package_root)?;
+
+    let mut result = Vec::new();
+    for (path, toml) in targets {
+        let mut target = Target::bench_target(&toml.name(), path,
+                                              toml.required_features.clone());
+        configure(&toml, &mut target);
+        result.push(target);
+    }
+
+    Ok(result)
+}
+
+fn clean_targets(target_kind_human: &str, target_kind: &str,
+                 toml_targets: Option<&Vec<TomlTarget>>,
+                 inferred: Vec<(String, PathBuf)>,
+                 package_root: &Path)
+                 -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
+    let toml_targets = match toml_targets {
+        Some(targets) => targets.clone(),
         None => inferred.iter().map(|&(ref name, ref path)| {
             TomlTarget {
                 name: Some(name.clone()),
@@ -403,20 +365,15 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
         }).collect()
     };
 
-    for target in benches.iter() {
-        validate_has_name(target, "benchmark", "bench")?;
+    for target in toml_targets.iter() {
+        validate_has_name(target, target_kind_human, target_kind)?;
     }
 
-    validate_unique_names(&benches, "bench")?;
-
+    validate_unique_names(&toml_targets, target_kind)?;
     let mut result = Vec::new();
-    for bench in benches.iter() {
-        let path = target_path(bench, &inferred, "bench", package_root)?;
-
-        let mut target = Target::bench_target(&bench.name(), path,
-                                              bench.required_features.clone());
-        configure(bench, &mut target);
-        result.push(target);
+    for target in toml_targets {
+        let path = target_path(&target, &inferred, target_kind, package_root)?;
+        result.push((path, target));
     }
     Ok(result)
 }
@@ -461,12 +418,14 @@ fn target_path(target: &TomlTarget,
     }
 }
 
-fn validate_has_name(target: &TomlTarget, target_name: &str, target_kind: &str) -> CargoResult<()> {
+fn validate_has_name(target: &TomlTarget,
+                     target_kind_human: &str,
+                     target_kind: &str) -> CargoResult<()> {
     match target.name {
         Some(ref name) => if name.trim().is_empty() {
-            bail!("{} target names cannot be empty", target_name)
+            bail!("{} target names cannot be empty", target_kind_human)
         },
-        None => bail!("{} target {}.name is required", target_name, target_kind)
+        None => bail!("{} target {}.name is required", target_kind_human, target_kind)
     }
 
     Ok(())
