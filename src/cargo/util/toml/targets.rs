@@ -92,14 +92,14 @@ fn inferred_lib(package_root: &Path) -> Option<PathBuf> {
 }
 
 fn inferred_bins(package_root: &Path, package_name: &str) -> Vec<(String, PathBuf)> {
-    let main = package_root.join("src/main.rs");
+    let main = package_root.join("src").join("main.rs");
     let mut result = Vec::new();
     if main.exists() {
         result.push((package_name.to_string(), main));
     }
-    result.extend(infer_from_directory(&package_root.join("src/bin")));
+    result.extend(infer_from_directory(&package_root.join("src").join("bin")));
 
-    if let Ok(entries) = fs::read_dir(&package_root.join("src/bin")) {
+    if let Ok(entries) = fs::read_dir(&package_root.join("src").join("bin")) {
         let multifile_bins = entries
             .filter_map(|e| e.ok())
             .filter(is_not_dotfile)
@@ -198,14 +198,18 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
         (Some(path), _) => package_root.join(&path.0),
         (None, Some(path)) => path,
         (None, None) => {
-            let short_path = format!("src/{}.rs", lib.name());
-            let legacy_path = package_root.join(&short_path);
+            let legacy_path = package_root.join("src").join(format!("{}.rs", lib.name()));
             if legacy_path.exists() {
-                warnings.push(format!(
-                    "path `{}` was erroneously implicitly accepted for library {},\n\
-                     please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
-                    short_path, lib.name()
-                ));
+                {
+                    let short_path = without_prefix(&legacy_path, package_root)
+                        .unwrap_or(&legacy_path);
+
+                    warnings.push(format!(
+                        "path `{}` was erroneously implicitly accepted for library {},\n\
+                         please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
+                        short_path.display(), lib.name()
+                    ));
+                }
                 legacy_path
             } else {
                 bail!("can't find library `{}`, \
@@ -291,17 +295,17 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
 
     fn legacy_bin_path(package_root: &Path, name: &str, has_lib: bool) -> Option<PathBuf> {
         if !has_lib {
-            let path = package_root.join(format!("src/{}.rs", name));
+            let path = package_root.join("src").join(format!("{}.rs", name));
             if path.exists() {
                 return Some(path);
             }
         }
-        let path = package_root.join("src/main.rs");
+        let path = package_root.join("src").join("main.rs");
         if path.exists() {
             return Some(path);
         }
 
-        let path = package_root.join("src/bin/main.rs");
+        let path = package_root.join("src").join("bin").join("main.rs");
         if path.exists() {
             return Some(path);
         }
