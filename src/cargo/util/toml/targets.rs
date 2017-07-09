@@ -7,7 +7,7 @@
 //!  * `tests/*.rs` are integration tests
 //!
 //! It is a bit tricky because we need match explicit information from `Cargo.toml`
-//! with implicit info in directory layout
+//! with implicit info in directory layout.
 
 use std::path::{Path, PathBuf};
 use std::fs::{self, DirEntry};
@@ -64,75 +64,6 @@ pub fn targets(manifest: &TomlManifest,
     Ok(targets)
 }
 
-fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
-    let entries = match fs::read_dir(directory) {
-        Err(_) => return Vec::new(),
-        Ok(dir) => dir
-    };
-
-    entries
-        .filter_map(|e| e.ok())
-        .filter(is_not_dotfile)
-        .map(|e| e.path())
-        .filter(|f| f.extension().and_then(|s| s.to_str()) == Some("rs"))
-        .filter_map(|f| {
-            f.file_stem().and_then(|s| s.to_str())
-                .map(|s| (s.to_owned(), f.clone()))
-        })
-        .collect()
-}
-
-fn inferred_lib(package_root: &Path) -> Option<PathBuf> {
-    let lib = package_root.join("src").join("lib.rs");
-    if fs::metadata(&lib).is_ok() {
-        Some(lib)
-    } else {
-        None
-    }
-}
-
-fn inferred_bins(package_root: &Path, package_name: &str) -> Vec<(String, PathBuf)> {
-    let main = package_root.join("src").join("main.rs");
-    let mut result = Vec::new();
-    if main.exists() {
-        result.push((package_name.to_string(), main));
-    }
-    result.extend(infer_from_directory(&package_root.join("src").join("bin")));
-
-    if let Ok(entries) = fs::read_dir(&package_root.join("src").join("bin")) {
-        let multifile_bins = entries
-            .filter_map(|e| e.ok())
-            .filter(is_not_dotfile)
-            .filter(|e| match e.file_type() {
-                Ok(t) if t.is_dir() => true,
-                _ => false
-            })
-            .filter_map(|entry| {
-                let dir = entry.path();
-                let main = dir.join("main.rs");
-                let name = dir.file_name().and_then(|n| n.to_str());
-                match (main.exists(), name) {
-                    (true, Some(name)) => Some((name.to_owned(), main)),
-                    _ => None
-                }
-            });
-        result.extend(multifile_bins);
-    }
-
-    result
-}
-
-fn inferred_tests(package_root: &Path) -> Vec<(String, PathBuf)> {
-    infer_from_directory(&package_root.join("tests"))
-}
-
-fn inferred_benches(package_root: &Path) -> Vec<(String, PathBuf)> {
-    infer_from_directory(&package_root.join("benches"))
-}
-
-fn inferred_examples(package_root: &Path) -> Vec<(String, PathBuf)> {
-    infer_from_directory(&package_root.join("examples"))
-}
 
 fn clean_lib(toml_lib: Option<&TomlLibTarget>,
              package_root: &Path,
@@ -292,7 +223,6 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
     }
 }
 
-
 fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
                   package_root: &Path)
                   -> CargoResult<Vec<Target>> {
@@ -378,6 +308,109 @@ fn clean_targets(target_kind_human: &str, target_kind: &str,
     Ok(result)
 }
 
+
+fn inferred_lib(package_root: &Path) -> Option<PathBuf> {
+    let lib = package_root.join("src").join("lib.rs");
+    if fs::metadata(&lib).is_ok() {
+        Some(lib)
+    } else {
+        None
+    }
+}
+
+fn inferred_bins(package_root: &Path, package_name: &str) -> Vec<(String, PathBuf)> {
+    let main = package_root.join("src").join("main.rs");
+    let mut result = Vec::new();
+    if main.exists() {
+        result.push((package_name.to_string(), main));
+    }
+    result.extend(infer_from_directory(&package_root.join("src").join("bin")));
+
+    if let Ok(entries) = fs::read_dir(&package_root.join("src").join("bin")) {
+        let multifile_bins = entries
+            .filter_map(|e| e.ok())
+            .filter(is_not_dotfile)
+            .filter(|e| match e.file_type() {
+                Ok(t) if t.is_dir() => true,
+                _ => false
+            })
+            .filter_map(|entry| {
+                let dir = entry.path();
+                let main = dir.join("main.rs");
+                let name = dir.file_name().and_then(|n| n.to_str());
+                match (main.exists(), name) {
+                    (true, Some(name)) => Some((name.to_owned(), main)),
+                    _ => None
+                }
+            });
+        result.extend(multifile_bins);
+    }
+
+    result
+}
+
+fn inferred_examples(package_root: &Path) -> Vec<(String, PathBuf)> {
+    infer_from_directory(&package_root.join("examples"))
+}
+
+fn inferred_tests(package_root: &Path) -> Vec<(String, PathBuf)> {
+    infer_from_directory(&package_root.join("tests"))
+}
+
+fn inferred_benches(package_root: &Path) -> Vec<(String, PathBuf)> {
+    infer_from_directory(&package_root.join("benches"))
+}
+
+fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
+    let entries = match fs::read_dir(directory) {
+        Err(_) => return Vec::new(),
+        Ok(dir) => dir
+    };
+
+    entries
+        .filter_map(|e| e.ok())
+        .filter(is_not_dotfile)
+        .map(|e| e.path())
+        .filter(|f| f.extension().and_then(|s| s.to_str()) == Some("rs"))
+        .filter_map(|f| {
+            f.file_stem().and_then(|s| s.to_str())
+                .map(|s| (s.to_owned(), f.clone()))
+        })
+        .collect()
+}
+
+fn is_not_dotfile(entry: &DirEntry) -> bool {
+    entry.file_name().to_str().map(|s| s.starts_with('.')) == Some(false)
+}
+
+
+fn validate_has_name(target: &TomlTarget,
+                     target_kind_human: &str,
+                     target_kind: &str) -> CargoResult<()> {
+    match target.name {
+        Some(ref name) => if name.trim().is_empty() {
+            bail!("{} target names cannot be empty", target_kind_human)
+        },
+        None => bail!("{} target {}.name is required", target_kind_human, target_kind)
+    }
+
+    Ok(())
+}
+
+/// Will check a list of toml targets, and make sure the target names are unique within a vector.
+fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResult<()> {
+    let mut seen = HashSet::new();
+    for name in targets.iter().map(|e| e.name()) {
+        if !seen.insert(name.clone()) {
+            bail!("found duplicate {target_kind} name {name}, \
+                   but all {target_kind} targets must have a unique name",
+                   target_kind = target_kind, name = name);
+        }
+    }
+    Ok(())
+}
+
+
 fn configure(toml: &TomlTarget, target: &mut Target) {
     let t2 = target.clone();
     target.set_tested(toml.test.unwrap_or(t2.tested()))
@@ -416,34 +449,4 @@ fn target_path(target: &TomlTarget,
         }
         (None, Some(_)) => unreachable!()
     }
-}
-
-fn validate_has_name(target: &TomlTarget,
-                     target_kind_human: &str,
-                     target_kind: &str) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => if name.trim().is_empty() {
-            bail!("{} target names cannot be empty", target_kind_human)
-        },
-        None => bail!("{} target {}.name is required", target_kind_human, target_kind)
-    }
-
-    Ok(())
-}
-
-/// Will check a list of toml targets, and make sure the target names are unique within a vector.
-fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResult<()> {
-    let mut seen = HashSet::new();
-    for name in targets.iter().map(|e| e.name()) {
-        if !seen.insert(name.clone()) {
-            bail!("found duplicate {target_kind} name {name}, \
-                   but all {target_kind} targets must have a unique name",
-                   target_kind = target_kind, name = name);
-        }
-    }
-    Ok(())
-}
-
-fn is_not_dotfile(entry: &DirEntry) -> bool {
-    entry.file_name().to_str().map(|s| s.starts_with('.')) == Some(false)
 }
