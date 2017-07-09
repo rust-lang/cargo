@@ -387,12 +387,13 @@ fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
 
 fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
                  package_root: &Path) -> CargoResult<Vec<Target>> {
+    let inferred = inferred_benches(package_root);
     let benches = match toml_benches {
         Some(benches) => benches.clone(),
-        None => inferred_benches(package_root).into_iter().map(|(name, path)| {
+        None => inferred.iter().map(|&(ref name, ref path)| {
             TomlTarget {
-                name: Some(name),
-                path: Some(PathValue(path)),
+                name: Some(name.clone()),
+                path: Some(PathValue(path.clone())),
                 ..TomlTarget::new()
             }
         }).collect()
@@ -406,11 +407,9 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
 
     let mut result = Vec::new();
     for bench in benches.iter() {
-        let path = bench.path.clone().unwrap_or_else(|| {
-            PathValue(Path::new("benches").join(&format!("{}.rs", bench.name())))
-        });
+        let path = target_path(bench, &inferred, "bench", package_root)?;
 
-        let mut target = Target::bench_target(&bench.name(), package_root.join(&path.0),
+        let mut target = Target::bench_target(&bench.name(), path,
                                               bench.required_features.clone());
         configure(bench, &mut target);
         result.push(target);
