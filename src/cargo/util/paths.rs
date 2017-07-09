@@ -54,9 +54,9 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     ret
 }
 
-pub fn without_prefix<'a>(a: &'a Path, b: &'a Path) -> Option<&'a Path> {
-    let mut a = a.components();
-    let mut b = b.components();
+pub fn without_prefix<'a>(long_path: &'a Path, prefix: &'a Path) -> Option<&'a Path> {
+    let mut a = long_path.components();
+    let mut b = prefix.components();
     loop {
         match b.next() {
             Some(y) => match a.next() {
