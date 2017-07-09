@@ -153,6 +153,7 @@ fn cargo_compile_duplicate_build_targets() {
 
             [lib]
             name = "main"
+            path = "src/main.rs"
             crate-type = ["dylib"]
 
             [dependencies]
@@ -1007,7 +1008,9 @@ fn many_crate_types_old_style_lib_location() {
         .file("src/foo.rs", r#"
             pub fn foo() {}
         "#);
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo_process("build"), execs().with_status(0).with_stderr_contains("\
+[WARNING] path `src/foo.rs` was erroneously implicitly accepted for library foo,
+please rename the file to `src/lib.rs` or set lib.path in Cargo.toml"));
 
     assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
     let fname = format!("{}foo{}", env::consts::DLL_PREFIX,
@@ -1056,8 +1059,8 @@ fn unused_keys() {
             bulid = "foo"
 
             [lib]
-
             name = "foo"
+            path = "foo"
         "#)
         .file("src/foo.rs", r#"
             pub fn foo() {}
@@ -1112,8 +1115,8 @@ fn self_dependency() {
             path = "."
 
             [lib]
-
             name = "test"
+            path = "src/test.rs"
         "#)
         .file("src/test.rs", "fn main() {}");
     assert_that(p.cargo_process("build"),

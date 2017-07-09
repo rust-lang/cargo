@@ -23,7 +23,8 @@ use super::{TomlTarget, LibKind, PathValue, TomlManifest, StringOrBool,
 pub fn targets(manifest: &TomlManifest,
                package_name: &str,
                package_root: &Path,
-               custom_build: &Option<StringOrBool>)
+               custom_build: &Option<StringOrBool>,
+               warnings: &mut Vec<String>)
                -> CargoResult<Vec<Target>> {
     let layout = Layout::from_package_path(package_root);
 
@@ -31,7 +32,7 @@ pub fn targets(manifest: &TomlManifest,
 
     let has_lib;
 
-    if let Some(target) = clean_lib(manifest.lib.as_ref(), package_root, &layout, package_name)? {
+    if let Some(target) = clean_lib(manifest.lib.as_ref(), package_root, package_name, warnings)? {
         targets.push(target);
         has_lib = true;
     } else {
@@ -67,7 +68,6 @@ pub fn targets(manifest: &TomlManifest,
 
 /// Implicit Cargo targets, defined by conventions.
 struct Layout {
-    lib: Option<PathBuf>,
     bins: Vec<PathBuf>,
 }
 
@@ -75,20 +75,13 @@ impl Layout {
     /// Returns a new `Layout` for a given root path.
     /// The `package_root` represents the directory that contains the `Cargo.toml` file.
     fn from_package_path(package_root: &Path) -> Layout {
-        let mut lib = None;
         let mut bins = vec![];
-
-        let lib_candidate = package_root.join("src").join("lib.rs");
-        if fs::metadata(&lib_candidate).is_ok() {
-            lib = Some(lib_candidate);
-        }
 
         try_add_file(&mut bins, package_root.join("src").join("main.rs"));
         try_add_files(&mut bins, package_root.join("src").join("bin"));
         try_add_mains_from_dirs(&mut bins, package_root.join("src").join("bin"));
 
         return Layout {
-            lib: lib,
             bins: bins,
         };
 
@@ -156,6 +149,14 @@ fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
         .collect()
 }
 
+fn inferred_lib(package_root: &Path) -> Option<PathBuf> {
+    let lib = package_root.join("src").join("lib.rs");
+    if fs::metadata(&lib).is_ok() {
+        Some(lib)
+    } else {
+        None
+    }
+}
 
 fn inferred_tests(package_root: &Path) -> Vec<(String, PathBuf)> {
     infer_from_directory(&package_root.join("tests"))
@@ -190,8 +191,9 @@ impl TomlTarget {
 
 fn clean_lib(toml_lib: Option<&TomlLibTarget>,
              package_root: &Path,
-             layout: &Layout,
-             package_name: &str) -> CargoResult<Option<Target>> {
+             package_name: &str,
+             warnings: &mut Vec<String>) -> CargoResult<Option<Target>> {
+    let inferred = inferred_lib(package_root);
     let lib = match toml_lib {
         Some(lib) => {
             if let Some(ref name) = lib.name {
@@ -206,13 +208,13 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
                 TomlTarget {
                     name: lib.name.clone().or(Some(package_name.to_owned())),
                     path: lib.path.clone().or_else(
-                        || layout.lib.as_ref().map(|p| PathValue(p.clone()))
+                        || inferred.as_ref().map(|p| PathValue(p.clone()))
                     ),
                     ..lib.clone()
                 }
             )
         }
-        None => layout.lib.as_ref().map(|lib| {
+        None => inferred.as_ref().map(|lib| {
             TomlTarget {
                 name: Some(package_name.to_string()),
                 path: Some(PathValue(lib.clone())),
@@ -228,9 +230,25 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
 
     validate_has_name(&lib, "library", "lib")?;
 
-    let path = lib.path.clone().unwrap_or_else(
-        || PathValue(Path::new("src").join(&format!("{}.rs", lib.name())))
-    );
+    let path = match (lib.path.as_ref(), inferred) {
+        (Some(path), _) => package_root.join(&path.0),
+        (None, Some(path)) => path,
+        (None, None) => {
+            let short_path = format!("src/{}.rs", lib.name());
+            let legacy_path = package_root.join(&short_path);
+            if legacy_path.exists() {
+                warnings.push(format!(
+                    "path `{}` was erroneously implicitly accepted for library {},\n\
+                     please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
+                    short_path, lib.name()
+                ));
+                legacy_path
+            } else {
+                bail!("can't find library `{}`, \
+                       rename file to `src/lib.rs` or specify lib.path", lib.name())
+            }
+        }
+    };
 
     let crate_types = match lib.crate_types() {
         Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
@@ -244,7 +262,7 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
         }
     };
 
-    let mut target = Target::lib_target(&lib.name(), crate_types, package_root.join(&path.0));
+    let mut target = Target::lib_target(&lib.name(), crate_types, path);
     configure(lib, &mut target);
     Ok(Some(target))
 }

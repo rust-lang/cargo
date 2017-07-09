@@ -517,7 +517,7 @@ impl TomlManifest {
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
-        let targets = targets(me, package_name, package_root, &project.build)?;
+        let targets = targets(me, package_name, package_root, &project.build, &mut warnings)?;
 
         if targets.is_empty() {
             debug!("manifest has no build targets");
