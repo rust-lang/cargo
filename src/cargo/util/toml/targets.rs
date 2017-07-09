@@ -43,15 +43,15 @@ pub fn targets(manifest: &TomlManifest,
     );
 
     targets.extend(
-        clean_examples(manifest.example.as_ref(), package_root, &layout)?
+        clean_examples(manifest.example.as_ref(), package_root)?
     );
 
     targets.extend(
-        clean_tests(manifest.test.as_ref(), package_root, &layout)?
+        clean_tests(manifest.test.as_ref(), package_root)?
     );
 
     targets.extend(
-        clean_benches(manifest.bench.as_ref(), package_root, &layout)?
+        clean_benches(manifest.bench.as_ref(), package_root)?
     );
 
     // processing the custom build script
@@ -69,9 +69,6 @@ pub fn targets(manifest: &TomlManifest,
 struct Layout {
     lib: Option<PathBuf>,
     bins: Vec<PathBuf>,
-    examples: Vec<PathBuf>,
-    tests: Vec<PathBuf>,
-    benches: Vec<PathBuf>,
 }
 
 impl Layout {
@@ -80,9 +77,6 @@ impl Layout {
     fn from_package_path(package_root: &Path) -> Layout {
         let mut lib = None;
         let mut bins = vec![];
-        let mut examples = vec![];
-        let mut tests = vec![];
-        let mut benches = vec![];
 
         let lib_candidate = package_root.join("src").join("lib.rs");
         if fs::metadata(&lib_candidate).is_ok() {
@@ -93,17 +87,9 @@ impl Layout {
         try_add_files(&mut bins, package_root.join("src").join("bin"));
         try_add_mains_from_dirs(&mut bins, package_root.join("src").join("bin"));
 
-        try_add_files(&mut examples, package_root.join("examples"));
-
-        try_add_files(&mut tests, package_root.join("tests"));
-        try_add_files(&mut benches, package_root.join("benches"));
-
         return Layout {
             lib: lib,
             bins: bins,
-            examples: examples,
-            tests: tests,
-            benches: benches,
         };
 
         fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
@@ -150,6 +136,37 @@ impl Layout {
             /* else just don't add anything if the directory doesn't exist, etc. */
         }
     }
+}
+
+fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
+    let directory = match fs::read_dir(directory) {
+        Err(_) => return Vec::new(),
+        Ok(dir) => dir
+    };
+
+    directory.filter_map(|entry| entry.map(|d| d.path()).ok())
+        .filter(|f| f.extension().and_then(|s| s.to_str()) == Some("rs"))
+        .filter_map(|f| {
+            if f.file_name().and_then(|n| n.to_str()).map(|n| n.starts_with('.')) != Some(false) {
+                return None;
+            };
+            f.file_stem().and_then(|s| s.to_str())
+                .map(|s| (s.to_owned(), f.clone()))
+        })
+        .collect()
+}
+
+
+fn inferred_tests(package_root: &Path) -> Vec<(String, PathBuf)> {
+    infer_from_directory(&package_root.join("tests"))
+}
+
+fn inferred_benches(package_root: &Path) -> Vec<(String, PathBuf)> {
+    infer_from_directory(&package_root.join("benches"))
+}
+
+fn inferred_examples(package_root: &Path) -> Vec<(String, PathBuf)> {
+    infer_from_directory(&package_root.join("examples"))
 }
 
 impl TomlTarget {
@@ -267,12 +284,18 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
 }
 
 fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
-                  package_root: &Path,
-                  layout: &Layout)
+                  package_root: &Path)
                   -> CargoResult<Vec<Target>> {
     let examples = match toml_examples {
         Some(examples) => examples.clone(),
-        None => inferred_example_targets(&layout)
+        None => inferred_examples(package_root).into_iter().map(|(name, path)| {
+            TomlTarget {
+                name: Some(name),
+                path: Some(PathValue(path)),
+                ..TomlTarget::new()
+            }
+        }).collect()
+
     };
 
     for target in examples.iter() {
@@ -306,11 +329,16 @@ fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
 }
 
 fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
-               package_root: &Path,
-               layout: &Layout) -> CargoResult<Vec<Target>> {
+               package_root: &Path) -> CargoResult<Vec<Target>> {
     let tests = match toml_tests {
         Some(tests) => tests.clone(),
-        None => inferred_test_targets(&layout)
+        None => inferred_tests(package_root).into_iter().map(|(name, path)| {
+            TomlTarget {
+                name: Some(name),
+                path: Some(PathValue(path)),
+                ..TomlTarget::new()
+            }
+        }).collect()
     };
 
     for target in tests.iter() {
@@ -334,11 +362,16 @@ fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
 }
 
 fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
-                 package_root: &Path,
-                 layout: &Layout) -> CargoResult<Vec<Target>> {
+                 package_root: &Path) -> CargoResult<Vec<Target>> {
     let benches = match toml_benches {
         Some(benches) => benches.clone(),
-        None => inferred_bench_targets(&layout)
+        None => inferred_benches(package_root).into_iter().map(|(name, path)| {
+            TomlTarget {
+                name: Some(name),
+                path: Some(PathValue(path)),
+                ..TomlTarget::new()
+            }
+        }).collect()
     };
 
     for target in benches.iter() {
@@ -465,42 +498,6 @@ fn inferred_bin_targets(name: &str, layout: &Layout, project_root: &Path) -> Vec
             TomlTarget {
                 name: Some(name),
                 path: Some(PathValue(bin.clone())),
-                ..TomlTarget::new()
-            }
-        })
-    }).collect()
-}
-
-fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
-    layout.examples.iter().filter_map(|ex| {
-        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
-            TomlTarget {
-                name: Some(name.to_string()),
-                path: Some(PathValue(ex.clone())),
-                ..TomlTarget::new()
-            }
-        })
-    }).collect()
-}
-
-fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
-    layout.tests.iter().filter_map(|ex| {
-        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
-            TomlTarget {
-                name: Some(name.to_string()),
-                path: Some(PathValue(ex.clone())),
-                ..TomlTarget::new()
-            }
-        })
-    }).collect()
-}
-
-fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
-    layout.benches.iter().filter_map(|ex| {
-        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
-            TomlTarget {
-                name: Some(name.to_string()),
-                path: Some(PathValue(ex.clone())),
                 ..TomlTarget::new()
             }
         })
