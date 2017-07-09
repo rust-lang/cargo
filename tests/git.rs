@@ -1341,8 +1341,8 @@ fn git_dep_build_cmd() {
             build = "build.rs"
 
             [lib]
-
             name = "bar"
+            path = "src/bar.rs"
         "#)
         .file("bar/src/bar.rs.in", r#"
             pub fn gimme() -> i32 { 0 }
