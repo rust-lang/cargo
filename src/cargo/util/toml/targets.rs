@@ -16,6 +16,7 @@ use std::collections::HashSet;
 use core::Target;
 use ops::is_bad_artifact_name;
 use util::errors::CargoResult;
+use util::paths::without_prefix;
 use super::{TomlTarget, LibKind, PathValue, TomlManifest, StringOrBool,
             TomlLibTarget, TomlBinTarget, TomlBenchTarget, TomlExampleTarget, TomlTestTarget};
 
@@ -38,7 +39,7 @@ pub fn targets(manifest: &TomlManifest,
     }
 
     targets.extend(
-        clean_bins(manifest.bin.as_ref(), package_root, package_name, has_lib)?
+        clean_bins(manifest.bin.as_ref(), package_root, package_name, warnings, has_lib)?
     );
 
     targets.extend(
@@ -233,6 +234,7 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
 fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
               package_root: &Path,
               package_name: &str,
+              warnings: &mut Vec<String>,
               has_lib: bool) -> CargoResult<Vec<Target>> {
     let inferred = inferred_bins(package_root, package_name);
     let bins = match toml_bins {
@@ -259,16 +261,54 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
 
     let mut result = Vec::new();
     for bin in bins.iter() {
-        let path = bin.path.clone().unwrap_or_else(|| {
-            PathValue(inferred_bin_path(bin, has_lib, package_root, bins.len()))
-        });
-        let mut target = Target::bin_target(&bin.name(), package_root.join(&path.0),
+        let path = match target_path(bin, &inferred, "bin", package_root) {
+            Ok(path) => path,
+            Err(e) => {
+                if let Some(legacy_path) = legacy_bin_path(package_root, &bin.name(), has_lib) {
+                    {
+                        let short_path = without_prefix(&legacy_path, package_root)
+                            .unwrap_or(&legacy_path);
+
+                        warnings.push(format!(
+                            "path `{}` was erroneously implicitly accepted for binary {},\n\
+                             please set bin.path in Cargo.toml",
+                            short_path.display(), bin.name()
+                        ));
+                    }
+                    legacy_path
+                } else {
+                    return Err(e);
+                }
+            }
+        };
+
+        let mut target = Target::bin_target(&bin.name(), path,
                                             bin.required_features.clone());
         configure(bin, &mut target);
         result.push(target);
     }
-    Ok(result)
+    return Ok(result);
+
+    fn legacy_bin_path(package_root: &Path, name: &str, has_lib: bool) -> Option<PathBuf> {
+        if !has_lib {
+            let path = package_root.join(format!("src/{}.rs", name));
+            if path.exists() {
+                return Some(path);
+            }
+        }
+        let path = package_root.join("src/main.rs");
+        if path.exists() {
+            return Some(path);
+        }
+
+        let path = package_root.join("src/bin/main.rs");
+        if path.exists() {
+            return Some(path);
+        }
+        return None;
+    }
 }
+
 
 fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
                   package_root: &Path)
@@ -390,66 +430,6 @@ fn configure(toml: &TomlTarget, target: &mut Target) {
             (Some(true), _) | (_, Some(true)) => true,
             (Some(false), _) | (_, Some(false)) => false,
         });
-}
-
-fn inferred_bin_path(bin: &TomlBinTarget,
-                     has_lib: bool,
-                     package_root: &Path,
-                     bin_len: usize) -> PathBuf {
-    // here we have a single bin, so it may be located in src/main.rs, src/foo.rs,
-    // src/bin/foo.rs, src/bin/foo/main.rs or src/bin/main.rs
-    if bin_len == 1 {
-        let path = Path::new("src").join("main.rs");
-        if package_root.join(&path).exists() {
-            return path.to_path_buf();
-        }
-
-        if !has_lib {
-            let path = Path::new("src").join(&format!("{}.rs", bin.name()));
-            if package_root.join(&path).exists() {
-                return path.to_path_buf();
-            }
-        }
-
-        let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
-        if package_root.join(&path).exists() {
-            return path.to_path_buf();
-        }
-
-        // check for the case where src/bin/foo/main.rs is present
-        let path = Path::new("src").join("bin").join(bin.name()).join("main.rs");
-        if package_root.join(&path).exists() {
-            return path.to_path_buf();
-        }
-
-        return Path::new("src").join("bin").join("main.rs").to_path_buf();
-    }
-
-    // bin_len > 1
-    let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
-    if package_root.join(&path).exists() {
-        return path.to_path_buf();
-    }
-
-    // we can also have src/bin/foo/main.rs, but the former one is preferred
-    let path = Path::new("src").join("bin").join(bin.name()).join("main.rs");
-    if package_root.join(&path).exists() {
-        return path.to_path_buf();
-    }
-
-    if !has_lib {
-        let path = Path::new("src").join(&format!("{}.rs", bin.name()));
-        if package_root.join(&path).exists() {
-            return path.to_path_buf();
-        }
-    }
-
-    let path = Path::new("src").join("bin").join("main.rs");
-    if package_root.join(&path).exists() {
-        return path.to_path_buf();
-    }
-
-    return Path::new("src").join("main.rs").to_path_buf();
 }
 
 fn target_path(target: &TomlTarget,
