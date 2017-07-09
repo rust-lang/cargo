@@ -251,7 +251,6 @@ fn native_plugin_dependency_with_custom_ar_linker() {
             authors = []
 
             [lib]
-            name = "foo"
             plugin = true
         "#)
         .file("src/lib.rs", "");
@@ -263,13 +262,10 @@ fn native_plugin_dependency_with_custom_ar_linker() {
             version = "0.0.1"
             authors = []
 
-            [lib]
-            name = "bar"
-
             [dependencies.foo]
             path = "../foo"
         "#)
-        .file("src/lib", "")
+        .file("src/lib.rs", "")
         .file(".cargo/config", &format!(r#"
             [target.{}]
             ar = "nonexistent-ar"

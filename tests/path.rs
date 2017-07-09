@@ -535,12 +535,9 @@ fn error_message_for_missing_manifest() {
             [dependencies.bar]
 
             path = "src/bar"
-
-            [lib]
-
-            name = "foo"
         "#)
-       .file("src/bar/not-a-manifest", "");
+        .file("src/lib.rs", "")
+        .file("src/bar/not-a-manifest", "");
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
@@ -704,8 +701,8 @@ fn path_dep_build_cmd() {
             build = "build.rs"
 
             [lib]
-
             name = "bar"
+            path = "src/bar.rs"
         "#)
         .file("bar/build.rs", r#"
             use std::fs;
