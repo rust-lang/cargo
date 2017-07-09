@@ -10,7 +10,7 @@
 //! with implicit info in directory layout
 
 use std::path::{Path, PathBuf};
-use std::fs;
+use std::fs::{self, DirEntry};
 use std::collections::HashSet;
 
 use core::Target;
@@ -26,8 +26,6 @@ pub fn targets(manifest: &TomlManifest,
                custom_build: &Option<StringOrBool>,
                warnings: &mut Vec<String>)
                -> CargoResult<Vec<Target>> {
-    let layout = Layout::from_package_path(package_root);
-
     let mut targets = Vec::new();
 
     let has_lib;
@@ -40,7 +38,7 @@ pub fn targets(manifest: &TomlManifest,
     }
 
     targets.extend(
-        clean_bins(manifest.bin.as_ref(), package_root, &layout, package_name, has_lib)?
+        clean_bins(manifest.bin.as_ref(), package_root, package_name, has_lib)?
     );
 
     targets.extend(
@@ -65,84 +63,18 @@ pub fn targets(manifest: &TomlManifest,
     Ok(targets)
 }
 
-
-/// Implicit Cargo targets, defined by conventions.
-struct Layout {
-    bins: Vec<PathBuf>,
-}
-
-impl Layout {
-    /// Returns a new `Layout` for a given root path.
-    /// The `package_root` represents the directory that contains the `Cargo.toml` file.
-    fn from_package_path(package_root: &Path) -> Layout {
-        let mut bins = vec![];
-
-        try_add_file(&mut bins, package_root.join("src").join("main.rs"));
-        try_add_files(&mut bins, package_root.join("src").join("bin"));
-        try_add_mains_from_dirs(&mut bins, package_root.join("src").join("bin"));
-
-        return Layout {
-            bins: bins,
-        };
-
-        fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
-            if fs::metadata(&file).is_ok() {
-                files.push(file);
-            }
-        }
-
-        // Add directories form src/bin which contain main.rs file
-        fn try_add_mains_from_dirs(files: &mut Vec<PathBuf>, root: PathBuf) {
-            if let Ok(new) = fs::read_dir(&root) {
-                let new: Vec<PathBuf> = new.filter_map(|i| i.ok())
-                    // Filter only directories
-                    .filter(|i| {
-                        i.file_type().map(|f| f.is_dir()).unwrap_or(false)
-                        // Convert DirEntry into PathBuf and append "main.rs"
-                    }).map(|i| {
-                    i.path().join("main.rs")
-                    // Filter only directories where main.rs is present
-                }).filter(|f| {
-                    f.as_path().exists()
-                }).collect();
-                files.extend(new);
-            }
-        }
-
-        fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
-            if let Ok(new) = fs::read_dir(&root) {
-                files.extend(new.filter_map(|dir| {
-                    dir.map(|d| d.path()).ok()
-                }).filter(|f| {
-                    f.extension().and_then(|s| s.to_str()) == Some("rs")
-                }).filter(|f| {
-                    // Some unix editors may create "dotfiles" next to original
-                    // source files while they're being edited, but these files are
-                    // rarely actually valid Rust source files and sometimes aren't
-                    // even valid UTF-8. Here we just ignore all of them and require
-                    // that they are explicitly specified in Cargo.toml if desired.
-                    f.file_name().and_then(|s| s.to_str()).map(|s| {
-                        !s.starts_with('.')
-                    }).unwrap_or(true)
-                }))
-            }
-            /* else just don't add anything if the directory doesn't exist, etc. */
-        }
-    }
-}
-
 fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
     let entries = match fs::read_dir(directory) {
         Err(_) => return Vec::new(),
         Ok(dir) => dir
     };
 
-    entries.filter_map(|entry| entry.map(|d| d.path()).ok())
+    entries
+        .filter_map(|e| e.ok())
+        .filter(is_not_dotfile)
+        .map(|e| e.path())
         .filter(|f| f.extension().and_then(|s| s.to_str()) == Some("rs"))
         .filter_map(|f| {
-            if f.file_name().and_then(|n| n.to_str()).map(|n| n.starts_with('.')) != Some(false) {
-                return None;
-            };
             f.file_stem().and_then(|s| s.to_str())
                 .map(|s| (s.to_owned(), f.clone()))
         })
@@ -156,6 +88,37 @@ fn inferred_lib(package_root: &Path) -> Option<PathBuf> {
     } else {
         None
     }
+}
+
+fn inferred_bins(package_root: &Path, package_name: &str) -> Vec<(String, PathBuf)> {
+    let main = package_root.join("src/main.rs");
+    let mut result = Vec::new();
+    if main.exists() {
+        result.push((package_name.to_string(), main));
+    }
+    result.extend(infer_from_directory(&package_root.join("src/bin")));
+
+    if let Ok(entries) = fs::read_dir(&package_root.join("src/bin")) {
+        let multifile_bins = entries
+            .filter_map(|e| e.ok())
+            .filter(is_not_dotfile)
+            .filter(|e| match e.file_type() {
+                Ok(t) if t.is_dir() => true,
+                _ => false
+            })
+            .filter_map(|entry| {
+                let dir = entry.path();
+                let main = dir.join("main.rs");
+                let name = dir.file_name().and_then(|n| n.to_str());
+                match (main.exists(), name) {
+                    (true, Some(name)) => Some((name.to_owned(), main)),
+                    _ => None
+                }
+            });
+        result.extend(multifile_bins);
+    }
+
+    result
 }
 
 fn inferred_tests(package_root: &Path) -> Vec<(String, PathBuf)> {
@@ -269,12 +232,18 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
 
 fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
               package_root: &Path,
-              layout: &Layout,
               package_name: &str,
               has_lib: bool) -> CargoResult<Vec<Target>> {
+    let inferred = inferred_bins(package_root, package_name);
     let bins = match toml_bins {
         Some(bins) => bins.clone(),
-        None => inferred_bin_targets(package_name, &layout, package_root)
+        None => inferred.iter().map(|&(ref name, ref path)| {
+            TomlTarget {
+                name: Some(name.clone()),
+                path: Some(PathValue(path.clone())),
+                ..TomlTarget::new()
+            }
+        }).collect()
     };
 
     for bin in bins.iter() {
@@ -483,42 +452,6 @@ fn inferred_bin_path(bin: &TomlBinTarget,
     return Path::new("src").join("main.rs").to_path_buf();
 }
 
-// These functions produce the equivalent of specific manifest entries. One
-// wrinkle is that certain paths cannot be represented in the manifest due
-// to Toml's UTF-8 requirement. This could, in theory, mean that certain
-// otherwise acceptable executable names are not used when inside of
-// `src/bin/*`, but it seems ok to not build executables with non-UTF8
-// paths.
-fn inferred_bin_targets(name: &str, layout: &Layout, project_root: &Path) -> Vec<TomlTarget> {
-    layout.bins.iter().filter_map(|bin| {
-        let name = if &**bin == Path::new("src/main.rs") ||
-            *bin == project_root.join("src").join("main.rs") {
-            Some(name.to_string())
-        } else {
-            // bin is either a source file or a directory with main.rs inside.
-            if bin.ends_with("main.rs") && !bin.ends_with("src/bin/main.rs") {
-                if let Some(parent) = bin.parent() {
-                    // Use a name of this directory as a name for binary
-                    parent.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
-                } else {
-                    None
-                }
-            } else {
-                // regular case, just a file in the bin directory
-                bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
-            }
-        };
-
-        name.map(|name| {
-            TomlTarget {
-                name: Some(name),
-                path: Some(PathValue(bin.clone())),
-                ..TomlTarget::new()
-            }
-        })
-    }).collect()
-}
-
 fn target_path(target: &TomlTarget,
                inferred: &[(String, PathBuf)],
                target_kind: &str,
@@ -567,4 +500,8 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
         }
     }
     Ok(())
+}
+
+fn is_not_dotfile(entry: &DirEntry) -> bool {
+    entry.file_name().to_str().map(|s| s.starts_with('.')) == Some(false)
 }
