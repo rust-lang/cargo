@@ -1351,6 +1351,32 @@ fn explicit_examples() {
 }
 
 #[test]
+fn non_existing_example() {
+    let mut p = project("world");
+    p = p.file("Cargo.toml", r#"
+            [package]
+            name = "world"
+            version = "1.0.0"
+            authors = []
+
+            [lib]
+            name = "world"
+            path = "src/lib.rs"
+
+            [[example]]
+            name = "hello"
+        "#)
+        .file("src/lib.rs", "")
+        .file("examples/ehlo.rs", "");
+
+    assert_that(p.cargo_process("test").arg("-v"), execs().with_status(101).with_stderr("\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `hello` example, specify example.path"));
+}
+
+#[test]
 fn implicit_examples() {
     let mut p = project("world");
     p = p.file("Cargo.toml", r#"
