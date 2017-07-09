@@ -1047,59 +1047,6 @@ fn many_crate_types_correct() {
 }
 
 #[test]
-fn unused_keys() {
-    let mut p = project("foo");
-    p = p
-        .file("Cargo.toml", r#"
-            [project]
-
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-            bulid = "foo"
-
-            [lib]
-            name = "foo"
-            path = "foo"
-        "#)
-        .file("src/foo.rs", r#"
-            pub fn foo() {}
-        "#);
-    assert_that(p.cargo_process("build"),
-                execs().with_status(0)
-                       .with_stderr("\
-warning: unused manifest key: project.bulid
-[COMPILING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-"));
-
-    let mut p = project("bar");
-    p = p
-        .file("Cargo.toml", r#"
-            [project]
-
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-
-            [lib]
-
-            name = "foo"
-            build = "foo"
-        "#)
-        .file("src/foo.rs", r#"
-            pub fn foo() {}
-        "#);
-    assert_that(p.cargo_process("build"),
-                execs().with_status(0)
-                       .with_stderr("\
-warning: unused manifest key: lib.build
-[COMPILING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-"));
-}
-
-#[test]
 fn self_dependency() {
     let mut p = project("foo");
     p = p

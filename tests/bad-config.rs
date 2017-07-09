@@ -610,7 +610,7 @@ have a single canonical source path irrespective of build target.
 
 #[test]
 fn unused_keys() {
-    let foo = project("foo")
+    let p = project("foo")
         .file("Cargo.toml", r#"
            [package]
            name = "foo"
@@ -622,13 +622,58 @@ fn unused_keys() {
         "#)
         .file("src/lib.rs", "");
 
-    assert_that(foo.cargo_process("build"),
+    assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
 warning: unused manifest key: target.foo.bar
 [COMPILING] foo v0.1.0 (file:///[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
+
+    let mut p = project("foo");
+    p = p
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+            bulid = "foo"
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn foo() {}
+        "#);
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0)
+                    .with_stderr("\
+warning: unused manifest key: project.bulid
+[COMPILING] foo [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    let mut p = project("bar");
+    p = p
+        .file("Cargo.toml", r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [lib]
+            build = "foo"
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn foo() {}
+        "#);
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0)
+                    .with_stderr("\
+warning: unused manifest key: lib.build
+[COMPILING] foo [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
 }
+
 
 #[test]
 fn empty_dependencies() {
