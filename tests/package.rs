@@ -251,13 +251,23 @@ fn exclude() {
             name = "foo"
             version = "0.0.1"
             authors = []
-            exclude = ["*.txt"]
+            exclude = [
+                "*.txt",
+                "data1",
+                "data2/", # Does NOT match
+                "data3/*",
+                "data4/**",
+            ]
         "#)
         .file("src/main.rs", r#"
             fn main() { println!("hello"); }
         "#)
         .file("bar.txt", "")
-        .file("src/bar.txt", "");
+        .file("src/bar.txt", "")
+        .file("data1/hello1.bin", "")
+        .file("data2/hello2.bin", "")
+        .file("data3/hello3.bin", "")
+        .file("data4/hello4.bin", "");
 
     assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stderr("\
@@ -266,6 +276,16 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
 [ARCHIVING] [..]
 [ARCHIVING] [..]
+[ARCHIVING] [..]
+"));
+
+    assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
+
+    assert_that(p.cargo("package").arg("-l"),
+                execs().with_status(0).with_stdout("\
+Cargo.toml
+data2[/]hello2.bin
+src[/]main.rs
 "));
 }
 
