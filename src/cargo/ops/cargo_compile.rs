@@ -579,11 +579,25 @@ fn generate_targets<'a>(pkg: &'a Package,
                         -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
     let build = if release {&profiles.release} else {&profiles.dev};
     let test = if release {&profiles.bench} else {&profiles.test};
+
+    let is_check_test = match *filter {
+        CompileFilter::Everything { .. } => false,
+        CompileFilter::Only { tests, .. } => match tests {
+            FilterRule::All => {
+                match mode {
+                    CompileMode::Check => true,
+                    _ => false,
+                }
+            },
+            FilterRule::Just(_) => false,
+        },
+    };
+
     let profile = match mode {
         CompileMode::Test => test,
         CompileMode::Bench => &profiles.bench,
         CompileMode::Build => build,
-        CompileMode::Check => &profiles.check,
+        CompileMode::Check => if is_check_test { &profiles.check_test } else { &profiles.check },
         CompileMode::Doc { .. } => &profiles.doc,
         CompileMode::Doctest => &profiles.doctest,
     };
@@ -600,7 +614,7 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileFilter::Only { lib, bins, examples, tests, benches } => {
             let mut targets = Vec::new();
 
-            if lib {
+            if lib || is_check_test {
                 if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
                     targets.push(BuildProposal {
                         target: t,
