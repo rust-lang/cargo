@@ -83,6 +83,12 @@ pub trait Executor: Send + Sync + 'static {
         cmd.exec_with_streaming(handle_stdout, handle_stderr, false)?;
         Ok(())
     }
+
+    /// Queried when queuing each unit of work. If it returns true, then the
+    /// unit will always be rebuilt, independent of whether it needs to be.
+    fn force_rebuild(&self, _unit: &Unit) -> bool {
+        false
+    }
 }
 
 /// A DefaultExecutor calls rustc without doing anything else. It is Cargo's
@@ -230,7 +236,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         // we run these targets later, so this is just a noop for now
         (Work::new(|_| Ok(())), Work::new(|_| Ok(())), Freshness::Fresh)
     } else {
-        let (freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
+        let (mut freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
         let work = if unit.profile.doc {
             rustdoc(cx, unit)?
         } else {
@@ -239,6 +245,11 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         // Need to link targets on both the dirty and fresh
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
         let fresh = link_targets(cx, unit, true)?.then(fresh);
+
+        if exec.force_rebuild(unit) {
+            freshness = Freshness::Dirty;
+        }
+
         (dirty, fresh, freshness)
     };
     jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness)?;
