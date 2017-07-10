@@ -5,7 +5,8 @@ use std::cmp;
 
 #[derive(Deserialize)]
 pub struct Options {
-    flag_host: Option<String>,
+    flag_index: Option<String>,
+    flag_host: Option<String>,  // TODO: Depricated, remove
     flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
@@ -24,7 +25,8 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    --host HOST              Host of a registry to search in
+    --index INDEX            Registry index to search in
+    --host HOST              DEPRICATED, renamed to '--index'
     -v, --verbose ...        Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
@@ -40,12 +42,37 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_frozen,
                      options.flag_locked)?;
     let Options {
-        flag_host: host,
+        flag_index: index,
+        flag_host: host,    // TODO: Depricated, remove
         flag_limit: limit,
         arg_query: query,
         ..
     } = options;
 
-    ops::search(&query.join("+"), config, host, cmp::min(100, limit.unwrap_or(10)) as u8)?;
+    // TODO: Depricated
+    // remove once it has been decided --host can be safely removed
+    // We may instead want to repurpose the host flag, as
+    // mentioned in this issue
+    // https://github.com/rust-lang/cargo/issues/4208
+
+    let msg = "The flag '--host' is no longer valid.
+
+Previous versions of Cargo accepted this flag, but it is being
+depricated. The flag is being renamed to 'index', as the flag
+wants the location of the index in which to search. Please
+use '--index' instead.
+
+This will soon become a hard error, so it's either recommended
+to update to a fixed version or contact the upstream maintainer
+about this warning.";
+
+    let index = if host.clone().is_none() || host.clone().unwrap().is_empty() {
+        index
+    } else {
+        config.shell().warn(&msg)?;
+        host
+    };
+
+    ops::search(&query.join("+"), config, index, cmp::min(100, limit.unwrap_or(10)) as u8)?;
     Ok(())
 }
