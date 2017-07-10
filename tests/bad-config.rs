@@ -609,6 +609,35 @@ have a single canonical source path irrespective of build target.
 }
 
 #[test]
+fn duplicate_deps_2() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.2.0").publish();
+
+    let foo = project("foo")
+    .file("Cargo.toml", r#"
+       [package]
+       name = "qqq"
+       version = "0.0.1"
+       authors = []
+
+       [dependencies]
+       bar = "0.1.0"
+
+       [target.x86_64-unknown-linux-gnu.dependencies]
+       bar = "0.2.0"
+    "#)
+    .file("src/main.rs", r#"fn main () {}"#);
+
+    assert_that(foo.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  found duplicate dependency name bar, but all dependencies must have a unique name
+"));
+}
+
+#[test]
 fn unused_keys() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
