@@ -1,7 +1,7 @@
 pub use self::cargo_clean::{clean, CleanOptions};
 pub use self::cargo_compile::{compile, compile_with_exec, compile_ws, CompileOptions};
 pub use self::cargo_compile::{CompileFilter, CompileMode, MessageFormat, Packages};
-pub use self::cargo_read_manifest::{read_manifest,read_package,read_packages};
+pub use self::cargo_read_manifest::{read_package, read_packages};
 pub use self::cargo_rustc::{compile_targets, Compilation, Kind, Unit};
 pub use self::cargo_rustc::{Context, is_bad_artifact_name};
 pub use self::cargo_rustc::{BuildOutput, BuildConfig, TargetConfig};

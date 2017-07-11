@@ -28,12 +28,8 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
             version = "0.5.0"
             path = "bar"
-
-            [[bin]]
-
-            name = "foo"
         "#)
-        .file("src/foo.rs",
+        .file("src/main.rs",
               &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", r#"
             [project]
@@ -210,12 +206,8 @@ fn cargo_compile_with_transitive_dev_deps() {
 
             version = "0.5.0"
             path = "bar"
-
-            [[bin]]
-
-            name = "foo"
         "#)
-        .file("src/foo.rs",
+        .file("src/main.rs",
               &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", r#"
             [project]
@@ -262,12 +254,10 @@ fn no_rebuild_dependency() {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[bin]]
-            name = "foo"
             [dependencies.bar]
             path = "bar"
         "#)
-        .file("src/foo.rs", r#"
+        .file("src/main.rs", r#"
             extern crate bar;
             fn main() { bar::bar() }
         "#)
@@ -294,7 +284,7 @@ fn no_rebuild_dependency() {
                                             p.url())));
 
     sleep_ms(1000);
-    p.change_file("src/foo.rs", r#"
+    p.change_file("src/main.rs", r#"
         extern crate bar;
         fn main() { bar::bar(); }
     "#);
@@ -317,12 +307,10 @@ fn deep_dependencies_trigger_rebuild() {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[bin]]
-            name = "foo"
             [dependencies.bar]
             path = "bar"
         "#)
-        .file("src/foo.rs", r#"
+        .file("src/main.rs", r#"
             extern crate bar;
             fn main() { bar::bar() }
         "#)
@@ -412,14 +400,12 @@ fn no_rebuild_two_deps() {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [[bin]]
-            name = "foo"
             [dependencies.bar]
             path = "bar"
             [dependencies.baz]
             path = "baz"
         "#)
-        .file("src/foo.rs", r#"
+        .file("src/main.rs", r#"
             extern crate bar;
             fn main() { bar::bar() }
         "#)
@@ -480,12 +466,8 @@ fn nested_deps_recompile() {
 
             version = "0.5.0"
             path = "src/bar"
-
-            [[bin]]
-
-            name = "foo"
         "#)
-        .file("src/foo.rs",
+        .file("src/main.rs",
               &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("src/bar/Cargo.toml", r#"
             [project]
@@ -510,7 +492,7 @@ fn nested_deps_recompile() {
                                             p.url())));
     sleep_ms(1000);
 
-    File::create(&p.root().join("src/foo.rs")).unwrap().write_all(br#"
+    File::create(&p.root().join("src/main.rs")).unwrap().write_all(br#"
         fn main() {}
     "#).unwrap();
 
@@ -535,12 +517,9 @@ fn error_message_for_missing_manifest() {
             [dependencies.bar]
 
             path = "src/bar"
-
-            [lib]
-
-            name = "foo"
         "#)
-       .file("src/bar/not-a-manifest", "");
+        .file("src/lib.rs", "")
+        .file("src/bar/not-a-manifest", "");
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
@@ -688,12 +667,8 @@ fn path_dep_build_cmd() {
 
             version = "0.5.0"
             path = "bar"
-
-            [[bin]]
-
-            name = "foo"
         "#)
-        .file("src/foo.rs",
+        .file("src/main.rs",
               &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", r#"
             [project]
@@ -704,8 +679,8 @@ fn path_dep_build_cmd() {
             build = "build.rs"
 
             [lib]
-
             name = "bar"
+            path = "src/bar.rs"
         "#)
         .file("bar/build.rs", r#"
             use std::fs;

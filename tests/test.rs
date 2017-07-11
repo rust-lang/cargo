@@ -17,7 +17,7 @@ use cargo::util::process;
 fn cargo_test_simple() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", r#"
+        .file("src/main.rs", r#"
             fn hello() -> &'static str {
                 "hello"
             }
@@ -134,7 +134,7 @@ fn cargo_test_overflow_checks() {
 fn cargo_test_verbose() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", r#"
+        .file("src/main.rs", r#"
             fn main() {}
             #[test] fn test_hello() {}
         "#);
@@ -142,7 +142,7 @@ fn cargo_test_verbose() {
     assert_that(p.cargo_process("test").arg("-v").arg("hello"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({url})
-[RUNNING] `rustc [..] src[/]foo.rs [..]`
+[RUNNING] `rustc [..] src[/]main.rs [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target[/]debug[/]deps[/]foo-[..][EXE] hello`", url = p.url()))
                        .with_stdout_contains("test test_hello ... ok"));
@@ -182,7 +182,7 @@ fn many_similar_names() {
 fn cargo_test_failing_test_in_bin() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", r#"
+        .file("src/main.rs", r#"
             fn hello() -> &'static str {
                 "hello"
             }
@@ -219,7 +219,7 @@ failures:
                        .with_stdout_contains("[..]`(left == right)`[..]")
                        .with_stdout_contains("[..]left: `\"hello\"`,[..]")
                        .with_stdout_contains("[..]right: `\"nope\"`[..]")
-                       .with_stdout_contains("[..]src[/]foo.rs:12[..]")
+                       .with_stdout_contains("[..]src[/]main.rs:12[..]")
                        .with_stdout_contains("\
 failures:
     test_hello
@@ -231,7 +231,7 @@ failures:
 fn cargo_test_failing_test_in_test() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", r#"
+        .file("src/main.rs", r#"
             pub fn main() {
                 println!("hello");
             }"#)
@@ -790,7 +790,7 @@ fn bench_without_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  bench target bench.name is required"));
+  benchmark target bench.name is required"));
 }
 
 #[test]

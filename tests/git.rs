@@ -47,12 +47,8 @@ fn cargo_compile_simple_git_dep() {
             [dependencies.dep1]
 
             git = '{}'
-
-            [[bin]]
-
-            name = "foo"
         "#, git_project.url()))
-        .file("src/foo.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]));
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]));
 
     let root = project.root();
     let git_root = git_project.root();
@@ -116,11 +112,8 @@ fn cargo_compile_git_dep_branch() {
             git = '{}'
             branch = "branchy"
 
-            [[bin]]
-
-            name = "foo"
         "#, git_project.url()))
-        .file("src/foo.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]));
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]));
 
     let root = project.root();
     let git_root = git_project.root();
@@ -186,12 +179,8 @@ fn cargo_compile_git_dep_tag() {
 
             git = '{}'
             tag = "v0.1.0"
-
-            [[bin]]
-
-            name = "foo"
         "#, git_project.url()))
-        .file("src/foo.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]));
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]));
 
     let root = project.root();
     let git_root = git_project.root();
@@ -552,12 +541,8 @@ fn recompilation() {
 
             version = "0.5.0"
             git = '{}'
-
-            [[bin]]
-
-            name = "foo"
         "#, git_project.url()))
-        .file("src/foo.rs",
+        .file("src/main.rs",
               &main_file(r#""{:?}", bar::bar()"#, &["bar"]));
 
     // First time around we should compile both foo and bar
@@ -1341,8 +1326,8 @@ fn git_dep_build_cmd() {
             build = "build.rs"
 
             [lib]
-
             name = "bar"
+            path = "src/bar.rs"
         "#)
         .file("bar/src/bar.rs.in", r#"
             pub fn gimme() -> i32 { 0 }
