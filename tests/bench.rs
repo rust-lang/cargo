@@ -16,7 +16,7 @@ fn cargo_bench_simple() {
 
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", r#"
+        .file("src/main.rs", r#"
             #![feature(test)]
             extern crate test;
 
@@ -153,7 +153,7 @@ fn cargo_bench_verbose() {
 
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", r#"
+        .file("src/main.rs", r#"
             #![feature(test)]
             extern crate test;
             fn main() {}
@@ -163,7 +163,7 @@ fn cargo_bench_verbose() {
     assert_that(p.cargo_process("bench").arg("-v").arg("hello"),
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.5.0 ({url})
-[RUNNING] `rustc [..] src[/]foo.rs [..]`
+[RUNNING] `rustc [..] src[/]main.rs [..]`
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `[..]target[/]release[/]deps[/]foo-[..][EXE] hello --bench`", url = p.url()))
                        .with_stdout_contains("test bench_hello ... bench: [..]"));
@@ -213,7 +213,7 @@ fn cargo_bench_failing_test() {
 
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", r#"
+        .file("src/main.rs", r#"
             #![feature(test)]
             extern crate test;
             fn hello() -> &'static str {
@@ -245,7 +245,7 @@ thread '[..]' panicked at 'assertion failed: \
     `(left == right)`[..]", p.url()))
                        .with_stderr_contains("[..]left: `\"hello\"`[..]")
                        .with_stderr_contains("[..]right: `\"nope\"`[..]")
-                       .with_stderr_contains("[..]src[/]foo.rs:14[..]")
+                       .with_stderr_contains("[..]src[/]main.rs:14[..]")
                        .with_status(101));
 }
 

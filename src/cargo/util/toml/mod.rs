@@ -16,117 +16,39 @@ use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::{EitherManifest, VirtualManifest};
 use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata};
-use ops::is_bad_artifact_name;
 use sources::CRATES_IO;
+use util::paths;
 use util::{self, ToUrl, Config};
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 
-/// Representation of the projects file layout.
-///
-/// This structure is used to hold references to all project files that are relevant to cargo.
+mod targets;
+use self::targets::targets;
 
-#[derive(Clone)]
-pub struct Layout {
-    pub root: PathBuf,
-    lib: Option<PathBuf>,
-    bins: Vec<PathBuf>,
-    examples: Vec<PathBuf>,
-    tests: Vec<PathBuf>,
-    benches: Vec<PathBuf>,
+pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
+                     -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
+    trace!("read_manifest; path={}; source-id={}", path.display(), source_id);
+    let contents = paths::read(path)?;
+
+    do_read_manifest(&contents, path, source_id, config).chain_err(|| {
+        format!("failed to parse manifest at `{}`", path.display())
+    })
 }
 
-impl Layout {
-    /// Returns a new `Layout` for a given root path.
-    /// The `root_path` represents the directory that contains the `Cargo.toml` file.
-    pub fn from_project_path(root_path: &Path) -> Layout {
-        let mut lib = None;
-        let mut bins = vec![];
-        let mut examples = vec![];
-        let mut tests = vec![];
-        let mut benches = vec![];
+fn do_read_manifest(contents: &str,
+                    manifest_file: &Path,
+                    source_id: &SourceId,
+                    config: &Config)
+                    -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
+    let package_root = manifest_file.parent().unwrap();
 
-        let lib_canidate = root_path.join("src").join("lib.rs");
-        if fs::metadata(&lib_canidate).is_ok() {
-            lib = Some(lib_canidate);
-        }
-
-        try_add_file(&mut bins, root_path.join("src").join("main.rs"));
-        try_add_files(&mut bins, root_path.join("src").join("bin"));
-        try_add_mains_from_dirs(&mut bins, root_path.join("src").join("bin"));
-
-        try_add_files(&mut examples, root_path.join("examples"));
-
-        try_add_files(&mut tests, root_path.join("tests"));
-        try_add_files(&mut benches, root_path.join("benches"));
-
-        Layout {
-            root: root_path.to_path_buf(),
-            lib: lib,
-            bins: bins,
-            examples: examples,
-            tests: tests,
-            benches: benches,
-        }
-    }
-}
-
-fn try_add_file(files: &mut Vec<PathBuf>, file: PathBuf) {
-    if fs::metadata(&file).is_ok() {
-        files.push(file);
-    }
-}
-
-// Add directories form src/bin which contain main.rs file
-fn try_add_mains_from_dirs(files: &mut Vec<PathBuf>, root: PathBuf) {
-    if let Ok(new) = fs::read_dir(&root) {
-        let new: Vec<PathBuf> = new.filter_map(|i| i.ok())
-            // Filter only directories
-            .filter(|i| {
-                i.file_type().map(|f| f.is_dir()).unwrap_or(false)
-            // Convert DirEntry into PathBuf and append "main.rs"
-            }).map(|i| {
-                i.path().join("main.rs")
-            // Filter only directories where main.rs is present
-            }).filter(|f| {
-                f.as_path().exists()
-        }).collect();
-        files.extend(new);
-    }
-}
-
-fn try_add_files(files: &mut Vec<PathBuf>, root: PathBuf) {
-    if let Ok(new) = fs::read_dir(&root) {
-        files.extend(new.filter_map(|dir| {
-            dir.map(|d| d.path()).ok()
-        }).filter(|f| {
-            f.extension().and_then(|s| s.to_str()) == Some("rs")
-        }).filter(|f| {
-            // Some unix editors may create "dotfiles" next to original
-            // source files while they're being edited, but these files are
-            // rarely actually valid Rust source files and sometimes aren't
-            // even valid UTF-8. Here we just ignore all of them and require
-            // that they are explicitly specified in Cargo.toml if desired.
-            f.file_name().and_then(|s| s.to_str()).map(|s| {
-                !s.starts_with('.')
-            }).unwrap_or(true)
-        }))
-    }
-    /* else just don't add anything if the directory doesn't exist, etc. */
-}
-
-pub fn to_manifest(contents: &str,
-                   source_id: &SourceId,
-                   layout: Layout,
-                   config: &Config)
-                   -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
-    let manifest = layout.root.join("Cargo.toml");
-    let manifest = match util::without_prefix(&manifest, config.cwd()) {
-        Some(path) => path.to_path_buf(),
-        None => manifest.clone(),
+    let toml = {
+        let pretty_filename =
+            util::without_prefix(manifest_file, config.cwd()).unwrap_or(manifest_file);
+        parse(contents, pretty_filename, config)?
     };
-    let root = parse(contents, &manifest, config)?;
+
     let mut unused = BTreeSet::new();
-    let manifest: TomlManifest = serde_ignored::deserialize(root, |path| {
+    let manifest: TomlManifest = serde_ignored::deserialize(toml, |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
         unused.insert(key);
@@ -135,7 +57,7 @@ pub fn to_manifest(contents: &str,
     let manifest = Rc::new(manifest);
     return match TomlManifest::to_real_manifest(&manifest,
                                                 source_id,
-                                                &layout,
+                                                package_root,
                                                 config) {
         Ok((mut manifest, paths)) => {
             for key in unused {
@@ -151,7 +73,7 @@ pub fn to_manifest(contents: &str,
         Err(e) => {
             match TomlManifest::to_virtual_manifest(&manifest,
                                                     source_id,
-                                                    &layout,
+                                                    package_root,
                                                     config) {
                 Ok((m, paths)) => Ok((EitherManifest::Virtual(m), paths)),
                 Err(..) => Err(e),
@@ -500,89 +422,7 @@ struct Context<'a, 'b> {
     config: &'b Config,
     warnings: &'a mut Vec<String>,
     platform: Option<Platform>,
-    layout: &'a Layout,
-}
-
-// These functions produce the equivalent of specific manifest entries. One
-// wrinkle is that certain paths cannot be represented in the manifest due
-// to Toml's UTF-8 requirement. This could, in theory, mean that certain
-// otherwise acceptable executable names are not used when inside of
-// `src/bin/*`, but it seems ok to not build executables with non-UTF8
-// paths.
-fn inferred_lib_target(name: &str, layout: &Layout) -> Option<TomlTarget> {
-    layout.lib.as_ref().map(|lib| {
-        TomlTarget {
-            name: Some(name.to_string()),
-            path: Some(PathValue(lib.clone())),
-            .. TomlTarget::new()
-        }
-    })
-}
-
-fn inferred_bin_targets(name: &str, layout: &Layout) -> Vec<TomlTarget> {
-    layout.bins.iter().filter_map(|bin| {
-        let name = if &**bin == Path::new("src/main.rs") ||
-                      *bin == layout.root.join("src").join("main.rs") {
-            Some(name.to_string())
-        } else {
-            // bin is either a source file or a directory with main.rs inside.
-            if bin.ends_with("main.rs") && !bin.ends_with("src/bin/main.rs") {
-                if let Some(parent) = bin.parent() {
-                    // Use a name of this directory as a name for binary
-                    parent.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
-                } else {
-                    None
-                }
-            } else {
-                // regular case, just a file in the bin directory
-                bin.file_stem().and_then(|s| s.to_str()).map(|f| f.to_string())
-            }
-        };
-
-        name.map(|name| {
-            TomlTarget {
-                name: Some(name),
-                path: Some(PathValue(bin.clone())),
-                .. TomlTarget::new()
-            }
-        })
-    }).collect()
-}
-
-fn inferred_example_targets(layout: &Layout) -> Vec<TomlTarget> {
-    layout.examples.iter().filter_map(|ex| {
-        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
-            TomlTarget {
-                name: Some(name.to_string()),
-                path: Some(PathValue(ex.clone())),
-                .. TomlTarget::new()
-            }
-        })
-    }).collect()
-}
-
-fn inferred_test_targets(layout: &Layout) -> Vec<TomlTarget> {
-    layout.tests.iter().filter_map(|ex| {
-        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
-            TomlTarget {
-                name: Some(name.to_string()),
-                path: Some(PathValue(ex.clone())),
-                .. TomlTarget::new()
-            }
-        })
-    }).collect()
-}
-
-fn inferred_bench_targets(layout: &Layout) -> Vec<TomlTarget> {
-    layout.benches.iter().filter_map(|ex| {
-        ex.file_stem().and_then(|s| s.to_str()).map(|name| {
-            TomlTarget {
-                name: Some(name.to_string()),
-                path: Some(PathValue(ex.clone())),
-                .. TomlTarget::new()
-            }
-        })
-    }).collect()
+    root: &'a Path,
 }
 
 impl TomlManifest {
@@ -656,7 +496,7 @@ impl TomlManifest {
 
     fn to_real_manifest(me: &Rc<TomlManifest>,
                         source_id: &SourceId,
-                        layout: &Layout,
+                        package_root: &Path,
                         config: &Config)
                         -> CargoResult<(Manifest, Vec<PathBuf>)> {
         let mut nested_paths = vec![];
@@ -667,7 +507,8 @@ impl TomlManifest {
             CargoError::from("no `package` or `project` section found.")
         })?;
 
-        if project.name.trim().is_empty() {
+        let package_name = project.name.trim();
+        if package_name.is_empty() {
             bail!("package name cannot be an empty string.")
         }
 
@@ -676,108 +517,13 @@ impl TomlManifest {
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
-
-        let lib = match me.lib {
-            Some(ref lib) => {
-                lib.validate_library_name()?;
-                lib.validate_crate_type()?;
-                Some(
-                    TomlTarget {
-                        name: lib.name.clone().or(Some(project.name.clone())),
-                        path: lib.path.clone().or_else(
-                            || layout.lib.as_ref().map(|p| PathValue(p.clone()))
-                        ),
-                        ..lib.clone()
-                    }
-                )
-            }
-            None => inferred_lib_target(&project.name, layout),
-        };
-
-        let bins = match me.bin {
-            Some(ref bins) => {
-                for target in bins {
-                    target.validate_binary_name()?;
-                };
-                bins.clone()
-            }
-            None => inferred_bin_targets(&project.name, layout)
-        };
-
-        for bin in bins.iter() {
-            if is_bad_artifact_name(&bin.name()) {
-                bail!("the binary target name `{}` is forbidden",
-                      bin.name())
-            }
-        }
-
-        let examples = match me.example {
-            Some(ref examples) => {
-                for target in examples {
-                    target.validate_example_name()?;
-                }
-                examples.clone()
-            }
-            None => inferred_example_targets(layout)
-        };
-
-        let tests = match me.test {
-            Some(ref tests) => {
-                for target in tests {
-                    target.validate_test_name()?;
-                }
-                tests.clone()
-            }
-            None => inferred_test_targets(layout)
-        };
-
-        let benches = match me.bench {
-            Some(ref benches) => {
-                for target in benches {
-                    target.validate_bench_name()?;
-                }
-                benches.clone()
-            }
-            None => inferred_bench_targets(layout)
-        };
-
-        if let Err(e) = unique_names_in_targets(&bins) {
-            bail!("found duplicate binary name {}, but all binary targets \
-                   must have a unique name", e);
-        }
-
-        if let Err(e) = unique_names_in_targets(&examples) {
-            bail!("found duplicate example name {}, but all binary targets \
-                   must have a unique name", e);
-        }
-
-        if let Err(e) = unique_names_in_targets(&benches) {
-            bail!("found duplicate bench name {}, but all binary targets must \
-                   have a unique name", e);
-        }
-
-        if let Err(e) = unique_names_in_targets(&tests) {
-            bail!("found duplicate test name {}, but all binary targets must \
-                   have a unique name", e)
-        }
-
-        // processing the custom build script
-        let new_build = me.maybe_custom_build(&project.build, &layout.root);
-
-        // Get targets
-        let targets = normalize(&layout.root,
-                                &lib,
-                                &bins,
-                                new_build,
-                                &examples,
-                                &tests,
-                                &benches);
+        let targets = targets(me, package_name, package_root, &project.build, &mut warnings)?;
 
         if targets.is_empty() {
             debug!("manifest has no build targets");
         }
 
-        if let Err(e) = unique_build_targets(&targets, layout) {
+        if let Err(e) = unique_build_targets(&targets, package_root) {
             warnings.push(format!("file found to be present in multiple \
                                    build targets: {}", e));
         }
@@ -795,7 +541,7 @@ impl TomlManifest {
                 config: config,
                 warnings: &mut warnings,
                 platform: None,
-                layout: layout,
+                root: package_root,
             };
 
             fn process_dependencies(
@@ -915,7 +661,7 @@ impl TomlManifest {
 
     fn to_virtual_manifest(me: &Rc<TomlManifest>,
                            source_id: &SourceId,
-                           layout: &Layout,
+                           root: &Path,
                            config: &Config)
                            -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
         if me.project.is_some() {
@@ -951,7 +697,7 @@ impl TomlManifest {
             config: config,
             warnings: &mut warnings,
             platform: None,
-            layout: layout,
+            root: root
         })?;
         let profiles = build_profiles(&me.profile);
         let workspace_config = match me.workspace {
@@ -1006,9 +752,9 @@ impl TomlManifest {
 
     fn maybe_custom_build(&self,
                           build: &Option<StringOrBool>,
-                          project_dir: &Path)
+                          package_root: &Path)
                           -> Option<PathBuf> {
-        let build_rs = project_dir.join("build.rs");
+        let build_rs = package_root.join("build.rs");
         match *build {
             Some(StringOrBool::Bool(false)) => None,        // explicitly no build script
             Some(StringOrBool::Bool(true)) => Some(build_rs.into()),
@@ -1025,23 +771,11 @@ impl TomlManifest {
     }
 }
 
-/// Will check a list of toml targets, and make sure the target names are unique within a vector.
-/// If not, the name of the offending binary target is returned.
-fn unique_names_in_targets(targets: &[TomlTarget]) -> Result<(), String> {
-    let mut seen = HashSet::new();
-    for v in targets.iter().map(|e| e.name()) {
-        if !seen.insert(v.clone()) {
-            return Err(v);
-        }
-    }
-    Ok(())
-}
-
 /// Will check a list of build targets, and make sure the target names are unique within a vector.
 /// If not, the name of the offending build target is returned.
-fn unique_build_targets(targets: &[Target], layout: &Layout) -> Result<(), String> {
+fn unique_build_targets(targets: &[Target], package_root: &Path) -> Result<(), String> {
     let mut seen = HashSet::new();
-    for v in targets.iter().map(|e| layout.root.join(e.src_path())) {
+    for v in targets.iter().map(|e| package_root.join(e.src_path())) {
         if !seen.insert(v.clone()) {
             return Err(v.display().to_string());
         }
@@ -1128,7 +862,7 @@ impl TomlDependency {
                 // always end up hashing to the same value no matter where it's
                 // built from.
                 if cx.source_id.is_path() {
-                    let path = cx.layout.root.join(path);
+                    let path = cx.root.join(path);
                     let path = util::normalize_path(&path);
                     SourceId::for_path(&path)?
                 } else {
@@ -1230,93 +964,12 @@ impl TomlTarget {
         }
     }
 
-    fn validate_library_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    Err("library target names cannot be empty.".into())
-                } else if name.contains('-') {
-                    Err(format!("library target names cannot contain hyphens: {}",
-                                 name).into())
-                } else {
-                    Ok(())
-                }
-            },
-            None => Ok(())
-        }
-    }
-
-    fn validate_binary_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    Err("binary target names cannot be empty.".into())
-                } else {
-                    Ok(())
-                }
-            },
-            None => Err("binary target bin.name is required".into())
-        }
-    }
-
-    fn validate_example_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    Err("example target names cannot be empty".into())
-                } else {
-                    Ok(())
-                }
-            },
-            None => Err("example target example.name is required".into())
-        }
-    }
-
-    fn validate_test_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    Err("test target names cannot be empty".into())
-                } else {
-                    Ok(())
-                }
-            },
-            None => Err("test target test.name is required".into())
-        }
-    }
-
-    fn validate_bench_name(&self) -> CargoResult<()> {
-        match self.name {
-            Some(ref name) => {
-                if name.trim().is_empty() {
-                    Err("bench target names cannot be empty".into())
-                } else {
-                    Ok(())
-                }
-            },
-            None => Err("bench target bench.name is required".into())
-        }
-    }
-
-    fn validate_crate_type(&self) -> CargoResult<()> {
-        // Per the Macros 1.1 RFC:
-        //
-        // > Initially if a crate is compiled with the proc-macro crate type
-        // > (and possibly others) it will forbid exporting any items in the
-        // > crate other than those functions tagged #[proc_macro_derive] and
-        // > those functions must also be placed at the crate root.
-        //
-        // A plugin requires exporting plugin_registrar so a crate cannot be
-        // both at once.
-        if self.plugin == Some(true) && self.proc_macro() == Some(true) {
-            Err("lib.plugin and lib.proc-macro cannot both be true".into())
-        } else {
-            Ok(())
-        }
-    }
-
     fn proc_macro(&self) -> Option<bool> {
         self.proc_macro.or(self.proc_macro2)
+    }
+
+    fn crate_types(&self) -> Option<&Vec<String>> {
+        self.crate_type.as_ref().or(self.crate_type2.as_ref())
     }
 }
 
@@ -1324,210 +977,6 @@ impl fmt::Debug for PathValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
-}
-
-fn normalize(package_root: &Path,
-             lib: &Option<TomlLibTarget>,
-             bins: &[TomlBinTarget],
-             custom_build: Option<PathBuf>,
-             examples: &[TomlExampleTarget],
-             tests: &[TomlTestTarget],
-             benches: &[TomlBenchTarget]) -> Vec<Target> {
-    fn configure(toml: &TomlTarget, target: &mut Target) {
-        let t2 = target.clone();
-        target.set_tested(toml.test.unwrap_or(t2.tested()))
-              .set_doc(toml.doc.unwrap_or(t2.documented()))
-              .set_doctest(toml.doctest.unwrap_or(t2.doctested()))
-              .set_benched(toml.bench.unwrap_or(t2.benched()))
-              .set_harness(toml.harness.unwrap_or(t2.harness()))
-              .set_for_host(match (toml.plugin, toml.proc_macro()) {
-                  (None, None) => t2.for_host(),
-                  (Some(true), _) | (_, Some(true)) => true,
-                  (Some(false), _) | (_, Some(false)) => false,
-              });
-    }
-
-    let lib_target = |dst: &mut Vec<Target>, l: &TomlLibTarget| {
-        let path = l.path.clone().unwrap_or_else(
-            || PathValue(Path::new("src").join(&format!("{}.rs", l.name())))
-        );
-        let crate_types = l.crate_type.as_ref().or(l.crate_type2.as_ref());
-        let crate_types = match crate_types {
-            Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
-            None => {
-                vec![ if l.plugin == Some(true) {LibKind::Dylib}
-                      else if l.proc_macro() == Some(true) {LibKind::ProcMacro}
-                      else {LibKind::Lib} ]
-            }
-        };
-
-        let mut target = Target::lib_target(&l.name(), crate_types,
-                                            package_root.join(&path.0));
-        configure(l, &mut target);
-        dst.push(target);
-    };
-
-    let bin_targets = |dst: &mut Vec<Target>, bins: &[TomlBinTarget],
-                       default: &mut FnMut(&TomlBinTarget) -> PathBuf| {
-        for bin in bins.iter() {
-            let path = bin.path.clone().unwrap_or_else(|| {
-                PathValue(default(bin))
-            });
-            let mut target = Target::bin_target(&bin.name(), package_root.join(&path.0),
-                                                bin.required_features.clone());
-            configure(bin, &mut target);
-            dst.push(target);
-        }
-    };
-
-    let custom_build_target = |dst: &mut Vec<Target>, cmd: &Path| {
-        let name = format!("build-script-{}",
-                           cmd.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
-
-        dst.push(Target::custom_build_target(&name, package_root.join(cmd)));
-    };
-
-    let example_targets = |dst: &mut Vec<Target>,
-                           examples: &[TomlExampleTarget],
-                           default: &mut FnMut(&TomlExampleTarget) -> PathBuf| {
-        for ex in examples.iter() {
-            let path = ex.path.clone().unwrap_or_else(|| {
-                PathValue(default(ex))
-            });
-
-            let crate_types = ex.crate_type.as_ref().or(ex.crate_type2.as_ref());
-            let crate_types = match crate_types {
-                Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
-                None => Vec::new()
-            };
-
-            let mut target = Target::example_target(
-                &ex.name(),
-                crate_types,
-                package_root.join(&path.0),
-                ex.required_features.clone()
-            );
-            configure(ex, &mut target);
-            dst.push(target);
-        }
-    };
-
-    let test_targets = |dst: &mut Vec<Target>,
-                        tests: &[TomlTestTarget],
-                        default: &mut FnMut(&TomlTestTarget) -> PathBuf| {
-        for test in tests.iter() {
-            let path = test.path.clone().unwrap_or_else(|| {
-                PathValue(default(test))
-            });
-
-            let mut target = Target::test_target(&test.name(), package_root.join(&path.0),
-                                                 test.required_features.clone());
-            configure(test, &mut target);
-            dst.push(target);
-        }
-    };
-
-    let bench_targets = |dst: &mut Vec<Target>,
-                         benches: &[TomlBenchTarget],
-                         default: &mut FnMut(&TomlBenchTarget) -> PathBuf| {
-        for bench in benches.iter() {
-            let path = bench.path.clone().unwrap_or_else(|| {
-                PathValue(default(bench))
-            });
-
-            let mut target = Target::bench_target(&bench.name(), package_root.join(&path.0),
-                                                  bench.required_features.clone());
-            configure(bench, &mut target);
-            dst.push(target);
-        }
-    };
-
-    let mut ret = Vec::new();
-
-    if let Some(ref lib) = *lib {
-        lib_target(&mut ret, lib);
-    }
-    bin_targets(&mut ret, bins,
-                &mut |bin| inferred_bin_path(bin, lib.is_some(), package_root, bins.len()));
-
-
-    if let Some(custom_build) = custom_build {
-        custom_build_target(&mut ret, &custom_build);
-    }
-
-    example_targets(&mut ret, examples,
-                    &mut |ex| Path::new("examples")
-                                   .join(&format!("{}.rs", ex.name())));
-
-    test_targets(&mut ret, tests, &mut |test| {
-        Path::new("tests").join(&format!("{}.rs", test.name()))
-    });
-
-    bench_targets(&mut ret, benches, &mut |bench| {
-        Path::new("benches").join(&format!("{}.rs", bench.name()))
-    });
-
-    ret
-}
-
-fn inferred_bin_path(bin: &TomlBinTarget,
-                     has_lib: bool,
-                     package_root: &Path,
-                     bin_len: usize) -> PathBuf {
-    // here we have a single bin, so it may be located in src/main.rs, src/foo.rs,
-    // src/bin/foo.rs, src/bin/foo/main.rs or src/bin/main.rs
-    if bin_len == 1 {
-        let path = Path::new("src").join("main.rs");
-        if package_root.join(&path).exists() {
-            return path.to_path_buf()
-        }
-
-        if !has_lib {
-            let path = Path::new("src").join(&format!("{}.rs", bin.name()));
-            if package_root.join(&path).exists() {
-                return path.to_path_buf()
-            }
-        }
-
-        let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
-        if package_root.join(&path).exists() {
-            return path.to_path_buf()
-        }
-
-        // check for the case where src/bin/foo/main.rs is present
-        let path = Path::new("src").join("bin").join(bin.name()).join("main.rs");
-        if package_root.join(&path).exists() {
-            return path.to_path_buf()
-        }
-
-        return Path::new("src").join("bin").join("main.rs").to_path_buf()
-    }
-
-    // bin_len > 1
-    let path = Path::new("src").join("bin").join(&format!("{}.rs", bin.name()));
-    if package_root.join(&path).exists() {
-        return path.to_path_buf()
-    }
-
-    // we can also have src/bin/foo/main.rs, but the former one is preferred
-    let path = Path::new("src").join("bin").join(bin.name()).join("main.rs");
-    if package_root.join(&path).exists() {
-        return path.to_path_buf()
-    }
-
-    if !has_lib {
-        let path = Path::new("src").join(&format!("{}.rs", bin.name()));
-        if package_root.join(&path).exists() {
-            return path.to_path_buf()
-        }
-    }
-
-    let path = Path::new("src").join("bin").join("main.rs");
-    if package_root.join(&path).exists() {
-        return path.to_path_buf()
-    }
-
-    return Path::new("src").join("main.rs").to_path_buf()
 }
 
 fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {

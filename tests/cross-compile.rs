@@ -528,7 +528,7 @@ fn cross_tests() {
             [[bin]]
             name = "bar"
         "#)
-        .file("src/main.rs", &format!(r#"
+        .file("src/bin/bar.rs", &format!(r#"
             extern crate foo;
             use std::env;
             fn main() {{

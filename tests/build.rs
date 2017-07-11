@@ -153,6 +153,7 @@ fn cargo_compile_duplicate_build_targets() {
 
             [lib]
             name = "main"
+            path = "src/main.rs"
             crate-type = ["dylib"]
 
             [dependencies]
@@ -235,7 +236,7 @@ fn cargo_compile_with_invalid_bin_target_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  binary target names cannot be empty.
+  binary target names cannot be empty
 "))
 }
 
@@ -283,7 +284,7 @@ fn cargo_compile_with_invalid_lib_target_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  library target names cannot be empty.
+  library target names cannot be empty
 "))
 }
 
@@ -539,12 +540,8 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
             [dependencies.bar]
             path = "bar"
-
-            [[bin]]
-
-            name = "foo"
         "#)
-        .file("src/foo.rs",
+        .file("src/main.rs",
               &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", r#"
             [project]
@@ -686,7 +683,7 @@ fn cargo_compile_with_dep_name_mismatch() {
 
             path = "bar"
         "#)
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &["bar"]))
+        .file("src/bin/foo.rs", &main_file(r#""i am foo""#, &["bar"]))
         .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
         .file("bar/src/bar.rs", &main_file(r#""i am bar""#, &[]));
 
@@ -1007,7 +1004,9 @@ fn many_crate_types_old_style_lib_location() {
         .file("src/foo.rs", r#"
             pub fn foo() {}
         "#);
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo_process("build"), execs().with_status(0).with_stderr_contains("\
+[WARNING] path `src[/]foo.rs` was erroneously implicitly accepted for library foo,
+please rename the file to `src/lib.rs` or set lib.path in Cargo.toml"));
 
     assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
     let fname = format!("{}foo{}", env::consts::DLL_PREFIX,
@@ -1044,59 +1043,6 @@ fn many_crate_types_correct() {
 }
 
 #[test]
-fn unused_keys() {
-    let mut p = project("foo");
-    p = p
-        .file("Cargo.toml", r#"
-            [project]
-
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-            bulid = "foo"
-
-            [lib]
-
-            name = "foo"
-        "#)
-        .file("src/foo.rs", r#"
-            pub fn foo() {}
-        "#);
-    assert_that(p.cargo_process("build"),
-                execs().with_status(0)
-                       .with_stderr("\
-warning: unused manifest key: project.bulid
-[COMPILING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-"));
-
-    let mut p = project("bar");
-    p = p
-        .file("Cargo.toml", r#"
-            [project]
-
-            name = "foo"
-            version = "0.5.0"
-            authors = ["wycats@example.com"]
-
-            [lib]
-
-            name = "foo"
-            build = "foo"
-        "#)
-        .file("src/foo.rs", r#"
-            pub fn foo() {}
-        "#);
-    assert_that(p.cargo_process("build"),
-                execs().with_status(0)
-                       .with_stderr("\
-warning: unused manifest key: lib.build
-[COMPILING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-"));
-}
-
-#[test]
 fn self_dependency() {
     let mut p = project("foo");
     p = p
@@ -1112,8 +1058,8 @@ fn self_dependency() {
             path = "."
 
             [lib]
-
             name = "test"
+            path = "src/test.rs"
         "#)
         .file("src/test.rs", "fn main() {}");
     assert_that(p.cargo_process("build"),
@@ -1348,6 +1294,107 @@ fn explicit_examples() {
                         execs().with_status(0).with_stdout("Hello, World!\n"));
     assert_that(process(&p.bin("examples/goodbye")),
                         execs().with_status(0).with_stdout("Goodbye, World!\n"));
+}
+
+#[test]
+fn non_existing_example() {
+    let mut p = project("world");
+    p = p.file("Cargo.toml", r#"
+            [package]
+            name = "world"
+            version = "1.0.0"
+            authors = []
+
+            [lib]
+            name = "world"
+            path = "src/lib.rs"
+
+            [[example]]
+            name = "hello"
+        "#)
+        .file("src/lib.rs", "")
+        .file("examples/ehlo.rs", "");
+
+    assert_that(p.cargo_process("test").arg("-v"), execs().with_status(101).with_stderr("\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `hello` example, specify example.path"));
+}
+
+#[test]
+fn non_existing_binary() {
+    let mut p = project("world");
+    p = p.file("Cargo.toml", r#"
+            [package]
+            name = "world"
+            version = "1.0.0"
+            authors = []
+
+            [[bin]]
+            name = "hello"
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/ehlo.rs", "");
+
+    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(101).with_stderr("\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `hello` bin, specify bin.path"));
+}
+
+#[test]
+fn legacy_binary_paths_warinigs() {
+    let mut p = project("world");
+    p = p.file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            authors = []
+
+            [[bin]]
+            name = "bar"
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
+[WARNING] path `src[/]main.rs` was erroneously implicitly accepted for binary bar,
+please set bin.path in Cargo.toml"));
+
+    let mut p = project("world");
+    p = p.file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            authors = []
+
+            [[bin]]
+            name = "bar"
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/bin/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
+[WARNING] path `src[/]bin[/]main.rs` was erroneously implicitly accepted for binary bar,
+please set bin.path in Cargo.toml"));
+
+    let mut p = project("world");
+    p = p.file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "1.0.0"
+            authors = []
+
+            [[bin]]
+            name = "bar"
+        "#)
+        .file("src/bar.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
+[WARNING] path `src[/]bar.rs` was erroneously implicitly accepted for binary bar,
+please set bin.path in Cargo.toml"));
 }
 
 #[test]
@@ -2461,7 +2508,7 @@ fn invalid_spec() {
             [[bin]]
                 name = "foo"
         "#)
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("src/bin/foo.rs", &main_file(r#""i am foo""#, &[]))
         .file("d1/Cargo.toml", r#"
             [package]
             name = "d1"
@@ -3279,7 +3326,11 @@ fn no_bin_in_src_with_lib() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
-                       .with_stderr_contains(r#"[ERROR] couldn't read "[..]main.rs"[..]"#));
+                       .with_stderr_contains("\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  can't find `foo` bin, specify bin.path"));
 }
 
 

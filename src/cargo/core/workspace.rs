@@ -7,10 +7,10 @@ use glob::glob;
 
 use core::{Package, VirtualManifest, EitherManifest, SourceId};
 use core::{PackageIdSpec, Dependency, Profile, Profiles};
-use ops;
 use util::{Config, Filesystem};
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
+use util::toml::read_manifest;
 
 /// The core abstraction in Cargo for working with a workspace of crates.
 ///
@@ -594,9 +594,8 @@ impl<'cfg> Packages<'cfg> {
             Entry::Occupied(e) => Ok(e.into_mut()),
             Entry::Vacant(v) => {
                 let source_id = SourceId::for_path(key)?;
-                let pair = ops::read_manifest(&manifest_path, &source_id,
-                                              self.config)?;
-                let (manifest, _nested_paths) = pair;
+                let (manifest, _nested_paths) =
+                    read_manifest(&manifest_path, &source_id, self.config)?;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {
                         MaybePackage::Package(Package::new(manifest,
