@@ -1469,3 +1469,72 @@ Caused by:
 "));
 }
 
+fn missing_workspace_build_dir(){
+    let p = project("foo")
+    .file("Cargo.toml", r#"
+        [project]
+        name = "foo"
+        version = "0.5.0"
+        authors = []
+    "#)
+    .file("src/lib.rs", "")
+    .file("build.rs", r#"
+        fn main() {
+            use std::env;
+            use std::env::VarError::NotPresent;
+
+            assert_eq!(env::var("CARGO_WORSPACE_DIR"), Err(NotPresent));
+        }
+    "#);
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+}
+
+#[test]
+fn workspace_build_dir(){
+    let p = project("foo")
+    .file("Cargo.toml", r#"
+        [project]
+        name = "foo"
+        version = "0.5.0"
+        authors = []
+
+
+        [workspace]
+        members = ["bar"]
+    "#)
+    .file("src/lib.rs", "")
+    .file("build.rs", r#"
+        use std::env;
+
+        fn main() {
+            assert!(env::var("CARGO_WORKSPACE_DIR").unwrap().ends_with("foo"));
+        }
+    "#)
+    .file("bar/Cargo.toml", r#"
+        [project]
+        name = "bar"
+        version = "0.5.0"
+        authors = []
+        links = "bar"
+        build = "build.rs"
+    "#)
+    .file("bar/src/lib.rs", "")
+    .file("bar/build.rs", r#"
+        use std::env;
+
+        fn main() {
+            assert!(env::var("CARGO_WORKSPACE_DIR").unwrap().ends_with("foo"));
+        }
+    "#);
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target"), existing_dir());
+    assert_that(p.cargo("build").cwd(p.root().join("bar")),
+                execs().with_status(0));
+}
+
