@@ -57,9 +57,9 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 #[test]
 fn multiple_pkgs() {
     pkg("foo", "0.0.1");
-    pkg("bar", "0.0.1");
+    pkg("bar", "0.0.2");
 
-    assert_that(cargo_process("install").arg("foo").arg("bar"),
+    assert_that(cargo_process("install").args(&["foo", "bar", "baz"]),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.1 (registry file://[..])
@@ -67,12 +67,14 @@ fn multiple_pkgs() {
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]foo[..]
-[DOWNLOADING] bar v0.0.1 (registry file://[..])
-[INSTALLING] bar v0.0.1
-[COMPILING] bar v0.0.1
+[DOWNLOADING] bar v0.0.2 (registry file://[..])
+[INSTALLING] bar v0.0.2
+[COMPILING] bar v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]bar[..]
-Successfully installed foo, bar
+error: could not find `baz` in `registry [..]`
+   
+Summary: Successfully installed foo, bar! Failed to install baz (see error(s) above).
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         home = cargo_home().display())));
