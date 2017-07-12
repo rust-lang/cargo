@@ -7,7 +7,6 @@ use std::io::prelude::*;
 use std::io::{self, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT, Ordering};
 
 use semver::Version;
 use tempdir::TempDir;
@@ -65,26 +64,43 @@ pub fn install(root: Option<&str>,
     let map = SourceConfigMap::new(opts.config)?;
 
     if krates.len() <= 1 {
-        install_one(root, map, krates.into_iter().next(), source_id, vers, opts, force)
+        install_one(root.clone(), map, krates.into_iter().next(), source_id, vers, opts,
+                    force, true)?;
     } else {
         let mut success = vec![];
         let mut errors = vec![];
+        let mut first = true;
         for krate in krates {
             let root = root.clone();
             let map = map.clone();
-            match install_one(root, map, Some(krate), source_id, vers, opts, force) {
+            match install_one(root, map, Some(krate), source_id, vers, opts, force, first) {
                 Ok(()) => success.push(krate),
                 Err(e) => errors.push(format!("{}: {}", krate, e))
             }
+            first = false;
         }
 
         writeln!(io::stderr(),
                  "\n\nSUMMARY\n\nSuccessfully installed: {}\n\nErrors:\n\t{}",
                  success.join(", "),
                  errors.join("\n\t"))?;
-
-        Ok(())
     }
+
+    // Print a warning that if this directory isn't in PATH that they won't be
+    // able to run these commands.
+    let dst = metadata(opts.config, &root)?.parent().join("bin");
+    let path = env::var_os("PATH").unwrap_or(OsString::new());
+    for path in env::split_paths(&path) {
+        if path == dst {
+            return Ok(())
+        }
+    }
+
+    opts.config.shell().warn(&format!("be sure to add `{}` to your PATH to be \
+                                       able to run the installed binaries",
+                                       dst.display()))?;
+
+    Ok(())
 }
 
 fn install_one(root: Filesystem,
@@ -93,17 +109,14 @@ fn install_one(root: Filesystem,
                source_id: &SourceId,
                vers: Option<&str>,
                opts: &ops::CompileOptions,
-               force: bool) -> CargoResult<()> {
-
-    static ALREADY_UPDATED: AtomicBool = ATOMIC_BOOL_INIT;
-    let needs_update = !ALREADY_UPDATED.load(Ordering::SeqCst);
-    ALREADY_UPDATED.store(true, Ordering::SeqCst);
+               force: bool,
+               is_first_install: bool) -> CargoResult<()> {
 
     let config = opts.config;
 
     let (pkg, source) = if source_id.is_git() {
         select_pkg(GitSource::new(source_id, config),
-                   krate, vers, config, needs_update,
+                   krate, vers, config, is_first_install,
                    &mut |git| git.read_packages())?
     } else if source_id.is_path() {
         let path = source_id.url().to_file_path()
@@ -115,11 +128,11 @@ fn install_one(root: Filesystem,
                      specify an alternate source", path.display())
         })?;
         select_pkg(PathSource::new(&path, source_id, config),
-                   krate, vers, config, needs_update,
+                   krate, vers, config, is_first_install,
                    &mut |path| path.read_packages())?
     } else {
         select_pkg(map.load(source_id)?,
-                   krate, vers, config, needs_update,
+                   krate, vers, config, is_first_install,
                    &mut |_| Err("must specify a crate to install from \
                                  crates.io, or use --path or --git to \
                                  specify alternate source".into()))?
@@ -287,18 +300,6 @@ fn install_one(root: Filesystem,
         fs::remove_dir_all(&target_dir)?;
     }
 
-    // Print a warning that if this directory isn't in PATH that they won't be
-    // able to run these commands.
-    let path = env::var_os("PATH").unwrap_or(OsString::new());
-    for path in env::split_paths(&path) {
-        if path == dst {
-            return Ok(())
-        }
-    }
-
-    config.shell().warn(&format!("be sure to add `{}` to your PATH to be \
-                                       able to run the installed binaries",
-                                      dst.display()))?;
     Ok(())
 }
 
