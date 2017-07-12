@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use semver::Version;
 use tempdir::TempDir;
-use termcolor::Color::Red;
 use toml;
 
 use core::{SourceId, Source, Package, Dependency, PackageIdSpec};
@@ -64,9 +63,9 @@ pub fn install(root: Option<&str>,
     let root = resolve_root(root, opts.config)?;
     let map = SourceConfigMap::new(opts.config)?;
 
-    if krates.len() <= 1 {
+    let installed_anything = if krates.len() <= 1 {
         install_one(root.clone(), map, krates.into_iter().next(), source_id, vers, opts,
-                    force, true)?;
+                    force, true).is_ok()
     } else {
         let mut succeeded = vec![];
         let mut failed = vec![];
@@ -84,27 +83,35 @@ pub fn install(root: Option<&str>,
             first = false;
         }
 
+        let mut summary = vec![];
         if !succeeded.is_empty() {
-            opts.config.shell().status("Successfully installed", succeeded.join(", "))?;
+            summary.push(format!("Successfully installed {}!", succeeded.join(", ")));
         }
         if !failed.is_empty() {
-            opts.config.shell().status_with_color("Failed to install", failed.join(", "), Red)?;
+            summary.push(format!("Failed to install {} (see error(s) above).", failed.join(", ")));
         }
-    }
-
-    // Print a warning that if this directory isn't in PATH that they won't be
-    // able to run these commands.
-    let dst = metadata(opts.config, &root)?.parent().join("bin");
-    let path = env::var_os("PATH").unwrap_or(OsString::new());
-    for path in env::split_paths(&path) {
-        if path == dst {
-            return Ok(())
+        if !succeeded.is_empty() || !failed.is_empty() {
+            opts.config.shell().status("\nSummary:", summary.join(" "))?;
         }
-    }
 
-    opts.config.shell().warn(&format!("be sure to add `{}` to your PATH to be \
-                                       able to run the installed binaries",
-                                       dst.display()))?;
+        !succeeded.is_empty()
+    };
+
+    if installed_anything {
+        // Print a warning that if this directory isn't in PATH that they won't be
+        // able to run these commands.
+        let dst = metadata(opts.config, &root)?.parent().join("bin");
+        let path = env::var_os("PATH").unwrap_or(OsString::new());
+        for path in env::split_paths(&path) {
+            if path == dst {
+                return Ok(())
+            }
+        }
+
+        opts.config.shell().warn(&format!("be sure to add `{}` to your PATH to be \
+                                           able to run the installed binaries",
+                                           dst.display()))?;
+    }
 
     Ok(())
 }
