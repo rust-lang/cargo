@@ -163,6 +163,8 @@ travis-ci = { repository = "...", branch = "master" }
 appveyor = { repository = "...", branch = "master", service = "github" }
 # GitLab: `repository` is required. `branch` is optional; default is `master`
 gitlab = { repository = "...", branch = "master" }
+# Circle CI: `repository` is required. `branch` is optiona; default is `master`
+circle-ci = { repository = "...", branch = "master" }
 # Is it maintained resolution time: `repository` is required.
 is-it-maintained-issue-resolution = { repository = "..." }
 # Is it maintained percentage of open issues: `repository` is required.
