@@ -4,12 +4,13 @@ use std::env;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::io::{self, SeekFrom};
+use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use semver::Version;
 use tempdir::TempDir;
+use termcolor::Color::Red;
 use toml;
 
 use core::{SourceId, Source, Package, Dependency, PackageIdSpec};
@@ -67,23 +68,28 @@ pub fn install(root: Option<&str>,
         install_one(root.clone(), map, krates.into_iter().next(), source_id, vers, opts,
                     force, true)?;
     } else {
-        let mut success = vec![];
-        let mut errors = vec![];
+        let mut succeeded = vec![];
+        let mut failed = vec![];
         let mut first = true;
         for krate in krates {
             let root = root.clone();
             let map = map.clone();
             match install_one(root, map, Some(krate), source_id, vers, opts, force, first) {
-                Ok(()) => success.push(krate),
-                Err(e) => errors.push(format!("{}: {}", krate, e))
+                Ok(()) => succeeded.push(krate),
+                Err(e) => {
+                    opts.config.shell().error(e)?;
+                    failed.push(krate)
+                }
             }
             first = false;
         }
 
-        writeln!(io::stderr(),
-                 "\n\nSUMMARY\n\nSuccessfully installed: {}\n\nErrors:\n\t{}",
-                 success.join(", "),
-                 errors.join("\n\t"))?;
+        if !succeeded.is_empty() {
+            opts.config.shell().status("Successfully installed", succeeded.join(", "))?;
+        }
+        if !failed.is_empty() {
+            opts.config.shell().status_with_color("Failed to install", failed.join(", "), Red)?;
+        }
     }
 
     // Print a warning that if this directory isn't in PATH that they won't be

@@ -72,14 +72,7 @@ fn multiple_pkgs() {
 [COMPILING] bar v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]bar[..]
-
-
-SUMMARY
-
-Successfully installed: foo, bar
-
-Errors:
-<tab>
+Successfully installed foo, bar
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         home = cargo_home().display())));
