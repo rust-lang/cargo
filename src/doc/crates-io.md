@@ -49,10 +49,15 @@ are there for the build to succeed. This behavior can be disabled with the
 `--no-verify` flag.
 
 Now’s a good time to take a look at the `*.crate` file to make sure you didn’t
-accidentally package up that 2GB video asset. There is currently a 10MB upload
-size limit on `*.crate` files. Cargo will automatically ignore files ignored by
-your version control system when packaging, but if you want to specify an extra
-set of files to ignore you can use the `exclude` key in the manifest:
+accidentally package up that 2GB video asset, or large data files used for code
+generation, integration tests, or benchmarking.  There is currently a 10MB
+upload size limit on `*.crate` files. So, if the size of `tests` and `benches`
+directories and their dependencies are up to a couple of MBs, you can keep them
+in your package; otherwsie, better to exclude them.
+
+Cargo will automatically ignore files ignored by your version control system
+when packaging, but if you want to specify an extra set of files to ignore you
+can use the `exclude` key in the manifest:
 
 ```toml
 [package]
@@ -66,7 +71,7 @@ exclude = [
 The syntax of each element in this array is what
 [rust-lang/glob](https://github.com/rust-lang/glob) accepts. If you’d rather
 roll with a whitelist instead of a blacklist, Cargo also supports an `include`
-key:
+key, which if set, overrides the `exclude` key:
 
 ```toml
 [package]
