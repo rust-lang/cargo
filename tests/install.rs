@@ -67,13 +67,11 @@ fn multiple_pkgs() {
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]foo[..]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 [DOWNLOADING] bar v0.0.1 (registry file://[..])
 [INSTALLING] bar v0.0.1
 [COMPILING] bar v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]bar[..]
-warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 
 
 SUMMARY
@@ -82,6 +80,7 @@ Successfully installed: foo, bar
 
 Errors:
 <tab>
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         home = cargo_home().display())));
     assert_that(cargo_home(), has_installed_exe("foo"));
