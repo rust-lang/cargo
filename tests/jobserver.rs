@@ -23,7 +23,7 @@ fn jobserver_exists() {
             use std::env;
 
             fn main() {
-                let var = env::var("MAKEFLAGS").unwrap();
+                let var = env::var("CARGO_MAKEFLAGS").unwrap();
                 let arg = var.split(' ')
                              .find(|p| p.starts_with("--jobserver"))
                              .unwrap();
