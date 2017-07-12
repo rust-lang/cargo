@@ -957,6 +957,9 @@ fn cfg_rustflags_normal_source() {
             [package]
             name = "foo"
             version = "0.0.1"
+
+            [features]
+            feat = []
         "#)
         .file("src/lib.rs", "")
         .file("src/bin/a.rs", "fn main() {}")
@@ -966,25 +969,72 @@ fn cfg_rustflags_normal_source() {
             #![feature(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }"#)
-        .file(".cargo/config", "
-            [target.'cfg(feature=\"feat\")']
-            rustflags = [\"-Z\", \"bogus\"]
-            ");
+        .file(".cargo/config", r#"
+            [target.'cfg(feature="feat")']
+            rustflags = ["-Z", "bogus"]
+        "#);
     p.build();
 
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+    assert_that(p.cargo("build").arg("--features").arg("feat")
                 .arg("--lib"),
                 execs().with_status(101));
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+    assert_that(p.cargo("build").arg("--features").arg("feat")
                 .arg("--bin=a"),
                 execs().with_status(101));
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+    assert_that(p.cargo("build").arg("--features").arg("feat")
                 .arg("--example=b"),
                 execs().with_status(101));
-    assert_that(p.cargo("test").arg("--features").arg("\"feat\""),
+    assert_that(p.cargo("test").arg("--features").arg("feat"),
                 execs().with_status(101));
-    assert_that(p.cargo("bench").arg("--features").arg("\"feat\""),
+    assert_that(p.cargo("bench").arg("--features").arg("feat"),
                 execs().with_status(101));
+}
+
+#[test]
+fn cfg_rustflags_always() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            verison = "0.0.1"
+        "#)
+        .file("src/main.rs", "
+            #[cfg(foo)]
+            fn main() {}
+        ")
+        .file(".cargo/config", r#"
+            [target.'cfg(not(feature="never_set"))']
+            rustflags = ["--cfg", "foo"]
+        "#);
+    p.build();
+
+    assert_that(p.cargo("build"),
+        execs().with_status(0));
+}
+
+#[test]
+fn cfg_rustflags_feature() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [features]
+            feat = []
+        "#)
+        .file("src/main.rs", "
+            #[cfg(foo)]
+            fn main() {}
+        ")
+        .file(".cargo/config", r#"
+            [target.'cfg(feature="feat")']
+            rustflags = ["--cfg", "foo"]
+        "#);
+    p.build();
+
+    assert_that(p.cargo("build").arg("--features").arg("feat"),
+        execs().with_status(0));
 }
 
 // target.'cfg(...)'.rustflags takes precedence over build.rustflags
@@ -995,29 +1045,32 @@ fn cfg_rustflags_precedence() {
             [package]
             name = "foo"
             version = "0.0.1"
+
+            [features]
+            feat = []
         "#)
         .file("src/lib.rs", "")
-        .file(".cargo/config", "
+        .file(".cargo/config", r#"
             [build]
-            rustflags = [\"--cfg\", \"foo\"]
+            rustflags = ["--cfg", "foo"]
 
-            [target.'cfg(feature = \"feat\"')]
-            rustflags = [\"-Z\", \"bogus\"]
-            ");
+            [target.'cfg(feature = "feat")']
+            rustflags = ["-Z", "bogus"]
+        "#);
     p.build();
 
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+    assert_that(p.cargo("build").arg("--features").arg("feat")
                 .arg("--lib"),
                 execs().with_status(101));
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+    assert_that(p.cargo("build").arg("--features").arg("feat")
                 .arg("--bin=a"),
                 execs().with_status(101));
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
+    assert_that(p.cargo("build").arg("--features").arg("feat")
                 .arg("--example=b"),
                 execs().with_status(101));
-    assert_that(p.cargo("test").arg("--features").arg("\"feat\""),
+    assert_that(p.cargo("test").arg("--features").arg("feat"),
                 execs().with_status(101));
-    assert_that(p.cargo("bench").arg("--features").arg("\"feat\""),
+    assert_that(p.cargo("bench").arg("--features").arg("feat"),
                 execs().with_status(101));
 }
 
