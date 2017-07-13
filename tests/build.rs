@@ -7,6 +7,7 @@ use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
 
+use cargo::util::paths::dylib_path_envvar;
 use cargo::util::process;
 use cargotest::{is_nightly, rustc_host, sleep_ms};
 use cargotest::support::paths::{CargoPathExt,root};
@@ -982,6 +983,47 @@ fn crate_authors_env_vars() {
     println!("test");
     assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0));
+}
+
+// Regression test for #4277
+#[test]
+fn crate_library_path_env_var() {
+    let mut p = project("foo");
+
+    p = p.file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", &format!(r##"
+            fn main() {{
+                let search_path = env!("{}");
+                let paths = std::env::split_paths(&search_path).collect::<Vec<_>>();
+                assert!(!paths.contains(&"".into()));
+            }}
+        "##, dylib_path_envvar()));
+
+    assert_that(p.cargo_process("run"), execs().with_status(0));
+}
+
+// Regression test for #4277
+#[test]
+fn build_with_fake_libc_not_loading() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {}
+        "#)
+        .file("src/lib.rs", r#" "#)
+        .file("libc.so.6", r#""#);
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
 }
 
 // this is testing that src/<pkg-name>.rs still works (for now)
