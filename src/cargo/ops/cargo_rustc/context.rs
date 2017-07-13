@@ -1049,11 +1049,18 @@ fn env_args(config: &Config,
     // ...including target.'cfg(...)'.rustflags
     if let Some(ref target_cfg) = target_info.cfg {
         if let Some(table) = config.get_table("target")? {
-            let cfgs = table.val.iter().map(|(t, _)| (CfgExpr::from_str(t), t))
-                .filter_map(|(c, n)| c.map(|c| (c, n)).ok())
-                .filter(|&(ref c, _)| c.matches(target_cfg));
-            for (_, n) in cfgs {
-                let key = format!("target.'{}'.{}", n, name);
+            let cfgs = table.val.keys().filter_map(|t| {
+                if t.starts_with("cfg(") && t.ends_with(")") {
+                    let cfg = &t[4..t.len() - 1];
+                    CfgExpr::from_str(cfg)
+                        .ok()
+                        .and_then(|c| if c.matches(target_cfg) { Some(t) } else { None })
+                } else {
+                    None
+                }
+            });
+            for n in cfgs {
+                let key = format!("target.{}.{}", n, name);
                 if let Some(args) = config.get_list_or_split_string(&key)? {
                     let args = args.val.into_iter();
                     rustflags.extend(args);
