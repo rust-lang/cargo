@@ -125,7 +125,7 @@ impl<'cfg> Compilation<'cfg> {
 
         let mut search_path = if is_host {
             let mut search_path = vec![self.plugins_dylib_path.clone()];
-            search_path.push(self.host_dylib_path.iter().collect());
+            search_path.extend(self.host_dylib_path.clone());
             search_path
         } else {
             let mut search_path =
@@ -133,7 +133,7 @@ impl<'cfg> Compilation<'cfg> {
                                                   &self.root_output);
             search_path.push(self.root_output.clone());
             search_path.push(self.deps_output.clone());
-            search_path.push(self.target_dylib_path.iter().collect());
+            search_path.extend(self.target_dylib_path.clone());
             search_path
         };
 
