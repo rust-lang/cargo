@@ -958,33 +958,55 @@ fn cfg_rustflags_normal_source() {
             name = "foo"
             version = "0.0.1"
         "#)
-        .file("src/lib.rs", "")
+        .file("src/lib.rs", "pub fn t() {}")
         .file("src/bin/a.rs", "fn main() {}")
         .file("examples/b.rs", "fn main() {}")
         .file("tests/c.rs", "#[test] fn f() { }")
-        .file("benches/d.rs", r#"
-            #![feature(test)]
-            extern crate test;
-            #[bench] fn run1(_ben: &mut test::Bencher) { }"#)
-        .file(".cargo/config", "
-            [target.'cfg(feature=\"feat\")']
-            rustflags = [\"-Z\", \"bogus\"]
-            ");
+        .file(".cargo/config", &format!(r#"
+            [target.'cfg({})']
+            rustflags = ["--cfg", "bar"]
+            "#, if rustc_host().contains("-windows-") {"windows"} else {"not(windows)"}));
     p.build();
-
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
-                .arg("--lib"),
-                execs().with_status(101));
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
-                .arg("--bin=a"),
-                execs().with_status(101));
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
-                .arg("--example=b"),
-                execs().with_status(101));
-    assert_that(p.cargo("test").arg("--features").arg("\"feat\""),
-                execs().with_status(101));
-    assert_that(p.cargo("bench").arg("--features").arg("\"feat\""),
-                execs().with_status(101));
+    
+    assert_that(p.cargo("build").arg("--lib").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg bar[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+    
+    assert_that(p.cargo("build").arg("--bin=a").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg bar[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+    
+    assert_that(p.cargo("build").arg("--example=b").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg bar[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+    
+    assert_that(p.cargo("test").arg("--no-run").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `rustc [..] --cfg bar[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+    
+    assert_that(p.cargo("bench").arg("--no-run").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `rustc [..] --cfg bar[..]`
+[FINISHED] release [optimized] target(s) in [..]
+"));
+                
 }
 
 // target.'cfg(...)'.rustflags takes precedence over build.rustflags
@@ -996,32 +1018,59 @@ fn cfg_rustflags_precedence() {
             name = "foo"
             version = "0.0.1"
         "#)
-        .file("src/lib.rs", "")
-        .file(".cargo/config", "
+        .file("src/lib.rs", "pub fn t() {}")
+        .file("src/bin/a.rs", "fn main() {}")
+        .file("examples/b.rs", "fn main() {}")
+        .file("tests/c.rs", "#[test] fn f() { }")
+        .file(".cargo/config", &format!(r#"
             [build]
-            rustflags = [\"--cfg\", \"foo\"]
+            rustflags = ["--cfg", "foo"]
 
-            [target.'cfg(feature = \"feat\"')]
-            rustflags = [\"-Z\", \"bogus\"]
-            ");
+            [target.'cfg({})']
+            rustflags = ["--cfg", "bar"]
+            "#, if rustc_host().contains("-windows-") { "windows" } else { "not(windows)" }));
     p.build();
 
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
-                .arg("--lib"),
-                execs().with_status(101));
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
-                .arg("--bin=a"),
-                execs().with_status(101));
-    assert_that(p.cargo("build").arg("--features").arg("\"feat\"")
-                .arg("--example=b"),
-                execs().with_status(101));
-    assert_that(p.cargo("test").arg("--features").arg("\"feat\""),
-                execs().with_status(101));
-    assert_that(p.cargo("bench").arg("--features").arg("\"feat\""),
-                execs().with_status(101));
+    assert_that(p.cargo("build").arg("--lib").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg bar[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    assert_that(p.cargo("build").arg("--bin=a").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg bar[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    assert_that(p.cargo("build").arg("--example=b").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg bar[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    assert_that(p.cargo("test").arg("--no-run").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `rustc [..] --cfg bar[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    assert_that(p.cargo("bench").arg("--no-run").arg("-v"),
+                execs().with_status(0).with_stderr("\
+[COMPILING] foo v0.0.1 ([..])
+[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `rustc [..] --cfg bar[..]`
+[RUNNING] `rustc [..] --cfg bar[..]`
+[FINISHED] release [optimized] target(s) in [..]
+"));
+                
 }
-
-
 
 #[test]
 fn target_rustflags_string_and_array_form1() {
