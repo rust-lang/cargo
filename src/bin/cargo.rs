@@ -65,6 +65,7 @@ Some common cargo commands are (see all commands with --list):
     search      Search registry for crates
     publish     Package and upload this project to the registry
     install     Install a Rust binary
+    uninstall   Uninstall a Rust binary
 
 See 'cargo help <command>' for more information on a specific command.
 ";
