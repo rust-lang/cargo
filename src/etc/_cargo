@@ -519,7 +519,7 @@ _benchmark_names()
     _get_names_from_array "bench"
 }
 
-# These flags are mutally exclusive specifiers for the scope of a command; as
+# These flags are mutually exclusive specifiers for the scope of a command; as
 # they are used in multiple places without change, they are expanded into the
 # appropriate command's `_arguments` where appropriate.
 set command_scope_spec
