@@ -1158,3 +1158,34 @@ fn bench_all_virtual_manifest() {
                        .with_stdout_contains("test bench_foo ... bench: [..]"));
 }
 
+// https://github.com/rust-lang/cargo/issues/4287
+#[test]
+fn legacy_bench_name() {
+    if !is_nightly() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [[bench]]
+            name = "bench"
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn foo() {}
+        "#)
+        .file("src/bench.rs", r#"
+            #![feature(test)]
+            extern crate test;
+
+            use test::Bencher;
+
+            #[bench]
+            fn bench_foo(_: &mut Bencher) -> () { () }
+        "#);
+
+    assert_that(p.cargo_process("bench"), execs().with_status(0).with_stderr_contains("\
+[WARNING] path `src[/]bench.rs` was erroneously implicitly accepted for benchmark bench,
+please set bench.path in Cargo.toml"));
+}
