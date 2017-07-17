@@ -51,7 +51,7 @@ pub fn targets(manifest: &TomlManifest,
     );
 
     targets.extend(
-        clean_benches(manifest.bench.as_ref(), package_root)?
+        clean_benches(manifest.bench.as_ref(), package_root, warnings)?
     );
 
     // processing the custom build script
@@ -175,26 +175,23 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
 
     let mut result = Vec::new();
     for bin in bins.iter() {
-        let path = match target_path(bin, &inferred, "bin", package_root) {
-            Ok(path) => path,
-            Err(e) => {
-                if let Some(legacy_path) = legacy_bin_path(package_root, &bin.name(), has_lib) {
-                    {
-                        let short_path = without_prefix(&legacy_path, package_root)
-                            .unwrap_or(&legacy_path);
+        let path = target_path(bin, &inferred, "bin", package_root, &mut |_| {
+            if let Some(legacy_path) = legacy_bin_path(package_root, &bin.name(), has_lib) {
+                {
+                    let short_path = without_prefix(&legacy_path, package_root)
+                        .unwrap_or(&legacy_path);
 
-                        warnings.push(format!(
-                            "path `{}` was erroneously implicitly accepted for binary {},\n\
-                             please set bin.path in Cargo.toml",
-                            short_path.display(), bin.name()
-                        ));
-                    }
-                    legacy_path
-                } else {
-                    return Err(e);
+                    warnings.push(format!(
+                        "path `{}` was erroneously implicitly accepted for binary {},\n\
+                         please set bin.path in Cargo.toml",
+                        short_path.display(), bin.name()
+                    ));
                 }
+                Some(legacy_path)
+            } else {
+                None
             }
-        };
+        })?;
 
         let mut target = Target::bin_target(&bin.name(), path,
                                             bin.required_features.clone());
@@ -263,10 +260,30 @@ fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
 }
 
 fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
-                 package_root: &Path) -> CargoResult<Vec<Target>> {
-    let targets = clean_targets("benchmark", "bench",
-                                toml_benches, inferred_benches(package_root),
-                                package_root)?;
+                 package_root: &Path,
+                 warnings: &mut Vec<String>) -> CargoResult<Vec<Target>> {
+    let mut legacy_bench_path = |bench: &TomlTarget| {
+        let legacy_path = package_root.join("src").join("bench.rs");
+        if !(bench.name() == "bench" && legacy_path.exists()) {
+            return None;
+        }
+        {
+            let short_path = without_prefix(&legacy_path, package_root)
+                .unwrap_or(&legacy_path);
+
+            warnings.push(format!(
+                "path `{}` was erroneously implicitly accepted for benchmark {},\n\
+                 please set bench.path in Cargo.toml",
+                short_path.display(), bench.name()
+            ));
+        }
+        Some(legacy_path)
+    };
+
+    let targets = clean_targets_with_legacy_path("benchmark", "bench",
+                                                 toml_benches, inferred_benches(package_root),
+                                                 package_root,
+                                                 &mut legacy_bench_path)?;
 
     let mut result = Vec::new();
     for (path, toml) in targets {
@@ -284,6 +301,19 @@ fn clean_targets(target_kind_human: &str, target_kind: &str,
                  inferred: Vec<(String, PathBuf)>,
                  package_root: &Path)
                  -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
+    clean_targets_with_legacy_path(target_kind_human, target_kind,
+                                   toml_targets,
+                                   inferred,
+                                   package_root,
+                                   &mut |_| None)
+}
+
+fn clean_targets_with_legacy_path(target_kind_human: &str, target_kind: &str,
+                                  toml_targets: Option<&Vec<TomlTarget>>,
+                                  inferred: Vec<(String, PathBuf)>,
+                                  package_root: &Path,
+                                  legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>)
+                                  -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
     let toml_targets = match toml_targets {
         Some(targets) => targets.clone(),
         None => inferred.iter().map(|&(ref name, ref path)| {
@@ -302,7 +332,7 @@ fn clean_targets(target_kind_human: &str, target_kind: &str,
     validate_unique_names(&toml_targets, target_kind)?;
     let mut result = Vec::new();
     for target in toml_targets {
-        let path = target_path(&target, &inferred, target_kind, package_root)?;
+        let path = target_path(&target, &inferred, target_kind, package_root, legacy_path)?;
         result.push((path, target));
     }
     Ok(result)
@@ -428,7 +458,8 @@ fn configure(toml: &TomlTarget, target: &mut Target) {
 fn target_path(target: &TomlTarget,
                inferred: &[(String, PathBuf)],
                target_kind: &str,
-               package_root: &Path) -> CargoResult<PathBuf> {
+               package_root: &Path,
+               legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>) -> CargoResult<PathBuf> {
     if let Some(ref path) = target.path {
         // Should we verify that this path exists here?
         return Ok(package_root.join(&path.0));
@@ -444,6 +475,10 @@ fn target_path(target: &TomlTarget,
     match (first, second) {
         (Some(path), None) => Ok(path),
         (None, None) | (Some(_), Some(_)) => {
+            if let Some(path) = legacy_path(target) {
+                return Ok(path);
+            }
+
             bail!("can't find `{name}` {target_kind}, specify {target_kind}.path",
                    name = name, target_kind = target_kind)
         }
