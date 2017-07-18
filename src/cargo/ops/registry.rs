@@ -44,10 +44,13 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         bail!("some crates cannot be published.\n\
                `{}` is marked as unpublishable", pkg.name());
     }
+    if pkg.manifest().patch().len() > 0 {
+        bail!("published crates cannot contain [patch] sections");
+    }
 
     let (mut registry, reg_id) = registry(opts.config,
-                                               opts.token.clone(),
-                                               opts.index.clone())?;
+                                          opts.token.clone(),
+                                          opts.index.clone())?;
     verify_dependencies(pkg, &reg_id)?;
 
     // Prepare a tarball, with a non-surpressable warning if metadata

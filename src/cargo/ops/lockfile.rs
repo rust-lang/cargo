@@ -72,6 +72,15 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
         emit_package(dep, &mut out);
     }
 
+    if let Some(patch) = toml.get("patch") {
+        let list = patch["unused"].as_array().unwrap();
+        for entry in list {
+            out.push_str("[[patch.unused]]\n");
+            emit_package(entry.as_table().unwrap(), &mut out);
+            out.push_str("\n");
+        }
+    }
+
     if let Some(meta) = toml.get("metadata") {
         out.push_str("[metadata]\n");
         out.push_str(&meta.to_string());
