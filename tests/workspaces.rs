@@ -1469,3 +1469,35 @@ Caused by:
 "));
 }
 
+#[test]
+fn include_and_exclude() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo"]
+            exclude = ["foo/bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", "")
+        .file("foo/bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/bar/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build").cwd(p.root().join("foo")),
+                execs().with_status(0));
+    assert_that(&p.root().join("target"), existing_dir());
+    assert_that(&p.root().join("foo/target"), is_not(existing_dir()));
+    assert_that(p.cargo("build").cwd(p.root().join("foo/bar")),
+                execs().with_status(0));
+    assert_that(&p.root().join("foo/bar/target"), existing_dir());
+}
