@@ -1186,6 +1186,6 @@ fn legacy_bench_name() {
         "#);
 
     assert_that(p.cargo_process("bench"), execs().with_status(0).with_stderr_contains("\
-[WARNING] path `src[/]bench.rs` was erroneously implicitly accepted for benchmark `bench`,
+[WARNING] path `[..]src[/]bench.rs` was erroneously implicitly accepted for benchmark `bench`,
 please set bench.path in Cargo.toml"));
 }
