@@ -104,13 +104,11 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
         (None, None) => {
             let legacy_path = package_root.join("src").join(format!("{}.rs", lib.name()));
             if legacy_path.exists() {
-                {
-                    warnings.push(format!(
-                        "path `{}` was erroneously implicitly accepted for library `{}`,\n\
-                         please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
-                        legacy_path.display(), lib.name()
-                    ));
-                }
+                warnings.push(format!(
+                    "path `{}` was erroneously implicitly accepted for library `{}`,\n\
+                     please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
+                    legacy_path.display(), lib.name()
+                ));
                 legacy_path
             } else {
                 bail!("can't find library `{}`, \
@@ -173,13 +171,11 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
     for bin in bins.iter() {
         let path = target_path(bin, &inferred, "bin", package_root, &mut |_| {
             if let Some(legacy_path) = legacy_bin_path(package_root, &bin.name(), has_lib) {
-                {
-                    warnings.push(format!(
-                        "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
-                         please set bin.path in Cargo.toml",
-                        legacy_path.display(), bin.name()
-                    ));
-                }
+                warnings.push(format!(
+                    "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
+                     please set bin.path in Cargo.toml",
+                    legacy_path.display(), bin.name()
+                ));
                 Some(legacy_path)
             } else {
                 None
@@ -260,13 +256,11 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
         if !(bench.name() == "bench" && legacy_path.exists()) {
             return None;
         }
-        {
-            warnings.push(format!(
-                "path `{}` was erroneously implicitly accepted for benchmark `{}`,\n\
-                 please set bench.path in Cargo.toml",
-                legacy_path.display(), bench.name()
-            ));
-        }
+        warnings.push(format!(
+            "path `{}` was erroneously implicitly accepted for benchmark `{}`,\n\
+             please set bench.path in Cargo.toml",
+            legacy_path.display(), bench.name()
+        ));
         Some(legacy_path)
     };
 
