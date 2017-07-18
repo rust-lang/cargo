@@ -19,6 +19,7 @@ extern crate fs2;
 extern crate git2;
 extern crate glob;
 extern crate hex;
+extern crate ignore;
 extern crate jobserver;
 extern crate libc;
 extern crate libgit2_sys;
