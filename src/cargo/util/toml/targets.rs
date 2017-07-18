@@ -16,7 +16,6 @@ use std::collections::HashSet;
 use core::Target;
 use ops::is_bad_artifact_name;
 use util::errors::CargoResult;
-use util::paths::without_prefix;
 use super::{TomlTarget, LibKind, PathValue, TomlManifest, StringOrBool,
             TomlLibTarget, TomlBinTarget, TomlBenchTarget, TomlExampleTarget, TomlTestTarget};
 
@@ -106,13 +105,10 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
             let legacy_path = package_root.join("src").join(format!("{}.rs", lib.name()));
             if legacy_path.exists() {
                 {
-                    let short_path = without_prefix(&legacy_path, package_root)
-                        .unwrap_or(&legacy_path);
-
                     warnings.push(format!(
                         "path `{}` was erroneously implicitly accepted for library `{}`,\n\
                          please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
-                        short_path.display(), lib.name()
+                        legacy_path.display(), lib.name()
                     ));
                 }
                 legacy_path
@@ -178,13 +174,10 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
         let path = target_path(bin, &inferred, "bin", package_root, &mut |_| {
             if let Some(legacy_path) = legacy_bin_path(package_root, &bin.name(), has_lib) {
                 {
-                    let short_path = without_prefix(&legacy_path, package_root)
-                        .unwrap_or(&legacy_path);
-
                     warnings.push(format!(
                         "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
                          please set bin.path in Cargo.toml",
-                        short_path.display(), bin.name()
+                        legacy_path.display(), bin.name()
                     ));
                 }
                 Some(legacy_path)
@@ -268,13 +261,10 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
             return None;
         }
         {
-            let short_path = without_prefix(&legacy_path, package_root)
-                .unwrap_or(&legacy_path);
-
             warnings.push(format!(
                 "path `{}` was erroneously implicitly accepted for benchmark `{}`,\n\
                  please set bench.path in Cargo.toml",
-                short_path.display(), bench.name()
+                legacy_path.display(), bench.name()
             ));
         }
         Some(legacy_path)
