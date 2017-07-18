@@ -110,7 +110,7 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
                         .unwrap_or(&legacy_path);
 
                     warnings.push(format!(
-                        "path `{}` was erroneously implicitly accepted for library {},\n\
+                        "path `{}` was erroneously implicitly accepted for library `{}`,\n\
                          please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
                         short_path.display(), lib.name()
                     ));
@@ -182,7 +182,7 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
                         .unwrap_or(&legacy_path);
 
                     warnings.push(format!(
-                        "path `{}` was erroneously implicitly accepted for binary {},\n\
+                        "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
                          please set bin.path in Cargo.toml",
                         short_path.display(), bin.name()
                     ));
@@ -272,7 +272,7 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
                 .unwrap_or(&legacy_path);
 
             warnings.push(format!(
-                "path `{}` was erroneously implicitly accepted for benchmark {},\n\
+                "path `{}` was erroneously implicitly accepted for benchmark `{}`,\n\
                  please set bench.path in Cargo.toml",
                 short_path.display(), bench.name()
             ));

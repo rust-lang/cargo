@@ -1047,7 +1047,7 @@ fn many_crate_types_old_style_lib_location() {
             pub fn foo() {}
         "#);
     assert_that(p.cargo_process("build"), execs().with_status(0).with_stderr_contains("\
-[WARNING] path `src[/]foo.rs` was erroneously implicitly accepted for library foo,
+[WARNING] path `src[/]foo.rs` was erroneously implicitly accepted for library `foo`,
 please rename the file to `src/lib.rs` or set lib.path in Cargo.toml"));
 
     assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
@@ -1402,7 +1402,7 @@ fn legacy_binary_paths_warinigs() {
         .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
-[WARNING] path `src[/]main.rs` was erroneously implicitly accepted for binary bar,
+[WARNING] path `src[/]main.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml"));
 
     let mut p = project("world");
@@ -1419,7 +1419,7 @@ please set bin.path in Cargo.toml"));
         .file("src/bin/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
-[WARNING] path `src[/]bin[/]main.rs` was erroneously implicitly accepted for binary bar,
+[WARNING] path `src[/]bin[/]main.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml"));
 
     let mut p = project("world");
@@ -1435,7 +1435,7 @@ please set bin.path in Cargo.toml"));
         .file("src/bar.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
-[WARNING] path `src[/]bar.rs` was erroneously implicitly accepted for binary bar,
+[WARNING] path `src[/]bar.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml"));
 }
 
