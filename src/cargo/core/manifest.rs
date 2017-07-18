@@ -5,6 +5,7 @@ use std::rc::Rc;
 
 use semver::Version;
 use serde::ser;
+use url::Url;
 
 use core::{Dependency, PackageId, Summary, SourceId, PackageIdSpec};
 use core::WorkspaceConfig;
@@ -28,6 +29,7 @@ pub struct Manifest {
     profiles: Profiles,
     publish: bool,
     replace: Vec<(PackageIdSpec, Dependency)>,
+    patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
     original: Rc<TomlManifest>,
 }
@@ -35,6 +37,7 @@ pub struct Manifest {
 #[derive(Clone, Debug)]
 pub struct VirtualManifest {
     replace: Vec<(PackageIdSpec, Dependency)>,
+    patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
     profiles: Profiles,
 }
@@ -225,6 +228,7 @@ impl Manifest {
                profiles: Profiles,
                publish: bool,
                replace: Vec<(PackageIdSpec, Dependency)>,
+               patch: HashMap<Url, Vec<Dependency>>,
                workspace: WorkspaceConfig,
                original: Rc<TomlManifest>) -> Manifest {
         Manifest {
@@ -238,6 +242,7 @@ impl Manifest {
             profiles: profiles,
             publish: publish,
             replace: replace,
+            patch: patch,
             workspace: workspace,
             original: original,
         }
@@ -257,6 +262,7 @@ impl Manifest {
     pub fn publish(&self) -> bool { self.publish }
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] { &self.replace }
     pub fn original(&self) -> &TomlManifest { &self.original }
+    pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> { &self.patch }
     pub fn links(&self) -> Option<&str> {
         self.links.as_ref().map(|s| &s[..])
     }
@@ -284,10 +290,12 @@ impl Manifest {
 
 impl VirtualManifest {
     pub fn new(replace: Vec<(PackageIdSpec, Dependency)>,
+               patch: HashMap<Url, Vec<Dependency>>,
                workspace: WorkspaceConfig,
                profiles: Profiles) -> VirtualManifest {
         VirtualManifest {
             replace: replace,
+            patch: patch,
             workspace: workspace,
             profiles: profiles,
         }
@@ -295,6 +303,10 @@ impl VirtualManifest {
 
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
         &self.replace
+    }
+
+    pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> {
+        &self.patch
     }
 
     pub fn workspace_config(&self) -> &WorkspaceConfig {

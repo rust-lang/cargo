@@ -258,6 +258,12 @@ impl Dependency {
             .set_source_id(id.source_id().clone())
     }
 
+    /// Returns whether this is a "locked" dependency, basically whether it has
+    /// an exact version req.
+    pub fn is_locked(&self) -> bool {
+        // Kind of a hack to figure this out, but it works!
+        self.inner.req.to_string().starts_with("=")
+    }
 
     /// Returns false if the dependency is only used to build the local package.
     pub fn is_transitive(&self) -> bool {
@@ -290,6 +296,12 @@ impl Dependency {
     /// Returns true if the package (`sum`) can fulfill this dependency request.
     pub fn matches(&self, sum: &Summary) -> bool {
         self.matches_id(sum.package_id())
+    }
+
+    /// Returns true if the package (`sum`) can fulfill this dependency request.
+    pub fn matches_ignoring_source(&self, sum: &Summary) -> bool {
+        self.name() == sum.package_id().name() &&
+            self.version_req().matches(sum.package_id().version())
     }
 
     /// Returns true if the package (`id`) can fulfill this dependency request.
