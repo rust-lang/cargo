@@ -182,7 +182,7 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
                         .unwrap_or(&legacy_path);
 
                     warnings.push(format!(
-                        "path `{}` was erroneously implicitly accepted for binary {},\n\
+                        "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
                          please set bin.path in Cargo.toml",
                         short_path.display(), bin.name()
                     ));
