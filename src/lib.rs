@@ -15,6 +15,10 @@
 /// This crate further provides two functions, `cargo_home` and
 /// `rustup_home`, which are the canonical way to determine the
 /// location that Cargo and rustup store their data.
+///
+/// See [rust-lang/rust#43321].
+///
+/// [rust-lang/rust#43321]: https://github.com/rust-lang/rust/issues/43321
 
 #[cfg(windows)]
 extern crate scopeguard;
