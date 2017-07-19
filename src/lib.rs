@@ -33,7 +33,7 @@ extern crate userenv;
 
 #[cfg(windows)]
 use winapi::DWORD;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::io;
 use std::env;
 
@@ -177,6 +177,11 @@ fn home_dir_() -> Option<PathBuf> {
 /// This function fails if it fails to retrieve the current directory,
 /// or if the home directory cannot be determined.
 pub fn cargo_home() -> io::Result<PathBuf> {
+    let cwd = env::current_dir()?;
+    cargo_home_with_cwd(&cwd)
+}
+
+pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
     let env_var = env::var_os("CARGO_HOME");
 
     // NB: During the multirust-rs -> rustup transition the install
@@ -198,7 +203,6 @@ pub fn cargo_home() -> io::Result<PathBuf> {
         None
     };
 
-    let cwd = env::current_dir()?;
     let env_cargo_home = env_var.map(|home| cwd.join(home));
     let home_dir = home_dir()
         .ok_or(io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
@@ -235,8 +239,12 @@ pub fn cargo_home() -> io::Result<PathBuf> {
 /// This function fails if it fails to retrieve the current directory,
 /// or if the home directory cannot be determined.
 pub fn rustup_home() -> io::Result<PathBuf> {
-    let env_var = env::var_os("RUSTUP_HOME");
     let cwd = env::current_dir()?;
+    rustup_home_with_cwd(&cwd)
+}
+
+pub fn rustup_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
+    let env_var = env::var_os("RUSTUP_HOME");
     let env_rustup_home = env_var.map(|home| cwd.join(home));
     let home_dir = home_dir()
         .ok_or(io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
