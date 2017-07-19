@@ -8,7 +8,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 
 use cargo::util::paths::dylib_path_envvar;
-use cargo::util::process;
+use cargo::util::{process, ProcessBuilder};
 use cargotest::{is_nightly, rustc_host, sleep_ms};
 use cargotest::support::paths::{CargoPathExt,root};
 use cargotest::support::{ProjectBuilder};
@@ -985,6 +985,18 @@ fn crate_authors_env_vars() {
                 execs().with_status(0));
 }
 
+// The tester may already have LD_LIBRARY_PATH=::/foo/bar which leads to a false positive error
+fn setenv_for_removing_empty_component(mut p: ProcessBuilder) -> ProcessBuilder {
+    let v = dylib_path_envvar();
+    if let Ok(search_path) = env::var(v) {
+        let new_search_path =
+            env::join_paths(env::split_paths(&search_path).filter(|e| !e.as_os_str().is_empty()))
+                .expect("join_paths");
+        p.env(v, new_search_path); // build_command() will override LD_LIBRARY_PATH accordingly
+    }
+    p
+}
+
 // Regression test for #4277
 #[test]
 fn crate_library_path_env_var() {
@@ -1004,7 +1016,8 @@ fn crate_library_path_env_var() {
             }}
         "##, dylib_path_envvar()));
 
-    assert_that(p.cargo_process("run"), execs().with_status(0));
+    assert_that(setenv_for_removing_empty_component(p.cargo_process("run")),
+                execs().with_status(0));
 }
 
 // Regression test for #4277
@@ -1023,7 +1036,8 @@ fn build_with_fake_libc_not_loading() {
         .file("src/lib.rs", r#" "#)
         .file("libc.so.6", r#""#);
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(setenv_for_removing_empty_component(p.cargo_process("build")),
+                execs().with_status(0));
 }
 
 // this is testing that src/<pkg-name>.rs still works (for now)
