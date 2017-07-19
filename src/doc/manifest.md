@@ -81,6 +81,20 @@ necessary source files may not be included.
 
 [globs]: http://doc.rust-lang.org/glob/glob/struct.Pattern.html
 
+### Migrating to `gitignore`-like pattern matching
+
+The current interpretation of these configs is based on UNIX Globs, as
+implemented in the [`glob` crate](https://crates.io/crates/glob). We want
+Cargo's `include` and `exclude` configs to work as similar to `gitignore` as
+possible. [The `gitignore` specification](https://git-scm.com/docs/gitignore) is
+also based on Globs, but has a bunch of additional features that enable easier
+pattern writing and more control. Therefore, we are migrating the interpretation
+for the rules of these configs to use the [`ignore`
+crate](https://crates.io/crates/ignore), and treat them each rule as a single
+line in a `gitignore` file. See [the tracking
+issue](https://github.com/rust-lang/cargo/issues/4268) for more details on the
+migration.
+
 ## The `publish`  field (optional)
 
 The `publish` field can be used to prevent a package from being published to a
