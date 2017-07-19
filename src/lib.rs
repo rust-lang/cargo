@@ -208,10 +208,22 @@ pub fn cargo_home_with_cwd(cwd: &Path) -> io::Result<PathBuf> {
         .ok_or(io::Error::new(io::ErrorKind::Other, "couldn't find home dir"));
     let user_home = home_dir.map(|p| p.join(".cargo"));
 
+    // Compatibility with old cargo that used the std definition of home_dir
+    let compat_home_dir = ::std::env::home_dir();
+    let compat_user_home = compat_home_dir.map(|p| p.join(".cargo"));
+    
     if let Some(p) = env_cargo_home {
         Ok(p)
     } else {
-        user_home
+        if let Some(d) = compat_user_home {
+            if d.exists() {
+                Ok(d)
+            } else {
+                user_home
+            }                
+        } else {
+            user_home
+        }
     }
 }
 
