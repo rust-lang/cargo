@@ -80,6 +80,15 @@ let out_dir = env::var("OUT_DIR").unwrap();
                            built, this environment variable will be present
                            where `<name>` is the name of the feature uppercased
                            and having `-` translated to `_`.
+* `CARGO_CFG_<cfg>` - For each [configuration option][configuration] of the
+                      package being built, this environment variable will
+                      contain the value of the configuration, where `<cfg>` is
+                      the name of the configuration uppercased and having `-`
+                      translated to `_`.
+                      Boolean configurations are present if they are set, and
+                      not present otherwise.
+                      Configurations with multiple values are joined to a
+                      single variable with the values delimited by `,`.
 * `OUT_DIR` - the folder in which all output should be placed. This folder is
               inside the build directory for the package being built, and it is
               unique for the package in question.
@@ -107,6 +116,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 
 [links]: build-script.html#the-links-manifest-key
 [profile]: manifest.html#the-profile-sections
+[configuration]: https://doc.rust-lang.org/reference/attributes.html#conditional-compilation
 [clang]:http://clang.llvm.org/docs/CrossCompilation.html#target-triple
 [jobserver]: http://make.mad-scientist.net/papers/jobserver-implementation/
 
