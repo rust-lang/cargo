@@ -4,7 +4,7 @@ use cargo;
 use cargo::util::{CliResult, Config};
 
 #[derive(Deserialize)]
-pub struct Options {}
+pub struct Options;
 
 pub const USAGE: &'static str = "
 Show version information
