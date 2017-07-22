@@ -23,8 +23,8 @@ fn env_rustflags_normal_source() {
         .file("benches/d.rs", r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run1(_ben: &mut test::Bencher) { }"#);
-    p.build();
+            #[bench] fn run1(_ben: &mut test::Bencher) { }"#)
+        .build();
 
     // Use RUSTFLAGS to pass an argument that will generate an error
     assert_that(p.cargo("build").env("RUSTFLAGS", "-Z bogus")
@@ -59,8 +59,8 @@ fn env_rustflags_build_script() {
             fn main() { }
             #[cfg(not(foo))]
             fn main() { }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
@@ -84,8 +84,9 @@ fn env_rustflags_build_script_dep() {
         .file("src/lib.rs", "")
         .file("build.rs", r#"
             fn main() { }
-        "#);
-    let bar = project("bar")
+        "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -95,9 +96,8 @@ fn env_rustflags_build_script_dep() {
             fn bar() { }
             #[cfg(not(foo))]
             fn bar() { }
-        "#);
-    foo.build();
-    bar.build();
+        "#)
+        .build();
 
     assert_that(foo.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
@@ -122,8 +122,8 @@ fn env_rustflags_plugin() {
             fn main() { }
             #[cfg(not(foo))]
             fn main() { }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
@@ -149,8 +149,9 @@ fn env_rustflags_plugin_dep() {
         "#)
         .file("src/lib.rs", r#"
             fn foo() { }
-        "#);
-    let bar = project("bar")
+        "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -163,9 +164,8 @@ fn env_rustflags_plugin_dep() {
             fn bar() { }
             #[cfg(not(foo))]
             fn bar() { }
-        "#);
-    foo.build();
-    bar.build();
+        "#)
+        .build();
 
     assert_that(foo.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
@@ -186,8 +186,8 @@ fn env_rustflags_normal_source_with_target() {
         .file("benches/d.rs", r#"
             #![feature(test)]
             extern crate test;
-            #[bench] fn run1(_ben: &mut test::Bencher) { }"#);
-    p.build();
+            #[bench] fn run1(_ben: &mut test::Bencher) { }"#)
+        .build();
 
     let host = &rustc_host();
 
@@ -226,8 +226,8 @@ fn env_rustflags_build_script_with_target() {
             fn main() { }
             #[cfg(foo)]
             fn main() { }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     let host = rustc_host();
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo")
@@ -253,8 +253,9 @@ fn env_rustflags_build_script_dep_with_target() {
         .file("src/lib.rs", "")
         .file("build.rs", r#"
             fn main() { }
-        "#);
-    let bar = project("bar")
+        "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -264,9 +265,8 @@ fn env_rustflags_build_script_dep_with_target() {
             fn bar() { }
             #[cfg(foo)]
             fn bar() { }
-        "#);
-    foo.build();
-    bar.build();
+        "#)
+        .build();
 
     let host = rustc_host();
     assert_that(foo.cargo("build").env("RUSTFLAGS", "--cfg foo")
@@ -293,8 +293,8 @@ fn env_rustflags_plugin_with_target() {
             fn main() { }
             #[cfg(foo)]
             fn main() { }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     let host = rustc_host();
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo")
@@ -322,8 +322,9 @@ fn env_rustflags_plugin_dep_with_target() {
         "#)
         .file("src/lib.rs", r#"
             fn foo() { }
-        "#);
-    let bar = project("bar")
+        "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -336,9 +337,8 @@ fn env_rustflags_plugin_dep_with_target() {
             fn bar() { }
             #[cfg(foo)]
             fn bar() { }
-        "#);
-    foo.build();
-    bar.build();
+        "#)
+        .build();
 
     let host = rustc_host();
     assert_that(foo.cargo("build").env("RUSTFLAGS", "--cfg foo")
@@ -354,8 +354,8 @@ fn env_rustflags_recompile() {
             name = "foo"
             version = "0.0.1"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -372,8 +372,8 @@ fn env_rustflags_recompile2() {
             name = "foo"
             version = "0.0.1"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
@@ -390,8 +390,8 @@ fn env_rustflags_no_recompile() {
             name = "foo"
             version = "0.0.1"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
@@ -418,8 +418,8 @@ fn build_rustflags_normal_source() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["-Z", "bogus"]
-            "#);
-    p.build();
+            "#)
+        .build();
 
     assert_that(p.cargo("build")
                 .arg("--lib"),
@@ -457,8 +457,8 @@ fn build_rustflags_build_script() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["--cfg", "foo"]
-            "#);
-    p.build();
+            "#)
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -486,8 +486,9 @@ fn build_rustflags_build_script_dep() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["--cfg", "foo"]
-            "#);
-    let bar = project("bar")
+            "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -497,9 +498,8 @@ fn build_rustflags_build_script_dep() {
             fn bar() { }
             #[cfg(not(foo))]
             fn bar() { }
-        "#);
-    foo.build();
-    bar.build();
+        "#)
+        .build();
 
     assert_that(foo.cargo("build"),
                 execs().with_status(0));
@@ -528,8 +528,8 @@ fn build_rustflags_plugin() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["--cfg", "foo"]
-            "#);
-    p.build();
+            "#)
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -559,8 +559,9 @@ fn build_rustflags_plugin_dep() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["--cfg", "foo"]
-            "#);
-    let bar = project("bar")
+            "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -573,9 +574,8 @@ fn build_rustflags_plugin_dep() {
             fn bar() { }
             #[cfg(not(foo))]
             fn bar() { }
-        "#);
-    foo.build();
-    bar.build();
+        "#)
+        .build();
 
     assert_that(foo.cargo("build"),
                 execs().with_status(0));
@@ -600,8 +600,8 @@ fn build_rustflags_normal_source_with_target() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["-Z", "bogus"]
-            "#);
-    p.build();
+            "#)
+        .build();
 
     let ref host = rustc_host();
 
@@ -644,8 +644,8 @@ fn build_rustflags_build_script_with_target() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["--cfg", "foo"]
-            "#);
-    p.build();
+            "#)
+        .build();
 
     let host = rustc_host();
     assert_that(p.cargo("build")
@@ -675,8 +675,9 @@ fn build_rustflags_build_script_dep_with_target() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["--cfg", "foo"]
-            "#);
-    let bar = project("bar")
+            "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -686,9 +687,8 @@ fn build_rustflags_build_script_dep_with_target() {
             fn bar() { }
             #[cfg(foo)]
             fn bar() { }
-        "#);
-    foo.build();
-    bar.build();
+        "#)
+        .build();
 
     let host = rustc_host();
     assert_that(foo.cargo("build")
@@ -719,8 +719,8 @@ fn build_rustflags_plugin_with_target() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["--cfg", "foo"]
-            "#);
-    p.build();
+            "#)
+        .build();
 
     let host = rustc_host();
     assert_that(p.cargo("build")
@@ -752,8 +752,9 @@ fn build_rustflags_plugin_dep_with_target() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["--cfg", "foo"]
-            "#);
-    let bar = project("bar")
+            "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -766,9 +767,8 @@ fn build_rustflags_plugin_dep_with_target() {
             fn bar() { }
             #[cfg(foo)]
             fn bar() { }
-        "#);
-    foo.build();
-    bar.build();
+        "#)
+        .build();
 
     let host = rustc_host();
     assert_that(foo.cargo("build")
@@ -784,8 +784,8 @@ fn build_rustflags_recompile() {
             name = "foo"
             version = "0.0.1"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -812,8 +812,8 @@ fn build_rustflags_recompile2() {
             name = "foo"
             version = "0.0.1"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
@@ -844,8 +844,8 @@ fn build_rustflags_no_recompile() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["--cfg", "foo"]
-            "#);
-    p.build();
+            "#)
+        .build();
 
     assert_that(p.cargo("build").env("RUSTFLAGS", "--cfg foo"),
                 execs().with_status(0));
@@ -872,8 +872,8 @@ fn build_rustflags_with_home_config() {
             name = "foo"
             version = "0.0.1"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
@@ -898,8 +898,8 @@ fn target_rustflags_normal_source() {
         .file(".cargo/config", &format!("
             [target.{}]
             rustflags = [\"-Z\", \"bogus\"]
-            ", rustc_host()));
-    p.build();
+            ", rustc_host()))
+        .build();
 
     assert_that(p.cargo("build")
                 .arg("--lib"),
@@ -932,8 +932,8 @@ fn target_rustflags_precedence() {
 
             [target.{}]
             rustflags = [\"-Z\", \"bogus\"]
-            ", rustc_host()));
-    p.build();
+            ", rustc_host()))
+        .build();
 
     assert_that(p.cargo("build")
                 .arg("--lib"),
@@ -965,9 +965,9 @@ fn cfg_rustflags_normal_source() {
         .file(".cargo/config", &format!(r#"
             [target.'cfg({})']
             rustflags = ["--cfg", "bar"]
-            "#, if rustc_host().contains("-windows-") {"windows"} else {"not(windows)"}));
-    p.build();
-    
+            "#, if rustc_host().contains("-windows-") {"windows"} else {"not(windows)"}))
+        .build();
+
     assert_that(p.cargo("build").arg("--lib").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
@@ -1028,8 +1028,8 @@ fn cfg_rustflags_precedence() {
 
             [target.'cfg({})']
             rustflags = ["--cfg", "bar"]
-            "#, if rustc_host().contains("-windows-") { "windows" } else { "not(windows)" }));
-    p.build();
+            "#, if rustc_host().contains("-windows-") { "windows" } else { "not(windows)" }))
+        .build();
 
     assert_that(p.cargo("build").arg("--lib").arg("-v"),
                 execs().with_status(0).with_stderr("\
@@ -1084,8 +1084,8 @@ fn target_rustflags_string_and_array_form1() {
         .file(".cargo/config", r#"
             [build]
             rustflags = ["--cfg", "foo"]
-            "#);
-    p1.build();
+            "#)
+        .build();
 
     assert_that(p1.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr("\
@@ -1104,8 +1104,8 @@ fn target_rustflags_string_and_array_form1() {
         .file(".cargo/config", r#"
             [build]
             rustflags = "--cfg foo"
-            "#);
-    p2.build();
+            "#)
+        .build();
 
     assert_that(p2.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr("\
@@ -1128,8 +1128,8 @@ fn target_rustflags_string_and_array_form2() {
             [target.{}]
             rustflags = ["--cfg", "foo"]
         "#, rustc_host()))
-        .file("src/lib.rs", "");
-    p1.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p1.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr("\
@@ -1148,8 +1148,8 @@ fn target_rustflags_string_and_array_form2() {
             [target.{}]
             rustflags = "--cfg foo"
         "#, rustc_host()))
-        .file("src/lib.rs", "");
-    p2.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p2.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr("\

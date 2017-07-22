@@ -31,9 +31,10 @@ fn simple() {
         .file("src/main.rs", r#"
             fn main() { println!("hello"); }
         "#)
-        .file("src/bar.txt", ""); // should be ignored when packaging
+        .file("src/bar.txt", "") // should be ignored when packaging
+        .build();
 
-    assert_that(p.cargo_process("package"),
+    assert_that(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 [WARNING] manifest has no documentation[..]
 See [..]
@@ -79,8 +80,9 @@ fn metadata_warning() {
         "#)
         .file("src/main.rs", r#"
             fn main() {}
-        "#);
-    assert_that(p.cargo_process("package"),
+        "#)
+        .build();
+    assert_that(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 warning: manifest has no description, license, license-file, documentation, \
 homepage or repository.
@@ -102,8 +104,9 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         "#)
         .file("src/main.rs", r#"
             fn main() {}
-        "#);
-    assert_that(p.cargo_process("package"),
+        "#)
+        .build();
+    assert_that(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 warning: manifest has no description, documentation, homepage or repository.
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -126,8 +129,9 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         "#)
         .file("src/main.rs", r#"
             fn main() {}
-        "#);
-    assert_that(p.cargo_process("package"),
+        "#)
+        .build();
+    assert_that(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
@@ -156,8 +160,8 @@ fn package_verbose() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
-    p.build();
+        .file("a/src/lib.rs", "")
+        .build();
     let mut cargo = cargo_process();
     cargo.cwd(p.root());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
@@ -195,8 +199,9 @@ fn package_verification() {
         "#)
         .file("src/main.rs", r#"
             fn main() {}
-        "#);
-    assert_that(p.cargo_process("build"),
+        "#)
+        .build();
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
     assert_that(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
@@ -231,9 +236,10 @@ fn path_dependency_no_version() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "");
+        .file("bar/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("package"),
+    assert_that(p.cargo("package"),
                 execs().with_status(101).with_stderr("\
 [WARNING] manifest has no documentation, homepage or repository.
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -307,9 +313,9 @@ fn exclude() {
         .file("some_dir/dir_deep_3/some_dir/file", "")
         .file("some_dir/dir_deep_4/some_dir/file", "")
         .file("some_dir/dir_deep_5/some_dir/file", "")
-        ;
+        .build();
 
-    assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
+    assert_that(p.cargo("package").arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stdout("").with_stderr("\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -390,9 +396,10 @@ fn include() {
         .file("src/main.rs", r#"
             fn main() { println!("hello"); }
         "#)
-        .file("src/bar.txt", ""); // should be ignored when packaging
+        .file("src/bar.txt", "") // should be ignored when packaging
+        .build();
 
-    assert_that(p.cargo_process("package").arg("--no-verify").arg("-v"),
+    assert_that(p.cargo("package").arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -416,9 +423,10 @@ fn package_lib_with_bin() {
             extern crate foo;
             fn main() {}
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("package").arg("-v"),
+    assert_that(p.cargo("package").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -466,8 +474,8 @@ fn no_duplicates_from_modified_tracked_files() {
         "#)
         .file("src/main.rs", r#"
             fn main() {}
-        "#);
-    p.build();
+        "#)
+        .build();
     File::create(p.root().join("src/main.rs")).unwrap().write_all(br#"
             fn main() { println!("A change!"); }
         "#).unwrap();
@@ -500,9 +508,10 @@ fn ignore_nested() {
         // If a project happens to contain a copy of itself, we should
         // ignore it.
         .file("a_dir/nested/Cargo.toml", cargo_toml)
-        .file("a_dir/nested/src/main.rs", main_rs);
+        .file("a_dir/nested/src/main.rs", main_rs)
+        .build();
 
-    assert_that(p.cargo_process("package"),
+    assert_that(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 [WARNING] manifest has no documentation[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -550,9 +559,10 @@ fn package_weird_characters() {
         .file("src/main.rs", r#"
             fn main() { println!("hello"); }
         "#)
-        .file("src/:foo", "");
+        .file("src/:foo", "")
+        .build();
 
-    assert_that(p.cargo_process("package"),
+    assert_that(p.cargo("package"),
                 execs().with_status(101).with_stderr("\
 warning: [..]
 See [..]
@@ -575,9 +585,10 @@ fn repackage_on_source_change() {
         "#)
         .file("src/main.rs", r#"
             fn main() { println!("hello"); }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("package"),
+    assert_that(p.cargo("package"),
                 execs().with_status(0));
 
     // Add another source file
@@ -636,8 +647,8 @@ fn broken_symlink() {
         "#)
         .file("src/main.rs", r#"
             fn main() { println!("hello"); }
-        "#);
-    p.build();
+        "#)
+        .build();
     t!(fs::symlink("nowhere", &p.root().join("src/foo.rs")));
 
     assert_that(p.cargo("package").arg("-v"),
@@ -655,11 +666,10 @@ Caused by:
 
 #[test]
 fn do_not_package_if_repository_is_dirty() {
-    let p = project("foo");
-    p.build();
+    let p = project("foo").build();
 
     // Create a Git repository containing a minimal Rust project.
-    git::repo(&paths::root().join("foo"))
+    let _ = git::repo(&paths::root().join("foo"))
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -731,9 +741,10 @@ fn generated_manifest() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "");
+        .file("bar/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("package").arg("--no-verify"),
+    assert_that(p.cargo("package").arg("--no-verify"),
                 execs().with_status(0));
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -809,8 +820,8 @@ fn ignore_workspace_specifier() {
             authors = []
             workspace = ".."
         "#)
-        .file("bar/src/lib.rs", "");
-    p.build();
+        .file("bar/src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("package").arg("--no-verify").cwd(p.root().join("bar")),
                 execs().with_status(0));
@@ -861,8 +872,9 @@ fn package_two_kinds_of_deps() {
             other = "1.0"
             other1 = { version = "1.0" }
         "#)
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("package").arg("--no-verify"),
+    assert_that(p.cargo("package").arg("--no-verify"),
                 execs().with_status(0));
 }

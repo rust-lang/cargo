@@ -10,10 +10,11 @@ use hamcrest::{assert_that, existing_dir, existing_file, is_not};
 #[test]
 fn cargo_clean_simple() {
     let p = project("foo")
-              .file("Cargo.toml", &basic_bin_manifest("foo"))
-              .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(&p.build_dir(), existing_dir());
 
     assert_that(p.cargo("clean"),
@@ -24,11 +25,12 @@ fn cargo_clean_simple() {
 #[test]
 fn different_dir() {
     let p = project("foo")
-              .file("Cargo.toml", &basic_bin_manifest("foo"))
-              .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
-              .file("src/bar/a.rs", "");
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("src/bar/a.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(&p.build_dir(), existing_dir());
 
     assert_that(p.cargo("clean").cwd(&p.root().join("src")),
@@ -73,9 +75,10 @@ fn clean_multiple_packages() {
             [[bin]]
                 name = "d2"
         "#)
-        .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }");
+        .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-p").arg("d1").arg("-p").arg("d2")
+    assert_that(p.cargo("build").arg("-p").arg("d1").arg("-p").arg("d2")
                                         .arg("-p").arg("foo"),
                 execs().with_status(0));
 
@@ -116,8 +119,8 @@ fn clean_release() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
-    p.build();
+        .file("a/src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build").arg("--release"),
                 execs().with_status(0));
@@ -160,8 +163,8 @@ fn build_script() {
                 }
             }
         "#)
-        .file("a/src/lib.rs", "");
-    p.build();
+        .file("a/src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build").env("FIRST", "1"),
                 execs().with_status(0));
@@ -199,8 +202,8 @@ fn clean_git() {
             [dependencies]
             dep = {{ git = '{}' }}
         "#, git.url()))
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -222,8 +225,8 @@ fn registry() {
             [dependencies]
             bar = "0.1"
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     Package::new("bar", "0.1.0").publish();
 

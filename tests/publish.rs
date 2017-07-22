@@ -27,9 +27,10 @@ fn simple() {
             license = "MIT"
             description = "foo"
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("publish").arg("--no-verify")
+    assert_that(p.cargo("publish").arg("--no-verify")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
@@ -83,9 +84,10 @@ fn simple_with_host() {
             license = "MIT"
             description = "foo"
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("publish").arg("--no-verify")
+    assert_that(p.cargo("publish").arg("--no-verify")
                  .arg("--host").arg(publish::registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [WARNING] The flag '--host' is no longer valid.
@@ -149,9 +151,10 @@ fn simple_with_index_and_host() {
             license = "MIT"
             description = "foo"
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("publish").arg("--no-verify")
+    assert_that(p.cargo("publish").arg("--no-verify")
                  .arg("--index").arg(publish::registry().to_string())
                  .arg("--host").arg(publish::registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
@@ -217,9 +220,10 @@ fn git_deps() {
             [dependencies.foo]
             git = "git://path/to/nowhere"
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("publish").arg("-v").arg("--no-verify")
+    assert_that(p.cargo("publish").arg("-v").arg("--no-verify")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
@@ -254,9 +258,10 @@ fn path_dependency_no_version() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "");
+        .file("bar/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("publish")
+    assert_that(p.cargo("publish")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
@@ -279,9 +284,10 @@ fn unpublishable_crate() {
             description = "foo"
             publish = false
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("publish")
+    assert_that(p.cargo("publish")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
@@ -293,10 +299,10 @@ fn unpublishable_crate() {
 fn dont_publish_dirty() {
     publish::setup();
     let p = project("foo")
-        .file("bar", "");
-    p.build();
+        .file("bar", "")
+        .build();
 
-    repo(&paths::root().join("foo"))
+    let _ = repo(&paths::root().join("foo"))
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -328,10 +334,9 @@ to proceed despite this, pass the `--allow-dirty` flag
 fn publish_clean() {
     publish::setup();
 
-    let p = project("foo");
-    p.build();
+    let p = project("foo").build();
 
-    repo(&paths::root().join("foo"))
+    let _ = repo(&paths::root().join("foo"))
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -356,10 +361,10 @@ fn publish_in_sub_repo() {
     publish::setup();
 
     let p = project("foo")
-        .file("baz", "");
-    p.build();
+        .file("baz", "")
+        .build();
 
-    repo(&paths::root().join("foo"))
+    let _ = repo(&paths::root().join("foo"))
         .file("bar/Cargo.toml", r#"
             [project]
             name = "foo"
@@ -384,10 +389,10 @@ fn publish_when_ignored() {
     publish::setup();
 
     let p = project("foo")
-        .file("baz", "");
-    p.build();
+        .file("baz", "")
+        .build();
 
-    repo(&paths::root().join("foo"))
+    let _ = repo(&paths::root().join("foo"))
         .file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -413,10 +418,10 @@ fn ignore_when_crate_ignored() {
     publish::setup();
 
     let p = project("foo")
-        .file("bar/baz", "");
-    p.build();
+        .file("bar/baz", "")
+        .build();
 
-    repo(&paths::root().join("foo"))
+    let _ = repo(&paths::root().join("foo"))
         .file(".gitignore", "bar")
         .nocommit_file("bar/Cargo.toml", r#"
             [project]
@@ -440,10 +445,10 @@ fn new_crate_rejected() {
     publish::setup();
 
     let p = project("foo")
-        .file("baz", "");
-    p.build();
+        .file("baz", "")
+        .build();
 
-    repo(&paths::root().join("foo"))
+    let _ = repo(&paths::root().join("foo"))
         .nocommit_file("Cargo.toml", r#"
             [project]
             name = "foo"
@@ -474,9 +479,10 @@ fn dry_run() {
             license = "MIT"
             description = "foo"
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("publish").arg("--dry-run")
+    assert_that(p.cargo("publish").arg("--dry-run")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`

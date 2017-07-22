@@ -8,9 +8,10 @@ use hamcrest::{assert_that, existing_file};
 fn build_dep_info() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
 
     let depinfo_bin_path = &p.bin("foo").with_extension("d");
 
@@ -31,9 +32,10 @@ fn build_dep_info_lib() {
             crate-type = ["lib"]
         "#)
         .file("src/lib.rs", "")
-        .file("examples/ex.rs", "");
+        .file("examples/ex.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--example=ex"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("--example=ex"), execs().with_status(0));
     assert_that(&p.example_lib("ex", "lib").with_extension("d"), existing_file());
 }
 
@@ -52,9 +54,10 @@ fn build_dep_info_rlib() {
             crate-type = ["rlib"]
         "#)
         .file("src/lib.rs", "")
-        .file("examples/ex.rs", "");
+        .file("examples/ex.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--example=ex"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("--example=ex"), execs().with_status(0));
     assert_that(&p.example_lib("ex", "rlib").with_extension("d"), existing_file());
 }
 
@@ -72,8 +75,9 @@ fn build_dep_info_dylib() {
             crate-type = ["dylib"]
         "#)
         .file("src/lib.rs", "")
-        .file("examples/ex.rs", "");
+        .file("examples/ex.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--example=ex"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("--example=ex"), execs().with_status(0));
     assert_that(&p.example_lib("ex", "dylib").with_extension("d"), existing_file());
 }

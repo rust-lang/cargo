@@ -1,10 +1,10 @@
 extern crate cargotest;
 extern crate hamcrest;
 
-use cargotest::support::{basic_bin_manifest, execs, project, ProjectBuilder};
+use cargotest::support::{basic_bin_manifest, execs, project, Project};
 use hamcrest::{assert_that};
 
-fn verbose_output_for_lib(p: &ProjectBuilder) -> String {
+fn verbose_output_for_lib(p: &Project) -> String {
     format!("\
 [COMPILING] {name} v{version} ({url})
 [RUNNING] `rustc --crate-name {name} src[/]lib.rs --crate-type lib \
@@ -31,9 +31,10 @@ fn build_lib_only() {
         .file("src/main.rs", r#"
             fn main() {}
         "#)
-        .file("src/lib.rs", r#" "#);
+        .file("src/lib.rs", r#" "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--lib").arg("-v"),
+    assert_that(p.cargo("build").arg("--lib").arg("-v"),
                 execs()
                 .with_status(0)
                 .with_stderr(verbose_output_for_lib(&p)));
@@ -46,9 +47,10 @@ fn build_with_no_lib() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", r#"
             fn main() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--lib"),
+    assert_that(p.cargo("build").arg("--lib"),
                 execs().with_status(101)
                        .with_stderr("[ERROR] no library targets found"));
 }
@@ -77,9 +79,10 @@ fn build_with_relative_cargo_home_path() {
             name = "test-dependency"
             version = "0.0.1"
             authors = ["wycats@example.com"]
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").env("CARGO_HOME", "./cargo_home/"),
+    assert_that(p.cargo("build").env("CARGO_HOME", "./cargo_home/"),
                 execs()
                 .with_status(0));
 }

@@ -28,9 +28,10 @@ static MANIFEST_OUTPUT: &'static str = r#"
 fn cargo_read_manifest_path_to_cargo_toml_relative() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
 
-    assert_that(p.cargo_process("read-manifest")
+    assert_that(p.cargo("read-manifest")
                  .arg("--manifest-path").arg("foo/Cargo.toml")
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(0)
@@ -41,9 +42,10 @@ fn cargo_read_manifest_path_to_cargo_toml_relative() {
 fn cargo_read_manifest_path_to_cargo_toml_absolute() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
 
-    assert_that(p.cargo_process("read-manifest")
+    assert_that(p.cargo("read-manifest")
                  .arg("--manifest-path").arg(p.root().join("Cargo.toml"))
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(0)
@@ -54,9 +56,10 @@ fn cargo_read_manifest_path_to_cargo_toml_absolute() {
 fn cargo_read_manifest_path_to_cargo_toml_parent_relative() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
 
-    assert_that(p.cargo_process("read-manifest")
+    assert_that(p.cargo("read-manifest")
                  .arg("--manifest-path").arg("foo")
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
@@ -68,9 +71,10 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_relative() {
 fn cargo_read_manifest_path_to_cargo_toml_parent_absolute() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
 
-    assert_that(p.cargo_process("read-manifest")
+    assert_that(p.cargo("read-manifest")
                  .arg("--manifest-path").arg(p.root())
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
@@ -82,9 +86,10 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_absolute() {
 fn cargo_read_manifest_cwd() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]));
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
 
-    assert_that(p.cargo_process("read-manifest")
+    assert_that(p.cargo("read-manifest")
                  .cwd(p.root()),
                 execs().with_status(0)
                        .with_json(MANIFEST_OUTPUT));
