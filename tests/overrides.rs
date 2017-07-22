@@ -18,8 +18,8 @@ fn override_simple() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn foo() {}");
-    foo.build();
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -39,9 +39,10 @@ fn override_simple() {
             pub fn bar() {
                 foo::foo();
             }
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -66,9 +67,10 @@ fn missing_version() {
             [replace]
             foo = { git = 'https://example.com' }
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 
@@ -92,9 +94,10 @@ fn invalid_semver_version() {
             [replace]
             "foo:*" = { git = 'https://example.com' }
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
 error: failed to parse manifest at `[..]`
 
@@ -121,9 +124,10 @@ fn different_version() {
             [replace]
             "foo:0.1.0" = "0.2.0"
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 
@@ -147,8 +151,8 @@ fn transitive() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn foo() {}");
-    foo.build();
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -163,9 +167,10 @@ fn transitive() {
             [replace]
             "foo:0.1.0" = {{ git = '{}' }}
         "#, foo.url()))
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -190,8 +195,8 @@ fn persists_across_rebuilds() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn foo() {}");
-    foo.build();
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -211,9 +216,10 @@ fn persists_across_rebuilds() {
             pub fn bar() {
                 foo::foo();
             }
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `file://[..]`
@@ -230,7 +236,7 @@ fn persists_across_rebuilds() {
 fn replace_registry_with_path() {
     Package::new("foo", "0.1.0").publish();
 
-    project("foo")
+    let _ = project("foo")
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -258,9 +264,10 @@ fn replace_registry_with_path() {
             pub fn bar() {
                 foo::foo();
             }
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [COMPILING] foo v0.1.0 (file://[..])
@@ -290,8 +297,8 @@ fn use_a_spec_to_select() {
             version = "0.2.0"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn foo3() {}");
-    foo.build();
+        .file("src/lib.rs", "pub fn foo3() {}")
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -315,9 +322,10 @@ fn use_a_spec_to_select() {
                 foo::foo1();
                 bar::bar();
             }
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -346,8 +354,8 @@ fn override_adds_some_deps() {
             [dependencies]
             foo = "0.1"
         "#)
-        .file("src/lib.rs", "");
-    foo.build();
+        .file("src/lib.rs", "")
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -362,9 +370,10 @@ fn override_adds_some_deps() {
             [replace]
             "bar:0.1.0" = {{ git = '{}' }}
         "#, foo.url()))
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -409,8 +418,8 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
             [dependencies]
             foo = "*"
         "#)
-        .file("src/lib.rs", "");
-    foo.build();
+        .file("src/lib.rs", "")
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -426,9 +435,10 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
             [replace]
             "bar:0.1.0" = {{ git = '{}' }}
         "#, foo.url()))
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
@@ -446,8 +456,8 @@ fn override_wrong_name() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", "");
-    foo.build();
+        .file("src/lib.rs", "")
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -462,9 +472,10 @@ fn override_wrong_name() {
             [replace]
             "foo:0.1.0" = {{ git = '{}' }}
         "#, foo.url()))
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [UPDATING] git repository [..]
@@ -479,8 +490,8 @@ fn override_with_nothing() {
     Package::new("foo", "0.1.0").publish();
 
     let foo = git::repo(&paths::root().join("override"))
-        .file("src/lib.rs", "");
-    foo.build();
+        .file("src/lib.rs", "")
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -495,9 +506,10 @@ fn override_with_nothing() {
             [replace]
             "foo:0.1.0" = {{ git = '{}' }}
         "#, foo.url()))
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [UPDATING] git repository [..]
@@ -523,9 +535,10 @@ fn override_wrong_version() {
             [replace]
             "foo:0.1.0" = { git = 'https://example.com', version = '0.2.0' }
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 
@@ -545,8 +558,8 @@ fn multiple_specs() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn foo() {}");
-    foo.build();
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -564,9 +577,10 @@ fn multiple_specs() {
             [replace."https://github.com/rust-lang/crates.io-index#foo:0.1.0"]
             git = '{0}'
         "#, foo.url()))
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [UPDATING] git repository [..]
@@ -590,8 +604,8 @@ fn test_override_dep() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn foo() {}");
-    foo.build();
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -606,9 +620,10 @@ fn test_override_dep() {
             [replace]
             "foo:0.1.0" = {{ git = '{0}' }}
         "#, foo.url()))
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("test").arg("-p").arg("foo"),
+    assert_that(p.cargo("test").arg("-p").arg("foo"),
                 execs().with_status(101)
                        .with_stderr_contains("\
 error: There are multiple `foo` packages in your project, and the [..]
@@ -629,8 +644,8 @@ fn update() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn foo() {}");
-    foo.build();
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -645,9 +660,10 @@ fn update() {
             [replace]
             "foo:0.1.0" = {{ git = '{0}' }}
         "#, foo.url()))
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("generate-lockfile"),
+    assert_that(p.cargo("generate-lockfile"),
                 execs().with_status(0));
     assert_that(p.cargo("update"),
                 execs().with_status(0)
@@ -683,9 +699,8 @@ fn no_override_self() {
         .file("near/src/lib.rs", r#"
             #![no_std]
             pub extern crate far;
-        "#);
-
-    deps.build();
+        "#)
+        .build();
 
     let p = project("local")
         .file("Cargo.toml", &format!(r#"
@@ -703,9 +718,10 @@ fn no_override_self() {
         .file("src/lib.rs", r#"
             #![no_std]
             pub extern crate near;
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--verbose"),
+    assert_that(p.cargo("build").arg("--verbose"),
                 execs().with_status(0));
 }
 
@@ -747,9 +763,10 @@ fn broken_path_override_warns() {
         .file("a2/src/lib.rs", "")
         .file(".cargo/config", r#"
             paths = ["a2"]
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] [..]
@@ -870,9 +887,10 @@ fn override_an_override() {
         "#)
         .file("serde/src/lib.rs", "
             pub fn serde08_override() {}
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -898,8 +916,8 @@ fn overriding_nonexistent_no_spurious() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "pub fn foo() {}");
-    foo.build();
+        .file("bar/src/lib.rs", "pub fn foo() {}")
+        .build();
 
 
     let p = project("local")
@@ -916,9 +934,10 @@ fn overriding_nonexistent_no_spurious() {
             "foo:0.1.0" = {{ git = '{url}' }}
             "bar:0.1.0" = {{ git = '{url}' }}
         "#, url = foo.url()))
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
@@ -959,8 +978,8 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
             name = "foo"
             version = "0.1.0"
         "#)
-        .file("local_foo/src/lib.rs", "");
-    p.build();
+        .file("local_foo/src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build").cwd(p.root().join("first_crate")),
                 execs().with_status(0)
@@ -1015,9 +1034,10 @@ fn override_to_path_dep() {
         .file("foo/bar/src/lib.rs", "")
         .file(".cargo/config", r#"
             paths = ["foo"]
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -1062,9 +1082,10 @@ fn replace_to_path_dep() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("foo/bar/src/lib.rs", "pub fn bar() {}");
+        .file("foo/bar/src/lib.rs", "pub fn bar() {}")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -1105,9 +1126,10 @@ fn paths_ok_with_optional() {
         .file("foo2/src/lib.rs", "")
         .file(".cargo/config", r#"
             paths = ["foo2"]
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.1.0 ([..]foo2)
 [COMPILING] local v0.0.1 ([..])
@@ -1149,9 +1171,10 @@ fn paths_add_optional_bad() {
         .file("foo2/src/lib.rs", "")
         .file(".cargo/config", r#"
             paths = ["foo2"]
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr_contains("\
 warning: path override for crate `foo` has altered the original list of
 dependencies; the dependency on `bar` was either added or\
@@ -1210,9 +1233,10 @@ fn override_with_default_feature() {
             [dependencies]
             bar = { version = "0.1", default-features = false }
         "#)
-        .file("another2/src/lib.rs", "");
+        .file("another2/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("run"),
+    assert_that(p.cargo("run"),
                 execs().with_status(0));
 }
 
@@ -1243,9 +1267,10 @@ fn override_plus_dep() {
             [dependencies]
             foo = { path = ".." }
         "#)
-        .file("bar/src/lib.rs", "");
+        .file("bar/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
 error: cyclic package dependency: [..]
 "));

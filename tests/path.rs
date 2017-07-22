@@ -70,9 +70,10 @@ fn cargo_compile_with_nested_deps_shorthand() {
             pub fn gimme() -> String {
                 "test passed".to_string()
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
         execs().with_status(0)
                .with_stderr(&format!("[COMPILING] baz v0.5.0 ({}/bar/baz)\n\
                                      [COMPILING] bar v0.5.0 ({}/bar)\n\
@@ -129,8 +130,9 @@ fn cargo_compile_with_root_dev_deps() {
             name = "foo"
         "#)
         .file("src/main.rs",
-              &main_file(r#""{}", bar::gimme()"#, &["bar"]));
-    let p2 = project("bar")
+              &main_file(r#""{}", bar::gimme()"#, &["bar"]))
+        .build();
+    let _p2 = project("bar")
         .file("Cargo.toml", r#"
             [package]
 
@@ -142,10 +144,10 @@ fn cargo_compile_with_root_dev_deps() {
             pub fn gimme() -> &'static str {
                 "zoidberg"
             }
-        "#);
+        "#)
+        .build();
 
-    p2.build();
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101))
 }
 
@@ -168,8 +170,9 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
             name = "foo"
         "#)
         .file("src/main.rs",
-              &main_file(r#""{}", bar::gimme()"#, &["bar"]));
-    let p2 = project("bar")
+              &main_file(r#""{}", bar::gimme()"#, &["bar"]))
+        .build();
+    let _p2 = project("bar")
         .file("Cargo.toml", r#"
             [package]
 
@@ -181,10 +184,10 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
             pub fn gimme() -> &'static str {
                 "zoidberg"
             }
-        "#);
+        "#)
+        .build();
 
-    p2.build();
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_stderr("\
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..])
@@ -229,9 +232,10 @@ fn cargo_compile_with_transitive_dev_deps() {
             pub fn gimme() -> &'static str {
                 "zoidberg"
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
         execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
                                      [COMPILING] foo v0.5.0 ({})\n\
                                      [FINISHED] dev [unoptimized + debuginfo] target(s) in \
@@ -274,9 +278,10 @@ fn no_rebuild_dependency() {
         "#)
         .file("bar/src/bar.rs", r#"
             pub fn bar() {}
-        "#);
+        "#)
+        .build();
     // First time around we should compile both foo and bar
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
                                              [FINISHED] dev [unoptimized + debuginfo] target(s) \
@@ -299,8 +304,7 @@ fn no_rebuild_dependency() {
 
 #[test]
 fn deep_dependencies_trigger_rebuild() {
-    let mut p = project("foo");
-    p = p
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
 
@@ -343,8 +347,9 @@ fn deep_dependencies_trigger_rebuild() {
         "#)
         .file("baz/src/baz.rs", r#"
             pub fn baz() {}
-        "#);
-    assert_that(p.cargo_process("build"),
+        "#)
+        .build();
+    assert_that(p.cargo("build"),
                 execs().with_stderr(&format!("[COMPILING] baz v0.5.0 ({}/baz)\n\
                                              [COMPILING] bar v0.5.0 ({}/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
@@ -392,8 +397,7 @@ fn deep_dependencies_trigger_rebuild() {
 
 #[test]
 fn no_rebuild_two_deps() {
-    let mut p = project("foo");
-    p = p
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
 
@@ -437,8 +441,9 @@ fn no_rebuild_two_deps() {
         "#)
         .file("baz/src/baz.rs", r#"
             pub fn baz() {}
-        "#);
-    assert_that(p.cargo_process("build"),
+        "#)
+        .build();
+    assert_that(p.cargo("build"),
                 execs().with_stderr(&format!("[COMPILING] baz v0.5.0 ({}/baz)\n\
                                              [COMPILING] bar v0.5.0 ({}/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
@@ -481,10 +486,11 @@ fn nested_deps_recompile() {
 
             name = "bar"
         "#)
-        .file("src/bar/src/bar.rs", "pub fn gimme() -> i32 { 92 }");
+        .file("src/bar/src/bar.rs", "pub fn gimme() -> i32 { 92 }")
+        .build();
     let bar = p.url();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_stderr(&format!("[COMPILING] bar v0.5.0 ({}/src/bar)\n\
                                              [COMPILING] foo v0.5.0 ({})\n\
                                              [FINISHED] dev [unoptimized + debuginfo] target(s) \
@@ -520,9 +526,10 @@ fn error_message_for_missing_manifest() {
             path = "src/bar"
         "#)
         .file("src/lib.rs", "")
-        .file("src/bar/not-a-manifest", "");
+        .file("src/bar/not-a-manifest", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] failed to load source for a dependency on `bar`
@@ -549,7 +556,8 @@ fn override_relative() {
             version = "0.5.0"
             authors = ["wycats@example.com"]
         "#)
-       .file("src/lib.rs", "");
+       .file("src/lib.rs", "")
+        .build();
 
     fs::create_dir(&paths::root().join(".cargo")).unwrap();
     File::create(&paths::root().join(".cargo/config")).unwrap()
@@ -566,9 +574,9 @@ fn override_relative() {
             [dependencies.bar]
             path = '{}'
         "#, bar.root().display()))
-       .file("src/lib.rs", "");
-    bar.build();
-    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
+       .file("src/lib.rs", "")
+       .build();
+    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
 
 }
 
@@ -582,7 +590,8 @@ fn override_self() {
             version = "0.5.0"
             authors = ["wycats@example.com"]
         "#)
-       .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
     let p = project("foo");
     let root = p.root().clone();
@@ -602,11 +611,10 @@ fn override_self() {
 
         "#, bar.root().display()))
        .file("src/lib.rs", "")
-       .file("src/main.rs", "fn main() {}");
+       .file("src/main.rs", "fn main() {}")
+       .build();
 
-    bar.build();
-    assert_that(p.cargo_process("build"), execs().with_status(0));
-
+    assert_that(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
@@ -628,7 +636,8 @@ fn override_path_dep() {
             version = "0.5.0"
             authors = []
        "#)
-       .file("p2/src/lib.rs", "");
+        .file("p2/src/lib.rs", "")
+        .build();
 
     let p = project("foo")
         .file(".cargo/config", &format!(r#"
@@ -646,10 +655,10 @@ fn override_path_dep() {
             path = '{}'
 
         "#, bar.root().join("p2").display()))
-       .file("src/lib.rs", "");
+       .file("src/lib.rs", "")
+       .build();
 
-    bar.build();
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 
 }
@@ -691,9 +700,7 @@ fn path_dep_build_cmd() {
         "#)
         .file("bar/src/bar.rs.in", r#"
             pub fn gimme() -> i32 { 0 }
-        "#);
-
-    p.build();
+        "#).build();
     p.root().join("bar").move_into_the_past();
 
     assert_that(p.cargo("build"),
@@ -754,8 +761,8 @@ fn dev_deps_no_rebuild_lib() {
             version = "0.5.0"
             authors = ["wycats@example.com"]
         "#)
-        .file("bar/src/lib.rs", "pub fn bar() {}");
-    p.build();
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
     assert_that(p.cargo("build")
                  .env("FOO", "bar"),
                 execs().with_status(0)
@@ -803,8 +810,8 @@ fn custom_target_no_rebuild() {
             [dependencies]
             a = { path = "../a" }
         "#)
-        .file("b/src/lib.rs", "");
-    p.build();
+        .file("b/src/lib.rs", "")
+        .build();
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
@@ -855,8 +862,8 @@ fn override_and_depend() {
         .file("b/src/lib.rs", "")
         .file("b/.cargo/config", r#"
             paths = ["../a"]
-        "#);
-    p.build();
+        "#)
+        .build();
     assert_that(p.cargo("build").cwd(p.root().join("b")),
                 execs().with_status(0)
                        .with_stderr("\
@@ -879,8 +886,8 @@ fn missing_path_dependency() {
         .file("src/lib.rs", "")
         .file(".cargo/config", r#"
             paths = ["../whoa-this-does-not-exist"]
-        "#);
-    p.build();
+        "#)
+        .build();
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
@@ -921,8 +928,8 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
             [dependencies]
             bar = "*"
         "#)
-        .file("foo/src/lib.rs", "");
-    p.build();
+        .file("foo/src/lib.rs", "")
+        .build();
 
     // Generate a lock file
     assert_that(p.cargo("build"), execs().with_status(0));
@@ -970,8 +977,8 @@ fn workspace_produces_rlib() {
             version = "0.5.0"
             authors = []
         "#)
-        .file("foo/src/lib.rs", "");
-    p.build();
+        .file("foo/src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
 

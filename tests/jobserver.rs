@@ -53,9 +53,10 @@ fn jobserver_exists() {
                 // a little too complicated for a test...
             }
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -114,12 +115,12 @@ fn makes_jobserver_used() {
                 let mut v = Vec::new();
                 stream.read_to_end(&mut v).unwrap();
             }
-       "#)
-       .file("Makefile", "\
+        "#)
+        .file("Makefile", "\
 all:
 \t+$(CARGO) build
-");
-    p.build();
+")
+        .build();
 
     let l = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = l.local_addr().unwrap();
@@ -163,12 +164,12 @@ fn jobserver_and_j() {
             version = "0.0.1"
             authors = []
         "#)
-       .file("src/lib.rs", "")
-       .file("Makefile", "\
+        .file("src/lib.rs", "")
+        .file("Makefile", "\
 all:
 \t+$(CARGO) build -j2
-");
-    p.build();
+")
+        .build();
 
     assert_that(p.process(make)
                  .env("CARGO", cargo_exe())

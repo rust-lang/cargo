@@ -77,9 +77,10 @@ fn http_auth_offered() {
                 println!("username=foo");
                 println!("password=bar");
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(script.cargo_process("build").arg("-v"),
+    assert_that(script.cargo("build").arg("-v"),
                 execs().with_status(0));
     let script = script.bin("script");
 
@@ -102,9 +103,10 @@ fn http_auth_offered() {
         .file(".cargo/config","\
         [net]
         retry = 0
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr(&format!("\
 [UPDATING] git repository `http://{addr}/foo/bar`
 [ERROR] failed to load source for a dependency on `bar`
@@ -152,9 +154,10 @@ fn https_something_happens() {
         .file(".cargo/config","\
         [net]
         retry = 0
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr_contains(&format!("\
 [UPDATING] git repository `https://{addr}/foo/bar`
 ", addr = addr))
@@ -195,9 +198,10 @@ fn ssh_something_happens() {
             [dependencies.bar]
             git = "ssh://127.0.0.1:{}/foo/bar"
         "#, addr.port()))
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr_contains(&format!("\
 [UPDATING] git repository `ssh://{addr}/foo/bar`
 ", addr = addr))

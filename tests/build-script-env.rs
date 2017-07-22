@@ -23,8 +23,8 @@ fn rerun_if_env_changes() {
             fn main() {
                 println!("cargo:rerun-if-env-changed=FOO");
             }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
@@ -75,8 +75,8 @@ fn rerun_if_env_or_file_changes() {
                 println!("cargo:rerun-if-changed=foo");
             }
         "#)
-        .file("foo", "");
-    p.build();
+        .file("foo", "")
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0)
