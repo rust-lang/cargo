@@ -65,7 +65,8 @@ pub fn install(root: Option<&str>,
 
     let installed_anything = if krates.len() <= 1 {
         install_one(root.clone(), map, krates.into_iter().next(), source_id, vers, opts,
-                    force, true).is_ok()
+                    force, true)?;
+        true
     } else {
         let mut succeeded = vec![];
         let mut failed = vec![];
