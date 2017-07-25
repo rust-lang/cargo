@@ -77,7 +77,7 @@ pub fn install(root: Option<&str>,
             match install_one(root, map, Some(krate), source_id, vers, opts, force, first) {
                 Ok(()) => succeeded.push(krate),
                 Err(e) => {
-                    opts.config.shell().error(e)?;
+                    ::handle_error(e, &mut opts.config.shell());
                     failed.push(krate)
                 }
             }
