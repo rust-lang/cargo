@@ -63,10 +63,10 @@ pub fn install(root: Option<&str>,
     let root = resolve_root(root, opts.config)?;
     let map = SourceConfigMap::new(opts.config)?;
 
-    let installed_anything = if krates.len() <= 1 {
+    let (installed_anything, scheduled_error) = if krates.len() <= 1 {
         install_one(root.clone(), map, krates.into_iter().next(), source_id, vers, opts,
                     force, true)?;
-        true
+        (true, false)
     } else {
         let mut succeeded = vec![];
         let mut failed = vec![];
@@ -95,7 +95,7 @@ pub fn install(root: Option<&str>,
             opts.config.shell().status("\nSummary:", summary.join(" "))?;
         }
 
-        !succeeded.is_empty()
+        (!succeeded.is_empty(), !failed.is_empty())
     };
 
     if installed_anything {
@@ -112,6 +112,10 @@ pub fn install(root: Option<&str>,
         opts.config.shell().warn(&format!("be sure to add `{}` to your PATH to be \
                                            able to run the installed binaries",
                                            dst.display()))?;
+    }
+
+    if scheduled_error {
+        bail!("some crates failed to install");
     }
 
     Ok(())
