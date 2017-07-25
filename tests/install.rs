@@ -60,7 +60,7 @@ fn multiple_pkgs() {
     pkg("bar", "0.0.2");
 
     assert_that(cargo_process("install").args(&["foo", "bar", "baz"]),
-                execs().with_status(0).with_stderr(&format!("\
+                execs().with_status(101).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.1 (registry file://[..])
 [INSTALLING] foo v0.0.1
@@ -76,6 +76,7 @@ error: could not find `baz` in `registry [..]`
    
 Summary: Successfully installed foo, bar! Failed to install baz (see error(s) above).
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+error: some crates failed to install
 ",
         home = cargo_home().display())));
     assert_that(cargo_home(), has_installed_exe("foo"));
