@@ -220,8 +220,8 @@ assets = "path/to/static"
 # Dependency sections
 
 See the [specifying dependencies page](specifying-dependencies.html) for
-information on the `[dependencies]`, `[dev-dependencies]`, and target-specific
-`[target.*.dependencies]` sections.
+information on the `[dependencies]`, `[dev-dependencies]`,
+`[build-dependencies]`, and target-specific `[target.*.dependencies]` sections.
 
 # The `[profile.*]` sections
 
