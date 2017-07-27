@@ -83,7 +83,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     let ws = Workspace::new(&root, config)?;
 
-    let spec = if options.flag_all || ws.is_virtual() {
+    let spec = if options.flag_all || (ws.is_virtual() && options.flag_package.is_empty()) {
         Packages::All
     } else {
         Packages::Packages(&options.flag_package)
