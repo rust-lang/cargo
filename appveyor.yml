@@ -33,6 +33,10 @@ install:
   - cargo -V
   - git submodule update --init
 
+branches:
+  only:
+    - master
+
 clone_depth: 1
 
 build: false
