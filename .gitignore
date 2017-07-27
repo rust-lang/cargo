@@ -11,3 +11,4 @@ rustc
 __pycache__
 .idea/
 *.iml
+*.swp

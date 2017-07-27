@@ -138,13 +138,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                          &options.flag_bench, options.flag_benches);
     }
 
-    let spec = if options.flag_all || ws.is_virtual() {
-        Packages::All
-    } else {
-    	Packages::from_flags(options.flag_all,
-                            &options.flag_exclude,
-                            &options.flag_package)?
-    };
+    let spec = Packages::from_flags(ws.is_virtual(),
+                                    options.flag_all,
+                                    &options.flag_exclude,
+                                    &options.flag_package)?;
 
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,

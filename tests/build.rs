@@ -3073,6 +3073,40 @@ fn build_virtual_manifest_all_implied() {
 }
 
 #[test]
+fn build_virtual_manifest_one_project() {
+    let p = project("workspace")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo", "bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("foo/src/lib.rs", r#"
+            pub fn foo() {}
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {}
+        "#);
+
+    // The order in which foo and bar are built is not guaranteed
+    assert_that(p.cargo_process("build")
+                 .arg("-p").arg("foo"),
+                execs().with_status(0)
+                       .with_stderr_does_not_contain("[..] Compiling bar v0.1.0 ([..])")
+                       .with_stderr_contains("[..] Compiling foo v0.1.0 ([..])")
+                       .with_stderr("[..] Compiling [..] v0.1.0 ([..])\n\
+                       [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
+}
+
+#[test]
 fn build_all_virtual_manifest_implicit_examples() {
     let p = project("foo")
         .file("Cargo.toml", r#"
