@@ -3096,11 +3096,10 @@ fn build_virtual_manifest_one_project() {
             pub fn bar() {}
         "#);
 
-    // The order in which foo and bar are built is not guaranteed
     assert_that(p.cargo_process("build")
                  .arg("-p").arg("foo"),
                 execs().with_status(0)
-                       .with_stderr_does_not_contain("[..] Compiling bar v0.1.0 ([..])")
+                       .with_stderr_does_not_contain("bar")
                        .with_stderr_contains("[..] Compiling foo v0.1.0 ([..])")
                        .with_stderr("[..] Compiling [..] v0.1.0 ([..])\n\
                        [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
