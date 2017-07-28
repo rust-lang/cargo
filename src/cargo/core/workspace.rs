@@ -179,6 +179,13 @@ impl<'cfg> Workspace<'cfg> {
         }
     }
 
+    pub fn is_virtual(&self) -> bool {
+        match *self.packages.get(&self.current_manifest) {
+            MaybePackage::Package(..) => false,
+            MaybePackage::Virtual(..) => true
+        }
+    }
+
     /// Returns the `Config` this workspace is associated with.
     pub fn config(&self) -> &'cfg Config {
         self.config

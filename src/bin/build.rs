@@ -92,8 +92,10 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_locked)?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
+    let ws = Workspace::new(&root, config)?;
 
-    let spec = Packages::from_flags(options.flag_all,
+    let spec = Packages::from_flags(ws.is_virtual(),
+                                    options.flag_all,
                                     &options.flag_exclude,
                                     &options.flag_package)?;
 
@@ -117,7 +119,6 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         target_rustc_args: None,
     };
 
-    let ws = Workspace::new(&root, config)?;
     ops::compile(&ws, &opts)?;
     Ok(())
 }

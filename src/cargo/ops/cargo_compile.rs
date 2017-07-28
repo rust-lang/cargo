@@ -110,9 +110,11 @@ pub enum Packages<'a> {
 }
 
 impl<'a> Packages<'a> {
-    pub fn from_flags(all: bool, exclude: &'a Vec<String>, package: &'a Vec<String>)
+    pub fn from_flags(virtual_ws: bool, all: bool, exclude: &'a Vec<String>, package: &'a Vec<String>)
         -> CargoResult<Self>
     {
+        let all = all || (virtual_ws && package.is_empty());
+
         let packages = match (all, &exclude) {
             (true, exclude) if exclude.is_empty() => Packages::All,
             (true, exclude) => Packages::OptOut(exclude),

@@ -1189,3 +1189,55 @@ fn legacy_bench_name() {
 [WARNING] path `[..]src[/]bench.rs` was erroneously implicitly accepted for benchmark `bench`,
 please set bench.path in Cargo.toml"));
 }
+
+#[test]
+fn bench_virtual_manifest_all_implied() {
+    if !is_nightly() { return }
+
+    let p = project("workspace")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo", "bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("foo/src/lib.rs", r#"
+            pub fn foo() {}
+        "#)
+        .file("foo/benches/foo.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            use test::Bencher;
+            #[bench]
+            fn bench_foo(_: &mut Bencher) -> () { () }
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            pub fn bar() {}
+        "#)
+        .file("bar/benches/bar.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            use test::Bencher;
+            #[bench]
+            fn bench_bar(_: &mut Bencher) -> () { () }
+        "#);
+
+    // The order in which foo and bar are built is not guaranteed
+    
+    assert_that(p.cargo_process("bench"),
+                execs().with_status(0)
+                       .with_stderr_contains("\
+[RUNNING] target[/]release[/]deps[/]bar-[..][EXE]")
+                       .with_stdout_contains("test bench_bar ... bench: [..]")
+                       .with_stderr_contains("\
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
+                       .with_stdout_contains("test bench_foo ... bench: [..]"));
+}
