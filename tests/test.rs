@@ -2482,20 +2482,9 @@ fn test_virtual_manifest_all_implied() {
         "#);
 
     assert_that(p.cargo_process("test"),
-                execs().with_status(0).with_stdout_contains("\
-running 1 test
-test b ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-")
-                .with_stdout_contains("\
-running 1 test
-test b ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
-
-"));
+                execs().with_status(0)
+                       .with_stdout_contains("test a ... ok")
+                       .with_stdout_contains("test b ... ok"));
 }
 
 #[test]
