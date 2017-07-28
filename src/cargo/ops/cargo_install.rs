@@ -55,20 +55,90 @@ impl Drop for Transaction {
 }
 
 pub fn install(root: Option<&str>,
-               krate: Option<&str>,
+               krates: Vec<&str>,
                source_id: &SourceId,
                vers: Option<&str>,
                opts: &ops::CompileOptions,
                force: bool) -> CargoResult<()> {
+    let root = resolve_root(root, opts.config)?;
+    let map = SourceConfigMap::new(opts.config)?;
+
+    let (installed_anything, scheduled_error) = if krates.len() <= 1 {
+        install_one(root.clone(), map, krates.into_iter().next(), source_id, vers, opts,
+                    force, true)?;
+        (true, false)
+    } else {
+        let mut succeeded = vec![];
+        let mut failed = vec![];
+        let mut first = true;
+        for krate in krates {
+            let root = root.clone();
+            let map = map.clone();
+            match install_one(root, map, Some(krate), source_id, vers, opts, force, first) {
+                Ok(()) => succeeded.push(krate),
+                Err(e) => {
+                    ::handle_error(e, &mut opts.config.shell());
+                    failed.push(krate)
+                }
+            }
+            first = false;
+        }
+
+        let mut summary = vec![];
+        if !succeeded.is_empty() {
+            summary.push(format!("Successfully installed {}!", succeeded.join(", ")));
+        }
+        if !failed.is_empty() {
+            summary.push(format!("Failed to install {} (see error(s) above).", failed.join(", ")));
+        }
+        if !succeeded.is_empty() || !failed.is_empty() {
+            opts.config.shell().status("\nSummary:", summary.join(" "))?;
+        }
+
+        (!succeeded.is_empty(), !failed.is_empty())
+    };
+
+    if installed_anything {
+        // Print a warning that if this directory isn't in PATH that they won't be
+        // able to run these commands.
+        let dst = metadata(opts.config, &root)?.parent().join("bin");
+        let path = env::var_os("PATH").unwrap_or(OsString::new());
+        for path in env::split_paths(&path) {
+            if path == dst {
+                return Ok(())
+            }
+        }
+
+        opts.config.shell().warn(&format!("be sure to add `{}` to your PATH to be \
+                                           able to run the installed binaries",
+                                           dst.display()))?;
+    }
+
+    if scheduled_error {
+        bail!("some crates failed to install");
+    }
+
+    Ok(())
+}
+
+fn install_one(root: Filesystem,
+               map: SourceConfigMap,
+               krate: Option<&str>,
+               source_id: &SourceId,
+               vers: Option<&str>,
+               opts: &ops::CompileOptions,
+               force: bool,
+               is_first_install: bool) -> CargoResult<()> {
+
     let config = opts.config;
-    let root = resolve_root(root, config)?;
-    let map = SourceConfigMap::new(config)?;
+
     let (pkg, source) = if source_id.is_git() {
         select_pkg(GitSource::new(source_id, config),
-                   krate, vers, config, &mut |git| git.read_packages())?
+                   krate, vers, config, is_first_install,
+                   &mut |git| git.read_packages())?
     } else if source_id.is_path() {
-        let path = source_id.url().to_file_path().ok()
-                            .expect("path sources must have a valid path");
+        let path = source_id.url().to_file_path()
+                            .map_err(|()| CargoError::from("path sources must have a valid path"))?;
         let mut src = PathSource::new(&path, source_id, config);
         src.update().chain_err(|| {
             format!("`{}` is not a crate root; specify a crate to \
@@ -76,15 +146,15 @@ pub fn install(root: Option<&str>,
                      specify an alternate source", path.display())
         })?;
         select_pkg(PathSource::new(&path, source_id, config),
-                   krate, vers, config, &mut |path| path.read_packages())?
+                   krate, vers, config, is_first_install,
+                   &mut |path| path.read_packages())?
     } else {
         select_pkg(map.load(source_id)?,
-                   krate, vers, config,
+                   krate, vers, config, is_first_install,
                    &mut |_| Err("must specify a crate to install from \
                                  crates.io, or use --path or --git to \
                                  specify alternate source".into()))?
     };
-
 
     let mut td_opt = None;
     let overidden_target_dir = if source_id.is_path() {
@@ -248,18 +318,6 @@ pub fn install(root: Option<&str>,
         fs::remove_dir_all(&target_dir)?;
     }
 
-    // Print a warning that if this directory isn't in PATH that they won't be
-    // able to run these commands.
-    let path = env::var_os("PATH").unwrap_or(OsString::new());
-    for path in env::split_paths(&path) {
-        if path == dst {
-            return Ok(())
-        }
-    }
-
-    config.shell().warn(&format!("be sure to add `{}` to your PATH to be \
-                                       able to run the installed binaries",
-                                      dst.display()))?;
     Ok(())
 }
 
@@ -267,11 +325,15 @@ fn select_pkg<'a, T>(mut source: T,
                      name: Option<&str>,
                      vers: Option<&str>,
                      config: &Config,
+                     needs_update: bool,
                      list_all: &mut FnMut(&mut T) -> CargoResult<Vec<Package>>)
                      -> CargoResult<(Package, Box<Source + 'a>)>
     where T: Source + 'a
 {
-    source.update()?;
+    if needs_update {
+        source.update()?;
+    }
+
     match name {
         Some(name) => {
             let vers = match vers {
