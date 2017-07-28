@@ -1,3 +1,5 @@
+#![allow(unknown_lints)]
+
 extern crate curl;
 extern crate url;
 #[macro_use]
