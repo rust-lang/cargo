@@ -55,6 +55,48 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 }
 
 #[test]
+fn multiple_pkgs() {
+    pkg("foo", "0.0.1");
+    pkg("bar", "0.0.2");
+
+    assert_that(cargo_process("install").args(&["foo", "bar", "baz"]),
+                execs().with_status(101).with_stderr(&format!("\
+[UPDATING] registry `[..]`
+[DOWNLOADING] foo v0.0.1 (registry file://[..])
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] {home}[..]bin[..]foo[..]
+[DOWNLOADING] bar v0.0.2 (registry file://[..])
+[INSTALLING] bar v0.0.2
+[COMPILING] bar v0.0.2
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] {home}[..]bin[..]bar[..]
+error: could not find `baz` in `registry [..]`
+   
+Summary: Successfully installed foo, bar! Failed to install baz (see error(s) above).
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+error: some crates failed to install
+",
+        home = cargo_home().display())));
+    assert_that(cargo_home(), has_installed_exe("foo"));
+    assert_that(cargo_home(), has_installed_exe("bar"));
+
+    assert_that(cargo_process("uninstall").arg("foo"),
+                execs().with_status(0).with_stderr(&format!("\
+[REMOVING] {home}[..]bin[..]foo[..]
+",
+        home = cargo_home().display())));
+    assert_that(cargo_process("uninstall").arg("bar"),
+                execs().with_status(0).with_stderr(&format!("\
+[REMOVING] {home}[..]bin[..]bar[..]
+",
+        home = cargo_home().display())));
+    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_that(cargo_home(), is_not(has_installed_exe("bar")));
+}
+
+#[test]
 fn pick_max_version() {
     pkg("foo", "0.0.1");
     pkg("foo", "0.0.2");
