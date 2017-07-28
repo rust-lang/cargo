@@ -673,7 +673,7 @@ manifest located at: [..]
 }
 
 #[test]
-fn virtual_build() {
+fn virtual_build_all_implied() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [workspace]
@@ -688,11 +688,7 @@ fn virtual_build() {
         .file("bar/src/main.rs", "fn main() {}");
     p.build();
     assert_that(p.cargo("build"),
-                execs().with_status(101)
-                       .with_stderr("\
-error: manifest path `[..]` is a virtual manifest, but this command \
-requires running against an actual package in this workspace
-"));
+                execs().with_status(0));
 }
 
 #[test]
