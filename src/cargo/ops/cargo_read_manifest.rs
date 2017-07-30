@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use core::{Package, SourceId, PackageId, EitherManifest};
 use util::{self, Config};
-use util::errors::{CargoResult, CargoResultExt};
+use util::errors::{CargoResult, CargoResultExt, CargoError};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::read_manifest;
 
@@ -28,6 +28,7 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
                      -> CargoResult<Vec<Package>> {
     let mut all_packages = HashMap::new();
     let mut visited = HashSet::<PathBuf>::new();
+    let mut errors = Vec::<CargoError>::new();
 
     trace!("looking for root package: {}, source_id={}", path.display(), source_id);
 
@@ -55,13 +56,16 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
 
         if has_manifest(dir) {
             read_nested_packages(dir, &mut all_packages, source_id, config,
-                                      &mut visited)?;
+                                      &mut visited, &mut errors)?;
         }
         Ok(true)
     })?;
 
     if all_packages.is_empty() {
-        Err(format!("Could not find Cargo.toml in `{}`", path.display()).into())
+        match errors.pop() {
+            Some(err) => Err(err),
+            None => Err(format!("Could not find Cargo.toml in `{}`", path.display()).into()),
+        }
     } else {
         Ok(all_packages.into_iter().map(|(_, v)| v).collect())
     }
@@ -104,13 +108,14 @@ fn read_nested_packages(path: &Path,
                         all_packages: &mut HashMap<PackageId, Package>,
                         source_id: &SourceId,
                         config: &Config,
-                        visited: &mut HashSet<PathBuf>) -> CargoResult<()> {
+                        visited: &mut HashSet<PathBuf>,
+                        errors: &mut Vec<CargoError>) -> CargoResult<()> {
     if !visited.insert(path.to_path_buf()) { return Ok(()) }
 
     let manifest_path = find_project_manifest_exact(path, "Cargo.toml")?;
 
     let (manifest, nested) = match read_manifest(&manifest_path, source_id, config) {
-        Err(_) => {
+        Err(err) => {
             // Ignore malformed manifests found on git repositories
             //
             // git source try to find and read all manifests from the repository
@@ -120,6 +125,7 @@ fn read_nested_packages(path: &Path,
             // TODO: Add a way to exclude folders?
             info!("skipping malformed package found at `{}`",
                   path.to_string_lossy());
+            errors.push(err);
             return Ok(());
         }
         Ok(tuple) => tuple
@@ -151,7 +157,7 @@ fn read_nested_packages(path: &Path,
         for p in nested.iter() {
             let path = util::normalize_path(&path.join(p));
             read_nested_packages(&path, all_packages, source_id,
-                                      config, visited)?;
+                                      config, visited, errors)?;
         }
     }
 
