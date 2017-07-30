@@ -2083,3 +2083,65 @@ fn include_overrides_gitignore() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
+
+#[test]
+fn invalid_git_dependency_manifest() {
+    let project = project("foo");
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [project]
+
+                name = "dep1"
+                version = "0.5.0"
+                authors = ["carlhuda@example.com"]
+                categories = ["algorithms"]
+                categories = ["algorithms"]
+
+                [lib]
+
+                name = "dep1"
+            "#)
+            .file("src/dep1.rs", r#"
+                pub fn hello() -> &'static str {
+                    "hello world"
+                }
+            "#)
+    }).unwrap();
+
+    let project = project
+        .file("Cargo.toml", &format!(r#"
+            [project]
+
+            name = "foo"
+            version = "0.5.0"
+            authors = ["wycats@example.com"]
+
+            [dependencies.dep1]
+
+            git = '{}'
+        "#, git_project.url()))
+        .file("src/main.rs", &main_file(r#""{}", dep1::hello()"#, &["dep1"]));
+
+    let git_root = git_project.root();
+
+    assert_that(project.cargo_process("build"),
+        execs()
+        .with_stderr(&format!("[UPDATING] git repository `{}`\n\
+                              error: failed to load source for a dependency on `dep1`\n\
+                              \n\
+                              Caused by:\n  \
+                              Unable to update {}\n\
+                              \n\
+                              Caused by:\n  \
+                              failed to parse manifest at `[..]`\n\
+                              \n\
+                              Caused by:\n  \
+                              could not parse input as TOML\n\
+                              \n\
+                              Caused by:\n  \
+                              duplicate key: `categories` for key `project`",
+                             path2url(git_root.clone()),
+                             path2url(git_root),
+                             )));
+}
