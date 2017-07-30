@@ -153,7 +153,7 @@ fn fill_utf16_buf<F1, F2, T>(mut f1: F1, f2: F2) -> io::Result<T>
     }
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, target_os = "redox"))]
 fn home_dir_() -> Option<PathBuf> {
     ::std::env::home_dir()
 }
