@@ -390,8 +390,15 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let path = opts.path;
     let name = opts.name;
     let cfg = global_config(config)?;
+    // Please ensure that ignore and hgignore are in sync.
     let ignore = ["/target/\n", "**/*.rs.bk\n",
         if !opts.bin { "Cargo.lock\n" } else { "" }]
+        .concat();
+    // Mercurial glob ignores can't be rooted, so just sticking a 'syntax: glob' at the top of the
+    // file will exclude too much. Instead, use regexp-based ignores. See 'hg help ignore' for
+    // more.
+    let hgignore = ["^target/\n", "glob:*.rs.bk\n",
+        if !opts.bin { "glob:Cargo.lock\n" } else { "" }]
         .concat();
 
     let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap(), config.cwd());
@@ -412,8 +419,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
             if !fs::metadata(&path.join(".hg")).is_ok() {
                 HgRepo::init(path, config.cwd())?;
             }
-            let ignore = format!("syntax: glob\n{}", ignore);
-            paths::append(&path.join(".hgignore"), ignore.as_bytes())?;
+            paths::append(&path.join(".hgignore"), hgignore.as_bytes())?;
         },
         VersionControl::Pijul => {
             if !fs::metadata(&path.join(".pijul")).is_ok() {
