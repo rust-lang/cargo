@@ -184,3 +184,61 @@ fn cargo_update_generate_lockfile() {
     assert_that(&lockfile, existing_file());
 
 }
+
+// Issue: https://github.com/rust-lang/cargo/issues/2981
+#[test]
+fn same_path_dependency_from_path_dependencies() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.1"
+
+            [dependencies.bar]
+            path = "bar"
+
+            [dependencies.baz]
+            path = "baz"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            authors = []
+            version = "0.0.1"
+
+            [dependencies.foobar]
+            path = "foobar"
+        "#)
+        .file("bar/src/lib.rs", "")
+        .file("bar/foobar/Cargo.toml", r#"
+            [package]
+            name = "foobar"
+            authors = []
+            version = "0.0.1"
+        "#)
+        .file("bar/foobar/src/lib.rs", "")
+        .file("baz/Cargo.toml", r#"
+            [package]
+            name = "baz"
+            authors = []
+            version = "0.0.1"
+
+            [dependencies.foobar]
+            path = "foobar"
+        "#)
+        .file("baz/src/lib.rs", "")
+        .file("baz/foobar/Cargo.toml", r#"
+            [package]
+            name = "foobar"
+            authors = []
+            version = "0.0.1"
+        "#)
+        .file("baz/foobar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("generate-lockfile"),
+                execs().with_status(0));
+
+    assert_that(p.cargo("update"), execs().with_status(0).with_stdout(""));
+}
