@@ -26,6 +26,7 @@ use util::toml as cargo_toml;
 
 use self::ConfigValue as CV;
 
+#[derive(Debug)]
 pub struct Config {
     home_path: Filesystem,
     shell: RefCell<Shell>,
