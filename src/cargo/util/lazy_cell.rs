@@ -10,6 +10,7 @@
 
 use std::cell::UnsafeCell;
 
+#[derive(Debug)]
 pub struct LazyCell<T> {
     inner: UnsafeCell<Option<T>>,
 }

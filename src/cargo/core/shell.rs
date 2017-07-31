@@ -19,6 +19,12 @@ pub struct Shell {
     verbosity: Verbosity,
 }
 
+impl fmt::Debug for Shell {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Shell")
+    }
+}
+
 enum ShellOut {
     Write(Box<Write>),
     Stream(StandardStream, ColorChoice),

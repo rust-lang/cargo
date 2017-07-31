@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use util::{self, CargoResult, internal, ProcessBuilder};
 
+#[derive(Debug)]
 pub struct Rustc {
     pub path: PathBuf,
     pub wrapper: Option<PathBuf>,
