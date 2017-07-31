@@ -35,6 +35,7 @@ use util::config::Config;
 use util::{CargoResult, profile};
 
 /// Contains information about how a package should be compiled.
+#[derive(Debug)]
 pub struct CompileOptions<'a> {
     pub config: &'a Config,
     /// Number of concurrent jobs to use.
@@ -96,7 +97,7 @@ pub enum CompileMode {
     Doctest,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 pub enum MessageFormat {
     Human,
     Json
@@ -149,12 +150,13 @@ impl<'a> Packages<'a> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum FilterRule<'a> {
     All,
     Just (&'a [String]),
 }
 
+#[derive(Debug)]
 pub enum CompileFilter<'a> {
     Everything {
         /// Flag whether targets can be safely skipped when required-features are not satisfied.
