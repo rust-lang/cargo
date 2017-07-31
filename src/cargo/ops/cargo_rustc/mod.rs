@@ -234,7 +234,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         custom_build::prepare(cx, unit)?
     } else if unit.profile.doc && unit.profile.test {
         // we run these targets later, so this is just a noop for now
-        (Work::new(|_| Ok(())), Work::new(|_| Ok(())), Freshness::Fresh)
+        (Work::noop(), Work::noop(), Freshness::Fresh)
     } else {
         let (mut freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
         let work = if unit.profile.doc {
