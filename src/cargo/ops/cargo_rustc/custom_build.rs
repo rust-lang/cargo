@@ -79,7 +79,7 @@ pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                                     unit.pkg, unit.target.name()));
     let overridden = cx.build_state.has_override(unit);
     let (work_dirty, work_fresh) = if overridden {
-        (Work::new(|_| Ok(())), Work::new(|_| Ok(())))
+        (Work::noop(), Work::noop())
     } else {
         build_work(cx, unit)?
     };
