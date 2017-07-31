@@ -121,7 +121,7 @@ impl<'a> JobQueue<'a> {
         // we're only sending "longer living" messages and we should also
         // destroy all references to the channel before this function exits as
         // the destructor for the `helper` object will ensure the associated
-        // thread i sno longer running.
+        // thread is no longer running.
         //
         // As a result, this `transmute` to a longer lifetime should be safe in
         // practice.
