@@ -480,7 +480,7 @@ fn build_script_local_fingerprints<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     // First up, if this build script is entirely overridden, then we just
     // return the hash of what we overrode it with.
     //
-    // Note that the `None` here means tha twe don't want to update the local
+    // Note that the `None` here means that we don't want to update the local
     // fingerprint afterwards because this is all just overridden.
     if let Some(output) = state.get(&(unit.pkg.package_id().clone(), unit.kind)) {
         debug!("override local fingerprints deps");

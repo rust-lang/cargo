@@ -435,7 +435,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // - OSX encodes the dylib name in the executable
         // - Windows rustc multiple files of which we can't easily link all of them
         //
-        // Two expeptions
+        // Two exceptions
         // 1) Upstream dependencies (we aren't exporting + need to resolve name conflict)
         // 2) __CARGO_DEFAULT_LIB_METADATA env var
         //
