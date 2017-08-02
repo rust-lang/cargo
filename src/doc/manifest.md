@@ -169,7 +169,8 @@ license-file = "..."
 # currently available are Travis CI, Appveyor, and GitLab latest build status,
 # specified using the following parameters:
 [badges]
-# Travis CI: `repository` is required. `branch` is optional; default is `master`
+# Travis CI: `repository` in format "<user>/<project>" is required.
+# `branch` is optional; default is `master`
 travis-ci = { repository = "...", branch = "master" }
 # Appveyor: `repository` is required. `branch` is optional; default is `master`
 # `service` is optional; valid values are `github` (default), `bitbucket`, and
@@ -238,14 +239,20 @@ along with the defaults for each profile.
 ```toml
 # The development profile, used for `cargo build`.
 [profile.dev]
-opt-level = 0      # controls the `--opt-level` the compiler builds with
-debug = true       # controls whether the compiler passes `-C debuginfo`
-                   # a value of `true` is equivalent to `2`
-rpath = false      # controls whether the compiler passes `-C rpath`
-lto = false        # controls `-C lto` for binaries and staticlibs
+opt-level = 0      # controls the `--opt-level` the compiler builds with.
+                   # 0-1 is good for debugging. 2 is well-optimized. Max is 3.
+debug = true       # include debug information (debug symbols). Equivalent to
+                   # `-C debuginfo=2` compiler flag.
+rpath = false      # controls whether compiler should set loader paths.
+                   # If true, passes `-C rpath` flag to the compiler.
+lto = false        # Link Time Optimization usually reduces size of binaries
+                   # and static libraries. Increases compilation time.
+                   # If true, passes `-C lto` flag to the compiler.
 debug-assertions = true # controls whether debug assertions are enabled
-codegen-units = 1  # controls whether the compiler passes `-C codegen-units`
-                   # `codegen-units` is ignored when `lto = true`
+                   # (e.g. debug_assert!() and arithmetic overflow checks)
+codegen-units = 1  # if > 1 enables parallel code generation which improves
+                   # compile times, but prevents some optimizations.
+                   # Passes `-C codegen-units`. Ignored when `lto = true`.
 panic = 'unwind'   # panic strategy (`-C panic=...`), can also be 'abort'
 
 # The release profile, used for `cargo build --release`.
