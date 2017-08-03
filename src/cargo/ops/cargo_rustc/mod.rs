@@ -50,6 +50,7 @@ pub struct BuildConfig {
     pub test: bool,
     pub doc_all: bool,
     pub json_messages: bool,
+    pub build_plan: bool,
 }
 
 #[derive(Clone, Default)]
@@ -129,6 +130,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                                    build_config, profiles)?;
 
     let mut queue = JobQueue::new(&cx);
+    let build_plan = cx.build_config.build_plan;
 
     cx.prepare()?;
     cx.probe_target_info(&units)?;
@@ -144,8 +146,17 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         compile(&mut cx, &mut queue, unit, exec.clone())?;
     }
 
+    if build_plan {
+        queue.output_build_plan();
+        println!("commands = {{");
+    }
+
     // Now that we've figured out everything that we're going to do, do it!
     queue.execute(&mut cx)?;
+
+    if build_plan {
+        println!("}}");
+    }
 
     for unit in units.iter() {
         for &(ref dst, ref link_dst, _) in cx.target_filenames(unit)?.iter() {
@@ -219,6 +230,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
                          jobs: &mut JobQueue<'a>,
                          unit: &Unit<'a>,
                          exec: Arc<Executor>) -> CargoResult<()> {
+    let build_plan = cx.build_config.build_plan;
     if !cx.compiled.insert(*unit) {
         return Ok(())
     }
@@ -235,6 +247,8 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     } else if unit.profile.doc && unit.profile.test {
         // we run these targets later, so this is just a noop for now
         (Work::noop(), Work::noop(), Freshness::Fresh)
+    } else if build_plan {
+        (rustc(cx, unit, exec.clone())?, Work::noop(), Freshness::Dirty)
     } else {
         let (mut freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
         let work = if unit.profile.doc {
@@ -268,6 +282,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                    exec: Arc<Executor>) -> CargoResult<Work> {
     let crate_types = unit.target.rustc_crate_types();
     let mut rustc = prepare_rustc(cx, crate_types, unit)?;
+    let build_plan = cx.build_config.build_plan;
 
     let name = unit.pkg.name().to_string();
 
@@ -385,6 +400,8 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             ).chain_err(|| {
                 format!("Could not compile `{}`.", name)
             })?;
+        } else if build_plan {
+            state.build_plan(package_id, rustc.clone(), filenames.clone());
         } else {
             exec.exec(rustc, &package_id).map_err(|e| e.into_internal()).chain_err(|| {
                 format!("Could not compile `{}`.", name)

@@ -3,6 +3,8 @@ use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::io;
 use std::mem;
+use std::sync::Arc;
+use std::path::PathBuf;
 use std::sync::mpsc::{channel, Sender, Receiver};
 
 use crossbeam::{self, Scope};
@@ -56,6 +58,7 @@ pub struct JobState<'a> {
 
 enum Message<'a> {
     Run(String),
+    BuildPlan(PackageId, ProcessBuilder, Arc<Vec<(PathBuf, Option<PathBuf>, bool)>>),
     Stdout(String),
     Stderr(String),
     Token(io::Result<Acquired>),
@@ -65,6 +68,10 @@ enum Message<'a> {
 impl<'a> JobState<'a> {
     pub fn running(&self, cmd: &ProcessBuilder) {
         let _ = self.tx.send(Message::Run(cmd.to_string()));
+    }
+
+    pub fn build_plan(&self, pkg: PackageId, cmd: ProcessBuilder, filenames: Arc<Vec<(PathBuf, Option<PathBuf>, bool)>>) {
+        let _ = self.tx.send(Message::BuildPlan(pkg, cmd, filenames));
     }
 
     pub fn stdout(&self, out: &str) {
@@ -149,6 +156,7 @@ impl<'a> JobQueue<'a> {
 
         let mut tokens = Vec::new();
         let mut queue = Vec::new();
+        let build_plan = cx.build_config.build_plan;
         trace!("queue: {:#?}", self.queue);
 
         // Iteratively execute the entire dependency graph. Each turn of the
@@ -189,7 +197,7 @@ impl<'a> JobQueue<'a> {
             // we're able to perform some parallel work.
             while error.is_none() && self.active < tokens.len() + 1 && !queue.is_empty() {
                 let (key, job, fresh) = queue.remove(0);
-                self.run(key, fresh, job, cx.config, scope)?;
+                self.run(key, fresh, job, cx.config, scope, build_plan)?;
             }
 
             // If after all that we're not actually running anything then we're
@@ -208,6 +216,16 @@ impl<'a> JobQueue<'a> {
             match self.rx.recv().unwrap() {
                 Message::Run(cmd) => {
                     cx.config.shell().verbose(|c| c.status("Running", &cmd))?;
+                }
+                Message::BuildPlan(pkg, cmd, filenames) => {
+                    println!("    {:?}: {{", pkg.name());
+                    println!("        'outputs': [");
+                    for &(ref dst, _, _) in filenames.iter() {
+                        println!("            {:?},", dst);
+                    }
+                    println!("        ],");
+                    cmd.output_build_plan();
+                    println!("    }},");
                 }
                 Message::Stdout(out) => {
                     if cx.config.extra_verbose() {
@@ -269,7 +287,9 @@ impl<'a> JobQueue<'a> {
                                   build_type,
                                   opt_type,
                                   time_elapsed);
-            cx.config.shell().status("Finished", message)?;
+            if !build_plan {
+                cx.config.shell().status("Finished", message)?;
+            }
             Ok(())
         } else if let Some(e) = error {
             Err(e)
@@ -286,7 +306,8 @@ impl<'a> JobQueue<'a> {
            fresh: Freshness,
            job: Job,
            config: &Config,
-           scope: &Scope<'a>) -> CargoResult<()> {
+           scope: &Scope<'a>,
+           build_plan: bool) -> CargoResult<()> {
         info!("start: {:?}", key);
 
         self.active += 1;
@@ -304,8 +325,10 @@ impl<'a> JobQueue<'a> {
             Freshness::Dirty => { scope.spawn(doit); }
         }
 
-        // Print out some nice progress information
-        self.note_working_on(config, &key, fresh)?;
+        if !build_plan {
+            // Print out some nice progress information
+            self.note_working_on(config, &key, fresh)?;
+        }
 
         Ok(())
     }
@@ -384,6 +407,19 @@ impl<'a> JobQueue<'a> {
             Fresh => {}
         }
         Ok(())
+    }
+
+    pub fn output_build_plan(&self) {
+        let dep_map = self.queue.get_dep_map();
+        println!("dependencies = {{");
+        for (key, deps) in dep_map.iter() {
+            println!("    {:?}: [", key.pkg.name());
+            for dep in deps.0.iter() {
+                println!("        {:?},", dep.pkg.name());
+            }
+            println!("    ],");
+        }
+        println!("}}");
     }
 }
 

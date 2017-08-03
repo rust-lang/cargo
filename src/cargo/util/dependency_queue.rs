@@ -135,4 +135,8 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
             assert!(self.dep_map.get_mut(dep).unwrap().0.remove(key));
         }
     }
+
+    pub fn get_dep_map(&self) -> &HashMap<K, (HashSet<K>, V)> {
+        return &self.dep_map;
+    }
 }

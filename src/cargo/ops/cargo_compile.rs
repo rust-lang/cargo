@@ -59,6 +59,8 @@ pub struct CompileOptions<'a> {
     pub mode: CompileMode,
     /// `--error_format` flag for the compiler.
     pub message_format: MessageFormat,
+    /// Output a build plan to stdout instead of actually compiling.
+    pub build_plan: bool,
     /// Extra arguments to be passed to rustdoc (for main crate and dependencies)
     pub target_rustdoc_args: Option<&'a [String]>,
     /// The specified target will be compiled with all the available arguments,
@@ -81,6 +83,7 @@ impl<'a> CompileOptions<'a> {
             release: false,
             filter: CompileFilter::Everything { required_features_filterable: false },
             message_format: MessageFormat::Human,
+            build_plan: false,
             target_rustdoc_args: None,
             target_rustc_args: None,
         }
@@ -196,6 +199,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     let CompileOptions { config, jobs, target, spec, features,
                          all_features, no_default_features,
                          release, mode, message_format,
+                         build_plan,
                          ref filter,
                          ref target_rustdoc_args,
                          ref target_rustc_args } = *options;
@@ -297,6 +301,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         build_config.release = release;
         build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
         build_config.json_messages = message_format == MessageFormat::Json;
+        build_config.build_plan = build_plan;
         if let CompileMode::Doc { deps } = mode {
             build_config.doc_all = deps;
         }
