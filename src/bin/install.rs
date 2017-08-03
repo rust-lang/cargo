@@ -126,6 +126,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                         &[], false,
                                         false),
         message_format: ops::MessageFormat::Human,
+        build_plan: false,
         target_rustc_args: None,
         target_rustdoc_args: None,
     };

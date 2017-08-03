@@ -20,6 +20,7 @@ pub struct Options {
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_message_format: MessageFormat,
+    flag_build_plan: bool,
     flag_package: Vec<String>,
     flag_lib: bool,
     flag_bin: Vec<String>,
@@ -57,6 +58,7 @@ Options:
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
     --message-format FMT         Error format: human, json [default: human]
+    --build-plan                 Generate a build plan
     --frozen                     Require Cargo.lock and cache are up to date
     --locked                     Require Cargo.lock is up to date
     -Z FLAG ...                  Unstable (nightly-only) flags to Cargo
@@ -111,6 +113,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                             &empty, false,
                                             false),
             message_format: options.flag_message_format,
+            build_plan: options.flag_build_plan,
             release: options.flag_release,
             mode: ops::CompileMode::Doc {
                 deps: !options.flag_no_deps,

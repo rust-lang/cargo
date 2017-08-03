@@ -3,6 +3,8 @@ use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::io;
 use std::mem;
+use std::sync::Arc;
+use std::path::PathBuf;
 use std::sync::mpsc::{channel, Sender, Receiver};
 
 use crossbeam::{self, Scope};
@@ -13,7 +15,7 @@ use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
 use util::{CargoResult, ProcessBuilder, profile, internal, CargoResultExt};
 use {handle_error};
 
-use super::{Context, Kind, Unit};
+use super::{Context, Kind, Unit, BuildPlan};
 use super::job::Job;
 
 /// A management structure of the entire dependency graph to compile.
@@ -56,6 +58,7 @@ pub struct JobState<'a> {
 
 enum Message<'a> {
     Run(String),
+    BuildPlanMsg(String, ProcessBuilder, Arc<Vec<(PathBuf, Option<PathBuf>, bool)>>),
     Stdout(String),
     Stderr(String),
     Token(io::Result<Acquired>),
@@ -65,6 +68,10 @@ enum Message<'a> {
 impl<'a> JobState<'a> {
     pub fn running(&self, cmd: &ProcessBuilder) {
         let _ = self.tx.send(Message::Run(cmd.to_string()));
+    }
+
+    pub fn build_plan(&self, module_name: String, cmd: ProcessBuilder, filenames: Arc<Vec<(PathBuf, Option<PathBuf>, bool)>>) {
+        let _ = self.tx.send(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
     pub fn stdout(&self, out: &str) {
@@ -109,7 +116,7 @@ impl<'a> JobQueue<'a> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(&mut self, cx: &mut Context) -> CargoResult<()> {
+    pub fn execute(&mut self, cx: &mut Context, plan: &mut BuildPlan) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
 
         // We need to give a handle to the send half of our message queue to the
@@ -136,12 +143,13 @@ impl<'a> JobQueue<'a> {
         })?;
 
         crossbeam::scope(|scope| {
-            self.drain_the_queue(cx, scope, &helper)
+            self.drain_the_queue(cx, plan, scope, &helper)
         })
     }
 
     fn drain_the_queue(&mut self,
                        cx: &mut Context,
+                       plan: &mut BuildPlan,
                        scope: &Scope<'a>,
                        jobserver_helper: &HelperThread)
                        -> CargoResult<()> {
@@ -149,6 +157,7 @@ impl<'a> JobQueue<'a> {
 
         let mut tokens = Vec::new();
         let mut queue = Vec::new();
+        let build_plan = cx.build_config.build_plan;
         trace!("queue: {:#?}", self.queue);
 
         // Iteratively execute the entire dependency graph. Each turn of the
@@ -189,7 +198,7 @@ impl<'a> JobQueue<'a> {
             // we're able to perform some parallel work.
             while error.is_none() && self.active < tokens.len() + 1 && !queue.is_empty() {
                 let (key, job, fresh) = queue.remove(0);
-                self.run(key, fresh, job, cx.config, scope)?;
+                self.run(key, fresh, job, cx.config, scope, build_plan)?;
             }
 
             // If after all that we're not actually running anything then we're
@@ -208,6 +217,9 @@ impl<'a> JobQueue<'a> {
             match self.rx.recv().unwrap() {
                 Message::Run(cmd) => {
                     cx.config.shell().verbose(|c| c.status("Running", &cmd))?;
+                }
+                Message::BuildPlanMsg(module_name, cmd, filenames) => {
+                    plan.update(module_name, cmd, filenames)?;
                 }
                 Message::Stdout(out) => {
                     if cx.config.extra_verbose() {
@@ -269,7 +281,9 @@ impl<'a> JobQueue<'a> {
                                   build_type,
                                   opt_type,
                                   time_elapsed);
-            cx.config.shell().status("Finished", message)?;
+            if !build_plan {
+                cx.config.shell().status("Finished", message)?;
+            }
             Ok(())
         } else if let Some(e) = error {
             Err(e)
@@ -286,7 +300,8 @@ impl<'a> JobQueue<'a> {
            fresh: Freshness,
            job: Job,
            config: &Config,
-           scope: &Scope<'a>) -> CargoResult<()> {
+           scope: &Scope<'a>,
+           build_plan: bool) -> CargoResult<()> {
         info!("start: {:?}", key);
 
         self.active += 1;
@@ -304,8 +319,10 @@ impl<'a> JobQueue<'a> {
             Freshness::Dirty => { scope.spawn(doit); }
         }
 
-        // Print out some nice progress information
-        self.note_working_on(config, &key, fresh)?;
+        if !build_plan {
+            // Print out some nice progress information
+            self.note_working_on(config, &key, fresh)?;
+        }
 
         Ok(())
     }
