@@ -14,6 +14,8 @@ pub struct BuildConfig {
     pub mode: CompileMode,
     /// Whether to print std output in json format (for machine reading)
     pub message_format: MessageFormat,
+    /// Output a build plan to stdout instead of actually compiling.
+    pub build_plan: bool,
 }
 
 impl BuildConfig {
@@ -87,6 +89,7 @@ impl BuildConfig {
             release: false,
             mode,
             message_format: MessageFormat::Human,
+            build_plan: false,
         })
     }
 

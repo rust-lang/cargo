@@ -30,6 +30,7 @@ mod bench;
 mod build_auth;
 mod build_lib;
 mod build;
+mod build_plan;
 mod build_script_env;
 mod build_script;
 mod cargo_alias_config;

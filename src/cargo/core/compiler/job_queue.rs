@@ -4,6 +4,7 @@ use std::fmt;
 use std::io;
 use std::mem;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::Arc;
 
 use crossbeam::{self, Scope};
 use jobserver::{Acquired, HelperThread};
@@ -15,7 +16,8 @@ use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
 use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
 
 use super::job::Job;
-use super::{BuildContext, CompileMode, Context, Kind, Unit};
+use super::{BuildContext, BuildPlan, CompileMode, Context, Kind, Unit};
+use super::context::OutputFile;
 
 /// A management structure of the entire dependency graph to compile.
 ///
@@ -58,6 +60,7 @@ pub struct JobState<'a> {
 
 enum Message<'a> {
     Run(String),
+    BuildPlanMsg(String, ProcessBuilder, Arc<Vec<OutputFile>>),
     Stdout(String),
     Stderr(String),
     Token(io::Result<Acquired>),
@@ -67,6 +70,16 @@ enum Message<'a> {
 impl<'a> JobState<'a> {
     pub fn running(&self, cmd: &ProcessBuilder) {
         let _ = self.tx.send(Message::Run(cmd.to_string()));
+    }
+
+    pub fn build_plan(
+        &self,
+        module_name: String,
+        cmd: ProcessBuilder,
+        filenames: Arc<Vec<OutputFile>>,
+    ) {
+        let _ = self.tx
+            .send(Message::BuildPlanMsg(module_name, cmd, filenames));
     }
 
     pub fn stdout(&self, out: &str) {
@@ -115,7 +128,7 @@ impl<'a> JobQueue<'a> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(&mut self, cx: &mut Context) -> CargoResult<()> {
+    pub fn execute(&mut self, cx: &mut Context, plan: &mut BuildPlan) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
@@ -141,17 +154,19 @@ impl<'a> JobQueue<'a> {
             })
             .chain_err(|| "failed to create helper thread for jobserver management")?;
 
-        crossbeam::scope(|scope| self.drain_the_queue(cx, scope, &helper))
+        crossbeam::scope(|scope| self.drain_the_queue(cx, plan, scope, &helper))
     }
 
     fn drain_the_queue(
         &mut self,
         cx: &mut Context,
+        plan: &mut BuildPlan,
         scope: &Scope<'a>,
         jobserver_helper: &HelperThread,
     ) -> CargoResult<()> {
         let mut tokens = Vec::new();
         let mut queue = Vec::new();
+        let build_plan = cx.bcx.build_config.build_plan;
         trace!("queue: {:#?}", self.queue);
 
         // Iteratively execute the entire dependency graph. Each turn of the
@@ -192,7 +207,7 @@ impl<'a> JobQueue<'a> {
             // we're able to perform some parallel work.
             while error.is_none() && self.active < tokens.len() + 1 && !queue.is_empty() {
                 let (key, job, fresh) = queue.remove(0);
-                self.run(key, fresh, job, cx.bcx.config, scope)?;
+                self.run(key, fresh, job, cx.bcx.config, scope, build_plan)?;
             }
 
             // If after all that we're not actually running anything then we're
@@ -214,6 +229,9 @@ impl<'a> JobQueue<'a> {
                         .config
                         .shell()
                         .verbose(|c| c.status("Running", &cmd))?;
+                }
+                Message::BuildPlanMsg(module_name, cmd, filenames) => {
+                    plan.update(module_name, cmd, filenames)?;
                 }
                 Message::Stdout(out) => {
                     if cx.bcx.config.extra_verbose() {
@@ -303,7 +321,9 @@ impl<'a> JobQueue<'a> {
                 "{} [{}] target(s) in {}",
                 build_type, opt_type, time_elapsed
             );
-            cx.bcx.config.shell().status("Finished", message)?;
+            if !build_plan {
+                cx.bcx.config.shell().status("Finished", message)?;
+            }
             Ok(())
         } else if let Some(e) = error {
             Err(e)
@@ -322,6 +342,7 @@ impl<'a> JobQueue<'a> {
         job: Job,
         config: &Config,
         scope: &Scope<'a>,
+        build_plan: bool,
     ) -> CargoResult<()> {
         info!("start: {:?}", key);
 
@@ -340,8 +361,10 @@ impl<'a> JobQueue<'a> {
             }
         }
 
-        // Print out some nice progress information
-        self.note_working_on(config, &key, fresh)?;
+        if !build_plan {
+            // Print out some nice progress information
+            self.note_working_on(config, &key, fresh)?;
+        }
 
         Ok(())
     }

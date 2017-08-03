@@ -31,6 +31,7 @@ pub fn cli() -> App {
         .arg(opt("out-dir", "Copy final artifacts to this directory").value_name("PATH"))
         .arg_manifest_path()
         .arg_message_format()
+        .arg_build_plan()
         .after_help(
             "\
 If the --package argument is given, then SPEC is a package id specification
