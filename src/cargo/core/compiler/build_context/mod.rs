@@ -229,6 +229,18 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
         }
         None
     }
+
+    /// Return the list of filenames read by cargo to generate the BuildContext
+    /// (all Cargo.toml, etc).
+    pub fn inputs(&self) -> CargoResult<Vec<PathBuf>> {
+        let mut inputs = Vec::new();
+        for id in self.packages.package_ids() {
+            let pkg = self.get_package(id)?;
+            inputs.push(pkg.manifest_path().to_path_buf());
+        }
+        inputs.sort();
+        Ok(inputs)
+    }
 }
 
 /// Information required to build for a target
