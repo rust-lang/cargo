@@ -17,7 +17,7 @@ pub enum EitherManifest {
 }
 
 /// Contains all the information about a package, as loaded from a Cargo.toml.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,

@@ -18,6 +18,7 @@ use util::toml::read_manifest;
 /// A workspace is often created very early on and then threaded through all
 /// other functions. It's typically through this object that the current
 /// package is loaded and/or learned about.
+#[derive(Debug)]
 pub struct Workspace<'cfg> {
     config: &'cfg Config,
 
@@ -57,11 +58,13 @@ pub struct Workspace<'cfg> {
 
 // Separate structure for tracking loaded packages (to avoid loading anything
 // twice), and this is separate to help appease the borrow checker.
+#[derive(Debug)]
 struct Packages<'cfg> {
     config: &'cfg Config,
     packages: HashMap<PathBuf, MaybePackage>,
 }
 
+#[derive(Debug)]
 enum MaybePackage {
     Package(Package),
     Virtual(VirtualManifest),

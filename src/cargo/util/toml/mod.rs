@@ -142,7 +142,7 @@ type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum TomlDependency {
     Simple(String),
@@ -181,7 +181,7 @@ impl<'de> de::Deserialize<'de> for TomlDependency {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Default)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default)]
 pub struct DetailedTomlDependency {
     version: Option<String>,
     path: Option<String>,
@@ -197,7 +197,7 @@ pub struct DetailedTomlDependency {
     default_features2: Option<bool>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TomlManifest {
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
@@ -224,7 +224,7 @@ pub struct TomlManifest {
     badges: Option<HashMap<String, HashMap<String, String>>>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Default)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default)]
 pub struct TomlProfiles {
     test: Option<TomlProfile>,
     doc: Option<TomlProfile>,
@@ -233,7 +233,7 @@ pub struct TomlProfiles {
     release: Option<TomlProfile>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TomlOptLevel(String);
 
 impl<'de> de::Deserialize<'de> for TomlOptLevel {
@@ -282,7 +282,7 @@ impl ser::Serialize for TomlOptLevel {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum U32OrBool {
     U32(u32),
@@ -325,7 +325,7 @@ impl<'de> de::Deserialize<'de> for U32OrBool {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Default)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default)]
 pub struct TomlProfile {
     #[serde(rename = "opt-level")]
     opt_level: Option<TomlOptLevel>,
@@ -378,7 +378,7 @@ impl<'de> de::Deserialize<'de> for StringOrBool {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TomlProject {
     name: String,
     version: semver::Version,
@@ -404,7 +404,7 @@ pub struct TomlProject {
     metadata: Option<toml::Value>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TomlWorkspace {
     members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
@@ -966,7 +966,7 @@ impl ser::Serialize for PathValue {
 }
 
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct TomlPlatform {
     dependencies: Option<HashMap<String, TomlDependency>>,
     #[serde(rename = "build-dependencies")]
