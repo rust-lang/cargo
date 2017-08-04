@@ -18,7 +18,7 @@ use util::errors::{CargoResult, CargoResultExt};
 ///
 /// A package is a `Cargo.toml` file plus all the files that are part of it.
 // TODO: Is manifest_path a relic?
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Package {
     // The package's manifest
     manifest: Manifest,
