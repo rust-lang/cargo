@@ -9,7 +9,7 @@ pub use self::resolver::Resolve;
 pub use self::shell::{Shell, Verbosity};
 pub use self::source::{Source, SourceId, SourceMap, GitReference};
 pub use self::summary::Summary;
-pub use self::workspace::{Workspace, WorkspaceConfig};
+pub use self::workspace::{Members, Workspace, WorkspaceConfig};
 
 pub mod source;
 pub mod package;
