@@ -1,11 +1,11 @@
-% Replacing sources
+## Replacing sources
 
 Cargo supports the ability to **replace one source with another** to express
 strategies along the lines of mirrors or vendoring dependencies. Configuration
 is currently done through the [`.cargo/config` configuration][config] mechanism,
 like so:
 
-[config]: config.html
+[config]: 03-03-config.html
 
 ```toml
 # The `source` table is where all keys related to source-replacement
@@ -49,9 +49,9 @@ patching a dependency or a private registry. Cargo supports patching
 dependencies through the usage of [the `[replace]` key][replace-section], and
 private registry support is planned for a future version of Cargo.
 
-[replace-section]: manifest.html#the-replace-section
+[replace-section]: 03-02-manifest.html#the-replace-section
 
-## Configuration
+### Configuration
 
 Configuration of replacement sources is done through [`.cargo/config`][config]
 and the full set of available keys are:
@@ -78,7 +78,7 @@ crates) and can be replaced with:
 replace-with = 'another-source'
 ```
 
-## Registry Sources
+### Registry Sources
 
 A "registry source" is one that is the same as crates.io itself. That is, it has
 an index served in a git repository which matches the format of the
@@ -88,7 +88,7 @@ then has configuration indicating where to download crates from.
 Currently there is not an already-available project for setting up a mirror of
 crates.io. Stay tuned though!
 
-## Local Registry Sources
+### Local Registry Sources
 
 A "local registry source" is intended to be a subset of another registry
 source, but available on the local filesystem (aka vendoring). Local registries
@@ -106,7 +106,7 @@ Local registries are contained within one directory and contain a number of
 the same format as the crates.io-index project (populated with just entries for
 the crates that are present).
 
-## Directory Sources
+### Directory Sources
 
 A "directory source" is similar to a local registry source where it contains a
 number of crates available on the local filesystem, suitable for vendoring

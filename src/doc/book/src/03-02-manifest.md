@@ -1,6 +1,6 @@
-% The Manifest Format
+## The Manifest Format
 
-# The `[package]` section
+### The `[package]` section
 
 The first section in a `Cargo.toml` is `[package]`.
 
@@ -13,7 +13,7 @@ authors = ["you@example.com"]
 
 All three of these fields are mandatory.
 
-## The `version` field
+#### The `version` field
 
 Cargo bakes in the concept of [Semantic
 Versioning](http://semver.org/), so make sure you follow some basic rules:
@@ -28,13 +28,13 @@ Versioning](http://semver.org/), so make sure you follow some basic rules:
   traits, fields, types, functions, methods or anything else.
 * Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.
 
-## The `build` field (optional)
+#### The `build` field (optional)
 
 This field specifies a file in the repository which is a [build script][1] for
 building native code. More information can be found in the build script
 [guide][1].
 
-[1]: build-script.html
+[1]: 03-05-build-scripts.html
 
 ```toml
 [package]
@@ -42,15 +42,15 @@ building native code. More information can be found in the build script
 build = "build.rs"
 ```
 
-## The `documentation` field (optional)
+#### The `documentation` field (optional)
 
 This field specifies a URL to a website hosting the crate's documentation.
 If no URL is specified in the manifest file, [crates.io][cratesio] will
 automatically link your crate to the corresponding [docs.rs][docsrs] page.
 
-Documentation links from specific hosts are blacklisted. Hosts are added 
-to the blacklist if they are known to not be hosting documentation and are 
-possibly of malicious intent e.g. ad tracking networks. URLs from the 
+Documentation links from specific hosts are blacklisted. Hosts are added
+to the blacklist if they are known to not be hosting documentation and are
+possibly of malicious intent e.g. ad tracking networks. URLs from the
 following hosts are blacklisted:
 - rust-ci.org
 
@@ -60,7 +60,7 @@ may be replaced by docs.rs links.
 [docsrs]: https://docs.rs/
 [cratesio]: https://crates.io/
 
-## The `exclude` and `include` fields (optional)
+#### The `exclude` and `include` fields (optional)
 
 You can explicitly specify to Cargo that a set of [globs][globs] should be
 ignored or included for the purposes of packaging and rebuilding a package. The
@@ -90,7 +90,7 @@ necessary source files may not be included.
 
 [globs]: http://doc.rust-lang.org/glob/glob/struct.Pattern.html
 
-### Migrating to `gitignore`-like pattern matching
+#### Migrating to `gitignore`-like pattern matching
 
 The current interpretation of these configs is based on UNIX Globs, as
 implemented in the [`glob` crate](https://crates.io/crates/glob). We want
@@ -104,7 +104,7 @@ line in a `gitignore` file. See [the tracking
 issue](https://github.com/rust-lang/cargo/issues/4268) for more details on the
 migration.
 
-## The `publish`  field (optional)
+#### The `publish`  field (optional)
 
 The `publish` field can be used to prevent a package from being published to a
 repository by mistake.
@@ -115,7 +115,7 @@ repository by mistake.
 publish = false
 ```
 
-## The `workspace`  field (optional)
+#### The `workspace`  field (optional)
 
 The `workspace` field can be used to configure the workspace that this package
 will be a member of. If not specified this will be inferred as the first
@@ -129,7 +129,7 @@ workspace = "path/to/root"
 
 For more information, see the documentation for the workspace table below.
 
-## Package metadata
+#### Package metadata
 
 There are a number of optional metadata fields also accepted under the
 `[package]` section:
@@ -187,7 +187,7 @@ travis-ci = { repository = "...", branch = "master" }
 appveyor = { repository = "...", branch = "master", service = "github" }
 # GitLab: `repository` is required. `branch` is optional; default is `master`
 gitlab = { repository = "...", branch = "master" }
-# Circle CI: `repository` is required. `branch` is optiona; default is `master`
+# Circle CI: `repository` is required. `branch` is optional; default is `master`
 circle-ci = { repository = "...", branch = "master" }
 # Is it maintained resolution time: `repository` is required.
 is-it-maintained-issue-resolution = { repository = "..." }
@@ -208,7 +208,7 @@ provide useful information to users of the registry and also influence the
 search ranking of a crate. It is highly discouraged to omit everything in a
 published crate.
 
-## The `metadata` table (optional)
+#### The `metadata` table (optional)
 
 Cargo by default will warn about unused keys in `Cargo.toml` to assist in
 detecting typos and such. The `package.metadata` table, however, is completely
@@ -227,13 +227,13 @@ package-name = "my-awesome-android-app"
 assets = "path/to/static"
 ```
 
-# Dependency sections
+### Dependency sections
 
-See the [specifying dependencies page](specifying-dependencies.html) for
+See the [specifying dependencies page](03-01-specifying-dependencies.html) for
 information on the `[dependencies]`, `[dev-dependencies]`,
 `[build-dependencies]`, and target-specific `[target.*.dependencies]` sections.
 
-# The `[profile.*]` sections
+### The `[profile.*]` sections
 
 Cargo supports custom configuration of how rustc is invoked through profiles at
 the top level. Any manifest may declare a profile, but only the top level
@@ -305,7 +305,7 @@ codegen-units = 1
 panic = 'unwind'
 ```
 
-# The `[features]` section
+### The `[features]` section
 
 Cargo supports features to allow expression of:
 
@@ -366,7 +366,7 @@ default-features = false # do not include the default features, and optionally
 features = ["secure-password", "civet"]
 ```
 
-## Rules
+#### Rules
 
 The usage of features is subject to a few rules:
 
@@ -388,7 +388,7 @@ Note that it is explicitly allowed for features to not actually activate any
 optional dependencies. This allows packages to internally enable/disable
 features without requiring a new dependency.
 
-## Usage in end products
+#### Usage in end products
 
 One major use-case for this feature is specifying optional features in
 end-products. For example, the Servo project may want to include optional
@@ -403,7 +403,7 @@ $ cargo build --release --features "shumway pdf"
 
 Default features could be excluded using `--no-default-features`.
 
-## Usage in packages
+#### Usage in packages
 
 In most cases, the concept of *optional dependency* in a library is best
 expressed as a separate package that the top-level application depends on.
@@ -430,7 +430,7 @@ In almost all cases, it is an antipattern to use these features outside of
 high-level packages that are designed for curation. If a feature is optional, it
 can almost certainly be expressed as a separate package.
 
-# The `[workspace]` section
+### The `[workspace]` section
 
 Projects can define a workspace which is a set of crates that will all share the
 same `Cargo.lock` and output directory. The `[workspace]` table can be defined
@@ -485,13 +485,14 @@ and also be a member crate of another workspace (contain `package.workspace`).
 Most of the time workspaces will not need to be dealt with as `cargo new` and
 `cargo init` will handle workspace configuration automatically.
 
-# The project layout
+#TODO: move this to a more appropriate place
+### The project layout
 
 If your project is an executable, name the main source file `src/main.rs`. If it
 is a library, name the main source file `src/lib.rs`.
 
 Cargo will also treat any files located in `src/bin/*.rs` as executables. If your
-executable consist of more than just one source file, you might also use a directory
+executable consists of more than just one source file, you might also use a directory
 inside `src/bin` containing a `main.rs` file which will be treated as an executable
 with a name of the parent directory.
 Do note, however, once you add a `[[bin]]` section ([see
@@ -519,15 +520,18 @@ integration tests, and benchmarks respectively.
   *.rs
 ```
 
-To structure your code after you've created the files and folders for your project, you should remember to use Rust's module system, which you can read about in [the book](https://doc.rust-lang.org/book/crates-and-modules.html).
+To structure your code after you've created the files and folders for your
+project, you should remember to use Rust's module system, which you can read
+about in [the book](https://doc.rust-lang.org/book/crates-and-modules.html).
 
-# Examples
+### Examples
 
 Files located under `examples` are example uses of the functionality provided by
 the library. When compiled, they are placed in the `target/examples` directory.
 
-They can compile either as executables (with a `main()` function) or libraries and pull in the library by using `extern crate <library-name>`. They are compiled when you run
-your tests to protect them from bitrotting.
+They can compile either as executables (with a `main()` function) or libraries
+and pull in the library by using `extern crate <library-name>`. They are
+compiled when you run your tests to protect them from bitrotting.
 
 You can run individual executable examples with the command `cargo run --example
 <example-name>`.
@@ -540,9 +544,10 @@ name = "foo"
 crate-type = ["staticlib"]
 ```
 
-You can build individual library examples with the command `cargo build --example <example-name>`.
+You can build individual library examples with the command `cargo build
+--example <example-name>`.
 
-# Tests
+### Tests
 
 When you run `cargo test`, Cargo will:
 
@@ -554,7 +559,7 @@ When you run `cargo test`, Cargo will:
 * compile and run your library’s [integration tests](#integration-tests); and
 * compile your library’s examples.
 
-## Integration tests
+#### Integration tests
 
 Each file in `tests/*.rs` is an integration test. When you run `cargo test`,
 Cargo will compile each of these files as a separate crate. The crate can link
@@ -567,7 +572,7 @@ example, if you want several integration tests to share some code, you can put
 the shared code in `tests/common/mod.rs` and then put `mod common;` in each of
 the test files.
 
-# Configuring a target
+### Configuring a target
 
 All of the  `[[bin]]`, `[lib]`, `[[bench]]`, `[[test]]`, and `[[example]]`
 sections support similar configuration for specifying how a target should be
@@ -621,7 +626,7 @@ proc-macro = false
 harness = true
 ```
 
-## The `required-features` field (optional)
+#### The `required-features` field (optional)
 
 The `required-features` field specifies which features the target needs in order
 to be built. If any of the required features are not selected, the target will
@@ -640,7 +645,7 @@ tools = []
 required-features = ["postgres", "tools"]
 ```
 
-# Building dynamic or static libraries
+#### Building dynamic or static libraries
 
 If your project produces a library, you can specify which kind of library to
 build by explicitly listing the library in your `Cargo.toml`:
@@ -661,7 +666,7 @@ includes them.
 You can read more about the different crate types in the
 [Rust Reference Manual](https://doc.rust-lang.org/reference/linkage.html)
 
-# The `[patch]` Section
+### The `[patch]` Section
 
 This section of Cargo.toml can be used to [override dependencies][replace] with
 other copies. The syntax is similar to the `[dependencies]` section:
@@ -695,9 +700,9 @@ technical specification of this feature. Note that the `[patch]` feature will
 first become available in Rust 1.20, set to be released on 2017-08-31.
 
 [RFC 1969]: https://github.com/rust-lang/rfcs/pull/1969
-[replace]: specifying-dependencies.html#overriding-dependencies
+[replace]: 03-01-specifying-dependencies.html#overriding-dependencies
 
-# The `[replace]` Section
+### The `[replace]` Section
 
 This section of Cargo.toml can be used to [override dependencies][replace] with
 other copies. The syntax is similar to the `[dependencies]` section:
@@ -709,7 +714,7 @@ other copies. The syntax is similar to the `[dependencies]` section:
 ```
 
 Each key in the `[replace]` table is a [package id
-specification](pkgid-spec.html) which allows arbitrarily choosing a node in the
+specification](03-07-pkgid-spec.html) which allows arbitrarily choosing a node in the
 dependency graph to override. The value of each key is the same as the
 `[dependencies]` syntax for specifying dependencies, except that you can't
 specify features. Note that when a crate is overridden the copy it's overridden

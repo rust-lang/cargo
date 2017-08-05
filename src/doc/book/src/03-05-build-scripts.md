@@ -1,4 +1,4 @@
-% Build Script Support
+## Build Script Support
 
 Some packages need to compile third-party non-Rust code, for example C
 libraries. Other packages need to link to C libraries which can either be
@@ -32,7 +32,7 @@ Some example use cases of the build command are:
 Each of these use cases will be detailed in full below to give examples of how
 the build command works.
 
-## Inputs to the Build Script
+### Inputs to the Build Script
 
 When the build script is run, there are a number of inputs to the build script,
 all passed in the form of [environment variables][env].
@@ -40,26 +40,26 @@ all passed in the form of [environment variables][env].
 In addition to environment variables, the build script’s current directory is
 the source directory of the build script’s package.
 
-[env]: environment-variables.html
+[env]: 03-04-environment-variables.html
 
-## Outputs of the Build Script
+### Outputs of the Build Script
 
-All the lines printed to stdout by a build script are written to a file like `target/debug/build/<pkg>/output` (the precise location may depend on your configuration). Any line that starts with `cargo:` is interpreted directly by Cargo. This line must be of the form `cargo:key=value`, like the examples below:
+All the lines printed to stdout by a build script are written to a file like
+`target/debug/build/<pkg>/output` (the precise location may depend on your
+configuration). Any line that starts with `cargo:` is interpreted directly by
+Cargo. This line must be of the form `cargo:key=value`, like the examples
+below:
 
 ```notrust
 # specially recognized by Cargo
 cargo:rustc-link-lib=static=foo
 cargo:rustc-link-search=native=/path/to/foo
 cargo:rustc-cfg=foo
-cargo:rustc-env=FOO=bar
 # arbitrary user-defined metadata
 cargo:root=/path/to/foo
 cargo:libdir=/path/to/foo/lib
 cargo:include=/path/to/foo/include
 ```
-
-On the other hand, lines printed to stderr are written to a file like
-`target/debug/build/<pkg>/stderr` but are not interpreted by cargo.
 
 There are a few special keys that Cargo recognizes, some affecting how the
 crate is built:
@@ -77,12 +77,6 @@ crate is built:
 * `rustc-cfg=FEATURE` indicates that the specified feature will be passed as a
   `--cfg` flag to the compiler. This is often useful for performing compile-time
   detection of various features.
-* `rustc-env=VAR=VALUE` indicates that the specified environment variable
-  will be added to the environment which the compiler is run within.
-  The value can be then retrieved by the `env!` macro in the compiled crate.
-  This is useful for embedding additional metadata in crate's code,
-  such as the hash of Git HEAD or the unique identifier of a continuous
-  integration server.
 * `rerun-if-changed=PATH` is a path to a file or directory which indicates that
   the build script should be re-run if it changes (detected by a more-recent
   last-modified timestamp on the file). Normally build scripts are re-run if
@@ -92,21 +86,11 @@ crate is built:
   of the directory itself (which corresponds to some types of changes within the
   directory, depending on platform) will trigger a rebuild. To request a re-run
   on any changes within an entire directory, print a line for the directory and
-  another line for everything inside it, recursively.)
+  another line for everything inside it, recursively.)  
   Note that if the build script itself (or one of its dependencies) changes,
   then it's rebuilt and rerun unconditionally, so
   `cargo:rerun-if-changed=build.rs` is almost always redundant (unless you
   want to ignore changes in all other files except for `build.rs`).
-* `rerun-if-env-changed=VAR` is the name of an environment variable which
-  indicates that if the environment variable's value changes the build script
-  should be rerun. This basically behaves the same as `rerun-if-changed` except
-  that it works with environment variables instead. Note that the environment
-  variables here are intended for global environment variables like `CC` and
-  such, it's not necessary to use this for env vars like `TARGET` that Cargo
-  sets. Also note that if `rerun-if-env-changed` is printed out then Cargo will
-  *only* rerun the build script if those environment variables change or if
-  files printed out by `rerun-if-changed` change.
-
 * `warning=MESSAGE` is a message that will be printed to the main console after
   a build script has finished running. Warnings are only shown for path
   dependencies (that is, those you're working on locally), so for example
@@ -118,7 +102,7 @@ section.
 
 [links]: #the-links-manifest-key
 
-## Build Dependencies
+### Build Dependencies
 
 Build scripts are also allowed to have dependencies on other Cargo-based crates.
 Dependencies are declared through the `build-dependencies` section of the
@@ -134,7 +118,7 @@ The build script **does not** have access to the dependencies listed in the
 dependencies will also not be available to the package itself unless explicitly
 stated as so.
 
-## The `links` Manifest Key
+### The `links` Manifest Key
 
 In addition to the manifest key `build`, Cargo also supports a `links` manifest
 key to declare the name of a native library that is being linked to:
@@ -173,7 +157,7 @@ Note that metadata is only passed to immediate dependents, not transitive
 dependents. The motivation for this metadata passing is outlined in the linking
 to system libraries case study below.
 
-## Overriding Build Scripts
+### Overriding Build Scripts
 
 If a manifest contains a `links` key, then Cargo supports overriding the build
 script specified with a custom library. The purpose of this functionality is to
@@ -181,7 +165,7 @@ prevent running the build script in question altogether and instead supply the
 metadata ahead of time.
 
 To override a build script, place the following configuration in any acceptable
-Cargo [configuration location](config.html).
+Cargo [configuration location](03-03-config.html).
 
 ```toml
 [target.x86_64-unknown-linux-gnu.foo]
@@ -201,7 +185,7 @@ With this configuration, if a package declares that it links to `foo` then the
 build script will **not** be compiled or run, and the metadata specified will
 instead be used.
 
-# Case study: Code generation
+### Case study: Code generation
 
 Some Cargo packages need to have code generated just before they are compiled
 for various reasons. Here we’ll walk through a simple example which generates a
@@ -286,7 +270,7 @@ the generated file (`hello.rs`) into the crate’s compilation.
 Using the structure shown here, crates can include any number of generated files
 from the build script itself.
 
-# Case study: Building some native code
+### Case study: Building some native code
 
 Sometimes it’s necessary to build some native C or C++ code as part of a
 package. This is another excellent use case of leveraging the build script to
@@ -433,7 +417,7 @@ dependency can be crucial in many situations and even much more concise!
 We’ve also seen a brief example of how a build script can use a crate as a
 dependency purely for the build process and not for the crate itself at runtime.
 
-# Case study: Linking to system libraries
+### Case study: Linking to system libraries
 
 The final case study here will be investigating how a Cargo library links to a
 system library and how the build script is leveraged to support this use case.
@@ -446,7 +430,7 @@ script is again to farm out as much of this as possible to make this as easy as
 possible for consumers.
 
 As an example to follow, let’s take a look at one of [Cargo’s own
-dependencies][git2-rs], [libgit2][libgit2]. The C library has a number of
+dependencies][git2-rs], [libgit2][libgit2]. This library has a number of
 constraints:
 
 [git2-rs]: https://github.com/alexcrichton/git2-rs/tree/master/libgit2-sys
@@ -460,7 +444,7 @@ constraints:
 * It can be built from source using `cmake`.
 
 To visualize what’s going on here, let’s take a look at the manifest for the
-relevant Cargo package that links to the native C library.
+relevant Cargo package.
 
 ```toml
 [package]
@@ -483,14 +467,13 @@ As the above manifests show, we’ve got a `build` script specified, but it’s
 worth noting that this example has a `links` entry which indicates that the
 crate (`libgit2-sys`) links to the `git2` native library.
 
-Here we also see that we chose to have the Rust crate have an unconditional
-dependency on `libssh2` via the `libssh2-sys` crate, as well as a
-platform-specific dependency on `openssl-sys` for \*nix (other variants elided
-for now). It may seem a little counterintuitive to express *C dependencies* in
-the *Cargo manifest*, but this is actually using one of Cargo’s conventions in
-this space.
+Here we also see the unconditional dependency on `libssh2` via the
+`libssh2-sys` crate, as well as a platform-specific dependency on `openssl-sys`
+for \*nix (other variants elided for now). It may seem a little counterintuitive
+to express *C dependencies* in the *Cargo manifest*, but this is actually using
+one of Cargo’s conventions in this space.
 
-## `*-sys` Packages
+### `*-sys` Packages
 
 To alleviate linking to system libraries, Cargo has a *convention* of package
 naming and functionality. Any package named `foo-sys` will provide two major
@@ -512,7 +495,7 @@ convention of native-library-related packages:
   (or building it from source).
 * These dependencies are easily overridable.
 
-## Building libgit2
+### Building libgit2
 
 Now that we’ve got libgit2’s dependencies sorted out, we need to actually write
 the build script. We’re not going to look at specific snippets of code here and
@@ -549,5 +532,5 @@ doing so that we need to take into account, however:
 
 Most of the functionality of this build script is easily refactorable into
 common dependencies, so our build script isn’t quite as intimidating as this
-descriptions! In reality it’s expected that build scripts are quite succinct by
+description! In reality it’s expected that build scripts are quite succinct by
 farming logic such as above to build dependencies.

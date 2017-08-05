@@ -1,10 +1,10 @@
-% Environment Variables
+## Environment Variables
 
 Cargo sets and reads a number of environment variables which your code can detect
 or override. Here is a list of the variables Cargo sets, organized by when it interacts
 with them:
 
-# Environment variables Cargo reads
+### Environment variables Cargo reads
 
 You can override these environment variables to change Cargo's behavior on your
 system:
@@ -29,13 +29,14 @@ system:
 Note that Cargo will also read environment variables for `.cargo/config`
 configuration values, as described in [that documentation][config-env]
 
-[config-env]: config.html#environment-variables
+[config-env]: 03-03-config.html#environment-variables
 
-# Environment variables Cargo sets for crates
+### Environment variables Cargo sets for crates
 
 Cargo exposes these environment variables to your crate when it is compiled.
 Note that this applies for test binaries as well.
-To get the value of any of these variables in a Rust program, do this:
+To get the value of any of these variables in a Rust program, you can use
+the `env!` macro:
 
 ```
 let version = env!("CARGO_PKG_VERSION");
@@ -57,7 +58,7 @@ let version = env!("CARGO_PKG_VERSION");
 * `OUT_DIR` - If the package has a build script, this is set to the folder where the build
               script should place its output.  See below for more information.
 
-# Environment variables Cargo sets for build scripts
+### Environment variables Cargo sets for build scripts
 
 Cargo sets several environment variables when build scripts are run. Because these variables
 are not yet set when the build script is compiled, the above example using `env!` won't work
@@ -97,14 +98,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
              triples can be found in [clang’s own documentation][clang].
 * `HOST` - the host triple of the rust compiler.
 * `NUM_JOBS` - the parallelism specified as the top-level parallelism. This can
-               be useful to pass a `-j` parameter to a system like `make`. Note
-               that care should be taken when interpreting this environment
-               variable. For historical purposes this is still provided but
-               recent versions of Cargo, for example, do not need to run `make
-               -j` as it'll automatically happen. Cargo implements its own
-               [jobserver] and will allow build scripts to inherit this
-               information, so programs compatible with GNU make jobservers will
-               already have appropriately configured parallelism.
+               be useful to pass a `-j` parameter to a system like `make`.
 * `OPT_LEVEL`, `DEBUG` - values of the corresponding variables for the
                          profile currently being built.
 * `PROFILE` - `release` for release builds, `debug` for other builds.
@@ -114,13 +108,12 @@ let out_dir = env::var("OUT_DIR").unwrap();
                        resolved to use, passed to the build script so it might
                        use it as well.
 
-[links]: build-script.html#the-links-manifest-key
-[profile]: manifest.html#the-profile-sections
+[links]: 03-05-build-scripts.html#the-links-manifest-key
+[profile]: 03-02-manifest.html#the-profile-sections
 [configuration]: https://doc.rust-lang.org/reference/attributes.html#conditional-compilation
 [clang]:http://clang.llvm.org/docs/CrossCompilation.html#target-triple
-[jobserver]: http://make.mad-scientist.net/papers/jobserver-implementation/
 
-# Environment variables Cargo sets for 3rd party subcommands
+### Environment variables Cargo sets for 3rd party subcommands
 
 Cargo exposes this environment variable to 3rd party subcommands
 (ie. programs named `cargo-foobar` placed in `$PATH`):

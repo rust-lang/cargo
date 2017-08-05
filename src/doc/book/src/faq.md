@@ -1,6 +1,6 @@
-% Frequently Asked Questions
+## Frequently Asked Questions
 
-# Is the plan to use GitHub as a package repository?
+### Is the plan to use GitHub as a package repository?
 
 No. The plan for Cargo is to use [crates.io], like npm or Rubygems do with
 npmjs.org and rubygems.org.
@@ -9,7 +9,7 @@ We plan to support git repositories as a source of packages forever,
 because they can be used for early development and temporary patches,
 even when people use the registry as the primary source of packages.
 
-# Why build crates.io rather than use GitHub as a registry?
+### Why build crates.io rather than use GitHub as a registry?
 
 We think that it’s very important to support multiple ways to download
 packages, including downloading from GitHub and copying packages into
@@ -42,7 +42,7 @@ languages include:
   down fast. Also remember that not everybody has a high-speed,
   low-latency Internet connection.
 
-# Will Cargo work with C code (or other languages)?
+### Will Cargo work with C code (or other languages)?
 
 Yes!
 
@@ -50,12 +50,12 @@ Cargo handles compiling Rust code, but we know that many Rust projects
 link against C code. We also know that there are decades of tooling
 built up around compiling languages other than Rust.
 
-Our solution: Cargo allows a package to [specify a script](build-script.html)
+Our solution: Cargo allows a package to [specify a script](03-05-build-scripts.html)
 (written in Rust) to run before invoking `rustc`. Rust is leveraged to
 implement platform-specific configuration and refactor out common build
 functionality among packages.
 
-# Can Cargo be used inside of `make` (or `ninja`, or ...)
+### Can Cargo be used inside of `make` (or `ninja`, or ...)
 
 Indeed. While we intend Cargo to be useful as a standalone way to
 compile Rust projects at the top-level, we know that some people will
@@ -67,23 +67,23 @@ have some work to do on those fronts, but using Cargo in the context of
 conventional scripts is something we designed for from the beginning and
 will continue to prioritize.
 
-# Does Cargo handle multi-platform projects or cross-compilation?
+### Does Cargo handle multi-platform projects or cross-compilation?
 
 Rust itself provides facilities for configuring sections of code based
 on the platform. Cargo also supports [platform-specific
 dependencies][target-deps], and we plan to support more per-platform
 configuration in `Cargo.toml` in the future.
 
-[target-deps]: manifest.html#the-dependencies-section
+[target-deps]: 03-02-manifest.html#the-dependencies-section
 
 In the longer-term, we’re looking at ways to conveniently cross-compile
 projects using Cargo.
 
-# Does Cargo support environments, like `production` or `test`?
+### Does Cargo support environments, like `production` or `test`?
 
 We support environments through the use of [profiles][profile] to support:
 
-[profile]: manifest.html#the-profile-sections
+[profile]: 03-02-manifest.html#the-profile-sections
 
 * environment-specific flags (like `-g --opt-level=0` for development
   and `--opt-level=3` for production).
@@ -91,7 +91,7 @@ We support environments through the use of [profiles][profile] to support:
 * environment-specific `#[cfg]`
 * a `cargo test` command
 
-# Does Cargo work on Windows?
+### Does Cargo work on Windows?
 
 Yes!
 
@@ -101,7 +101,7 @@ issue][3].
 
 [3]: https://github.com/rust-lang/cargo/issues
 
-# Why do binaries have `Cargo.lock` in version control, but not libraries?
+### Why do binaries have `Cargo.lock` in version control, but not libraries?
 
 The purpose of a `Cargo.lock` is to describe the state of the world at the time
 of a successful build. It is then used to provide deterministic builds across
@@ -128,7 +128,7 @@ In other words, libraries specify semver requirements for their dependencies but
 cannot see the full picture. Only end products like binaries have a full
 picture to decide what versions of dependencies should be used.
 
-# Can libraries use `*` as a version for their dependencies?
+### Can libraries use `*` as a version for their dependencies?
 
 **As of January 22nd, 2016, [crates.io] rejects all packages (not just libraries)
 with wildcard dependency constraints.**
@@ -138,7 +138,7 @@ of `*` says “This will work with every version ever,” which is never going
 to be true. Libraries should always specify the range that they do work with,
 even if it’s something as general as “every 1.x.y version.”
 
-# Why `Cargo.toml`?
+### Why `Cargo.toml`?
 
 As one of the most frequent interactions with Cargo, the question of why the
 configuration file is named `Cargo.toml` arises from time to time. The leading
@@ -156,7 +156,7 @@ but others were accidentally forgotten.
 
 [crates.io]: https://crates.io/
 
-# How can Cargo work offline?
+### How can Cargo work offline?
 
 Cargo is often used in situations with limited or no network access such as
 airplanes, CI environments, or embedded in large production deployments. Users
@@ -190,4 +190,4 @@ shouldn't be necessary.
 For more information about vendoring, see documentation on [source
 replacement][replace].
 
-[replace]: source-replacement.html
+[replace]: 03-08-source-replacement.html
