@@ -226,6 +226,71 @@ fn invalid8() {
 }
 
 #[test]
+fn invalid9() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("--features").arg("bar"),
+                execs().with_status(101).with_stderr("\
+[ERROR] Package `foo v0.0.1 ([..])` does not have these features: `bar`
+"));
+}
+
+#[test]
+fn invalid10() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+            features = ["baz"]
+        "#)
+        .file("src/main.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.baz]
+            path = "baz"
+        "#)
+        .file("bar/src/lib.rs", "")
+        .file("bar/baz/Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/baz/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101).with_stderr("\
+[ERROR] Package `bar v0.0.1 ([..])` does not have these features: `baz`
+"));
+}
+
+#[test]
 fn no_transitive_dep_feature_requirement() {
     let p = project("foo")
         .file("Cargo.toml", r#"
