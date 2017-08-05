@@ -827,13 +827,15 @@ fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
 //
 // The feature dependencies map is a mapping of package name to list of features
 // enabled. Each package should be enabled, and each package should have the
-// specified set of features enabled.
+// specified set of features enabled.  The boolean indicates whether this
+// package was specifically requested (rather than just requesting features
+// *within* this package).
 //
 // The all used features set is the set of features which this local package had
 // enabled, which is later used when compiling to instruct the code what
 // features were enabled.
 fn build_features<'a>(s: &'a Summary, method: &'a Method)
-                      -> CargoResult<(HashMap<&'a str, Vec<String>>, HashSet<&'a str>)> {
+                      -> CargoResult<(HashMap<&'a str, (bool, Vec<String>)>, HashSet<&'a str>)> {
     let mut deps = HashMap::new();
     let mut used = HashSet::new();
     let mut visited = HashSet::new();
@@ -867,7 +869,7 @@ fn build_features<'a>(s: &'a Summary, method: &'a Method)
 
     fn add_feature<'a>(s: &'a Summary,
                        feat: &'a str,
-                       deps: &mut HashMap<&'a str, Vec<String>>,
+                       deps: &mut HashMap<&'a str, (bool, Vec<String>)>,
                        used: &mut HashSet<&'a str>,
                        visited: &mut HashSet<&'a str>) -> CargoResult<()> {
         if feat.is_empty() { return Ok(()) }
@@ -884,8 +886,8 @@ fn build_features<'a>(s: &'a Summary, method: &'a Method)
                 let package = feat_or_package;
                 used.insert(package);
                 deps.entry(package)
-                    .or_insert(Vec::new())
-                    .push(feat.to_string());
+                    .or_insert((false, Vec::new()))
+                    .1.push(feat.to_string());
             }
             None => {
                 let feat = feat_or_package;
@@ -896,12 +898,14 @@ fn build_features<'a>(s: &'a Summary, method: &'a Method)
                 used.insert(feat);
                 match s.features().get(feat) {
                     Some(recursive) => {
+                        // This is a feature, add it recursively.
                         for f in recursive {
                             add_feature(s, f, deps, used, visited)?;
                         }
                     }
                     None => {
-                        deps.entry(feat).or_insert(Vec::new());
+                        // This is a dependency, mark it as explicitly requested.
+                        deps.entry(feat).or_insert((false, Vec::new())).0 = true;
                     }
                 }
                 visited.remove(feat);
@@ -1057,8 +1061,9 @@ impl<'a> Context<'a> {
             .unwrap_or(&[])
     }
 
+    /// Return all dependencies and the features we want from them.
     fn resolve_features<'b>(&mut self,
-                            candidate: &'b Summary,
+                            s: &'b Summary,
                             method: &'b Method)
                             -> CargoResult<Vec<(Dependency, Vec<String>)>> {
         let dev_deps = match *method {
@@ -1067,21 +1072,27 @@ impl<'a> Context<'a> {
         };
 
         // First, filter by dev-dependencies
-        let deps = candidate.dependencies();
+        let deps = s.dependencies();
         let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
 
-        let (mut feature_deps, used_features) = build_features(candidate,
-                                                               method)?;
+        let (mut feature_deps, used_features) = build_features(s, method)?;
         let mut ret = Vec::new();
 
-        // Next, sanitize all requested features by whitelisting all the
-        // requested features that correspond to optional dependencies
+        // Next, collect all actually enabled dependencies and their features.
         for dep in deps {
-            // weed out optional dependencies, but not those required
+            // Skip optional dependencies, but not those enabled through a feature
             if dep.is_optional() && !feature_deps.contains_key(dep.name()) {
                 continue
             }
-            let mut base = feature_deps.remove(dep.name()).unwrap_or(vec![]);
+            // So we want this dependency.  Move the features we want from `feature_deps`
+            // to `ret`.
+            let base = feature_deps.remove(dep.name()).unwrap_or((false, vec![]));
+            if !dep.is_optional() && base.0 {
+                bail!("Package `{}` does not have feature `{}`. It has a required dependency with \
+                       that name, but only optional dependencies can be used as features.",
+                      s.package_id(), dep.name());
+            }
+            let mut base = base.1;
             base.extend(dep.features().iter().cloned());
             for feature in base.iter() {
                 if feature.contains("/") {
@@ -1091,23 +1102,20 @@ impl<'a> Context<'a> {
             ret.push((dep.clone(), base));
         }
 
-        // All features can only point to optional dependencies, in which case
-        // they should have all been weeded out by the above iteration. Any
-        // remaining features are bugs in that the package does not actually
-        // have those features.
+        // Any remaining entries in feature_deps are bugs in that the package does not actually
+        // have those dependencies.  We classified them as dependencies in the first place
+        // because there is no such feature, either.
         if !feature_deps.is_empty() {
             let unknown = feature_deps.keys().map(|s| &s[..])
                                       .collect::<Vec<&str>>();
-            if !unknown.is_empty() {
-                let features = unknown.join(", ");
-                bail!("Package `{}` does not have these features: `{}`",
-                      candidate.package_id(), features)
-            }
+            let features = unknown.join(", ");
+            bail!("Package `{}` does not have these features: `{}`",
+                    s.package_id(), features)
         }
 
         // Record what list of features is active for this package.
         if !used_features.is_empty() {
-            let pkgid = candidate.package_id();
+            let pkgid = s.package_id();
 
             let set = self.resolve_features.entry(pkgid.clone())
                               .or_insert_with(HashSet::new);

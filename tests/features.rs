@@ -248,7 +248,8 @@ fn invalid9() {
 
     assert_that(p.cargo_process("build").arg("--features").arg("bar"),
                 execs().with_status(101).with_stderr("\
-[ERROR] Package `foo v0.0.1 ([..])` does not have these features: `bar`
+[ERROR] Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with \
+that name, but only optional dependencies can be used as features.
 "));
 }
 
@@ -286,7 +287,8 @@ fn invalid10() {
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101).with_stderr("\
-[ERROR] Package `bar v0.0.1 ([..])` does not have these features: `baz`
+[ERROR] Package `bar v0.0.1 ([..])` does not have feature `baz`. It has a required dependency with \
+that name, but only optional dependencies can be used as features.
 "));
 }
 
