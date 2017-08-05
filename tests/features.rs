@@ -169,7 +169,7 @@ fn invalid6() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `foo` requires `bar` which is not an optional dependency
+  Feature `foo` requires a feature of `bar` which is not a dependency
 "));
 }
 
@@ -193,7 +193,7 @@ fn invalid7() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `foo` requires `bar` which is not an optional dependency
+  Feature `foo` requires a feature of `bar` which is not a dependency
 "));
 }
 
