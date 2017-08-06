@@ -173,7 +173,7 @@ dependencies but "libraries" do not.
 
 The desire to override a dependency or otherwise alter some dependencies can
 arise through a number of scenarios. Most of them, however, boil down to the
-ability to to work with a crate before it's been published to crates.io. For
+ability to work with a crate before it's been published to crates.io. For
 example:
 
 * A crate you're working on is also used in a much larger application you're
