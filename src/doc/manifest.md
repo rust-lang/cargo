@@ -30,7 +30,7 @@ Versioning](http://semver.org/), so make sure you follow some basic rules:
 
 ## The `build` field (optional)
 
-This field specifies a file in the repository which is a [build script][1] for
+This field specifies a file in the project root which is a [build script][1] for
 building native code. More information can be found in the build script
 [guide][1].
 
@@ -48,9 +48,9 @@ This field specifies a URL to a website hosting the crate's documentation.
 If no URL is specified in the manifest file, [crates.io][cratesio] will
 automatically link your crate to the corresponding [docs.rs][docsrs] page.
 
-Documentation links from specific hosts are blacklisted. Hosts are added 
-to the blacklist if they are known to not be hosting documentation and are 
-possibly of malicious intent e.g. ad tracking networks. URLs from the 
+Documentation links from specific hosts are blacklisted. Hosts are added
+to the blacklist if they are known to not be hosting documentation and are
+possibly of malicious intent e.g. ad tracking networks. URLs from the
 following hosts are blacklisted:
 - rust-ci.org
 
@@ -107,7 +107,7 @@ migration.
 ## The `publish`  field (optional)
 
 The `publish` field can be used to prevent a package from being published to a
-repository by mistake.
+package repository (like *crates.io*) by mistake.
 
 ```toml
 [package]
@@ -124,7 +124,7 @@ Cargo.toml with `[workspace]` upwards in the filesystem.
 ```toml
 [package]
 # ...
-workspace = "path/to/root"
+workspace = "path/to/workspace/root"
 ```
 
 For more information, see the documentation for the workspace table below.
@@ -142,15 +142,15 @@ There are a number of optional metadata fields also accepted under the
 # uploaded to crates.io (aka this is not markdown).
 description = "..."
 
-# These URLs point to more information about the repository. These are
+# These URLs point to more information about the package. These are
 # intended to be webviews of the relevant data, not necessarily compatible
 # with VCS tools and the like.
 documentation = "..."
 homepage = "..."
 repository = "..."
 
-# This points to a file in the repository (relative to this `Cargo.toml`). The
-# contents of this file are stored and indexed in the registry.
+# This points to a file under the package root (relative to this `Cargo.toml`).
+# The contents of this file are stored and indexed in the registry.
 readme = "..."
 
 # This is a list of up to five keywords that describe this crate. Keywords
@@ -178,25 +178,33 @@ license-file = "..."
 # currently available are Travis CI, Appveyor, and GitLab latest build status,
 # specified using the following parameters:
 [badges]
+
 # Travis CI: `repository` in format "<user>/<project>" is required.
 # `branch` is optional; default is `master`
 travis-ci = { repository = "...", branch = "master" }
+
 # Appveyor: `repository` is required. `branch` is optional; default is `master`
 # `service` is optional; valid values are `github` (default), `bitbucket`, and
 # `gitlab`.
 appveyor = { repository = "...", branch = "master", service = "github" }
+
 # GitLab: `repository` is required. `branch` is optional; default is `master`
 gitlab = { repository = "...", branch = "master" }
+
 # Circle CI: `repository` is required. `branch` is optiona; default is `master`
 circle-ci = { repository = "...", branch = "master" }
+
 # Is it maintained resolution time: `repository` is required.
 is-it-maintained-issue-resolution = { repository = "..." }
+
 # Is it maintained percentage of open issues: `repository` is required.
 is-it-maintained-open-issues = { repository = "..." }
+
 # Codecov: `repository` is required. `branch` is optional; default is `master`
 # `service` is optional; valid values are `github` (default), `bitbucket`, and
 # `gitlab`.
 codecov = { repository = "...", branch = "master", service = "github" }
+
 # Coveralls: `repository` is required. `branch` is optional; default is `master`
 # `service` is optional; valid values are `github` (default) and `bitbucket`.
 coveralls = { repository = "...", branch = "master", service = "github" }
@@ -446,23 +454,22 @@ members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 exclude = ["path1", "path/to/dir2"]
 ```
 
-Workspaces were added to Cargo as part [RFC 1525] and have a number of
+Workspaces were added to Cargo as part of [RFC 1525] and have a number of
 properties:
 
-* A workspace can contain multiple crates where one of them is the root crate.
-* The root crate's `Cargo.toml` contains the `[workspace]` table, but is not
+* A workspace can contain multiple crates where one of them is the *root crate*.
+* The *root crate*'s `Cargo.toml` contains the `[workspace]` table, but is not
   required to have other configuration.
-* Whenever any crate in the workspace is compiled, output is placed next to the
-  root crate's `Cargo.toml`.
-* The lock file for all crates in the workspace resides next to the root crate's
-  `Cargo.toml`.
+* Whenever any crate in the workspace is compiled, output is placed in the
+  *workspace root*. i.e. next to the *root crate*'s `Cargo.toml`.
+* The lock file for all crates in the workspace resides in the *workspace root*.
 * The `[patch]` and `[replace]` sections in `Cargo.toml` are only recognized
-  at the workspace root crate, they are ignored in member crates' manifests.
+  in the *root crate*'s manifest, and ignored in member crates' manifests.
 
 [RFC 1525]: https://github.com/rust-lang/rfcs/blob/master/text/1525-cargo-workspace.md
 
-The root crate of a workspace, indicated by the presence of `[workspace]` in its
-manifest, is responsible for defining the entire workspace. All `path`
+The *root crate* of a workspace, indicated by the presence of `[workspace]` in
+its manifest, is responsible for defining the entire workspace. All `path`
 dependencies residing in the workspace directory become members. You can add
 additional packages to the workspace by listing them in the `members` key. Note
 that members of the workspaces listed explicitly will also have their path
@@ -519,15 +526,18 @@ integration tests, and benchmarks respectively.
   *.rs
 ```
 
-To structure your code after you've created the files and folders for your project, you should remember to use Rust's module system, which you can read about in [the book](https://doc.rust-lang.org/book/crates-and-modules.html).
+To structure your code after you've created the files and folders for your
+project, you should remember to use Rust's module system, which you can read
+about in [the book](https://doc.rust-lang.org/book/crates-and-modules.html).
 
 # Examples
 
 Files located under `examples` are example uses of the functionality provided by
 the library. When compiled, they are placed in the `target/examples` directory.
 
-They can compile either as executables (with a `main()` function) or libraries and pull in the library by using `extern crate <library-name>`. They are compiled when you run
-your tests to protect them from bitrotting.
+They can compile either as executables (with a `main()` function) or libraries
+and pull in the library by using `extern crate <library-name>`. They are
+compiled when you run your tests to protect them from bitrotting.
 
 You can run individual executable examples with the command `cargo run --example
 <example-name>`.
@@ -540,7 +550,8 @@ name = "foo"
 crate-type = ["staticlib"]
 ```
 
-You can build individual library examples with the command `cargo build --example <example-name>`.
+You can build individual library examples with the command
+`cargo build --example <example-name>`.
 
 # Tests
 
