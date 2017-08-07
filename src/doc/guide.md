@@ -232,7 +232,8 @@ Cargo project:
     └── some-integration-tests.rs
 ```
 
-* `Cargo.toml` and `Cargo.lock` are stored in the root of your project.
+* `Cargo.toml` and `Cargo.lock` are stored in the root of your project (*package
+  root*).
 * Source code goes in the `src` directory.
 * The default library file is `src/lib.rs`.
 * The default executable file is `src/main.rs`.
