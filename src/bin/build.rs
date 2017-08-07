@@ -32,6 +32,7 @@ pub struct Options {
     flag_frozen: bool,
     flag_all: bool,
     flag_exclude: Vec<String>,
+    flag_config: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -61,6 +62,7 @@ Options:
     --no-default-features        Do not build the `default` feature
     --target TRIPLE              Build for the target triple
     --manifest-path PATH         Path to the manifest to compile
+    -c CONFIG, --config CONFIG   Set/override values specified in Cargo.toml
     -v, --verbose ...            Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
