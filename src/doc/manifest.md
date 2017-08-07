@@ -526,15 +526,18 @@ integration tests, and benchmarks respectively.
   *.rs
 ```
 
-To structure your code after you've created the files and folders for your project, you should remember to use Rust's module system, which you can read about in [the book](https://doc.rust-lang.org/book/crates-and-modules.html).
+To structure your code after you've created the files and folders for your
+project, you should remember to use Rust's module system, which you can read
+about in [the book](https://doc.rust-lang.org/book/crates-and-modules.html).
 
 # Examples
 
 Files located under `examples` are example uses of the functionality provided by
 the library. When compiled, they are placed in the `target/examples` directory.
 
-They can compile either as executables (with a `main()` function) or libraries and pull in the library by using `extern crate <library-name>`. They are compiled when you run
-your tests to protect them from bitrotting.
+They can compile either as executables (with a `main()` function) or libraries
+and pull in the library by using `extern crate <library-name>`. They are
+compiled when you run your tests to protect them from bitrotting.
 
 You can run individual executable examples with the command `cargo run --example
 <example-name>`.
@@ -547,7 +550,8 @@ name = "foo"
 crate-type = ["staticlib"]
 ```
 
-You can build individual library examples with the command `cargo build --example <example-name>`.
+You can build individual library examples with the command
+`cargo build --example <example-name>`.
 
 # Tests
 
