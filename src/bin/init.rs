@@ -18,7 +18,7 @@ pub struct Options {
 }
 
 pub const USAGE: &'static str = "
-Create a new cargo package in current directory
+Create a new cargo package in an existing directory
 
 Usage:
     cargo init [options] [<path>]
@@ -27,8 +27,9 @@ Usage:
 Options:
     -h, --help          Print this message
     --vcs VCS           Initialize a new repository for the given version
-                        control system (git or hg) or do not initialize any version
-                        control at all (none) overriding a global configuration.
+                        control system (git, hg, pijul, or fossil) or do not
+                        initialize any version control at all (none), overriding
+                        a global configuration.
     --bin               Use a binary (application) template
     --lib               Use a library template [default]
     --name NAME         Set the resulting package name
@@ -49,11 +50,11 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
 
     let Options { flag_bin, flag_lib, arg_path, flag_name, flag_vcs, .. } = options;
 
-    let tmp = &arg_path.unwrap_or(format!("."));
+    let path = &arg_path.unwrap_or(format!("."));
     let opts = ops::NewOptions::new(flag_vcs,
                                      flag_bin,
                                      flag_lib,
-                                     tmp,
+                                     path,
                                      flag_name.as_ref().map(|s| s.as_ref()));
 
     let opts_lib = opts.lib;
