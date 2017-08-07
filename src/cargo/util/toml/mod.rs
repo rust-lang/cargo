@@ -25,19 +25,59 @@ use util::errors::{CargoError, CargoResult, CargoResultExt};
 mod targets;
 use self::targets::targets;
 
-pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
+pub fn read_manifest(path: &Path, source_id: &SourceId, overrides: &Vec<String>,
+                     config: &Config)
                      -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     trace!("read_manifest; path={}; source-id={}", path.display(), source_id);
     let contents = paths::read(path)?;
 
-    do_read_manifest(&contents, path, source_id, config).chain_err(|| {
+    do_read_manifest(&contents, path, source_id, &overrides, config).chain_err(|| {
         format!("failed to parse manifest at `{}`", path.display())
     })
+}
+
+fn merge_toml(orig: &toml::Value, overrides: &toml::Value) -> CargoResult<toml::Value> {
+    match (orig, overrides) {
+        // We've descended down some TOML path and found identically-typed scalar
+        // values; the override is the correct one to pick.
+        (&toml::Value::String(_), &toml::Value::String(_)) |
+        (&toml::Value::Integer(_), &toml::Value::Integer(_)) |
+        (&toml::Value::Float(_), &toml::Value::Float(_)) |
+        (&toml::Value::Boolean(_), &toml::Value::Boolean(_)) |
+        (&toml::Value::Datetime(_), &toml::Value::Datetime(_)) => Ok(overrides.clone()),
+
+        // We have two tables to merge.  We want to recursively merge all of the
+        // values in the override table into the first one.
+        (&toml::Value::Table(ref orig), &toml::Value::Table(ref overrides)) => {
+            let mut new_table = orig.clone();
+            for (key, value) in overrides {
+                // XXX This should not be so difficult!
+                match orig.get(key) {
+                    Some(ref v) => {
+                        let merged = merge_toml(v, &value)?;
+                        *(new_table.get_mut(key).unwrap()) = merged;
+                    }
+                    None => {
+                        new_table.insert(key.clone(), value.clone());
+                    }
+                };
+            }
+            Ok(toml::Value::Table(new_table))
+        },
+
+        // XXX arrays are a peculiar case.  Do we just accept the override array,
+        // or do we attempt to merge recursively?  What does merging recursively even
+        // *mean* if the arrays don't have the same length?
+        //
+        // Anything else is just something we're not equipped to handle.
+        (_, _) => bail!("Can't incorporate command-line manifest modifications."),
+    }
 }
 
 fn do_read_manifest(contents: &str,
                     manifest_file: &Path,
                     source_id: &SourceId,
+                    overrides: &Vec<String>,
                     config: &Config)
                     -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     let package_root = manifest_file.parent().unwrap();
@@ -45,7 +85,23 @@ fn do_read_manifest(contents: &str,
     let toml = {
         let pretty_filename =
             util::without_prefix(manifest_file, config.cwd()).unwrap_or(manifest_file);
-        parse(contents, pretty_filename, config)?
+        let candidate = parse(contents, pretty_filename, config)?;
+
+        if overrides.is_empty() {
+            candidate
+        } else {
+            let command_line_filename = "<command-line>".to_owned();
+            let command_line_filename = Path::new(&command_line_filename);
+            // XXX need some better error handling
+            let toml_overrides = parse(&overrides[0], &command_line_filename, config);
+            let toml_overrides = overrides[1..].iter().fold(toml_overrides, |acc, ref o| {
+                acc.and_then(|v| {
+                    parse(&o, &command_line_filename, config).and_then(|v2| merge_toml(&v, &v2))
+                })
+            })?;
+
+            merge_toml(&candidate, &toml_overrides)?
+        }
     };
 
     let mut unused = BTreeSet::new();

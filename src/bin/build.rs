@@ -42,33 +42,33 @@ Usage:
     cargo build [options]
 
 Options:
-    -h, --help                   Print this message
-    -p SPEC, --package SPEC ...  Package to build
-    --all                        Build all packages in the workspace
-    --exclude SPEC ...           Exclude packages from the build
-    -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
-    --lib                        Build only this package's library
-    --bin NAME                   Build only the specified binary
-    --bins                       Build all binaries
-    --example NAME               Build only the specified example
-    --examples                   Build all examples
-    --test NAME                  Build only the specified test target
-    --tests                      Build all tests
-    --bench NAME                 Build only the specified bench target
-    --benches                    Build all benches
-    --release                    Build artifacts in release mode, with optimizations
-    --features FEATURES          Space-separated list of features to also build
-    --all-features               Build all available features
-    --no-default-features        Do not build the `default` feature
-    --target TRIPLE              Build for the target triple
-    --manifest-path PATH         Path to the manifest to compile
-    -c CONFIG, --config CONFIG   Set/override values specified in Cargo.toml
-    -v, --verbose ...            Use verbose output (-vv very verbose/build.rs output)
-    -q, --quiet                  No output printed to stdout
-    --color WHEN                 Coloring: auto, always, never
-    --message-format FMT         Error format: human, json [default: human]
-    --frozen                     Require Cargo.lock and cache are up to date
-    --locked                     Require Cargo.lock is up to date
+    -h, --help                       Print this message
+    -p SPEC, --package SPEC ...      Package to build
+    --all                            Build all packages in the workspace
+    --exclude SPEC ...               Exclude packages from the build
+    -j N, --jobs N                   Number of parallel jobs, defaults to # of CPUs
+    --lib                            Build only this package's library
+    --bin NAME                       Build only the specified binary
+    --bins                           Build all binaries
+    --example NAME                   Build only the specified example
+    --examples                       Build all examples
+    --test NAME                      Build only the specified test target
+    --tests                          Build all tests
+    --bench NAME                     Build only the specified bench target
+    --benches                        Build all benches
+    --release                        Build artifacts in release mode, with optimizations
+    --features FEATURES              Space-separated list of features to also build
+    --all-features                   Build all available features
+    --no-default-features            Do not build the `default` feature
+    --target TRIPLE                  Build for the target triple
+    --manifest-path PATH             Path to the manifest to compile
+    -c CONFIG, --config CONFIG ...   Set/override values specified in Cargo.toml
+    -v, --verbose ...                Use verbose output (-vv very verbose/build.rs output)
+    -q, --quiet                      No output printed to stdout
+    --color WHEN                     Coloring: auto, always, never
+    --message-format FMT             Error format: human, json [default: human]
+    --frozen                         Require Cargo.lock and cache are up to date
+    --locked                         Require Cargo.lock is up to date
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be built. If it is not given, then the
@@ -94,7 +94,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_locked)?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
-    let ws = Workspace::new(&root, config)?;
+    let ws = Workspace::new_with_overrides(&root, config, &options.flag_config)?;
 
     let spec = Packages::from_flags(ws.is_virtual(),
                                     options.flag_all,
