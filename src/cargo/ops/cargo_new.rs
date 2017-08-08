@@ -268,12 +268,14 @@ fn plan_new_source_file(bin: bool, project_name: String) -> SourceFileInformatio
 pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     let path = config.cwd().join(opts.path);
     if fs::metadata(&path).is_ok() {
-        bail!("destination `{}` already exists",
-              path.display())
+        bail!("destination `{}` already exists\n\n\
+            Use `cargo init` to initialize the directory\
+            ", path.display()
+        )
     }
 
     if opts.lib && opts.bin {
-        bail!("can't specify both lib and binary outputs");
+        bail!("can't specify both lib and binary outputs")
     }
 
     let name = get_name(&path, &opts, config)?;
