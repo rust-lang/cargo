@@ -492,6 +492,18 @@ and also be a member crate of another workspace (contain `package.workspace`).
 Most of the time workspaces will not need to be dealt with as `cargo new` and
 `cargo init` will handle workspace configuration automatically.
 
+## Virtual Manifest
+
+In workspace manifests, if the `package` table is present, the workspace root
+crate will be treated as a normal package, as well as a worksapce. If the
+`package` table is not present in a worksapce manifest, it is called a *virtual
+manifest*.
+
+When working with *virtual manifests*, package-related cargo commands, like
+`cargo build`, won't be available anymore. But, most of such commands support
+the `--all` option, will execute the command for all the non-virtual manifest in
+the workspace.
+
 # The project layout
 
 If your project is an executable, name the main source file `src/main.rs`. If it
