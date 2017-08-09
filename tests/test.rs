@@ -2732,3 +2732,42 @@ fn cyclic_dev() {
     assert_that(p.cargo_process("test").arg("--all"),
                 execs().with_status(0));
 }
+
+#[test]
+fn publish_a_crate_without_tests() {
+    Package::new("testless", "0.1.0")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "testless"
+            version = "0.1.0"
+            exclude = ["tests/*"]
+
+            [[test]]
+            name = "a_test"
+        "#)
+        .file("src/lib.rs", "")
+
+        // In real life, the package will have a test,
+        // which would be excluded from .crate file by the
+        // `exclude` field. Our test harness does not honor
+        // exclude though, so let's just not add the file!
+        // .file("tests/a_test.rs", "")
+
+        .publish();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            testless = "0.1.0"
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("test"), execs().with_status(0));
+    assert_that(p.cargo("test").arg("--package").arg("testless"),
+                execs().with_status(0));
+}
