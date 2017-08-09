@@ -482,7 +482,7 @@ impl Config {
             format!("failed to load TOML configuration from `{}`", credentials.display())
         })?;
 
-        let mut cfg = match *cfg {
+        let cfg = match *cfg {
             CV::Table(ref mut map, _) => map,
             _ => unreachable!(),
         };
