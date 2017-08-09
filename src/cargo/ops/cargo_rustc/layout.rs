@@ -108,10 +108,41 @@ impl Layout {
         })
     }
 
+    #[cfg(not(target_os = "macos"))]
+    fn exclude_from_backups(&self, _: &Path) {}
+
+    #[cfg(target_os = "macos")]
+    /// Marks files or directories as excluded from Time Machine on macOS
+    ///
+    /// This is recommended to prevent derived/temporary files from bloating backups.
+    fn exclude_from_backups(&self, path: &Path) {
+        use std::ptr;
+        use core_foundation::{url, number, string};
+        use core_foundation::base::TCFType;
+
+        // For compatibility with 10.7 a string is used instead of global kCFURLIsExcludedFromBackupKey
+        let is_excluded_key: Result<string::CFString, _> = "NSURLIsExcludedFromBackupKey".parse();
+        match (url::CFURL::from_path(path, false), is_excluded_key) {
+            (Some(path), Ok(is_excluded_key)) => unsafe {
+                url::CFURLSetResourcePropertyForKey(
+                    path.as_concrete_TypeRef(),
+                    is_excluded_key.as_concrete_TypeRef(),
+                    number::kCFBooleanTrue as *const _,
+                    ptr::null_mut(),
+                );
+            },
+            // Errors are ignored, since it's an optional feature and failure
+            // doesn't prevent Cargo from working
+            _ => {}
+        }
+    }
+
     pub fn prepare(&mut self) -> io::Result<()> {
         if fs::metadata(&self.root).is_err() {
             fs::create_dir_all(&self.root)?;
         }
+
+        self.exclude_from_backups(&self.root);
 
         mkdir(&self.deps)?;
         mkdir(&self.native)?;

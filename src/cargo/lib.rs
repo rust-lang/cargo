@@ -34,6 +34,8 @@ extern crate tempdir;
 extern crate termcolor;
 extern crate toml;
 extern crate url;
+#[cfg(target_os = "macos")]
+extern crate core_foundation;
 
 use std::fmt;
 use std::error::Error;
