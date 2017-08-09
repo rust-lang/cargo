@@ -110,7 +110,12 @@ impl<'cfg> PathSource<'cfg> {
         // glob-like matching rules
 
         let glob_parse = |p: &String| {
-            Pattern::new(p).map_err(|e| {
+            let pattern: &str = if p.starts_with('/') {
+                &p[1..p.len()]
+            } else {
+                &p
+            };
+            Pattern::new(pattern).map_err(|e| {
                 CargoError::from(format!("could not parse glob pattern `{}`: {}", p, e))
             })
         };
@@ -128,15 +133,15 @@ impl<'cfg> PathSource<'cfg> {
             .collect::<Result<Vec<_>, _>>()?;
 
         let glob_should_package = |relative_path: &Path| -> bool {
+            fn glob_match(patterns: &Vec<Pattern>, relative_path: &Path) -> bool {
+                patterns.iter().any(|pattern| pattern.matches_path(relative_path))
+            }
+
             // include and exclude options are mutually exclusive.
             if no_include_option {
-                !glob_exclude.iter().any(|pattern| {
-                    pattern.matches_path(relative_path)
-                })
+                !glob_match(&glob_exclude, relative_path)
             } else {
-                glob_include.iter().any(|pattern| {
-                    pattern.matches_path(relative_path)
-                })
+                glob_match(&glob_include, relative_path)
             }
         };
 
@@ -197,7 +202,7 @@ impl<'cfg> PathSource<'cfg> {
                             .shell()
                             .warn(format!(
                                 "Pattern matching for Cargo's include/exclude fields is changing and \
-                                file `{}` WILL be excluded in the next Cargo version.\n\
+                                file `{}` WILL be excluded in a future Cargo version.\n\
                                 See https://github.com/rust-lang/cargo/issues/4268 for more info",
                                 relative_path.display()
                             ))?;
@@ -206,7 +211,7 @@ impl<'cfg> PathSource<'cfg> {
                             .shell()
                             .warn(format!(
                                 "Pattern matching for Cargo's include/exclude fields is changing and \
-                                file `{}` WILL NOT be included in the next Cargo version.\n\
+                                file `{}` WILL NOT be included in a future Cargo version.\n\
                                 See https://github.com/rust-lang/cargo/issues/4268 for more info",
                                 relative_path.display()
                             ))?;
@@ -217,7 +222,7 @@ impl<'cfg> PathSource<'cfg> {
                             .shell()
                             .warn(format!(
                                 "Pattern matching for Cargo's include/exclude fields is changing and \
-                                file `{}` WILL NOT be excluded in the next Cargo version.\n\
+                                file `{}` WILL NOT be excluded in a future Cargo version.\n\
                                 See https://github.com/rust-lang/cargo/issues/4268 for more info",
                                 relative_path.display()
                             ))?;
@@ -226,7 +231,7 @@ impl<'cfg> PathSource<'cfg> {
                             .shell()
                             .warn(format!(
                                 "Pattern matching for Cargo's include/exclude fields is changing and \
-                                file `{}` WILL be included in the next Cargo version.\n\
+                                file `{}` WILL be included in a future Cargo version.\n\
                                 See https://github.com/rust-lang/cargo/issues/4268 for more info",
                                 relative_path.display()
                             ))?;
