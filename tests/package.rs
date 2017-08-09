@@ -321,8 +321,6 @@ See [..]
 See [..]
 [WARNING] [..] file `dir_root_3[/]some_dir[/]file` WILL be excluded [..]
 See [..]
-[WARNING] [..] file `file_root_2` WILL be excluded [..]
-See [..]
 [WARNING] [..] file `some_dir[/]dir_deep_1[/]some_dir[/]file` WILL be excluded [..]
 See [..]
 [WARNING] [..] file `some_dir[/]dir_deep_3[/]some_dir[/]file` WILL be excluded [..]
@@ -351,7 +349,6 @@ See [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 [ARCHIVING] [..]
-[ARCHIVING] [..]
 "));
 
     assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
@@ -362,7 +359,6 @@ Cargo.toml
 dir_root_1[/]some_dir[/]file
 dir_root_2[/]some_dir[/]file
 dir_root_3[/]some_dir[/]file
-file_root_2
 file_root_3
 file_root_4
 file_root_5
