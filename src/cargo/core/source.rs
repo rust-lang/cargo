@@ -1,7 +1,7 @@
 use std::cmp::{self, Ordering};
 use std::collections::hash_map::{HashMap, Values, IterMut};
 use std::fmt::{self, Formatter};
-use std::hash;
+use std::hash::{self, Hash};
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
@@ -297,6 +297,17 @@ impl SourceId {
         }
         self.inner.url.to_string() == CRATES_IO
     }
+
+    pub fn stable_hash<S: hash::Hasher>(&self, workspace: &Path, into: &mut S) {
+        if self.is_path() {
+            if let Ok(p) = self.inner.url.to_file_path().unwrap().strip_prefix(workspace) {
+                self.inner.kind.hash(into);
+                p.to_str().unwrap().hash(into);
+                return
+            }
+        }
+        self.hash(into)
+    }
 }
 
 impl PartialEq for SourceId {
@@ -417,7 +428,7 @@ impl Ord for SourceIdInner {
 // The hash of SourceId is used in the name of some Cargo folders, so shouldn't
 // vary. `as_str` gives the serialisation of a url (which has a spec) and so
 // insulates against possible changes in how the url crate does hashing.
-impl hash::Hash for SourceId {
+impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
         match *self.inner {

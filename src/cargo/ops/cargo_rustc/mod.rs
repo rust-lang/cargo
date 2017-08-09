@@ -12,7 +12,7 @@ use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::shell::ColorChoice;
 use util::{self, ProcessBuilder, machine_message};
-use util::{Config, internal, profile, join_paths, short_hash};
+use util::{Config, internal, profile, join_paths};
 use util::errors::{CargoResult, CargoResultExt};
 use util::Freshness;
 
@@ -802,7 +802,7 @@ fn build_base_args(cx: &mut Context,
             cmd.arg("-C").arg(&format!("extra-filename=-{}", m));
         }
         None => {
-            cmd.arg("-C").arg(&format!("metadata={}", short_hash(unit.pkg)));
+            cmd.arg("-C").arg(&format!("metadata={}", cx.target_short_hash(unit)));
         }
     }
 
