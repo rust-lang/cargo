@@ -1109,7 +1109,7 @@ impl<'a> Context<'a> {
         if !used_features.is_empty() {
             let pkgid = candidate.package_id();
 
-            let mut set = self.resolve_features.entry(pkgid.clone())
+            let set = self.resolve_features.entry(pkgid.clone())
                               .or_insert_with(HashSet::new);
             for feature in used_features {
                 if !set.contains(feature) {
