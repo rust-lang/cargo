@@ -38,6 +38,7 @@ libc = "0.2"
 libgit2-sys = "0.6"
 log = "0.3"
 num_cpus = "1.0"
+same-file = "0.1"
 scoped-tls = "0.1"
 semver = { version = "0.7.0", features = ["serde"] }
 serde = "1.0"
