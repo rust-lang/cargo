@@ -6,6 +6,7 @@ use std::io::{self, Write};
 use std::path::{self, PathBuf};
 use std::sync::Arc;
 
+use same_file::is_same_file;
 use serde_json;
 
 use core::{Package, PackageId, PackageSet, Target, Resolve};
@@ -496,6 +497,9 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             destinations.push(dst.display().to_string());
 
             debug!("linking {} to {}", src.display(), dst.display());
+            if is_same_file(src, dst).unwrap_or(false) {
+                continue
+            }
             if dst.exists() {
                 fs::remove_file(&dst).chain_err(|| {
                     format!("failed to remove: {}", dst.display())

@@ -25,6 +25,7 @@ extern crate jobserver;
 extern crate libc;
 extern crate libgit2_sys;
 extern crate num_cpus;
+extern crate same_file;
 extern crate semver;
 extern crate serde;
 extern crate serde_ignored;
