@@ -270,7 +270,7 @@ mod tests {
     #[test]
     fn matching() {
         let url = Url::parse("http://example.com").unwrap();
-        let sid = SourceId::for_registry(&url);
+        let sid = SourceId::for_registry(&url).unwrap();
         let foo = PackageId::new("foo", "1.2.3", &sid).unwrap();
         let bar = PackageId::new("bar", "1.2.3", &sid).unwrap();
 

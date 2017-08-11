@@ -73,7 +73,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
         debug!("loading: {}", id);
         let mut name = match self.id2name.get(id) {
             Some(name) => name,
-            None => return Ok(id.load(self.config)),
+            None => return Ok(id.load(self.config)?),
         };
         let mut path = Path::new("/");
         let orig_name = name;
@@ -91,7 +91,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
                     name = s;
                     path = p;
                 }
-                None if *id == cfg.id => return Ok(id.load(self.config)),
+                None if *id == cfg.id => return Ok(id.load(self.config)?),
                 None => {
                     new_id = cfg.id.with_precise(id.precise()
                                                  .map(|s| s.to_string()));
@@ -105,8 +105,8 @@ impl<'cfg> SourceConfigMap<'cfg> {
                        (configuration in `{}`)", name, path.display())
             }
         }
-        let new_src = new_id.load(self.config);
-        let old_src = id.load(self.config);
+        let new_src = new_id.load(self.config)?;
+        let old_src = id.load(self.config)?;
         if new_src.supports_checksums() != old_src.supports_checksums() {
             let (supports, no_support) = if new_src.supports_checksums() {
                 (name, orig_name)
@@ -133,7 +133,7 @@ a lock file compatible with `{orig}` cannot be generated in this situation
         let mut srcs = Vec::new();
         if let Some(val) = table.get("registry") {
             let url = url(val, &format!("source.{}.registry", name))?;
-            srcs.push(SourceId::for_registry(&url));
+            srcs.push(SourceId::for_registry(&url)?);
         }
         if let Some(val) = table.get("local-registry") {
             let (s, path) = val.string(&format!("source.{}.local-registry",
