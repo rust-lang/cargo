@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn invalid_version_handled_nicely() {
         let loc = CRATES_IO.to_url().unwrap();
-        let repo = SourceId::for_registry(&loc);
+        let repo = SourceId::for_registry(&loc).unwrap();
 
         assert!(PackageId::new("foo", "1.0", &repo).is_err());
         assert!(PackageId::new("foo", "1", &repo).is_err());

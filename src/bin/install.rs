@@ -136,7 +136,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         } else {
             GitReference::Branch("master".to_string())
         };
-        SourceId::for_git(&url, gitref)
+        SourceId::for_git(&url, gitref)?
     } else if let Some(path) = options.flag_path {
         SourceId::for_path(&config.cwd().join(path))?
     } else if options.arg_crate.is_empty() {
