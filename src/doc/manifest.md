@@ -52,7 +52,8 @@ Documentation links from specific hosts are blacklisted. Hosts are added
 to the blacklist if they are known to not be hosting documentation and are
 possibly of malicious intent e.g. ad tracking networks. URLs from the
 following hosts are blacklisted:
-- rust-ci.org
+
+* rust-ci.org
 
 Documentation URLs from blacklisted hosts will not appear on crates.io, and
 may be replaced by docs.rs links.
