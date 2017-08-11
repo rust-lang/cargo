@@ -902,3 +902,11 @@ historically Cargo treated this as a semver version requirement accidentally
 and will continue to do so, but this behavior will be removed eventually
 "));
 }
+
+#[test]
+fn test_install_git_cannot_be_a_base_url() {
+    assert_that(cargo_process("install").arg("--git").arg("github.com:rust-lang-nursery/rustfmt.git"),
+                execs().with_status(101).with_stderr("\
+error: invalid url `github.com:rust-lang-nursery/rustfmt.git`: cannot-be-a-base-URLs are not supported
+"));
+}
