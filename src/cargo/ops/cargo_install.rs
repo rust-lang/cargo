@@ -490,7 +490,7 @@ fn find_duplicates(dst: &Path,
         }
     };
     match *filter {
-        CompileFilter::Everything { .. } => {
+        CompileFilter::Default { .. } => {
             pkg.targets().iter()
                          .filter(|t| t.is_bin())
                          .filter_map(|t| check(t.name().to_string()))

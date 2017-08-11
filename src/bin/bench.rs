@@ -28,6 +28,7 @@ pub struct Options {
     flag_tests: bool,
     flag_bench: Vec<String>,
     flag_benches: bool,
+    flag_all_targets: bool,
     flag_no_fail_fast: bool,
     flag_frozen: bool,
     flag_locked: bool,
@@ -53,6 +54,7 @@ Options:
     --tests                      Benchmark all tests
     --bench NAME                 Benchmark only the specified bench target
     --benches                    Benchmark all benches
+    --all-targets                Benchmark all targets (default)
     --no-run                     Compile, but don't run benchmarks
     -p SPEC, --package SPEC ...  Package to run benchmarks for
     --all                        Benchmark all packages in the workspace
@@ -125,7 +127,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                             &options.flag_bin, options.flag_bins,
                                             &options.flag_test, options.flag_tests,
                                             &options.flag_example, options.flag_examples,
-                                            &options.flag_bench, options.flag_benches,),
+                                            &options.flag_bench, options.flag_benches,
+                                            options.flag_all_targets),
             message_format: options.flag_message_format,
             target_rustdoc_args: None,
             target_rustc_args: None,
