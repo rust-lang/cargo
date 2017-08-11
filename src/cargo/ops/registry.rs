@@ -195,7 +195,7 @@ pub fn registry(config: &Config,
     } = registry_configuration(config)?;
     let token = token.or(token_config);
     let sid = match index {
-        Some(index) => SourceId::for_registry(&index.to_url()?),
+        Some(index) => SourceId::for_registry(&index.to_url()?)?,
         None => SourceId::crates_io(config)?,
     };
     let api_host = {

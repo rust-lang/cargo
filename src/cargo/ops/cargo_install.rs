@@ -133,7 +133,7 @@ fn install_one(root: Filesystem,
     let config = opts.config;
 
     let (pkg, source) = if source_id.is_git() {
-        select_pkg(GitSource::new(source_id, config),
+        select_pkg(GitSource::new(source_id, config)?,
                    krate, vers, config, is_first_install,
                    &mut |git| git.read_packages())?
     } else if source_id.is_path() {

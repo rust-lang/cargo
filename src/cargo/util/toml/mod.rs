@@ -876,7 +876,7 @@ impl TomlDependency {
                     .or_else(|| details.rev.clone().map(GitReference::Rev))
                     .unwrap_or_else(|| GitReference::Branch("master".to_string()));
                 let loc = git.to_url()?;
-                SourceId::for_git(&loc, reference)
+                SourceId::for_git(&loc, reference)?
             },
             (None, Some(path)) => {
                 cx.nested_paths.push(PathBuf::from(path));
