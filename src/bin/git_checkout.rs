@@ -40,9 +40,9 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
     let url = url.to_url()?;
 
     let reference = GitReference::Branch(reference.clone());
-    let source_id = SourceId::for_git(&url, reference);
+    let source_id = SourceId::for_git(&url, reference)?;
 
-    let mut source = GitSource::new(&source_id, config);
+    let mut source = GitSource::new(&source_id, config)?;
 
     source.update()?;
 
