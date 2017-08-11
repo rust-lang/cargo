@@ -76,13 +76,10 @@ fn ident(url: &Url) -> CargoResult<String> {
 pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
     let mut url = url.clone();
 
+    // cannot-be-a-base-urls are not supported 
+    // eg. github.com:rust-lang-nursery/rustfmt.git
     if url.cannot_be_a_base() {
-        if url.scheme() != "github.com" {
-            return Err(format!("invalid url `{}`: cannot-be-a-base-URLs are not supported", url).into());
-        }
-        // it's most likely an attempt to fetch github repo
-        // https://github.com/rust-lang/cargo/issues/4394
-        url = Url::parse(&format!("https://github.com/{}", url.path())).unwrap();
+        return Err(format!("invalid url `{}`: cannot-be-a-base-URLs are not supported", url).into());
     }
 
     // Strip a trailing slash
@@ -245,22 +242,15 @@ mod test {
     }
 
     #[test]
-    fn test_canonicalize_idents_different_protocls() {
+    fn test_canonicalize_idents_different_protocols() {
         let ident1 = ident(&url("https://github.com/PistonDevelopers/piston")).unwrap();
         let ident2 = ident(&url("git://github.com/PistonDevelopers/piston")).unwrap();
         assert_eq!(ident1, ident2);
     }
 
     #[test]
-    fn test_canonicalize_github_not_a_base_urls() {
-        let ident1 = ident(&url("github.com:PistonDevelopers/piston")).unwrap();
-        let ident2 = ident(&url("https://github.com/PistonDevelopers/piston")).unwrap();
-        assert_eq!(ident1, ident2);
-    }
-
-    #[test]
-    fn test_canonicalize_not_a_base_urls() {
-        assert!(ident(&url("github.com:PistonDevelopers/piston")).is_ok());
+    fn test_canonicalize_cannot_be_a_base_urls() {
+        assert!(ident(&url("github.com:PistonDevelopers/piston")).is_err());
         assert!(ident(&url("google.com:PistonDevelopers/piston")).is_err());
     }
 
