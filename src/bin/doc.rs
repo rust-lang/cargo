@@ -104,7 +104,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                             &options.flag_bin, options.flag_bins,
                                             &empty, false,
                                             &empty, false,
-                                            &empty, false),
+                                            &empty, false,
+                                            false),
             message_format: options.flag_message_format,
             release: options.flag_release,
             mode: ops::CompileMode::Doc {

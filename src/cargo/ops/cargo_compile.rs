@@ -79,7 +79,7 @@ impl<'a> CompileOptions<'a> {
             spec: ops::Packages::Packages(&[]),
             mode: mode,
             release: false,
-            filter: CompileFilter::Everything { required_features_filterable: false },
+            filter: CompileFilter::Default { required_features_filterable: false },
             message_format: MessageFormat::Human,
             target_rustdoc_args: None,
             target_rustc_args: None,
@@ -158,7 +158,7 @@ pub enum FilterRule<'a> {
 
 #[derive(Debug)]
 pub enum CompileFilter<'a> {
-    Everything {
+    Default {
         /// Flag whether targets can be safely skipped when required-features are not satisfied.
         required_features_filterable: bool,
     },
@@ -371,13 +371,20 @@ impl<'a> CompileFilter<'a> {
                bins: &'a [String], all_bins: bool,
                tsts: &'a [String], all_tsts: bool,
                exms: &'a [String], all_exms: bool,
-               bens: &'a [String], all_bens: bool) -> CompileFilter<'a> {
+               bens: &'a [String], all_bens: bool,
+               all_targets: bool) -> CompileFilter<'a> {
         let rule_bins = FilterRule::new(bins, all_bins);
         let rule_tsts = FilterRule::new(tsts, all_tsts);
         let rule_exms = FilterRule::new(exms, all_exms);
         let rule_bens = FilterRule::new(bens, all_bens);
 
-        if lib_only || rule_bins.is_specific() || rule_tsts.is_specific()
+        if all_targets {
+            CompileFilter::Only {
+                lib: true, bins: FilterRule::All,
+                examples: FilterRule::All, benches: FilterRule::All,
+                tests: FilterRule::All,
+            }
+        } else if lib_only || rule_bins.is_specific() || rule_tsts.is_specific()
                     || rule_exms.is_specific() || rule_bens.is_specific() {
             CompileFilter::Only {
                 lib: lib_only, bins: rule_bins,
@@ -385,7 +392,7 @@ impl<'a> CompileFilter<'a> {
                 tests: rule_tsts,
             }
         } else {
-            CompileFilter::Everything {
+            CompileFilter::Default {
                 required_features_filterable: true,
             }
         }
@@ -393,7 +400,7 @@ impl<'a> CompileFilter<'a> {
 
     pub fn matches(&self, target: &Target) -> bool {
         match *self {
-            CompileFilter::Everything { .. } => true,
+            CompileFilter::Default { .. } => true,
             CompileFilter::Only { lib, bins, examples, tests, benches } => {
                 let rule = match *target.kind() {
                     TargetKind::Bin => bins,
@@ -411,7 +418,7 @@ impl<'a> CompileFilter<'a> {
 
     pub fn is_specific(&self) -> bool {
         match *self {
-            CompileFilter::Everything { .. } => false,
+            CompileFilter::Default { .. } => false,
             CompileFilter::Only { .. } => true,
         }
     }
@@ -593,7 +600,7 @@ fn generate_targets<'a>(pkg: &'a Package,
     };
 
     let targets = match *filter {
-        CompileFilter::Everything { required_features_filterable } => {
+        CompileFilter::Default { required_features_filterable } => {
             let deps = if release {
                 &profiles.bench_deps
             } else {
