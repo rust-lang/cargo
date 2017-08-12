@@ -22,7 +22,7 @@ pub struct Manifest {
     summary: Summary,
     targets: Vec<Target>,
     links: Option<String>,
-    warnings: Vec<String>,
+    warnings: Vec<DelayedWarning>,
     exclude: Vec<String>,
     include: Vec<String>,
     metadata: ManifestMetadata,
@@ -32,6 +32,15 @@ pub struct Manifest {
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
     original: Rc<TomlManifest>,
+}
+
+/// When parsing `Cargo.toml`, some warnings should silenced
+/// if the manifest comes from a dependency. `ManifestWarning`
+/// allows this delayed emission of warnings.
+#[derive(Clone, Debug)]
+pub struct DelayedWarning {
+    pub message: String,
+    pub is_critical: bool
 }
 
 #[derive(Clone, Debug)]
@@ -257,7 +266,7 @@ impl Manifest {
     pub fn summary(&self) -> &Summary { &self.summary }
     pub fn targets(&self) -> &[Target] { &self.targets }
     pub fn version(&self) -> &Version { self.package_id().version() }
-    pub fn warnings(&self) -> &[String] { &self.warnings }
+    pub fn warnings(&self) -> &[DelayedWarning] { &self.warnings }
     pub fn profiles(&self) -> &Profiles { &self.profiles }
     pub fn publish(&self) -> bool { self.publish }
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] { &self.replace }
@@ -272,7 +281,11 @@ impl Manifest {
     }
 
     pub fn add_warning(&mut self, s: String) {
-        self.warnings.push(s)
+        self.warnings.push(DelayedWarning { message: s, is_critical: false })
+    }
+
+    pub fn add_critical_warning(&mut self, s: String) {
+        self.warnings.push(DelayedWarning { message: s, is_critical: true })
     }
 
     pub fn set_summary(&mut self, summary: Summary) {

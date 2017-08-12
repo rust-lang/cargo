@@ -3549,3 +3549,35 @@ fn same_metadata_different_directory() {
         ),
     );
 }
+
+#[test]
+fn building_a_dependent_crate_witout_bin_should_fail() {
+    Package::new("testless", "0.1.0")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "testless"
+            version = "0.1.0"
+
+            [[bin]]
+            name = "a_bin"
+        "#)
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            testless = "0.1.0"
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(101).with_stderr_contains(
+                    "[..]can't find `a_bin` bin, specify bin.path"
+                ));
+}

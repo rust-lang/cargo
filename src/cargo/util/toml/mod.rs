@@ -504,6 +504,7 @@ impl TomlManifest {
                         -> CargoResult<(Manifest, Vec<PathBuf>)> {
         let mut nested_paths = vec![];
         let mut warnings = vec![];
+        let mut errors = vec![];
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
         let project = project.ok_or_else(|| {
@@ -520,7 +521,8 @@ impl TomlManifest {
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
         // If we have a lib with no path, use the inferred lib or_else package name
-        let targets = targets(me, package_name, package_root, &project.build, &mut warnings)?;
+        let targets = targets(me, package_name, package_root, &project.build,
+                              &mut warnings, &mut errors)?;
 
         if targets.is_empty() {
             debug!("manifest has no build targets");
@@ -659,7 +661,10 @@ impl TomlManifest {
                                  `license-file` is necessary".to_string());
         }
         for warning in warnings {
-            manifest.add_warning(warning.clone());
+            manifest.add_warning(warning);
+        }
+        for error in errors {
+            manifest.add_critical_warning(error);
         }
 
         Ok((manifest, nested_paths))
