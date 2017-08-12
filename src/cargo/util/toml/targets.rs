@@ -24,7 +24,8 @@ pub fn targets(manifest: &TomlManifest,
                package_name: &str,
                package_root: &Path,
                custom_build: &Option<StringOrBool>,
-               warnings: &mut Vec<String>)
+               warnings: &mut Vec<String>,
+               errors: &mut Vec<String>)
                -> CargoResult<Vec<Target>> {
     let mut targets = Vec::new();
 
@@ -42,15 +43,15 @@ pub fn targets(manifest: &TomlManifest,
     );
 
     targets.extend(
-        clean_examples(manifest.example.as_ref(), package_root)?
+        clean_examples(manifest.example.as_ref(), package_root, errors)?
     );
 
     targets.extend(
-        clean_tests(manifest.test.as_ref(), package_root)?
+        clean_tests(manifest.test.as_ref(), package_root, errors)?
     );
 
     targets.extend(
-        clean_benches(manifest.bench.as_ref(), package_root, warnings)?
+        clean_benches(manifest.bench.as_ref(), package_root, warnings, errors)?
     );
 
     // processing the custom build script
@@ -180,7 +181,11 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
             } else {
                 None
             }
-        })?;
+        });
+        let path = match path {
+            Ok(path) => path,
+            Err(e) => bail!("{}", e),
+        };
 
         let mut target = Target::bin_target(&bin.name(), path,
                                             bin.required_features.clone());
@@ -210,11 +215,12 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
 }
 
 fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
-                  package_root: &Path)
+                  package_root: &Path,
+                  errors: &mut Vec<String>)
                   -> CargoResult<Vec<Target>> {
     let targets = clean_targets("example", "example",
                                 toml_examples, inferred_examples(package_root),
-                                package_root)?;
+                                package_root, errors)?;
 
     let mut result = Vec::new();
     for (path, toml) in targets {
@@ -233,10 +239,11 @@ fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
 }
 
 fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
-               package_root: &Path) -> CargoResult<Vec<Target>> {
+               package_root: &Path,
+               errors: &mut Vec<String>) -> CargoResult<Vec<Target>> {
     let targets = clean_targets("test", "test",
                                 toml_tests, inferred_tests(package_root),
-                                package_root)?;
+                                package_root, errors)?;
 
     let mut result = Vec::new();
     for (path, toml) in targets {
@@ -250,7 +257,8 @@ fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
 
 fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
                  package_root: &Path,
-                 warnings: &mut Vec<String>) -> CargoResult<Vec<Target>> {
+                 warnings: &mut Vec<String>,
+                 errors: &mut Vec<String>) -> CargoResult<Vec<Target>> {
     let mut legacy_bench_path = |bench: &TomlTarget| {
         let legacy_path = package_root.join("src").join("bench.rs");
         if !(bench.name() == "bench" && legacy_path.exists()) {
@@ -267,6 +275,7 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
     let targets = clean_targets_with_legacy_path("benchmark", "bench",
                                                  toml_benches, inferred_benches(package_root),
                                                  package_root,
+                                                 errors,
                                                  &mut legacy_bench_path)?;
 
     let mut result = Vec::new();
@@ -283,12 +292,14 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
 fn clean_targets(target_kind_human: &str, target_kind: &str,
                  toml_targets: Option<&Vec<TomlTarget>>,
                  inferred: Vec<(String, PathBuf)>,
-                 package_root: &Path)
+                 package_root: &Path,
+                 errors: &mut Vec<String>)
                  -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
     clean_targets_with_legacy_path(target_kind_human, target_kind,
                                    toml_targets,
                                    inferred,
                                    package_root,
+                                   errors,
                                    &mut |_| None)
 }
 
@@ -296,6 +307,7 @@ fn clean_targets_with_legacy_path(target_kind_human: &str, target_kind: &str,
                                   toml_targets: Option<&Vec<TomlTarget>>,
                                   inferred: Vec<(String, PathBuf)>,
                                   package_root: &Path,
+                                  errors: &mut Vec<String>,
                                   legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>)
                                   -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
     let toml_targets = match toml_targets {
@@ -316,7 +328,14 @@ fn clean_targets_with_legacy_path(target_kind_human: &str, target_kind: &str,
     validate_unique_names(&toml_targets, target_kind)?;
     let mut result = Vec::new();
     for target in toml_targets {
-        let path = target_path(&target, &inferred, target_kind, package_root, legacy_path)?;
+        let path = target_path(&target, &inferred, target_kind, package_root, legacy_path);
+        let path = match path {
+            Ok(path) => path,
+            Err(e) => {
+                errors.push(e);
+                continue
+            },
+        };
         result.push((path, target));
     }
     Ok(result)
@@ -443,7 +462,7 @@ fn target_path(target: &TomlTarget,
                inferred: &[(String, PathBuf)],
                target_kind: &str,
                package_root: &Path,
-               legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>) -> CargoResult<PathBuf> {
+               legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>) -> Result<PathBuf, String> {
     if let Some(ref path) = target.path {
         // Should we verify that this path exists here?
         return Ok(package_root.join(&path.0));
@@ -462,9 +481,8 @@ fn target_path(target: &TomlTarget,
             if let Some(path) = legacy_path(target) {
                 return Ok(path);
             }
-
-            bail!("can't find `{name}` {target_kind}, specify {target_kind}.path",
-                   name = name, target_kind = target_kind)
+            Err(format!("can't find `{name}` {target_kind}, specify {target_kind}.path",
+                        name = name, target_kind = target_kind))
         }
         (None, Some(_)) => unreachable!()
     }
