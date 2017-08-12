@@ -3413,7 +3413,7 @@ fn dir_and_file_with_same_name_in_bin() {
         .file("src/bin/foo.rs", "fn main() {}")
         .file("src/bin/foo/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("build"), 
+    assert_that(p.cargo_process("build"),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [..]found duplicate binary name foo, but all binary targets must have a unique name[..]
