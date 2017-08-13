@@ -22,6 +22,9 @@ system:
   invocation, with the first argument being rustc.
 * `RUSTDOC` - Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead.
+* `RUSTDOCFLAGS` - A space-separated list of custom flags to pass to all `rustdoc`
+  invocations that Cargo performs. In contrast with `cargo rustdoc`, this is
+  useful for passing a flag to *all* `rustdoc` instances.
 * `RUSTFLAGS` - A space-separated list of custom flags to pass to all compiler
   invocations that Cargo performs. In contrast with `cargo rustc`, this is
   useful for passing a flag to *all* compiler instances.
