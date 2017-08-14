@@ -101,6 +101,12 @@ impl<'cfg> Workspace<'cfg> {
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, config: &'cfg Config)
                -> CargoResult<Workspace<'cfg>> {
+        let overrides = vec!();
+        Workspace::new_with_overrides(manifest_path, config, &overrides)
+    }
+
+    pub fn new_with_overrides(manifest_path: &Path, config: &'cfg Config,
+                              overrides: &Vec<String>) -> CargoResult<Workspace<'cfg>> {
         let target_dir = config.target_dir()?;
 
         let mut ws = Workspace {
@@ -116,7 +122,7 @@ impl<'cfg> Workspace<'cfg> {
             is_ephemeral: false,
             require_optional_deps: true,
         };
-        ws.root_manifest = ws.find_root(manifest_path)?;
+        ws.root_manifest = ws.find_root(manifest_path, &overrides)?;
         ws.find_members()?;
         ws.validate()?;
         Ok(ws)
@@ -272,7 +278,7 @@ impl<'cfg> Workspace<'cfg> {
     ///
     /// Returns an error if `manifest_path` isn't actually a valid manifest or
     /// if some other transient error happens.
-    fn find_root(&mut self, manifest_path: &Path)
+    fn find_root(&mut self, manifest_path: &Path, overrides: &Vec<String>)
                  -> CargoResult<Option<PathBuf>> {
         fn read_root_pointer(member_manifest: &Path, root_link: &str) -> CargoResult<PathBuf> {
             let path = member_manifest.parent().unwrap()
@@ -283,7 +289,7 @@ impl<'cfg> Workspace<'cfg> {
         };
 
         {
-            let current = self.packages.load(&manifest_path)?;
+            let current = self.packages.load(&manifest_path, &overrides)?;
             match *current.workspace_config() {
                 WorkspaceConfig::Root { .. } => {
                     debug!("find_root - is root {}", manifest_path.display());
@@ -300,7 +306,7 @@ impl<'cfg> Workspace<'cfg> {
             let manifest = path.join("Cargo.toml");
             debug!("find_root - trying {}", manifest.display());
             if manifest.exists() {
-                match *self.packages.load(&manifest)?.workspace_config() {
+                match *self.packages.load(&manifest, &overrides)?.workspace_config() {
                     WorkspaceConfig::Root { ref exclude, ref members } => {
                         debug!("find_root - found a root checking exclusion");
                         if !is_excluded(members, exclude, path, manifest_path) {
@@ -337,7 +343,8 @@ impl<'cfg> Workspace<'cfg> {
             }
         };
         let members = {
-            let root = self.packages.load(&root_manifest)?;
+            let unused = vec!();
+            let root = self.packages.load(&root_manifest, &unused)?;
             match *root.workspace_config() {
                 WorkspaceConfig::Root { ref members, .. } => members.clone(),
                 _ => bail!("root of a workspace inferred but wasn't a root: {}",
@@ -379,16 +386,17 @@ impl<'cfg> Workspace<'cfg> {
         if self.members.iter().any(|p| p == &manifest_path) {
             return Ok(())
         }
+	let unused = vec!();
         if is_path_dep
             && !manifest_path.parent().unwrap().starts_with(self.root())
-            && self.find_root(&manifest_path)? != self.root_manifest {
+            && self.find_root(&manifest_path, &unused)? != self.root_manifest {
             // If `manifest_path` is a path dependency outside of the workspace,
             // don't add it, or any of its dependencies, as a members.
             return Ok(())
         }
 
         let root = root_manifest.parent().unwrap();
-        match *self.packages.load(root_manifest)?.workspace_config() {
+        match *self.packages.load(root_manifest, &unused)?.workspace_config() {
             WorkspaceConfig::Root { ref members, ref exclude } => {
                 if is_excluded(members, exclude, root, &manifest_path) {
                     return Ok(())
@@ -401,7 +409,7 @@ impl<'cfg> Workspace<'cfg> {
         self.members.push(manifest_path.clone());
 
         let candidates = {
-            let pkg = match *self.packages.load(&manifest_path)? {
+            let pkg = match *self.packages.load(&manifest_path, &unused)? {
                 MaybePackage::Package(ref p) => p,
                 MaybePackage::Virtual(_) => return Ok(()),
             };
@@ -471,8 +479,9 @@ impl<'cfg> Workspace<'cfg> {
             }
         }
 
+        let unused = vec!();
         for member in self.members.clone() {
-            let root = self.find_root(&member)?;
+            let root = self.find_root(&member, &unused)?;
             if root == self.root_manifest {
                 continue
             }
@@ -613,14 +622,14 @@ impl<'cfg> Packages<'cfg> {
         &self.packages[manifest_path.parent().unwrap()]
     }
 
-    fn load(&mut self, manifest_path: &Path) -> CargoResult<&MaybePackage> {
+    fn load(&mut self, manifest_path: &Path, overrides: &Vec<String>) -> CargoResult<&MaybePackage> {
         let key = manifest_path.parent().unwrap();
         match self.packages.entry(key.to_path_buf()) {
             Entry::Occupied(e) => Ok(e.into_mut()),
             Entry::Vacant(v) => {
                 let source_id = SourceId::for_path(key)?;
                 let (manifest, _nested_paths) =
-                    read_manifest(&manifest_path, &source_id, self.config)?;
+                    read_manifest(&manifest_path, &source_id, &overrides, self.config)?;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {
                         MaybePackage::Package(Package::new(manifest,

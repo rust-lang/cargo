@@ -12,7 +12,8 @@ use util::toml::read_manifest;
 pub fn read_package(path: &Path, source_id: &SourceId, config: &Config)
                     -> CargoResult<(Package, Vec<PathBuf>)> {
     trace!("read_package; path={}; source-id={}", path.display(), source_id);
-    let (manifest, nested) = read_manifest(path, source_id, config)?;
+    let unused = vec!();
+    let (manifest, nested) = read_manifest(path, source_id, &unused, config)?;
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => {
@@ -114,7 +115,8 @@ fn read_nested_packages(path: &Path,
 
     let manifest_path = find_project_manifest_exact(path, "Cargo.toml")?;
 
-    let (manifest, nested) = match read_manifest(&manifest_path, source_id, config) {
+    let unused = vec!();
+    let (manifest, nested) = match read_manifest(&manifest_path, source_id, &unused, config) {
         Err(err) => {
             // Ignore malformed manifests found on git repositories
             //
