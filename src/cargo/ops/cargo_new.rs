@@ -403,7 +403,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
         if !opts.bin { "glob:Cargo.lock\n" } else { "" }]
         .concat();
 
-    let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap(), config.cwd());
+    let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
     let vcs = match (opts.version_control, cfg.version_control, in_existing_vcs_repo) {
         (None, None, false) => VersionControl::Git,
         (None, Some(option), false) => option,
