@@ -28,6 +28,7 @@ pub struct Options {
     flag_tests: bool,
     flag_bench: Vec<String>,
     flag_benches: bool,
+    flag_all_targets: bool,
     flag_frozen: bool,
     flag_locked: bool,
 }
@@ -52,6 +53,7 @@ Options:
     --tests                  Build all tests
     --bench NAME             Build only the specified bench target
     --benches                Build all benches
+    --all-targets            Build all targets (default)
     --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Space-separated list of features to also build
     --all-features           Build all available features
@@ -105,7 +107,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                             &options.flag_bin, options.flag_bins,
                                             &options.flag_test, options.flag_tests,
                                             &options.flag_example, options.flag_examples,
-                                            &options.flag_bench, options.flag_benches,),
+                                            &options.flag_bench, options.flag_benches,
+                                            options.flag_all_targets),
             message_format: options.flag_message_format,
             mode: ops::CompileMode::Doc { deps: false },
             target_rustdoc_args: Some(&options.arg_opts),

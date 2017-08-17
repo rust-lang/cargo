@@ -299,7 +299,7 @@ fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()>
         no_default_features: false,
         all_features: false,
         spec: ops::Packages::Packages(&[]),
-        filter: ops::CompileFilter::Everything { required_features_filterable: true },
+        filter: ops::CompileFilter::Default { required_features_filterable: true },
         release: false,
         message_format: ops::MessageFormat::Human,
         mode: ops::CompileMode::Build,
