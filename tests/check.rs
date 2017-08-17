@@ -424,3 +424,29 @@ fn check_virtual_all_implied() {
         .with_stderr_contains("[..] --crate-name bar bar[/]src[/]lib.rs [..]")
         );
 }
+
+#[test]
+fn check_all_targets() {
+    let foo = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", "pub fn smth() {}")
+        .file("examples/example1.rs", "fn main() {}")
+        .file("tests/test2.rs", "#[test] fn t() {}")
+        .file("benches/bench3.rs", "")
+    ;
+
+    assert_that(foo.cargo_process("check").arg("--all-targets").arg("-v"),
+                execs().with_status(0)
+        .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..]")
+        .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..]")
+        .with_stderr_contains("[..] --crate-name example1 examples[/]example1.rs [..]")
+        .with_stderr_contains("[..] --crate-name test2 tests[/]test2.rs [..]")
+        .with_stderr_contains("[..] --crate-name bench3 benches[/]bench3.rs [..]")
+        );
+}
