@@ -57,7 +57,7 @@ use url::Url;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
-use core::shell::Shell;
+use util::config::Config;
 use util::Graph;
 use util::errors::{CargoResult, CargoError};
 use util::profile;
@@ -342,7 +342,7 @@ type Activations = HashMap<String, HashMap<SourceId, Vec<Summary>>>;
 pub fn resolve(summaries: &[(Summary, Method)],
                replacements: &[(PackageIdSpec, Dependency)],
                registry: &mut Registry,
-               shell: Option<&mut Shell>) -> CargoResult<Resolve> {
+               config: Option<&Config>) -> CargoResult<Resolve> {
     let cx = Context {
         resolve_graph: RcList::new(),
         resolve_features: HashMap::new(),
@@ -377,7 +377,8 @@ pub fn resolve(summaries: &[(Summary, Method)],
     trace!("resolved: {:?}", resolve);
 
     // If we have a shell, emit warnings about required deps used as feature.
-    if let Some(shell) = shell {
+    if let Some(config) = config {
+        let mut shell = config.shell();
         let mut warnings = &cx.warnings;
         while let Some(ref head) = warnings.head {
             shell.warn(&head.0)?;
