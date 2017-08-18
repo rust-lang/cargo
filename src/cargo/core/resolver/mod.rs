@@ -57,6 +57,7 @@ use url::Url;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
+use core::shell::Shell;
 use util::Graph;
 use util::errors::{CargoResult, CargoError};
 use util::profile;
@@ -330,6 +331,9 @@ struct Context<'a> {
     resolve_replacements: RcList<(PackageId, PackageId)>,
 
     replacements: &'a [(PackageIdSpec, Dependency)],
+
+    // These warnings are printed after resolution.
+    warnings: RcList<String>,
 }
 
 type Activations = HashMap<String, HashMap<SourceId, Vec<Summary>>>;
@@ -337,13 +341,15 @@ type Activations = HashMap<String, HashMap<SourceId, Vec<Summary>>>;
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summaries: &[(Summary, Method)],
                replacements: &[(PackageIdSpec, Dependency)],
-               registry: &mut Registry) -> CargoResult<Resolve> {
+               registry: &mut Registry,
+               shell: Option<&mut Shell>) -> CargoResult<Resolve> {
     let cx = Context {
         resolve_graph: RcList::new(),
         resolve_features: HashMap::new(),
         resolve_replacements: RcList::new(),
         activations: HashMap::new(),
         replacements: replacements,
+        warnings: RcList::new(),
     };
     let _p = profile::start(format!("resolving"));
     let cx = activate_deps_loop(cx, registry, summaries)?;
@@ -368,8 +374,17 @@ pub fn resolve(summaries: &[(Summary, Method)],
     }
 
     check_cycles(&resolve, &cx.activations)?;
-
     trace!("resolved: {:?}", resolve);
+
+    // If we have a shell, emit warnings about required deps used as feature.
+    if let Some(shell) = shell {
+        let mut warnings = &cx.warnings;
+        while let Some(ref head) = warnings.head {
+            shell.warn(&head.0)?;
+            warnings = &head.1;
+        }
+    }
+
     Ok(resolve)
 }
 
@@ -1088,9 +1103,13 @@ impl<'a> Context<'a> {
             // to `ret`.
             let base = feature_deps.remove(dep.name()).unwrap_or((false, vec![]));
             if !dep.is_optional() && base.0 {
-                bail!("Package `{}` does not have feature `{}`. It has a required dependency with \
-                       that name, but only optional dependencies can be used as features.",
-                      s.package_id(), dep.name());
+                self.warnings.push(
+                    format!("Package `{}` does not have feature `{}`. It has a required dependency \
+                       with that name, but only optional dependencies can be used as features. \
+                       This is currently a warning to ease the transition, but it will become an \
+                       error in the future.",
+                       s.package_id(), dep.name())
+                );
             }
             let mut base = base.1;
             base.extend(dep.features().iter().cloned());

@@ -15,7 +15,7 @@ use util::errors::{CargoResult, CargoResultExt};
 /// lockfile.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
-    let resolve = resolve_with_registry(ws, &mut registry)?;
+    let resolve = resolve_with_registry(ws, &mut registry, true)?;
     let packages = get_resolved_packages(&resolve, registry);
     Ok((packages, resolve))
 }
@@ -44,7 +44,7 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     let resolve = if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        let resolve = resolve_with_registry(ws, &mut registry)?;
+        let resolve = resolve_with_registry(ws, &mut registry, false)?;
 
         // Second, resolve with precisely what we're doing. Filter out
         // transitive dependencies if necessary, specify features, handle
@@ -79,19 +79,19 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     let resolved_with_overrides =
     ops::resolve_with_previous(&mut registry, ws,
                                method, resolve.as_ref(), None,
-                               specs)?;
+                               specs, true)?;
 
     let packages = get_resolved_packages(&resolved_with_overrides, registry);
 
     Ok((packages, resolved_with_overrides))
 }
 
-fn resolve_with_registry(ws: &Workspace, registry: &mut PackageRegistry)
+fn resolve_with_registry(ws: &Workspace, registry: &mut PackageRegistry, warn: bool)
                          -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let resolve = resolve_with_previous(registry, ws,
                                         Method::Everything,
-                                        prev.as_ref(), None, &[])?;
+                                        prev.as_ref(), None, &[], warn)?;
 
     if !ws.is_ephemeral() {
         ops::write_pkg_lockfile(ws, &resolve)?;
@@ -114,7 +114,8 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                  method: Method,
                                  previous: Option<&'a Resolve>,
                                  to_avoid: Option<&HashSet<&'a PackageId>>,
-                                 specs: &[PackageIdSpec])
+                                 specs: &[PackageIdSpec],
+                                 warn: bool)
                                  -> CargoResult<Resolve> {
     // Here we place an artificial limitation that all non-registry sources
     // cannot be locked at more than one revision. This means that if a git
@@ -256,9 +257,17 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => root_replace.to_vec(),
     };
 
+    let mut shell;
+    let opt_shell = if warn {
+        shell = ws.config().shell();
+        Some(&mut *shell)
+    } else {
+        None
+    };
     let mut resolved = resolver::resolve(&summaries,
                                          &replace,
-                                         registry)?;
+                                         registry,
+                                         opt_shell)?;
     resolved.register_used_patches(registry.patches());
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;
