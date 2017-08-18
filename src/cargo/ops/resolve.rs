@@ -257,17 +257,15 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => root_replace.to_vec(),
     };
 
-    let mut shell;
-    let opt_shell = if warn {
-        shell = ws.config().shell();
-        Some(&mut *shell)
+    let config = if warn {
+        Some(ws.config())
     } else {
         None
     };
     let mut resolved = resolver::resolve(&summaries,
                                          &replace,
                                          registry,
-                                         opt_shell)?;
+                                         config)?;
     resolved.register_used_patches(registry.patches());
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;
