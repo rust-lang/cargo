@@ -237,7 +237,7 @@ fn invalid9() {
             [dependencies.bar]
             path = "bar"
         "#)
-        .file("src/main.rs", "")
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", r#"
             [package]
             name = "bar"
@@ -247,9 +247,12 @@ fn invalid9() {
         .file("bar/src/lib.rs", "");
 
     assert_that(p.cargo_process("build").arg("--features").arg("bar"),
-                execs().with_status(101).with_stderr("\
-[ERROR] Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with \
-that name, but only optional dependencies can be used as features.
+                execs().with_status(0).with_stderr("\
+warning: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with \
+that name, but only optional dependencies can be used as features. [..]
+   Compiling bar v0.0.1 ([..])
+   Compiling foo v0.0.1 ([..])
+    Finished dev [unoptimized + debuginfo] target(s) in [..] secs
 "));
 }
 
@@ -266,7 +269,7 @@ fn invalid10() {
             path = "bar"
             features = ["baz"]
         "#)
-        .file("src/main.rs", "")
+        .file("src/main.rs", "fn main() {}")
         .file("bar/Cargo.toml", r#"
             [package]
             name = "bar"
@@ -286,9 +289,13 @@ fn invalid10() {
         .file("bar/baz/src/lib.rs", "");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-[ERROR] Package `bar v0.0.1 ([..])` does not have feature `baz`. It has a required dependency with \
-that name, but only optional dependencies can be used as features.
+                execs().with_status(0).with_stderr("\
+warning: Package `bar v0.0.1 ([..])` does not have feature `baz`. It has a required dependency with \
+that name, but only optional dependencies can be used as features. [..]
+   Compiling baz v0.0.1 ([..])
+   Compiling bar v0.0.1 ([..])
+   Compiling foo v0.0.1 ([..])
+    Finished dev [unoptimized + debuginfo] target(s) in [..] secs
 "));
 }
 
