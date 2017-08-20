@@ -53,8 +53,8 @@ impl Summary {
                                feature, dep)
                     }
                     None if is_reexport => {
-                        bail!("Feature `{}` requires `{}` which is not an \
-                               optional dependency", feature, dep)
+                        bail!("Feature `{}` requires a feature of `{}` which is not a \
+                               dependency", feature, dep)
                     }
                     None => {
                         bail!("Feature `{}` includes `{}` which is neither \
