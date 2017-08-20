@@ -32,7 +32,7 @@ fn resolve(pkg: PackageId, deps: Vec<Dependency>, registry: &[Summary])
     let mut registry = MyRegistry(registry);
     let summary = Summary::new(pkg.clone(), deps, HashMap::new()).unwrap();
     let method = Method::Everything;
-    let resolve = resolver::resolve(&[(summary, method)], &[], &mut registry)?;
+    let resolve = resolver::resolve(&[(summary, method)], &[], &mut registry, None)?;
     let res = resolve.iter().cloned().collect();
     Ok(res)
 }

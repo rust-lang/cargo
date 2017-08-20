@@ -169,7 +169,7 @@ fn invalid6() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `foo` requires `bar` which is not an optional dependency
+  Feature `foo` requires a feature of `bar` which is not a dependency
 "));
 }
 
@@ -193,7 +193,7 @@ fn invalid7() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  Feature `foo` requires `bar` which is not an optional dependency
+  Feature `foo` requires a feature of `bar` which is not a dependency
 "));
 }
 
@@ -222,6 +222,80 @@ fn invalid8() {
     assert_that(p.cargo_process("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] feature names may not contain slashes: `foo/bar`
+"));
+}
+
+#[test]
+fn invalid9() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build").arg("--features").arg("bar"),
+                execs().with_status(0).with_stderr("\
+warning: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with \
+that name, but only optional dependencies can be used as features. [..]
+   Compiling bar v0.0.1 ([..])
+   Compiling foo v0.0.1 ([..])
+    Finished dev [unoptimized + debuginfo] target(s) in [..] secs
+"));
+}
+
+#[test]
+fn invalid10() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+            features = ["baz"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.baz]
+            path = "baz"
+        "#)
+        .file("bar/src/lib.rs", "")
+        .file("bar/baz/Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/baz/src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0).with_stderr("\
+warning: Package `bar v0.0.1 ([..])` does not have feature `baz`. It has a required dependency with \
+that name, but only optional dependencies can be used as features. [..]
+   Compiling baz v0.0.1 ([..])
+   Compiling bar v0.0.1 ([..])
+   Compiling foo v0.0.1 ([..])
+    Finished dev [unoptimized + debuginfo] target(s) in [..] secs
 "));
 }
 
