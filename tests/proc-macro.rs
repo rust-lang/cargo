@@ -6,6 +6,60 @@ use cargotest::support::{project, execs};
 use hamcrest::assert_that;
 
 #[test]
+fn probe_cfg_before_crate_type_discovery() {
+    if !is_nightly() {
+        return;
+    }
+
+    let client = project("client")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "client"
+            version = "0.0.1"
+            authors = []
+
+            [target.'cfg(not(stage300))'.dependencies.noop]
+            path = "../noop"
+        "#)
+        .file("src/main.rs", r#"
+            #![feature(proc_macro)]
+
+            #[macro_use]
+            extern crate noop;
+
+            #[derive(Noop)]
+            struct X;
+
+            fn main() {}
+        "#);
+    let noop = project("noop")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "noop"
+            version = "0.0.1"
+            authors = []
+
+            [lib]
+            proc-macro = true
+        "#)
+        .file("src/lib.rs", r#"
+            #![feature(proc_macro, proc_macro_lib)]
+
+            extern crate proc_macro;
+            use proc_macro::TokenStream;
+
+            #[proc_macro_derive(Noop)]
+            pub fn noop(_input: TokenStream) -> TokenStream {
+                "".parse().unwrap()
+            }
+        "#);
+    noop.build();
+
+    assert_that(client.cargo_process("build"),
+                execs().with_status(0));
+}
+
+#[test]
 fn noop() {
     if !is_nightly() {
         return;
