@@ -45,6 +45,13 @@ impl ProcessBuilder {
         self
     }
 
+    pub fn args_replace<T: AsRef<OsStr>>(&mut self, arguments: &[T]) -> &mut ProcessBuilder {
+        self.args = arguments.iter().map(|t| {
+            t.as_ref().to_os_string()
+        }).collect();
+        self
+    }
+
     pub fn cwd<T: AsRef<OsStr>>(&mut self, path: T) -> &mut ProcessBuilder {
         self.cwd = Some(path.as_ref().to_os_string());
         self
@@ -59,6 +66,10 @@ impl ProcessBuilder {
     pub fn env_remove(&mut self, key: &str) -> &mut ProcessBuilder {
         self.env.insert(key.to_string(), None);
         self
+    }
+
+    pub fn get_program(&self) -> &OsString {
+        &self.program
     }
 
     pub fn get_args(&self) -> &[OsString] {
