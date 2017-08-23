@@ -611,31 +611,32 @@ fn build_script_needed_for_host_and_target() {
             pub fn d2() { d1::d1(); }
         ");
 
-    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v")
+                .env("RUSTFLAGS", "--cap-lints=forbid").env("RUSTFLAGS_HOST", "--cap-lints=warn"),
                 execs().with_status(0)
                        .with_stderr_contains(&format!("\
 [COMPILING] d1 v0.0.0 ({url}/d1)", url = p.url()))
                        .with_stderr_contains(&format!("\
-[RUNNING] `rustc [..] d1[/]build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]d1-[..]`",
-    dir = p.root().display()))
+[RUNNING] `rustc [..] d1[/]build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]d1-[..] \
+           --cap-lints=warn`",  dir = p.root().display()))
                        .with_stderr_contains(&format!("\
 [RUNNING] `{dir}[/]target[/]debug[/]build[/]d1-[..][/]build-script-build`",
-    dir = p.root().display()))
+           dir = p.root().display()))
                        .with_stderr_contains("\
-[RUNNING] `rustc [..] d1[/]src[/]lib.rs [..]`")
+[RUNNING] `rustc [..] d1[/]src[/]lib.rs [..] --cap-lints=warn [..]`")
                        .with_stderr_contains(&format!("\
 [COMPILING] d2 v0.0.0 ({url}/d2)", url = p.url()))
                        .with_stderr_contains(&format!("\
-[RUNNING] `rustc [..] d2[/]src[/]lib.rs [..] \
+[RUNNING] `rustc [..] d2[/]src[/]lib.rs [..] --cap-lints=warn \
            -L /path/to/{host}`", host = host))
                        .with_stderr_contains(&format!("\
 [COMPILING] foo v0.0.0 ({url})", url = p.url()))
                        .with_stderr_contains(&format!("\
 [RUNNING] `rustc [..] build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]foo-[..] \
-           -L /path/to/{host}`", dir = p.root().display(), host = host))
+           --cap-lints=warn -L /path/to/{host}`", dir = p.root().display(), host = host))
                        .with_stderr_contains(&format!("\
 [RUNNING] `rustc [..] src[/]main.rs [..] --target {target} [..] \
-           -L /path/to/{target}`", target = target)));
+           --cap-lints=forbid -L /path/to/{target}`", target = target)));
 }
 
 #[test]
