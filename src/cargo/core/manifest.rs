@@ -8,8 +8,9 @@ use serde::ser;
 use url::Url;
 
 use core::{Dependency, PackageId, Summary, SourceId, PackageIdSpec};
-use core::WorkspaceConfig;
+use core::{WorkspaceConfig, Features, Feature};
 use util::toml::TomlManifest;
+use util::errors::*;
 
 pub enum EitherManifest {
     Real(Manifest),
@@ -32,6 +33,8 @@ pub struct Manifest {
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
     original: Rc<TomlManifest>,
+    features: Features,
+    im_a_teapot: Option<bool>,
 }
 
 /// When parsing `Cargo.toml`, some warnings should silenced
@@ -239,6 +242,8 @@ impl Manifest {
                replace: Vec<(PackageIdSpec, Dependency)>,
                patch: HashMap<Url, Vec<Dependency>>,
                workspace: WorkspaceConfig,
+               features: Features,
+               im_a_teapot: Option<bool>,
                original: Rc<TomlManifest>) -> Manifest {
         Manifest {
             summary: summary,
@@ -253,7 +258,9 @@ impl Manifest {
             replace: replace,
             patch: patch,
             workspace: workspace,
+            features: features,
             original: original,
+            im_a_teapot: im_a_teapot,
         }
     }
 
@@ -280,6 +287,10 @@ impl Manifest {
         &self.workspace
     }
 
+    pub fn features(&self) -> &Features {
+        &self.features
+    }
+
     pub fn add_warning(&mut self, s: String) {
         self.warnings.push(DelayedWarning { message: s, is_critical: false })
     }
@@ -298,6 +309,17 @@ impl Manifest {
             summary: self.summary.map_source(to_replace, replace_with),
             ..self
         }
+    }
+
+    pub fn feature_gate(&self) -> CargoResult<()> {
+        if self.im_a_teapot.is_some() {
+            self.features.require(Feature::test_dummy_unstable()).chain_err(|| {
+                "the `im-a-teapot` manifest key is unstable and may not work \
+                 properly in England"
+            })?;
+        }
+
+        Ok(())
     }
 }
 
