@@ -9,6 +9,7 @@ use url::Url;
 
 use core::{Dependency, PackageId, Summary, SourceId, PackageIdSpec};
 use core::{WorkspaceConfig, Features, Feature};
+use util::Config;
 use util::toml::TomlManifest;
 use util::errors::*;
 
@@ -320,6 +321,15 @@ impl Manifest {
         }
 
         Ok(())
+    }
+
+    // Just a helper function to test out `-Z` flags on Cargo
+    pub fn print_teapot(&self, config: &Config) {
+        if let Some(teapot) = self.im_a_teapot {
+            if config.cli_unstable().print_im_a_teapot {
+                println!("im-a-teapot = {}", teapot);
+            }
+        }
     }
 }
 

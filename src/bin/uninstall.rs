@@ -10,6 +10,8 @@ pub struct Options {
     flag_color: Option<String>,
     flag_frozen: bool,
     flag_locked: bool,
+    #[serde(rename = "flag_Z")]
+    flag_z: Vec<String>,
 
     arg_spec: String,
 }
@@ -30,6 +32,7 @@ Options:
     --color WHEN              Coloring: auto, always, never
     --frozen                  Require Cargo.lock and cache are up to date
     --locked                  Require Cargo.lock is up to date
+    -Z FLAG ...               Unstable (nightly-only) flags to Cargo
 
 The argument SPEC is a package id specification (see `cargo help pkgid`) to
 specify which crate should be uninstalled. By default all binaries are
@@ -42,7 +45,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_quiet,
                      &options.flag_color,
                      options.flag_frozen,
-                     options.flag_locked)?;
+                     options.flag_locked,
+                     &options.flag_z)?;
 
     let root = options.flag_root.as_ref().map(|s| &s[..]);
     ops::uninstall(root, &options.arg_spec, &options.flag_bin, config)?;

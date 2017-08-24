@@ -17,6 +17,8 @@ pub struct Flags {
     flag_color: Option<String>,
     flag_frozen: bool,
     flag_locked: bool,
+    #[serde(rename = "flag_Z")]
+    flag_z: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -34,6 +36,7 @@ Options:
     --color WHEN            Coloring: auto, always, never
     --frozen                Require Cargo.lock and cache are up to date
     --locked                Require Cargo.lock is up to date
+    -Z FLAG ...             Unstable (nightly-only) flags to Cargo
 ";
 
 pub fn execute(args: Flags, config: &Config) -> CliResult {
@@ -41,7 +44,8 @@ pub fn execute(args: Flags, config: &Config) -> CliResult {
                      args.flag_quiet,
                      &args.flag_color,
                      args.flag_frozen,
-                     args.flag_locked)?;
+                     args.flag_locked,
+                     &args.flag_z)?;
 
     let mut contents = String::new();
     let filename = args.flag_manifest_path.unwrap_or("Cargo.toml".into());

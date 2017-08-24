@@ -123,6 +123,54 @@ Caused by:
 }
 
 #[test]
+fn nightly_feature_requires_nightly_in_dep() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            a = { path = "a" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+            im-a-teapot = true
+            cargo-features = ["test-dummy-unstable"]
+        "#)
+        .file("a/src/lib.rs", "");
+    assert_that(p.cargo_process("build")
+                 .masquerade_as_nightly_cargo(),
+                execs().with_status(0)
+                       .with_stderr("\
+[COMPILING] a [..]
+[COMPILING] b [..]
+[FINISHED] [..]
+"));
+
+    assert_that(p.cargo("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+error: failed to load source for a dependency on `a`
+
+Caused by:
+  Unable to update [..]
+
+Caused by:
+  failed to parse manifest at `[..]`
+
+Caused by:
+  the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
+  but this is the `stable` channel
+"));
+}
+
+#[test]
 fn cant_publish() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -150,5 +198,62 @@ error: failed to parse manifest at `[..]`
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
+"));
+}
+
+#[test]
+fn z_flags_rejected() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+            im-a-teapot = true
+            cargo-features = ["test-dummy-unstable"]
+        "#)
+        .file("src/lib.rs", "");
+    assert_that(p.cargo_process("build")
+                 .arg("-Zprint-im-a-teapot"),
+                execs().with_status(101)
+                       .with_stderr("\
+error: the `-Z` flag is only accepted on the nightly channel of Cargo
+"));
+
+    assert_that(p.cargo("build")
+                 .masquerade_as_nightly_cargo()
+                 .arg("-Zarg"),
+                execs().with_status(101)
+                       .with_stderr("\
+error: unknown `-Z` flag specified: arg
+"));
+
+    assert_that(p.cargo("build")
+                 .masquerade_as_nightly_cargo()
+                 .arg("-Zprint-im-a-teapot"),
+                execs().with_status(0)
+                       .with_stdout("im-a-teapot = true\n")
+                       .with_stderr("\
+[COMPILING] a [..]
+[FINISHED] [..]
+"));
+}
+
+#[test]
+fn publish_rejected() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            authors = []
+            cargo-features = ["test-dummy-unstable"]
+        "#)
+        .file("src/lib.rs", "");
+    assert_that(p.cargo_process("package")
+                 .masquerade_as_nightly_cargo(),
+                execs().with_status(101)
+                       .with_stderr("\
+error: cannot package or publish crates which activate nightly-only cargo features
 "));
 }

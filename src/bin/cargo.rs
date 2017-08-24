@@ -31,6 +31,8 @@ pub struct Flags {
     arg_args: Vec<String>,
     flag_locked: bool,
     flag_frozen: bool,
+    #[serde(rename = "flag_Z")]
+    flag_z: Vec<String>,
 }
 
 const USAGE: &'static str = "
@@ -50,6 +52,7 @@ Options:
     --color WHEN        Coloring: auto, always, never
     --frozen            Require Cargo.lock and cache are up to date
     --locked            Require Cargo.lock is up to date
+    -Z FLAG ...         Unstable (nightly-only) flags to Cargo
 
 Some common cargo commands are (see all commands with --list):
     build       Compile the current project
@@ -149,7 +152,8 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
                    flags.flag_quiet,
                    &flags.flag_color,
                    flags.flag_frozen,
-                   flags.flag_locked)?;
+                   flags.flag_locked,
+                   &flags.flag_z)?;
 
     init_git_transports(config);
     let _token = cargo::util::job::setup();
