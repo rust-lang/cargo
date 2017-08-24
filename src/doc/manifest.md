@@ -175,31 +175,28 @@ license = "..."
 # (similar to the readme key).
 license-file = "..."
 
-# Optional specification of badges to be displayed on crates.io. The badges
-# currently available are Travis CI, Appveyor, and GitLab latest build status,
-# specified using the following parameters:
+# Optional specification of badges to be displayed on crates.io. The badges 
+# pertaining to build status that are currently available are Appveyor, CircleCI,
+# GitLab, and TravisCI. Available badges pertaining to code test coverage are
+# Codecov and Coveralls. There are also maintenance-related badges which state
+# the issue resolution time, percent of open issues, and future maintenance
+# intentions.
 [badges]
-
-# Travis CI: `repository` in format "<user>/<project>" is required.
-# `branch` is optional; default is `master`
-travis-ci = { repository = "...", branch = "master" }
 
 # Appveyor: `repository` is required. `branch` is optional; default is `master`
 # `service` is optional; valid values are `github` (default), `bitbucket`, and
 # `gitlab`.
 appveyor = { repository = "...", branch = "master", service = "github" }
 
-# GitLab: `repository` is required. `branch` is optional; default is `master`
-gitlab = { repository = "...", branch = "master" }
-
 # Circle CI: `repository` is required. `branch` is optiona; default is `master`
 circle-ci = { repository = "...", branch = "master" }
 
-# Is it maintained resolution time: `repository` is required.
-is-it-maintained-issue-resolution = { repository = "..." }
+# GitLab: `repository` is required. `branch` is optional; default is `master`
+gitlab = { repository = "...", branch = "master" }
 
-# Is it maintained percentage of open issues: `repository` is required.
-is-it-maintained-open-issues = { repository = "..." }
+# Travis CI: `repository` in format "<user>/<project>" is required.
+# `branch` is optional; default is `master`
+travis-ci = { repository = "...", branch = "master" }
 
 # Codecov: `repository` is required. `branch` is optional; default is `master`
 # `service` is optional; valid values are `github` (default), `bitbucket`, and
@@ -209,6 +206,18 @@ codecov = { repository = "...", branch = "master", service = "github" }
 # Coveralls: `repository` is required. `branch` is optional; default is `master`
 # `service` is optional; valid values are `github` (default) and `bitbucket`.
 coveralls = { repository = "...", branch = "master", service = "github" }
+
+# Is it maintained resolution time: `repository` is required.
+is-it-maintained-issue-resolution = { repository = "..." }
+
+# Is it maintained percentage of open issues: `repository` is required.
+is-it-maintained-open-issues = { repository = "..." }
+
+# Maintenance: `status` is required Available options are `actively-developed`,
+# `passively-maintained`, `as-is`, `none`, `experimental`, `looking-for-maintainer`
+# and `deprecated`.
+maintenance = { status = "none" }
+
 ```
 
 The [crates.io](https://crates.io) registry will render the description, display
