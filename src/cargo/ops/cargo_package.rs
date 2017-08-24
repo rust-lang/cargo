@@ -28,6 +28,10 @@ pub fn package(ws: &Workspace,
                opts: &PackageOpts) -> CargoResult<Option<FileLock>> {
     let pkg = ws.current()?;
     let config = ws.config();
+    if pkg.manifest().features().activated().len() > 0 {
+        bail!("cannot package or publish crates which activate nightly-only \
+               cargo features")
+    }
     let mut src = PathSource::new(pkg.root(),
                                   pkg.package_id().source_id(),
                                   config);
