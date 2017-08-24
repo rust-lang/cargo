@@ -31,6 +31,8 @@ pub struct Options {
     flag_rev: Option<String>,
 
     flag_path: Option<String>,
+    #[serde(rename = "flag_Z")]
+    flag_z: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -66,6 +68,7 @@ Build and install options:
     --color WHEN              Coloring: auto, always, never
     --frozen                  Require Cargo.lock and cache are up to date
     --locked                  Require Cargo.lock is up to date
+    -Z FLAG ...               Unstable (nightly-only) flags to Cargo
 
 This command manages Cargo's local set of installed binary crates. Only packages
 which have [[bin]] targets can be installed, and all binaries are installed into
@@ -103,7 +106,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_quiet,
                      &options.flag_color,
                      options.flag_frozen,
-                     options.flag_locked)?;
+                     options.flag_locked,
+                     &options.flag_z)?;
 
     let compile_opts = ops::CompileOptions {
         config: config,

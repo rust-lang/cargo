@@ -33,6 +33,8 @@ pub struct Options {
     flag_profile: Option<String>,
     flag_frozen: bool,
     flag_locked: bool,
+    #[serde(rename = "flag_Z")]
+    flag_z: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -68,6 +70,7 @@ Options:
     --message-format FMT     Error format: human, json [default: human]
     --frozen                 Require Cargo.lock and cache are up to date
     --locked                 Require Cargo.lock is up to date
+    -Z FLAG ...              Unstable (nightly-only) flags to Cargo
 
 The specified target for the current package (or package specified by SPEC if
 provided) will be compiled along with all of its dependencies. The specified
@@ -90,7 +93,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_quiet,
                      &options.flag_color,
                      options.flag_frozen,
-                     options.flag_locked)?;
+                     options.flag_locked,
+                     &options.flag_z)?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path,
                                          config.cwd())?;

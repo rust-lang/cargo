@@ -24,6 +24,8 @@ pub struct Options {
     flag_frozen: bool,
     flag_locked: bool,
     arg_args: Vec<String>,
+    #[serde(rename = "flag_Z")]
+    flag_z: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -50,6 +52,7 @@ Options:
     --message-format FMT         Error format: human, json [default: human]
     --frozen                     Require Cargo.lock and cache are up to date
     --locked                     Require Cargo.lock is up to date
+    -Z FLAG ...                  Unstable (nightly-only) flags to Cargo
 
 If neither `--bin` nor `--example` are given, then if the project only has one
 bin target it will be run. Otherwise `--bin` specifies the bin target to run,
@@ -66,7 +69,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_quiet,
                      &options.flag_color,
                      options.flag_frozen,
-                     options.flag_locked)?;
+                     options.flag_locked,
+                     &options.flag_z)?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
 

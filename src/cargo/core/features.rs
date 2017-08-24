@@ -63,8 +63,8 @@ macro_rules! features {
         impl Feature {
             $(
                 pub fn $feature() -> &'static Feature {
-                    fn get(features: &Features) -> &bool {
-                        &features.$feature
+                    fn get(features: &Features) -> bool {
+                        features.$feature
                     }
                     static FEAT: Feature = Feature {
                         name: stringify!($feature),
@@ -73,6 +73,10 @@ macro_rules! features {
                     &FEAT
                 }
             )*
+
+            fn is_enabled(&self, features: &Features) -> bool {
+                (self.get)(features)
+            }
         }
 
         impl Features {
@@ -123,7 +127,7 @@ features! {
 
 pub struct Feature {
     name: &'static str,
-    get: fn(&Features) -> &bool,
+    get: fn(&Features) -> bool,
 }
 
 impl Features {
@@ -173,7 +177,7 @@ impl Features {
     }
 
     pub fn require(&self, feature: &Feature) -> CargoResult<()> {
-        if *(feature.get)(self) {
+        if feature.is_enabled(self) {
             Ok(())
         } else {
             let feature = feature.name.replace("_", "-");
@@ -193,6 +197,70 @@ impl Features {
             }
             bail!("{}", msg);
         }
+    }
+}
+
+/// A parsed represetnation of all unstable flags that Cargo accepts.
+///
+/// Cargo, like `rustc`, accepts a suite of `-Z` flags which are intended for
+/// gating unstable functionality to Cargo. These flags are only available on
+/// the nightly channel of Cargo.
+///
+/// This struct doesn't have quite the same convenience macro that the features
+/// have above, but the procedure should still be relatively stable for adding a
+/// new unstable flag:
+///
+/// 1. First, add a field to this `CliUnstable` structure. All flags are allowed
+///    to have a value as the `-Z` flags are either of the form `-Z foo` or
+///    `-Z foo=bar`, and it's up to you how to parse `bar`.
+///
+/// 2. Add an arm to the match statement in `CliUnstable::add` below to match on
+///    your new flag. The key (`k`) is what you're matching on and the value is
+///    in `v`.
+///
+/// 3. (optional) Add a new parsing function to parse your datatype. As of now
+///    there's an example for `bool`, but more can be added!
+///
+/// 4. In Cargo use `config.cli_unstable()` to get a reference to this structure
+///    and then test for your flag or your value and act accordingly.
+///
+/// If you have any trouble with this, please let us know!
+#[derive(Default, Debug)]
+pub struct CliUnstable {
+    pub print_im_a_teapot: bool,
+}
+
+impl CliUnstable {
+    pub fn parse(&mut self, flags: &[String]) -> CargoResult<()> {
+        if flags.len() > 0 && !nightly_features_allowed() {
+            bail!("the `-Z` flag is only accepted on the nightly channel of Cargo")
+        }
+        for flag in flags {
+            self.add(flag)?;
+        }
+        Ok(())
+    }
+
+    fn add(&mut self, flag: &str) -> CargoResult<()> {
+        let mut parts = flag.splitn(2, '=');
+        let k = parts.next().unwrap();
+        let v = parts.next();
+
+        fn parse_bool(value: Option<&str>) -> CargoResult<bool> {
+            match value {
+                None |
+                Some("yes") => Ok(true),
+                Some("no") => Ok(false),
+                Some(s) => bail!("expected `no` or `yes`, found: {}", s),
+            }
+        }
+
+        match k {
+            "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(v)?,
+            _ => bail!("unknown `-Z` flag specified: {}", k),
+        }
+
+        Ok(())
     }
 }
 

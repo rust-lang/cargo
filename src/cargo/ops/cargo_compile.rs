@@ -232,6 +232,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         }
     } else {
         let root_package = ws.current()?;
+        root_package.manifest().print_teapot(ws.config());
         let all_features = resolve_all_features(&resolve_with_overrides,
                                                 root_package.package_id());
         generate_targets(root_package, profiles, mode, filter, &all_features, release)?;
