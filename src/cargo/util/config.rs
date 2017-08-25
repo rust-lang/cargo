@@ -1,4 +1,4 @@
-use std::cell::{RefCell, RefMut, Cell};
+use std::cell::{RefCell, RefMut, Cell, Ref};
 use std::collections::HashSet;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::HashMap;
@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Once, ONCE_INIT};
 
-use core::Shell;
+use core::{Shell, CliUnstable};
 use core::shell::Verbosity;
 use jobserver;
 use serde::{Serialize, Serializer};
@@ -39,6 +39,7 @@ pub struct Config {
     frozen: Cell<bool>,
     locked: Cell<bool>,
     jobserver: Option<jobserver::Client>,
+    cli_flags: RefCell<CliUnstable>,
 }
 
 impl Config {
@@ -74,6 +75,7 @@ impl Config {
                     Some((*GLOBAL_JOBSERVER).clone())
                 }
             },
+            cli_flags: RefCell::new(CliUnstable::default()),
         }
     }
 
@@ -371,7 +373,8 @@ impl Config {
                      quiet: Option<bool>,
                      color: &Option<String>,
                      frozen: bool,
-                     locked: bool) -> CargoResult<()> {
+                     locked: bool,
+                     unstable_flags: &[String]) -> CargoResult<()> {
         let extra_verbose = verbose >= 2;
         let verbose = if verbose == 0 {None} else {Some(true)};
 
@@ -410,8 +413,13 @@ impl Config {
         self.extra_verbose.set(extra_verbose);
         self.frozen.set(frozen);
         self.locked.set(locked);
+        self.cli_flags.borrow_mut().parse(unstable_flags)?;
 
         Ok(())
+    }
+
+    pub fn cli_unstable(&self) -> Ref<CliUnstable> {
+        self.cli_flags.borrow()
     }
 
     pub fn extra_verbose(&self) -> bool {

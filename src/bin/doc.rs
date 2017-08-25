@@ -27,6 +27,8 @@ pub struct Options {
     flag_frozen: bool,
     flag_locked: bool,
     flag_all: bool,
+    #[serde(rename = "flag_Z")]
+    flag_z: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -57,6 +59,7 @@ Options:
     --message-format FMT         Error format: human, json [default: human]
     --frozen                     Require Cargo.lock and cache are up to date
     --locked                     Require Cargo.lock is up to date
+    -Z FLAG ...                  Unstable (nightly-only) flags to Cargo
 
 By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.
@@ -78,7 +81,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_quiet,
                      &options.flag_color,
                      options.flag_frozen,
-                     options.flag_locked)?;
+                     options.flag_locked,
+                     &options.flag_z)?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     let ws = Workspace::new(&root, config)?;

@@ -35,6 +35,8 @@ pub struct Options {
     arg_args: Vec<String>,
     flag_all: bool,
     flag_exclude: Vec<String>,
+    #[serde(rename = "flag_Z")]
+    flag_z: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -72,6 +74,7 @@ Options:
     --no-fail-fast               Run all benchmarks regardless of failure
     --frozen                     Require Cargo.lock and cache are up to date
     --locked                     Require Cargo.lock is up to date
+    -Z FLAG ...                  Unstable (nightly-only) flags to Cargo
 
 All of the trailing arguments are passed to the benchmark binaries generated
 for filtering benchmarks and generally providing options configuring how they
@@ -99,7 +102,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_quiet,
                      &options.flag_color,
                      options.flag_frozen,
-                     options.flag_locked)?;
+                     options.flag_locked,
+                     &options.flag_z)?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     let ws = Workspace::new(&root, config)?;

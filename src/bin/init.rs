@@ -15,6 +15,8 @@ pub struct Options {
     flag_vcs: Option<ops::VersionControl>,
     flag_frozen: bool,
     flag_locked: bool,
+    #[serde(rename = "flag_Z")]
+    flag_z: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -38,6 +40,7 @@ Options:
     --color WHEN        Coloring: auto, always, never
     --frozen            Require Cargo.lock and cache are up to date
     --locked            Require Cargo.lock is up to date
+    -Z FLAG ...         Unstable (nightly-only) flags to Cargo
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult {
@@ -46,7 +49,8 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                      options.flag_quiet,
                      &options.flag_color,
                      options.flag_frozen,
-                     options.flag_locked)?;
+                     options.flag_locked,
+                     &options.flag_z)?;
 
     let Options { flag_bin, flag_lib, arg_path, flag_name, flag_vcs, .. } = options;
 
