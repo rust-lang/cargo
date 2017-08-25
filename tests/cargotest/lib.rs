@@ -44,6 +44,12 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env("HOME", support::paths::home())
      .env("CARGO_HOME", support::paths::home().join(".cargo"))
      .env("__CARGO_TEST_ROOT", support::paths::root())
+
+     // Force cargo to think it's on the stable channel for all tests, this
+     // should hopefully not suprise us as we add cargo features over time and
+     // cargo rides the trains
+     .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
+
      .env_remove("__CARGO_DEFAULT_LIB_METADATA")
      .env_remove("RUSTC")
      .env_remove("RUSTDOC")
@@ -63,6 +69,16 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env_remove("CARGO_TARGET_DIR")     // we assume 'target'
      .env_remove("MSYSTEM");             // assume cmd.exe everywhere on windows
     return p
+}
+
+pub trait ChannelChanger: Sized {
+    fn masquerade_as_nightly_cargo(&mut self) -> &mut Self;
+}
+
+impl ChannelChanger for cargo::util::ProcessBuilder {
+    fn masquerade_as_nightly_cargo(&mut self) -> &mut Self {
+        self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
+    }
 }
 
 pub fn cargo_process() -> cargo::util::ProcessBuilder {

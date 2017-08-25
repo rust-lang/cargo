@@ -13,6 +13,8 @@ pub struct Options {
     flag_locked: bool,
     flag_package: Option<String>,
     arg_spec: Option<String>,
+    #[serde(rename = "flag_Z")]
+    flag_z: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -30,6 +32,7 @@ Options:
     --color WHEN             Coloring: auto, always, never
     --frozen                 Require Cargo.lock and cache are up to date
     --locked                 Require Cargo.lock is up to date
+    -Z FLAG ...              Unstable (nightly-only) flags to Cargo
 
 Given a <spec> argument, print out the fully qualified package id specifier.
 This command will generate an error if <spec> is ambiguous as to which package
@@ -58,7 +61,8 @@ pub fn execute(options: Options,
                      options.flag_quiet,
                      &options.flag_color,
                      options.flag_frozen,
-                     options.flag_locked)?;
+                     options.flag_locked,
+                     &options.flag_z)?;
     let root = find_root_manifest_for_wd(options.flag_manifest_path.clone(), config.cwd())?;
     let ws = Workspace::new(&root, config)?;
 

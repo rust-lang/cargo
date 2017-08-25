@@ -213,7 +213,6 @@ fn handle_cause<E, EKind>(cargo_err: E, shell: &mut Shell) -> bool
     true
 }
 
-
 pub fn version() -> VersionInfo {
     macro_rules! env_str {
         ($name:expr) => { env!($name).to_string() }

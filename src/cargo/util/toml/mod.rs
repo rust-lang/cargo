@@ -14,7 +14,7 @@ use url::Url;
 
 use core::{SourceId, Profiles, PackageIdSpec, GitReference, WorkspaceConfig};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
-use core::{EitherManifest, VirtualManifest};
+use core::{EitherManifest, VirtualManifest, Features};
 use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata};
 use sources::CRATES_IO;
@@ -389,6 +389,10 @@ pub struct TomlProject {
     include: Option<Vec<String>>,
     publish: Option<bool>,
     workspace: Option<String>,
+    #[serde(rename = "cargo-features")]
+    cargo_features: Option<Vec<String>>,
+    #[serde(rename = "im-a-teapot")]
+    im_a_teapot: Option<bool>,
 
     // package metadata
     description: Option<String>,
@@ -644,6 +648,9 @@ impl TomlManifest {
         };
         let profiles = build_profiles(&me.profile);
         let publish = project.publish.unwrap_or(true);
+        let empty = Vec::new();
+        let cargo_features = project.cargo_features.as_ref().unwrap_or(&empty);
+        let features = Features::new(&cargo_features, &mut warnings)?;
         let mut manifest = Manifest::new(summary,
                                          targets,
                                          exclude,
@@ -655,6 +662,8 @@ impl TomlManifest {
                                          replace,
                                          patch,
                                          workspace_config,
+                                         features,
+                                         project.im_a_teapot,
                                          me.clone());
         if project.license_file.is_some() && project.license.is_some() {
             manifest.add_warning("only one of `license` or \
@@ -666,6 +675,8 @@ impl TomlManifest {
         for error in errors {
             manifest.add_critical_warning(error);
         }
+
+        manifest.feature_gate()?;
 
         Ok((manifest, nested_paths))
     }
