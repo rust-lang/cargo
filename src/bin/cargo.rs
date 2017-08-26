@@ -1,5 +1,4 @@
 extern crate cargo;
-extern crate url;
 extern crate env_logger;
 extern crate git2_curl;
 extern crate toml;

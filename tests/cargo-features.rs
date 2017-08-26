@@ -1,4 +1,3 @@
-extern crate cargo;
 extern crate cargotest;
 extern crate hamcrest;
 
