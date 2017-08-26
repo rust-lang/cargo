@@ -2,7 +2,6 @@
 #![cfg_attr(test, deny(warnings))]
 #![recursion_limit="128"]
 
-#[cfg(test)] extern crate hamcrest;
 #[macro_use] extern crate error_chain;
 #[macro_use] extern crate log;
 #[macro_use] extern crate scoped_tls;
