@@ -1,6 +1,5 @@
 extern crate cargotest;
 extern crate hamcrest;
-extern crate cargo;
 
 use std::str;
 use std::net::TcpListener;

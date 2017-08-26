@@ -392,7 +392,6 @@ fn resolving_cycle() {
 
 #[test]
 fn hard_equality() {
-    extern crate env_logger;
     let reg = registry(vec![
         pkg!(("foo", "1.0.1")),
         pkg!(("foo", "1.0.0")),
