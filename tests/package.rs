@@ -4,7 +4,6 @@ extern crate flate2;
 extern crate git2;
 extern crate hamcrest;
 extern crate tar;
-extern crate cargo;
 
 use std::fs::File;
 use std::io::prelude::*;
