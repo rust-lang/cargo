@@ -516,7 +516,9 @@ fn groups_on_groups_on_groups() {
             optional = true
         "#)
         .file("src/main.rs", r#"
+            #[allow(unused_extern_crates)]
             extern crate bar;
+            #[allow(unused_extern_crates)]
             extern crate baz;
             fn main() {}
         "#)
@@ -562,7 +564,9 @@ fn many_cli_features() {
             optional = true
         "#)
         .file("src/main.rs", r#"
+            #[allow(unused_extern_crates)]
             extern crate bar;
+            #[allow(unused_extern_crates)]
             extern crate baz;
             fn main() {}
         "#)
@@ -607,6 +611,7 @@ fn union_features() {
             features = ["f2"]
         "#)
         .file("src/main.rs", r#"
+            #[allow(unused_extern_crates)]
             extern crate d1;
             extern crate d2;
             fn main() {
@@ -1100,7 +1105,9 @@ fn many_cli_features_comma_delimited() {
             optional = true
         "#)
         .file("src/main.rs", r#"
+            #[allow(unused_extern_crates)]
             extern crate bar;
+            #[allow(unused_extern_crates)]
             extern crate baz;
             fn main() {}
         "#)
@@ -1154,9 +1161,13 @@ fn many_cli_features_comma_and_space_delimited() {
             optional = true
         "#)
         .file("src/main.rs", r#"
+            #[allow(unused_extern_crates)]
             extern crate bar;
+            #[allow(unused_extern_crates)]
             extern crate baz;
+            #[allow(unused_extern_crates)]
             extern crate bam;
+            #[allow(unused_extern_crates)]
             extern crate bap;
             fn main() {}
         "#)
