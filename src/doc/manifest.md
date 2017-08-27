@@ -216,7 +216,7 @@ is-it-maintained-open-issues = { repository = "..." }
 # Maintenance: `status` is required Available options are `actively-developed`,
 # `passively-maintained`, `as-is`, `none`, `experimental`, `looking-for-maintainer`
 # and `deprecated`.
-maintenance = { status = "none" }
+maintenance = { status = "..." }
 
 ```
 
