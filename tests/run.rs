@@ -280,10 +280,12 @@ fn specify_name() {
         "#)
         .file("src/lib.rs", "")
         .file("src/bin/a.rs", r#"
+            #[allow(unused_extern_crates)]
             extern crate foo;
             fn main() { println!("hello a.rs"); }
         "#)
         .file("src/bin/b.rs", r#"
+            #[allow(unused_extern_crates)]
             extern crate foo;
             fn main() { println!("hello b.rs"); }
         "#);

@@ -744,7 +744,7 @@ fn dev_deps_no_rebuild_lib() {
                 doctest = false
         "#)
         .file("src/lib.rs", r#"
-            #[cfg(test)] extern crate bar;
+            #[cfg(test)] #[allow(unused_extern_crates)] extern crate bar;
             #[cfg(not(test))] pub fn foo() { env!("FOO"); }
         "#)
         .file("bar/Cargo.toml", r#"
