@@ -18,6 +18,7 @@ fn cargo_bench_simple() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", r#"
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
 
             fn hello() -> &'static str {
@@ -60,6 +61,7 @@ fn bench_bench_implicit() {
         "#)
         .file("src/main.rs", r#"
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }
             fn main() { println!("Hello main!"); }"#)
@@ -95,6 +97,7 @@ fn bench_bin_implicit() {
         "#)
         .file("src/main.rs", r#"
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }
             fn main() { println!("Hello main!"); }"#)
@@ -155,6 +158,7 @@ fn cargo_bench_verbose() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", r#"
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
             fn main() {}
             #[bench] fn bench_hello(_b: &mut test::Bencher) {}
@@ -182,13 +186,16 @@ fn many_similar_names() {
         "#)
         .file("src/lib.rs", "
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
             pub fn foo() {}
             #[bench] fn lib_bench(_b: &mut test::Bencher) {}
         ")
         .file("src/main.rs", "
             #![feature(test)]
+            #[cfg(test)]
             extern crate foo;
+            #[cfg(test)]
             extern crate test;
             fn main() {}
             #[bench] fn bin_bench(_b: &mut test::Bencher) { foo::foo() }
@@ -215,6 +222,7 @@ fn cargo_bench_failing_test() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", r#"
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
             fn hello() -> &'static str {
                 "hello"
@@ -245,7 +253,7 @@ thread '[..]' panicked at 'assertion failed: \
     `(left == right)`[..]", p.url()))
                        .with_stderr_contains("[..]left: `\"hello\"`[..]")
                        .with_stderr_contains("[..]right: `\"nope\"`[..]")
-                       .with_stderr_contains("[..]src[/]main.rs:14[..]")
+                       .with_stderr_contains("[..]src[/]main.rs:15[..]")
                        .with_status(101));
 }
 
@@ -266,6 +274,7 @@ fn bench_with_lib_dep() {
         "#)
         .file("src/lib.rs", r#"
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
             ///
             /// ```rust
@@ -280,7 +289,9 @@ fn bench_with_lib_dep() {
         "#)
         .file("src/main.rs", "
             #![feature(test)]
+            #[allow(unused_extern_crates)]
             extern crate foo;
+            #[cfg(test)]
             extern crate test;
 
             fn main() {}
@@ -315,7 +326,9 @@ fn bench_with_deep_lib_dep() {
         "#)
         .file("src/lib.rs", "
             #![feature(test)]
+            #[cfg(test)]
             extern crate foo;
+            #[cfg(test)]
             extern crate test;
             #[bench]
             fn bar_bench(_b: &mut test::Bencher) {
@@ -331,6 +344,7 @@ fn bench_with_deep_lib_dep() {
         "#)
         .file("src/lib.rs", "
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
 
             pub fn foo() {}
@@ -367,6 +381,7 @@ fn external_bench_explicit() {
         "#)
         .file("src/lib.rs", r#"
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
             pub fn get_hello() -> &'static str { "Hello" }
 
@@ -375,6 +390,7 @@ fn external_bench_explicit() {
         "#)
         .file("src/bench.rs", r#"
             #![feature(test)]
+            #[allow(unused_extern_crates)]
             extern crate foo;
             extern crate test;
 
@@ -405,6 +421,7 @@ fn external_bench_implicit() {
         "#)
         .file("src/lib.rs", r#"
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
 
             pub fn get_hello() -> &'static str { "Hello" }
@@ -414,6 +431,7 @@ fn external_bench_implicit() {
         "#)
         .file("benches/external.rs", r#"
             #![feature(test)]
+            #[allow(unused_extern_crates)]
             extern crate foo;
             extern crate test;
 
@@ -442,8 +460,7 @@ fn dont_run_examples() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", r#"
-        "#)
+        .file("src/lib.rs", r"")
         .file("examples/dont-run-me-i-will-fail.rs", r#"
             fn main() { panic!("Examples should not be run by 'cargo test'"); }
         "#);
@@ -464,6 +481,7 @@ fn pass_through_command_line() {
         "#)
         .file("src/lib.rs", "
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
 
             #[bench] fn foo(_b: &mut test::Bencher) {}
@@ -496,7 +514,7 @@ fn cargo_bench_twice() {
         .file("src/test_twice.rs", r#"
             #![crate_type = "rlib"]
             #![feature(test)]
-
+            #[cfg(test)]
             extern crate test;
 
             #[bench]
@@ -529,12 +547,15 @@ fn lib_bin_same_name() {
         "#)
         .file("src/lib.rs", "
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
             #[bench] fn lib_bench(_b: &mut test::Bencher) {}
         ")
         .file("src/main.rs", "
             #![feature(test)]
+            #[allow(unused_extern_crates)]
             extern crate foo;
+            #[cfg(test)]
             extern crate test;
 
             #[bench]
@@ -563,6 +584,7 @@ fn lib_with_standard_name() {
         "#)
         .file("src/lib.rs", "
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
 
             /// ```
@@ -614,7 +636,9 @@ fn lib_with_standard_name2() {
         ")
         .file("src/main.rs", "
             #![feature(test)]
+            #[cfg(test)]
             extern crate syntax;
+            #[cfg(test)]
             extern crate test;
 
             fn main() {}
@@ -653,6 +677,7 @@ fn bench_dylib() {
         .file("src/lib.rs", r#"
             #![feature(test)]
             extern crate bar as the_bar;
+            #[cfg(test)]
             extern crate test;
 
             pub fn bar() { the_bar::baz(); }
@@ -723,6 +748,7 @@ fn bench_twice_with_build_cmd() {
         .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
             #[bench]
             fn foo(_b: &mut test::Bencher) {}
@@ -762,6 +788,7 @@ fn bench_with_examples() {
         "#)
         .file("src/lib.rs", r#"
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
             #[cfg(test)]
             use test::Bencher;
@@ -887,6 +914,7 @@ fn test_bench_no_fail_fast() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", r#"
             #![feature(test)]
+            #[cfg(test)]
             extern crate test;
             fn hello() -> &'static str {
                 "hello"
@@ -1072,7 +1100,7 @@ fn bench_all_exclude() {
         "#)
         .file("bar/src/lib.rs", r#"
             #![feature(test)]
-
+            #[cfg(test)]
             extern crate test;
 
             #[bench]
