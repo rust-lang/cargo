@@ -66,6 +66,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         flag_allow_dirty: allow_dirty,
         flag_jobs: jobs,
         flag_dry_run: dry_run,
+        flag_target: target,
         ..
     } = options;
 
@@ -96,7 +97,7 @@ about this warning.";
             else { config.shell().warn(&msg)?; host },  // TODO: Deprecated, remove
         verify: !no_verify,
         allow_dirty: allow_dirty,
-        target: options.flag_target.as_ref().map(|t| &t[..]),
+        target: target.as_ref().map(|t| &t[..]),
         jobs: jobs,
         dry_run: dry_run,
     })?;
