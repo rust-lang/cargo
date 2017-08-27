@@ -60,7 +60,7 @@ fn bench_bench_implicit() {
             authors = []
         "#)
         .file("src/main.rs", r#"
-            #![feature(test)]
+            #![cfg_attr(test, feature(test))]
             #[cfg(test)]
             extern crate test;
             #[bench] fn run1(_ben: &mut test::Bencher) { }
@@ -273,7 +273,7 @@ fn bench_with_lib_dep() {
             path = "src/main.rs"
         "#)
         .file("src/lib.rs", r#"
-            #![feature(test)]
+            #![cfg_attr(test, feature(test))]
             #[cfg(test)]
             extern crate test;
             ///
@@ -325,7 +325,7 @@ fn bench_with_deep_lib_dep() {
             path = "../foo"
         "#)
         .file("src/lib.rs", "
-            #![feature(test)]
+            #![cfg_attr(test, feature(test))]
             #[cfg(test)]
             extern crate foo;
             #[cfg(test)]
@@ -343,7 +343,7 @@ fn bench_with_deep_lib_dep() {
             authors = []
         "#)
         .file("src/lib.rs", "
-            #![feature(test)]
+            #![cfg_attr(test, feature(test))]
             #[cfg(test)]
             extern crate test;
 
@@ -380,7 +380,7 @@ fn external_bench_explicit() {
             path = "src/bench.rs"
         "#)
         .file("src/lib.rs", r#"
-            #![feature(test)]
+            #![cfg_attr(test, feature(test))]
             #[cfg(test)]
             extern crate test;
             pub fn get_hello() -> &'static str { "Hello" }
@@ -420,7 +420,7 @@ fn external_bench_implicit() {
             authors = []
         "#)
         .file("src/lib.rs", r#"
-            #![feature(test)]
+            #![cfg_attr(test, feature(test))]
             #[cfg(test)]
             extern crate test;
 
@@ -546,13 +546,13 @@ fn lib_bin_same_name() {
             name = "foo"
         "#)
         .file("src/lib.rs", "
-            #![feature(test)]
+            #![cfg_attr(test, feature(test))]
             #[cfg(test)]
             extern crate test;
             #[bench] fn lib_bench(_b: &mut test::Bencher) {}
         ")
         .file("src/main.rs", "
-            #![feature(test)]
+            #![cfg_attr(test, feature(test))]
             #[allow(unused_extern_crates)]
             extern crate foo;
             #[cfg(test)]
@@ -583,7 +583,7 @@ fn lib_with_standard_name() {
             authors = []
         "#)
         .file("src/lib.rs", "
-            #![feature(test)]
+            #![cfg_attr(test, feature(test))]
             #[cfg(test)]
             extern crate test;
 
@@ -675,7 +675,7 @@ fn bench_dylib() {
             path = "bar"
         "#)
         .file("src/lib.rs", r#"
-            #![feature(test)]
+            #![cfg_attr(test, feature(test))]
             extern crate bar as the_bar;
             #[cfg(test)]
             extern crate test;
@@ -787,7 +787,7 @@ fn bench_with_examples() {
             name = "testb1"
         "#)
         .file("src/lib.rs", r#"
-            #![feature(test)]
+            #![cfg_attr(test, feature(test))]
             #[cfg(test)]
             extern crate test;
             #[cfg(test)]
