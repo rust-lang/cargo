@@ -208,7 +208,7 @@ fn works_through_the_registry() {
             [dependencies]
             bar = "0.1.0"
         "#)
-        .file("src/lib.rs", "extern crate bar;");
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate bar;");
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
@@ -242,7 +242,7 @@ fn ignore_version_from_other_platform() {
             [target.'cfg({})'.dependencies]
             foo = "0.2.0"
         "#, this_family, other_family))
-        .file("src/lib.rs", "extern crate foo;");
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate foo;");
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(0).with_stderr("\
