@@ -644,7 +644,9 @@ fn update_with_shared_deps() {
             path = "dep2"
         "#)
         .file("src/main.rs", r#"
+            #[allow(unused_extern_crates)]
             extern crate dep1;
+            #[allow(unused_extern_crates)]
             extern crate dep2;
             fn main() {}
         "#)
