@@ -647,6 +647,7 @@ fn build_deps_simple() {
         "#)
         .file("src/lib.rs", "")
         .file("build.rs", "
+            #[allow(unused_extern_crates)]
             extern crate a;
             fn main() {}
         ")
@@ -684,8 +685,9 @@ fn build_deps_not_for_normal() {
             [build-dependencies.aaaaa]
             path = "a"
         "#)
-        .file("src/lib.rs", "extern crate aaaaa;")
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate aaaaa;")
         .file("build.rs", "
+            #[allow(unused_extern_crates)]
             extern crate aaaaa;
             fn main() {}
         ")
@@ -725,6 +727,7 @@ fn build_cmd_with_a_build_cmd() {
         "#)
         .file("src/lib.rs", "")
         .file("build.rs", "
+            #[allow(unused_extern_crates)]
             extern crate a;
             fn main() {}
         ")
@@ -739,7 +742,7 @@ fn build_cmd_with_a_build_cmd() {
             path = "../b"
         "#)
         .file("a/src/lib.rs", "")
-        .file("a/build.rs", "extern crate b; fn main() {}")
+        .file("a/build.rs", "#[allow(unused_extern_crates)] extern crate b; fn main() {}")
         .file("b/Cargo.toml", r#"
             [project]
             name = "b"
@@ -2159,7 +2162,7 @@ fn panic_abort_with_build_scripts() {
             [dependencies]
             a = { path = "a" }
         "#)
-        .file("src/lib.rs", "extern crate a;")
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate a;")
         .file("a/Cargo.toml", r#"
             [project]
             name = "a"
@@ -2171,7 +2174,7 @@ fn panic_abort_with_build_scripts() {
             b = { path = "../b" }
         "#)
         .file("a/src/lib.rs", "")
-        .file("a/build.rs", "extern crate b; fn main() {}")
+        .file("a/build.rs", "#[allow(unused_extern_crates)] extern crate b; fn main() {}")
         .file("b/Cargo.toml", r#"
             [project]
             name = "b"

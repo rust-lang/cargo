@@ -331,6 +331,7 @@ fn test_with_lib_dep() {
             #[test] fn lib_test() {}
         "#)
         .file("src/main.rs", "
+            #[allow(unused_extern_crates)]
             extern crate foo;
 
             fn main() {}
@@ -364,6 +365,7 @@ fn test_with_deep_lib_dep() {
             path = "../foo"
         "#)
         .file("src/lib.rs", "
+            #[cfg(test)]
             extern crate foo;
             /// ```
             /// bar::bar();
@@ -587,6 +589,7 @@ fn lib_bin_same_name() {
             #[test] fn lib_test() {}
         ")
         .file("src/main.rs", "
+            #[allow(unused_extern_crates)]
             extern crate foo;
 
             #[test]
@@ -1288,7 +1291,7 @@ fn selective_testing() {
                 doctest = false
         "#)
         .file("d1/src/lib.rs", "")
-        .file("d1/src/main.rs", "extern crate d1; fn main() {}")
+        .file("d1/src/main.rs", "#[allow(unused_extern_crates)] extern crate d1; fn main() {}")
         .file("d2/Cargo.toml", r#"
             [package]
             name = "d2"
@@ -1300,7 +1303,7 @@ fn selective_testing() {
                 doctest = false
         "#)
         .file("d2/src/lib.rs", "")
-        .file("d2/src/main.rs", "extern crate d2; fn main() {}");
+        .file("d2/src/main.rs", "#[allow(unused_extern_crates)] extern crate d2; fn main() {}");
     p.build();
 
     println!("d1");
@@ -1361,6 +1364,7 @@ fn almost_cyclic_but_not_quite() {
             path = ".."
         "#)
         .file("b/src/lib.rs", r#"
+            #[allow(unused_extern_crates)]
             extern crate a;
         "#)
         .file("c/Cargo.toml", r#"
@@ -1388,8 +1392,14 @@ fn build_then_selective_test() {
             [dependencies.b]
             path = "b"
         "#)
-        .file("src/lib.rs", "extern crate b;")
-        .file("src/main.rs", "extern crate b; extern crate a; fn main() {}")
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate b;")
+        .file("src/main.rs", r#"
+            #[allow(unused_extern_crates)]
+            extern crate b;
+            #[allow(unused_extern_crates)]
+            extern crate a;
+            fn main() {}
+        "#)
         .file("b/Cargo.toml", r#"
             [package]
             name = "b"
@@ -1570,7 +1580,7 @@ fn example_with_dev_dep() {
             path = "a"
         "#)
         .file("src/lib.rs", "")
-        .file("examples/ex.rs", "extern crate a; fn main() {}")
+        .file("examples/ex.rs", "#[allow(unused_extern_crates)] extern crate a; fn main() {}")
         .file("a/Cargo.toml", r#"
             [package]
             name = "a"
@@ -1822,6 +1832,7 @@ fn cyclic_dev_dep_doc_test() {
             foo = { path = ".." }
         "#)
         .file("bar/src/lib.rs", r#"
+            #[allow(unused_extern_crates)]
             extern crate foo;
         "#);
     assert_that(p.cargo_process("test"),
@@ -2179,7 +2190,7 @@ fn panic_abort_multiple() {
             [profile.release]
             panic = 'abort'
         "#)
-        .file("src/lib.rs", "extern crate a;")
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate a;")
         .file("a/Cargo.toml", r#"
             [package]
             name = "a"
@@ -2296,7 +2307,7 @@ fn test_release_ignore_panic() {
             [profile.release]
             panic = 'abort'
         "#)
-        .file("src/lib.rs", "extern crate a;")
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate a;")
         .file("a/Cargo.toml", r#"
             [package]
             name = "a"
