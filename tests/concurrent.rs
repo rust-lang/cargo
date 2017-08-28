@@ -1,4 +1,3 @@
-extern crate cargo;
 extern crate cargotest;
 extern crate git2;
 extern crate hamcrest;
