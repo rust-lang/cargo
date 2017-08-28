@@ -33,6 +33,11 @@ impl fmt::Display for ProcessBuilder {
 }
 
 impl ProcessBuilder {
+    pub fn program<T: AsRef<OsStr>>(&mut self, program: T) -> &mut ProcessBuilder {
+        self.program = program.as_ref().to_os_string();
+        self
+    }
+
     pub fn arg<T: AsRef<OsStr>>(&mut self, arg: T) -> &mut ProcessBuilder {
         self.args.push(arg.as_ref().to_os_string());
         self
