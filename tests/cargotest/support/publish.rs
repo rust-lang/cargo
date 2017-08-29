@@ -1,5 +1,3 @@
-extern crate url;
-
 use std::path::PathBuf;
 use std::io::prelude::*;
 use std::fs::{self, File};
