@@ -30,6 +30,8 @@ macro_rules! t {
 pub mod paths;
 pub mod git;
 pub mod registry;
+pub mod cross_compile;
+pub mod publish;
 
 /*
  *

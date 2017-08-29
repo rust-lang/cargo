@@ -2,143 +2,14 @@ extern crate cargo;
 extern crate cargotest;
 extern crate hamcrest;
 
-use std::env;
-use std::process::Command;
-use std::sync::{Once, ONCE_INIT};
-use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT, Ordering};
-
 use cargo::util::process;
 use cargotest::{is_nightly, rustc_host};
-use cargotest::support::{project, execs, main_file, basic_bin_manifest};
+use cargotest::support::{project, execs, basic_bin_manifest, cross_compile};
 use hamcrest::{assert_that, existing_file};
-
-fn disabled() -> bool {
-    // First, disable if ./configure requested so
-    match env::var("CFG_DISABLE_CROSS_TESTS") {
-        Ok(ref s) if *s == "1" => return true,
-        _ => {}
-    }
-
-    // Right now the windows bots cannot cross compile due to the mingw setup,
-    // so we disable ourselves on all but macos/linux setups where the rustc
-    // install script ensures we have both architectures
-    if !(cfg!(target_os = "macos") ||
-         cfg!(target_os = "linux") ||
-         cfg!(target_env = "msvc")) {
-        return true;
-    }
-
-    // It's not particularly common to have a cross-compilation setup, so
-    // try to detect that before we fail a bunch of tests through no fault
-    // of the user.
-    static CAN_RUN_CROSS_TESTS: AtomicBool = ATOMIC_BOOL_INIT;
-    static CHECK: Once = ONCE_INIT;
-
-    let cross_target = alternate();
-
-    CHECK.call_once(|| {
-        let p = project("cross_test")
-            .file("Cargo.toml", &basic_bin_manifest("cross_test"))
-            .file("src/cross_test.rs", &main_file(r#""testing!""#, &[]));
-
-        let result = p.cargo_process("build")
-            .arg("--target").arg(&cross_target)
-            .exec_with_output();
-
-        if result.is_ok() {
-            CAN_RUN_CROSS_TESTS.store(true, Ordering::SeqCst);
-        }
-    });
-
-    if CAN_RUN_CROSS_TESTS.load(Ordering::SeqCst) {
-        // We were able to compile a simple project, so the user has the
-        // necessary std:: bits installed.  Therefore, tests should not
-        // be disabled.
-        return false;
-    }
-
-    // We can't compile a simple cross project.  We want to warn the user
-    // by failing a single test and having the remainder of the cross tests
-    // pass.  We don't use std::sync::Once here because panicing inside its
-    // call_once method would poison the Once instance, which is not what
-    // we want.
-    static HAVE_WARNED: AtomicBool = ATOMIC_BOOL_INIT;
-
-    if HAVE_WARNED.swap(true, Ordering::SeqCst) {
-        // We are some other test and somebody else is handling the warning.
-        // Just disable the current test.
-        return true;
-    }
-
-    // We are responsible for warning the user, which we do by panicing.
-    let rustup_available = Command::new("rustup").output().is_ok();
-
-    let linux_help = if cfg!(target_os = "linux") {
-        "
-
-You may need to install runtime libraries for your Linux distribution as well.".to_string()
-    } else {
-        "".to_string()
-    };
-
-    let rustup_help = if rustup_available {
-        format!("
-
-Alternatively, you can install the necessary libraries for cross-compilation with
-
-    rustup target add {}{}", cross_target, linux_help)
-    } else {
-        "".to_string()
-    };
-
-    panic!("Cannot cross compile to {}.
-
-This failure can be safely ignored. If you would prefer to not see this
-failure, you can set the environment variable CFG_DISABLE_CROSS_TESTS to \"1\".{}
-", cross_target, rustup_help);
-}
-
-fn alternate() -> String {
-    let platform = match env::consts::OS {
-        "linux" => "unknown-linux-gnu",
-        "macos" => "apple-darwin",
-        "windows" => "pc-windows-msvc",
-        _ => unreachable!(),
-    };
-    let arch = match env::consts::ARCH {
-        "x86" => "x86_64",
-        "x86_64" => "i686",
-        _ => unreachable!(),
-    };
-    format!("{}-{}", arch, platform)
-}
-
-fn alternate_arch() -> &'static str {
-    match env::consts::ARCH {
-        "x86" => "x86_64",
-        "x86_64" => "x86",
-        _ => unreachable!(),
-    }
-}
-
-fn host() -> String {
-    let platform = match env::consts::OS {
-        "linux" => "unknown-linux-gnu",
-        "macos" => "apple-darwin",
-        "windows" => "pc-windows-msvc",
-        _ => unreachable!(),
-    };
-    let arch = match env::consts::ARCH {
-        "x86" => "i686",
-        "x86_64" => "x86_64",
-        _ => unreachable!(),
-    };
-    format!("{}-{}", arch, platform)
-}
 
 #[test]
 fn simple_cross() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -152,15 +23,15 @@ fn simple_cross() {
             fn main() {{
                 assert_eq!(std::env::var("TARGET").unwrap(), "{}");
             }}
-        "#, alternate()))
+        "#, cross_compile::alternate()))
         .file("src/main.rs", &format!(r#"
             use std::env;
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, alternate_arch()));
+        "#, cross_compile::alternate_arch()));
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
     assert_that(&p.target_bin(&target, "foo"), existing_file());
@@ -171,13 +42,13 @@ fn simple_cross() {
 
 #[test]
 fn simple_cross_config() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
     let p = project("foo")
         .file(".cargo/config", &format!(r#"
             [build]
             target = "{}"
-        "#, alternate()))
+        "#, cross_compile::alternate()))
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -189,15 +60,15 @@ fn simple_cross_config() {
             fn main() {{
                 assert_eq!(std::env::var("TARGET").unwrap(), "{}");
             }}
-        "#, alternate()))
+        "#, cross_compile::alternate()))
         .file("src/main.rs", &format!(r#"
             use std::env;
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, alternate_arch()));
+        "#, cross_compile::alternate_arch()));
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     assert_that(p.cargo_process("build").arg("-v"),
                 execs().with_status(0));
     assert_that(&p.target_bin(&target, "foo"), existing_file());
@@ -208,7 +79,7 @@ fn simple_cross_config() {
 
 #[test]
 fn simple_deps() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -234,7 +105,7 @@ fn simple_deps() {
         .file("src/lib.rs", "pub fn bar() {}");
     p2.build();
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     assert_that(p.cargo_process("build").arg("--target").arg(&target),
                 execs().with_status(0));
     assert_that(&p.target_bin(&target, "foo"), existing_file());
@@ -245,7 +116,7 @@ fn simple_deps() {
 
 #[test]
 fn plugin_deps() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
     if !is_nightly() { return }
 
     let foo = project("foo")
@@ -312,7 +183,7 @@ fn plugin_deps() {
     bar.build();
     baz.build();
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     assert_that(foo.cargo_process("build").arg("--target").arg(&target),
                 execs().with_status(0));
     assert_that(&foo.target_bin(&target, "foo"), existing_file());
@@ -323,7 +194,7 @@ fn plugin_deps() {
 
 #[test]
 fn plugin_to_the_max() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
     if !is_nightly() { return }
 
     let foo = project("foo")
@@ -394,7 +265,7 @@ fn plugin_to_the_max() {
     bar.build();
     baz.build();
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     assert_that(foo.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
     println!("second");
@@ -409,9 +280,9 @@ fn plugin_to_the_max() {
 
 #[test]
 fn linker_and_ar() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     let p = project("foo")
         .file(".cargo/config", &format!(r#"
             [target.{}]
@@ -424,7 +295,7 @@ fn linker_and_ar() {
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, alternate_arch()));
+        "#, cross_compile::alternate_arch()));
 
     assert_that(p.cargo_process("build").arg("--target").arg(&target)
                                               .arg("-v"),
@@ -448,7 +319,7 @@ fn linker_and_ar() {
 
 #[test]
 fn plugin_with_extra_dylib_dep() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
     if !is_nightly() { return }
 
     let foo = project("foo")
@@ -509,14 +380,14 @@ fn plugin_with_extra_dylib_dep() {
     bar.build();
     baz.build();
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     assert_that(foo.cargo_process("build").arg("--target").arg(&target),
                 execs().with_status(0));
 }
 
 #[test]
 fn cross_tests() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -536,14 +407,14 @@ fn cross_tests() {
                 assert_eq!(env::consts::ARCH, "{}");
             }}
             #[test] fn test() {{ main() }}
-        "#, alternate_arch()))
+        "#, cross_compile::alternate_arch()))
         .file("src/lib.rs", &format!(r#"
             use std::env;
             pub fn foo() {{ assert_eq!(env::consts::ARCH, "{}"); }}
             #[test] fn test_foo() {{ foo() }}
-        "#, alternate_arch()));
+        "#, cross_compile::alternate_arch()));
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
@@ -557,7 +428,7 @@ fn cross_tests() {
 
 #[test]
 fn no_cross_doctests() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -587,7 +458,7 @@ fn no_cross_doctests() {
                        .with_stderr(&host_output));
 
     println!("b");
-    let target = host();
+    let target = cross_compile::host();
     assert_that(p.cargo("test").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
@@ -598,7 +469,7 @@ fn no_cross_doctests() {
 ", foo = p.url(), triple = target)));
 
     println!("c");
-    let target = alternate();
+    let target = cross_compile::alternate();
     assert_that(p.cargo("test").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
@@ -610,7 +481,7 @@ fn no_cross_doctests() {
 
 #[test]
 fn simple_cargo_run() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -624,18 +495,18 @@ fn simple_cargo_run() {
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, alternate_arch()));
+        "#, cross_compile::alternate_arch()));
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     assert_that(p.cargo_process("run").arg("--target").arg(&target),
                 execs().with_status(0));
 }
 
 #[test]
 fn cross_with_a_build_script() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -680,9 +551,9 @@ fn cross_with_a_build_script() {
 
 #[test]
 fn build_script_needed_for_host_and_target() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     let host = rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -769,7 +640,7 @@ fn build_script_needed_for_host_and_target() {
 
 #[test]
 fn build_deps_for_the_right_arch() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -804,14 +675,14 @@ fn build_deps_for_the_right_arch() {
         .file("d2/build.rs", "extern crate d1; fn main() {}")
         .file("d2/src/lib.rs", "");
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
 }
 
 #[test]
 fn build_script_only_host() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -846,14 +717,14 @@ fn build_script_only_host() {
             }
         "#);
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
 }
 
 #[test]
 fn plugin_build_script_right_arch() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -869,7 +740,7 @@ fn plugin_build_script_right_arch() {
         .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "");
 
-    assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(alternate()),
+    assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(cross_compile::alternate()),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
@@ -882,9 +753,9 @@ fn plugin_build_script_right_arch() {
 
 #[test]
 fn build_script_with_platform_specific_dependencies() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     let host = rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -941,9 +812,9 @@ fn build_script_with_platform_specific_dependencies() {
 
 #[test]
 fn platform_specific_dependencies_do_not_leak() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     let host = rustc_host();
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -987,9 +858,9 @@ fn platform_specific_dependencies_do_not_leak() {
 
 #[test]
 fn platform_specific_variables_reflected_in_build_scripts() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
-    let target = alternate();
+    let target = cross_compile::alternate();
     let host = rustc_host();
     let p = project("foo")
         .file("Cargo.toml", &format!(r#"
@@ -1056,9 +927,9 @@ fn platform_specific_variables_reflected_in_build_scripts() {
 
 #[test]
 fn cross_test_dylib() {
-    if disabled() { return }
+    if cross_compile::disabled() { return }
 
-    let target = alternate();
+    let target = cross_compile::alternate();
 
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -1103,7 +974,7 @@ fn cross_test_dylib() {
              pub fn baz() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, alternate_arch()));
+        "#, cross_compile::alternate_arch()));
 
     assert_that(p.cargo_process("test").arg("--target").arg(&target),
                 execs().with_status(0)
@@ -1113,7 +984,7 @@ fn cross_test_dylib() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]{arch}[/]debug[/]deps[/]foo-[..][EXE]
 [RUNNING] target[/]{arch}[/]debug[/]deps[/]test-[..][EXE]",
-                        dir = p.url(), arch = alternate()))
+                        dir = p.url(), arch = cross_compile::alternate()))
                        .with_stdout_contains_n("test foo ... ok", 2));
 
 }
