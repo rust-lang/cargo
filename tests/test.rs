@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::str;
 
-use cargotest::{sleep_ms, is_nightly};
+use cargotest::{sleep_ms, is_nightly, rustc_host};
 use cargotest::support::{project, execs, basic_bin_manifest, basic_lib_manifest, cargo_exe};
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::registry::Package;
@@ -2780,5 +2780,55 @@ fn publish_a_crate_without_tests() {
 
     assert_that(p.cargo("test"), execs().with_status(0));
     assert_that(p.cargo("test").arg("--package").arg("testless"),
+                execs().with_status(0));
+}
+
+#[test]
+fn find_dependency_of_proc_macro_dependency_with_target() {
+    let workspace = project("workspace")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["root", "proc_macro_dep"]
+        "#)
+        .file("root/Cargo.toml", r#"
+            [project]
+            name = "root"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            proc_macro_dep = { path = "../proc_macro_dep" }
+        "#)
+        .file("root/src/lib.rs", r#"
+            #[macro_use]
+            extern crate proc_macro_dep;
+
+            #[derive(Noop)]
+            pub struct X;
+        "#)
+        .file("proc_macro_dep/Cargo.toml", r#"
+            [project]
+            name = "proc_macro_dep"
+            version = "0.1.0"
+            authors = []
+
+            [lib]
+            proc-macro = true
+
+            [dependencies]
+            base64 = "^0.6"
+        "#)
+        .file("proc_macro_dep/src/lib.rs", r#"
+            extern crate base64;
+            extern crate proc_macro;
+            use proc_macro::TokenStream;
+
+            #[proc_macro_derive(Noop)]
+            pub fn noop(_input: TokenStream) -> TokenStream {
+                "".parse().unwrap()
+            }
+        "#);
+        workspace.build();
+    assert_that(workspace.cargo("test").arg("--all").arg("--target").arg(rustc_host()),
                 execs().with_status(0));
 }
