@@ -126,6 +126,7 @@ fn run_doc_tests(options: &TestOptions,
                  -> CargoResult<(Test, Vec<ProcessError>)> {
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
+    let host_deps = find_host_deps(options, compilation);
 
     // We don't build/rust doctests if target != host
     if config.rustc()?.host != compilation.target {
@@ -143,6 +144,8 @@ fn run_doc_tests(options: &TestOptions,
             let mut p = compilation.rustdoc_process(package)?;
             p.arg("--test").arg(lib)
              .arg("--crate-name").arg(&crate_name);
+
+            p.arg("-L").arg(&host_deps);
 
             for &rust_dep in &[&compilation.deps_output] {
                 let mut arg = OsString::from("dependency=");
@@ -197,4 +200,25 @@ fn run_doc_tests(options: &TestOptions,
         }
     }
     Ok((Test::Doc, errors))
+}
+
+fn find_host_deps(options: &TestOptions, compilation: &Compilation) -> OsString {
+    let build_type = if options.compile_opts.release { "release" } else { "debug" };
+    let mut dir = compilation.root_output.clone();
+
+    // first pop off the build_type
+    dir.pop();
+    // if we see the target next, pop it off
+    let target: &OsStr = compilation.target.as_ref();
+    if dir.file_name().unwrap() == target {
+        dir.pop();
+    }
+    // push the build_type back on
+    dir.push(build_type);
+    // and we are looking for the deps directory
+    dir.push("deps");
+
+    let mut host_deps = OsString::from("dependency=");
+    host_deps.push(dir);
+    host_deps
 }
