@@ -198,7 +198,7 @@ pub struct RegistryConfig {
 
     /// API endpoint for the registry. This is what's actually hit to perform
     /// operations like yanks, owner modifications, publish new crates, etc.
-    pub api: String,
+    pub api: Option<String>,
 }
 
 #[derive(Deserialize)]

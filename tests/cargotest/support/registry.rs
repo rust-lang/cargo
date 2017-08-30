@@ -18,6 +18,8 @@ pub fn registry_path() -> PathBuf { paths::root().join("registry") }
 pub fn registry() -> Url { Url::from_file_path(&*registry_path()).ok().unwrap() }
 pub fn dl_path() -> PathBuf { paths::root().join("dl") }
 pub fn dl_url() -> Url { Url::from_file_path(&*dl_path()).ok().unwrap() }
+pub fn alt_registry_path() -> PathBuf { paths::root().join("alternative-registry") }
+pub fn alt_registry() -> Url { Url::from_file_path(&*alt_registry_path()).ok().unwrap() }
 
 pub struct Package {
     name: String,
@@ -28,6 +30,7 @@ pub struct Package {
     yanked: bool,
     features: HashMap<String, Vec<String>>,
     local: bool,
+    alternative: bool,
 }
 
 struct Dependency {
@@ -54,10 +57,21 @@ pub fn init() {
 
         [source.dummy-registry]
         registry = '{reg}'
-    "#, reg = registry()).as_bytes()));
+
+        [registries.alternative]
+        index = '{alt}'
+    "#, reg = registry(), alt = alt_registry()).as_bytes()));
 
     // Init a new registry
     repo(&registry_path())
+        .file("config.json", &format!(r#"
+            {{"dl":"{0}","api":"{0}"}}
+        "#, dl_url()))
+        .build();
+    fs::create_dir_all(dl_path().join("api/v1/crates")).unwrap();
+
+    // Init an alt registry
+    repo(&alt_registry_path())
         .file("config.json", &format!(r#"
             {{"dl":"{0}","api":"{0}"}}
         "#, dl_url()))
@@ -77,11 +91,17 @@ impl Package {
             yanked: false,
             features: HashMap::new(),
             local: false,
+            alternative: false,
         }
     }
 
     pub fn local(&mut self, local: bool) -> &mut Package {
         self.local = local;
+        self
+    }
+
+    pub fn alternative(&mut self, alternative: bool) -> &mut Package {
+        self.alternative = alternative;
         self
     }
 
@@ -174,11 +194,13 @@ impl Package {
             _ => format!("{}/{}/{}", &self.name[0..2], &self.name[2..4], self.name),
         };
 
+        let registry_path = if self.alternative { alt_registry_path() } else { registry_path() };
+
         // Write file/line in the index
         let dst = if self.local {
-            registry_path().join("index").join(&file)
+            registry_path.join("index").join(&file)
         } else {
-            registry_path().join(&file)
+            registry_path.join(&file)
         };
         let mut prev = String::new();
         let _ = File::open(&dst).and_then(|mut f| f.read_to_string(&mut prev));
@@ -188,7 +210,7 @@ impl Package {
 
         // Add the new file to the index
         if !self.local {
-            let repo = t!(git2::Repository::open(&registry_path()));
+            let repo = t!(git2::Repository::open(&registry_path));
             let mut index = t!(repo.index());
             t!(index.add_path(Path::new(&file)));
             t!(index.write());

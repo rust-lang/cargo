@@ -794,7 +794,7 @@ fn bad_source_config2() {
 error: failed to load source for a dependency on `bar`
 
 Caused by:
-  Unable to update registry https://[..]
+  Unable to update registry `https://[..]`
 
 Caused by:
   could not find a configured source with the name `bar` \
@@ -826,7 +826,7 @@ fn bad_source_config3() {
 error: failed to load source for a dependency on `bar`
 
 Caused by:
-  Unable to update registry https://[..]
+  Unable to update registry `https://[..]`
 
 Caused by:
   detected a cycle of `replace-with` sources, [..]
@@ -861,7 +861,7 @@ fn bad_source_config4() {
 error: failed to load source for a dependency on `bar`
 
 Caused by:
-  Unable to update registry https://[..]
+  Unable to update registry `https://[..]`
 
 Caused by:
   detected a cycle of `replace-with` sources, the source `crates-io` is \
