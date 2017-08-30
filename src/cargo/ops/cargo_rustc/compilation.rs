@@ -28,8 +28,12 @@ pub struct Compilation<'cfg> {
     /// Root output directory (for the local package's artifacts)
     pub root_output: PathBuf,
 
-    /// Output directory for rust dependencies
+    /// Output directory for rust dependencies.
+    /// May be for the host or for a specific target.
     pub deps_output: PathBuf,
+
+    /// Output directory for the rust host dependencies.
+    pub host_deps_output: PathBuf,
 
     /// Library search path for compiler plugins and build scripts
     /// which have dynamic dependencies.
@@ -64,6 +68,7 @@ impl<'cfg> Compilation<'cfg> {
             native_dirs: HashSet::new(),  // TODO: deprecated, remove
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
+            host_deps_output: PathBuf::from("/"),
             plugins_dylib_path: PathBuf::from("/"),
             host_dylib_path: None,
             target_dylib_path: None,
