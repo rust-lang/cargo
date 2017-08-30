@@ -762,7 +762,7 @@ impl ConfigValue {
         }
     }
 
-    fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
+    pub fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
         Err(format!("expected a {}, but found a {} for `{}` in {}",
                     wanted, self.desc(), key,
                     self.definition_path().display()).into())
