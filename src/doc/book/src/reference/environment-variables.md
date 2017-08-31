@@ -40,7 +40,7 @@ Cargo exposes these environment variables to your crate when it is compiled.
 Note that this applies for test binaries as well.
 To get the value of any of these variables in a Rust program, do this:
 
-```
+```rust
 let version = env!("CARGO_PKG_VERSION");
 ```
 
@@ -66,7 +66,7 @@ Cargo sets several environment variables when build scripts are run. Because the
 are not yet set when the build script is compiled, the above example using `env!` won't work
 and instead you'll need to retrieve the values when the build script is run:
 
-```
+```rust
 use std::env;
 let out_dir = env::var("OUT_DIR").unwrap();
 ```

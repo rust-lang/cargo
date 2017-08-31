@@ -39,7 +39,7 @@ needs to compile your project.
 
 Here’s what’s in `src/main.rs`:
 
-```
+```rust
 fn main() {
     println!("Hello, world!");
 }
