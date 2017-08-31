@@ -69,7 +69,7 @@ If you are using Rust, there is [cargo_metadata] crate.
 
 ### Information about build
 
-When passing `--message=format=json`, Cargo will output the following
+When passing `--message-format=json`, Cargo will output the following
 information during the build:
 
 * compiler errors and warnings,
