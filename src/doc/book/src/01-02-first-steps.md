@@ -1,4 +1,4 @@
-## First steps with Cargo
+## First Steps with Cargo
 
 To start a new project with Cargo, use `cargo new`:
 
