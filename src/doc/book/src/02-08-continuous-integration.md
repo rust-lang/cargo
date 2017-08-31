@@ -4,7 +4,7 @@
 
 To test your project on Travis CI, here is a sample `.travis.yml` file:
 
-```
+```yaml
 language: rust
 rust:
   - stable

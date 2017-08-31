@@ -65,9 +65,10 @@ fn main() {
 
 Cargo generated a “hello world” for us. Let’s compile it:
 
-<pre><code class="language-shell"><span class="gp">$</span> cargo build
-<span style="font-weight: bold"
-class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)</code></pre>
+```shell
+$ cargo build
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+```
 
 And then run it:
 
@@ -80,12 +81,12 @@ We can also use `cargo run` to compile and then run it, all in one step (You
 won't see the `Compiling` line if you have not made any changes since you last
 compiled):
 
-<pre><code class="language-shell"><span class="gp">$</span> cargo run
-<span style="font-weight: bold"
-class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
-<span style="font-weight: bold"
-class="s1">   Running</span> `target/debug/hello_world`
-Hello, world!</code></pre>
+```shell
+$ cargo run
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+     Running `target/debug/hello_world`
+Hello, world!
+```
 
 You’ll now notice a new file, `Cargo.lock`. It contains information about our
 dependencies. Since we don’t have any yet, it’s not very interesting.
@@ -93,12 +94,13 @@ dependencies. Since we don’t have any yet, it’s not very interesting.
 Once you’re ready for release, you can use `cargo build --release` to compile
 your files with optimizations turned on:
 
-<pre><code class="language-shell"><span class="gp">$</span> cargo build --release
-<span style="font-weight: bold"
-class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)</code></pre>
+```shell
+$ cargo build --release
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+```
 
-`cargo build --release` puts the resulting binary in
-`target/release` instead of `target/debug`.
+`cargo build --release` puts the resulting binary in `target/release` instead of
+`target/debug`.
 
 Compiling in debug mode is the default for development-- compilation time is
 shorter since the compiler doesn't do optimizations, but the code will run
@@ -112,15 +114,17 @@ to get going.
 First, get the project from somewhere. In this example, we’ll use `rand`
 cloned from its repository on GitHub:
 
-```sh
+```shell
 $ git clone https://github.com/rust-lang-nursery/rand.git
 $ cd rand
 ```
 
 To build, use `cargo build`:
 
-<pre><code class="language-shell"><span class="gp">$</span> cargo build
-<span style="font-weight: bold" class="s1">   Compiling</span> rand v0.1.0 (file:///path/to/project/rand)</code></pre>
+```shell
+$ cargo build
+   Compiling rand v0.1.0 (file:///path/to/project/rand)
+```
 
 This will fetch all of the dependencies and then build them, along with the
 project.
@@ -171,21 +175,23 @@ regex = "0.1.41"
 Re-run `cargo build`, and Cargo will fetch the new dependencies and all of
 their dependencies, compile them all, and update the `Cargo.lock`:
 
-<pre><code class="language-shell"><span class="gp">$</span> cargo build
-<span style="font-weight: bold" class="s1">    Updating</span> registry `https://github.com/rust-lang/crates.io-index`
-<span style="font-weight: bold" class="s1"> Downloading</span> memchr v0.1.5
-<span style="font-weight: bold" class="s1"> Downloading</span> libc v0.1.10
-<span style="font-weight: bold" class="s1"> Downloading</span> regex-syntax v0.2.1
-<span style="font-weight: bold" class="s1"> Downloading</span> memchr v0.1.5
-<span style="font-weight: bold" class="s1"> Downloading</span> aho-corasick v0.3.0
-<span style="font-weight: bold" class="s1"> Downloading</span> regex v0.1.41
-<span style="font-weight: bold" class="s1">   Compiling</span> memchr v0.1.5
-<span style="font-weight: bold" class="s1">   Compiling</span> libc v0.1.10
-<span style="font-weight: bold" class="s1">   Compiling</span> regex-syntax v0.2.1
-<span style="font-weight: bold" class="s1">   Compiling</span> memchr v0.1.5
-<span style="font-weight: bold" class="s1">   Compiling</span> aho-corasick v0.3.0
-<span style="font-weight: bold" class="s1">   Compiling</span> regex v0.1.41
-<span style="font-weight: bold" class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)</code></pre>
+```shell
+$ cargo build
+      Updating registry `https://github.com/rust-lang/crates.io-index`
+   Downloading memchr v0.1.5
+   Downloading libc v0.1.10
+   Downloading regex-syntax v0.2.1
+   Downloading memchr v0.1.5
+   Downloading aho-corasick v0.3.0
+   Downloading regex v0.1.41
+     Compiling memchr v0.1.5
+     Compiling libc v0.1.10
+     Compiling regex-syntax v0.2.1
+     Compiling memchr v0.1.5
+     Compiling aho-corasick v0.3.0
+     Compiling regex v0.1.41
+     Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+```
 
 Our `Cargo.lock` contains the exact information about which revision of all of
 these dependencies we used.
@@ -208,10 +214,11 @@ fn main() {
 
 Running it will show:
 
-<pre><code class="language-shell"><span class="gp">$</span> cargo run
-<span style="font-weight: bold" class="s1">     Running</span> `target/hello_world`
-Did our date match? true</code></pre>
-
+```shell
+$ cargo run
+   Running `target/hello_world`
+Did our date match? true
+```
 # Project layout
 
 Cargo uses conventions for file placement to make it easy to dive into a new
@@ -345,7 +352,7 @@ re-calculate the dependencies and update things for us:
 
 ```shell
 $ cargo update           # updates all dependencies
-$ cargo update -p rand  # updates just “rand”
+$ cargo update -p rand   # updates just “rand”
 ```
 
 This will write out a new `Cargo.lock` with the new version information. Note
@@ -364,26 +371,25 @@ the files in `tests`.
 Here's an example of running `cargo test` in our project, which currently has
 no tests:
 
-<pre><code class="language-shell"><span class="gp">$</span> cargo test
-<span style="font-weight: bold"
-class="s1">   Compiling</span> rand v0.1.0 (https://github.com/rust-lang-nursery/rand.git#9f35b8e)
-<span style="font-weight: bold"
-class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
-<span style="font-weight: bold"
-class="s1">     Running</span> target/test/hello_world-9c2b65bbb79eabce
+```shell
+$ cargo test
+   Compiling rand v0.1.0 (https://github.com/rust-lang-nursery/rand.git#9f35b8e)
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+     Running target/test/hello_world-9c2b65bbb79eabce
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
-</code></pre>
+```
 
 If our project had tests, we would see more output with the correct number of
 tests.
 
 You can also run a specific test by passing a filter:
 
-<pre><code class="language-shell"><span class="gp">$</span> cargo test foo
-</code></pre>
+```shell
+$ cargo test foo
+```
 
 This will run any test with `foo` in its name.
 
@@ -398,7 +404,7 @@ documentation for more details.
 
 To test your project on Travis CI, here is a sample `.travis.yml` file:
 
-```
+```yaml
 language: rust
 rust:
   - stable
