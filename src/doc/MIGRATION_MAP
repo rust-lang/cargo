@@ -4,7 +4,7 @@ crates-io.md book/src/03-06-crates-io.md
 environment-variables.md book/src/03-04-environment-variables.md
 external-tools.md book/src/03-09-external-tools.md
 faq.md book/src/faq.md
-guide.md
+guide.md book/src/guide.md
 index.md
 manifest.md
 pkgid-spec.md

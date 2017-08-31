@@ -59,7 +59,7 @@ $ ./target/debug/hello_world
 Hello, world!
 ```
 
-We can also use `cargo run` to compile and then run it, all in one step (you
+We can also use `cargo run` to compile and then run it, all in one step (You
 won't see the `Compiling` line if you have not made any changes since you last
 compiled):
 
@@ -70,42 +70,20 @@ $ cargo run
 Hello, world!
 ```
 
-You'll notice several new files and directories have been created:
-```shell
-$ tree .
-.
-├── Cargo.lock
-├── Cargo.toml
-├── src
-│   └── main.rs
-└── target
-    └── debug
-        ├── build
-        ├── deps
-        │   └── hello_world-2386c2fd0156916f
-        ├── examples
-        ├── hello_world
-        ├── hello_world.d
-        ├── incremental
-        └── native
+You’ll now notice a new file, `Cargo.lock`. It contains information about our
+dependencies. Since we don’t have any yet, it’s not very interesting.
 
-8 directories, 6 files
-```
-
-The `Cargo.lock` file contains information about our dependencies. Since we
-don’t have any yet, it’s not very interesting. The `target` directory contains
-all the build products, and, as can be seen, Cargo produces debug builds by
-default. You can use `cargo build --release` to compile your files with
-optimizations turned on:
+Once you’re ready for release, you can use `cargo build --release` to compile
+your files with optimizations turned on:
 
 ```shell
 $ cargo build --release
    Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
 ```
 
-`cargo build --release` puts the resulting binary in `target/release`
-instead of `target/debug`.
+`cargo build --release` puts the resulting binary in `target/release` instead of
+`target/debug`.
 
-Compiling in debug mode is the default for development -- compilation time is
+Compiling in debug mode is the default for development-- compilation time is
 shorter since the compiler doesn't do optimizations, but the code will run
 slower. Release mode takes longer to compile, but the code will run faster.
