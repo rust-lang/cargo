@@ -1,4 +1,4 @@
-## Creating a new project
+## Creating a New Project
 
 To start a new project with Cargo, use `cargo new`:
 

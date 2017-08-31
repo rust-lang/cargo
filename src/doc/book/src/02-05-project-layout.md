@@ -1,4 +1,4 @@
-## Project layout
+## Project Layout
 
 Cargo uses conventions for file placement to make it easy to dive into a new
 Cargo project:

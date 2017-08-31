@@ -1,4 +1,4 @@
-## Continuous integration
+## Continuous Integration
 
 ### Travis CI
 

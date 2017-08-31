@@ -1,4 +1,4 @@
-## Working on an existing Cargo project
+## Working on an Existing Cargo Project
 
 If you download an existing project that uses Cargo, it’s really easy
 to get going.
