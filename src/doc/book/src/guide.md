@@ -11,12 +11,3 @@ about how to use Cargo to develop Rust projects.
 * [Cargo.toml vs Cargo.lock](02-06-cargo-toml-vs-cargo-lock.html)
 * [Tests](02-07-tests.html)
 * [Continuous Integration](02-08-continuous-integration.html)
-
-### Further reading
-
-Now that you have an overview of how to use cargo and have created your first
-crate, you may be interested in:
-
-* [Publishing your crate on crates.io](03-06-crates-io.html)
-* [Reading about all the possible ways of specifying dependencies](03-01-specifying-dependencies.html)
-* [Learning more details about what you can specify in your `Cargo.toml` manifest](03-02-manifest.html)
