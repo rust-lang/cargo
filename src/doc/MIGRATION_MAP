@@ -10,4 +10,4 @@ manifest.md book/src/03-02-manifest.md
 pkgid-spec.md book/src/03-07-pkgid-spec.md
 policies.md book/src/03-10-policies.md
 source-replacement.md book/src/03-08-source-replacement.md
-specifying-dependencies.md
+specifying-dependencies.md book/src/03-01-specifying-dependencies.md

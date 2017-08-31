@@ -47,10 +47,10 @@ be allowed with them:
 ^0 := >=0.0.0 <1.0.0
 ```
 
-While SemVer says that there is no compatibility before 1.0.0, many programmers
-treat a `0.x.y` release in the same way as a `1.x.y` release: that is, `y` is
-incremented for bugfixes, and `x` is incremented for new features. As such,
-Cargo considers a `0.x.y` and `0.x.z` version, where `z > y`, to be compatible.
+This compatibility convention is different from SemVer in the way it treats
+versions before 1.0.0. While SemVer says there is no compatibility before
+1.0.0, Cargo considers `0.x.y` to be compatible with `0.x.z`, where `y ≥ z`
+and `x > 0`.
 
 ### Tilde requirements
 
@@ -173,7 +173,7 @@ dependencies but "libraries" do not.
 
 The desire to override a dependency or otherwise alter some dependencies can
 arise through a number of scenarios. Most of them, however, boil down to the
-ability to to work with a crate before it's been published to crates.io. For
+ability to work with a crate before it's been published to crates.io. For
 example:
 
 * A crate you're working on is also used in a much larger application you're
