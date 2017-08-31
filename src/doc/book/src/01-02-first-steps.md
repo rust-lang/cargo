@@ -65,6 +65,6 @@ $ cargo run
 Hello, world!
 ```
 
-## Going further
+### Going further
 
 For more details on using Cargo, check out the [Cargo Guide](guide.html)

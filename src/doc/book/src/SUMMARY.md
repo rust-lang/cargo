@@ -1,5 +1,7 @@
 # Summary
 
+[Introduction](introduction.md)
+
 * [Getting Started](getting-started.md)
     * [Installation](01-01-installation.md)
     * [First Steps with Cargo](01-02-first-steps.md)
@@ -26,4 +28,4 @@
     * [External Tools](03-09-external-tools.md)
     * [Policies](03-10-policies.md)
 
-* [FAQ](faq.md)
+[FAQ](faq.md)
