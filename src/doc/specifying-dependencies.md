@@ -47,9 +47,9 @@ be allowed with them:
 ^0 := >=0.0.0 <1.0.0
 ```
 
-This compatibility convention is different from SemVer in the way it treats 
-versions before 1.0.0. While SemVer says there is no compatibility before 
-1.0.0, Cargo considers `0.x.y` to be compatible with `0.x.z`, where `y ≥ z` 
+This compatibility convention is different from SemVer in the way it treats
+versions before 1.0.0. While SemVer says there is no compatibility before
+1.0.0, Cargo considers `0.x.y` to be compatible with `0.x.z`, where `y ≥ z`
 and `x > 0`.
 
 ## Tilde requirements
