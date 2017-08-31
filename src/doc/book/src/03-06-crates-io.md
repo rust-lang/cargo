@@ -21,9 +21,9 @@ $ cargo login abcdefghijklmnopqrstuvwxyz012345
 ```
 
 This command will inform Cargo of your API token and store it locally in your
-`~/.cargo/config`. Note that this token is a **secret** and should not be shared
-with anyone else. If it leaks for any reason, you should regenerate it
-immediately.
+`~/.cargo/credentials` (previously it was `~/.cargo/config`).  Note that this
+token is a **secret** and should not be shared with anyone else. If it leaks for
+any reason, you should regenerate it immediately.
 
 ### Before publishing a new crate
 
