@@ -2816,10 +2816,10 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
             proc-macro = true
 
             [dependencies]
-            dep_of_proc_macro_dep = "^0.1"
+            bar = "^0.1"
         "#)
         .file("proc_macro_dep/src/lib.rs", r#"
-            extern crate dep_of_proc_macro_dep;
+            extern crate bar;
             extern crate proc_macro;
             use proc_macro::TokenStream;
 
@@ -2828,7 +2828,11 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
                 "".parse().unwrap()
             }
         "#);
-    Package::new("dep_of_proc_macro_dep", "0.1.0").publish();
+    Package::new("foo", "0.1.0").publish();
+    Package::new("bar", "0.1.0")
+        .dep("foo", "0.1")
+        .file("src/lib.rs", "extern crate foo;")
+        .publish();
     workspace.build();
     assert_that(workspace.cargo("test").arg("--all").arg("--target").arg(rustc_host()),
                 execs().with_status(0));
