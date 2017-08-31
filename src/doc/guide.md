@@ -57,7 +57,7 @@ needs to compile your project.
 
 Here’s what’s in `src/main.rs`:
 
-```
+```rust
 fn main() {
     println!("Hello, world!");
 }
@@ -201,7 +201,7 @@ we choose to `cargo update`.
 
 You can now use the `regex` library using `extern crate` in `main.rs`.
 
-```
+```rust
 extern crate regex;
 
 use regex::Regex;
@@ -339,7 +339,6 @@ dependencies = [
 name = "rand"
 version = "0.1.0"
 source = "git+https://github.com/rust-lang-nursery/rand.git#9f35b8e439eeedd60b9414c58f389bdc6a3284f9"
-
 ```
 
 You can see that there’s a lot more information here, including the exact
