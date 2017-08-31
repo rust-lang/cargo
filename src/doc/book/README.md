@@ -7,7 +7,7 @@ Building the book requires [mdBook]. To get it:
 
 [mdBook]: https://github.com/azerupi/mdBook
 
-```bash
+```shell
 $ cargo install mdbook
 ```
 
@@ -15,7 +15,7 @@ $ cargo install mdbook
 
 To build the book:
 
-```bash
+```shell
 $ mdbook build
 ```
 
@@ -23,7 +23,7 @@ The output will be in the `book` subdirectory. To check it out, open it in
 your web browser.
 
 _Firefox:_
-```bash
+```shell
 $ firefox book/index.html                       # Linux
 $ open -a "Firefox" book/index.html             # OS X
 $ Start-Process "firefox.exe" .\book\index.html # Windows (PowerShell)
@@ -31,7 +31,7 @@ $ start firefox.exe .\book\index.html           # Windows (Cmd)
 ```
 
 _Chrome:_
-```bash
+```shell
 $ google-chrome book/index.html                 # Linux
 $ open -a "Google Chrome" book/index.html       # OS X
 $ Start-Process "chrome.exe" .\book\index.html  # Windows (PowerShell)

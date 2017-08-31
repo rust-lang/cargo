@@ -82,7 +82,6 @@ dependencies = [
 name = "rand"
 version = "0.1.0"
 source = "git+https://github.com/rust-lang-nursery/rand.git#9f35b8e439eeedd60b9414c58f389bdc6a3284f9"
-
 ```
 
 You can see that there’s a lot more information here, including the exact

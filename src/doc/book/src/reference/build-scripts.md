@@ -49,7 +49,7 @@ All the lines printed to stdout by a build script are written to a file like
 configuration). Any line that starts with `cargo:` is interpreted directly by
 Cargo. This line must be of the form `cargo:key=value`, like the examples below:
 
-```notrust
+```shell
 # specially recognized by Cargo
 cargo:rustc-link-lib=static=foo
 cargo:rustc-link-search=native=/path/to/foo
@@ -212,7 +212,7 @@ library call as part of the build script.
 
 First, let’s take a look at the directory structure of this package:
 
-```notrust
+```shell
 .
 ├── Cargo.toml
 ├── build.rs
@@ -298,7 +298,7 @@ a Rust library which calls into C to print “Hello, World!”.
 
 Like above, let’s first take a look at the project layout:
 
-```notrust
+```shell
 .
 ├── Cargo.toml
 ├── build.rs
