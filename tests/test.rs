@@ -2828,8 +2828,8 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
                 "".parse().unwrap()
             }
         "#);
-        Package::new("dep_of_proc_macro_dep", "0.1.0").publish();
-        workspace.build();
+    Package::new("dep_of_proc_macro_dep", "0.1.0").publish();
+    workspace.build();
     assert_that(workspace.cargo("test").arg("--all").arg("--target").arg(rustc_host()),
                 execs().with_status(0));
 }
