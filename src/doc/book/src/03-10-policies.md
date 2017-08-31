@@ -1,11 +1,11 @@
-% Crates.io package policies
+## Crates.io package policies
 
 In general, these policies are guidelines. Problems are often contextual, and
 exceptional circumstances sometimes require exceptional measures. We plan to
 continue to clarify and expand these rules over time as new circumstances
 arise. If your problem is not described below, consider [sending us an email].
 
-# Package Ownership
+### Package Ownership
 
 We have a first-come, first-served policy on crate names. Upon publishing a
 package, the publisher will be made owner of the package on Crates.io.
@@ -15,7 +15,7 @@ existing maintainer can add them as an owner, and the new maintainer can remove
 them. If necessary, the team may reach out to inactive maintainers and help
 mediate the process of ownership transfer.
 
-# Removal
+### Removal
 
 Many questions are specialized instances of a more general form: “Under what
 circumstances can a package be removed from Crates.io?”
@@ -25,18 +25,18 @@ attempt to get into policing what exactly makes a legitimate package. We will
 do what the law requires us to do, and address flagrant violations of the Rust
 Code of Conduct.
 
-## Squatting
+### Squatting
 
 We do not have any policies to define 'squatting', and so will not hand over
 ownership of a package for that reason.
 
-## The Law
+### The Law
 
 For issues such as DMCA violations, trademark and copyright infringement,
 Crates.io will respect Mozilla Legal’s decisions with regards to content that
 is hosted.
 
-## Code of Conduct
+### Code of Conduct
 
 The Rust project has a [Code of Conduct] which governs appropriate conduct for
 the Rust community. In general, any content on Crates.io that violates the Code

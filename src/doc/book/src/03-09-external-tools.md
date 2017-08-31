@@ -1,4 +1,4 @@
-% External tools
+## External tools
 
 One of the goals of Cargo is simple integration with third-party tools, like
 IDEs and other build systems. To make integration easier, Cargo has several
@@ -12,7 +12,7 @@ facilities:
 * support for custom subcommands.
 
 
-# Information about project structure
+### Information about project structure
 
 You can use `cargo metadata` command to get information about project structure
 and dependencies. The output of the command looks like this:
@@ -67,7 +67,7 @@ If you are using Rust, there is [cargo_metadata] crate.
 [cargo_metadata]: https://crates.io/crates/cargo_metadata
 
 
-# Information about build
+### Information about build
 
 When passing `--message-format=json`, Cargo will output the following
 information during the build:
@@ -85,7 +85,7 @@ Information about dependencies in the Makefile-compatible format is stored in
 the `.d` files alongside the artifacts.
 
 
-# Custom subcommands.
+### Custom subcommands.
 
 Cargo is designed to be extensible with new subcommands without having to modify
 Cargo itself. This is achieved by translating a cargo invocation of the form

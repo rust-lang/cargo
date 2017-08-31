@@ -1,4 +1,4 @@
-% Build Script Support
+## Build Script Support
 
 Some packages need to compile third-party non-Rust code, for example C
 libraries. Other packages need to link to C libraries which can either be
@@ -32,7 +32,7 @@ Some example use cases of the build command are:
 Each of these use cases will be detailed in full below to give examples of how
 the build command works.
 
-## Inputs to the Build Script
+### Inputs to the Build Script
 
 When the build script is run, there are a number of inputs to the build script,
 all passed in the form of [environment variables][env].
@@ -40,9 +40,9 @@ all passed in the form of [environment variables][env].
 In addition to environment variables, the build script’s current directory is
 the source directory of the build script’s package.
 
-[env]: environment-variables.html
+[env]: 03-04-environment-variables.html
 
-## Outputs of the Build Script
+### Outputs of the Build Script
 
 All the lines printed to stdout by a build script are written to a file like
 `target/debug/build/<pkg>/output` (the precise location may depend on your
@@ -121,7 +121,7 @@ section.
 
 [links]: #the-links-manifest-key
 
-## Build Dependencies
+### Build Dependencies
 
 Build scripts are also allowed to have dependencies on other Cargo-based crates.
 Dependencies are declared through the `build-dependencies` section of the
@@ -137,7 +137,7 @@ The build script **does not** have access to the dependencies listed in the
 dependencies will also not be available to the package itself unless explicitly
 stated as so.
 
-## The `links` Manifest Key
+### The `links` Manifest Key
 
 In addition to the manifest key `build`, Cargo also supports a `links` manifest
 key to declare the name of a native library that is being linked to:
@@ -176,7 +176,7 @@ Note that metadata is only passed to immediate dependents, not transitive
 dependents. The motivation for this metadata passing is outlined in the linking
 to system libraries case study below.
 
-## Overriding Build Scripts
+### Overriding Build Scripts
 
 If a manifest contains a `links` key, then Cargo supports overriding the build
 script specified with a custom library. The purpose of this functionality is to
@@ -184,7 +184,7 @@ prevent running the build script in question altogether and instead supply the
 metadata ahead of time.
 
 To override a build script, place the following configuration in any acceptable
-Cargo [configuration location](config.html).
+Cargo [configuration location](03-03-config.html).
 
 ```toml
 [target.x86_64-unknown-linux-gnu.foo]
@@ -204,7 +204,7 @@ With this configuration, if a package declares that it links to `foo` then the
 build script will **not** be compiled or run, and the metadata specified will
 instead be used.
 
-# Case study: Code generation
+### Case study: Code generation
 
 Some Cargo packages need to have code generated just before they are compiled
 for various reasons. Here we’ll walk through a simple example which generates a
@@ -289,7 +289,7 @@ the generated file (`hello.rs`) into the crate’s compilation.
 Using the structure shown here, crates can include any number of generated files
 from the build script itself.
 
-# Case study: Building some native code
+### Case study: Building some native code
 
 Sometimes it’s necessary to build some native C or C++ code as part of a
 package. This is another excellent use case of leveraging the build script to
@@ -436,7 +436,7 @@ dependency can be crucial in many situations and even much more concise!
 We’ve also seen a brief example of how a build script can use a crate as a
 dependency purely for the build process and not for the crate itself at runtime.
 
-# Case study: Linking to system libraries
+### Case study: Linking to system libraries
 
 The final case study here will be investigating how a Cargo library links to a
 system library and how the build script is leveraged to support this use case.
@@ -493,7 +493,7 @@ for now). It may seem a little counterintuitive to express *C dependencies* in
 the *Cargo manifest*, but this is actually using one of Cargo’s conventions in
 this space.
 
-## `*-sys` Packages
+### `*-sys` Packages
 
 To alleviate linking to system libraries, Cargo has a *convention* of package
 naming and functionality. Any package named `foo-sys` will provide two major
@@ -515,7 +515,7 @@ convention of native-library-related packages:
   (or building it from source).
 * These dependencies are easily overridable.
 
-## Building libgit2
+### Building libgit2
 
 Now that we’ve got libgit2’s dependencies sorted out, we need to actually write
 the build script. We’re not going to look at specific snippets of code here and

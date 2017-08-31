@@ -1,4 +1,4 @@
-% Publishing on crates.io
+## Publishing on crates.io
 
 Once you've got a library that you'd like to share with the world, it's time to
 publish it on [crates.io]! Publishing a crate is when a specific
@@ -8,7 +8,7 @@ Take care when publishing a crate, because a publish is **permanent**. The
 version can never be overwritten, and the code cannot be deleted. There is no
 limit to the number of versions which can be published, however.
 
-# Before your first publish
+### Before your first publish
 
 First thing’s first, you’ll need an account on [crates.io] to acquire
 an API token. To do so, [visit the home page][crates.io] and log in via a GitHub
@@ -25,12 +25,12 @@ This command will inform Cargo of your API token and store it locally in your
 token is a **secret** and should not be shared with anyone else. If it leaks for
 any reason, you should regenerate it immediately.
 
-# Before publishing a new crate
+### Before publishing a new crate
 
 Keep in mind that crate names on [crates.io] are allocated on a first-come-first-
 serve basis. Once a crate name is taken, it cannot be used for another crate.
 
-## Packaging a crate
+#### Packaging a crate
 
 The next step is to package up your crate into a format that can be uploaded to
 [crates.io]. For this we’ll use the `cargo package` subcommand. This will take
@@ -81,7 +81,7 @@ include = [
 ]
 ```
 
-## Uploading the crate
+### Uploading the crate
 
 Now that we’ve got a `*.crate` file ready to go, it can be uploaded to
 [crates.io] with the `cargo publish` command. And that’s it, you’ve now published
@@ -95,24 +95,24 @@ If you’d like to skip the `cargo package` step, the `cargo publish` subcommand
 will automatically package up the local crate if a copy isn’t found already.
 
 Be sure to check out the [metadata you can
-specify](manifest.html#package-metadata) to ensure your crate can be discovered
-more easily!
+specify](03-02-manifest.html#package-metadata) to ensure your crate can be
+discovered more easily!
 
-# Publishing a new version of an existing crate
+### Publishing a new version of an existing crate
 
 In order to release a new version, change the `version` value specified in your
 `Cargo.toml` manifest. Keep in mind [the semver
-rules](manifest.html#the-version-field). Then optionally run `cargo package` if
+rules](03-02-manifest.html#the-version-field). Then optionally run `cargo package` if
 you want to inspect the `*.crate` file for the new version before publishing,
 and run `cargo publish` to upload the new version.
 
-# Managing a crates.io-based crate
+### Managing a crates.io-based crate
 
 Management of crates is primarily done through the command line `cargo` tool
 rather than the [crates.io] web interface. For this, there are a few subcommands
 to manage a crate.
 
-## `cargo yank`
+#### `cargo yank`
 
 Occasions may arise where you publish a version of a crate that actually ends up
 being broken for one reason or another (syntax error, forgot to include a file,
@@ -136,7 +136,7 @@ goal. Essentially a yank means that all projects with a `Cargo.lock` will not
 break, while any future `Cargo.lock` files generated will not list the yanked
 version.
 
-## `cargo owner`
+#### `cargo owner`
 
 A crate is often developed by more than one person, or the primary maintainer
 may change over time! The owner of a crate is the only person allowed to publish
@@ -168,7 +168,7 @@ The syntax for teams is currently `github:org:team` (see examples above).
 In order to add a team as an owner one must be a member of that team. No
 such restriction applies to removing a team as an owner.
 
-## GitHub permissions
+### GitHub permissions
 
 Team membership is not something GitHub provides simple public access to, and it
 is likely for you to encounter the following message when working with them:
