@@ -108,7 +108,7 @@ migration.
 ## The `publish`  field (optional)
 
 The `publish` field can be used to prevent a package from being published to a
-package repository (like *crates.io*) by mistake.
+package registry (like *crates.io*) by mistake.
 
 ```toml
 [package]
@@ -175,7 +175,7 @@ license = "..."
 # (similar to the readme key).
 license-file = "..."
 
-# Optional specification of badges to be displayed on crates.io. The badges 
+# Optional specification of badges to be displayed on crates.io. The badges
 # pertaining to build status that are currently available are Appveyor, CircleCI,
 # GitLab, and TravisCI. Available badges pertaining to code test coverage are
 # Codecov and Coveralls. There are also maintenance-related badges which state
@@ -217,7 +217,6 @@ is-it-maintained-open-issues = { repository = "..." }
 # `passively-maintained`, `as-is`, `none`, `experimental`, `looking-for-maintainer`
 # and `deprecated`.
 maintenance = { status = "..." }
-
 ```
 
 The [crates.io](https://crates.io) registry will render the description, display
@@ -520,7 +519,7 @@ If your project is an executable, name the main source file `src/main.rs`. If it
 is a library, name the main source file `src/lib.rs`.
 
 Cargo will also treat any files located in `src/bin/*.rs` as executables. If your
-executable consist of more than just one source file, you might also use a directory
+executable consists of more than just one source file, you might also use a directory
 inside `src/bin` containing a `main.rs` file which will be treated as an executable
 with a name of the parent directory.
 Do note, however, once you add a `[[bin]]` section ([see
@@ -572,8 +571,8 @@ name = "foo"
 crate-type = ["staticlib"]
 ```
 
-You can build individual library examples with the command
-`cargo build --example <example-name>`.
+You can build individual library examples with the command `cargo build
+--example <example-name>`.
 
 # Tests
 
