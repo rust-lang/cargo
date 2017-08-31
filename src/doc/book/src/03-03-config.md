@@ -58,18 +58,19 @@ vcs = "none"
 
 # For the following sections, $triple refers to any valid target triple, not the
 # literal string "$triple", and it will apply whenever that target triple is
-# being compiled to. 'cfg(...)' refers to the Rust-like `#[cfg]` syntax for 
+# being compiled to. 'cfg(...)' refers to the Rust-like `#[cfg]` syntax for
 # conditional compilation.
-[target]
-# For Cargo builds which do not mention --target, this is the linker
-# which is passed to rustc (via `-C linker=`). By default this flag is not
-# passed to the compiler.
-linker = ".."
-
 [target.$triple]
-# Similar to the above linker configuration, but this only applies to
-# when the `$triple` is being compiled for.
+# This is the linker which is passed to rustc (via `-C linker=`) when the `$triple`
+# is being compiled for. By default this flag is not passed to the compiler.
 linker = ".."
+# Same but for the library archiver which is passed to rustc via `-C ar=`.
+ar = ".."
+# If a runner is provided, compiled targets for the `$triple` will be executed
+# by invoking the specified runner executable with actual target as first argument.
+# This applies to `cargo run`, `cargo test` and `cargo bench` commands.
+# By default compiled targets are executed directly.
+runner = ".."
 # custom flags to pass to all compiler invocations that target $triple
 # this value overrides build.rustflags when both are present
 rustflags = ["..", ".."]
