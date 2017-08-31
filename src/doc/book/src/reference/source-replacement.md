@@ -5,7 +5,7 @@ strategies along the lines of mirrors or vendoring dependencies. Configuration
 is currently done through the [`.cargo/config` configuration][config] mechanism,
 like so:
 
-[config]: 03-03-config.html
+[config]: reference/config.html
 
 ```toml
 # The `source` table is where all keys related to source-replacement
@@ -49,7 +49,7 @@ patching a dependency or a private registry. Cargo supports patching
 dependencies through the usage of [the `[replace]` key][replace-section], and
 private registry support is planned for a future version of Cargo.
 
-[replace-section]: 03-02-manifest.html#the-replace-section
+[replace-section]: reference/manifest.html#the-replace-section
 
 ### Configuration
 

@@ -20,7 +20,7 @@ time = "0.1.12"
 ```
 
 The version string is a [semver] version requirement. The [specifying
-dependencies](03-01-specifying-dependencies.html) docs have more information about
+dependencies](reference/specifying-dependencies.html) docs have more information about
 the options you have here.
 
 [semver]: https://github.com/steveklabnik/semver#requirements
