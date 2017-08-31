@@ -6,7 +6,7 @@ external-tools.md book/src/03-09-external-tools.md
 faq.md book/src/faq.md
 guide.md book/src/guide.md book/src/02-*.md
 index.md book/src/SUMMARY.md book/src/01-*.md
-manifest.md
+manifest.md book/src/03-02-manifest.md
 pkgid-spec.md
 policies.md
 source-replacement.md
