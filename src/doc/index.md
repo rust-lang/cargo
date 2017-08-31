@@ -63,9 +63,10 @@ fn main() {
 
 Cargo generated a “hello world” for us. Let’s compile it:
 
-<pre><code class="language-shell">$ cargo build
-<span style="font-weight: bold"
-class="s1">   Compiling</span> hello_world v0.1.0 (file:///path/to/project/hello_world)</code></pre>
+```shell
+$ cargo build
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+```
 
 And then run it:
 
@@ -76,12 +77,12 @@ Hello, world!
 
 We can also use `cargo run` to compile and then run it, all in one step:
 
-<pre><code class="language-shell">$ cargo run
-<span style="font-weight: bold"
-class="s1">     Fresh</span> hello_world v0.1.0 (file:///path/to/project/hello_world)
-<span style="font-weight: bold"
-class="s1">   Running</span> `target/hello_world`
-Hello, world!</code></pre>
+```shell
+$ cargo run
+     Fresh hello_world v0.1.0 (file:///path/to/project/hello_world)
+   Running `target/hello_world`
+Hello, world!
+```
 
 # Going further
 
