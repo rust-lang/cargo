@@ -1,7 +1,7 @@
 build-script.md book/src/03-05-build-scripts.md
 config.md book/src/03-03-config.md
 crates-io.md book/src/03-06-crates-io.md
-environment-variables.md
+environment-variables.md book/src/03-04-environment-variables.md
 external-tools.md
 faq.md
 guide.md
