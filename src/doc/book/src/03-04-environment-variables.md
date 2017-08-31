@@ -22,6 +22,9 @@ system:
   invocation, with the first argument being rustc.
 * `RUSTDOC` - Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead.
+* `RUSTDOCFLAGS` - A space-separated list of custom flags to pass to all `rustdoc`
+  invocations that Cargo performs. In contrast with `cargo rustdoc`, this is
+  useful for passing a flag to *all* `rustdoc` instances.
 * `RUSTFLAGS` - A space-separated list of custom flags to pass to all compiler
   invocations that Cargo performs. In contrast with `cargo rustc`, this is
   useful for passing a flag to *all* compiler instances.
@@ -35,8 +38,7 @@ configuration values, as described in [that documentation][config-env]
 
 Cargo exposes these environment variables to your crate when it is compiled.
 Note that this applies for test binaries as well.
-To get the value of any of these variables in a Rust program, you can use
-the `env!` macro:
+To get the value of any of these variables in a Rust program, do this:
 
 ```
 let version = env!("CARGO_PKG_VERSION");
@@ -98,7 +100,14 @@ let out_dir = env::var("OUT_DIR").unwrap();
              triples can be found in [clang’s own documentation][clang].
 * `HOST` - the host triple of the rust compiler.
 * `NUM_JOBS` - the parallelism specified as the top-level parallelism. This can
-               be useful to pass a `-j` parameter to a system like `make`.
+               be useful to pass a `-j` parameter to a system like `make`. Note
+               that care should be taken when interpreting this environment
+               variable. For historical purposes this is still provided but
+               recent versions of Cargo, for example, do not need to run `make
+               -j` as it'll automatically happen. Cargo implements its own
+               [jobserver] and will allow build scripts to inherit this
+               information, so programs compatible with GNU make jobservers will
+               already have appropriately configured parallelism.
 * `OPT_LEVEL`, `DEBUG` - values of the corresponding variables for the
                          profile currently being built.
 * `PROFILE` - `release` for release builds, `debug` for other builds.
