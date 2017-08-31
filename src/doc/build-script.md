@@ -18,8 +18,8 @@ build = "build.rs"
 
 The Rust file designated by the `build` command (relative to the package root)
 will be compiled and invoked before anything else is compiled in the package,
-allowing your Rust code to depend on the built or generated artifacts. Note that 
-if you do not specify a value for `build` but your package root does contains a 
+allowing your Rust code to depend on the built or generated artifacts. Note that
+if you do not specify a value for `build` but your package root does contains a
 `"build.rs"` file, Cargo will compile and invoke this file for you.
 
 Some example use cases of the build command are:
@@ -44,7 +44,10 @@ the source directory of the build script’s package.
 
 ## Outputs of the Build Script
 
-All the lines printed to stdout by a build script are written to a file like `target/debug/build/<pkg>/output` (the precise location may depend on your configuration). Any line that starts with `cargo:` is interpreted directly by Cargo. This line must be of the form `cargo:key=value`, like the examples below:
+All the lines printed to stdout by a build script are written to a file like
+`target/debug/build/<pkg>/output` (the precise location may depend on your
+configuration). Any line that starts with `cargo:` is interpreted directly by
+Cargo. This line must be of the form `cargo:key=value`, like the examples below:
 
 ```notrust
 # specially recognized by Cargo
