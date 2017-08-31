@@ -1,1 +1,2 @@
-config.md	book/src/03-03-config.md
+config.md book/src/03-03-config.md
+build-script.md book/src/03-05-build-scripts.md
