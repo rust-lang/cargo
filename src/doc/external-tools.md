@@ -14,7 +14,6 @@ facilities:
 
 # Information about project structure
 
-
 You can use `cargo metadata` command to get information about project structure
 and dependencies. The output of the command looks like this:
 
