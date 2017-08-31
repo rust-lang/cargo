@@ -149,8 +149,15 @@ fn run_doc_tests(options: &TestOptions,
                 arg.push(rust_dep);
                 p.arg("-L").arg(arg);
             }
+
             for native_dep in compilation.native_dirs.iter() {
                 p.arg("-L").arg(native_dep);
+            }
+
+            for &host_rust_dep in &[&compilation.host_deps_output] {
+                let mut arg = OsString::from("dependency=");
+                arg.push(host_rust_dep);
+                p.arg("-L").arg(arg);
             }
 
             for arg in test_args {
