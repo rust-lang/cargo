@@ -1,4 +1,4 @@
-## Crates.io package policies
+## Crates.io Package Policies
 
 In general, these policies are guidelines. Problems are often contextual, and
 exceptional circumstances sometimes require exceptional measures. We plan to

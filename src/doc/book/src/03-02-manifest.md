@@ -1,5 +1,8 @@
 ## The Manifest Format
 
+The `Cargo.toml` file for each package is called its *manifest*. Every manifest
+file consists of one or more sections.
+
 ### The `[package]` section
 
 The first section in a `Cargo.toml` is `[package]`.

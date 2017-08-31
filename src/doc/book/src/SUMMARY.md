@@ -18,14 +18,14 @@
 
 * [Cargo In Depth](cargo-in-depth.md)
     * [Specifying Dependencies](03-01-specifying-dependencies.md)
-    * [Cargo.toml Format](03-02-manifest.md)
+    * [The Manifest Format](03-02-manifest.md)
     * [Configuration](03-03-config.md)
     * [Environment Variables](03-04-environment-variables.md)
     * [Build Scripts](03-05-build-scripts.md)
     * [Publishing on crates.io](03-06-crates-io.md)
-    * [Package ID specs](03-07-pkgid-spec.md)
+    * [Package ID Specifications](03-07-pkgid-spec.md)
     * [Source Replacement](03-08-source-replacement.md)
     * [External Tools](03-09-external-tools.md)
-    * [Policies](03-10-policies.md)
+    * [Crates.io Package Policies](03-10-policies.md)
 
 [FAQ](faq.md)

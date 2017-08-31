@@ -1,4 +1,4 @@
-## Replacing sources
+## Source Replacement
 
 Cargo supports the ability to **replace one source with another** to express
 strategies along the lines of mirrors or vendoring dependencies. Configuration
