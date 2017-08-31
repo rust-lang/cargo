@@ -30,7 +30,6 @@ Code of Conduct.
 We do not have any policies to define 'squatting', and so will not hand over
 ownership of a package for that reason.
 
-
 ## The Law
 
 For issues such as DMCA violations, trademark and copyright infringement,
@@ -58,10 +57,10 @@ There are two important, related aspects:
 
 # Security
 
-Cargo and crates.io are projects that are governed by the Rust Programming 
+Cargo and crates.io are projects that are governed by the Rust Programming
 Language Team. Safety is one of the core principles of Rust, and to that end,
 we would like to ensure that cargo and crates.io have secure implementations.
-To learn more about disclosing security vulnerabilities, please reference the 
+To learn more about disclosing security vulnerabilities, please reference the
 [Rust Security policy] for more details.
 
 Thank you for taking the time to responsibly disclose any issues you find.
