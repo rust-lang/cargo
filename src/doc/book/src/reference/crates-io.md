@@ -95,14 +95,14 @@ If you’d like to skip the `cargo package` step, the `cargo publish` subcommand
 will automatically package up the local crate if a copy isn’t found already.
 
 Be sure to check out the [metadata you can
-specify](03-02-manifest.html#package-metadata) to ensure your crate can be
+specify](reference/manifest.html#package-metadata) to ensure your crate can be
 discovered more easily!
 
 ### Publishing a new version of an existing crate
 
 In order to release a new version, change the `version` value specified in your
 `Cargo.toml` manifest. Keep in mind [the semver
-rules](03-02-manifest.html#the-version-field). Then optionally run `cargo package` if
+rules](reference/manifest.html#the-version-field). Then optionally run `cargo package` if
 you want to inspect the `*.crate` file for the new version before publishing,
 and run `cargo publish` to upload the new version.
 

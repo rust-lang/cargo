@@ -40,7 +40,7 @@ all passed in the form of [environment variables][env].
 In addition to environment variables, the build script’s current directory is
 the source directory of the build script’s package.
 
-[env]: 03-04-environment-variables.html
+[env]: reference/environment-variables.html
 
 ### Outputs of the Build Script
 
@@ -184,7 +184,7 @@ prevent running the build script in question altogether and instead supply the
 metadata ahead of time.
 
 To override a build script, place the following configuration in any acceptable
-Cargo [configuration location](03-03-config.html).
+Cargo [configuration location](reference/config.html).
 
 ```toml
 [target.x86_64-unknown-linux-gnu.foo]

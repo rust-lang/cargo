@@ -37,7 +37,7 @@ This field specifies a file in the project root which is a [build script][1] for
 building native code. More information can be found in the build script
 [guide][1].
 
-[1]: 03-05-build-scripts.html
+[1]: reference/build-scripts.html
 
 ```toml
 [package]
@@ -249,7 +249,7 @@ assets = "path/to/static"
 
 ### Dependency sections
 
-See the [specifying dependencies page](03-01-specifying-dependencies.html) for
+See the [specifying dependencies page](reference/specifying-dependencies.html) for
 information on the `[dependencies]`, `[dev-dependencies]`,
 `[build-dependencies]`, and target-specific `[target.*.dependencies]` sections.
 
@@ -731,7 +731,7 @@ technical specification of this feature. Note that the `[patch]` feature will
 first become available in Rust 1.20, set to be released on 2017-08-31.
 
 [RFC 1969]: https://github.com/rust-lang/rfcs/pull/1969
-[replace]: 03-01-specifying-dependencies.html#overriding-dependencies
+[replace]: reference/specifying-dependencies.html#overriding-dependencies
 
 ### The `[replace]` Section
 
@@ -745,7 +745,7 @@ other copies. The syntax is similar to the `[dependencies]` section:
 ```
 
 Each key in the `[replace]` table is a [package id
-specification](03-07-pkgid-spec.html) which allows arbitrarily choosing a node in the
+specification](reference/pkgid-spec.html) which allows arbitrarily choosing a node in the
 dependency graph to override. The value of each key is the same as the
 `[dependencies]` syntax for specifying dependencies, except that you can't
 specify features. Note that when a crate is overridden the copy it's overridden
