@@ -2,7 +2,7 @@ index.md book/src/SUMMARY.md book/src/getting-started.md book/src/getting-starte
 guide.md book/src/guide.md book/src/guide/*.md
 build-script.md book/src/reference/build-scripts.md
 config.md book/src/reference/config.md
-crates-io.md book/src/reference/crates-io.md
+crates-io.md book/src/reference/publishing.md
 environment-variables.md book/src/reference/environment-variables.md
 external-tools.md book/src/reference/external-tools.md
 manifest.md book/src/reference/manifest.md

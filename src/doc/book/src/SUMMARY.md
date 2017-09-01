@@ -22,7 +22,7 @@
     * [Configuration](reference/config.md)
     * [Environment Variables](reference/environment-variables.md)
     * [Build Scripts](reference/build-scripts.md)
-    * [Publishing on crates.io](reference/crates-io.md)
+    * [Publishing on crates.io](reference/publishing.md)
     * [Package ID Specifications](reference/pkgid-spec.md)
     * [Source Replacement](reference/source-replacement.md)
     * [External Tools](reference/external-tools.md)
