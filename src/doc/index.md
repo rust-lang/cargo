@@ -1,5 +1,7 @@
 % Cargo, Rust’s Package Manager
 
+# Installing
+
 ### Install Stable Rust and Cargo
 
 The easiest way to get Cargo is to get the current stable release of [Rust] by
