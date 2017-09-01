@@ -32,7 +32,7 @@ system:
 Note that Cargo will also read environment variables for `.cargo/config`
 configuration values, as described in [that documentation][config-env]
 
-[config-env]: 03-03-config.html#environment-variables
+[config-env]: reference/config.html#environment-variables
 
 ### Environment variables Cargo sets for crates
 
@@ -40,7 +40,7 @@ Cargo exposes these environment variables to your crate when it is compiled.
 Note that this applies for test binaries as well.
 To get the value of any of these variables in a Rust program, do this:
 
-```
+```rust
 let version = env!("CARGO_PKG_VERSION");
 ```
 
@@ -66,7 +66,7 @@ Cargo sets several environment variables when build scripts are run. Because the
 are not yet set when the build script is compiled, the above example using `env!` won't work
 and instead you'll need to retrieve the values when the build script is run:
 
-```
+```rust
 use std::env;
 let out_dir = env::var("OUT_DIR").unwrap();
 ```
@@ -117,8 +117,8 @@ let out_dir = env::var("OUT_DIR").unwrap();
                        resolved to use, passed to the build script so it might
                        use it as well.
 
-[links]: 03-05-build-scripts.html#the-links-manifest-key
-[profile]: 03-02-manifest.html#the-profile-sections
+[links]: reference/build-scripts.html#the-links-manifest-key
+[profile]: reference/manifest.html#the-profile-sections
 [configuration]: https://doc.rust-lang.org/reference/attributes.html#conditional-compilation
 [clang]:http://clang.llvm.org/docs/CrossCompilation.html#target-triple
 

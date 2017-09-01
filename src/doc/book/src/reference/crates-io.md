@@ -16,7 +16,7 @@ account (required for now). After this, visit your [Account
 Settings](https://crates.io/me) page and run the `cargo login` command
 specified.
 
-```notrust
+```shell
 $ cargo login abcdefghijklmnopqrstuvwxyz012345
 ```
 
@@ -37,7 +37,7 @@ The next step is to package up your crate into a format that can be uploaded to
 our entire crate and package it all up into a `*.crate` file in the
 `target/package` directory.
 
-```notrust
+```shell
 $ cargo package
 ```
 
@@ -87,7 +87,7 @@ Now that we’ve got a `*.crate` file ready to go, it can be uploaded to
 [crates.io] with the `cargo publish` command. And that’s it, you’ve now published
 your first crate!
 
-```notrust
+```shell
 $ cargo publish
 ```
 
@@ -95,14 +95,14 @@ If you’d like to skip the `cargo package` step, the `cargo publish` subcommand
 will automatically package up the local crate if a copy isn’t found already.
 
 Be sure to check out the [metadata you can
-specify](03-02-manifest.html#package-metadata) to ensure your crate can be
+specify](reference/manifest.html#package-metadata) to ensure your crate can be
 discovered more easily!
 
 ### Publishing a new version of an existing crate
 
 In order to release a new version, change the `version` value specified in your
 `Cargo.toml` manifest. Keep in mind [the semver
-rules](03-02-manifest.html#the-version-field). Then optionally run `cargo package` if
+rules](reference/manifest.html#the-version-field). Then optionally run `cargo package` if
 you want to inspect the `*.crate` file for the new version before publishing,
 and run `cargo publish` to upload the new version.
 
@@ -119,7 +119,7 @@ being broken for one reason or another (syntax error, forgot to include a file,
 etc.). For situations such as this, Cargo supports a “yank” of a version of a
 crate.
 
-```notrust
+```shell
 $ cargo yank --vers 1.0.1
 $ cargo yank --vers 1.0.1 --undo
 ```
@@ -142,7 +142,7 @@ A crate is often developed by more than one person, or the primary maintainer
 may change over time! The owner of a crate is the only person allowed to publish
 new versions of the crate, but an owner may designate additional owners.
 
-```notrust
+```shell
 $ cargo owner --add my-buddy
 $ cargo owner --remove my-buddy
 $ cargo owner --add github:rust-lang:owners

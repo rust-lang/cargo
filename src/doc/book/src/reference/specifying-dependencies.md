@@ -194,8 +194,8 @@ stable and will be released on 2017-08-31. Historically some of these scenarios
 have been solved with [the `[replace]` section][replace-section], but we'll
 document the `[patch]` section here.
 
-[patch-section]: 03-02-manifest.html#the-patch-section
-[replace-section]: 03-02-manifest.html#the-replace-section
+[patch-section]: reference/manifest.html#the-patch-section
+[replace-section]: reference/manifest.html#the-replace-section
 
 ### Testing a bugfix
 
@@ -523,4 +523,4 @@ features = ["secure-password", "civet"]
 ```
 
 More information about features can be found in the
-[manifest documentation](03-02-manifest.html#the-features-section).
+[manifest documentation](reference/manifest.html#the-features-section).
