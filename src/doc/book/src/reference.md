@@ -10,7 +10,7 @@ The reference covers the details of various areas of Cargo.
 * [Configuration](reference/config.html)
 * [Environment Variables](reference/environment-variables.html)
 * [Build Scripts](reference/build-scripts.html)
-* [Publishing on crates.io](reference/crates-io.html)
+* [Publishing on crates.io](reference/publishing.html)
 * [Package ID Specifications](reference/pkgid-spec.html)
 * [Source Replacement](reference/source-replacement.html)
 * [External Tools](reference/external-tools.html)

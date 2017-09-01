@@ -21,6 +21,8 @@ matrix:
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
       rust: nightly
+      install:
+        - cargo install mdbook
       script:
         - cargo test
         - cargo doc --no-deps
@@ -31,7 +33,7 @@ matrix:
         [ $(uname -s) = Linux ] &&
         pip install ghp-import --user &&
         $HOME/.local/bin/ghp-import -n target/doc &&
-        git push -qf https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages 2>&1 > /dev/null
+        git push -qf https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages 2>&1 >/dev/null
 
   exclude:
     - rust: stable
