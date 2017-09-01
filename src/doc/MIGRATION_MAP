@@ -7,7 +7,6 @@ environment-variables.md book/src/reference/environment-variables.md
 external-tools.md book/src/reference/external-tools.md
 manifest.md book/src/reference/manifest.md
 pkgid-spec.md book/src/reference/pkgid-spec.md
-policies.md book/src/reference/policies.md
 source-replacement.md book/src/reference/source-replacement.md
 specifying-dependencies.md book/src/reference/specifying-dependencies.md
 faq.md book/src/faq.md
