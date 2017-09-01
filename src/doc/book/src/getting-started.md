@@ -1,4 +1,6 @@
 ## Getting Started
 
-* [Installation](01-01-installation.html)
-* [First steps with Cargo](01-02-first-steps.html)
+To get started with Cargo, install Cargo (and Rust) and set up your first crate.
+
+* [Installation](getting-started/installation.html)
+* [First steps with Cargo](getting-started/first-steps.html)

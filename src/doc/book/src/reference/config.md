@@ -2,7 +2,7 @@
 
 This document will explain how Cargo’s configuration system works, as well as
 available keys or configuration.  For configuration of a project through its
-manifest, see the [manifest format](03-02-manifest.html).
+manifest, see the [manifest format](reference/manifest.html).
 
 ### Hierarchical structure
 
@@ -134,4 +134,4 @@ environment variables.
 In addition to the system above, Cargo recognizes a few other specific
 [environment variables][env].
 
-[env]: 03-04-environment-variables.html
+[env]: reference/environment-variables.html

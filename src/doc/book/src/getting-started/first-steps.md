@@ -36,7 +36,7 @@ needs to compile your project.
 
 Here’s what’s in `src/main.rs`:
 
-```
+```rust
 fn main() {
     println!("Hello, world!");
 }
@@ -65,6 +65,6 @@ $ cargo run
 Hello, world!
 ```
 
-## Going further
+### Going further
 
 For more details on using Cargo, check out the [Cargo Guide](guide.html)

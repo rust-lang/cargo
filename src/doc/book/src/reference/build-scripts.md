@@ -1,4 +1,4 @@
-## Build Script Support
+## Build Scripts
 
 Some packages need to compile third-party non-Rust code, for example C
 libraries. Other packages need to link to C libraries which can either be
@@ -40,7 +40,7 @@ all passed in the form of [environment variables][env].
 In addition to environment variables, the build script’s current directory is
 the source directory of the build script’s package.
 
-[env]: 03-04-environment-variables.html
+[env]: reference/environment-variables.html
 
 ### Outputs of the Build Script
 
@@ -49,7 +49,7 @@ All the lines printed to stdout by a build script are written to a file like
 configuration). Any line that starts with `cargo:` is interpreted directly by
 Cargo. This line must be of the form `cargo:key=value`, like the examples below:
 
-```notrust
+```shell
 # specially recognized by Cargo
 cargo:rustc-link-lib=static=foo
 cargo:rustc-link-search=native=/path/to/foo
@@ -184,7 +184,7 @@ prevent running the build script in question altogether and instead supply the
 metadata ahead of time.
 
 To override a build script, place the following configuration in any acceptable
-Cargo [configuration location](03-03-config.html).
+Cargo [configuration location](reference/config.html).
 
 ```toml
 [target.x86_64-unknown-linux-gnu.foo]
@@ -212,7 +212,7 @@ library call as part of the build script.
 
 First, let’s take a look at the directory structure of this package:
 
-```notrust
+```shell
 .
 ├── Cargo.toml
 ├── build.rs
@@ -298,7 +298,7 @@ a Rust library which calls into C to print “Hello, World!”.
 
 Like above, let’s first take a look at the project layout:
 
-```notrust
+```shell
 .
 ├── Cargo.toml
 ├── build.rs
