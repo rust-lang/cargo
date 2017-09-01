@@ -1,6 +1,6 @@
 # Summary
 
-[Introduction](introduction.md)
+[Introduction](index.md)
 
 * [Getting Started](getting-started.md)
     * [Installation](getting-started/installation.md)
@@ -26,6 +26,5 @@
     * [Package ID Specifications](reference/pkgid-spec.md)
     * [Source Replacement](reference/source-replacement.md)
     * [External Tools](reference/external-tools.md)
-    * [Crates.io Package Policies](reference/policies.md)
 
 * [FAQ](faq.md)

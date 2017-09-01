@@ -27,14 +27,14 @@ Here, brackets indicate that the contents are optional.
 These could all be references to a package `foo` version `1.2.3` from the
 registry at `crates.io`
 
-|         pkgid                  |  name  |  version  |          url         |
-|-------------------------------:|:------:|:---------:|:--------------------:|
-| `foo`                          | foo    | *         | *                    |
-| `foo:1.2.3`                    | foo    | 1.2.3     | *                    |
-| `crates.io/foo`                | foo    | *         | *://crates.io/foo    |
-| `crates.io/foo#1.2.3`          | foo    | 1.2.3     | *://crates.io/foo    |
-| `crates.io/bar#foo:1.2.3`      | foo    | 1.2.3     | *://crates.io/bar    |
-| `http://crates.io/foo#1.2.3`   | foo    | 1.2.3     | http://crates.io/foo |
+| pkgid                        | name  | version | url                    |
+|:-----------------------------|:-----:|:-------:|:----------------------:|
+| `foo`                        | `foo` | `*`     | `*`                    |
+| `foo:1.2.3`                  | `foo` | `1.2.3` | `*`                    |
+| `crates.io/foo`              | `foo` | `*`     | `*://crates.io/foo`    |
+| `crates.io/foo#1.2.3`        | `foo` | `1.2.3` | `*://crates.io/foo`    |
+| `crates.io/bar#foo:1.2.3`    | `foo` | `1.2.3` | `*://crates.io/bar`    |
+| `http://crates.io/foo#1.2.3` | `foo` | `1.2.3` | `http://crates.io/foo` |
 
 ## Brevity of specifications
 
