@@ -26,3 +26,8 @@ for doc in $DOCS; do
     -o target/doc \
     src/doc/$doc.md
 done
+
+# Temporary preview for mdBook docs
+cd src/doc/book
+$HOME/.cargo/bin/mdbook build --no-create --dest-dir ../../../target/doc/book
+cd ../../../
