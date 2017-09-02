@@ -13,12 +13,12 @@ dependencies, compiles your project, makes packages, and upload them to
 
 To get started with Cargo, install Cargo (and Rust) and set up your first crate.
 
-**[Cargo Guide](guide.html)**
+**[Cargo Guide](guide/index.html)**
 
 The guide will give you all you need to know about how to use Cargo to develop
 Rust projects.
 
-**[Cargo Reference](reference.html)**
+**[Cargo Reference](reference/index.html)**
 
 The reference covers the details of various areas of Cargo.
 
