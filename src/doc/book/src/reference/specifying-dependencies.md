@@ -11,7 +11,7 @@ development. Let's take a look at how to do each of these.
 
 Cargo is configured to look for dependencies on [crates.io] by default. Only
 the name and a version string are required in this case. In [the cargo
-guide](guide.html), we specified a dependency on the `time` crate:
+guide](guide/index.html), we specified a dependency on the `time` crate:
 
 ```toml
 [dependencies]
@@ -126,12 +126,11 @@ rand = { git = "https://github.com/rust-lang-nursery/rand", branch = "next" }
 
 ### Specifying path dependencies
 
-Over time, our `hello_world` project from [the guide](guide.html) has grown
-significantly in size! It’s gotten to the point that we probably want to
-split out a separate crate for others to use. To do this Cargo supports
-**path dependencies** which are typically sub-crates that live within one
-repository. Let’s start off by making a new crate inside of our `hello_world`
-project:
+Over time, our `hello_world` project from [the guide](guide/index.html) has
+grown significantly in size! It’s gotten to the point that we probably want to
+split out a separate crate for others to use. To do this Cargo supports **path
+dependencies** which are typically sub-crates that live within one repository.
+Let’s start off by making a new crate inside of our `hello_world` project:
 
 ```shell
 # inside of hello_world/
