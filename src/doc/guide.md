@@ -419,6 +419,21 @@ will not fail your overall build. Please see the [Travis CI Rust
 documentation](https://docs.travis-ci.com/user/languages/rust/) for more
 information.
 
+
+## Build cache
+
+Cargo shares build artifacts among all the packages of a single workspaces.
+Today, Cargo does not share build results across different workspaces, but 
+a similar result can be achieved by using a third party tool, [sccache].
+
+To setup `sccache`, install it with `cargo install sccache` and set 
+`RUSTC_WRAPPER` environmental variable to `sccache` before invoking Cargo.
+If you use bash, it makes sense to add `export RUSTC_WRAPPER=sccache` to 
+`.bashrc`. Refer to sccache documentation for more details.
+
+[sccache]: https://github.com/mozilla/sccache
+
+
 # Further reading
 
 Now that you have an overview of how to use cargo and have created your first
