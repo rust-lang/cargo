@@ -346,3 +346,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
     let lock = p.read_lockfile();
     assert!(lock.starts_with(lockfile.trim()));
 }
+
+#[test]
+fn locked_correct_error() {
+    Package::new("foo", "0.1.0").publish();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build").arg("--locked"),
+                execs().with_status(101).with_stderr("\
+[UPDATING] registry `[..]`
+error: the lock file needs to be updated but --locked was passed to prevent this
+"));
+}
