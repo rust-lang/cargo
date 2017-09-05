@@ -936,8 +936,25 @@ impl TomlDependency {
     }
 }
 
+fn toml_target_name<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<Option<String>, D::Error> {
+    let maybe_name = <Option<String>>::deserialize(deserializer)?;
+    match maybe_name {
+        Some(name) => {
+            for ch in name.chars() {
+                if !ch.is_alphanumeric() && ch != '_' && ch != '-' {
+                    return Err(de::Error::custom(format!("Invalid character `{}`", ch)));
+                }
+            }
+            Ok(Some(name))
+        },
+        none => Ok(none),
+    }
+}
+
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
 struct TomlTarget {
+    #[serde(default)]
+    #[serde(deserialize_with = "toml_target_name")]
     name: Option<String>,
 
     // The intention was to only accept `crate-type` here but historical
