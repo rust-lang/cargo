@@ -19,7 +19,7 @@ path = "src/cargo/lib.rs"
 [dependencies]
 atty = "0.2"
 crates-io = { path = "src/crates-io", version = "0.12" }
-crossbeam = "0.2"
+crossbeam = "0.3"
 curl = "0.4.6"
 docopt = "0.8.1"
 env_logger = "0.4"
@@ -40,10 +40,10 @@ log = "0.3"
 num_cpus = "1.0"
 same-file = "0.1"
 scoped-tls = "0.1"
-semver = { version = "0.7.0", features = ["serde"] }
+semver = { version = "0.8.0", features = ["serde"] }
 serde = "1.0"
 serde_derive = "1.0"
-serde_ignored = "0.0.3"
+serde_ignored = "0.0.4"
 serde_json = "1.0"
 shell-escape = "0.1"
 tar = { version = "0.4", default-features = false }
