@@ -82,7 +82,7 @@ impl TargetInfo {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Metadata(u64);
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
@@ -482,6 +482,16 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // Also mix in enabled features to our metadata. This'll ensure that
         // when changing feature sets each lib is separately cached.
         self.resolve.features_sorted(unit.pkg.package_id()).hash(&mut hasher);
+
+        if let Ok(dep_units) =  self.dep_targets(&unit) {
+            let mut dep_metadatas = dep_units.into_iter().map(|dep_unit| {
+                self.target_metadata(&dep_unit)
+            }).collect::<Vec<_>>();
+            dep_metadatas.sort();
+            for metadata in dep_metadatas {
+                metadata.hash(&mut hasher);
+            }
+        }
 
         // Throw in the profile we're compiling with. This helps caching
         // panic=abort and panic=unwind artifacts, additionally with various
