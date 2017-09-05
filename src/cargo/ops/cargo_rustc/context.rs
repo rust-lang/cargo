@@ -25,7 +25,7 @@ use super::layout::Layout;
 use super::links::Links;
 use super::{Kind, Compilation, BuildConfig};
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Unit<'a> {
     pub pkg: &'a Package,
     pub target: &'a Target,
@@ -483,14 +483,30 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // when changing feature sets each lib is separately cached.
         self.resolve.features_sorted(unit.pkg.package_id()).hash(&mut hasher);
 
-        if let Ok(dep_units) =  self.dep_targets(&unit) {
-            let mut dep_metadatas = dep_units.into_iter().map(|dep_unit| {
-                self.target_metadata(&dep_unit)
+        // Mix in the target-metadata of all the dependencies of this target
+        {
+            let id = unit.pkg.package_id();
+            let deps = self.resolve.deps(id);
+            let mut deps = deps.filter_map(|id| {
+                match self.get_package(id) {
+                    Ok(pkg) => {
+                        pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
+                            let unit = Unit {
+                                pkg: pkg,
+                                target: t,
+                                profile: self.lib_or_check_profile(unit, t),
+                                kind: unit.kind.for_target(t),
+                            };
+                            Some(self.target_metadata(&unit))
+                        })
+                    }
+                    Err(_) => None
+                }
             }).collect::<Vec<_>>();
-            dep_metadatas.sort();
-            for metadata in dep_metadatas {
-                metadata.hash(&mut hasher);
-            }
+
+            debug!("Mixing in units {:?} to {:?}:{:?}", deps.len(), unit.target.name(), unit.target.kind());
+            deps.sort();
+            deps.hash(&mut hasher);
         }
 
         // Throw in the profile we're compiling with. This helps caching
@@ -518,7 +534,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             channel.hash(&mut hasher);
         }
 
-        Some(Metadata(hasher.finish()))
+        let x = Metadata(hasher.finish());
+        debug!("Produced hash {} for {:?}:{:?}", x, unit.target.name(), unit.target.kind());
+        Some(x)
     }
 
     /// Returns the file stem for a given target/profile combo (with metadata)
