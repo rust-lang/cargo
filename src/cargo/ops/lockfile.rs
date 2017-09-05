@@ -98,7 +98,7 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
     }
 
     if !ws.config().lock_update_allowed() {
-        let flag = if ws.config().network_allowed() {"--frozen"} else {"--locked"};
+        let flag = if ws.config().network_allowed() {"--locked"} else {"--frozen"};
         bail!("the lock file needs to be updated but {} was passed to \
                prevent this", flag);
     }
