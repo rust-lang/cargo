@@ -55,7 +55,9 @@ pub struct Context<'a, 'cfg: 'a> {
     host_info: TargetInfo,
     profiles: &'a Profiles,
     incremental_enabled: bool,
+
     target_filenames: HashMap<Unit<'a>, Arc<Vec<(PathBuf, Option<PathBuf>, bool)>>>,
+    target_metadatas: HashMap<Unit<'a>, Option<Metadata>>,
 }
 
 #[derive(Clone, Default)]
@@ -154,7 +156,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             used_in_plugin: HashSet::new(),
             incremental_enabled: incremental_enabled,
             jobserver: jobserver,
+
+            // TODO: Pre-Calculate these with a topo-sort, rather than lazy-calculating
             target_filenames: HashMap::new(),
+            target_metadatas: HashMap::new(),
         })
     }
 
@@ -362,13 +367,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Returns the directory for the specified unit where fingerprint
     /// information is stored.
-    pub fn fingerprint_dir(&mut self, unit: &Unit) -> PathBuf {
+    pub fn fingerprint_dir(&mut self, unit: &Unit<'a>) -> PathBuf {
         let dir = self.pkg_dir(unit);
         self.layout(unit.kind).fingerprint().join(dir)
     }
 
     /// Returns the appropriate directory layout for either a plugin or not.
-    pub fn build_script_dir(&mut self, unit: &Unit) -> PathBuf {
+    pub fn build_script_dir(&mut self, unit: &Unit<'a>) -> PathBuf {
         assert!(unit.target.is_custom_build());
         assert!(!unit.profile.run_custom_build);
         let dir = self.pkg_dir(unit);
@@ -376,7 +381,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Returns the appropriate directory layout for either a plugin or not.
-    pub fn build_script_out_dir(&mut self, unit: &Unit) -> PathBuf {
+    pub fn build_script_out_dir(&mut self, unit: &Unit<'a>) -> PathBuf {
         assert!(unit.target.is_custom_build());
         assert!(unit.profile.run_custom_build);
         let dir = self.pkg_dir(unit);
@@ -394,7 +399,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Returns the appropriate output directory for the specified package and
     /// target.
-    pub fn out_dir(&mut self, unit: &Unit) -> PathBuf {
+    pub fn out_dir(&mut self, unit: &Unit<'a>) -> PathBuf {
         if unit.profile.doc {
             self.layout(unit.kind).root().parent().unwrap().join("doc")
         } else if unit.target.is_custom_build() {
@@ -406,7 +411,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
     }
 
-    fn pkg_dir(&mut self, unit: &Unit) -> String {
+    fn pkg_dir(&mut self, unit: &Unit<'a>) -> String {
         let name = unit.pkg.package_id().name();
         match self.target_metadata(unit) {
             Some(meta) => format!("{}-{}", name, meta),
@@ -440,7 +445,17 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// We build to the path: "{filename}-{target_metadata}"
     /// We use a linking step to link/copy to a predictable filename
     /// like `target/debug/libfoo.{a,so,rlib}` and such.
-    pub fn target_metadata(&mut self, unit: &Unit) -> Option<Metadata> {
+    pub fn target_metadata(&mut self, unit: &Unit<'a>) -> Option<Metadata> {
+        if let Some(cache) = self.target_metadatas.get(unit) {
+            return cache.clone()
+        }
+
+        let metadata = self.calc_target_metadata(unit);
+        self.target_metadatas.insert(*unit, metadata.clone());
+        metadata
+    }
+
+    fn calc_target_metadata(&mut self, unit: &Unit<'a>) -> Option<Metadata> {
         // No metadata for dylibs because of a couple issues
         // - OSX encodes the dylib name in the executable
         // - Windows rustc multiple files of which we can't easily link all of them
@@ -521,7 +536,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Returns the file stem for a given target/profile combo (with metadata)
-    pub fn file_stem(&mut self, unit: &Unit) -> String {
+    pub fn file_stem(&mut self, unit: &Unit<'a>) -> String {
         match self.target_metadata(unit) {
             Some(ref metadata) => format!("{}-{}", unit.target.crate_name(),
                                           metadata),
@@ -546,7 +561,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Returns an Option because in some cases we don't want to link
     /// (eg a dependent lib)
-    pub fn link_stem(&mut self, unit: &Unit) -> Option<(PathBuf, String)> {
+    pub fn link_stem(&mut self, unit: &Unit<'a>) -> Option<(PathBuf, String)> {
         let src_dir = self.out_dir(unit);
         let bin_stem = self.bin_stem(unit);
         let file_stem = self.file_stem(unit);
@@ -587,6 +602,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             return Ok(cache.clone())
         }
 
+        let result = self.calc_target_filenames(unit);
+        if let Ok(ref ret) = result {
+            self.target_filenames.insert(*unit, ret.clone());
+        }
+        result
+    }
+
+    fn calc_target_filenames(&mut self, unit: &Unit<'a>)
+                            -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, bool)>>> {
         let out_dir = self.out_dir(unit);
         let stem = self.file_stem(unit);
         let link_stem = self.link_stem(unit);
@@ -668,9 +692,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
         info!("Target filenames: {:?}", ret);
 
-        let ret = Arc::new(ret);
-        self.target_filenames.insert(*unit, ret.clone());
-        Ok(ret)
+        Ok(Arc::new(ret))
     }
 
     fn used_deps(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
