@@ -1516,7 +1516,7 @@ fn dep_used_with_separate_features() {
     p.build();
 
     // Build the entire workspace
-    assert_that(p.cargo("build"),
+    assert_that(p.cargo("build").arg("--all"),
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling feat_lib v0.1.0 ([..])
