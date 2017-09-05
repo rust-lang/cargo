@@ -25,7 +25,7 @@ use super::layout::Layout;
 use super::links::Links;
 use super::{Kind, Compilation, BuildConfig};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Unit<'a> {
     pub pkg: &'a Package,
     pub target: &'a Target,
@@ -485,7 +485,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         // Mix in the target-metadata of all the dependencies of this target
         if let Ok(deps) = self.used_deps(unit) {
-            debug!("Mixing in units {:?} to {:?}:{:?}", deps.len(), unit.target.name(), unit.target.kind());
             let mut deps_metadata = deps.into_iter().map(|dep_unit| {
                 self.target_metadata(&dep_unit)
             }).collect::<Vec<_>>();
@@ -518,9 +517,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             channel.hash(&mut hasher);
         }
 
-        let x = Metadata(hasher.finish());
-        debug!("Produced hash {} for {:?}:{:?}", x, unit.target.name(), unit.target.kind());
-        Some(x)
+        Some(Metadata(hasher.finish()))
     }
 
     /// Returns the file stem for a given target/profile combo (with metadata)

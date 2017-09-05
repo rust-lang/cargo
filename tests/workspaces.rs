@@ -1530,6 +1530,8 @@ fn dep_used_with_separate_features() {
 
     // Build caller1. should build the dep library. Because the features
     // are different than the full workspace, it rebuilds.
+    // Ideally once we solve https://github.com/rust-lang/cargo/issues/3620, then
+    // a single cargo build at the top level will be enough.
     assert_that(p.cargo("build").cwd(p.root().join("caller1")),
                 execs().with_status(0)
                        .with_stderr("\
