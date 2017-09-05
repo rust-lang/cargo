@@ -86,7 +86,8 @@ impl CargoError {
             &CargoErrorKind::Parse(_) |
             &CargoErrorKind::Git(_) |
             &CargoErrorKind::Internal(_) |
-            &CargoErrorKind::CargoTestErrorKind(_) => false
+            &CargoErrorKind::CargoTestErrorKind(_) |
+            &CargoErrorKind::__Nonexhaustive { .. } => false
         }
     }
 }
