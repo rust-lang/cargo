@@ -484,29 +484,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.resolve.features_sorted(unit.pkg.package_id()).hash(&mut hasher);
 
         // Mix in the target-metadata of all the dependencies of this target
-        {
-            let id = unit.pkg.package_id();
-            let deps = self.resolve.deps(id);
-            let mut deps = deps.filter_map(|id| {
-                match self.get_package(id) {
-                    Ok(pkg) => {
-                        pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                            let unit = Unit {
-                                pkg: pkg,
-                                target: t,
-                                profile: self.lib_or_check_profile(unit, t),
-                                kind: unit.kind.for_target(t),
-                            };
-                            Some(self.target_metadata(&unit))
-                        })
-                    }
-                    Err(_) => None
-                }
-            }).collect::<Vec<_>>();
-
+        if let Ok(deps) = self.used_deps(unit) {
             debug!("Mixing in units {:?} to {:?}:{:?}", deps.len(), unit.target.name(), unit.target.kind());
-            deps.sort();
-            deps.hash(&mut hasher);
+            let mut deps_metadata = deps.into_iter().map(|dep_unit| {
+                self.target_metadata(&dep_unit)
+            }).collect::<Vec<_>>();
+            deps_metadata.sort();
+            deps_metadata.hash(&mut hasher);
         }
 
         // Throw in the profile we're compiling with. This helps caching
@@ -692,18 +676,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         Ok(ret)
     }
 
-    /// For a package, return all targets which are registered as dependencies
-    /// for that package.
-    pub fn dep_targets(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
-        if unit.profile.run_custom_build {
-            return self.dep_run_custom_build(unit)
-        } else if unit.profile.doc && !unit.profile.test {
-            return self.doc_deps(unit);
-        }
-
+    fn used_deps(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
         let id = unit.pkg.package_id();
         let deps = self.resolve.deps(id);
-        let mut ret = deps.filter(|dep| {
+        deps.filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name() && d.version_req().matches(dep.version())
             }).any(|d| {
@@ -752,7 +728,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
                 Err(e) => Some(Err(e))
             }
-        }).collect::<CargoResult<Vec<_>>>()?;
+        }).collect::<CargoResult<Vec<_>>>()
+    }
+
+    /// For a package, return all targets which are registered as dependencies
+    /// for that package.
+    pub fn dep_targets(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
+        if unit.profile.run_custom_build {
+            return self.dep_run_custom_build(unit)
+        } else if unit.profile.doc && !unit.profile.test {
+            return self.doc_deps(unit);
+        }
+
+        let id = unit.pkg.package_id();
+        let mut ret = self.used_deps(unit)?;
 
         // If this target is a build script, then what we've collected so far is
         // all we need. If this isn't a build script, then it depends on the
