@@ -907,15 +907,22 @@ fn build_features<'a>(s: &'a Summary, method: &'a Method)
             }
             None => {
                 let feat = feat_or_package;
+
+                //if this feature has already been added, then just return Ok
                 if !visited.insert(feat) {
-                    bail!("Cyclic feature dependency: feature `{}` depends \
-                           on itself", feat)
+                    return Ok(());
                 }
+
                 used.insert(feat);
                 match s.features().get(feat) {
                     Some(recursive) => {
                         // This is a feature, add it recursively.
                         for f in recursive {
+                            if f == feat {
+                                bail!("Cyclic feature dependency: feature `{}` depends \
+                                        on itself", feat);
+                            }
+
                             add_feature(s, f, deps, used, visited)?;
                         }
                     }
@@ -924,7 +931,6 @@ fn build_features<'a>(s: &'a Summary, method: &'a Method)
                         deps.entry(feat).or_insert((false, Vec::new())).0 = true;
                     }
                 }
-                visited.remove(feat);
             }
         }
         Ok(())
