@@ -14,4 +14,3 @@ The reference covers the details of various areas of Cargo.
 * [Package ID Specifications](reference/pkgid-spec.html)
 * [Source Replacement](reference/source-replacement.html)
 * [External Tools](reference/external-tools.html)
-* [Crates.io Package Policies](reference/policies.html)
