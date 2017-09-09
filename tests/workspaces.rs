@@ -1465,3 +1465,96 @@ Caused by:
 "));
 }
 
+/// This is a freshness test for feature use with workspaces
+///
+/// feat_lib is used by caller1 and caller2, but with different features enabled.
+/// This test ensures that alternating building caller1, caller2 doesn't force
+/// recompile of feat_lib.
+///
+/// Ideally once we solve https://github.com/rust-lang/cargo/issues/3620, then
+/// a single cargo build at the top level will be enough.
+#[test]
+fn dep_used_with_separate_features() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["feat_lib", "caller1", "caller2"]
+        "#)
+        .file("feat_lib/Cargo.toml", r#"
+            [project]
+            name = "feat_lib"
+            version = "0.1.0"
+            authors = []
+
+            [features]
+            myfeature = []
+        "#)
+        .file("feat_lib/src/lib.rs", "")
+        .file("caller1/Cargo.toml", r#"
+            [project]
+            name = "caller1"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            feat_lib = { path = "../feat_lib" }
+        "#)
+        .file("caller1/src/main.rs", "fn main() {}")
+        .file("caller1/src/lib.rs", "")
+        .file("caller2/Cargo.toml", r#"
+            [project]
+            name = "caller2"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            feat_lib = { path = "../feat_lib", features = ["myfeature"] }
+            caller1 = { path = "../caller1" }
+        "#)
+        .file("caller2/src/main.rs", "fn main() {}")
+        .file("caller2/src/lib.rs", "");
+    p.build();
+
+    // Build the entire workspace
+    assert_that(p.cargo("build").arg("--all"),
+                execs().with_status(0)
+                       .with_stderr("\
+[..]Compiling feat_lib v0.1.0 ([..])
+[..]Compiling caller1 v0.1.0 ([..])
+[..]Compiling caller2 v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+    assert_that(&p.bin("caller1"), existing_file());
+    assert_that(&p.bin("caller2"), existing_file());
+
+
+    // Build caller1. should build the dep library. Because the features
+    // are different than the full workspace, it rebuilds.
+    // Ideally once we solve https://github.com/rust-lang/cargo/issues/3620, then
+    // a single cargo build at the top level will be enough.
+    assert_that(p.cargo("build").cwd(p.root().join("caller1")),
+                execs().with_status(0)
+                       .with_stderr("\
+[..]Compiling feat_lib v0.1.0 ([..])
+[..]Compiling caller1 v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+
+    // Alternate building caller2/caller1 a few times, just to make sure
+    // features are being built separately.  Should not rebuild anything
+    assert_that(p.cargo("build").cwd(p.root().join("caller2")),
+                execs().with_status(0)
+                       .with_stderr("\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+    assert_that(p.cargo("build").cwd(p.root().join("caller1")),
+                execs().with_status(0)
+                       .with_stderr("\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+    assert_that(p.cargo("build").cwd(p.root().join("caller2")),
+                execs().with_status(0)
+                       .with_stderr("\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+}
