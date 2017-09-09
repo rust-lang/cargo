@@ -77,7 +77,9 @@ pub fn prepare<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                          -> CargoResult<(Work, Work, Freshness)> {
     let _p = profile::start(format!("build script prepare: {}/{}",
                                     unit.pkg, unit.target.name()));
-    let overridden = cx.build_state.has_override(unit);
+
+    let key = (unit.pkg.package_id().clone(), unit.kind);
+    let overridden = cx.build_script_overridden.contains(&key);
     let (work_dirty, work_fresh) = if overridden {
         (Work::noop(), Work::noop())
     } else {
@@ -314,18 +316,6 @@ impl BuildState {
     fn insert(&self, id: PackageId, kind: Kind, output: BuildOutput) {
         self.outputs.lock().unwrap().insert((id, kind), output);
     }
-
-    fn has_override(&self, unit: &Unit) -> bool {
-        let key = unit.pkg.manifest().links().map(|l| (l.to_string(), unit.kind));
-        match key.and_then(|k| self.overrides.get(&k)) {
-            Some(output) => {
-                self.insert(unit.pkg.package_id().clone(), unit.kind,
-                            output.clone());
-                true
-            }
-            None => false,
-        }
-    }
 }
 
 impl BuildOutput {
@@ -483,13 +473,27 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
     // Recursive function to build up the map we're constructing. This function
     // memoizes all of its return values as it goes along.
     fn build<'a, 'b, 'cfg>(out: &'a mut HashMap<Unit<'b>, BuildScripts>,
-                           cx: &Context<'b, 'cfg>,
+                           cx: &mut Context<'b, 'cfg>,
                            unit: &Unit<'b>)
                            -> CargoResult<&'a BuildScripts> {
         // Do a quick pre-flight check to see if we've already calculated the
         // set of dependencies.
         if out.contains_key(unit) {
             return Ok(&out[unit])
+        }
+
+        {
+            let key = unit.pkg.manifest().links().map(|l| (l.to_string(), unit.kind));
+            let build_state = &cx.build_state;
+            if let Some(output) = key.and_then(|k| build_state.overrides.get(&k)) {
+                let key = (unit.pkg.package_id().clone(), unit.kind);
+                cx.build_script_overridden.insert(key.clone());
+                build_state
+                    .outputs
+                    .lock()
+                    .unwrap()
+                    .insert(key, output.clone());
+            }
         }
 
         let mut ret = BuildScripts::default();

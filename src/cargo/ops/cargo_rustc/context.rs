@@ -40,6 +40,7 @@ pub struct Context<'a, 'cfg: 'a> {
     pub compilation: Compilation<'cfg>,
     pub packages: &'a PackageSet<'cfg>,
     pub build_state: Arc<BuildState>,
+    pub build_script_overridden: HashSet<(PackageId, Kind)>,
     pub build_explicit_deps: HashMap<Unit<'a>, BuildDeps>,
     pub fingerprints: HashMap<Unit<'a>, Arc<Fingerprint>>,
     pub compiled: HashSet<Unit<'a>>,
@@ -156,6 +157,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             used_in_plugin: HashSet::new(),
             incremental_enabled: incremental_enabled,
             jobserver: jobserver,
+            build_script_overridden: HashSet::new(),
 
             // TODO: Pre-Calculate these with a topo-sort, rather than lazy-calculating
             target_filenames: HashMap::new(),
@@ -499,7 +501,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         self.resolve.features_sorted(unit.pkg.package_id()).hash(&mut hasher);
 
         // Mix in the target-metadata of all the dependencies of this target
-        if let Ok(deps) = self.used_deps(unit) {
+        if let Ok(deps) = self.dep_targets(unit) {
             let mut deps_metadata = deps.into_iter().map(|dep_unit| {
                 self.target_metadata(&dep_unit)
             }).collect::<Vec<_>>();
@@ -695,10 +697,18 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         Ok(Arc::new(ret))
     }
 
-    fn used_deps(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
+    /// For a package, return all targets which are registered as dependencies
+    /// for that package.
+    pub fn dep_targets(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
+        if unit.profile.run_custom_build {
+            return self.dep_run_custom_build(unit)
+        } else if unit.profile.doc && !unit.profile.test {
+            return self.doc_deps(unit);
+        }
+
         let id = unit.pkg.package_id();
         let deps = self.resolve.deps(id);
-        deps.filter(|dep| {
+        let mut ret = deps.filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name() && d.version_req().matches(dep.version())
             }).any(|d| {
@@ -747,20 +757,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
                 Err(e) => Some(Err(e))
             }
-        }).collect::<CargoResult<Vec<_>>>()
-    }
-
-    /// For a package, return all targets which are registered as dependencies
-    /// for that package.
-    pub fn dep_targets(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
-        if unit.profile.run_custom_build {
-            return self.dep_run_custom_build(unit)
-        } else if unit.profile.doc && !unit.profile.test {
-            return self.doc_deps(unit);
-        }
-
-        let id = unit.pkg.package_id();
-        let mut ret = self.used_deps(unit)?;
+        }).collect::<CargoResult<Vec<_>>>()?;
 
         // If this target is a build script, then what we've collected so far is
         // all we need. If this isn't a build script, then it depends on the
@@ -812,7 +809,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // actually depend on anything, we've reached the end of the dependency
         // chain as we've got all the info we're gonna get.
         let key = (unit.pkg.package_id().clone(), unit.kind);
-        if self.build_state.outputs.lock().unwrap().contains_key(&key) {
+        if self.build_script_overridden.contains(&key) {
             return Ok(Vec::new())
         }
 
