@@ -480,12 +480,10 @@ fn cyclic_feature2() {
             foo = ["bar"]
             bar = ["foo"]
         "#)
-        .file("src/main.rs", "");
+        .file("src/main.rs", "fn main() {}");
 
     assert_that(p.cargo_process("build"),
-                execs().with_status(101).with_stderr("\
-[ERROR] Cyclic feature dependency: feature `[..]` depends on itself
-"));
+                execs().with_status(0).with_stdout(""));
 }
 
 #[test]
