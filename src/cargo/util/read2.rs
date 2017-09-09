@@ -2,7 +2,6 @@ pub use self::imp::read2;
 
 #[cfg(unix)]
 mod imp {
-    use std::cmp;
     use std::io::prelude::*;
     use std::io;
     use std::mem;
@@ -23,20 +22,14 @@ mod imp {
         let mut out = Vec::new();
         let mut err = Vec::new();
 
-        let max = cmp::max(out_pipe.as_raw_fd(), err_pipe.as_raw_fd());
+        let mut fds: [libc::pollfd; 2] = unsafe { mem::zeroed() };
+        fds[0].fd = out_pipe.as_raw_fd();
+        fds[0].events = libc::POLLIN;
+        fds[1].fd = err_pipe.as_raw_fd();
+        fds[1].events = libc::POLLIN;
         loop {
             // wait for either pipe to become readable using `select`
-            let r = unsafe {
-                let mut read: libc::fd_set = mem::zeroed();
-                if !out_done {
-                    libc::FD_SET(out_pipe.as_raw_fd(), &mut read);
-                }
-                if !err_done {
-                    libc::FD_SET(err_pipe.as_raw_fd(), &mut read);
-                }
-                libc::select(max + 1, &mut read, 0 as *mut _, 0 as *mut _,
-                             0 as *mut _)
-            };
+            let r = unsafe { libc::poll(fds.as_mut_ptr(), 2, -1) };
             if r == -1 {
                 let err = io::Error::last_os_error();
                 if err.kind() == io::ErrorKind::Interrupted {
@@ -62,11 +55,11 @@ mod imp {
                     }
                 }
             };
-            if !out_done && handle(out_pipe.read_to_end(&mut out))? {
+            if !out_done && fds[0].revents != 0 && handle(out_pipe.read_to_end(&mut out))? {
                 out_done = true;
             }
             data(true, &mut out, out_done);
-            if !err_done && handle(err_pipe.read_to_end(&mut err))? {
+            if !err_done && fds[1].revents != 0 && handle(err_pipe.read_to_end(&mut err))? {
                 err_done = true;
             }
             data(false, &mut err, err_done);
