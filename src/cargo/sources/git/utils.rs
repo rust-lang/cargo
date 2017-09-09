@@ -1,8 +1,11 @@
 use std::env;
 use std::fmt;
 use std::fs::{self, File};
+use std::mem;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
+use curl::easy::{Easy, List};
 use git2::{self, ObjectType};
 use serde::ser::{self, Serialize};
 use url::Url;
@@ -90,8 +93,8 @@ impl GitRemote {
 
     pub fn checkout(&self, into: &Path, cargo_config: &Config) -> CargoResult<GitDatabase> {
         let repo = match git2::Repository::open(into) {
-            Ok(repo) => {
-                self.fetch_into(&repo, cargo_config).chain_err(|| {
+            Ok(mut repo) => {
+                self.fetch_into(&mut repo, cargo_config).chain_err(|| {
                     format!("failed to fetch into {}", into.display())
                 })?;
                 repo
@@ -119,21 +122,19 @@ impl GitRemote {
         })
     }
 
-    fn fetch_into(&self, dst: &git2::Repository, cargo_config: &Config) -> CargoResult<()> {
+    fn fetch_into(&self, dst: &mut git2::Repository, cargo_config: &Config) -> CargoResult<()> {
         // Create a local anonymous remote in the repository to fetch the url
-        let url = self.url.to_string();
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(dst, &url, refspec, cargo_config)
+        fetch(dst, &self.url, refspec, cargo_config)
     }
 
     fn clone_into(&self, dst: &Path, cargo_config: &Config) -> CargoResult<git2::Repository> {
-        let url = self.url.to_string();
         if fs::metadata(&dst).is_ok() {
             fs::remove_dir_all(dst)?;
         }
         fs::create_dir_all(dst)?;
-        let repo = git2::Repository::init_bare(dst)?;
-        fetch(&repo, &url, "refs/heads/*:refs/heads/*", cargo_config)?;
+        let mut repo = git2::Repository::init_bare(dst)?;
+        fetch(&mut repo, &self.url, "refs/heads/*:refs/heads/*", cargo_config)?;
         Ok(repo)
     }
 }
@@ -147,7 +148,7 @@ impl GitDatabase {
                    -> CargoResult<GitCheckout> {
         let checkout = match git2::Repository::open(dest) {
             Ok(repo) => {
-                let checkout = GitCheckout::new(dest, self, rev, repo);
+                let mut checkout = GitCheckout::new(dest, self, rev, repo);
                 if !checkout.is_fresh() {
                     checkout.fetch(cargo_config)?;
                     checkout.reset()?;
@@ -244,7 +245,7 @@ impl<'a> GitCheckout<'a> {
 
         let url = source.to_url()?;
         let url = url.to_string();
-        let repo = git2::Repository::clone(&url, into)            
+        let repo = git2::Repository::clone(&url, into)
             .chain_err(|| {
                 internal(format!("failed to clone {} into {}", source.display(),
                              into.display()))
@@ -262,12 +263,11 @@ impl<'a> GitCheckout<'a> {
         }
     }
 
-    fn fetch(&self, cargo_config: &Config) -> CargoResult<()> {
+    fn fetch(&mut self, cargo_config: &Config) -> CargoResult<()> {
         info!("fetch {}", self.repo.path().display());
         let url = self.database.path.to_url()?;
-        let url = url.to_string();
         let refspec = "refs/heads/*:refs/heads/*";
-        fetch(&self.repo, &url, refspec, cargo_config)?;
+        fetch(&mut self.repo, &url, refspec, cargo_config)?;
         Ok(())
     }
 
@@ -329,7 +329,7 @@ impl<'a> GitCheckout<'a> {
                 let target = repo.head()?.target();
                 Ok((target, repo))
             });
-            let repo = match head_and_repo {
+            let mut repo = match head_and_repo {
                 Ok((head, repo)) => {
                     if child.head_id() == head {
                         return Ok(())
@@ -345,7 +345,8 @@ impl<'a> GitCheckout<'a> {
 
             // Fetch data from origin and reset to the head commit
             let refspec = "refs/heads/*:refs/heads/*";
-            fetch(&repo, url, refspec, cargo_config).chain_err(|| {
+            let url = url.to_url()?;
+            fetch(&mut repo, &url, refspec, cargo_config).chain_err(|| {
                 internal(format!("failed to fetch submodule `{}` from {}",
                                  child.name().unwrap_or(""), url))
             })?;
@@ -557,8 +558,8 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
     })
 }
 
-pub fn fetch(repo: &git2::Repository,
-             url: &str,
+pub fn fetch(repo: &mut git2::Repository,
+             url: &Url,
              refspec: &str,
              config: &Config) -> CargoResult<()> {
     if !config.network_allowed() {
@@ -566,20 +567,167 @@ pub fn fetch(repo: &git2::Repository,
                was specified")
     }
 
-    with_authentication(url, &repo.config()?, |f| {
+    // If we're fetching from github, attempt github's special fast path for
+    // testing if we've already got an up-to-date copy of the repository
+    if url.host_str() == Some("github.com") {
+        if let Ok(oid) = repo.refname_to_id("refs/remotes/origin/master") {
+            let mut handle = config.http()?.borrow_mut();
+            debug!("attempting github fast path for {}", url);
+            if github_up_to_date(&mut handle, url, &oid) {
+                return Ok(())
+            } else {
+                debug!("fast path failed, falling back to a git fetch");
+            }
+        }
+    }
+
+    // We reuse repositories quite a lot, so before we go through and update the
+    // repo check to see if it's a little too old and could benefit from a gc.
+    // In theory this shouldn't be too too expensive compared to the network
+    // request we're about to issue.
+    maybe_gc_repo(repo)?;
+
+    debug!("doing a fetch for {}", url);
+    with_authentication(url.as_str(), &repo.config()?, |f| {
         let mut cb = git2::RemoteCallbacks::new();
         cb.credentials(f);
 
         // Create a local anonymous remote in the repository to fetch the url
-        let mut remote = repo.remote_anonymous(url)?;
+        let mut remote = repo.remote_anonymous(url.as_str())?;
         let mut opts = git2::FetchOptions::new();
         opts.remote_callbacks(cb)
             .download_tags(git2::AutotagOption::All);
 
         network::with_retry(config, || {
+            debug!("initiating fetch of {} from {}", refspec, url);
             remote.fetch(&[refspec], Some(&mut opts), None)
                 .map_err(CargoError::from)
         })?;
         Ok(())
     })
+}
+
+/// Cargo has a bunch of long-lived git repositories in its global cache and
+/// some, like the index, are updated very frequently. Right now each update
+/// creates a new "pack file" inside the git database, and over time this can
+/// cause bad performance and bad current behavior in libgit2.
+///
+/// One pathological use case today is where libgit2 opens hundreds of file
+/// descriptors, getting us dangerously close to blowing out the OS limits of
+/// how many fds we can have open. This is detailed in #4403.
+///
+/// To try to combat this problem we attempt a `git gc` here. Note, though, that
+/// we may not even have `git` installed on the system! As a result we
+/// opportunistically try a `git gc` when the pack directory looks too big, and
+/// failing that we just blow away the repository and start over.
+fn maybe_gc_repo(repo: &mut git2::Repository) -> CargoResult<()> {
+    // Here we arbitrarily declare that if you have more than 100 files in your
+    // `pack` folder that we need to do a gc.
+    let entries = match repo.path().join("objects/pack").read_dir() {
+        Ok(e) => e.count(),
+        Err(_) => {
+            debug!("skipping gc as pack dir appears gone");
+            return Ok(())
+        }
+    };
+    let max = env::var("__CARGO_PACKFILE_LIMIT").ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(100);
+    if entries < max {
+        debug!("skipping gc as there's only {} pack files", entries);
+        return Ok(())
+    }
+
+    // First up, try a literal `git gc` by shelling out to git. This is pretty
+    // likely to fail though as we may not have `git` installed. Note that
+    // libgit2 doesn't currently implement the gc operation, so there's no
+    // equivalent there.
+    match Command::new("git").arg("gc").current_dir(repo.path()).output() {
+        Ok(out) => {
+            debug!("git-gc status: {}\n\nstdout ---\n{}\nstderr ---\n{}",
+                   out.status,
+                   String::from_utf8_lossy(&out.stdout),
+                   String::from_utf8_lossy(&out.stderr));
+            if out.status.success() {
+                let new = git2::Repository::open(repo.path())?;
+                mem::replace(repo, new);
+                return Ok(())
+            }
+        }
+        Err(e) => debug!("git-gc failed to spawn: {}", e),
+    }
+
+    // Alright all else failed, let's start over.
+    //
+    // Here we want to drop the current repository object pointed to by `repo`,
+    // so we initialize temporary repository in a sub-folder, blow away the
+    // existing git folder, and then recreate the git repo. Finally we blow away
+    // the `tmp` folder we allocated.
+    let path = repo.path().to_path_buf();
+    let tmp = path.join("tmp");
+    mem::replace(repo, git2::Repository::init(&tmp)?);
+    for entry in path.read_dir()? {
+        let entry = entry?;
+        if entry.file_name().to_str() == Some("tmp") {
+            continue
+        }
+        let path = entry.path();
+        drop(fs::remove_file(&path).or_else(|_| fs::remove_dir_all(&path)));
+    }
+    if repo.is_bare() {
+        mem::replace(repo, git2::Repository::init_bare(path)?);
+    } else {
+        mem::replace(repo, git2::Repository::init(path)?);
+    }
+    fs::remove_dir_all(&tmp).chain_err(|| {
+        format!("failed to remove {:?}", tmp)
+    })?;
+    Ok(())
+}
+
+/// Updating the index is done pretty regularly so we want it to be as fast as
+/// possible. For registries hosted on github (like the crates.io index) there's
+/// a fast path available to use [1] to tell us that there's no updates to be
+/// made.
+///
+/// This function will attempt to hit that fast path and verify that the `oid`
+/// is actually the current `master` branch of the repository. If `true` is
+/// returned then no update needs to be performed, but if `false` is returned
+/// then the standard update logic still needs to happen.
+///
+/// [1]: https://developer.github.com/v3/repos/commits/#get-the-sha-1-of-a-commit-reference
+///
+/// Note that this function should never cause an actual failure because it's
+/// just a fast path. As a result all errors are ignored in this function and we
+/// just return a `bool`. Any real errors will be reported through the normal
+/// update path above.
+fn github_up_to_date(handle: &mut Easy, url: &Url, oid: &git2::Oid) -> bool {
+    macro_rules! try {
+        ($e:expr) => (match $e {
+            Some(e) => e,
+            None => return false,
+        })
+    }
+
+    // This expects github urls in the form `github.com/user/repo` and nothing
+    // else
+    let mut pieces = try!(url.path_segments());
+    let username = try!(pieces.next());
+    let repo = try!(pieces.next());
+    if pieces.next().is_some() {
+        return false
+    }
+
+    let url = format!("https://api.github.com/repos/{}/{}/commits/master",
+                      username, repo);
+    try!(handle.get(true).ok());
+    try!(handle.url(&url).ok());
+    try!(handle.useragent("cargo").ok());
+    let mut headers = List::new();
+    try!(headers.append("Accept: application/vnd.github.3.sha").ok());
+    try!(headers.append(&format!("If-None-Match: \"{}\"", oid)).ok());
+    try!(handle.http_headers(headers).ok());
+    try!(handle.perform().ok());
+
+    try!(handle.response_code().ok()) == 304
 }
