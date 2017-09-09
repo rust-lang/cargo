@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use url::Url;
 
-use core::{Source, SourceId};
+use core::{Source, SourceId, GitReference};
 use sources::ReplacedSource;
 use util::{Config, ToUrl};
 use util::config::ConfigValue;
@@ -107,19 +107,25 @@ impl<'cfg> SourceConfigMap<'cfg> {
         }
         let new_src = new_id.load(self.config)?;
         let old_src = id.load(self.config)?;
-        if new_src.supports_checksums() != old_src.supports_checksums() {
-            let (supports, no_support) = if new_src.supports_checksums() {
-                (name, orig_name)
-            } else {
-                (orig_name, name)
-            };
+        if !new_src.supports_checksums() && old_src.supports_checksums() {
             bail!("\
-cannot replace `{orig}` with `{name}`, the source `{supports}` supports \
-checksums, but `{no_support}` does not
+cannot replace `{orig}` with `{name}`, the source `{orig}` supports \
+checksums, but `{name}` does not
 
 a lock file compatible with `{orig}` cannot be generated in this situation
-", orig = orig_name, name = name, supports = supports, no_support = no_support);
+", orig = orig_name, name = name);
         }
+
+        if old_src.requires_precise() && id.precise().is_none() {
+            bail!("\
+the source {orig} requires a lock file to be present first before it can be
+used against vendored source code
+
+remove the source replacement configuration, generate a lock file, and then
+restore the source replacement configuration to continue the build
+", orig = orig_name);
+        }
+
         Ok(Box::new(ReplacedSource::new(id, &new_id, new_src)))
     }
 
@@ -152,6 +158,32 @@ a lock file compatible with `{orig}` cannot be generated in this situation
             path.pop();
             path.push(s);
             srcs.push(SourceId::for_directory(&path)?);
+        }
+        if let Some(val) = table.get("git") {
+            let url = url(val, &format!("source.{}.git", name))?;
+            let try = |s: &str| {
+                let val = match table.get(s) {
+                    Some(s) => s,
+                    None => return Ok(None),
+                };
+                let key = format!("source.{}.{}", name, s);
+                val.string(&key).map(Some)
+            };
+            let reference = match try("branch")? {
+                Some(b) => GitReference::Branch(b.0.to_string()),
+                None => {
+                    match try("tag")? {
+                        Some(b) => GitReference::Tag(b.0.to_string()),
+                        None => {
+                            match try("rev")? {
+                                Some(b) => GitReference::Rev(b.0.to_string()),
+                                None => GitReference::Branch("master".to_string()),
+                            }
+                        }
+                    }
+                }
+            };
+            srcs.push(SourceId::for_git(&url, reference)?);
         }
         if name == "crates-io" && srcs.is_empty() {
             srcs.push(SourceId::crates_io(self.config)?);

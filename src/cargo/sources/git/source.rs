@@ -130,6 +130,14 @@ impl<'cfg> Registry for GitSource<'cfg> {
                       .expect("BUG: update() must be called before query()");
         src.query(dep, f)
     }
+
+    fn supports_checksums(&self) -> bool {
+        false
+    }
+
+    fn requires_precise(&self) -> bool {
+        true
+    }
 }
 
 impl<'cfg> Source for GitSource<'cfg> {

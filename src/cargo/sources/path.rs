@@ -484,6 +484,14 @@ impl<'cfg> Registry for PathSource<'cfg> {
         }
         Ok(())
     }
+
+    fn supports_checksums(&self) -> bool {
+        false
+    }
+
+    fn requires_precise(&self) -> bool {
+        false
+    }
 }
 
 impl<'cfg> Source for PathSource<'cfg> {

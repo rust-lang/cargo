@@ -33,6 +33,14 @@ impl<'cfg> Registry for ReplacedSource<'cfg> {
                     self.to_replace)
         })
     }
+
+    fn supports_checksums(&self) -> bool {
+        self.inner.supports_checksums()
+    }
+
+    fn requires_precise(&self) -> bool {
+        self.inner.requires_precise()
+    }
 }
 
 impl<'cfg> Source for ReplacedSource<'cfg> {
