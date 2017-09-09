@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 use std::slice;
 
 use glob::glob;
+use ignore::Match;
+use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use url::Url;
 
 use core::{Package, VirtualManifest, EitherManifest, SourceId};
@@ -77,7 +79,7 @@ pub enum WorkspaceConfig {
     /// optionally specified as well.
     Root {
         members: Option<Vec<String>>,
-        exclude: Vec<String>,
+        exclude: Gitignore,
     },
 
     /// Indicates that `[workspace]` was present and the `root` field is the
@@ -350,13 +352,12 @@ impl<'cfg> Workspace<'cfg> {
 
             let mut expanded_list = Vec::new();
             for path in list {
-                let pathbuf = root.join(path);
-                let expanded_paths = expand_member_path(&pathbuf)?;
+                let expanded_paths = expand_member_path(root, &path)?;
 
                 // If glob does not find any valid paths, then put the original
                 // path in the expanded list to maintain backwards compatibility.
                 if expanded_paths.is_empty() {
-                    expanded_list.push(pathbuf);
+                    expanded_list.push(root.join(path.as_str()));
                 } else {
                     expanded_list.extend(expanded_paths);
                 }
@@ -572,11 +573,13 @@ impl<'cfg> Workspace<'cfg> {
     }
 }
 
-fn expand_member_path(path: &Path) -> CargoResult<Vec<PathBuf>> {
-    let path = match path.to_str() {
+fn expand_member_path(root: &Path, pattern: &str) -> CargoResult<Vec<PathBuf>> {
+    let root = root.join(pattern);
+    let path = match root.to_str() {
         Some(p) => p,
         None => return Ok(Vec::new()),
     };
+    // TODO: need to switch away from `glob` to `ignore` here.
     let res = glob(path).chain_err(|| {
         format!("could not parse pattern `{}`", &path)
     })?;
@@ -588,25 +591,39 @@ fn expand_member_path(path: &Path) -> CargoResult<Vec<PathBuf>> {
 }
 
 fn is_excluded(members: &Option<Vec<String>>,
-               exclude: &[String],
+               exclude: &Gitignore,
                root_path: &Path,
                manifest_path: &Path) -> bool {
-    let excluded = exclude.iter().any(|ex| {
-        manifest_path.starts_with(root_path.join(ex))
-    });
+    let exclude_match = exclude.matched_path_or_any_parents(manifest_path, false);
 
     let explicit_member = match *members {
         Some(ref members) => {
-            members.iter().any(|mem| {
-                manifest_path.starts_with(root_path.join(mem))
-            })
+            members.iter()
+                .filter(|p| manifest_path.starts_with(root_path.join(p)))
+                .max_by_key(|p| p.len())
         }
-        None => false,
+        None => None,
     };
 
-    !explicit_member && excluded
-}
+    match explicit_member {
+        // This `manifest_path` is explicitly included by `path` here, and
+        // `path` is the longest specification for whether to include this,
+        // taking the highest precedence. This is still excluded, however, if
+        // there's any `exclude` path which is longer
+        Some(path) => {
+            match exclude_match {
+                Match::Ignore(glob) => {
+                    glob.original().len() > path.as_str().len()
+                }
+                _ => false, // not ignored
+            }
+        }
 
+        // This `manifest_path` isn't explicitly included, so see if we're
+        // explicitly excluded by any rules
+        None => exclude_match.is_ignore(),
+    }
+}
 
 impl<'cfg> Packages<'cfg> {
     fn get(&self, manifest_path: &Path) -> &MaybePackage {
@@ -664,5 +681,22 @@ impl MaybePackage {
             MaybePackage::Virtual(ref v) => v.workspace_config(),
             MaybePackage::Package(ref v) => v.manifest().workspace_config(),
         }
+    }
+}
+
+impl WorkspaceConfig {
+    pub fn root(root: &Path,
+                members: Option<Vec<String>>,
+                excludes: Option<Vec<String>>)
+        -> CargoResult<WorkspaceConfig>
+    {
+        let mut builder = GitignoreBuilder::new(root);
+        for exclude in excludes.unwrap_or(Vec::new()) {
+            builder.add_line(None, &exclude)?;
+        }
+        Ok(WorkspaceConfig::Root {
+            members: members,
+            exclude: builder.build()?,
+        })
     }
 }

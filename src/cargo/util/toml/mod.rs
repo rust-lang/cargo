@@ -633,10 +633,9 @@ impl TomlManifest {
         let workspace_config = match (me.workspace.as_ref(),
                                       project.workspace.as_ref()) {
             (Some(config), None) => {
-                WorkspaceConfig::Root {
-                    members: config.members.clone(),
-                    exclude: config.exclude.clone().unwrap_or(Vec::new()),
-                }
+                WorkspaceConfig::root(package_root,
+                                      config.members.clone(),
+                                      config.exclude.clone())?
             }
             (None, root) => {
                 WorkspaceConfig::Member { root: root.cloned() }
@@ -727,10 +726,9 @@ impl TomlManifest {
         let profiles = build_profiles(&me.profile);
         let workspace_config = match me.workspace {
             Some(ref config) => {
-                WorkspaceConfig::Root {
-                    members: config.members.clone(),
-                    exclude: config.exclude.clone().unwrap_or(Vec::new()),
-                }
+                WorkspaceConfig::root(root,
+                                      config.members.clone(),
+                                      config.exclude.clone())?
             }
             None => {
                 bail!("virtual manifests must be configured with [workspace]");
