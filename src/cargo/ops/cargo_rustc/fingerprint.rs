@@ -538,7 +538,7 @@ fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
 }
 
 /// Prepare for work when a package starts to build
-pub fn prepare_init(cx: &mut Context, unit: &Unit) -> CargoResult<()> {
+pub fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<()> {
     let new1 = cx.fingerprint_dir(unit);
 
     if fs::metadata(&new1).is_err() {
@@ -548,7 +548,7 @@ pub fn prepare_init(cx: &mut Context, unit: &Unit) -> CargoResult<()> {
     Ok(())
 }
 
-pub fn dep_info_loc(cx: &mut Context, unit: &Unit) -> PathBuf {
+pub fn dep_info_loc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> PathBuf {
     cx.fingerprint_dir(unit).join(&format!("dep-{}", filename(cx, unit)))
 }
 
@@ -670,7 +670,7 @@ fn mtime_if_fresh<I>(output: &Path, paths: I) -> Option<FileTime>
     }
 }
 
-fn filename(cx: &mut Context, unit: &Unit) -> String {
+fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
     // file_stem includes metadata hash. Thus we have a different
     // fingerprint for every metadata hash version. This works because
     // even if the package is fresh, we'll still link the fresh target

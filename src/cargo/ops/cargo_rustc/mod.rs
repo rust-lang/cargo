@@ -684,10 +684,10 @@ fn root_path(cx: &Context, unit: &Unit) -> PathBuf {
     }
 }
 
-fn build_base_args(cx: &mut Context,
-                   cmd: &mut ProcessBuilder,
-                   unit: &Unit,
-                   crate_types: &[&str]) {
+fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
+                             cmd: &mut ProcessBuilder,
+                             unit: &Unit<'a>,
+                             crate_types: &[&str]) {
     let Profile {
         ref opt_level, lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, overflow_checks, rpath, test, doc: _doc,
