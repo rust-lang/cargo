@@ -69,6 +69,9 @@ labels to triage issues:
   are only assigned during triage meetings, and replace the [I-nominated][inom]
   label.
 
+* The light orange **relnotes** label marks issues that should be documented in
+  the release notes of the next release.
+
 If you're looking for somewhere to start, check out the [E-easy][eeasy] tag.
 
 [eeasy]: https://github.com/rust-lang/cargo/issues?q=is%3Aopen+is%3Aissue+label%3AE-easy
