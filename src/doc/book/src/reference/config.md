@@ -9,7 +9,7 @@ manifest, see the [manifest format](reference/manifest.html).
 Cargo allows to have local configuration for a particular project or global
 configuration (like git). Cargo also extends this ability to a hierarchical
 strategy. If, for example, Cargo were invoked in `/home/foo/bar/baz`, then the
-following configuration files would be probed for:
+following configuration files would be probed for and unified in this order:
 
 * `/home/foo/bar/baz/.cargo/config`
 * `/home/foo/bar/.cargo/config`
