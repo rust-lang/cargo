@@ -185,7 +185,8 @@ license-file = "..."
 
 # Appveyor: `repository` is required. `branch` is optional; default is `master`
 # `service` is optional; valid values are `github` (default), `bitbucket`, and
-# `gitlab`.
+# `gitlab`; `id` is optional; you can specify the appveyor project id if you 
+# want to use that instead.
 appveyor = { repository = "...", branch = "master", service = "github" }
 
 # Circle CI: `repository` is required. `branch` is optiona; default is `master`
