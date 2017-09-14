@@ -92,7 +92,8 @@ current package is tested. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
 
 All packages in the workspace are tested if the `--all` flag is supplied. The
-`--all` flag may be supplied in the presence of a virtual manifest.
+`--all` flag is automatically assumed for a virtual manifest.
+Note that `--exclude` has to be specified in conjunction with the `--all` flag.
 
 The --jobs argument affects the building of the test executable but does
 not affect how many jobs are used when running the tests. The default value
