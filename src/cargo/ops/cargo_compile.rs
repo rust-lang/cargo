@@ -143,6 +143,12 @@ impl<'a> Packages<'a> {
                     .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
                     .collect()
             }
+            Packages::Packages(packages) if packages.is_empty() => {
+                ws.current_opt()
+                    .map(Package::package_id)
+                    .map(PackageIdSpec::from_package_id)
+                    .into_iter().collect()
+            }
             Packages::Packages(packages) => {
                 packages.iter().map(|p| PackageIdSpec::parse(&p)).collect::<CargoResult<Vec<_>>>()?
             }
@@ -231,17 +237,16 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
             pkgids.push(p.query(resolve_with_overrides.iter())?);
         }
     } else {
-        let root_package = ws.current()?;
-        root_package.manifest().print_teapot(ws.config());
-        let all_features = resolve_all_features(&resolve_with_overrides,
-                                                root_package.package_id());
-        generate_targets(root_package, profiles, mode, filter, &all_features, release)?;
-        pkgids.push(root_package.package_id());
+        return Err(format!("manifest path `{}` contains no package: The manifest is virtual, \
+                     and the workspace has no members.", ws.current_manifest().display()).into());
     };
 
     let to_builds = pkgids.iter().map(|id| {
         packages.get(id)
     }).collect::<CargoResult<Vec<_>>>()?;
+    for p in to_builds.iter() {
+        p.manifest().print_teapot(ws.config());
+    }
 
     let mut general_targets = Vec::new();
     let mut package_targets = Vec::new();

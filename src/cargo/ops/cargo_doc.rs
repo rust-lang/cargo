@@ -28,8 +28,8 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
             pkgs.push(packages.get(p.query(resolve_with_overrides.iter())?)?);
         }
     } else {
-        let root_package = ws.current()?;
-        pkgs.push(root_package);
+        return Err(format!("manifest path `{}` contains no package: The manifest is virtual, \
+                     and the workspace has no members.", ws.current_manifest().display()).into());
     };
 
     let mut lib_names = HashSet::new();
