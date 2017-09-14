@@ -12,17 +12,19 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Once, ONCE_INIT};
 
-use core::{Shell, CliUnstable};
-use core::shell::Verbosity;
+use curl::easy::Easy;
 use jobserver;
 use serde::{Serialize, Serializer};
 use toml;
+
+use core::shell::Verbosity;
+use core::{Shell, CliUnstable};
+use ops;
 use util::Rustc;
 use util::errors::{CargoResult, CargoResultExt, CargoError, internal};
 use util::paths;
-use util::{Filesystem, LazyCell};
-
 use util::toml as cargo_toml;
+use util::{Filesystem, LazyCell};
 
 use self::ConfigValue as CV;
 
@@ -40,6 +42,7 @@ pub struct Config {
     locked: Cell<bool>,
     jobserver: Option<jobserver::Client>,
     cli_flags: RefCell<CliUnstable>,
+    easy: LazyCell<RefCell<Easy>>,
 }
 
 impl Config {
@@ -76,6 +79,7 @@ impl Config {
                 }
             },
             cli_flags: RefCell::new(CliUnstable::default()),
+            easy: LazyCell::new(),
         }
     }
 
@@ -536,6 +540,12 @@ impl Config {
 
     pub fn jobserver_from_env(&self) -> Option<&jobserver::Client> {
         self.jobserver.as_ref()
+    }
+
+    pub fn http(&self) -> CargoResult<&RefCell<Easy>> {
+        self.easy.get_or_try_init(|| {
+            ops::http_handle(self).map(RefCell::new)
+        })
     }
 }
 

@@ -6,7 +6,7 @@
 //! outer object.
 //!
 //! The limitation of a `LazyCell` is that after initialized, it can never be
-//! modified.
+//! modified unless you've otherwise got a `&mut` reference
 
 use std::cell::UnsafeCell;
 
@@ -44,6 +44,13 @@ impl<T> LazyCell<T> {
     pub fn borrow(&self) -> Option<&T> {
         unsafe {
             (*self.inner.get()).as_ref()
+        }
+    }
+
+    /// Same as `borrow`, but the mutable version
+    pub fn borrow_mut(&mut self) -> Option<&mut T> {
+        unsafe {
+            (*self.inner.get()).as_mut()
         }
     }
 
