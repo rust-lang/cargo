@@ -122,6 +122,10 @@ impl<'cfg> Workspace<'cfg> {
         Ok(ws)
     }
 
+    pub fn current_manifest(&self) -> &Path {
+        &self.current_manifest
+    }
+
     /// Creates a "temporary workspace" from one package which only contains
     /// that package.
     ///

@@ -457,10 +457,12 @@ as:
 ```toml
 [workspace]
 
-# Optional key, inferred if not present
+# Optional key, inferred from path dependencies if not present.
+# Additional non-path dependencies that should be included must be given here.
+# In particular, for a virtual manifest, all members have to be listed.
 members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 
-# Optional key, empty if not present
+# Optional key, empty if not present.
 exclude = ["path1", "path/to/dir2"]
 ```
 

@@ -46,6 +46,10 @@ which indicates which package should be built. If it is not given, then the
 current package is built. For more information on SPEC and its format, see the
 `cargo help pkgid` command.
 
+All packages in the workspace are checked if the `--all` flag is supplied. The
+`--all` flag is automatically assumed for a virtual manifest.
+Note that `--exclude` has to be specified in conjunction with the `--all` flag.
+
 Compilation can be configured via the use of profiles which are configured in
 the manifest. The default profile for this command is `dev`, but passing
 the --release flag will use the `release` profile instead.

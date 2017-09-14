@@ -65,7 +65,8 @@ By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.
 
 All packages in the workspace are documented if the `--all` flag is supplied. The
-`--all` flag may be supplied in the presence of a virtual manifest.
+`--all` flag is automatically assumed for a virtual manifest.
+Note that `--exclude` has to be specified in conjunction with the `--all` flag.
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be documented. If it is not given, then the
