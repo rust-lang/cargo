@@ -24,6 +24,7 @@ pub struct Package {
     vers: String,
     deps: Vec<Dependency>,
     files: Vec<(String, String)>,
+    extra_files: Vec<(String, String)>,
     yanked: bool,
     features: HashMap<String, Vec<String>>,
     local: bool,
@@ -72,6 +73,7 @@ impl Package {
             vers: vers.to_string(),
             deps: Vec::new(),
             files: Vec::new(),
+            extra_files: Vec::new(),
             yanked: false,
             features: HashMap::new(),
             local: false,
@@ -85,6 +87,11 @@ impl Package {
 
     pub fn file(&mut self, name: &str, contents: &str) -> &mut Package {
         self.files.push((name.to_string(), contents.to_string()));
+        self
+    }
+
+    pub fn extra_file(&mut self, name: &str, contents: &str) -> &mut Package {
+        self.extra_files.push((name.to_string(), contents.to_string()));
         self
     }
 
@@ -235,14 +242,22 @@ impl Package {
                 self.append(&mut a, name, contents);
             }
         }
+        for &(ref name, ref contents) in self.extra_files.iter() {
+            self.append_extra(&mut a, name, contents);
+        }
     }
 
     fn append<W: Write>(&self, ar: &mut Builder<W>, file: &str, contents: &str) {
+        self.append_extra(ar,
+                          &format!("{}-{}/{}", self.name, self.vers, file),
+                          contents);
+    }
+
+    fn append_extra<W: Write>(&self, ar: &mut Builder<W>, path: &str, contents: &str) {
         let mut header = Header::new_ustar();
         header.set_size(contents.len() as u64);
-        t!(header.set_path(format!("{}-{}/{}", self.name, self.vers, file)));
+        t!(header.set_path(path));
         header.set_cksum();
-
         t!(ar.append(&header, contents.as_bytes()));
     }
 

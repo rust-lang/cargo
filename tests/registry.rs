@@ -1408,3 +1408,40 @@ fn vv_prints_warnings() {
     assert_that(p.cargo("build").arg("-vv"),
                 execs().with_status(0));
 }
+
+#[test]
+fn bad_and_or_malicious_packages_rejected() {
+    Package::new("foo", "0.2.0")
+            .extra_file("foo-0.1.0/src/lib.rs", "")
+            .publish();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "fo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            foo = "0.2"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    assert_that(p.cargo("build").arg("-vv"),
+                execs().with_status(101)
+                       .with_stderr("\
+[UPDATING] [..]
+[DOWNLOADING] [..]
+error: unable to get packages from source
+
+Caused by:
+  failed to download [..]
+
+Caused by:
+  failed to unpack [..]
+
+Caused by:
+  [..] contains a file at \"foo-0.1.0/src/lib.rs\" which isn't under \"foo-0.2.0\"
+"));
+}
