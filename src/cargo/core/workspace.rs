@@ -169,9 +169,8 @@ impl<'cfg> Workspace<'cfg> {
     /// indicating that something else should be passed.
     pub fn current(&self) -> CargoResult<&Package> {
         self.current_opt().ok_or_else(||
-            format!("manifest path `{}` is a virtual manifest, but this \
-                     command requires running against an actual package in \
-                     this workspace", self.current_manifest.display()).into()
+            format!("manifest path `{}` contains no package: The manifest is virtual, \
+                     and the workspace has no members.", self.current_manifest.display()).into()
         )
     }
 
