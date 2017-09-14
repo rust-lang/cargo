@@ -696,20 +696,13 @@ fn virtual_build_no_members() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [workspace]
-        "#)
-        .file("bar/Cargo.toml", r#"
-            [project]
-            name = "bar"
-            version = "0.1.0"
-            authors = []
-        "#)
-        .file("bar/src/main.rs", "fn main() {}");
+        "#);
     p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-error: manifest path `[..]` is a virtual manifest, but this command \
-requires running against an actual package in this workspace
+error: manifest path `[..]` contains no package: The manifest is virtual, \
+and the workspace has no members.
 "));
 }
 
