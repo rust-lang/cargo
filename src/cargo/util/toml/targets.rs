@@ -5,6 +5,7 @@
 //!  * `src/bin/*.rs` are binaries
 //!  * `examples/*.rs` are examples
 //!  * `tests/*.rs` are integration tests
+//!  * `benches/*.rs` are benchmarks
 //!
 //! It is a bit tricky because we need match explicit information from `Cargo.toml`
 //! with implicit info in directory layout.
@@ -218,8 +219,11 @@ fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
                   package_root: &Path,
                   errors: &mut Vec<String>)
                   -> CargoResult<Vec<Target>> {
+
+    let inferred = infer_from_directory(&package_root.join("examples"));
+
     let targets = clean_targets("example", "example",
-                                toml_examples, inferred_examples(package_root),
+                                toml_examples, inferred,
                                 package_root, errors)?;
 
     let mut result = Vec::new();
@@ -241,8 +245,11 @@ fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
 fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
                package_root: &Path,
                errors: &mut Vec<String>) -> CargoResult<Vec<Target>> {
+
+    let inferred = infer_from_directory(&package_root.join("tests"));
+
     let targets = clean_targets("test", "test",
-                                toml_tests, inferred_tests(package_root),
+                                toml_tests, inferred,
                                 package_root, errors)?;
 
     let mut result = Vec::new();
@@ -272,8 +279,10 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
         Some(legacy_path)
     };
 
+    let inferred = infer_from_directory(&package_root.join("benches"));
+
     let targets = clean_targets_with_legacy_path("benchmark", "bench",
-                                                 toml_benches, inferred_benches(package_root),
+                                                 toml_benches, inferred,
                                                  package_root,
                                                  errors,
                                                  &mut legacy_bench_path)?;
@@ -359,39 +368,7 @@ fn inferred_bins(package_root: &Path, package_name: &str) -> Vec<(String, PathBu
     }
     result.extend(infer_from_directory(&package_root.join("src").join("bin")));
 
-    if let Ok(entries) = fs::read_dir(&package_root.join("src").join("bin")) {
-        let multifile_bins = entries
-            .filter_map(|e| e.ok())
-            .filter(is_not_dotfile)
-            .filter(|e| match e.file_type() {
-                Ok(t) if t.is_dir() => true,
-                _ => false
-            })
-            .filter_map(|entry| {
-                let dir = entry.path();
-                let main = dir.join("main.rs");
-                let name = dir.file_name().and_then(|n| n.to_str());
-                match (main.exists(), name) {
-                    (true, Some(name)) => Some((name.to_owned(), main)),
-                    _ => None
-                }
-            });
-        result.extend(multifile_bins);
-    }
-
     result
-}
-
-fn inferred_examples(package_root: &Path) -> Vec<(String, PathBuf)> {
-    infer_from_directory(&package_root.join("examples"))
-}
-
-fn inferred_tests(package_root: &Path) -> Vec<(String, PathBuf)> {
-    infer_from_directory(&package_root.join("tests"))
-}
-
-fn inferred_benches(package_root: &Path) -> Vec<(String, PathBuf)> {
-    infer_from_directory(&package_root.join("benches"))
 }
 
 fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
@@ -403,14 +380,41 @@ fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
     entries
         .filter_map(|e| e.ok())
         .filter(is_not_dotfile)
-        .map(|e| e.path())
-        .filter(|f| f.extension().and_then(|s| s.to_str()) == Some("rs"))
-        .filter_map(|f| {
-            f.file_stem().and_then(|s| s.to_str())
-                .map(|s| (s.to_owned(), f.clone()))
-        })
+        .filter_map(infer_any)
         .collect()
 }
+
+
+fn infer_any(entry: DirEntry) -> Option<(String, PathBuf)> {
+    if entry.path().extension().and_then(|p| p.to_str()) == Some("rs") {
+        infer_file(entry)
+    } else if entry.file_type().map(|t| t.is_dir()).ok() == Some(true) {
+        infer_subdirectory(entry)
+    } else {
+        None
+    }
+}
+
+
+fn infer_file(entry: DirEntry) -> Option<(String, PathBuf)> {
+    let path = entry.path();
+    path
+        .file_stem()
+        .and_then(|p| p.to_str()) 
+        .map(|p| (p.to_owned(), path.clone()))
+}
+
+
+fn infer_subdirectory(entry: DirEntry) -> Option<(String, PathBuf)> {
+    let path = entry.path();
+    let main = path.join("main.rs");
+    let name = path.file_name().and_then(|n| n.to_str());
+    match (name, main.exists()) {
+        (Some(name), true) => Some((name.to_owned(), main)),
+        _ => None
+    }
+}
+
 
 fn is_not_dotfile(entry: &DirEntry) -> bool {
     entry.file_name().to_str().map(|s| s.starts_with('.')) == Some(false)
