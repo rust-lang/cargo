@@ -52,11 +52,12 @@ switch to nightly channel you can add
 fn unknown_feature() {
     let p = project("foo")
         .file("Cargo.toml", r#"
+            cargo-features = ["foo"]
+
             [package]
             name = "a"
             version = "0.0.1"
             authors = []
-            cargo-features = ["foo"]
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build"),
@@ -73,11 +74,12 @@ Caused by:
 fn stable_feature_warns() {
     let p = project("foo")
         .file("Cargo.toml", r#"
+            cargo-features = ["test-dummy-stable"]
+
             [package]
             name = "a"
             version = "0.0.1"
             authors = []
-            cargo-features = ["test-dummy-stable"]
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build"),
@@ -94,12 +96,13 @@ necessary to be listed in the manifest
 fn nightly_feature_requires_nightly() {
     let p = project("foo")
         .file("Cargo.toml", r#"
+            cargo-features = ["test-dummy-unstable"]
+
             [package]
             name = "a"
             version = "0.0.1"
             authors = []
             im-a-teapot = true
-            cargo-features = ["test-dummy-unstable"]
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build")
@@ -135,12 +138,13 @@ fn nightly_feature_requires_nightly_in_dep() {
         "#)
         .file("src/lib.rs", "")
         .file("a/Cargo.toml", r#"
+            cargo-features = ["test-dummy-unstable"]
+
             [package]
             name = "a"
             version = "0.0.1"
             authors = []
             im-a-teapot = true
-            cargo-features = ["test-dummy-unstable"]
         "#)
         .file("a/src/lib.rs", "");
     assert_that(p.cargo_process("build")
@@ -173,12 +177,13 @@ Caused by:
 fn cant_publish() {
     let p = project("foo")
         .file("Cargo.toml", r#"
+            cargo-features = ["test-dummy-unstable"]
+
             [package]
             name = "a"
             version = "0.0.1"
             authors = []
             im-a-teapot = true
-            cargo-features = ["test-dummy-unstable"]
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build")
@@ -204,12 +209,13 @@ Caused by:
 fn z_flags_rejected() {
     let p = project("foo")
         .file("Cargo.toml", r#"
+            cargo-features = ["test-dummy-unstable"]
+
             [package]
             name = "a"
             version = "0.0.1"
             authors = []
             im-a-teapot = true
-            cargo-features = ["test-dummy-unstable"]
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("build")
@@ -242,11 +248,12 @@ error: unknown `-Z` flag specified: arg
 fn publish_rejected() {
     let p = project("foo")
         .file("Cargo.toml", r#"
+            cargo-features = ["test-dummy-unstable"]
+
             [package]
             name = "a"
             version = "0.0.1"
             authors = []
-            cargo-features = ["test-dummy-unstable"]
         "#)
         .file("src/lib.rs", "");
     assert_that(p.cargo_process("package")
