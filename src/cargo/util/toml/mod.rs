@@ -222,6 +222,8 @@ pub struct TomlManifest {
     patch: Option<HashMap<String, HashMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
     badges: Option<HashMap<String, HashMap<String, String>>>,
+    #[serde(rename = "cargo-features")]
+    cargo_features: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -389,8 +391,6 @@ pub struct TomlProject {
     include: Option<Vec<String>>,
     publish: Option<bool>,
     workspace: Option<String>,
-    #[serde(rename = "cargo-features")]
-    cargo_features: Option<Vec<String>>,
     #[serde(rename = "im-a-teapot")]
     im_a_teapot: Option<bool>,
 
@@ -472,6 +472,7 @@ impl TomlManifest {
             patch: None,
             workspace: None,
             badges: self.badges.clone(),
+            cargo_features: self.cargo_features.clone(),
         };
 
         fn map_deps(deps: Option<&HashMap<String, TomlDependency>>)
@@ -649,7 +650,7 @@ impl TomlManifest {
         let profiles = build_profiles(&me.profile);
         let publish = project.publish.unwrap_or(true);
         let empty = Vec::new();
-        let cargo_features = project.cargo_features.as_ref().unwrap_or(&empty);
+        let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
         let features = Features::new(&cargo_features, &mut warnings)?;
         let mut manifest = Manifest::new(summary,
                                          targets,
