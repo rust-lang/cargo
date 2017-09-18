@@ -236,12 +236,12 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                      and the workspace has no members.", ws.current_manifest().display()).into());
     };
 
-    let mut to_builds = Vec::new();
-    for p in specs.iter() {
-        let p = packages.get(p.query(resolve_with_overrides.iter())?)?;
+    let to_builds = specs.iter().map(|p| {
+        let pkgid = p.query(resolve_with_overrides.iter())?;
+        let p = packages.get(pkgid)?;
         p.manifest().print_teapot(ws.config());
-        to_builds.push(p);
-    }
+        Ok(p)
+    }).collect::<CargoResult<Vec<_>>>()?;
 
     let mut general_targets = Vec::new();
     let mut package_targets = Vec::new();
