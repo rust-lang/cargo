@@ -22,15 +22,15 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
                                             &specs)?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let mut pkgs = Vec::new();
-    if specs.len() > 0 {
-        for p in specs.iter() {
-            pkgs.push(packages.get(p.query(resolve_with_overrides.iter())?)?);
-        }
-    } else {
+    if specs.is_empty() {
         return Err(format!("manifest path `{}` contains no package: The manifest is virtual, \
                      and the workspace has no members.", ws.current_manifest().display()).into());
     };
+
+    let pkgs = specs.iter().map(|p| {
+        let pkgid = p.query(resolve_with_overrides.iter())?;
+        packages.get(pkgid)
+    }).collect::<CargoResult<Vec<_>>>()?;
 
     let mut lib_names = HashSet::new();
     let mut bin_names = HashSet::new();

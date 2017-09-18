@@ -231,22 +231,17 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                                             &specs)?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let mut pkgids = Vec::new();
-    if specs.len() > 0 {
-        for p in specs.iter() {
-            pkgids.push(p.query(resolve_with_overrides.iter())?);
-        }
-    } else {
+    if specs.is_empty() {
         return Err(format!("manifest path `{}` contains no package: The manifest is virtual, \
                      and the workspace has no members.", ws.current_manifest().display()).into());
     };
 
-    let to_builds = pkgids.iter().map(|id| {
-        packages.get(id)
-    }).collect::<CargoResult<Vec<_>>>()?;
-    for p in to_builds.iter() {
+    let to_builds = specs.iter().map(|p| {
+        let pkgid = p.query(resolve_with_overrides.iter())?;
+        let p = packages.get(pkgid)?;
         p.manifest().print_teapot(ws.config());
-    }
+        Ok(p)
+    }).collect::<CargoResult<Vec<_>>>()?;
 
     let mut general_targets = Vec::new();
     let mut package_targets = Vec::new();
