@@ -532,7 +532,8 @@ each file you want to build.
 
 Your project can optionally contain folders named `examples`, `tests`, and
 `benches`, which Cargo will treat as containing examples,
-integration tests, and benchmarks respectively.
+integration tests, and benchmarks respectively. Analogous to `bin` targets, they
+may be composed of single files or directories with a `main.rs` file.
 
 ```notrust
 ▾ src/           # directory containing source files
@@ -544,10 +545,16 @@ integration tests, and benchmarks respectively.
     main.rs
 ▾ examples/      # (optional) examples
   *.rs
+  ▾ */           # (optional) directories containing multi-file examples
+    main.rs
 ▾ tests/         # (optional) integration tests
   *.rs
+  ▾ */           # (optional) directories containing multi-file tests
+    main.rs
 ▾ benches/       # (optional) benchmarks
   *.rs
+  ▾ */           # (optional) directories containing multi-file benchmarks
+    main.rs
 ```
 
 To structure your code after you've created the files and folders for your

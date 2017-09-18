@@ -3495,7 +3495,7 @@ fn dir_and_file_with_same_name_in_bin() {
         .file("src/bin/foo.rs", "fn main() {}")
         .file("src/bin/foo/main.rs", "fn main() {}");
 
-    assert_that(p.cargo_process("build"), 
+    assert_that(p.cargo_process("build"),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [..]found duplicate binary name foo, but all binary targets must have a unique name[..]
@@ -3519,6 +3519,77 @@ fn inferred_path_in_src_bin_foo() {
 
     assert_that(p.cargo_process("build"), execs().with_status(0));
     assert_that(&p.bin("bar"), existing_file());
+}
+
+#[test]
+fn inferred_examples() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "fn main() {}")
+        .file("examples/bar.rs", "fn main() {}")
+        .file("examples/baz/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("test"), execs().with_status(0));
+    assert_that(&p.bin("examples/bar"), existing_file());
+    assert_that(&p.bin("examples/baz"), existing_file());
+}
+
+#[test]
+fn inferred_tests() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "fn main() {}")
+        .file("tests/bar.rs", "fn main() {}")
+        .file("tests/baz/main.rs", "fn main() {}");
+
+    assert_that(
+        p.cargo_process("test").arg("--test=bar").arg("--test=baz"),
+        execs().with_status(0));
+}
+
+#[test]
+fn inferred_benchmark() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "fn main() {}")
+        .file("benches/bar.rs", "fn main() {}");
+
+    assert_that(
+        p.cargo_process("bench").arg("--bench=bar"),
+        execs().with_status(0));
+}
+
+#[test]
+fn inferred_benchmark_from_directory() {
+    //FIXME: merge with `inferred_benchmark` after fixing #4504
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "fn main() {}")
+        .file("benches/bar/main.rs", "fn main() {}");
+
+    assert_that(
+        p.cargo_process("bench").arg("--bench=bar"),
+        execs().with_status(0));
 }
 
 #[test]
