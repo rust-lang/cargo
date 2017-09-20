@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 
-use core::PackageId;
+use core::{Resolve, PackageId};
 use util::CargoResult;
 use super::Unit;
 
@@ -17,7 +18,7 @@ impl<'a> Links<'a> {
         }
     }
 
-    pub fn validate(&mut self, unit: &Unit<'a>) -> CargoResult<()> {
+    pub fn validate(&mut self, resolve: &Resolve, unit: &Unit<'a>) -> CargoResult<()> {
         if !self.validated.insert(unit.pkg.package_id()) {
             return Ok(())
         }
@@ -27,17 +28,41 @@ impl<'a> Links<'a> {
         };
         if let Some(prev) = self.links.get(lib) {
             let pkg = unit.pkg.package_id();
-            if prev.name() == pkg.name() && prev.source_id() == pkg.source_id() {
-                bail!("native library `{}` is being linked to by more \
-                       than one version of the same package, but it can \
-                       only be linked once; try updating or pinning your \
-                       dependencies to ensure that this package only shows \
-                       up once\n\n  {}\n  {}", lib, prev, pkg)
-            } else {
-                bail!("native library `{}` is being linked to by more than \
-                       one package, and can only be linked to by one \
-                       package\n\n  {}\n  {}", lib, prev, pkg)
-            }
+
+            let describe_path = |pkgid: &PackageId| -> String {
+                let dep_path = resolve.path_to_top(pkgid);
+                if dep_path.is_empty() {
+                    String::from("(This is the root-package)")
+                } else {
+                    let mut pkg_path_desc = String::from("(Dependency via ");
+                    let mut dep_path_iter = dep_path.into_iter().peekable();
+                    while let Some(dep) = dep_path_iter.next() {
+                        write!(pkg_path_desc, "{}", dep).unwrap();
+                        if dep_path_iter.peek().is_some() {
+                            pkg_path_desc.push_str(" => ");
+                        }
+                    }
+                    pkg_path_desc.push(')');
+                    pkg_path_desc
+                }
+            };
+
+            bail!("More than one package links to native library `{}`, \
+                   which can only be linked once.\n\n\
+                   Package {} links to native library `{}`.\n\
+                   {}\n\
+                   \n\
+                   Package {} also links to native library `{}`.\n\
+                   {}\n\
+                   \n\
+                   Try updating or pinning your dependencies to ensure that \
+                   native library `{}` is only linked once.",
+                  lib,
+                  prev, lib,
+                  describe_path(prev),
+                  pkg, lib,
+                  describe_path(pkg),
+                  lib)
         }
         if !unit.pkg.manifest().targets().iter().any(|t| t.is_custom_build()) {
             bail!("package `{}` specifies that it links to `{}` but does not \

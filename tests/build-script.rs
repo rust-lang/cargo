@@ -229,6 +229,49 @@ fn links_duplicates() {
             links = "a"
             build = "build.rs"
 
+            [dependencies.a-sys]
+            path = "a-sys"
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", "")
+        .file("a-sys/Cargo.toml", r#"
+            [project]
+            name = "a-sys"
+            version = "0.5.0"
+            authors = []
+            links = "a"
+            build = "build.rs"
+        "#)
+        .file("a-sys/src/lib.rs", "")
+        .file("a-sys/build.rs", "");
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+error: More than one package links to native library `a`, which can only be \
+linked once.
+
+Package foo v0.5.0 (file://[..]) links to native library `a`.
+(This is the root-package)
+
+Package a-sys v0.5.0 (file://[..]) also links to native library `a`.
+(Dependency via foo v0.5.0 (file://[..]))
+
+Try updating[..]
+"));
+}
+
+#[test]
+fn links_duplicates_deep_dependency() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            links = "a"
+            build = "build.rs"
+
             [dependencies.a]
             path = "a"
         "#)
@@ -239,20 +282,37 @@ fn links_duplicates() {
             name = "a"
             version = "0.5.0"
             authors = []
+            build = "build.rs"
+
+            [dependencies.a-sys]
+            path = "a-sys"
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", "")
+        .file("a/a-sys/Cargo.toml", r#"
+            [project]
+            name = "a-sys"
+            version = "0.5.0"
+            authors = []
             links = "a"
             build = "build.rs"
         "#)
-        .file("a/src/lib.rs", "")
-        .file("a/build.rs", "");
+        .file("a/a-sys/src/lib.rs", "")
+        .file("a/a-sys/build.rs", "");
 
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] native library `a` is being linked to by more than one package, and can only be \
-linked to by one package
+error: More than one package links to native library `a`, which can only be \
+linked once.
 
-  [..] v0.5.0 (file://[..])
-  [..] v0.5.0 (file://[..])
+Package foo v0.5.0 (file://[..]) links to native library `a`.
+(This is the root-package)
+
+Package a-sys v0.5.0 (file://[..]) also links to native library `a`.
+(Dependency via a v0.5.0 (file://[..]) => foo v0.5.0 (file://[..]))
+
+Try updating[..]
 "));
 }
 
