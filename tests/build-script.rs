@@ -248,16 +248,14 @@ fn links_duplicates() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
                        .with_stderr("\
-error: More than one package links to native library `a`, which can only be \
-linked once.
+[ERROR] Multiple packages link to native library `a`. A native library can be \
+linked only once.
 
-Package foo v0.5.0 (file://[..]) links to native library `a`.
-(This is the root-package)
+The root-package links to native library `a`.
 
-Package a-sys v0.5.0 (file://[..]) also links to native library `a`.
-(Dependency via foo v0.5.0 (file://[..]))
-
-Try updating[..]
+Package `a-sys v0.5.0 (file://[..])`
+    ... which is depended on by `foo v0.5.0 (file://[..])`
+also links to native library `a`.
 "));
 }
 
@@ -303,16 +301,15 @@ fn links_duplicates_deep_dependency() {
     assert_that(p.cargo_process("build"),
                 execs().with_status(101)
                        .with_stderr("\
-error: More than one package links to native library `a`, which can only be \
-linked once.
+[ERROR] Multiple packages link to native library `a`. A native library can be \
+linked only once.
 
-Package foo v0.5.0 (file://[..]) links to native library `a`.
-(This is the root-package)
+The root-package links to native library `a`.
 
-Package a-sys v0.5.0 (file://[..]) also links to native library `a`.
-(Dependency via a v0.5.0 (file://[..]) => foo v0.5.0 (file://[..]))
-
-Try updating[..]
+Package `a-sys v0.5.0 (file://[..])`
+    ... which is depended on by `a v0.5.0 (file://[..])`
+    ... which is depended on by `foo v0.5.0 (file://[..])`
+also links to native library `a`.
 "));
 }
 
