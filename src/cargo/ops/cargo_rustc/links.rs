@@ -32,37 +32,27 @@ impl<'a> Links<'a> {
             let describe_path = |pkgid: &PackageId| -> String {
                 let dep_path = resolve.path_to_top(pkgid);
                 if dep_path.is_empty() {
-                    String::from("(This is the root-package)")
+                    String::from("The root-package ")
                 } else {
-                    let mut pkg_path_desc = String::from("(Dependency via ");
-                    let mut dep_path_iter = dep_path.into_iter().peekable();
-                    while let Some(dep) = dep_path_iter.next() {
-                        write!(pkg_path_desc, "{}", dep).unwrap();
-                        if dep_path_iter.peek().is_some() {
-                            pkg_path_desc.push_str(" => ");
-                        }
+                    let mut dep_path_desc = format!("Package `{}`\n", pkgid);
+                    for dep in dep_path {
+                        write!(dep_path_desc,
+                               "    ... which is depended on by `{}`\n",
+                               dep).unwrap();
                     }
-                    pkg_path_desc.push(')');
-                    pkg_path_desc
+                    dep_path_desc
                 }
             };
 
-            bail!("More than one package links to native library `{}`, \
-                   which can only be linked once.\n\n\
-                   Package {} links to native library `{}`.\n\
-                   {}\n\
+            bail!("Multiple packages link to native library `{}`. \
+                   A native library can be linked only once.\n\
                    \n\
-                   Package {} also links to native library `{}`.\n\
-                   {}\n\
+                   {}links to native library `{}`.\n\
                    \n\
-                   Try updating or pinning your dependencies to ensure that \
-                   native library `{}` is only linked once.",
+                   {}also links to native library `{}`.",
                   lib,
-                  prev, lib,
-                  describe_path(prev),
-                  pkg, lib,
-                  describe_path(pkg),
-                  lib)
+                  describe_path(prev), lib,
+                  describe_path(pkg), lib)
         }
         if !unit.pkg.manifest().targets().iter().any(|t| t.is_custom_build()) {
             bail!("package `{}` specifies that it links to `{}` but does not \
