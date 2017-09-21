@@ -237,7 +237,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     let p = profile::start(format!("preparing: {}/{}", unit.pkg,
                                    unit.target.name()));
     fingerprint::prepare_init(cx, unit)?;
-    cx.links.validate(unit)?;
+    cx.links.validate(&cx.resolve, unit)?;
 
     let (dirty, fresh, freshness) = if unit.profile.run_custom_build {
         custom_build::prepare(cx, unit)?
