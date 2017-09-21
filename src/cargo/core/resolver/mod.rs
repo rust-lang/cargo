@@ -114,6 +114,31 @@ struct Candidate {
 }
 
 impl Resolve {
+    /// Resolves one of the paths from the given dependent package up to
+    /// the root.
+    pub fn path_to_top(&self, pkg: &PackageId) -> Vec<&PackageId> {
+        let mut result = Vec::new();
+        let mut pkg = pkg;
+        loop {
+            match self.graph
+                  .get_nodes()
+                  .iter()
+                  .filter_map(|(pulling, pulled)|
+                              if pulled.contains(pkg) {
+                                  Some(pulling)
+                              } else {
+                                  None
+                              })
+                  .nth(0) {
+                Some(pulling) => {
+                    result.push(pulling);
+                    pkg = pulling;
+                },
+                None => break
+            }
+        }
+        result
+    }
     pub fn register_used_patches(&mut self,
                                  patches: &HashMap<Url, Vec<Summary>>) {
         for summary in patches.values().flat_map(|v| v) {
