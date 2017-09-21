@@ -162,7 +162,7 @@ impl hash::Hash for Package {
 }
 
 pub struct PackageSet<'cfg> {
-    packages: Vec<(PackageId, LazyCell<Package>)>,
+    packages: HashMap<PackageId, LazyCell<Package>>,
     sources: RefCell<SourceMap<'cfg>>,
 }
 
@@ -178,14 +178,13 @@ impl<'cfg> PackageSet<'cfg> {
     }
 
     pub fn package_ids<'a>(&'a self) -> Box<Iterator<Item=&'a PackageId> + 'a> {
-        Box::new(self.packages.iter().map(|&(ref p, _)| p))
+        Box::new(self.packages.keys())
     }
 
     pub fn get(&self, id: &PackageId) -> CargoResult<&Package> {
-        let slot = self.packages.iter().find(|p| p.0 == *id).ok_or_else(|| {
+        let slot = self.packages.get(id).ok_or_else(|| {
             internal(format!("couldn't find `{}` in package set", id))
         })?;
-        let slot = &slot.1;
         if let Some(pkg) = slot.borrow() {
             return Ok(pkg)
         }
