@@ -194,13 +194,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// all the units mentioned in `units`.
     pub fn probe_target_info(&mut self, units: &[Unit<'a>]) -> CargoResult<()> {
         let mut crate_types = BTreeSet::new();
+        let mut visited_units = HashSet::new();
         // pre-fill with `bin` for learning about tests (nothing may be
         // explicitly `bin`) as well as `rlib` as it's the coalesced version of
         // `lib` in the compiler and we're not sure which we'll see.
         crate_types.insert("bin".to_string());
         crate_types.insert("rlib".to_string());
         for unit in units {
-            self.visit_crate_type(unit, &mut crate_types)?;
+            self.visit_crate_type(unit, &mut crate_types, &mut visited_units)?;
         }
         debug!("probe_target_info: crate_types={:?}", crate_types);
         self.probe_target_info_kind(&crate_types, Kind::Target)?;
@@ -214,8 +215,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     fn visit_crate_type(&self,
                         unit: &Unit<'a>,
-                        crate_types: &mut BTreeSet<String>)
+                        crate_types: &mut BTreeSet<String>,
+                        visited_units: &mut HashSet<Unit<'a>>)
                         -> CargoResult<()> {
+        if !visited_units.insert(*unit) {
+            return Ok(());
+        }
         for target in unit.pkg.manifest().targets() {
             crate_types.extend(target.rustc_crate_types().iter().map(|s| {
                 if *s == "lib" {
@@ -226,7 +231,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }));
         }
         for dep in self.dep_targets(&unit)? {
-            self.visit_crate_type(&dep, crate_types)?;
+            self.visit_crate_type(&dep, crate_types, visited_units)?;
         }
         Ok(())
     }
