@@ -727,8 +727,8 @@ source's original crate is replaced.
 
 More information about overriding dependencies can be found in the [overriding
 dependencies][replace] section of the documentation and [RFC 1969] for the
-technical specification of this feature. Note that the `[patch]` feature will
-first become available in Rust 1.20, set to be released on 2017-08-31.
+technical specification of this feature. (Note that the `[patch]` feature will
+first become available in Rust 1.21, set to be released on 2017-10-12.)
 
 [RFC 1969]: https://github.com/rust-lang/rfcs/pull/1969
 [replace]: reference/specifying-dependencies.html#overriding-dependencies

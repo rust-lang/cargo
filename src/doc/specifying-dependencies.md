@@ -189,10 +189,10 @@ example:
   of the crate to avoid blocking on the bug fix getting merged.
 
 These scenarios are currently all solved with the [`[patch]` manifest
-section][patch-section]. Note that the `[patch]` feature is not yet currently
-stable and will be released on 2017-08-31. Historically some of these scenarios
-have been solved with [the `[replace]` section][replace-section], but we'll
-document the `[patch]` section here.
+section][patch-section]. (Note that the `[patch]` feature will first become
+available in Rust 1.21, set to be released on 2017-10-12.) Historically some of
+these scenarios have been solved with [the `[replace]` section][replace-section],
+but we'll document the `[patch]` section here.
 
 [patch-section]: manifest.html#the-patch-section
 [replace-section]: manifest.html#the-replace-section
