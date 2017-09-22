@@ -56,7 +56,7 @@ impl<N: Eq + Hash + Clone> Graph<N> {
 
         marks.insert(node.clone(), Mark::InProgress);
 
-        for child in self.nodes[node].iter() {
+        for child in &self.nodes[node] {
             self.visit(child, dst, marks);
         }
 
@@ -69,11 +69,17 @@ impl<N: Eq + Hash + Clone> Graph<N> {
     }
 }
 
+impl<N: Eq + Hash + Clone> Default for Graph<N> {
+    fn default() -> Graph<N> {
+        Graph::new()
+    }
+}
+
 impl<N: fmt::Display + Eq + Hash> fmt::Debug for Graph<N> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         writeln!(fmt, "Graph {{")?;
 
-        for (n, e) in self.nodes.iter() {
+        for (n, e) in &self.nodes {
             writeln!(fmt, "  - {}", n)?;
 
             for n in e.iter() {

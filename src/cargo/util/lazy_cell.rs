@@ -65,10 +65,8 @@ impl<T> LazyCell<T> {
     pub fn get_or_try_init<Error, F>(&self, init: F) -> Result<&T, Error>
         where F: FnOnce() -> Result<T, Error>
     {
-        if self.borrow().is_none() {
-            if self.fill(init()?).is_err() {
-                unreachable!();
-            }
+        if self.borrow().is_none() && self.fill(init()?).is_err() {
+            unreachable!();
         }
         Ok(self.borrow().unwrap())
     }

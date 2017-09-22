@@ -68,26 +68,26 @@ impl CargoError {
     }
 
     fn is_human(&self) -> bool {
-        match &self.0 {
-            &CargoErrorKind::Msg(_) => true,
-            &CargoErrorKind::TomlSer(_) => true,
-            &CargoErrorKind::TomlDe(_) => true,
-            &CargoErrorKind::Curl(_) => true,
-            &CargoErrorKind::HttpNot200(..) => true,
-            &CargoErrorKind::ProcessErrorKind(_) => true,
-            &CargoErrorKind::CrateRegistry(_) => true,
-            &CargoErrorKind::ParseSemver(_) |
-            &CargoErrorKind::Semver(_) |
-            &CargoErrorKind::Ignore(_) |
-            &CargoErrorKind::Io(_) |
-            &CargoErrorKind::SerdeJson(_) |
-            &CargoErrorKind::ParseInt(_) |
-            &CargoErrorKind::ParseBool(_) |
-            &CargoErrorKind::Parse(_) |
-            &CargoErrorKind::Git(_) |
-            &CargoErrorKind::Internal(_) |
-            &CargoErrorKind::CargoTestErrorKind(_) |
-            &CargoErrorKind::__Nonexhaustive { .. } => false
+        match self.0 {
+            CargoErrorKind::Msg(_) |
+            CargoErrorKind::TomlSer(_) |
+            CargoErrorKind::TomlDe(_) |
+            CargoErrorKind::Curl(_) |
+            CargoErrorKind::HttpNot200(..) |
+            CargoErrorKind::ProcessErrorKind(_) |
+            CargoErrorKind::CrateRegistry(_) => true,
+            CargoErrorKind::ParseSemver(_) |
+            CargoErrorKind::Semver(_) |
+            CargoErrorKind::Ignore(_) |
+            CargoErrorKind::Io(_) |
+            CargoErrorKind::SerdeJson(_) |
+            CargoErrorKind::ParseInt(_) |
+            CargoErrorKind::ParseBool(_) |
+            CargoErrorKind::Parse(_) |
+            CargoErrorKind::Git(_) |
+            CargoErrorKind::Internal(_) |
+            CargoErrorKind::CargoTestErrorKind(_) |
+            CargoErrorKind::__Nonexhaustive { .. } => false
         }
     }
 }
@@ -138,8 +138,8 @@ impl CargoTestError {
     }
 
     pub fn hint(&self) -> String {
-        match &self.test {
-            &Test::UnitTest(ref kind, ref name) => {
+        match self.test {
+            Test::UnitTest(ref kind, ref name) => {
                 match *kind {
                     TargetKind::Bench => format!("test failed, to rerun pass '--bench {}'", name),
                     TargetKind::Bin => format!("test failed, to rerun pass '--bin {}'", name),
@@ -150,7 +150,7 @@ impl CargoTestError {
                     _ => "test failed.".into()
                 }
             },
-            &Test::Doc => "test failed, to rerun pass '--doc'".into(),
+            Test::Doc => "test failed, to rerun pass '--doc'".into(),
             _ => "test failed.".into()
         }
     }

@@ -380,7 +380,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                             internal(&format!("compiler produced invalid json: `{}`", line))
                         })?;
 
-                        machine_message::emit(machine_message::FromCompiler {
+                        machine_message::emit(&machine_message::FromCompiler {
                             package_id: &package_id,
                             target: &target,
                             message: compiler_message,
@@ -525,7 +525,7 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         }
 
         if json_messages {
-            machine_message::emit(machine_message::Artifact {
+            machine_message::emit(&machine_message::Artifact {
                 package_id: &package_id,
                 target: &target,
                 profile: &profile,

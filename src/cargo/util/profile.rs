@@ -37,7 +37,7 @@ impl Drop for Profiler {
 
         let start = PROFILE_STACK.with(|stack| stack.borrow_mut().pop().unwrap());
         let duration = start.elapsed();
-        let duration_ms = duration.as_secs() * 1000 + (duration.subsec_nanos() / 1000000) as u64;
+        let duration_ms = duration.as_secs() * 1000 + u64::from(duration.subsec_nanos() / 1_000_000);
 
         let stack_len = PROFILE_STACK.with(|stack| stack.borrow().len());
         if stack_len == 0 {
