@@ -6,6 +6,10 @@ dist: trusty
 git:
   depth: 1
 
+cache:
+  directories:
+    - $HOME/.cargo/bin/
+
 matrix:
   include:
     - env: TARGET=x86_64-unknown-linux-gnu
@@ -22,7 +26,7 @@ matrix:
            ALT=i686-unknown-linux-gnu
       rust: nightly
       install:
-        - cargo install mdbook
+        - mdbook --help || cargo install mdbook --force
       script:
         - cargo test
         - cargo doc --no-deps
