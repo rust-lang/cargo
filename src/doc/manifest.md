@@ -184,6 +184,9 @@ license-file = "..."
 # - There are also maintenance-related badges basesed on isitmaintained.com
 #   which state the issue resolution time, percent of open issues, and future
 #   maintenance intentions.
+#
+# If a `repository` key is required, this refers to a Github repository in
+# `user/repo` format.
 [badges]
 
 # Appveyor: `repository` is required. `branch` is optional; default is `master`
