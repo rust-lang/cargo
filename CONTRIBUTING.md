@@ -18,6 +18,10 @@ installed locally, ignore the cross-compile test failures, or disable them by
 using `CFG_DISABLE_CROSS_TESTS=1 cargo test`. Note that some tests are enabled
 only on nightly toolchain.
 
+## Minimal version of Rust
+
+Cargo must compile on stable Rust. Code added to Cargo is encouraged to use
+the latest stable features of the language and `stdlib`.
 
 ## Contributing to the Docs
 
