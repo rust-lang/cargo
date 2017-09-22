@@ -188,7 +188,7 @@ license-file = "..."
 #   which state the issue resolution time, percent of open issues, and future
 #   maintenance intentions.
 #
-# If a `repository` key is required, this refers to a Github repository in
+# If a `repository` key is required, this refers to a repository in
 # `user/repo` format.
 [badges]
 
