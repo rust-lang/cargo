@@ -297,7 +297,14 @@ impl hash::Hash for Fingerprint {
             memoized_hash: _,
             ref rustflags,
         } = *self;
-        (rustc, features, target, profile, deps, local, rustflags).hash(h)
+        (rustc, features, target, profile, local, rustflags).hash(h);
+
+        h.write_usize(deps.len());
+        for &(ref name, ref fingerprint) in deps {
+            name.hash(h);
+            // use memoized dep hashes to avoid exponential blowup
+            h.write_u64(Fingerprint::hash(fingerprint));
+        }
     }
 }
 
