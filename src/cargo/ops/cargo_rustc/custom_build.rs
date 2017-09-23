@@ -270,7 +270,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
             let library_paths = parsed_output.library_paths.iter().map(|l| {
                 l.display().to_string()
             }).collect::<Vec<_>>();
-            machine_message::emit(machine_message::BuildScript {
+            machine_message::emit(&machine_message::BuildScript {
                 package_id: &id,
                 linked_libs: &parsed_output.library_links,
                 linked_paths: &library_paths,

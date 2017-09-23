@@ -2,11 +2,10 @@ use std;
 use std::error::Error;
 
 use error_chain::ChainedError;
-
 use util::Config;
 use util::errors::{CargoError, CargoErrorKind, CargoResult};
-
 use git2;
+
 fn maybe_spurious<E, EKind>(err: &E) -> bool
     where E: ChainedError<ErrorKind=EKind> + 'static {
     //Error inspection in non-verbose mode requires inspecting the
@@ -18,7 +17,7 @@ fn maybe_spurious<E, EKind>(err: &E) -> bool
     //the borrow's actual lifetime for purposes of downcasting and
     //inspecting the error chain
     unsafe fn extend_lifetime(r: &Error) -> &(Error + 'static) {
-        std::mem::transmute::<&Error, &Error>(r)    
+        std::mem::transmute::<&Error, &Error>(r)
     }
 
     for e in err.iter() {
@@ -32,7 +31,7 @@ fn maybe_spurious<E, EKind>(err: &E) -> bool
                         _ => ()
                     }
                 }
-                &CargoErrorKind::Curl(ref curl_err) 
+                &CargoErrorKind::Curl(ref curl_err)
                     if curl_err.is_couldnt_connect() ||
                         curl_err.is_couldnt_resolve_proxy() ||
                         curl_err.is_couldnt_resolve_host() ||
@@ -55,7 +54,7 @@ fn maybe_spurious<E, EKind>(err: &E) -> bool
 /// Retry counts provided by Config object `net.retry`. Config shell outputs
 /// a warning on per retry.
 ///
-/// Closure must return a CargoResult.
+/// Closure must return a `CargoResult`.
 ///
 /// # Examples
 ///

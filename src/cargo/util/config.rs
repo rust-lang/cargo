@@ -386,7 +386,7 @@ impl Config {
         let cfg_verbose = self.get_bool("term.verbose").unwrap_or(None).map(|v| v.val);
         let cfg_color = self.get_string("term.color").unwrap_or(None).map(|v| v.val);
 
-        let color = color.as_ref().or(cfg_color.as_ref());
+        let color = color.as_ref().or_else(|| cfg_color.as_ref());
 
         let verbosity = match (verbose, cfg_verbose, quiet) {
             (Some(true), _, None) |
@@ -449,12 +449,12 @@ impl Config {
                               path.display())
             })?;
             let toml = cargo_toml::parse(&contents,
-                                         &path,
+                                         path,
                                          self).chain_err(|| {
                 format!("could not parse TOML configuration in `{}`",
                         path.display())
             })?;
-            let value = CV::from_toml(&path, toml).chain_err(|| {
+            let value = CV::from_toml(path, toml).chain_err(|| {
                 format!("failed to load TOML configuration from `{}`",
                         path.display())
             })?;
@@ -500,12 +500,12 @@ impl Config {
         };
 
         let registry = cfg.entry("registry".into())
-                          .or_insert(CV::Table(HashMap::new(), PathBuf::from(".")));
+                          .or_insert_with(|| CV::Table(HashMap::new(), PathBuf::from(".")));
 
         match (registry, value) {
             (&mut CV::Table(ref mut old, _), CV::Table(ref mut new, _)) => {
                 let new = mem::replace(new, HashMap::new());
-                for (key, value) in new.into_iter() {
+                for (key, value) in new {
                     old.insert(key, value);
                 }
             }
@@ -535,7 +535,7 @@ impl Config {
     /// as a path.
     fn get_tool(&self, tool: &str) -> CargoResult<PathBuf> {
         self.maybe_get_tool(tool)
-            .map(|t| t.unwrap_or(PathBuf::from(tool)))
+            .map(|t| t.unwrap_or_else(|| PathBuf::from(tool)))
     }
 
     pub fn jobserver_from_env(&self) -> Option<&jobserver::Client> {
@@ -665,7 +665,7 @@ impl ConfigValue {
             }
             (&mut CV::Table(ref mut old, _), CV::Table(ref mut new, _)) => {
                 let new = mem::replace(new, HashMap::new());
-                for (key, value) in new.into_iter() {
+                for (key, value) in new {
                     match old.entry(key.clone()) {
                         Occupied(mut entry) => {
                             let path = value.definition_path().to_path_buf();
