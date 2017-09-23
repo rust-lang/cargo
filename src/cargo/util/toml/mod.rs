@@ -694,19 +694,19 @@ impl TomlManifest {
             bail!("virtual manifests do not define [package]");
         }
         if me.lib.is_some() {
-            bail!("virtual manifests do not specifiy [lib]");
+            bail!("virtual manifests do not specify [lib]");
         }
         if me.bin.is_some() {
-            bail!("virtual manifests do not specifiy [[bin]]");
+            bail!("virtual manifests do not specify [[bin]]");
         }
         if me.example.is_some() {
-            bail!("virtual manifests do not specifiy [[example]]");
+            bail!("virtual manifests do not specify [[example]]");
         }
         if me.test.is_some() {
-            bail!("virtual manifests do not specifiy [[test]]");
+            bail!("virtual manifests do not specify [[test]]");
         }
         if me.bench.is_some() {
-            bail!("virtual manifests do not specifiy [[bench]]");
+            bail!("virtual manifests do not specify [[bench]]");
         }
 
         let mut nested_paths = Vec::new();
