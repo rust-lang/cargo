@@ -7,8 +7,8 @@ pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;
 }
 
-pub fn emit<T: Message>(t: T) {
-    let mut json: Value = serde_json::to_value(&t).unwrap();
+pub fn emit<T: Message>(t: &T) {
+    let mut json: Value = serde_json::to_value(t).unwrap();
     json["reason"] = json!(t.reason());
     println!("{}", json);
 }

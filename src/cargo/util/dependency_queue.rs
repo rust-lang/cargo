@@ -52,6 +52,12 @@ impl Freshness {
     }
 }
 
+impl<K: Hash + Eq + Clone, V> Default for DependencyQueue<K, V> {
+    fn default() -> DependencyQueue<K, V> {
+        DependencyQueue::new()
+    }
+}
+
 impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
     /// Creates a new dependency queue with 0 packages.
     pub fn new() -> DependencyQueue<K, V> {
