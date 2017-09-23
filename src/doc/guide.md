@@ -422,7 +422,7 @@ information.
 
 ## Build cache
 
-Cargo shares build artifacts among all the packages of a single workspaces.
+Cargo shares build artifacts among all the packages of a single workspace.
 Today, Cargo does not share build results across different workspaces, but 
 a similar result can be achieved by using a third party tool, [sccache].
 
