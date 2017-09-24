@@ -175,12 +175,18 @@ license = "..."
 # (similar to the readme key).
 license-file = "..."
 
-# Optional specification of badges to be displayed on crates.io. The badges
-# pertaining to build status that are currently available are Appveyor, CircleCI,
-# GitLab, and TravisCI. Available badges pertaining to code test coverage are
-# Codecov and Coveralls. There are also maintenance-related badges which state
-# the issue resolution time, percent of open issues, and future maintenance
-# intentions.
+# Optional specification of badges to be displayed on crates.io.
+#
+# - The badges pertaining to build status that are currently available are
+#   Appveyor, CircleCI, GitLab, and TravisCI.
+# - Available badges pertaining to code test coverage are Codecov and
+#   Coveralls.
+# - There are also maintenance-related badges basesed on isitmaintained.com
+#   which state the issue resolution time, percent of open issues, and future
+#   maintenance intentions.
+#
+# If a `repository` key is required, this refers to a repository in
+# `user/repo` format.
 [badges]
 
 # Appveyor: `repository` is required. `branch` is optional; default is `master`
@@ -189,7 +195,7 @@ license-file = "..."
 # want to use that instead.
 appveyor = { repository = "...", branch = "master", service = "github" }
 
-# Circle CI: `repository` is required. `branch` is optiona; default is `master`
+# Circle CI: `repository` is required. `branch` is optional; default is `master`
 circle-ci = { repository = "...", branch = "master" }
 
 # GitLab: `repository` is required. `branch` is optional; default is `master`
