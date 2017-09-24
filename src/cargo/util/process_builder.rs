@@ -246,6 +246,16 @@ impl ProcessBuilder {
         command
     }
 
+    pub fn output_build_plan(&self) -> () {
+        println!("        'program': {:?},", self.program);
+        println!("        'cwd': {:?},", self.get_cwd().unwrap());
+        println!("        'args': [");
+        for arg in self.args.iter() {
+            println!("            '{}',", escape(arg.to_string_lossy()));
+        }
+        println!("        ],");
+    }
+
     fn debug_string(&self) -> String {
         let mut program = format!("{}", self.program.to_string_lossy());
         for arg in &self.args {
