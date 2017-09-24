@@ -53,7 +53,7 @@ impl<'de> de::Deserialize<'de> for PackageId {
             Some(s) => s,
             None => return Err(de::Error::custom("invalid serialized PackageId")),
         };
-        let url = if url.starts_with("(") && url.ends_with(")") {
+        let url = if url.starts_with('(') && url.ends_with(')') {
             &url[1..url.len() - 1]
         } else {
             return Err(de::Error::custom("invalid serialized PackageId"))
@@ -134,7 +134,7 @@ impl PackageId {
     }
 
     pub fn stable_hash<'a>(&'a self, workspace: &'a Path) -> PackageIdStableHash<'a> {
-        PackageIdStableHash(&self, workspace)
+        PackageIdStableHash(self, workspace)
     }
 }
 

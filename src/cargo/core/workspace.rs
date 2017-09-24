@@ -163,7 +163,7 @@ impl<'cfg> Workspace<'cfg> {
             };
             ws.members.push(ws.current_manifest.clone());
         }
-        return Ok(ws)
+        Ok(ws)
     }
 
     /// Returns the current package of this workspace.
@@ -283,11 +283,11 @@ impl<'cfg> Workspace<'cfg> {
                 .join(root_link)
                 .join("Cargo.toml");
             debug!("find_root - pointer {}", path.display());
-            return Ok(paths::normalize_path(&path))
+            Ok(paths::normalize_path(&path))
         };
 
         {
-            let current = self.packages.load(&manifest_path)?;
+            let current = self.packages.load(manifest_path)?;
             match *current.workspace_config() {
                 WorkspaceConfig::Root { .. } => {
                     debug!("find_root - is root {}", manifest_path.display());
@@ -392,13 +392,10 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         let root = root_manifest.parent().unwrap();
-        match *self.packages.load(root_manifest)?.workspace_config() {
-            WorkspaceConfig::Root { ref members, ref exclude } => {
-                if is_excluded(members, exclude, root, &manifest_path) {
-                    return Ok(())
-                }
+        if let WorkspaceConfig::Root { ref members, ref exclude } = *self.packages.load(root_manifest)?.workspace_config() {
+            if is_excluded(members, exclude, root, &manifest_path) {
+                return Ok(())
             }
-            _ => {}
         }
 
         debug!("find_members - {}", manifest_path.display());
@@ -624,7 +621,7 @@ impl<'cfg> Packages<'cfg> {
             Entry::Vacant(v) => {
                 let source_id = SourceId::for_path(key)?;
                 let (manifest, _nested_paths) =
-                    read_manifest(&manifest_path, &source_id, self.config)?;
+                    read_manifest(manifest_path, &source_id, self.config)?;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {
                         MaybePackage::Package(Package::new(manifest,

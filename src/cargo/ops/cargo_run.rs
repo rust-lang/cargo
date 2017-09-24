@@ -53,13 +53,13 @@ pub fn run(ws: &Workspace,
     let compile = ops::compile(ws, options)?;
     assert_eq!(compile.binaries.len(), 1);
     let exe = &compile.binaries[0];
-    let exe = match util::without_prefix(&exe, config.cwd()) {
+    let exe = match util::without_prefix(exe, config.cwd()) {
         Some(path) if path.file_name() == Some(path.as_os_str())
                    => Path::new(".").join(path).to_path_buf(),
         Some(path) => path.to_path_buf(),
         None => exe.to_path_buf(),
     };
-    let mut process = compile.target_process(exe, &pkg)?;
+    let mut process = compile.target_process(exe, pkg)?;
     process.args(args).cwd(config.cwd());
 
     config.shell().status("Running", process.to_string())?;

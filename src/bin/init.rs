@@ -54,7 +54,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
 
     let Options { flag_bin, flag_lib, arg_path, flag_name, flag_vcs, .. } = options;
 
-    let path = &arg_path.unwrap_or(format!("."));
+    let path = &arg_path.unwrap_or_else(|| String::from("."));
     let opts = ops::NewOptions::new(flag_vcs,
                                      flag_bin,
                                      flag_lib,
@@ -62,7 +62,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                      flag_name.as_ref().map(|s| s.as_ref()));
 
     let opts_lib = opts.lib;
-    ops::init(opts, config)?;
+    ops::init(&opts, config)?;
 
     config.shell().status("Created", format!("{} project",
                                              if opts_lib { "library" }

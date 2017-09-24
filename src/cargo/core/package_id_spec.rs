@@ -17,7 +17,7 @@ pub struct PackageIdSpec {
 
 impl PackageIdSpec {
     pub fn parse(spec: &str) -> CargoResult<PackageIdSpec> {
-        if spec.contains("/") {
+        if spec.contains('/') {
             if let Ok(url) = spec.to_url() {
                 return PackageIdSpec::from_url(url);
             }
@@ -117,9 +117,10 @@ impl PackageIdSpec {
     pub fn matches(&self, package_id: &PackageId) -> bool {
         if self.name() != package_id.name() { return false }
 
-        match self.version {
-            Some(ref v) => if v != package_id.version() { return false },
-            None => {}
+        if let Some(ref v) = self.version {
+            if v != package_id.version() {
+                return false;
+            }
         }
 
         match self.url {
@@ -148,20 +149,20 @@ impl PackageIdSpec {
                                       self.name(), self);
                 let mut vec = vec![ret, other];
                 vec.extend(ids);
-                minimize(&mut msg, vec, self);
+                minimize(&mut msg, &vec, self);
                 Err(msg.into())
             }
             None => Ok(ret)
         };
 
         fn minimize(msg: &mut String,
-                    ids: Vec<&PackageId>,
+                    ids: &[&PackageId],
                     spec: &PackageIdSpec) {
             let mut version_cnt = HashMap::new();
-            for id in ids.iter() {
+            for id in ids {
                 *version_cnt.entry(id.version()).or_insert(0) += 1;
             }
-            for id in ids.iter() {
+            for id in ids {
                 if version_cnt[id.version()] == 1 {
                     msg.push_str(&format!("\n  {}:{}", spec.name(),
                                           id.version()));
@@ -184,18 +185,15 @@ impl fmt::Display for PackageIdSpec {
                 } else {
                     write!(f, "{}", url)?;
                 }
-                if url.path_segments().unwrap().next_back().unwrap() != &self.name {
+                if url.path_segments().unwrap().next_back().unwrap() != self.name {
                     printed_name = true;
                     write!(f, "#{}", self.name)?;
                 }
             }
             None => { printed_name = true; write!(f, "{}", self.name)? }
         }
-        match self.version {
-            Some(ref v) => {
-                write!(f, "{}{}", if printed_name {":"} else {"#"}, v)?;
-            }
-            None => {}
+        if let Some(ref v) = self.version {
+            write!(f, "{}{}", if printed_name {":"} else {"#"}, v)?;
         }
         Ok(())
     }

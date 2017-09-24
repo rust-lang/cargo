@@ -143,9 +143,9 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         match *cfg {
             Cfg::Name(ref n) => { cfg_map.insert(n.clone(), None); }
             Cfg::KeyPair(ref k, ref v) => {
-                match *cfg_map.entry(k.clone()).or_insert(Some(Vec::new())) {
-                    Some(ref mut values) => values.push(v.clone()),
-                    None => { /* ... */ }
+                if let Some(ref mut values) = *cfg_map.entry(k.clone())
+                                                      .or_insert_with(|| Some(Vec::new())) {
+                    values.push(v.clone())
                 }
             }
         }
@@ -174,7 +174,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         }).collect::<Vec<_>>()
     };
     let pkg_name = unit.pkg.to_string();
-    let build_state = cx.build_state.clone();
+    let build_state = Arc::clone(&cx.build_state);
     let id = unit.pkg.package_id().clone();
     let (output_file, err_file) = {
         let build_output_parent = build_output.parent().unwrap();
@@ -182,7 +182,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         let err_file = build_output_parent.join("stderr");
         (output_file, err_file)
     };
-    let all = (id.clone(), pkg_name.clone(), build_state.clone(),
+    let all = (id.clone(), pkg_name.clone(), Arc::clone(&build_state),
                output_file.clone());
     let build_scripts = super::load_build_deps(cx, unit);
     let kind = unit.kind;
@@ -398,11 +398,7 @@ impl BuildOutput {
         let mut flags_iter = value.split(|c: char| c.is_whitespace())
                                   .filter(|w| w.chars().any(|c| !c.is_whitespace()));
         let (mut library_paths, mut library_links) = (Vec::new(), Vec::new());
-        loop {
-            let flag = match flags_iter.next() {
-                Some(f) => f,
-                None => break
-            };
+        while let Some(flag) = flags_iter.next() {
             if flag != "-l" && flag != "-L" {
                 bail!("Only `-l` and `-L` flags are allowed in {}: `{}`",
                       whence, value)

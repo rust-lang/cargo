@@ -29,7 +29,7 @@ pub fn package(ws: &Workspace,
                opts: &PackageOpts) -> CargoResult<Option<FileLock>> {
     let pkg = ws.current()?;
     let config = ws.config();
-    if pkg.manifest().features().activated().len() > 0 {
+    if !pkg.manifest().features().activated().is_empty() {
         bail!("cannot package or publish crates which activate nightly-only \
                cargo features")
     }
@@ -42,12 +42,12 @@ pub fn package(ws: &Workspace,
         check_metadata(pkg, config)?;
     }
 
-    verify_dependencies(&pkg)?;
+    verify_dependencies(pkg)?;
 
     if opts.list {
         let root = pkg.root();
-        let mut list: Vec<_> = src.list_files(&pkg)?.iter().map(|file| {
-            util::without_prefix(&file, &root).unwrap().to_path_buf()
+        let mut list: Vec<_> = src.list_files(pkg)?.iter().map(|file| {
+            util::without_prefix(file, root).unwrap().to_path_buf()
         }).collect();
         list.sort();
         for file in list.iter() {
@@ -57,7 +57,7 @@ pub fn package(ws: &Workspace,
     }
 
     if !opts.allow_dirty {
-        check_not_dirty(&pkg, &src)?;
+        check_not_dirty(pkg, &src)?;
     }
 
     let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
@@ -118,7 +118,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
         if !things.is_empty() {
             things.push_str(" or ");
         }
-        things.push_str(&missing.last().unwrap());
+        things.push_str(missing.last().unwrap());
 
         config.shell().warn(
             &format!("manifest has no {things}.\n\
@@ -131,12 +131,10 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
 // check that the package dependencies are safe to deploy.
 fn verify_dependencies(pkg: &Package) -> CargoResult<()> {
     for dep in pkg.dependencies() {
-        if dep.source_id().is_path() {
-            if !dep.specified_req() {
-                bail!("all path dependencies must have a version specified \
-                       when packaging.\ndependency `{}` does not specify \
-                       a version.", dep.name())
-            }
+        if dep.source_id().is_path() && !dep.specified_req() {
+            bail!("all path dependencies must have a version specified \
+                    when packaging.\ndependency `{}` does not specify \
+                    a version.", dep.name())
         }
     }
     Ok(())
@@ -202,7 +200,7 @@ fn tar(ws: &Workspace,
     let config = ws.config();
     let root = pkg.root();
     for file in src.list_files(pkg)?.iter() {
-        let relative = util::without_prefix(&file, &root).unwrap();
+        let relative = util::without_prefix(file, root).unwrap();
         check_filename(relative)?;
         let relative = relative.to_str().ok_or_else(|| {
             format!("non-utf8 path in source directory: {}",
@@ -334,7 +332,7 @@ fn check_filename(file: &Path) -> CargoResult<()> {
         }
     };
     let bad_chars = ['/', '\\', '<', '>', ':', '"', '|', '?', '*'];
-    for c in bad_chars.iter().filter(|c| name.contains(**c)) {
+    if let Some(c) = bad_chars.iter().find(|c| name.contains(**c)) {
         bail!("cannot package a filename with a special character `{}`: {}",
               c, file.display())
     }

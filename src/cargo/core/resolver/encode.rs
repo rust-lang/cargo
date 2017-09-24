@@ -34,7 +34,7 @@ impl EncodableResolve {
         let path_deps = build_path_deps(ws);
 
         let packages = {
-            let mut packages = self.package.unwrap_or(Vec::new());
+            let mut packages = self.package.unwrap_or_default();
             if let Some(root) = self.root {
                 packages.insert(0, root);
             }
@@ -57,7 +57,7 @@ impl EncodableResolve {
                     return Err(internal(format!("package `{}` is specified twice in the lockfile",
                                                 pkg.name)));
                 }
-                let id = match pkg.source.as_ref().or(path_deps.get(&pkg.name)) {
+                let id = match pkg.source.as_ref().or_else(|| path_deps.get(&pkg.name)) {
                     // We failed to find a local package in the workspace.
                     // It must have been removed and should be ignored.
                     None => continue,
@@ -90,7 +90,7 @@ impl EncodableResolve {
                 g.add(id.clone(), &[]);
             }
 
-            for &(ref id, ref pkg) in live_pkgs.values() {
+            for &(ref id, pkg) in live_pkgs.values() {
                 let deps = match pkg.dependencies {
                     Some(ref deps) => deps,
                     None => continue
@@ -107,7 +107,7 @@ impl EncodableResolve {
 
         let replacements = {
             let mut replacements = HashMap::new();
-            for &(ref id, ref pkg) in live_pkgs.values() {
+            for &(ref id, pkg) in live_pkgs.values() {
                 if let Some(ref replace) = pkg.replace {
                     assert!(pkg.dependencies.is_none());
                     if let Some(replace_id) = lookup_id(replace)? {
@@ -118,7 +118,7 @@ impl EncodableResolve {
             replacements
         };
 
-        let mut metadata = self.metadata.unwrap_or(BTreeMap::new());
+        let mut metadata = self.metadata.unwrap_or_default();
 
         // Parse out all package checksums. After we do this we can be in a few
         // situations:
@@ -163,7 +163,7 @@ impl EncodableResolve {
 
         let mut unused_patches = Vec::new();
         for pkg in self.patch.unused {
-            let id = match pkg.source.as_ref().or(path_deps.get(&pkg.name)) {
+            let id = match pkg.source.as_ref().or_else(|| path_deps.get(&pkg.name)) {
                 Some(src) => PackageId::new(&pkg.name, &pkg.version, src)?,
                 None => continue,
             };
@@ -272,7 +272,7 @@ impl FromStr for EncodablePackageId {
         })?;
         let source_id = match s.next() {
             Some(s) => {
-                if s.starts_with("(") && s.ends_with(")") {
+                if s.starts_with('(') && s.ends_with(')') {
                     Some(SourceId::from_url(&s[1..s.len() - 1])?)
                 } else {
                     bail!("invalid serialized PackageId")
@@ -345,10 +345,10 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
                             checksum.to_string());
         }
 
-        let metadata = if metadata.len() == 0 {None} else {Some(metadata)};
+        let metadata = if metadata.is_empty() { None } else { Some(metadata) };
 
         let root = match root {
-            Some(root) if self.use_root_key => Some(encodable_resolve_node(&root, self.resolve)),
+            Some(root) if self.use_root_key => Some(encodable_resolve_node(root, self.resolve)),
             _ => None,
         };
 

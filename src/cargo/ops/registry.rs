@@ -45,7 +45,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         bail!("some crates cannot be published.\n\
                `{}` is marked as unpublishable", pkg.name());
     }
-    if pkg.manifest().patch().len() > 0 {
+    if !pkg.manifest().patch().is_empty() {
         bail!("published crates cannot contain [patch] sections");
     }
 
@@ -265,10 +265,10 @@ fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
 ///
 /// * cargo's `http.proxy`
 /// * git's `http.proxy`
-/// * http_proxy env var
-/// * HTTP_PROXY env var
-/// * https_proxy env var
-/// * HTTPS_PROXY env var
+/// * `http_proxy` env var
+/// * `HTTP_PROXY` env var
+/// * `https_proxy` env var
+/// * `HTTPS_PROXY` env var
 pub fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     if http_proxy(config)?.is_some() {
         Ok(true)
@@ -286,7 +286,7 @@ pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
 }
 
 pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
-    let RegistryConfig { index: _, token: old_token } = registry_configuration(config)?;
+    let RegistryConfig { token: old_token, .. } = registry_configuration(config)?;
     if let Some(old_token) = old_token {
         if old_token == token {
             return Ok(());
@@ -432,12 +432,12 @@ pub fn search(query: &str,
     }
 
     let search_max_limit = 100;
-    if total_crates > limit as u32 && limit < search_max_limit {
+    if total_crates > u32::from(limit) && limit < search_max_limit {
         println!("... and {} crates more (use --limit N to see more)",
-                 total_crates - limit as u32);
-    } else if total_crates > limit as u32 && limit >= search_max_limit {
+                 total_crates - u32::from(limit));
+    } else if total_crates > u32::from(limit) && limit >= search_max_limit {
         println!("... and {} crates more (go to http://crates.io/search?q={} to see more)",
-                 total_crates - limit as u32,
+                 total_crates - u32::from(limit),
                  percent_encode(query.as_bytes(), QUERY_ENCODE_SET));
     }
 

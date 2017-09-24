@@ -225,11 +225,11 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
         }
     };
 
-    if let Some(r) = try_execute_builtin_command(&config, &args) {
+    if let Some(r) = try_execute_builtin_command(config, &args) {
         return r;
     }
 
-    let alias_list = aliased_command(&config, &args[1])?;
+    let alias_list = aliased_command(config, &args[1])?;
     let args = match alias_list {
         Some(alias_command) => {
             let chain = args.iter()
@@ -238,7 +238,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
                 .chain(args.iter().skip(2))
                 .map(|s| s.to_string())
                 .collect::<Vec<_>>();
-            if let Some(r) = try_execute_builtin_command(&config, &chain) {
+            if let Some(r) = try_execute_builtin_command(config, &chain) {
                 return r;
             } else {
                 chain
@@ -266,7 +266,7 @@ fn try_execute_builtin_command(config: &Config, args: &[String]) -> Option<CliRe
     None
 }
 
-fn aliased_command(config: &Config, command: &String) -> CargoResult<Option<Vec<String>>> {
+fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<String>>> {
     let alias_name = format!("alias.{}", command);
     let mut result = Ok(None);
     match config.get_string(&alias_name) {
@@ -298,7 +298,7 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
     // Only consider candidates with a lev_distance of 3 or less so we don't
     // suggest out-of-the-blue options.
     let mut filtered = cmds.iter()
-        .map(|c| (lev_distance(&c, cmd), c))
+        .map(|c| (lev_distance(c, cmd), c))
         .filter(|&(d, _)| d < 4)
         .collect::<Vec<_>>();
     filtered.sort_by(|a, b| a.0.cmp(&b.0));

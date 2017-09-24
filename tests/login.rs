@@ -24,7 +24,7 @@ const CONFIG_FILE: &str = r#"
 fn setup_old_credentials() {
     let config = cargo_home().join("config");
     t!(fs::create_dir_all(config.parent().unwrap()));
-    t!(t!(File::create(&config)).write_all(&CONFIG_FILE.as_bytes()));
+    t!(t!(File::create(&config)).write_all(CONFIG_FILE.as_bytes()));
 }
 
 fn setup_new_credentials() {
@@ -61,7 +61,7 @@ fn login_with_old_credentials() {
 
     let mut contents = String::new();
     File::open(&config).unwrap().read_to_string(&mut contents).unwrap();
-    assert!(CONFIG_FILE == &contents);
+    assert_eq!(CONFIG_FILE, contents);
 
     let credentials = cargo_home().join("credentials");
     assert_that(&credentials, existing_file());
@@ -124,5 +124,5 @@ fn new_credentials_is_used_instead_old() {
 
     let config = Config::new(Shell::new(), cargo_home(), cargo_home());
     let token = config.get_string("registry.token").unwrap().map(|p| p.val);
-    assert!(token.unwrap() == TOKEN);
+    assert_eq!(token.unwrap(), TOKEN);
 }

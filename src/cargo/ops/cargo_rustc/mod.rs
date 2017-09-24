@@ -100,7 +100,7 @@ pub trait Executor: Send + Sync + 'static {
     }
 }
 
-/// A DefaultExecutor calls rustc without doing anything else. It is Cargo's
+/// A `DefaultExecutor` calls rustc without doing anything else. It is Cargo's
 /// default behaviour.
 #[derive(Copy, Clone)]
 pub struct DefaultExecutor;
@@ -150,7 +150,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         // part of this, that's all done next as part of the `execute`
         // function which will run everything in order with proper
         // parallelism.
-        compile(&mut cx, &mut queue, unit, exec.clone())?;
+        compile(&mut cx, &mut queue, unit, Arc::clone(&exec))?;
     }
 
     // Now that we've figured out everything that we're going to do, do it!
@@ -199,7 +199,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                 }));
         }
 
-        let feats = cx.resolve.features(&unit.pkg.package_id());
+        let feats = cx.resolve.features(unit.pkg.package_id());
         cx.compilation.cfgs.entry(unit.pkg.package_id().clone())
             .or_insert_with(HashSet::new)
             .extend(feats.iter().map(|feat| format!("feature=\"{}\"", feat)));
@@ -237,7 +237,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     let p = profile::start(format!("preparing: {}/{}", unit.pkg,
                                    unit.target.name()));
     fingerprint::prepare_init(cx, unit)?;
-    cx.links.validate(&cx.resolve, unit)?;
+    cx.links.validate(cx.resolve, unit)?;
 
     let (dirty, fresh, freshness) = if unit.profile.run_custom_build {
         custom_build::prepare(cx, unit)?
@@ -249,7 +249,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         let work = if unit.profile.doc {
             rustdoc(cx, unit)?
         } else {
-            rustc(cx, unit, exec.clone())?
+            rustc(cx, unit, Arc::clone(&exec))?
         };
         // Need to link targets on both the dirty and fresh
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
@@ -275,8 +275,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
 fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                    unit: &Unit<'a>,
                    exec: Arc<Executor>) -> CargoResult<Work> {
-    let crate_types = unit.target.rustc_crate_types();
-    let mut rustc = prepare_rustc(cx, crate_types, unit)?;
+    let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
 
     let name = unit.pkg.name().to_string();
 
@@ -296,7 +295,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let kind = unit.kind;
 
     // Prepare the native lib state (extra -L and -l flags)
-    let build_state = cx.build_state.clone();
+    let build_state = Arc::clone(&cx.build_state);
     let current_id = unit.pkg.package_id().clone();
     let build_deps = load_build_deps(cx, unit);
 
@@ -323,8 +322,8 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
 
-    exec.init(cx, &unit);
-    let exec = exec.clone();
+    exec.init(cx, unit);
+    let exec = Arc::clone(&exec);
 
     let root_output = cx.target_root().to_path_buf();
 
@@ -352,7 +351,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             // If there is both an rmeta and rlib, rustc will prefer to use the
             // rlib, even if it is older. Therefore, we must delete the rlib to
             // force using the new rmeta.
-            if dsts[0].extension() == Some(&OsStr::new("rmeta")) {
+            if dsts[0].extension() == Some(OsStr::new("rmeta")) {
                 dsts.push(root.join(filename).with_extension("rlib"));
             }
             for dst in &dsts {
@@ -469,7 +468,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     }
 }
 
-/// Link the compiled target (often of form foo-{metadata_hash}) to the
+/// Link the compiled target (often of form `foo-{metadata_hash}`) to the
 /// final target. This must happen during both "Fresh" and "Compile"
 fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                           unit: &Unit<'a>,
@@ -551,7 +550,7 @@ fn add_plugin_deps(rustc: &mut ProcessBuilder,
                    root_output: &PathBuf)
                    -> CargoResult<()> {
     let var = util::dylib_path_envvar();
-    let search_path = rustc.get_env(var).unwrap_or(OsString::new());
+    let search_path = rustc.get_env(var).unwrap_or_default();
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for id in build_scripts.plugins.iter() {
         let key = (id.clone(), Kind::Host);
@@ -600,11 +599,11 @@ fn filter_dynamic_search_path<'a, I>(paths :I, root_output: &PathBuf) -> Vec<Pat
 }
 
 fn prepare_rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
-                           crate_types: Vec<&str>,
+                           crate_types: &[&str],
                            unit: &Unit<'a>) -> CargoResult<ProcessBuilder> {
     let mut base = cx.compilation.rustc_process(unit.pkg)?;
     base.inherit_jobserver(&cx.jobserver);
-    build_base_args(cx, &mut base, unit, &crate_types);
+    build_base_args(cx, &mut base, unit, crate_types);
     build_deps_args(&mut base, cx, unit)?;
     Ok(base)
 }
@@ -646,7 +645,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     rustdoc.args(&cx.rustdocflags_args(unit)?);
 
     let name = unit.pkg.name().to_string();
-    let build_state = cx.build_state.clone();
+    let build_state = Arc::clone(&cx.build_state);
     let key = (unit.pkg.package_id().clone(), unit.kind);
 
     Ok(Work::new(move |state| {
@@ -691,7 +690,7 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let Profile {
         ref opt_level, lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, overflow_checks, rpath, test, doc: _doc,
-        run_custom_build, ref panic, rustdoc_args: _, check,
+        run_custom_build, ref panic, check, ..
     } = *unit.profile;
     assert!(!run_custom_build);
 
@@ -727,7 +726,7 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let prefer_dynamic = (unit.target.for_host() &&
                           !unit.target.is_custom_build()) ||
                          (crate_types.contains(&"dylib") &&
-                          cx.ws.members().find(|&p| p != unit.pkg).is_some());
+                          cx.ws.members().any(|p| p != unit.pkg));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
@@ -756,12 +755,10 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     // exclusive.
     if unit.target.can_lto() && lto && !unit.target.for_host() {
         cmd.args(&["-C", "lto"]);
-    } else {
+    } else if let Some(n) = codegen_units {
         // There are some restrictions with LTO and codegen-units, so we
         // only add codegen units when LTO is not used.
-        if let Some(n) = codegen_units {
-            cmd.arg("-C").arg(&format!("codegen-units={}", n));
-        }
+        cmd.arg("-C").arg(&format!("codegen-units={}", n));
     }
 
     if let Some(debuginfo) = debuginfo {
@@ -784,15 +781,13 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         } else if overflow_checks {
             cmd.args(&["-C", "overflow-checks=on"]);
         }
-    } else {
-        if !debug_assertions {
-            cmd.args(&["-C", "debug-assertions=off"]);
-            if overflow_checks {
-                cmd.args(&["-C", "overflow-checks=on"]);
-            }
-        } else if !overflow_checks {
-            cmd.args(&["-C", "overflow-checks=off"]);
+    } else if !debug_assertions {
+        cmd.args(&["-C", "debug-assertions=off"]);
+        if overflow_checks {
+            cmd.args(&["-C", "overflow-checks=on"]);
         }
+    } else if !overflow_checks {
+        cmd.args(&["-C", "overflow-checks=off"]);
     }
 
     if test && unit.target.harness() {

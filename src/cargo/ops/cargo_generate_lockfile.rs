@@ -105,7 +105,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
         }
     }
 
-    ops::write_pkg_lockfile(&ws, &resolve)?;
+    ops::write_pkg_lockfile(ws, &resolve)?;
     return Ok(());
 
     fn fill_with_deps<'a>(resolve: &'a Resolve, dep: &'a PackageId,
@@ -162,13 +162,13 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
         let mut changes = BTreeMap::new();
         let empty = (Vec::new(), Vec::new());
         for dep in previous_resolve.iter() {
-            changes.entry(key(dep)).or_insert(empty.clone()).0.push(dep);
+            changes.entry(key(dep)).or_insert_with(|| empty.clone()).0.push(dep);
         }
         for dep in resolve.iter() {
-            changes.entry(key(dep)).or_insert(empty.clone()).1.push(dep);
+            changes.entry(key(dep)).or_insert_with(|| empty.clone()).1.push(dep);
         }
 
-        for (_, v) in changes.iter_mut() {
+        for v in changes.values_mut() {
             let (ref mut old, ref mut new) = *v;
             old.sort();
             new.sort();

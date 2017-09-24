@@ -223,7 +223,7 @@ impl<'a> JobQueue<'a> {
                     info!("end: {:?}", key);
                     self.active -= 1;
                     if self.active > 0 {
-                        assert!(tokens.len() > 0);
+                        assert!(!tokens.is_empty());
                         drop(tokens.pop());
                     }
                     match result {
@@ -258,12 +258,12 @@ impl<'a> JobQueue<'a> {
         let mut opt_type = String::from(if profile.opt_level == "0" { "unoptimized" }
                                         else { "optimized" });
         if profile.debuginfo.is_some() {
-            opt_type = opt_type + " + debuginfo";
+            opt_type += " + debuginfo";
         }
         let duration = start_time.elapsed();
         let time_elapsed = format!("{}.{1:.2} secs",
                                    duration.as_secs(),
-                                   duration.subsec_nanos() / 10000000);
+                                   duration.subsec_nanos() / 10_000_000);
         if self.queue.is_empty() {
             let message = format!("{} [{}] target(s) in {}",
                                   build_type,
