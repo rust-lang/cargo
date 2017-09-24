@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::collections::hash_map::Entry;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -38,7 +39,7 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
         // Don't recurse into hidden/dot directories unless we're at the toplevel
         if dir != path {
             let name = dir.file_name().and_then(|s| s.to_str());
-            if name.map(|s| s.starts_with(".")) == Some(true) {
+            if name.map(|s| s.starts_with('.')) == Some(true) {
                 return Ok(false)
             }
 
@@ -137,12 +138,10 @@ fn read_nested_packages(path: &Path,
     };
     let pkg = Package::new(manifest, &manifest_path);
 
-    let pkg_id = pkg.package_id().clone();
-    if !all_packages.contains_key(&pkg_id) {
-        all_packages.insert(pkg_id, pkg);
-    } else {
-        info!("skipping nested package `{}` found at `{}`",
-              pkg.name(), path.to_string_lossy());
+    match all_packages.entry(pkg.package_id().clone()) {
+        Entry::Occupied(_) => { info!("skipping nested package `{}` found at `{}`",
+                         pkg.name(), path.to_string_lossy()); },
+        Entry::Vacant(e) => { e.insert(pkg); }
     }
 
     // Registry sources are not allowed to have `path=` dependencies because

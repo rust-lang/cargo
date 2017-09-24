@@ -95,7 +95,7 @@ fn use_git_gc() {
 // notably not on AppVeyor's machines. Sounds like another but for another day.
 #[cfg_attr(windows, ignore)]
 fn avoid_using_git() {
-    let path = env::var_os("PATH").unwrap_or(Default::default());
+    let path = env::var_os("PATH").unwrap_or_default();
     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
     let idx = paths.iter().position(|p| {
         p.join("git").exists() || p.join("git.exe").exists()

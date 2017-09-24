@@ -131,7 +131,7 @@ fn emit_package(dep: &toml::value::Table, out: &mut String) {
         out.push_str(&format!("source = {}\n", &dep["source"]));
     }
 
-    if let Some(ref s) = dep.get("dependencies") {
+    if let Some(s) = dep.get("dependencies") {
         let slice = s.as_array().unwrap();
 
         if !slice.is_empty() {

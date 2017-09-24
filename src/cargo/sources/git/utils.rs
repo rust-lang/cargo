@@ -44,16 +44,16 @@ impl GitShortID {
     }
 }
 
-/// GitRemote represents a remote repository. It gets cloned into a local
-/// GitDatabase.
+/// `GitRemote` represents a remote repository. It gets cloned into a local
+/// `GitDatabase`.
 #[derive(PartialEq, Clone, Debug, Serialize)]
 pub struct GitRemote {
     #[serde(serialize_with = "serialize_str")]
     url: Url,
 }
 
-/// GitDatabase is a local clone of a remote repository's database. Multiple
-/// GitCheckouts can be cloned from this GitDatabase.
+/// `GitDatabase` is a local clone of a remote repository's database. Multiple
+/// `GitCheckouts` can be cloned from this `GitDatabase`.
 #[derive(Serialize)]
 pub struct GitDatabase {
     remote: GitRemote,
@@ -62,9 +62,9 @@ pub struct GitDatabase {
     repo: git2::Repository,
 }
 
-/// GitCheckout is a local checkout of a particular revision. Calling
+/// `GitCheckout` is a local checkout of a particular revision. Calling
 /// `clone_into` with a reference will resolve the reference into a revision,
-/// and return a CargoError if no revision for that reference was found.
+/// and return a `CargoError` if no revision for that reference was found.
 #[derive(Serialize)]
 pub struct GitCheckout<'a> {
     database: &'a GitDatabase,
@@ -295,7 +295,7 @@ impl<'a> GitCheckout<'a> {
         fn update_submodules(repo: &git2::Repository, cargo_config: &Config) -> CargoResult<()> {
             info!("update submodules for: {:?}", repo.workdir().unwrap());
 
-            for mut child in repo.submodules()?.into_iter() {
+            for mut child in repo.submodules()? {
                 update_submodule(repo, &mut child, cargo_config)
                     .map_err(CargoError::into_internal)
                     .chain_err(|| {

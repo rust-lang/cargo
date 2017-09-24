@@ -1,7 +1,6 @@
 use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
-use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -64,7 +63,7 @@ pub fn install(root: Option<&str>,
     let map = SourceConfigMap::new(opts.config)?;
 
     let (installed_anything, scheduled_error) = if krates.len() <= 1 {
-        install_one(root.clone(), map, krates.into_iter().next(), source_id, vers, opts,
+        install_one(&root, &map, krates.into_iter().next(), source_id, vers, opts,
                     force, true)?;
         (true, false)
     } else {
@@ -74,7 +73,8 @@ pub fn install(root: Option<&str>,
         for krate in krates {
             let root = root.clone();
             let map = map.clone();
-            match install_one(root, map, Some(krate), source_id, vers, opts, force, first) {
+            match install_one(&root, &map, Some(krate), source_id, vers,
+                              opts, force, first) {
                 Ok(()) => succeeded.push(krate),
                 Err(e) => {
                     ::handle_error(e, &mut opts.config.shell());
@@ -102,7 +102,7 @@ pub fn install(root: Option<&str>,
         // Print a warning that if this directory isn't in PATH that they won't be
         // able to run these commands.
         let dst = metadata(opts.config, &root)?.parent().join("bin");
-        let path = env::var_os("PATH").unwrap_or(OsString::new());
+        let path = env::var_os("PATH").unwrap_or_default();
         for path in env::split_paths(&path) {
             if path == dst {
                 return Ok(())
@@ -121,8 +121,8 @@ pub fn install(root: Option<&str>,
     Ok(())
 }
 
-fn install_one(root: Filesystem,
-               map: SourceConfigMap,
+fn install_one(root: &Filesystem,
+               map: &SourceConfigMap,
                krate: Option<&str>,
                source_id: &SourceId,
                vers: Option<&str>,
@@ -179,7 +179,7 @@ fn install_one(root: Filesystem,
     // We have to check this again afterwards, but may as well avoid building
     // anything if we're gonna throw it away anyway.
     {
-        let metadata = metadata(config, &root)?;
+        let metadata = metadata(config, root)?;
         let list = read_crate_list(metadata.file())?;
         let dst = metadata.parent().join("bin");
         check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
@@ -210,7 +210,7 @@ fn install_one(root: Filesystem,
               features");
     }
 
-    let metadata = metadata(config, &root)?;
+    let metadata = metadata(config, root)?;
     let mut list = read_crate_list(metadata.file())?;
     let dst = metadata.parent().join("bin");
     let duplicates = check_overwrites(&dst, pkg, &opts.filter,
@@ -225,10 +225,8 @@ fn install_one(root: Filesystem,
     for &(bin, src) in binaries.iter() {
         let dst = staging_dir.path().join(bin);
         // Try to move if `target_dir` is transient.
-        if !source_id.is_path() {
-            if fs::rename(src, &dst).is_ok() {
-                continue
-            }
+        if !source_id.is_path() && fs::rename(src, &dst).is_ok() {
+            continue
         }
         fs::copy(src, &dst).chain_err(|| {
             format!("failed to copy `{}` to `{}`", src.display(),
@@ -392,7 +390,7 @@ fn select_pkg<'a, T>(mut source: T,
                 }
                 None => {
                     let vers_info = vers.map(|v| format!(" with version `{}`", v))
-                                        .unwrap_or(String::new());
+                                        .unwrap_or_default();
                     Err(format!("could not find `{}` in `{}`{}", name,
                                 source.source_id(), vers_info).into())
                 }
@@ -448,13 +446,11 @@ fn check_overwrites(dst: &Path,
                     filter: &ops::CompileFilter,
                     prev: &CrateListingV1,
                     force: bool) -> CargoResult<BTreeMap<String, Option<PackageId>>> {
-    if !filter.is_specific() {
-        // If explicit --bin or --example flags were passed then those'll
-        // get checked during cargo_compile, we only care about the "build
-        // everything" case here
-        if pkg.targets().iter().filter(|t| t.is_bin()).next().is_none() {
-            bail!("specified package has no binaries")
-        }
+    // If explicit --bin or --example flags were passed then those'll
+    // get checked during cargo_compile, we only care about the "build
+    // everything" case here
+    if !filter.is_specific() && !pkg.targets().iter().any(|t| t.is_bin()) {
+        bail!("specified package has no binaries")
     }
     let duplicates = find_duplicates(dst, pkg, filter, prev);
     if force || duplicates.is_empty() {
@@ -462,7 +458,7 @@ fn check_overwrites(dst: &Path,
     }
     // Format the error message.
     let mut msg = String::new();
-    for (ref bin, p) in duplicates.iter() {
+    for (bin, p) in duplicates.iter() {
         msg.push_str(&format!("binary `{}` already exists in destination", bin));
         if let Some(p) = p.as_ref() {
             msg.push_str(&format!(" as part of `{}`\n", p));

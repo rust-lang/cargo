@@ -144,7 +144,7 @@ pub struct Fingerprint {
     rustflags: Vec<String>,
 }
 
-fn serialize_deps<S>(deps: &Vec<(String, Arc<Fingerprint>)>, ser: S)
+fn serialize_deps<S>(deps: &[(String, Arc<Fingerprint>)], ser: S)
                      -> Result<S::Ok, S::Error>
     where S: ser::Serializer,
 {
@@ -287,16 +287,8 @@ impl Fingerprint {
 
 impl hash::Hash for Fingerprint {
     fn hash<H: Hasher>(&self, h: &mut H) {
-        let Fingerprint {
-            rustc,
-            ref features,
-            target,
-            profile,
-            ref deps,
-            ref local,
-            memoized_hash: _,
-            ref rustflags,
-        } = *self;
+        let Fingerprint { rustc, ref features, target, profile, ref deps,
+                          ref local, ref rustflags, .. } = *self;
         (rustc, features, target, profile, local, rustflags).hash(h);
 
         h.write_usize(deps.len());
@@ -350,7 +342,7 @@ impl<'de> de::Deserialize<'de> for MtimeSlot {
 fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                        -> CargoResult<Arc<Fingerprint>> {
     if let Some(s) = cx.fingerprints.get(unit) {
-        return Ok(s.clone())
+        return Ok(Arc::clone(s))
     }
 
     // Next, recursively calculate the fingerprint for all of our dependencies.
@@ -395,7 +387,7 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         memoized_hash: Mutex::new(None),
         rustflags: extra_flags,
     });
-    cx.fingerprints.insert(*unit, fingerprint.clone());
+    cx.fingerprints.insert(*unit, Arc::clone(&fingerprint));
     Ok(fingerprint)
 }
 
@@ -459,7 +451,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // Hence, if there were some `rerun-if-changed` directives forcibly change
     // the kind of fingerprint by reinterpreting the dependencies output by the
     // build script.
-    let state = cx.build_state.clone();
+    let state = Arc::clone(&cx.build_state);
     let key = (unit.pkg.package_id().clone(), unit.kind);
     let root = unit.pkg.root().to_path_buf();
     let write_fingerprint = Work::new(move |_| {
@@ -532,13 +524,13 @@ fn local_fingerprints_deps(deps: &BuildDeps, root: &Path) -> Vec<LocalFingerprin
         local.push(LocalFingerprint::EnvBased(var.clone(), val));
     }
 
-    return local
+    local
 }
 
 fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
     let hash = fingerprint.hash();
     debug!("write fingerprint: {}", loc.display());
-    paths::write(&loc, util::to_hex(hash).as_bytes())?;
+    paths::write(loc, util::to_hex(hash).as_bytes())?;
     paths::write(&loc.with_extension("json"),
                  &serde_json::to_vec(&fingerprint).unwrap())?;
     Ok(())
@@ -570,7 +562,7 @@ fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint)
 
     let old_fingerprint_json = paths::read(&loc.with_extension("json"))?;
     let old_fingerprint = serde_json::from_str(&old_fingerprint_json)
-        .chain_err(|| internal(format!("failed to deserialize json")))?;
+        .chain_err(|| internal("failed to deserialize json"))?;
     new_fingerprint.compare(&old_fingerprint)
 }
 

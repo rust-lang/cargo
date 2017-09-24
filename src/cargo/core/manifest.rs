@@ -470,11 +470,11 @@ impl Target {
     pub fn doctested(&self) -> bool {
         self.doctest && match self.kind {
             TargetKind::Lib(ref kinds) => {
-                kinds.iter().find(|k| {
-                  *k == &LibKind::Rlib ||
-                  *k == &LibKind::Lib ||
-                  *k == &LibKind::ProcMacro
-                }).is_some()
+                kinds.iter().any(|k| {
+                  *k == LibKind::Rlib ||
+                  *k == LibKind::Lib ||
+                  *k == LibKind::ProcMacro
+                })
             }
             _ => false,
         }

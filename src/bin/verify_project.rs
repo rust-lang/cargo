@@ -48,7 +48,7 @@ pub fn execute(args: Flags, config: &Config) -> CliResult {
                      &args.flag_z)?;
 
     let mut contents = String::new();
-    let filename = args.flag_manifest_path.unwrap_or("Cargo.toml".into());
+    let filename = args.flag_manifest_path.unwrap_or_else(|| "Cargo.toml".into());
     let filename = match find_root_manifest_for_wd(Some(filename), config.cwd()) {
         Ok(manifest_path) => manifest_path,
         Err(e) => fail("invalid", &e.to_string()),

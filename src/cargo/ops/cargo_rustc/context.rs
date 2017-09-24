@@ -97,9 +97,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
 
         let dest = if build_config.release { "release" } else { "debug" };
-        let host_layout = Layout::new(ws, None, &dest)?;
+        let host_layout = Layout::new(ws, None, dest)?;
         let target_layout = match build_config.requested_target.as_ref() {
-            Some(target) => Some(Layout::new(ws, Some(&target), dest)?),
+            Some(target) => Some(Layout::new(ws, Some(target), dest)?),
             None => None,
         };
 
@@ -171,15 +171,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let _p = profile::start("preparing layout");
 
         self.host.prepare().chain_err(|| {
-            internal(format!("couldn't prepare build directories"))
+            internal("couldn't prepare build directories")
         })?;
-        match self.target {
-            Some(ref mut target) => {
-                target.prepare().chain_err(|| {
-                    internal(format!("couldn't prepare build directories"))
-                })?;
-            }
-            None => {}
+        if let Some(ref mut target) = self.target {
+            target.prepare().chain_err(|| {
+                internal("couldn't prepare build directories")
+            })?;
         }
 
         self.compilation.host_deps_output = self.host.deps().to_path_buf();
@@ -230,7 +227,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 }
             }));
         }
-        for dep in self.dep_targets(&unit)? {
+        for dep in self.dep_targets(unit)? {
             self.visit_crate_type(&dep, crate_types, visited_units)?;
         }
         Ok(())
@@ -242,7 +239,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                               -> CargoResult<()> {
         let rustflags = env_args(self.config,
                                  &self.build_config,
-                                 &self.info(&kind),
+                                 self.info(&kind),
                                  kind,
                                  "RUSTFLAGS")?;
         let mut process = self.config.rustc()?.process();
@@ -271,8 +268,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             has_cfg_and_sysroot = false;
             process.exec_with_output()
         }).chain_err(|| {
-            format!("failed to run `rustc` to learn about \
-                     target-specific information")
+            "failed to run `rustc` to learn about target-specific information"
         })?;
 
         let error = str::from_utf8(&output.stderr).unwrap();
@@ -433,7 +429,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Return the target triple which this context is targeting.
     pub fn target_triple(&self) -> &str {
-        self.requested_target().unwrap_or(self.host_triple())
+        self.requested_target().unwrap_or_else(|| self.host_triple())
     }
 
     /// Requested (not actual) target for the build
@@ -529,7 +525,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         unit.target.name().hash(&mut hasher);
         unit.target.kind().hash(&mut hasher);
 
-        if let Ok(ref rustc) = self.config.rustc() {
+        if let Ok(rustc) = self.config.rustc() {
             rustc.verbose_version.hash(&mut hasher);
         }
 
@@ -589,9 +585,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         } else if bin_stem == file_stem {
             None
-        } else if src_dir.ends_with("examples") {
-            Some((src_dir, bin_stem))
-        } else if src_dir.parent().unwrap().ends_with("build") {
+        } else if src_dir.ends_with("examples")
+               || src_dir.parent().unwrap().ends_with("build") {
             Some((src_dir, bin_stem))
         } else {
             None
@@ -606,12 +601,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn target_filenames(&mut self, unit: &Unit<'a>)
                             -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, bool)>>> {
         if let Some(cache) = self.target_filenames.get(unit) {
-            return Ok(cache.clone())
+            return Ok(Arc::clone(cache))
         }
 
         let result = self.calc_target_filenames(unit);
         if let Ok(ref ret) = result {
-            self.target_filenames.insert(*unit, ret.clone());
+            self.target_filenames.insert(*unit, Arc::clone(ret));
         }
         result
     }
@@ -644,7 +639,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     let crate_type_info = match entry {
                         Entry::Occupied(o) => &*o.into_mut(),
                         Entry::Vacant(v) => {
-                            let value = info.discover_crate_type(&v.key())?;
+                            let value = info.discover_crate_type(v.key())?;
                             &*v.insert(value)
                         }
                     };
@@ -688,7 +683,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             }
         }
         if ret.is_empty() {
-            if unsupported.len() > 0 {
+            if !unsupported.is_empty() {
                 bail!("cannot produce {} for `{}` as the target `{}` \
                        does not support these crate types",
                       unsupported.join(", "), unit.pkg, self.target_triple())
@@ -1010,14 +1005,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 // (see also https://github.com/rust-lang/cargo/issues/3972)
                 return Ok(vec![format!("-Zincremental={}",
                                        self.layout(unit.kind).incremental().display())]);
-            } else {
-                if unit.profile.codegen_units.is_none() {
-                    // For non-incremental builds we set a higher number of
-                    // codegen units so we get faster compiles. It's OK to do
-                    // so because the user has already opted into slower
-                    // runtime code by setting CARGO_INCREMENTAL.
-                    return Ok(vec![format!("-Ccodegen-units={}", ::num_cpus::get())]);
-                }
+            } else if unit.profile.codegen_units.is_none() {
+                // For non-incremental builds we set a higher number of
+                // codegen units so we get faster compiles. It's OK to do
+                // so because the user has already opted into slower
+                // runtime code by setting CARGO_INCREMENTAL.
+                return Ok(vec![format!("-Ccodegen-units={}", ::num_cpus::get())]);
             }
         }
 
@@ -1081,8 +1074,8 @@ fn env_args(config: &Config,
     }
 
     // First try RUSTFLAGS from the environment
-    if let Some(a) = env::var(name).ok() {
-        let args = a.split(" ")
+    if let Ok(a) = env::var(name) {
+        let args = a.split(' ')
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(str::to_string);
@@ -1103,7 +1096,7 @@ fn env_args(config: &Config,
     if let Some(ref target_cfg) = target_info.cfg {
         if let Some(table) = config.get_table("target")? {
             let cfgs = table.val.keys().filter_map(|t| {
-                if t.starts_with("cfg(") && t.ends_with(")") {
+                if t.starts_with("cfg(") && t.ends_with(')') {
                     let cfg = &t[4..t.len() - 1];
                     CfgExpr::from_str(cfg)
                         .ok()
