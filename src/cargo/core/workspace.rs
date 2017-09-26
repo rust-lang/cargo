@@ -75,14 +75,19 @@ enum MaybePackage {
 pub enum WorkspaceConfig {
     /// Indicates that `[workspace]` was present and the members were
     /// optionally specified as well.
-    Root {
-        members: Option<Vec<String>>,
-        exclude: Vec<String>,
-    },
+    Root(WorkspaceRootConfig),
 
     /// Indicates that `[workspace]` was present and the `root` field is the
     /// optional value of `package.workspace`, if present.
     Member { root: Option<String> },
+}
+
+/// Configuration of a workspace root in a manifest.
+#[derive(Debug, Clone)]
+pub struct WorkspaceRootConfig {
+    root_dir: PathBuf,
+    members: Option<Vec<String>>,
+    exclude: Vec<String>,
 }
 
 /// An iterator over the member packages of a workspace, returned by
@@ -289,7 +294,7 @@ impl<'cfg> Workspace<'cfg> {
         {
             let current = self.packages.load(manifest_path)?;
             match *current.workspace_config() {
-                WorkspaceConfig::Root { .. } => {
+                WorkspaceConfig::Root(_) => {
                     debug!("find_root - is root {}", manifest_path.display());
                     return Ok(Some(manifest_path.to_path_buf()))
                 }
@@ -305,9 +310,9 @@ impl<'cfg> Workspace<'cfg> {
             debug!("find_root - trying {}", manifest.display());
             if manifest.exists() {
                 match *self.packages.load(&manifest)?.workspace_config() {
-                    WorkspaceConfig::Root { ref exclude, ref members } => {
+                    WorkspaceConfig::Root(ref root_config) => {
                         debug!("find_root - found a root checking exclusion");
-                        if !is_excluded(members, exclude, path, manifest_path) {
+                        if !root_config.is_excluded(manifest_path) {
                             debug!("find_root - found!");
                             return Ok(Some(manifest))
                         }
@@ -332,7 +337,7 @@ impl<'cfg> Workspace<'cfg> {
     /// will transitively follow all `path` dependencies looking for members of
     /// the workspace.
     fn find_members(&mut self) -> CargoResult<()> {
-        let root_manifest = match self.root_manifest {
+        let root_manifest_path = match self.root_manifest {
             Some(ref path) => path.clone(),
             None => {
                 debug!("find_members - only me as a member");
@@ -340,39 +345,21 @@ impl<'cfg> Workspace<'cfg> {
                 return Ok(())
             }
         };
-        let members = {
-            let root = self.packages.load(&root_manifest)?;
-            match *root.workspace_config() {
-                WorkspaceConfig::Root { ref members, .. } => members.clone(),
+
+        let members_paths = {
+            let root_package = self.packages.load(&root_manifest_path)?;
+            match *root_package.workspace_config() {
+                WorkspaceConfig::Root(ref root_config) => root_config.members_paths()?,
                 _ => bail!("root of a workspace inferred but wasn't a root: {}",
-                           root_manifest.display()),
+                           root_manifest_path.display()),
             }
         };
 
-        if let Some(list) = members {
-            let root = root_manifest.parent().unwrap();
-
-            let mut expanded_list = Vec::new();
-            for path in list {
-                let pathbuf = root.join(path);
-                let expanded_paths = expand_member_path(&pathbuf)?;
-
-                // If glob does not find any valid paths, then put the original
-                // path in the expanded list to maintain backwards compatibility.
-                if expanded_paths.is_empty() {
-                    expanded_list.push(pathbuf);
-                } else {
-                    expanded_list.extend(expanded_paths);
-                }
-            }
-
-            for path in expanded_list {
-                let manifest_path = path.join("Cargo.toml");
-                self.find_path_deps(&manifest_path, &root_manifest, false)?;
-            }
+        for path in members_paths {
+            self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)?;
         }
 
-        self.find_path_deps(&root_manifest, &root_manifest, false)
+        self.find_path_deps(&root_manifest_path, &root_manifest_path, false)
     }
 
     fn find_path_deps(&mut self,
@@ -391,10 +378,9 @@ impl<'cfg> Workspace<'cfg> {
             return Ok(())
         }
 
-        let root = root_manifest.parent().unwrap();
         match *self.packages.load(root_manifest)?.workspace_config() {
-            WorkspaceConfig::Root { ref members, ref exclude } => {
-                if is_excluded(members, exclude, root, &manifest_path) {
+            WorkspaceConfig::Root(ref root_config) => {
+                if root_config.is_excluded(&manifest_path) {
                     return Ok(())
                 }
             }
@@ -439,7 +425,7 @@ impl<'cfg> Workspace<'cfg> {
             for member in self.members.iter() {
                 let package = self.packages.get(member);
                 match *package.workspace_config() {
-                    WorkspaceConfig::Root { .. } => {
+                    WorkspaceConfig::Root(_) => {
                         roots.push(member.parent().unwrap().to_path_buf());
                     }
                     WorkspaceConfig::Member { .. } => {}
@@ -522,11 +508,11 @@ impl<'cfg> Workspace<'cfg> {
             let extra = match *root_pkg {
                 MaybePackage::Virtual(_) => members_msg,
                 MaybePackage::Package(ref p) => {
-                    let members = match *p.manifest().workspace_config() {
-                        WorkspaceConfig::Root { ref members, .. } => members,
+                    let has_members_list = match *p.manifest().workspace_config() {
+                        WorkspaceConfig::Root(ref root_config) => root_config.has_members_list(),
                         WorkspaceConfig::Member { .. } => unreachable!(),
                     };
-                    if members.is_none() {
+                    if !has_members_list {
                         format!("this may be fixable by ensuring that this \
                                  crate is depended on by the workspace \
                                  root: {}", root.display())
@@ -574,41 +560,6 @@ impl<'cfg> Workspace<'cfg> {
 
         Ok(())
     }
-}
-
-fn expand_member_path(path: &Path) -> CargoResult<Vec<PathBuf>> {
-    let path = match path.to_str() {
-        Some(p) => p,
-        None => return Ok(Vec::new()),
-    };
-    let res = glob(path).chain_err(|| {
-        format!("could not parse pattern `{}`", &path)
-    })?;
-    res.map(|p| {
-        p.chain_err(|| {
-            format!("unable to match path to pattern `{}`", &path)
-        })
-    }).collect()
-}
-
-fn is_excluded(members: &Option<Vec<String>>,
-               exclude: &[String],
-               root_path: &Path,
-               manifest_path: &Path) -> bool {
-    let excluded = exclude.iter().any(|ex| {
-        manifest_path.starts_with(root_path.join(ex))
-    });
-
-    let explicit_member = match *members {
-        Some(ref members) => {
-            members.iter().any(|mem| {
-                manifest_path.starts_with(root_path.join(mem))
-            })
-        }
-        None => false,
-    };
-
-    !explicit_member && excluded
 }
 
 
@@ -668,5 +619,76 @@ impl MaybePackage {
             MaybePackage::Virtual(ref v) => v.workspace_config(),
             MaybePackage::Package(ref v) => v.manifest().workspace_config(),
         }
+    }
+}
+
+impl WorkspaceRootConfig {
+    pub fn new(
+        root_dir: &Path,
+        members: &Option<Vec<String>>,
+        exclude: &Option<Vec<String>>,
+    ) -> WorkspaceRootConfig {
+        WorkspaceRootConfig {
+            root_dir: root_dir.to_path_buf(),
+            members: members.clone(),
+            exclude: exclude.clone().unwrap_or_default(),
+        }
+    }
+
+    fn is_excluded(&self, manifest_path: &Path) -> bool {
+        let excluded = self.exclude.iter().any(|ex| {
+            manifest_path.starts_with(self.root_dir.join(ex))
+        });
+
+        let explicit_member = match self.members {
+            Some(ref members) => {
+                members.iter().any(|mem| {
+                    manifest_path.starts_with(self.root_dir.join(mem))
+                })
+            }
+            None => false,
+        };
+
+        !explicit_member && excluded
+    }
+
+    fn has_members_list(&self) -> bool {
+        self.members.is_some()
+    }
+
+    fn members_paths(&self) -> CargoResult<Vec<PathBuf>> {
+        let mut expanded_list = Vec::new();
+
+        if let Some(globs) = self.members.clone() {
+            for glob in globs {
+                let pathbuf = self.root_dir.join(glob);
+                let expanded_paths = Self::expand_member_path(&pathbuf)?;
+
+                // If glob does not find any valid paths, then put the original
+                // path in the expanded list to maintain backwards compatibility.
+                if expanded_paths.is_empty() {
+                    expanded_list.push(pathbuf);
+                } else {
+                    expanded_list.extend(expanded_paths);
+                }
+            }
+        }
+
+        Ok(expanded_list)
+    }
+
+    fn expand_member_path(path: &Path) -> CargoResult<Vec<PathBuf>> {
+        let path = match path.to_str() {
+            Some(p) => p,
+            None => return Ok(Vec::new()),
+        };
+        let res = glob(path).chain_err(|| {
+            format!("could not parse pattern `{}`", &path)
+        })?;
+        res.map(|p| {
+            p.chain_err(|| {
+                format!("unable to match path to pattern `{}`", &path)
+            })
+        }).collect()
     }
 }
