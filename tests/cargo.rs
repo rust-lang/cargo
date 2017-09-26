@@ -3,7 +3,6 @@ extern crate cargotest;
 extern crate hamcrest;
 
 use std::env;
-use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -22,11 +21,11 @@ enum FakeKind<'a> {
 
 /// Add an empty file with executable flags (and platform-dependent suffix).
 /// TODO: move this to `ProjectBuilder` if other cases using this emerge.
-fn fake_file(proj: ProjectBuilder, dir: &Path, name: &str, kind: FakeKind) -> ProjectBuilder {
+fn fake_file(proj: ProjectBuilder, dir: &Path, name: &str, kind: &FakeKind) -> ProjectBuilder {
     let path = proj.root().join(dir).join(&format!("{}{}", name,
                                                    env::consts::EXE_SUFFIX));
     path.parent().unwrap().mkdir_p();
-    match kind {
+    match *kind {
         FakeKind::Executable => {
             File::create(&path).unwrap();
             make_executable(&path);
@@ -59,13 +58,13 @@ fn fake_file(proj: ProjectBuilder, dir: &Path, name: &str, kind: FakeKind) -> Pr
 }
 
 fn path() -> Vec<PathBuf> {
-    env::split_paths(&env::var_os("PATH").unwrap_or(OsString::new())).collect()
+    env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect()
 }
 
 #[test]
 fn list_command_looks_at_path() {
     let proj = project("list-non-overlapping");
-    let proj = fake_file(proj, Path::new("path-test"), "cargo-1", FakeKind::Executable);
+    let proj = fake_file(proj, Path::new("path-test"), "cargo-1", &FakeKind::Executable);
     let mut pr = cargo_process();
 
     let mut path = path();
@@ -86,7 +85,7 @@ fn list_command_resolves_symlinks() {
 
     let proj = project("list-non-overlapping");
     let proj = fake_file(proj, Path::new("path-test"), "cargo-2",
-                         FakeKind::Symlink{target:&cargo_exe()});
+                         &FakeKind::Symlink{target:&cargo_exe()});
     let mut pr = cargo_process();
 
     let mut path = path();

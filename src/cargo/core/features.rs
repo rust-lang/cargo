@@ -232,7 +232,7 @@ pub struct CliUnstable {
 
 impl CliUnstable {
     pub fn parse(&mut self, flags: &[String]) -> CargoResult<()> {
-        if flags.len() > 0 && !nightly_features_allowed() {
+        if !flags.is_empty() && !nightly_features_allowed() {
             bail!("the `-Z` flag is only accepted on the nightly channel of Cargo")
         }
         for flag in flags {
@@ -267,7 +267,7 @@ impl CliUnstable {
 fn channel() -> String {
     env::var("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS").unwrap_or_else(|_| {
         ::version().cfg_info.map(|c| c.release_channel)
-            .unwrap_or(String::from("dev"))
+            .unwrap_or_else(|| String::from("dev"))
     })
 }
 

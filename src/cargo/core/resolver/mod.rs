@@ -119,23 +119,18 @@ impl Resolve {
     pub fn path_to_top(&self, pkg: &PackageId) -> Vec<&PackageId> {
         let mut result = Vec::new();
         let mut pkg = pkg;
-        loop {
-            match self.graph
-                  .get_nodes()
-                  .iter()
-                  .filter_map(|(pulling, pulled)|
-                              if pulled.contains(pkg) {
-                                  Some(pulling)
-                              } else {
-                                  None
-                              })
-                  .nth(0) {
-                Some(pulling) => {
-                    result.push(pulling);
-                    pkg = pulling;
-                },
-                None => break
-            }
+        while let Some(pulling) = self.graph
+                                    .get_nodes()
+                                    .iter()
+                                    .filter_map(|(pulling, pulled)|
+                                                if pulled.contains(pkg) {
+                                                    Some(pulling)
+                                                } else {
+                                                    None
+                                                })
+                                    .nth(0) {
+            result.push(pulling);
+            pkg = pulling;
         }
         result
     }
@@ -376,7 +371,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
         replacements: replacements,
         warnings: RcList::new(),
     };
-    let _p = profile::start(format!("resolving"));
+    let _p = profile::start("resolving");
     let cx = activate_deps_loop(cx, registry, summaries)?;
 
     let mut resolve = Resolve {
@@ -569,12 +564,12 @@ impl RemainingCandidates {
         // define "compatible" here in terms of the semver sense where if
         // the left-most nonzero digit is the same they're considered
         // compatible.
-        self.remaining.by_ref().map(|p| p.1).filter(|b| {
+        self.remaining.by_ref().map(|p| p.1).find(|b| {
             prev_active.iter().any(|a| *a == b.summary) ||
                 prev_active.iter().all(|a| {
                     !compatible(a.version(), b.summary.version())
                 })
-        }).next()
+        })
     }
 }
 
@@ -686,7 +681,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                                      &mut features) {
                     None => return Err(activation_error(&cx, registry, &parent,
                                                         &dep,
-                                                        &cx.prev_active(&dep),
+                                                        cx.prev_active(&dep),
                                                         &candidates)),
                     Some(candidate) => candidate,
                 }
@@ -729,7 +724,7 @@ fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
                 *remaining_deps = frame.deps_backup.clone();
                 *parent = frame.parent.clone();
                 *dep = frame.dep.clone();
-                *features = frame.features.clone();
+                *features = Rc::clone(&frame.features);
                 backtrack_stack.push(frame);
             } else {
                 *cx = frame.context_backup;
@@ -751,7 +746,7 @@ fn activation_error(cx: &Context,
                     dep: &Dependency,
                     prev_active: &[Summary],
                     candidates: &[Candidate]) -> CargoError {
-    if candidates.len() > 0 {
+    if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}` \
                                (required by `{}`):\n\
                                all possible versions conflict with \
@@ -832,7 +827,7 @@ fn activation_error(cx: &Context,
         // indicate that we updated a sub-package and forgot to run `cargo
         // update`. In this case try to print a helpful error!
         if dep.source_id().is_path()
-           && dep.version_req().to_string().starts_with("=") {
+           && dep.version_req().to_string().starts_with('=') {
             msg.push_str("\nconsider running `cargo update` to update \
                           a path dependency's locked version");
         }
@@ -1062,7 +1057,7 @@ impl<'a> Context<'a> {
                          spec, dep.source_id(), dep.version_req())
             })?;
             let summaries = summaries.collect::<Vec<_>>();
-            if summaries.len() > 0 {
+            if !summaries.is_empty() {
                 let bullets = summaries.iter().map(|s| {
                     format!("  * {}", s.package_id())
                 }).collect::<Vec<_>>();
@@ -1188,7 +1183,7 @@ impl<'a> Context<'a> {
             replacements.insert(k, v);
             cur = &node.1;
         }
-        return replacements
+        replacements
     }
 
     fn graph(&self) -> Graph<PackageId> {
@@ -1201,7 +1196,7 @@ impl<'a> Context<'a> {
             }
             cur = &node.1;
         }
-        return graph
+        graph
     }
 }
 

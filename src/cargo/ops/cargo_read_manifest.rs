@@ -38,7 +38,7 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
         // Don't recurse into hidden/dot directories unless we're at the toplevel
         if dir != path {
             let name = dir.file_name().and_then(|s| s.to_str());
-            if name.map(|s| s.starts_with(".")) == Some(true) {
+            if name.map(|s| s.starts_with('.')) == Some(true) {
                 return Ok(false)
             }
 

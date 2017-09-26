@@ -61,7 +61,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                     flag_name.as_ref().map(|s| s.as_ref()));
 
     let opts_lib = opts.lib;
-    ops::new(opts, config)?;
+    ops::new(&opts, config)?;
 
     config.shell().status("Created", format!("{} `{}` project",
                                              if opts_lib { "library" }

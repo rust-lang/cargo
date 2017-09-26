@@ -265,7 +265,7 @@ fn plan_new_source_file(bin: bool, project_name: String) -> SourceFileInformatio
     }
 }
 
-pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
+pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = config.cwd().join(opts.path);
     if fs::metadata(&path).is_ok() {
         bail!("destination `{}` already exists\n\n\
@@ -278,7 +278,7 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
         bail!("can't specify both lib and binary outputs")
     }
 
-    let name = get_name(&path, &opts, config)?;
+    let name = get_name(&path, opts, config)?;
     check_name(name, opts.bin)?;
 
     let mkopts = MkOptions {
@@ -295,7 +295,7 @@ pub fn new(opts: NewOptions, config: &Config) -> CargoResult<()> {
     })
 }
 
-pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
+pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = config.cwd().join(opts.path);
 
     let cargotoml_path = path.join("Cargo.toml");
@@ -307,14 +307,14 @@ pub fn init(opts: NewOptions, config: &Config) -> CargoResult<()> {
         bail!("can't specify both lib and binary outputs");
     }
 
-    let name = get_name(&path, &opts, config)?;
+    let name = get_name(&path, opts, config)?;
     check_name(name, opts.bin)?;
 
     let mut src_paths_types = vec![];
 
     detect_source_paths_and_types(&path, name, &mut src_paths_types)?;
 
-    if src_paths_types.len() == 0 {
+    if src_paths_types.is_empty() {
         src_paths_types.push(plan_new_source_file(opts.bin, name.to_string()));
     } else {
         // --bin option may be ignored if lib.rs or src/lib.rs present
@@ -462,14 +462,12 @@ name = "{}"
 path = {}
 "#, i.target_name, toml::Value::String(i.relative_path.clone())));
             }
-        } else {
-            if i.relative_path != "src/lib.rs" {
-                cargotoml_path_specifier.push_str(&format!(r#"
+        } else if i.relative_path != "src/lib.rs" {
+            cargotoml_path_specifier.push_str(&format!(r#"
 [lib]
 name = "{}"
 path = {}
 "#, i.target_name, toml::Value::String(i.relative_path.clone())));
-            }
         }
     }
 

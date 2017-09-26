@@ -130,7 +130,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let repo = self.repo()?;
         let tree = self.tree()?;
         let entry = tree.get_path(path)?;
-        let object = entry.to_object(&repo)?;
+        let object = entry.to_object(repo)?;
         let blob = match object.as_blob() {
             Some(blob) => blob,
             None => bail!("path `{}` is not a blob in the git repo", path.display()),
@@ -145,7 +145,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
                                             "the registry index")?;
         let mut config = None;
         self.load(Path::new(""), Path::new("config.json"), &mut |json| {
-            config = Some(serde_json::from_slice(&json)?);
+            config = Some(serde_json::from_slice(json)?);
             Ok(())
         })?;
         Ok(config)

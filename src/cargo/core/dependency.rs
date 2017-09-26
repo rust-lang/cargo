@@ -61,7 +61,7 @@ impl ser::Serialize for Dependency {
     {
         SerializedDependency {
             name: self.name(),
-            source: &self.source_id(),
+            source: self.source_id(),
             req: self.version_req().to_string(),
             kind: self.kind(),
             optional: self.is_optional(),
@@ -262,7 +262,7 @@ impl Dependency {
     /// an exact version req.
     pub fn is_locked(&self) -> bool {
         // Kind of a hack to figure this out, but it works!
-        self.inner.req.to_string().starts_with("=")
+        self.inner.req.to_string().starts_with('=')
     }
 
     /// Returns false if the dependency is only used to build the local package.
@@ -348,7 +348,7 @@ impl FromStr for Platform {
     type Err = CargoError;
 
     fn from_str(s: &str) -> CargoResult<Platform> {
-        if s.starts_with("cfg(") && s.ends_with(")") {
+        if s.starts_with("cfg(") && s.ends_with(')') {
             let s = &s[4..s.len()-1];
             s.parse().map(Platform::Cfg).chain_err(|| {
                 format!("failed to parse `{}` as a cfg expression", s)

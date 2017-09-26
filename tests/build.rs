@@ -3605,8 +3605,7 @@ fn same_metadata_different_directory() {
     ));
     let metadata = output
         .split_whitespace()
-        .filter(|arg| arg.starts_with("metadata="))
-        .next()
+        .find(|arg| arg.starts_with("metadata="))
         .unwrap();
 
     let p = project("foo2")

@@ -243,7 +243,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.name(), s);
             let mut results = src.query_vec(&dep)?;
-            if results.len() > 0 {
+            if !results.is_empty() {
                 return Ok(Some(results.remove(0)))
             }
         }
@@ -303,7 +303,7 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
             return Ok(())
         }
 
-        for id in real_deps {
+        if let Some(id) = real_deps.get(0) {
             let msg = format!("\
                 path override for crate `{}` has altered the original list of
                 dependencies; the dependency on `{}` was removed\n\n
@@ -322,7 +322,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
              f: &mut FnMut(Summary)) -> CargoResult<()> {
         let (override_summary, n, to_warn) = {
             // Look for an override and get ready to query the real source.
-            let override_summary = self.query_overrides(&dep)?;
+            let override_summary = self.query_overrides(dep)?;
 
             // Next up on our list of candidates is to check the `[patch]`
             // section of the manifest. Here we look through all patches
@@ -353,7 +353,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                     }
                 }
             } else {
-                if patches.len() > 0 {
+                if !patches.is_empty() {
                     debug!("found {} patches with an unlocked dep, \
                             looking at sources", patches.len());
                 }
@@ -400,7 +400,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                     // to sanity check its results. We don't actually use any of
                     // the summaries it gives us though.
                     (Some(override_summary), Some(source)) => {
-                        if patches.len() > 0 {
+                        if !patches.is_empty() {
                             bail!("found patches and a path override")
                         }
                         let mut n = 0;
@@ -526,7 +526,7 @@ fn lock(locked: &LockedMap,
         }
 
         trace!("\tnope, unlocked");
-        return dep
+        dep
     })
 }
 
