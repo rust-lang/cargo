@@ -429,7 +429,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Return the target triple which this context is targeting.
     pub fn target_triple(&self) -> &str {
-        self.requested_target().unwrap_or_else(|| self.host_triple())
+        self.requested_target().unwrap_or(self.host_triple())
     }
 
     /// Requested (not actual) target for the build

@@ -287,8 +287,16 @@ impl Fingerprint {
 
 impl hash::Hash for Fingerprint {
     fn hash<H: Hasher>(&self, h: &mut H) {
-        let Fingerprint { rustc, ref features, target, profile, ref deps,
-                          ref local, ref rustflags, .. } = *self;
+        let Fingerprint {
+            rustc,
+            ref features,
+            target,
+            profile,
+            ref deps,
+            ref local,
+            memoized_hash: _,
+            ref rustflags,
+        } = *self;
         (rustc, features, target, profile, local, rustflags).hash(h);
 
         h.write_usize(deps.len());

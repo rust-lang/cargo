@@ -309,6 +309,7 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
                 dependencies; the dependency on `{}` was removed\n\n
                 {}", override_summary.package_id().name(), id.name(), boilerplate);
             self.source_config.config().shell().warn(&msg)?;
+            return Ok(())
         }
 
         Ok(())

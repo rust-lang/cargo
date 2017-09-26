@@ -175,12 +175,12 @@ fn detect_source_paths_and_types(project_path : &Path,
     }
 
     let tests = vec![
-        Test { proposed_path: String::from("src/main.rs"), handling: H::Bin },
-        Test { proposed_path: String::from("main.rs"), handling: H::Bin },
+        Test { proposed_path: format!("src/main.rs"),     handling: H::Bin },
+        Test { proposed_path: format!("main.rs"),         handling: H::Bin },
         Test { proposed_path: format!("src/{}.rs", name), handling: H::Detect },
-        Test { proposed_path: format!("{}.rs", name), handling: H::Detect },
-        Test { proposed_path: String::from("src/lib.rs"), handling: H::Lib },
-        Test { proposed_path: String::from("lib.rs"), handling: H::Lib },
+        Test { proposed_path: format!("{}.rs", name),     handling: H::Detect },
+        Test { proposed_path: format!("src/lib.rs"),      handling: H::Lib },
+        Test { proposed_path: format!("lib.rs"),          handling: H::Lib },
     ];
 
     for i in tests {
@@ -406,7 +406,8 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
     let vcs = match (opts.version_control, cfg.version_control, in_existing_vcs_repo) {
         (None, None, false) => VersionControl::Git,
-        (None, Some(option), false) | (Some(option), _, _) => option,
+        (None, Some(option), false) => option,
+        (Some(option), _, _) => option,
         (_, _, true) => VersionControl::NoVcs,
     };
     match vcs {

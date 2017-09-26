@@ -295,7 +295,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let kind = unit.kind;
 
     // Prepare the native lib state (extra -L and -l flags)
-    let build_state = Arc::clone(&cx.build_state);
+    let build_state = cx.build_state.clone();
     let current_id = unit.pkg.package_id().clone();
     let build_deps = load_build_deps(cx, unit);
 
@@ -323,7 +323,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let target = unit.target.clone();
 
     exec.init(cx, unit);
-    let exec = Arc::clone(&exec);
+    let exec = exec.clone();
 
     let root_output = cx.target_root().to_path_buf();
 
@@ -645,7 +645,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     rustdoc.args(&cx.rustdocflags_args(unit)?);
 
     let name = unit.pkg.name().to_string();
-    let build_state = Arc::clone(&cx.build_state);
+    let build_state = cx.build_state.clone();
     let key = (unit.pkg.package_id().clone(), unit.kind);
 
     Ok(Work::new(move |state| {
@@ -690,7 +690,7 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let Profile {
         ref opt_level, lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, overflow_checks, rpath, test, doc: _doc,
-        run_custom_build, ref panic, check, ..
+        run_custom_build, ref panic, rustdoc_args: _, check,
     } = *unit.profile;
     assert!(!run_custom_build);
 

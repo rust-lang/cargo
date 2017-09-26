@@ -143,9 +143,9 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         match *cfg {
             Cfg::Name(ref n) => { cfg_map.insert(n.clone(), None); }
             Cfg::KeyPair(ref k, ref v) => {
-                if let Some(ref mut values) = *cfg_map.entry(k.clone())
-                                                      .or_insert_with(|| Some(Vec::new())) {
-                    values.push(v.clone())
+                match *cfg_map.entry(k.clone()).or_insert(Some(Vec::new())) {
+                    Some(ref mut values) => values.push(v.clone()),
+                    None => { /* ... */ }
                 }
             }
         }

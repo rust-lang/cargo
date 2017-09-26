@@ -217,14 +217,14 @@ impl<'cfg> PathSource<'cfg> {
                             ))?;
                     }
                 } else if no_include_option {
-                        self.config
-                            .shell()
-                            .warn(format!(
-                                "Pattern matching for Cargo's include/exclude fields is changing and \
-                                file `{}` WILL NOT be excluded in a future Cargo version.\n\
-                                See https://github.com/rust-lang/cargo/issues/4268 for more info",
-                                relative_path.display()
-                            ))?;
+                    self.config
+                        .shell()
+                        .warn(format!(
+                            "Pattern matching for Cargo's include/exclude fields is changing and \
+                            file `{}` WILL NOT be excluded in a future Cargo version.\n\
+                            See https://github.com/rust-lang/cargo/issues/4268 for more info",
+                            relative_path.display()
+                        ))?;
                 } else {
                     self.config
                         .shell()
@@ -451,9 +451,8 @@ impl<'cfg> PathSource<'cfg> {
             let name = path.file_name().and_then(|s| s.to_str());
             // Skip dotfile directories
             if name.map(|s| s.starts_with('.')) == Some(true) {
-                continue;
-            }
-            if is_root {
+                continue
+            } else if is_root {
                 // Skip cargo artifacts
                 match name {
                     Some("target") | Some("Cargo.lock") => continue,
@@ -532,7 +531,7 @@ impl<'cfg> Source for PathSource<'cfg> {
             // as 0.
             let mtime = fs::metadata(&file).map(|meta| {
                 FileTime::from_last_modification_time(&meta)
-            }).unwrap_or_else(|_| FileTime::zero());
+            }).unwrap_or(FileTime::zero());
             warn!("{} {}", mtime, file.display());
             if mtime > max {
                 max = mtime;
