@@ -392,10 +392,13 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         let root = root_manifest.parent().unwrap();
-        if let WorkspaceConfig::Root { ref members, ref exclude } = *self.packages.load(root_manifest)?.workspace_config() {
-            if is_excluded(members, exclude, root, &manifest_path) {
-                return Ok(())
+        match *self.packages.load(root_manifest)?.workspace_config() {
+            WorkspaceConfig::Root { ref members, ref exclude } => {
+                if is_excluded(members, exclude, root, &manifest_path) {
+                    return Ok(())
+                }
             }
+            _ => {}
         }
 
         debug!("find_members - {}", manifest_path.display());

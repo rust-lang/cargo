@@ -162,10 +162,10 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
         let mut changes = BTreeMap::new();
         let empty = (Vec::new(), Vec::new());
         for dep in previous_resolve.iter() {
-            changes.entry(key(dep)).or_insert_with(|| empty.clone()).0.push(dep);
+            changes.entry(key(dep)).or_insert(empty.clone()).0.push(dep);
         }
         for dep in resolve.iter() {
-            changes.entry(key(dep)).or_insert_with(|| empty.clone()).1.push(dep);
+            changes.entry(key(dep)).or_insert(empty.clone()).1.push(dep);
         }
 
         for v in changes.values_mut() {

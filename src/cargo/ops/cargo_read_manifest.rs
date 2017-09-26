@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::collections::hash_map::Entry;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -138,10 +137,12 @@ fn read_nested_packages(path: &Path,
     };
     let pkg = Package::new(manifest, &manifest_path);
 
-    match all_packages.entry(pkg.package_id().clone()) {
-        Entry::Occupied(_) => { info!("skipping nested package `{}` found at `{}`",
-                         pkg.name(), path.to_string_lossy()); },
-        Entry::Vacant(e) => { e.insert(pkg); }
+    let pkg_id = pkg.package_id().clone();
+    if !all_packages.contains_key(&pkg_id) {
+        all_packages.insert(pkg_id, pkg);
+    } else {
+        info!("skipping nested package `{}` found at `{}`",
+              pkg.name(), path.to_string_lossy());
     }
 
     // Registry sources are not allowed to have `path=` dependencies because

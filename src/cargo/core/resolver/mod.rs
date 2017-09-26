@@ -478,7 +478,7 @@ impl<T> RcVecIter<T> {
 impl<T> Clone for RcVecIter<T> {
     fn clone(&self) -> RcVecIter<T> {
         RcVecIter {
-            vec: Rc::clone(&self.vec),
+            vec: self.vec.clone(),
             rest: self.rest.clone(),
         }
     }
