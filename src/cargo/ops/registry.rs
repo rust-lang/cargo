@@ -320,11 +320,13 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 
     if let Some(ref v) = opts.to_add {
         let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-        config.shell().status("Owner", format!("adding {:?} to crate {}",
-                                                    v, name))?;
-        registry.add_owners(&name, &v).map_err(|e| {
-            CargoError::from(format!("failed to add owners to crate {}: {}", name, e))
+        //config.shell().status("Owner", format!("adding {:?} to crate {}",
+        //                                            v, name))?;
+        let msg = registry.add_owners(&name, &v).map_err(|e| {
+            CargoError::from(format!("failed to invite owners to crate {}: {}", name, e))
         })?;
+
+        config.shell().status("Owner", msg)?;
     }
 
     if let Some(ref v) = opts.to_remove {

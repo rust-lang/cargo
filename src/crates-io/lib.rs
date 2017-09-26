@@ -137,12 +137,13 @@ impl Registry {
         }
     }
 
-    pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
+    pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.put(format!("/crates/{}/owners", krate),
                                  body.as_bytes())?;
-        assert!(serde_json::from_str::<R>(&body)?.ok);
-        Ok(())
+        //assert!(serde_json::from_str::<R>(&body)?.ok);
+        //Ok(())
+        Ok(body)
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
