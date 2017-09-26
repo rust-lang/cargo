@@ -116,7 +116,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
         Some(err) => {
             // If we never actually spawned the process then that sounds pretty
             // bad and we always want to forward that up.
-            let exit = match err.exit.clone() {
+            let exit = match err.exit {
                 Some(exit) => exit,
                 None => return Err(
                     CliError::new(CargoErrorKind::ProcessErrorKind(err).into(), 101)),

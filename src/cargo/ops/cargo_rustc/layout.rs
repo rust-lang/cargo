@@ -70,8 +70,7 @@ pub struct Layout {
 pub fn is_bad_artifact_name(name: &str) -> bool {
     ["deps", "examples", "build", "native", "incremental"]
         .iter()
-        .find(|&&reserved| reserved == name)
-        .is_some()
+        .any(|&reserved| reserved == name)
 }
 
 impl Layout {

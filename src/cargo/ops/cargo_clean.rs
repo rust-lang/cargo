@@ -34,7 +34,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     let host_triple = opts.config.rustc()?.host.clone();
     let mut cx = Context::new(ws, &resolve, &packages, opts.config,
                                    BuildConfig {
-                                       host_triple: host_triple,
+                                       host_triple,
                                        requested_target: opts.target.map(|s| s.to_owned()),
                                        release: opts.release,
                                        jobs: 1,
@@ -46,7 +46,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     for spec in opts.spec {
         // Translate the spec to a Package
         let pkgid = resolve.query(spec)?;
-        let pkg = packages.get(&pkgid)?;
+        let pkg = packages.get(pkgid)?;
 
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {
@@ -60,9 +60,9 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
                                 test_deps, bench_deps, check, doctest];
                 for profile in profiles.iter() {
                     units.push(Unit {
-                        pkg: &pkg,
-                        target: target,
-                        profile: profile,
+                        pkg,
+                        target,
+                        profile,
                         kind: *kind,
                     });
                 }

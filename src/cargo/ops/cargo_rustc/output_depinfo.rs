@@ -16,7 +16,7 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
             _ => path,
         }
     };
-    relpath.to_str().ok_or(internal("path not utf-8")).map(|f| f.replace(" ", "\\ "))
+    relpath.to_str().ok_or_else(|| internal("path not utf-8")).map(|f| f.replace(" ", "\\ "))
 }
 
 fn add_deps_for_unit<'a, 'b>(deps: &mut HashSet<PathBuf>, context: &mut Context<'a, 'b>,
@@ -72,14 +72,12 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
                     write!(outfile, " {}", render_filename(dep, basedir)?)?;
                 }
                 writeln!(outfile, "")?;
-            } else {
+            } else if let Err(err) = fs::remove_file(output_path) {
                 // dep-info generation failed, so delete output file. This will usually
                 // cause the build system to always rerun the build rule, which is correct
                 // if inefficient.
-                if let Err(err) = fs::remove_file(output_path) {
-                    if err.kind() != ErrorKind::NotFound {
-                        return Err(err.into());
-                    }
+                if err.kind() != ErrorKind::NotFound {
+                    return Err(err.into());
                 }
             }
         }

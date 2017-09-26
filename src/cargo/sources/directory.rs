@@ -107,7 +107,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             let mut only_dotfile = true;
             for entry in path.read_dir()?.filter_map(|e| e.ok()) {
                 if let Some(s) = entry.file_name().to_str() {
-                    if s.starts_with(".") {
+                    if s.starts_with('.') {
                         continue
                     }
                 }

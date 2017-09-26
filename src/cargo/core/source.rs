@@ -499,6 +499,7 @@ impl<'a> fmt::Display for PrettyRef<'a> {
     }
 }
 
+#[derive(Default)]
 pub struct SourceMap<'src> {
     map: HashMap<SourceId, Box<Source + 'src>>,
 }

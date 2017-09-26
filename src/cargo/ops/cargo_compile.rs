@@ -112,7 +112,7 @@ pub enum Packages<'a> {
 }
 
 impl<'a> Packages<'a> {
-    pub fn from_flags(virtual_ws: bool, all: bool, exclude: &'a Vec<String>, package: &'a Vec<String>)
+    pub fn from_flags(virtual_ws: bool, all: bool, exclude: &'a [String], package: &'a [String])
         -> CargoResult<Self>
     {
         let all = all || (virtual_ws && package.is_empty());
@@ -150,7 +150,7 @@ impl<'a> Packages<'a> {
                     .into_iter().collect()
             }
             Packages::Packages(packages) => {
-                packages.iter().map(|p| PackageIdSpec::parse(&p)).collect::<CargoResult<Vec<_>>>()?
+                packages.iter().map(|p| PackageIdSpec::parse(p)).collect::<CargoResult<Vec<_>>>()?
             }
         };
         Ok(specs)
@@ -320,7 +320,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                              exec)?
     };
 
-    ret.to_doc_test = to_builds.iter().map(|&p| p.clone()).collect();
+    ret.to_doc_test = to_builds.into_iter().cloned().collect();
 
     return Ok(ret);
 
@@ -370,7 +370,7 @@ impl<'a> FilterRule<'a> {
     pub fn try_collect(&self) -> Option<Vec<String>> {
         match *self {
             FilterRule::All => None,
-            FilterRule::Just(targets) => Some(targets.iter().map(|t| t.clone()).collect()),
+            FilterRule::Just(targets) => Some(targets.to_vec()),
         }
     }
 }
@@ -527,7 +527,7 @@ fn propose_indicated_targets<'a>(pkg: &'a Package,
                     required: false,
                 }
             });
-            return Ok(result.collect());
+            Ok(result.collect())
         }
         FilterRule::Just(names) => {
             let mut targets = Vec::new();
@@ -556,7 +556,7 @@ fn propose_indicated_targets<'a>(pkg: &'a Package,
                     required: true,
                 });
             }
-            return Ok(targets);
+            Ok(targets)
         }
     }
 }
@@ -669,7 +669,7 @@ fn scrape_build_config(config: &Config,
             if v.val <= 0 {
                 bail!("build.jobs must be positive, but found {} in {}",
                       v.val, v.definition)
-            } else if v.val >= u32::max_value() as i64 {
+            } else if v.val >= i64::from(u32::max_value()) {
                 bail!("build.jobs is too large: found {} in {}", v.val,
                       v.definition)
             } else {
@@ -689,7 +689,7 @@ fn scrape_build_config(config: &Config,
     };
     base.host = scrape_target_config(config, &base.host_triple)?;
     base.target = match target.as_ref() {
-        Some(triple) => scrape_target_config(config, &triple)?,
+        Some(triple) => scrape_target_config(config, triple)?,
         None => base.host.clone(),
     };
     Ok(base)
@@ -736,32 +736,32 @@ fn scrape_target_config(config: &Config, triple: &str)
             let key = format!("{}.{}", key, k);
             match &k[..] {
                 "rustc-flags" => {
-                    let (flags, definition) = value.string(&k)?;
+                    let (flags, definition) = value.string(k)?;
                     let whence = format!("in `{}` (in {})", key,
                                          definition.display());
                     let (paths, links) =
-                        BuildOutput::parse_rustc_flags(&flags, &whence)
+                        BuildOutput::parse_rustc_flags(flags, &whence)
                     ?;
                     output.library_paths.extend(paths);
                     output.library_links.extend(links);
                 }
                 "rustc-link-lib" => {
-                    let list = value.list(&k)?;
+                    let list = value.list(k)?;
                     output.library_links.extend(list.iter()
                                                     .map(|v| v.0.clone()));
                 }
                 "rustc-link-search" => {
-                    let list = value.list(&k)?;
+                    let list = value.list(k)?;
                     output.library_paths.extend(list.iter().map(|v| {
                         PathBuf::from(&v.0)
                     }));
                 }
                 "rustc-cfg" => {
-                    let list = value.list(&k)?;
+                    let list = value.list(k)?;
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 "rustc-env" => {
-                    for (name, val) in value.table(&k)?.0 {
+                    for (name, val) in value.table(k)?.0 {
                         let val = val.string(name)?.0;
                         output.env.push((name.clone(), val.to_string()));
                     }
@@ -772,7 +772,7 @@ fn scrape_target_config(config: &Config, triple: &str)
                     bail!("`{}` is not supported in build script overrides", k);
                 }
                 _ => {
-                    let val = value.string(&k)?.0;
+                    let val = value.string(k)?.0;
                     output.metadata.push((k.clone(), val.to_string()));
                 }
             }

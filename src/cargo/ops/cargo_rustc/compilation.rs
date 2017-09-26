@@ -104,7 +104,7 @@ impl<'cfg> Compilation<'cfg> {
     /// See `process`.
     pub fn target_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
                                            -> CargoResult<ProcessBuilder> {
-        let builder = if let &Some((ref runner, ref args)) = self.target_runner()? {
+        let builder = if let Some((ref runner, ref args)) = *self.target_runner()? {
             let mut builder = process(runner);
             builder.args(args);
             builder.arg(cmd);

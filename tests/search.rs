@@ -35,7 +35,7 @@ fn setup() {
 fn cargo_process(s: &str) -> ProcessBuilder {
     let mut b = cargotest::cargo_process();
     b.arg(s);
-    return b
+    b
 }
 
 #[test]

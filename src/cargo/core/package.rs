@@ -53,7 +53,7 @@ impl ser::Serialize for Package {
         let description = manmeta.description.as_ref().map(String::as_ref);
 
         SerializedPackage {
-            name: &package_id.name(),
+            name: package_id.name(),
             version: &package_id.version().to_string(),
             id: package_id,
             license: license,
@@ -61,7 +61,7 @@ impl ser::Serialize for Package {
             description: description,
             source: summary.source_id(),
             dependencies: summary.dependencies(),
-            targets: &self.manifest.targets(),
+            targets: self.manifest.targets(),
             features: summary.features(),
             manifest_path: &self.manifest_path.display().to_string(),
         }.serialize(s)
@@ -80,8 +80,7 @@ impl Package {
     pub fn for_path(manifest_path: &Path, config: &Config) -> CargoResult<Package> {
         let path = manifest_path.parent().unwrap();
         let source_id = SourceId::for_path(path)?;
-        let (pkg, _) = ops::read_package(&manifest_path, &source_id,
-                                         config)?;
+        let (pkg, _) = ops::read_package(manifest_path, &source_id, config)?;
         Ok(pkg)
     }
 

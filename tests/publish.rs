@@ -53,7 +53,7 @@ See [..]
 
     // Verify the tarball
     let mut rdr = GzDecoder::new(f).unwrap();
-    assert_eq!(rdr.header().filename().unwrap(), "foo-0.0.1.crate".as_bytes());
+    assert_eq!(rdr.header().filename().unwrap(), b"foo-0.0.1.crate");
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);

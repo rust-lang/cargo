@@ -113,7 +113,7 @@ impl<'cfg> PathSource<'cfg> {
             let pattern: &str = if p.starts_with('/') {
                 &p[1..p.len()]
             } else {
-                &p
+                p
             };
             Pattern::new(pattern).map_err(|e| {
                 CargoError::from(format!("could not parse glob pattern `{}`: {}", p, e))
@@ -216,26 +216,24 @@ impl<'cfg> PathSource<'cfg> {
                                 relative_path.display()
                             ))?;
                     }
+                } else if no_include_option {
+                    self.config
+                        .shell()
+                        .warn(format!(
+                            "Pattern matching for Cargo's include/exclude fields is changing and \
+                            file `{}` WILL NOT be excluded in a future Cargo version.\n\
+                            See https://github.com/rust-lang/cargo/issues/4268 for more info",
+                            relative_path.display()
+                        ))?;
                 } else {
-                    if no_include_option {
-                        self.config
-                            .shell()
-                            .warn(format!(
-                                "Pattern matching for Cargo's include/exclude fields is changing and \
-                                file `{}` WILL NOT be excluded in a future Cargo version.\n\
-                                See https://github.com/rust-lang/cargo/issues/4268 for more info",
-                                relative_path.display()
-                            ))?;
-                    } else {
-                        self.config
-                            .shell()
-                            .warn(format!(
-                                "Pattern matching for Cargo's include/exclude fields is changing and \
-                                file `{}` WILL be included in a future Cargo version.\n\
-                                See https://github.com/rust-lang/cargo/issues/4268 for more info",
-                                relative_path.display()
-                            ))?;
-                    }
+                    self.config
+                        .shell()
+                        .warn(format!(
+                            "Pattern matching for Cargo's include/exclude fields is changing and \
+                            file `{}` WILL be included in a future Cargo version.\n\
+                            See https://github.com/rust-lang/cargo/issues/4268 for more info",
+                            relative_path.display()
+                        ))?;
                 }
             }
 
@@ -294,7 +292,7 @@ impl<'cfg> PathSource<'cfg> {
                 None => break,
             }
         }
-        return None;
+        None
     }
 
     fn list_files_git(&self, pkg: &Package, repo: git2::Repository,
