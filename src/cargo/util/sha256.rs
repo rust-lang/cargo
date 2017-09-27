@@ -1,12 +1,12 @@
-pub use self::Sha256;
 extern crate crypto_hash;
-use crypto_hash::{Hasher,Algorithm};
+use self::crypto_hash::{Hasher,Algorithm};
+use std::io::Write;
 
 pub struct Sha256(Hasher);
 
 impl Sha256 {
     pub fn new() -> Sha256 {
-        let hasher = Hasher::new(Algorithm::sha256());
+        let hasher = Hasher::new(Algorithm::SHA256);
         Sha256(hasher)
     }
 
