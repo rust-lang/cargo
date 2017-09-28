@@ -1,19 +1,29 @@
 #compdef cargo
 
-typeset -A opt_args
 autoload -U regexp-replace
 
 zstyle -T ':completion:*:*:cargo:*' tag-order && \
   zstyle ':completion:*:*:cargo:*' tag-order 'common-commands'
 
 _cargo() {
+local context state state_descr line
+typeset -A opt_args
 
+# leading items in parentheses are an exclusion list for the arguments following that arg
+# See: http://zsh.sourceforge.net/Doc/Release/Completion-System.html#Completion-Functions
+#   - => exclude all other options
+#   1 => exclude positional arg 1
+#   * => exclude all other args
+#   +blah => exclude +blah
 _arguments \
     '(- 1 *)'{-h,--help}'[show help message]' \
-    '(- 1 *)'--list'[list installed commands]' \
-    '(- 1 *)'{-v,--verbose}'[use verbose output]' \
-    '(- 1 *)'--color'[colorization option]' \
+    '(- 1 *)--list[list installed commands]' \
     '(- 1 *)'{-V,--version}'[show version information]' \
+    {-v,--verbose}'[use verbose output]' \
+    --color'[colorization option]' \
+    '(+beta +nightly)+stable[use the stable toolchain]' \
+    '(+stable +nightly)+beta[use the beta toolchain]' \
+    '(+stable +beta)+nightly[use the nightly toolchain]' \
     '1: :->command' \
     '*:: :->args'
 
@@ -163,10 +173,10 @@ case $state in
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
                     '--no-default-features[do not build the default features]' \
-                    '--path=[local filesystem path to crate to install]' \
+                    '--path=[local filesystem path to crate to install]: :_files -/' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '--rev=[specific commit to use when installing from git]' \
-                    '--root=[directory to install packages into]' \
+                    '--root=[directory to install packages into]: :_files -/' \
                     '--tag=[tag to use when installing from git]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     '--vers=[version to install from crates.io]' \
@@ -291,7 +301,7 @@ case $state in
                     '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'=[number of parallel jobs, defaults to # of CPUs]' \
-                    '--manifest-path=[path to the manifest to fetch dependencies for]' \
+                    '--manifest-path=[path to the manifest to fetch dependencies for]: :_files -/' \
                     '--no-default-features[do not compile default features for the package]' \
                     '(-p, --package)'{-p,--package}'=[profile to compile for]' \
                     '--profile=[profile to build the selected target for]' \
@@ -309,7 +319,7 @@ case $state in
                     '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-j, --jobs)'{-j,--jobs}'=[number of parallel jobs, defaults to # of CPUs]' \
-                    '--manifest-path=[path to the manifest to document]' \
+                    '--manifest-path=[path to the manifest to document]: :_files -/' \
                     '--no-default-features[do not build the `default` feature]' \
                     '--open[open the docs in a browser after the operation]' \
                     '(-p, --package)'{-p,--package}'=[package to document]' \
@@ -365,7 +375,7 @@ case $state in
                     '--color=:colorization option:(auto always never)' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
                     '(-q, --quiet)'{-q,--quiet}'[less output printed to stdout]' \
-                    '--root=[directory to uninstall packages from]' \
+                    '--root=[directory to uninstall packages from]: :_files -/' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
                     ;;
 
@@ -530,6 +540,5 @@ command_scope_spec=(
     '(--bench --bin --example --test)--lib=[library name]'
     '(--bench --bin --example --lib)--test=[test name]'
 )
-
 
 _cargo
