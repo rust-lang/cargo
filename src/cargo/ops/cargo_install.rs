@@ -1,7 +1,6 @@
 use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
-use std::env;
-use std::fs::{self, File};
+use std::{env, fs};
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
@@ -180,7 +179,7 @@ fn install_one(root: &Filesystem,
     // anything if we're gonna throw it away anyway.
     {
         let metadata = metadata(config, root)?;
-        let list = read_crate_list(metadata.file())?;
+        let list = read_crate_list(&metadata)?;
         let dst = metadata.parent().join("bin");
         check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
     }
@@ -211,7 +210,7 @@ fn install_one(root: &Filesystem,
     }
 
     let metadata = metadata(config, root)?;
-    let mut list = read_crate_list(metadata.file())?;
+    let mut list = read_crate_list(&metadata)?;
     let dst = metadata.parent().join("bin");
     let duplicates = check_overwrites(&dst, pkg, &opts.filter,
                                            &list, force)?;
@@ -299,7 +298,7 @@ fn install_one(root: &Filesystem,
                .extend(to_install.iter().map(|s| s.to_string()));
     }
 
-    let write_result = write_crate_list(metadata.file(), list);
+    let write_result = write_crate_list(&metadata, list);
     match write_result {
         // Replacement error (if any) isn't actually caused by write error
         // but this seems to be the only way to show both.
@@ -511,10 +510,10 @@ fn find_duplicates(dst: &Path,
     }
 }
 
-fn read_crate_list(mut file: &File) -> CargoResult<CrateListingV1> {
+fn read_crate_list(file: &FileLock) -> CargoResult<CrateListingV1> {
     (|| -> CargoResult<_> {
         let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
+        file.file().read_to_string(&mut contents)?;
         let listing = toml::from_str(&contents).chain_err(|| {
             internal("invalid TOML found for metadata")
         })?;
@@ -525,26 +524,29 @@ fn read_crate_list(mut file: &File) -> CargoResult<CrateListingV1> {
             }
         }
     })().chain_err(|| {
-        "failed to parse crate metadata"
+        format!("failed to parse crate metadata at `{}`",
+                file.path().to_string_lossy())
     })
 }
 
-fn write_crate_list(mut file: &File, listing: CrateListingV1) -> CargoResult<()> {
+fn write_crate_list(file: &FileLock, listing: CrateListingV1) -> CargoResult<()> {
     (|| -> CargoResult<_> {
+        let mut file = file.file();
         file.seek(SeekFrom::Start(0))?;
         file.set_len(0)?;
         let data = toml::to_string(&CrateListing::V1(listing))?;
         file.write_all(data.as_bytes())?;
         Ok(())
     })().chain_err(|| {
-        "failed to write crate metadata"
+        format!("failed to write crate metadata at `{}`",
+                file.path().to_string_lossy())
     })
 }
 
 pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
     let dst = resolve_root(dst, config)?;
     let dst = metadata(config, &dst)?;
-    let list = read_crate_list(dst.file())?;
+    let list = read_crate_list(&dst)?;
     for (k, v) in list.v1.iter() {
         println!("{}:", k);
         for bin in v {
@@ -560,7 +562,7 @@ pub fn uninstall(root: Option<&str>,
                  config: &Config) -> CargoResult<()> {
     let root = resolve_root(root, config)?;
     let crate_metadata = metadata(config, &root)?;
-    let mut metadata = read_crate_list(crate_metadata.file())?;
+    let mut metadata = read_crate_list(&crate_metadata)?;
     let mut to_remove = Vec::new();
     {
         let result = PackageIdSpec::query_str(spec, metadata.v1.keys())?
@@ -605,7 +607,7 @@ pub fn uninstall(root: Option<&str>,
             installed.remove();
         }
     }
-    write_crate_list(crate_metadata.file(), metadata)?;
+    write_crate_list(&crate_metadata, metadata)?;
     for bin in to_remove {
         config.shell().status("Removing", bin.display())?;
         fs::remove_file(bin)?;

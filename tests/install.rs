@@ -2,7 +2,7 @@ extern crate cargo;
 extern crate cargotest;
 extern crate hamcrest;
 
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 
 use cargo::util::ProcessBuilder;
@@ -639,6 +639,36 @@ bar v0.2.1:
     bar[..]
 foo v0.0.1:
     foo[..]
+"));
+}
+
+#[test]
+fn list_error() {
+    pkg("foo", "0.0.1");
+    assert_that(cargo_process("install").arg("foo"),
+                execs().with_status(0));
+    assert_that(cargo_process("install").arg("--list"),
+                execs().with_status(0).with_stdout("\
+foo v0.0.1:
+    foo[..]
+"));
+    let mut worldfile_path = cargo_home();
+    worldfile_path.push(".crates.toml");
+    let mut worldfile = OpenOptions::new()
+                            .write(true)
+                            .open(worldfile_path)
+                            .expect(".crates.toml should be there");
+    worldfile.write_all(b"\x00").unwrap();
+    drop(worldfile);
+    assert_that(cargo_process("install").arg("--list").arg("--verbose"),
+                execs().with_status(101).with_stderr("\
+[ERROR] failed to parse crate metadata at `[..]`
+
+Caused by:
+  invalid TOML found for metadata
+
+Caused by:
+  unexpected character[..]
 "));
 }
 
