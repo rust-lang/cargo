@@ -37,26 +37,48 @@ mod layout;
 mod links;
 mod output_depinfo;
 
+/// Whether an object is for the host arch, or the target arch.
+///
+/// These will be the same unless cross-compiling.
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
 pub enum Kind { Host, Target }
 
+/// Configuration information for a rustc build.
 #[derive(Default, Clone)]
 pub struct BuildConfig {
+    /// The host arch triple
+    ///
+    /// e.g. x86_64-unknown-linux-gnu, would be
+    ///  - machine: x86_64
+    ///  - hardware-platform: unknown
+    ///  - operating system: linux-gnu
     pub host_triple: String,
+    /// Build information for the host arch
     pub host: TargetConfig,
+    /// The target arch triple, defaults to host arch
     pub requested_target: Option<String>,
+    /// Build information for the target
     pub target: TargetConfig,
+    /// How many rustc jobs to run in parallel
     pub jobs: u32,
+    /// Whether we are building for release
     pub release: bool,
+    /// Whether we are running tests
     pub test: bool,
+    /// Whether we are building documentation
     pub doc_all: bool,
+    /// Whether to print std output in json format (for machine reading)
     pub json_messages: bool,
 }
 
+/// Information required to build for a target
 #[derive(Clone, Default)]
 pub struct TargetConfig {
+    /// The path of archiver (lib builder) for this target.
     pub ar: Option<PathBuf>,
+    /// The path of the linker for this target.
     pub linker: Option<PathBuf>,
+    /// Special build options for any necessary input files (filename -> options)
     pub overrides: HashMap<String, BuildOutput>,
 }
 
