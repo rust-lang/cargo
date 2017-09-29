@@ -34,8 +34,10 @@ pub struct BuildOutput {
     pub warnings: Vec<String>,
 }
 
+/// Map of packages to build info
 pub type BuildMap = HashMap<(PackageId, Kind), BuildOutput>;
 
+/// Build info and overrides
 pub struct BuildState {
     pub outputs: Mutex<BuildMap>,
     overrides: HashMap<(String, Kind), BuildOutput>,
