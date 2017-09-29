@@ -204,6 +204,131 @@ fn doc_only_bin() {
 }
 
 #[test]
+fn doc_multiple_targets_same_name_lib() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo", "bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [lib]
+            name = "foo_lib"
+        "#)
+        .file("foo/src/lib.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            [lib]
+            name = "foo_lib"
+        "#)
+        .file("bar/src/lib.rs", "");
+
+        assert_that(p.cargo_process("doc").arg("--all"),
+                    execs()
+                    .with_status(101)
+                    .with_stderr_contains("[..] library `foo_lib` is specified [..]")
+                    .with_stderr_contains("[..] `foo v0.1.0[..]` [..]")
+                    .with_stderr_contains("[..] `bar v0.1.0[..]` [..]"));
+}
+
+#[test]
+fn doc_multiple_targets_same_name() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo", "bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [[bin]]
+            name = "foo_lib"
+        "#)
+        .file("foo/src/foo_lib.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            [lib]
+            name = "foo_lib"
+        "#)
+        .file("bar/src/lib.rs", "");
+
+        assert_that(p.cargo_process("doc").arg("--all"),
+                    execs()
+                    .with_status(101)
+                    .with_stderr_contains("[..] target `foo_lib` [..]")
+                    .with_stderr_contains("[..] binary by package `foo v0.1.0[..]`[..]")
+                    .with_stderr_contains("[..] library by package `bar v0.1.0[..]` [..]"));
+}
+
+#[test]
+fn doc_multiple_targets_same_name_bin() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo", "bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [[bin]]
+            name = "foo-cli"
+        "#)
+        .file("foo/src/foo-cli.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            [[bin]]
+            name = "foo-cli"
+        "#)
+        .file("bar/src/foo-cli.rs", "");
+
+        assert_that(p.cargo_process("doc").arg("--all"),
+                    execs()
+                    .with_status(101)
+                    .with_stderr_contains("[..] binary `foo_cli` is specified [..]")
+                    .with_stderr_contains("[..] `foo v0.1.0[..]` [..]")
+                    .with_stderr_contains("[..] `bar v0.1.0[..]` [..]"));
+}
+
+#[test]
+fn doc_multiple_targets_same_name_undoced() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo", "bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            [[bin]]
+            name = "foo-cli"
+        "#)
+        .file("foo/src/foo-cli.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            [[bin]]
+            name = "foo-cli"
+            doc = false
+        "#)
+        .file("bar/src/foo-cli.rs", "");
+
+        assert_that(p.cargo_process("doc").arg("--all"),
+                    execs().with_status(0));
+}
+
+#[test]
 fn doc_lib_bin_same_name() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -218,9 +343,8 @@ fn doc_lib_bin_same_name() {
     assert_that(p.cargo_process("doc"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] cannot document a package where a library and a binary have the same name. \
-Consider renaming one or marking the target as `doc = false`
-"));
+[ERROR] The target `foo` is specified as a library and as a binary by package \
+`foo [..]`. It can be documented[..]"));
 }
 
 #[test]
