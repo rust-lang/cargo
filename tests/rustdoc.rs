@@ -160,7 +160,6 @@ fn rustdoc_same_name_err() {
                  .arg("--").arg("--cfg=foo"),
                 execs()
                 .with_status(101)
-                .with_stderr("[ERROR] cannot document a package where a library and a \
-                              binary have the same name. Consider renaming one \
-                              or marking the target as `doc = false`"));
+                .with_stderr("[ERROR] The target `foo` is specified as a \
+library and as a binary by package `foo [..]`. It can be documented[..]"));
 }
