@@ -561,7 +561,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// and link_stem would be out_dir/foo
     /// This function returns it in two parts so the caller can add prefix/suffix
     /// to filename separately
-
+    ///
     /// Returns an Option because in some cases we don't want to link
     /// (eg a dependent lib)
     pub fn link_stem(&mut self, unit: &Unit<'a>) -> Option<(PathBuf, String)> {
@@ -595,9 +595,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Return the filenames that the given target for the given profile will
     /// generate as a list of 3-tuples (filename, link_dst, linkable)
-    /// filename: filename rustc compiles to. (Often has metadata suffix).
-    /// link_dst: Optional file to link/copy the result to (without metadata suffix)
-    /// linkable: Whether possible to link against file (eg it's a library)
+    ///
+    ///  - filename: filename rustc compiles to. (Often has metadata suffix).
+    ///  - link_dst: Optional file to link/copy the result to (without metadata suffix)
+    ///  - linkable: Whether possible to link against file (eg it's a library)
     pub fn target_filenames(&mut self, unit: &Unit<'a>)
                             -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, bool)>>> {
         if let Some(cache) = self.target_filenames.get(unit) {
