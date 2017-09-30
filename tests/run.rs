@@ -855,3 +855,59 @@ fn run_multiple_packages() {
                     .with_status(101)
                     .with_stderr_contains("[ERROR] package `d3` is not a member of the workspace"));
 }
+
+#[test]
+fn run_set_environment() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            build = "build.rs"
+        "#)
+        .file("build.rs", r#"
+        use std::env;
+        fn main() {
+            let rustc = env::var("RUSTC").unwrap();
+            if rustc == "foobar" {
+                panic!("Environment should not get mangled by `--env`");
+            }
+        }
+        "#)
+        .file("src/main.rs", r#"
+            use std::env;
+            fn main() {
+                if (env::var("RUSTC").unwrap() != "foobar")
+                   | (env::var("foo").unwrap() != "bar") {
+                    panic!("Environment was not set properly");
+                }
+            }
+        "#);
+
+    assert_that(p.cargo_process("run")
+                 .arg("--env").arg("RUSTC=foobar")
+                 .arg("-e").arg("foo=foo")
+                 .arg("-e").arg("foo=bar"),
+                execs()
+                .with_status(0)
+                .with_stderr_contains("[WARNING] Environment variable `foo` \
+                                      is set multiple times."));
+}
+
+#[test]
+fn run_set_environment_bad_arg() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("run")
+                 .arg("-e").arg("foobar"),
+                execs()
+                .with_status(101)
+                .with_stderr_contains("[ERROR] Environment variables take the \
+                                      form KEY=VALUE"));
+}

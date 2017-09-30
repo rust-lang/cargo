@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::Path;
 
 use ops::{self, Packages};
@@ -7,7 +8,8 @@ use core::Workspace;
 
 pub fn run(ws: &Workspace,
            options: &ops::CompileOptions,
-           args: &[String]) -> CargoResult<Option<ProcessError>> {
+           args: &[String],
+           env: &HashMap<String, String>) -> CargoResult<Option<ProcessError>> {
     let config = ws.config();
 
     let pkg = match options.spec {
@@ -59,8 +61,12 @@ pub fn run(ws: &Workspace,
         Some(path) => path.to_path_buf(),
         None => exe.to_path_buf(),
     };
+
     let mut process = compile.target_process(exe, pkg)?;
     process.args(args).cwd(config.cwd());
+    for (key, value) in env.iter() {
+        process.env(key, value);
+    }
 
     config.shell().status("Running", process.to_string())?;
 
