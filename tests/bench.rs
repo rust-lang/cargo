@@ -151,6 +151,40 @@ fn bench_tarname() {
 }
 
 #[test]
+fn bench_multiple_targets() {
+    if !is_nightly() { return }
+
+    let prj = project("foo")
+        .file("Cargo.toml" , r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("benches/bin1.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            #[bench] fn run1(_ben: &mut test::Bencher) { }"#)
+        .file("benches/bin2.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            #[bench] fn run2(_ben: &mut test::Bencher) { }"#)
+        .file("benches/bin3.rs", r#"
+            #![feature(test)]
+            extern crate test;
+            #[bench] fn run3(_ben: &mut test::Bencher) { }"#);
+
+    assert_that(prj.cargo_process("bench")
+                .arg("--bench").arg("bin1")
+                .arg("--bench").arg("bin2"),
+                execs()
+                .with_status(0)
+                .with_stdout_contains("test run1 ... bench: [..]")
+                .with_stdout_contains("test run2 ... bench: [..]")
+                .with_stdout_does_not_contain("run3"));
+}
+
+#[test]
 fn cargo_bench_verbose() {
     if !is_nightly() { return }
 

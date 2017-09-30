@@ -48,13 +48,13 @@ Usage:
 Options:
     -h, --help                   Print this message
     --lib                        Benchmark only this package's library
-    --bin NAME                   Benchmark only the specified binary
+    --bin NAME ...               Benchmark only the specified binary
     --bins                       Benchmark all binaries
-    --example NAME               Benchmark only the specified example
+    --example NAME ...           Benchmark only the specified example
     --examples                   Benchmark all examples
-    --test NAME                  Benchmark only the specified test target
+    --test NAME ...              Benchmark only the specified test target
     --tests                      Benchmark all tests
-    --bench NAME                 Benchmark only the specified bench target
+    --bench NAME ...             Benchmark only the specified bench target
     --benches                    Benchmark all benches
     --all-targets                Benchmark all targets (default)
     --no-run                     Compile, but don't run benchmarks
