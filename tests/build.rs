@@ -3651,3 +3651,25 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
                     "[..]can't find `a_bin` bin, specify bin.path"
                 ));
 }
+
+#[test]
+fn invalid_character_in_crate_name() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [[bin]]
+            name = "foo.shmexe"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("build").arg("-v"),
+                execs().with_status(101)
+                .with_stderr_contains(
+                    "[..]Invalid character `.` for key `bin.name`"
+                )
+                .with_stderr_does_not_contain("Compiling foo v0.1.0"));
+}
