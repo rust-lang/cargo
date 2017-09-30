@@ -18,7 +18,7 @@
 //!    the `Manifest::feature_gate` function, but otherwise you may wish to
 //!    place the feature gate elsewhere in Cargo.
 //!
-//! 3. Do actually perform the feature gate, you'll want to have code that looks
+//! 3. To actually perform the feature gate, you'll want to have code that looks
 //!    like:
 //!
 //! ```rust,ignore
@@ -148,7 +148,7 @@ impl Features {
         };
 
         if *slot {
-            bail!("the cargo feature `{}` has already bene activated", feature);
+            bail!("the cargo feature `{}` has already been activated", feature);
         }
 
         match status {
@@ -200,7 +200,7 @@ impl Features {
     }
 }
 
-/// A parsed represetnation of all unstable flags that Cargo accepts.
+/// A parsed representation of all unstable flags that Cargo accepts.
 ///
 /// Cargo, like `rustc`, accepts a suite of `-Z` flags which are intended for
 /// gating unstable functionality to Cargo. These flags are only available on
