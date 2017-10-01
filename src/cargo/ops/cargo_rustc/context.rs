@@ -64,8 +64,11 @@ pub struct Unit<'a> {
 pub struct Context<'a, 'cfg: 'a> {
     /// The workspace the build is for
     pub ws: &'a Workspace<'cfg>,
+    /// The cargo configuration
     pub config: &'cfg Config,
+    /// The dependency graph for our build
     pub resolve: &'a Resolve,
+    /// Information on the compilation output
     pub compilation: Compilation<'cfg>,
     pub packages: &'a PackageSet<'cfg>,
     pub build_state: Arc<BuildState>,
