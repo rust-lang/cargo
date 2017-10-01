@@ -20,12 +20,13 @@ use util::errors::{CargoResult, CargoResultExt};
 // TODO: Is manifest_path a relic?
 #[derive(Clone, Debug)]
 pub struct Package {
-    // The package's manifest
+    /// The package's manifest
     manifest: Manifest,
-    // The root of the package
+    /// The root of the package
     manifest_path: PathBuf,
 }
 
+/// A Package in a form where `Serialize` can be derived.
 #[derive(Serialize)]
 struct SerializedPackage<'a> {
     name: &'a str,
@@ -69,6 +70,7 @@ impl ser::Serialize for Package {
 }
 
 impl Package {
+    /// Create a package from a manifest and its location
     pub fn new(manifest: Manifest,
                manifest_path: &Path) -> Package {
         Package {
@@ -77,6 +79,7 @@ impl Package {
         }
     }
 
+    /// Calculate the Package from the manifest path (and cargo configuration).
     pub fn for_path(manifest_path: &Path, config: &Config) -> CargoResult<Package> {
         let path = manifest_path.parent().unwrap();
         let source_id = SourceId::for_path(path)?;
@@ -84,18 +87,30 @@ impl Package {
         Ok(pkg)
     }
 
+    /// Get the manifest dependencies
     pub fn dependencies(&self) -> &[Dependency] { self.manifest.dependencies() }
+    /// Get the manifest
     pub fn manifest(&self) -> &Manifest { &self.manifest }
+    /// Get the path to the manifest
     pub fn manifest_path(&self) -> &Path { &self.manifest_path }
+    /// Get the name of the package
     pub fn name(&self) -> &str { self.package_id().name() }
+    /// Get the PackageId object for the package (fully defines a packge)
     pub fn package_id(&self) -> &PackageId { self.manifest.package_id() }
+    /// Get the root folder of the package
     pub fn root(&self) -> &Path { self.manifest_path.parent().unwrap() }
+    /// Get the summary for the package
     pub fn summary(&self) -> &Summary { self.manifest.summary() }
+    /// Get the targets specified in the manifest
     pub fn targets(&self) -> &[Target] { self.manifest.targets() }
+    /// Get the current package version
     pub fn version(&self) -> &Version { self.package_id().version() }
+    /// Get the package authors
     pub fn authors(&self) -> &Vec<String> { &self.manifest.metadata().authors }
+    /// Whether the package is set to publish
     pub fn publish(&self) -> bool { self.manifest.publish() }
 
+    /// Whether the package uses a custom build script for any target
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())
     }

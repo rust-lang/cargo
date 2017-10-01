@@ -21,6 +21,7 @@ use util::{Config, CargoResult, ToUrl};
 /// A Source finds and downloads remote packages based on names and
 /// versions.
 pub trait Source: Registry {
+    /// Returns the `SourceId` corresponding to this source
     fn source_id(&self) -> &SourceId;
 
     /// The update method performs any network operations required to
@@ -56,27 +57,34 @@ pub trait Source: Registry {
 }
 
 impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
+    /// Forwards to `Source::source_id`
     fn source_id(&self) -> &SourceId {
         (**self).source_id()
     }
 
+    /// Forwards to `Source::update`
     fn update(&mut self) -> CargoResult<()> {
         (**self).update()
     }
 
+    /// Forwards to `Source::download`
     fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
         (**self).download(id)
     }
 
+    /// Forwards to `Source::fingerprint`
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
         (**self).fingerprint(pkg)
     }
 
+    /// Forwards to `Source::verify`
     fn verify(&self, pkg: &PackageId) -> CargoResult<()> {
         (**self).verify(pkg)
     }
 }
 
+/// The possible kinds of code source. Along with a URL, this fully defines the
+/// source
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Kind {
     /// Kind::Git(<git reference>) represents a git repository
@@ -91,10 +99,14 @@ enum Kind {
     Directory,
 }
 
+/// Information to find a specific commit in a git repository
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum GitReference {
+    /// from a tag
     Tag(String),
+    /// from the HEAD of a branch
     Branch(String),
+    /// from a specific revision
     Rev(String),
 }
 
@@ -104,16 +116,23 @@ pub struct SourceId {
     inner: Arc<SourceIdInner>,
 }
 
+/// Unique identifier for a source of packages.
 #[derive(Eq, Clone, Debug)]
 struct SourceIdInner {
+    /// The source URL
     url: Url,
+    /// `git::canonicalize_url(url)` for the url field
     canonical_url: Url,
+    /// The source kind
     kind: Kind,
     // e.g. the exact git revision of the specified branch for a Git Source
     precise: Option<String>,
 }
 
 impl SourceId {
+    /// Create a SourceId object from the kind and url.
+    ///
+    /// The canonical url will be calculated, but the precise field will not
     fn new(kind: Kind, url: Url) -> CargoResult<SourceId> {
         let source_id = SourceId {
             inner: Arc::new(SourceIdInner {
@@ -174,29 +193,36 @@ impl SourceId {
         }
     }
 
+    /// A view of the `SourceId` that can be `Display`ed as a URL
     pub fn to_url(&self) -> SourceIdToUrl {
         SourceIdToUrl { inner: &*self.inner }
     }
 
-    // Pass absolute path
+    /// Create a SourceId from a filesystem path.
+    ///
+    /// Pass absolute path
     pub fn for_path(path: &Path) -> CargoResult<SourceId> {
         let url = path.to_url()?;
         SourceId::new(Kind::Path, url)
     }
 
+    /// Crate a SourceId from a git reference
     pub fn for_git(url: &Url, reference: GitReference) -> CargoResult<SourceId> {
         SourceId::new(Kind::Git(reference), url.clone())
     }
 
+    /// Create a SourceId from a registry url
     pub fn for_registry(url: &Url) -> CargoResult<SourceId> {
         SourceId::new(Kind::Registry, url.clone())
     }
 
+    /// Create a SourceId from a local registry path
     pub fn for_local_registry(path: &Path) -> CargoResult<SourceId> {
         let url = path.to_url()?;
         SourceId::new(Kind::LocalRegistry, url)
     }
 
+    /// Create a SourceId from a directory path
     pub fn for_directory(path: &Path) -> CargoResult<SourceId> {
         let url = path.to_url()?;
         SourceId::new(Kind::Directory, url)
@@ -212,9 +238,9 @@ impl SourceId {
             static WARNED: AtomicBool = ATOMIC_BOOL_INIT;
             if !WARNED.swap(true, SeqCst) {
                 config.shell().warn("custom registry support via \
-                                          the `registry.index` configuration is \
-                                          being removed, this functionality \
-                                          will not work in the future")?;
+                                     the `registry.index` configuration is \
+                                     being removed, this functionality \
+                                     will not work in the future")?;
             }
             &index[..]
         } else {
@@ -224,16 +250,22 @@ impl SourceId {
         SourceId::for_registry(&url)
     }
 
+    /// Get this source URL
     pub fn url(&self) -> &Url {
         &self.inner.url
     }
+
+    /// Is this source from a filesystem path
     pub fn is_path(&self) -> bool {
         self.inner.kind == Kind::Path
     }
+
+    /// Is this source from a registry (either local or not)
     pub fn is_registry(&self) -> bool {
         self.inner.kind == Kind::Registry || self.inner.kind == Kind::LocalRegistry
     }
 
+    /// Is this source from a git repository
     pub fn is_git(&self) -> bool {
         match self.inner.kind {
             Kind::Git(_) => true,
@@ -271,10 +303,12 @@ impl SourceId {
         }
     }
 
+    /// Get the value of the precise field
     pub fn precise(&self) -> Option<&str> {
         self.inner.precise.as_ref().map(|s| &s[..])
     }
 
+    /// Get the git reference if this is a git source, otherwise None.
     pub fn git_reference(&self) -> Option<&GitReference> {
         match self.inner.kind {
             Kind::Git(ref s) => Some(s),
@@ -282,6 +316,7 @@ impl SourceId {
         }
     }
 
+    /// Create a new SourceId from this source with the given `precise`
     pub fn with_precise(&self, v: Option<String>) -> SourceId {
         SourceId {
             inner: Arc::new(SourceIdInner {
@@ -291,6 +326,7 @@ impl SourceId {
         }
     }
 
+    /// Whether the remote registry is the standard https://crates.io
     pub fn is_default_registry(&self) -> bool {
         match self.inner.kind {
             Kind::Registry => {}
@@ -299,6 +335,10 @@ impl SourceId {
         self.inner.url.to_string() == CRATES_IO
     }
 
+    /// Hash `self`
+    ///
+    /// For paths, remove the workspace prefix so the same source will give the
+    /// same hash in different locations.
     pub fn stable_hash<S: hash::Hasher>(&self, workspace: &Path, into: &mut S) {
         if self.is_path() {
             if let Ok(p) = self.inner.url.to_file_path().unwrap().strip_prefix(workspace) {
@@ -383,6 +423,9 @@ impl fmt::Display for SourceId {
 // This custom implementation handles situations such as when two git sources
 // point at *almost* the same URL, but not quite, even when they actually point
 // to the same repository.
+/// This method tests for self and other values to be equal, and is used by ==.
+///
+/// For git repositories, the canonical url is checked.
 impl PartialEq for SourceIdInner {
     fn eq(&self, other: &SourceIdInner) -> bool {
         if self.kind != other.kind {
@@ -441,6 +484,7 @@ impl Hash for SourceId {
     }
 }
 
+/// A `Display`able view into a SourceId that will write it as a url
 pub struct SourceIdToUrl<'a> {
     inner: &'a SourceIdInner,
 }
@@ -477,6 +521,8 @@ impl<'a> fmt::Display for SourceIdToUrl<'a> {
 }
 
 impl GitReference {
+    /// Returns a `Display`able view of this git reference, or None if using
+    /// the head of the "master" branch
     pub fn pretty_ref(&self) -> Option<PrettyRef> {
         match *self {
             GitReference::Branch(ref s) if *s == "master" => None,
@@ -485,6 +531,7 @@ impl GitReference {
     }
 }
 
+/// A git reference that can be `Display`ed
 pub struct PrettyRef<'a> {
     inner: &'a GitReference,
 }
@@ -499,26 +546,32 @@ impl<'a> fmt::Display for PrettyRef<'a> {
     }
 }
 
+/// A `HashMap` of `SourceId` -> `Box<Source>`
 #[derive(Default)]
 pub struct SourceMap<'src> {
     map: HashMap<SourceId, Box<Source + 'src>>,
 }
 
+/// A `std::collection::hash_map::Values` for `SourceMap`
 pub type Sources<'a, 'src> = Values<'a, SourceId, Box<Source + 'src>>;
 
+/// A `std::collection::hash_map::IterMut` for `SourceMap`
 pub struct SourcesMut<'a, 'src: 'a> {
     inner: IterMut<'a, SourceId, Box<Source + 'src>>,
 }
 
 impl<'src> SourceMap<'src> {
+    /// Create an empty map
     pub fn new() -> SourceMap<'src> {
         SourceMap { map: HashMap::new() }
     }
 
+    /// Like `HashMap::contains_key`
     pub fn contains(&self, id: &SourceId) -> bool {
         self.map.contains_key(id)
     }
 
+    /// Like `HashMap::get`
     pub fn get(&self, id: &SourceId) -> Option<&(Source + 'src)> {
         let source = self.map.get(id);
 
@@ -528,6 +581,7 @@ impl<'src> SourceMap<'src> {
         })
     }
 
+    /// Like `HashMap::get_mut`
     pub fn get_mut(&mut self, id: &SourceId) -> Option<&mut (Source + 'src)> {
         self.map.get_mut(id).map(|s| {
             let s: &mut (Source + 'src) = &mut **s;
@@ -535,27 +589,34 @@ impl<'src> SourceMap<'src> {
         })
     }
 
+    /// Like `HashMap::get`, but first calculates the `SourceId` from a
+    /// `PackageId`
     pub fn get_by_package_id(&self, pkg_id: &PackageId) -> Option<&(Source + 'src)> {
         self.get(pkg_id.source_id())
     }
 
+    /// Like `HashMap::insert`, but derives the SourceId key from the Source
     pub fn insert(&mut self, source: Box<Source + 'src>) {
         let id = source.source_id().clone();
         self.map.insert(id, source);
     }
 
+    /// Like `HashMap::is_empty`
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()
     }
 
+    /// Like `HashMap::len`
     pub fn len(&self) -> usize {
         self.map.len()
     }
 
+    /// Like `HashMap::values`
     pub fn sources<'a>(&'a self) -> Sources<'a, 'src> {
         self.map.values()
     }
 
+    /// Like `HashMap::iter_mut`
     pub fn sources_mut<'a>(&'a mut self) -> SourcesMut<'a, 'src> {
         SourcesMut { inner: self.map.iter_mut() }
     }
