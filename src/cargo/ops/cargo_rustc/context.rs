@@ -25,15 +25,44 @@ use super::layout::Layout;
 use super::links::Links;
 use super::{Kind, Compilation, BuildConfig};
 
+/// All information needed to define a Unit.
+///
+/// A unit is an object that has enough information so that cargo knows how to build it.
+/// For example, if your project has dependencies, then every dependency will be built as a library
+/// unit. If your project is a library, then it will be built as a library unit as well, or if it
+/// is a binary with `main.rs`, then a binary will be output. There are also separate unit types
+/// for `test`ing and `check`ing, amongst others.
+///
+/// The unit also holds information about all possible metadata about the package in `pkg`.
+///
+/// A unit needs to know extra information in addition to the type and root source file. For
+/// example, it needs to know the target architecture (OS, chip arch etc.) and it needs to know
+/// whether you want a debug or release build. There is enough information in this struct to figure
+/// all that out.
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Unit<'a> {
+    /// Information about avaiable targets, which files to include/exclude, etc. Basically stuff in
+    /// `Cargo.toml`.
     pub pkg: &'a Package,
+    /// Information about the specific target to build, out of the possible targets in `pkg`. Not
+    /// to be confused with *target-triple* (or *target architecture* ...), the target arch for a
+    /// build.
     pub target: &'a Target,
+    /// The profile contains information about *how* the build should be run, including debug
+    /// level, extra args to pass to rustc, etc.
     pub profile: &'a Profile,
+    /// Whether this compilation unit is for the host or target architecture.
+    ///
+    /// For example, when
+    /// cross compiling and using a custom build script, the build script needs to be compiled for
+    /// the host architecture so the host rustc can use it (when compiling to the target
+    /// architecture).
     pub kind: Kind,
 }
 
+/// The build context, containing all information about a build task
 pub struct Context<'a, 'cfg: 'a> {
+    /// The workspace the build is for
     pub ws: &'a Workspace<'cfg>,
     pub config: &'cfg Config,
     pub resolve: &'a Resolve,
@@ -50,13 +79,21 @@ pub struct Context<'a, 'cfg: 'a> {
     pub used_in_plugin: HashSet<Unit<'a>>,
     pub jobserver: Client,
 
+    /// The target directory layout for the host (and target if it is the same as host)
     host: Layout,
+    /// The target directory layout for the target (if different from then host)
     target: Option<Layout>,
     target_info: TargetInfo,
     host_info: TargetInfo,
     profiles: &'a Profiles,
     incremental_enabled: bool,
 
+    /// For each Unit, a list all files produced as a triple of
+    ///
+    ///  - File name that will be produced by the build process (in `deps`)
+    ///  - If it should be linked into `target`, and what it should be called (e.g. without
+    ///    metadata).
+    ///  - Whether it is something you can link against (e.g. a library)
     target_filenames: HashMap<Unit<'a>, Arc<Vec<(PathBuf, Option<PathBuf>, bool)>>>,
     target_metadatas: HashMap<Unit<'a>, Option<Metadata>>,
 }
@@ -210,6 +247,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         Ok(())
     }
 
+    /// A recursive function that checks all crate types (`rlib`, ...) are in `crate_types`
+    /// for this unit and its dependencies.
+    ///
+    /// Tracks visited units to avoid unnecessary work.
     fn visit_crate_type(&self,
                         unit: &Unit<'a>,
                         crate_types: &mut BTreeSet<String>,
@@ -660,7 +701,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                         }
                     }
                 };
-
+                //info!("{:?}", unit);
                 match *unit.target.kind() {
                     TargetKind::Bin |
                     TargetKind::CustomBuild |
@@ -1038,8 +1079,23 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 }
 
-// Acquire extra flags to pass to the compiler from the
-// RUSTFLAGS environment variable and similar config values
+/// Acquire extra flags to pass to the compiler from various locations.
+///
+/// The locations are:
+///
+///  - the `RUSTFLAGS` environment variable
+///
+/// then if this was not found
+///
+///  - `target.*.rustflags` from the manifest (Cargo.toml)
+///  - `target.cfg(..).rustflags` from the manifest
+///
+/// then if neither of these were found
+///
+///  - `build.rustflags` from the manifest
+///
+/// Note that if a `target` is specified, no args will be passed to host code (plugins, build
+/// scripts, ...), even if it is the same as the target.
 fn env_args(config: &Config,
             build_config: &BuildConfig,
             target_info: &TargetInfo,
@@ -1136,6 +1192,14 @@ impl fmt::Display for Metadata {
     }
 }
 
+/// Takes rustc output (using specialized command line args), and calculates the file prefix and
+/// suffix for the given crate type, or returns None if the type is not supported. (e.g. for a
+/// rust library like libcargo.rlib, prefix = "lib", suffix = "rlib").
+///
+/// The caller needs to ensure that the lines object is at the correct line for the given crate
+/// type: this is not checked.
+// This function can not handle more than 1 file per type (with wasm32-unknown-emscripten, there
+// are 2 files for bin (.wasm and .js))
 fn parse_crate_type(
     crate_type: &str,
     error: &str,

@@ -28,15 +28,27 @@ use util::{Filesystem, LazyCell};
 
 use self::ConfigValue as CV;
 
+/// Configuration information for cargo. This is not specific to a build, it is information
+/// relating to cargo itself.
+///
+/// This struct implements `Default`: all fields can be inferred.
 #[derive(Debug)]
 pub struct Config {
+    /// The location of the users's 'home' directory. OS-dependent.
     home_path: Filesystem,
+    /// Information about how to write messages to the shell
     shell: RefCell<Shell>,
+    /// Information on how to invoke the compiler (rustc)
     rustc: LazyCell<Rustc>,
+    /// A collection of configuration options
     values: LazyCell<HashMap<String, ConfigValue>>,
+    /// The current working directory of cargo
     cwd: PathBuf,
+    /// The location of the cargo executable (path to current process)
     cargo_exe: LazyCell<PathBuf>,
+    /// The location of the rustdoc executable
     rustdoc: LazyCell<PathBuf>,
+    /// Whether we are printing extra verbose messages
     extra_verbose: Cell<bool>,
     frozen: Cell<bool>,
     locked: Cell<bool>,
