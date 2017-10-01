@@ -2,17 +2,23 @@ use std::path::PathBuf;
 
 use util::{self, CargoResult, internal, ProcessBuilder};
 
+/// Information on the `rustc` executable
 #[derive(Debug)]
 pub struct Rustc {
+    /// The location of the exe
     pub path: PathBuf,
+    /// An optional program that will be passed the path of the rust exe as its first argument, and
+    /// rustc args following this.
     pub wrapper: Option<PathBuf>,
+    /// Verbose version information (the output of `rustc -vV`)
     pub verbose_version: String,
+    /// The host triple (arch-platform-OS), this comes from verbose_version.
     pub host: String,
 }
 
 impl Rustc {
     /// Run the compiler at `path` to learn various pieces of information about
-    /// it.
+    /// it, with an optional wrapper.
     ///
     /// If successful this function returns a description of the compiler along
     /// with a list of its capabilities.
@@ -41,6 +47,7 @@ impl Rustc {
         })
     }
 
+    /// Get a process builder set up to use the found rustc version, with a wrapper if Some
     pub fn process(&self) -> ProcessBuilder {
         if let Some(ref wrapper) = self.wrapper {
             let mut cmd = util::process(wrapper);
