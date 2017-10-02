@@ -891,6 +891,15 @@ impl<'r> Requirements<'r> {
             .1.push(feat.to_string());
     }
 
+    fn seen(&mut self, feat: &'r str) -> bool {
+        if self.visited.insert(feat) {
+            self.used.insert(feat);
+            false
+        } else {
+            true
+        }
+    }
+
     fn add_feature(&mut self, feat: &'r str) -> CargoResult<()> {
         if feat.is_empty() { return Ok(()) }
 
@@ -907,13 +916,9 @@ impl<'r> Requirements<'r> {
             }
             None => {
                 let feat = feat_or_package;
-
-                //if this feature has already been added, then just return Ok
-                if !self.visited.insert(feat) {
+                if self.seen(feat) {
                     return Ok(());
                 }
-
-                self.used.insert(feat);
                 match self.summary.features().get(feat) {
                     Some(recursive) => {
                         // This is a feature, add it recursively.
