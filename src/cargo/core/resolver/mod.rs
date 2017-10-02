@@ -900,6 +900,10 @@ impl<'r> Requirements<'r> {
         }
     }
 
+    fn require_dependency(&mut self, pkg: &'r str) {
+        self.deps.entry(pkg).or_insert((false, Vec::new())).0 = true;
+    }
+
     fn add_feature(&mut self, feat: &'r str) -> CargoResult<()> {
         if feat.is_empty() { return Ok(()) }
 
@@ -933,7 +937,7 @@ impl<'r> Requirements<'r> {
                     }
                     None => {
                         // This is a dependency, mark it as explicitly requested.
-                        self.deps.entry(feat).or_insert((false, Vec::new())).0 = true;
+                        self.require_dependency(feat);
                     }
                 }
             }
