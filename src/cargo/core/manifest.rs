@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use std::fmt;
 use std::path::{PathBuf, Path};
 use std::rc::Rc;
@@ -75,7 +75,7 @@ pub struct ManifestMetadata {
     pub homepage: Option<String>,       // url
     pub repository: Option<String>,     // url
     pub documentation: Option<String>,  // url
-    pub badges: HashMap<String, HashMap<String, String>>,
+    pub badges: BTreeMap<String, BTreeMap<String, String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

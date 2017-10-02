@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::mem;
 use std::rc::Rc;
 
@@ -20,14 +20,14 @@ pub struct Summary {
 struct Inner {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
-    features: HashMap<String, Vec<String>>,
+    features: BTreeMap<String, Vec<String>>,
     checksum: Option<String>,
 }
 
 impl Summary {
     pub fn new(pkg_id: PackageId,
                dependencies: Vec<Dependency>,
-               features: HashMap<String, Vec<String>>) -> CargoResult<Summary> {
+               features: BTreeMap<String, Vec<String>>) -> CargoResult<Summary> {
         for dep in dependencies.iter() {
             if features.get(dep.name()).is_some() {
                 bail!("Features and dependencies cannot have the \
@@ -78,7 +78,7 @@ impl Summary {
     pub fn version(&self) -> &Version { self.package_id().version() }
     pub fn source_id(&self) -> &SourceId { self.package_id().source_id() }
     pub fn dependencies(&self) -> &[Dependency] { &self.inner.dependencies }
-    pub fn features(&self) -> &HashMap<String, Vec<String>> { &self.inner.features }
+    pub fn features(&self) -> &BTreeMap<String, Vec<String>> { &self.inner.features }
     pub fn checksum(&self) -> Option<&str> {
         self.inner.checksum.as_ref().map(|s| &s[..])
     }
