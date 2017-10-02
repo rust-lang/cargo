@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, BTreeSet};
+use std::collections::{HashMap, BTreeMap, HashSet, BTreeSet};
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -207,21 +207,21 @@ pub struct TomlManifest {
     example: Option<Vec<TomlExampleTarget>>,
     test: Option<Vec<TomlTestTarget>>,
     bench: Option<Vec<TomlTestTarget>>,
-    dependencies: Option<HashMap<String, TomlDependency>>,
+    dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "dev-dependencies")]
-    dev_dependencies: Option<HashMap<String, TomlDependency>>,
+    dev_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "dev_dependencies")]
-    dev_dependencies2: Option<HashMap<String, TomlDependency>>,
+    dev_dependencies2: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "build-dependencies")]
-    build_dependencies: Option<HashMap<String, TomlDependency>>,
+    build_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "build_dependencies")]
-    build_dependencies2: Option<HashMap<String, TomlDependency>>,
-    features: Option<HashMap<String, Vec<String>>>,
-    target: Option<HashMap<String, TomlPlatform>>,
-    replace: Option<HashMap<String, TomlDependency>>,
-    patch: Option<HashMap<String, HashMap<String, TomlDependency>>>,
+    build_dependencies2: Option<BTreeMap<String, TomlDependency>>,
+    features: Option<BTreeMap<String, Vec<String>>>,
+    target: Option<BTreeMap<String, TomlPlatform>>,
+    replace: Option<BTreeMap<String, TomlDependency>>,
+    patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
-    badges: Option<HashMap<String, HashMap<String, String>>>,
+    badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
     #[serde(rename = "cargo-features")]
     cargo_features: Option<Vec<String>>,
 }
@@ -475,8 +475,8 @@ impl TomlManifest {
             cargo_features: self.cargo_features.clone(),
         };
 
-        fn map_deps(deps: Option<&HashMap<String, TomlDependency>>)
-                        -> Option<HashMap<String, TomlDependency>>
+        fn map_deps(deps: Option<&BTreeMap<String, TomlDependency>>)
+                        -> Option<BTreeMap<String, TomlDependency>>
         {
             let deps = match deps {
                 Some(deps) => deps,
@@ -557,7 +557,7 @@ impl TomlManifest {
 
             fn process_dependencies(
                 cx: &mut Context,
-                new_deps: Option<&HashMap<String, TomlDependency>>,
+                new_deps: Option<&BTreeMap<String, TomlDependency>>,
                 kind: Option<Kind>)
                 -> CargoResult<()>
             {
@@ -600,7 +600,7 @@ impl TomlManifest {
         }
 
         {
-            let mut names_sources = HashMap::new();
+            let mut names_sources = BTreeMap::new();
             for dep in &deps {
                 let name = dep.name();
                 let prev = names_sources.insert(name, dep.source_id());
@@ -616,7 +616,7 @@ impl TomlManifest {
         let include = project.include.clone().unwrap_or_default();
 
         let summary = Summary::new(pkgid, deps, me.features.clone()
-            .unwrap_or_else(HashMap::new))?;
+            .unwrap_or_else(BTreeMap::new))?;
         let metadata = ManifestMetadata {
             description: project.description.clone(),
             homepage: project.homepage.clone(),
@@ -985,15 +985,15 @@ impl ser::Serialize for PathValue {
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
 #[derive(Serialize, Deserialize, Debug)]
 struct TomlPlatform {
-    dependencies: Option<HashMap<String, TomlDependency>>,
+    dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "build-dependencies")]
-    build_dependencies: Option<HashMap<String, TomlDependency>>,
+    build_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "build_dependencies")]
-    build_dependencies2: Option<HashMap<String, TomlDependency>>,
+    build_dependencies2: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "dev-dependencies")]
-    dev_dependencies: Option<HashMap<String, TomlDependency>>,
+    dev_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "dev_dependencies")]
-    dev_dependencies2: Option<HashMap<String, TomlDependency>>,
+    dev_dependencies2: Option<BTreeMap<String, TomlDependency>>,
 }
 
 impl TomlTarget {
