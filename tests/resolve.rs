@@ -3,7 +3,7 @@
 extern crate hamcrest;
 extern crate cargo;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use hamcrest::{assert_that, equal_to, contains, not};
 
@@ -32,7 +32,7 @@ fn resolve(pkg: &PackageId, deps: Vec<Dependency>, registry: &[Summary])
         fn requires_precise(&self) -> bool { false }
     }
     let mut registry = MyRegistry(registry);
-    let summary = Summary::new(pkg.clone(), deps, HashMap::new()).unwrap();
+    let summary = Summary::new(pkg.clone(), deps, BTreeMap::new()).unwrap();
     let method = Method::Everything;
     let resolve = resolver::resolve(&[(summary, method)], &[], &mut registry, None)?;
     let res = resolve.iter().cloned().collect();
@@ -78,11 +78,11 @@ macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),+]) => ({
         let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
 
-        Summary::new($pkgid.to_pkgid(), d, HashMap::new()).unwrap()
+        Summary::new($pkgid.to_pkgid(), d, BTreeMap::new()).unwrap()
     });
 
     ($pkgid:expr) => (
-        Summary::new($pkgid.to_pkgid(), Vec::new(), HashMap::new()).unwrap()
+        Summary::new($pkgid.to_pkgid(), Vec::new(), BTreeMap::new()).unwrap()
     )
 }
 
@@ -92,7 +92,7 @@ fn registry_loc() -> SourceId {
 }
 
 fn pkg(name: &str) -> Summary {
-    Summary::new(pkg_id(name), Vec::new(), HashMap::new()).unwrap()
+    Summary::new(pkg_id(name), Vec::new(), BTreeMap::new()).unwrap()
 }
 
 fn pkg_id(name: &str) -> PackageId {
@@ -108,7 +108,7 @@ fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
 }
 
 fn pkg_loc(name: &str, loc: &str) -> Summary {
-    Summary::new(pkg_id_loc(name, loc), Vec::new(), HashMap::new()).unwrap()
+    Summary::new(pkg_id_loc(name, loc), Vec::new(), BTreeMap::new()).unwrap()
 }
 
 fn dep(name: &str) -> Dependency { dep_req(name, "1.0.0") }
