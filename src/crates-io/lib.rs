@@ -8,7 +8,7 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, Cursor};
@@ -76,7 +76,7 @@ pub struct NewCrate {
     pub name: String,
     pub vers: String,
     pub deps: Vec<NewCrateDependency>,
-    pub features: HashMap<String, Vec<String>>,
+    pub features: BTreeMap<String, Vec<String>>,
     pub authors: Vec<String>,
     pub description: Option<String>,
     pub documentation: Option<String>,
@@ -87,7 +87,7 @@ pub struct NewCrate {
     pub license: Option<String>,
     pub license_file: Option<String>,
     pub repository: Option<String>,
-    pub badges: HashMap<String, HashMap<String, String>>,
+    pub badges: BTreeMap<String, BTreeMap<String, String>>,
 }
 
 #[derive(Serialize)]
