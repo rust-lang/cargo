@@ -153,7 +153,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         let deps = deps.into_iter()
             .map(|dep| dep.into_dep(&self.source_id))
             .collect::<CargoResult<Vec<_>>>()?;
-        let summary = Summary::new(pkgid, deps, features, links)?;
+        let summary = Summary::new(pkgid, deps, features, links, false)?;
         let summary = summary.set_checksum(cksum.clone());
         if self.hashes.contains_key(&name[..]) {
             self.hashes.get_mut(&name[..]).unwrap().insert(vers, cksum);
