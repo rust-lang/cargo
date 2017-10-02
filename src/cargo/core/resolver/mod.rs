@@ -904,6 +904,16 @@ impl<'r> Requirements<'r> {
         self.deps.entry(pkg).or_insert((false, Vec::new())).0 = true;
     }
 
+    fn require_feature(&mut self, feat: &'r str, recursive: &'r Vec<String>) -> CargoResult<()> {
+        for f in recursive {
+            if f == &feat {
+                bail!("Cyclic feature dependency: feature `{}` depends on itself", feat);
+            }
+            self.add_feature(f)?;
+        }
+        Ok(())
+    }
+
     fn add_feature(&mut self, feat: &'r str) -> CargoResult<()> {
         if feat.is_empty() { return Ok(()) }
 
@@ -925,15 +935,7 @@ impl<'r> Requirements<'r> {
                 }
                 match self.summary.features().get(feat) {
                     Some(recursive) => {
-                        // This is a feature, add it recursively.
-                        for f in recursive {
-                            if f == feat {
-                                bail!("Cyclic feature dependency: feature `{}` depends \
-                                        on itself", feat);
-                            }
-
-                            self.add_feature(f)?;
-                        }
+                        self.require_feature(feat, recursive)?;
                     }
                     None => {
                         // This is a dependency, mark it as explicitly requested.
