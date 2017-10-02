@@ -884,6 +884,13 @@ impl<'r> Requirements<'r> {
         }
     }
 
+    fn require_crate_feature(&mut self, package: &'r str, feat: &'r str) {
+        self.used.insert(package);
+        self.deps.entry(package)
+            .or_insert((false, Vec::new()))
+            .1.push(feat.to_string());
+    }
+
     fn add_feature(&mut self, feat: &'r str) -> CargoResult<()> {
         if feat.is_empty() { return Ok(()) }
 
@@ -896,11 +903,7 @@ impl<'r> Requirements<'r> {
         let feat_or_package = parts.next().unwrap();
         match parts.next() {
             Some(feat) => {
-                let package = feat_or_package;
-                self.used.insert(package);
-                self.deps.entry(package)
-                    .or_insert((false, Vec::new()))
-                    .1.push(feat.to_string());
+                self.require_crate_feature(feat_or_package, feat);
             }
             None => {
                 let feat = feat_or_package;
