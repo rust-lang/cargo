@@ -44,7 +44,7 @@ fn resolve_with_config(
         }
     }
     let mut registry = MyRegistry(registry);
-    let summary = Summary::new(pkg.clone(), deps, BTreeMap::new(), None).unwrap();
+    let summary = Summary::new(pkg.clone(), deps, BTreeMap::new(), None, false).unwrap();
     let method = Method::Everything;
     let resolve = resolver::resolve(
         &[(summary, method)],
@@ -106,13 +106,13 @@ macro_rules! pkg {
         let pkgid = $pkgid.to_pkgid();
         let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().to_string())} else {None};
 
-        Summary::new(pkgid, d, BTreeMap::new(), link).unwrap()
+        Summary::new(pkgid, d, BTreeMap::new(), link, false).unwrap()
     });
 
     ($pkgid:expr) => ({
         let pkgid = $pkgid.to_pkgid();
         let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().to_string())} else {None};
-        Summary::new(pkgid, Vec::new(), BTreeMap::new(), link).unwrap()
+        Summary::new(pkgid, Vec::new(), BTreeMap::new(), link, false).unwrap()
     })
 }
 
@@ -127,7 +127,7 @@ fn pkg(name: &str) -> Summary {
     } else {
         None
     };
-    Summary::new(pkg_id(name), Vec::new(), BTreeMap::new(), link).unwrap()
+    Summary::new(pkg_id(name), Vec::new(), BTreeMap::new(), link, false).unwrap()
 }
 
 fn pkg_id(name: &str) -> PackageId {
@@ -148,7 +148,13 @@ fn pkg_loc(name: &str, loc: &str) -> Summary {
     } else {
         None
     };
-    Summary::new(pkg_id_loc(name, loc), Vec::new(), BTreeMap::new(), link).unwrap()
+    Summary::new(
+        pkg_id_loc(name, loc),
+        Vec::new(),
+        BTreeMap::new(),
+        link,
+        false,
+    ).unwrap()
 }
 
 fn dep(name: &str) -> Dependency {

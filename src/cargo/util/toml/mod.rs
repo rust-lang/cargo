@@ -845,6 +845,7 @@ impl TomlManifest {
             deps,
             me.features.clone().unwrap_or_else(BTreeMap::new),
             project.links.clone(),
+            project.namespaced_features.unwrap_or(false),
         )?;
         let metadata = ManifestMetadata {
             description: project.description.clone(),

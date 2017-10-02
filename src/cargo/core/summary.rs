@@ -26,6 +26,7 @@ struct Inner {
     features: FeatureMap,
     checksum: Option<String>,
     links: Option<InternedString>,
+    namespaced_features: bool,
 }
 
 impl Summary {
@@ -34,6 +35,7 @@ impl Summary {
         dependencies: Vec<Dependency>,
         features: BTreeMap<String, Vec<String>>,
         links: Option<String>,
+        namespaced_features: bool,
     ) -> CargoResult<Summary> {
         for dep in dependencies.iter() {
             if features.get(&*dep.name()).is_some() {
@@ -58,6 +60,7 @@ impl Summary {
                 features: feature_map,
                 checksum: None,
                 links: links.map(|l| InternedString::new(&l)),
+                namespaced_features,
             }),
         })
     }
@@ -85,6 +88,9 @@ impl Summary {
     }
     pub fn links(&self) -> Option<InternedString> {
         self.inner.links
+    }
+    pub fn namespaced_features(&self) -> bool {
+        self.inner.namespaced_features
     }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
