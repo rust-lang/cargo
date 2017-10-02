@@ -159,7 +159,7 @@
 //! ```
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt;
 use std::fs::File;
 use std::path::{PathBuf, Path};
@@ -206,7 +206,7 @@ struct RegistryPackage<'a> {
     name: Cow<'a, str>,
     vers: Version,
     deps: DependencyList,
-    features: HashMap<String, Vec<String>>,
+    features: BTreeMap<String, Vec<String>>,
     cksum: String,
     yanked: Option<bool>,
 }
