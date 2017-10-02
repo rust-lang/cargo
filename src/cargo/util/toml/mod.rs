@@ -543,6 +543,8 @@ pub struct TomlProject {
     autoexamples: Option<bool>,
     autotests: Option<bool>,
     autobenches: Option<bool>,
+    #[serde(rename = "namespaced-features")]
+    namespaced_features: Option<bool>,
 
     // package metadata
     description: Option<String>,
