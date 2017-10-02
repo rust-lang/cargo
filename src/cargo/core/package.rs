@@ -1,5 +1,5 @@
 use std::cell::{Ref, RefCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use std::fmt;
 use std::hash;
 use std::path::{Path, PathBuf};
@@ -37,7 +37,7 @@ struct SerializedPackage<'a> {
     source: &'a SourceId,
     dependencies: &'a [Dependency],
     targets: &'a [Target],
-    features: &'a HashMap<String, Vec<String>>,
+    features: &'a BTreeMap<String, Vec<String>>,
     manifest_path: &'a str,
 }
 
