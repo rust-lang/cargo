@@ -10,7 +10,7 @@ use hamcrest::assert_that;
 fn oldest_lockfile_still_works() {
     Package::new("foo", "0.1.0").publish();
 
-    let expected_lock_file =
+    let expected_lockfile =
 r#"[[package]]
 name = "bar"
 version = "0.0.1"
@@ -27,7 +27,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "[..]"
 "#;
 
-    let lockfile = r#"
+    let old_lockfile = r#"
 [root]
 name = "bar"
 version = "0.0.1"
@@ -52,18 +52,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
             foo = "0.1.0"
         "#)
         .file("src/lib.rs", "")
-        .file("Cargo.lock", lockfile);
+        .file("Cargo.lock", old_lockfile);
     p.build();
 
-    assert_that(p.cargo("build"),
-                execs().with_status(0));
+    let cargo_commands = vec![
+        "build",
+        "update"
+    ];
 
-    let lock = p.read_lockfile();
-    for (l, r) in expected_lock_file.lines().zip(lock.lines()) {
-        assert!(lines_match(l, r), "Lines differ:\n{}\n\n{}", l, r);
+    for cargo_command in cargo_commands {
+        assert_that(p.cargo(cargo_command),
+                    execs().with_status(0));
+
+        let lock = p.read_lockfile();
+        for (l, r) in expected_lockfile.lines().zip(lock.lines()) {
+            assert!(lines_match(l, r), "Lines differ:\n{}\n\n{}", l, r);
+        }
+
+        assert_eq!(lock.lines().count(), expected_lockfile.lines().count());
     }
-
-    assert_eq!(lock.lines().count(), expected_lock_file.lines().count());
 }
 
 #[test]
