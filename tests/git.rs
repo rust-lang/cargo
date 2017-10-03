@@ -971,7 +971,7 @@ fn stale_cached_version() {
     let rev = repo.revparse_single("HEAD").unwrap().id();
 
     File::create(&foo.root().join("Cargo.lock")).unwrap().write_all(format!(r#"
-        [root]
+        [[package]]
         name = "foo"
         version = "0.0.0"
         dependencies = [

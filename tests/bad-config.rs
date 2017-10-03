@@ -256,7 +256,7 @@ fn duplicate_packages_in_cargo_lock() {
         "#)
         .file("src/lib.rs", "")
         .file("Cargo.lock", r#"
-            [root]
+            [[package]]
             name = "bar"
             version = "0.0.1"
             dependencies = [
@@ -300,7 +300,7 @@ fn bad_source_in_cargo_lock() {
         "#)
         .file("src/lib.rs", "")
         .file("Cargo.lock", r#"
-            [root]
+            [[package]]
             name = "bar"
             version = "0.0.1"
             dependencies = [
@@ -334,7 +334,7 @@ fn bad_dependency_in_lockfile() {
         "#)
         .file("src/lib.rs", "")
         .file("Cargo.lock", r#"
-            [root]
+            [[package]]
             name = "foo"
             version = "0.0.1"
             dependencies = [

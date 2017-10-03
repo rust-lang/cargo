@@ -961,7 +961,7 @@ fn lockfile_can_specify_nonexistant_members() {
         "#)
         .file("a/src/main.rs", "fn main() {}")
         .file("Cargo.lock", r#"
-            [root]
+            [[package]]
             name = "a"
             version = "0.1.0"
 
