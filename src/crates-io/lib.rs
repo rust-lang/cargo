@@ -116,6 +116,7 @@ pub struct Warnings {
 }
 
 #[derive(Deserialize)] struct R { ok: bool }
+#[derive(Deserialize)] struct OwnerResponse { ok: bool, msg: String }
 #[derive(Deserialize)] struct ApiErrorList { errors: Vec<ApiError> }
 #[derive(Deserialize)] struct ApiError { detail: String }
 #[derive(Serialize)] struct OwnersReq<'a> { users: &'a [&'a str] }
@@ -137,19 +138,19 @@ impl Registry {
         }
     }
 
-    pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
+    pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.put(format!("/crates/{}/owners", krate),
                                  body.as_bytes())?;
-        assert!(serde_json::from_str::<R>(&body)?.ok);
-        Ok(())
+        assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
+        Ok(serde_json::from_str::<OwnerResponse>(&body)?.msg)
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
         let body = self.delete(format!("/crates/{}/owners", krate),
                                     Some(body.as_bytes()))?;
-        assert!(serde_json::from_str::<R>(&body)?.ok);
+        assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
         Ok(())
     }
 

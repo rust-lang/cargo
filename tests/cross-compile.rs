@@ -529,6 +529,7 @@ fn cross_tests() {
             name = "bar"
         "#)
         .file("src/bin/bar.rs", &format!(r#"
+            #[allow(unused_extern_crates)]
             extern crate foo;
             use std::env;
             fn main() {{
@@ -698,10 +699,12 @@ fn build_script_needed_for_host_and_target() {
         "#)
 
         .file("build.rs", r#"
+            #[allow(unused_extern_crates)]
             extern crate d2;
             fn main() { d2::d2(); }
         "#)
         .file("src/main.rs", "
+            #[allow(unused_extern_crates)]
             extern crate d1;
             fn main() { d1::d1(); }
         ")
@@ -732,6 +735,7 @@ fn build_script_needed_for_host_and_target() {
             path = "../d1"
         "#)
         .file("d2/src/lib.rs", "
+            #[allow(unused_extern_crates)]
             extern crate d1;
             pub fn d2() { d1::d1(); }
         ");
@@ -893,7 +897,11 @@ fn build_script_with_platform_specific_dependencies() {
             [build-dependencies.d1]
             path = "d1"
         "#)
-        .file("build.rs", "extern crate d1; fn main() {}")
+        .file("build.rs", "
+            #[allow(unused_extern_crates)]
+            extern crate d1;
+            fn main() {}
+        ")
         .file("src/lib.rs", "")
         .file("d1/Cargo.toml", &format!(r#"
             [package]
@@ -904,7 +912,10 @@ fn build_script_with_platform_specific_dependencies() {
             [target.{}.dependencies]
             d2 = {{ path = "../d2" }}
         "#, host))
-        .file("d1/src/lib.rs", "extern crate d2;")
+        .file("d1/src/lib.rs", "
+            #[allow(unused_extern_crates)]
+            extern crate d2;
+        ")
         .file("d2/Cargo.toml", r#"
             [package]
             name = "d2"
