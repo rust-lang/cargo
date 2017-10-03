@@ -646,11 +646,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     };
                     match *crate_type_info {
                         Some((ref prefix, ref suffix)) => {
-                            let filename = out_dir.join(format!("{}{}{}", prefix, stem, suffix));
-                            let link_dst = link_stem.clone().map(|(ld, ls)| {
-                                ld.join(format!("{}{}{}", prefix, ls, suffix))
-                            });
-                            ret.push((filename, link_dst, linkable));
+                            let suffixes = add_target_specific_suffixes(
+                                &self.target_triple(),
+                                &crate_type,
+                                suffix,
+                                linkable,
+                            );
+                            for (suffix, linkable) in suffixes {
+                                let filename =
+                                    out_dir.join(format!("{}{}{}", prefix, stem, suffix));
+                                let link_dst = link_stem.clone().map(|(ld, ls)| {
+                                    ld.join(format!("{}{}{}", prefix, ls, suffix))
+                                });
+                                ret.push((filename, link_dst, linkable));
+                            }
                             Ok(())
                         }
                         // not supported, don't worry about it
@@ -1163,4 +1172,29 @@ fn parse_crate_type(
     };
 
     Ok(Some((prefix.to_string(), suffix.to_string())))
+}
+
+fn add_target_specific_suffixes(
+    target_triple: &str,
+    crate_type: &str,
+    suffix: &str,
+    linkable: bool,
+) -> Vec<(String, bool)> {
+    let mut suffixes = vec![(suffix.to_string(), linkable)];
+
+    // rust-lang/cargo#4500
+    if target_triple.ends_with("pc-windows-msvc") && crate_type.ends_with("dylib") &&
+        suffix == ".dll"
+    {
+        suffixes.push((format!("{}.lib", suffix), false));
+    }
+
+    // rust-lang/cargo#4535
+    if target_triple == "wasm32-unknown-emscripten" && crate_type == "bin" &&
+        suffix == ".js"
+    {
+        suffixes.push((".wasm".to_string(), false));
+    }
+
+    suffixes
 }

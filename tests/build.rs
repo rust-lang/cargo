@@ -3367,6 +3367,137 @@ fn cdylib_not_lifted() {
 }
 
 #[test]
+fn cdylib_final_outputs() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            authors = []
+            version = "0.1.0"
+
+            [lib]
+            crate-type = ["cdylib"]
+        "#)
+        .file("src/lib.rs", "");
+
+    assert_that(p.cargo_process("build"), execs().with_status(0));
+
+    let files = if cfg!(windows) {
+        vec!["foo.dll.lib", "foo.dll"]
+    } else if cfg!(target_os = "macos") {
+        vec!["libfoo.dylib"]
+    } else {
+        vec!["libfoo.so"]
+    };
+
+    for file in files {
+        println!("checking: {}", file);
+        assert_that(&p.root().join("target/debug").join(&file), existing_file());
+    }
+}
+
+#[test]
+fn wasm32_final_outputs() {
+    use cargo::core::{Shell, Target, Workspace};
+    use cargo::ops::{self, BuildConfig, Context, CompileMode, CompileOptions, Kind, Unit};
+    use cargo::util::Config;
+    use cargo::util::important_paths::find_root_manifest_for_wd;
+
+    let target_triple = "wasm32-unknown-emscripten";
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            authors = []
+            version = "0.1.0"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    // We can't cross-compile the project to wasm target unless we have emscripten installed.
+    // So here we will not run `cargo build`, but just create cargo_rustc::Context and ask it
+    // what the target file names would be.
+
+    // Create various stuff required to build cargo_rustc::Context.
+    let shell = Shell::new();
+    let config = Config::new(shell, p.root(), p.root());
+    let root = find_root_manifest_for_wd(None, config.cwd()).expect("Can't find the root manifest");
+    let ws = Workspace::new(&root, &config).expect("Can't create workspace");
+
+    let opts = CompileOptions {
+        target: Some(target_triple),
+        .. CompileOptions::default(&config, CompileMode::Build)
+    };
+
+    let specs = opts.spec.into_package_id_specs(&ws).expect("Can't create specs");
+
+    let (packages, resolve) = ops::resolve_ws_precisely(
+        &ws,
+        None,
+        opts.features,
+        opts.all_features,
+        opts.no_default_features,
+        &specs,
+    ).expect("Can't create resolve");
+
+    let build_config = BuildConfig {
+        requested_target: Some(target_triple.to_string()),
+        jobs: 1,
+        .. BuildConfig::default()
+    };
+
+    let pkgid = packages
+        .package_ids()
+        .filter(|id| id.name() == "foo")
+        .collect::<Vec<_>>();
+    let pkg = packages.get(pkgid[0]).expect("Can't get package");
+
+    let target = Target::bin_target("foo", p.root().join("src/main.rs"), None);
+
+    let unit = Unit {
+        pkg: &pkg,
+        target: &target,
+        profile: &ws.profiles().dev,
+        kind: Kind::Target,
+    };
+    let units = vec![unit];
+
+    // Finally, create the cargo_rustc::Context.
+    let mut ctx = Context::new(
+        &ws,
+        &resolve,
+        &packages,
+        &config,
+        build_config,
+        ws.profiles(),
+    ).expect("Can't create context");
+
+    // Ask the context to resolve target file names.
+    ctx.probe_target_info(&units).expect("Can't probe target info");
+    let target_filenames = ctx.target_filenames(&unit).expect("Can't get target file names");
+
+    // Verify the result.
+    let mut expected = vec!["debug/foo.js", "debug/foo.wasm"];
+
+    assert_eq!(target_filenames.len(), expected.len());
+
+    let mut target_filenames = target_filenames
+        .iter()
+        .map(|&(_, ref link_dst, _)| link_dst.clone().unwrap())
+        .collect::<Vec<_>>();
+    target_filenames.sort();
+    expected.sort();
+
+    for (expected, actual) in expected.iter().zip(target_filenames.iter()) {
+        assert!(
+            actual.ends_with(expected),
+            format!("{:?} does not end with {}", actual, expected)
+        );
+    }
+}
+
+#[test]
 fn deterministic_cfg_flags() {
     // This bug is non-deterministic
 
