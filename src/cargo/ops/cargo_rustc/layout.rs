@@ -56,6 +56,9 @@ use std::path::{PathBuf, Path};
 use core::Workspace;
 use util::{Config, FileLock, CargoResult, Filesystem};
 
+/// Contains the paths of all target output locations.
+///
+/// See module docs for more information.
 pub struct Layout {
     root: PathBuf,
     deps: PathBuf,
@@ -64,6 +67,7 @@ pub struct Layout {
     incremental: PathBuf,
     fingerprint: PathBuf,
     examples: PathBuf,
+    /// The lockfile for a build, will be unlocked when this struct is `drop`ped.
     _lock: FileLock,
 }
 
@@ -74,6 +78,12 @@ pub fn is_bad_artifact_name(name: &str) -> bool {
 }
 
 impl Layout {
+    /// Calcuate the paths for build output, lock the build directory, and return as a Layout.
+    ///
+    /// This function will block if the directory is already locked.
+    ///
+    /// Differs from `at` in that it calculates the root path from the workspace target directory,
+    /// adding the target triple and the profile (debug, release, ...).
     pub fn new(ws: &Workspace,
                triple: Option<&str>,
                dest: &str) -> CargoResult<Layout> {
@@ -88,6 +98,9 @@ impl Layout {
         Layout::at(ws.config(), path)
     }
 
+    /// Calcuate the paths for build output, lock the build directory, and return as a Layout.
+    ///
+    /// This function will block if the directory is already locked.
     pub fn at(config: &Config, root: Filesystem) -> CargoResult<Layout> {
         // For now we don't do any more finer-grained locking on the artifact
         // directory, so just lock the entire thing for the duration of this
@@ -136,6 +149,7 @@ impl Layout {
         }
     }
 
+    /// Make sure all directories stored in the Layout exist on the filesystem.
     pub fn prepare(&mut self) -> io::Result<()> {
         if fs::metadata(&self.root).is_err() {
             fs::create_dir_all(&self.root)?;
@@ -160,11 +174,18 @@ impl Layout {
         }
     }
 
+    /// Fetch the root path.
     pub fn dest(&self) -> &Path { &self.root }
+    /// Fetch the deps path.
     pub fn deps(&self) -> &Path { &self.deps }
+    /// Fetch the examples path.
     pub fn examples(&self) -> &Path { &self.examples }
+    /// Fetch the root path.
     pub fn root(&self) -> &Path { &self.root }
+    /// Fetch the incremental path.
     pub fn incremental(&self) -> &Path { &self.incremental }
+    /// Fetch the fingerprint path.
     pub fn fingerprint(&self) -> &Path { &self.fingerprint }
+    /// Fetch the build path.
     pub fn build(&self) -> &Path { &self.build }
 }
