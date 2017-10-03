@@ -43,7 +43,6 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
     let toml = toml::Value::try_from(WorkspaceResolve {
         ws: ws,
         resolve: resolve,
-        use_root_key: false,
     }).unwrap();
 
     let mut out = String::new();
