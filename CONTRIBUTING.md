@@ -142,7 +142,8 @@ adding labels to triage issues:
   specific cargo command.
 
 * Green, **E**-prefixed labels explain the level of **experience** or
-  **effort** necessary to fix the issue.
+  **effort** necessary to fix the issue. [**E-mentor**][E-mentor] issues also
+  have some instructions on how to get started.
 
 * Red, **I**-prefixed labels indicate the **importance** of the issue. The
   [I-nominated][inom] label indicates that an issue has been nominated for
@@ -167,5 +168,6 @@ adding labels to triage issues:
 [security policy]: https://www.rust-lang.org/security.html
 [lru]: https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-asc
 [E-easy]: https://github.com/rust-lang/cargo/labels/E-easy
+[E-mentor]: https://github.com/rust-lang/cargo/labels/E-mentor
 [Code of Conduct]: https://www.rust-lang.org/conduct.html
 [IRC]: https://kiwiirc.com/client/irc.mozilla.org/cargo
