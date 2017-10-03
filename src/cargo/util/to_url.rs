@@ -4,7 +4,9 @@ use url::Url;
 
 use util::CargoResult;
 
+/// A type that can be converted to a Url
 pub trait ToUrl {
+    /// Performs the conversion
     fn to_url(self) -> CargoResult<Url>;
 }
 
