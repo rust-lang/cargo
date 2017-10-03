@@ -829,7 +829,7 @@ fn git_with_lockfile() {
         "#)
         .file("bar/src/lib.rs", "fn main() {}")
         .file("Cargo.lock", r#"
-            [root]
+            [[package]]
             name = "foo"
             version = "0.1.0"
             dependencies = [ "bar 0.1.0" ]
