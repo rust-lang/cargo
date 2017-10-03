@@ -29,7 +29,7 @@ pub struct Manifest {
     include: Vec<String>,
     metadata: ManifestMetadata,
     profiles: Profiles,
-    publish: bool,
+    publish: Option<Vec<String>>,
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
@@ -239,7 +239,7 @@ impl Manifest {
                links: Option<String>,
                metadata: ManifestMetadata,
                profiles: Profiles,
-               publish: bool,
+               publish: Option<Vec<String>>,
                replace: Vec<(PackageIdSpec, Dependency)>,
                patch: HashMap<Url, Vec<Dependency>>,
                workspace: WorkspaceConfig,
@@ -276,7 +276,7 @@ impl Manifest {
     pub fn version(&self) -> &Version { self.package_id().version() }
     pub fn warnings(&self) -> &[DelayedWarning] { &self.warnings }
     pub fn profiles(&self) -> &Profiles { &self.profiles }
-    pub fn publish(&self) -> bool { self.publish }
+    pub fn publish(&self) -> &Option<Vec<String>> { &self.publish }
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] { &self.replace }
     pub fn original(&self) -> &TomlManifest { &self.original }
     pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> { &self.patch }

@@ -380,6 +380,44 @@ impl<'de> de::Deserialize<'de> for StringOrBool {
     }
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum VecStringOrBool {
+    VecString(Vec<String>),
+    Bool(bool),
+}
+
+impl<'de> de::Deserialize<'de> for VecStringOrBool {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: de::Deserializer<'de>
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = VecStringOrBool;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a boolean or vector of strings")
+            }
+
+            fn visit_seq<V>(self, v: V) -> Result<Self::Value, V::Error>
+                where V: de::SeqAccess<'de>
+            {
+                let seq = de::value::SeqAccessDeserializer::new(v);
+                Vec::deserialize(seq).map(VecStringOrBool::VecString)
+            }
+
+            fn visit_bool<E>(self, b: bool) -> Result<Self::Value, E>
+                where E: de::Error,
+            {
+                Ok(VecStringOrBool::Bool(b))
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TomlProject {
     name: String,
@@ -389,7 +427,7 @@ pub struct TomlProject {
     links: Option<String>,
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
-    publish: Option<bool>,
+    publish: Option<VecStringOrBool>,
     workspace: Option<String>,
     #[serde(rename = "im-a-teapot")]
     im_a_teapot: Option<bool>,
@@ -648,7 +686,11 @@ impl TomlManifest {
             }
         };
         let profiles = build_profiles(&me.profile);
-        let publish = project.publish.unwrap_or(true);
+        let publish = match project.publish {
+            Some(VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
+            Some(VecStringOrBool::Bool(false)) => Some(vec![]),
+            _ => None,
+        };
         let empty = Vec::new();
         let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
         let features = Features::new(cargo_features, &mut warnings)?;

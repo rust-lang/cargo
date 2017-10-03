@@ -494,3 +494,80 @@ See [..]
     // Ensure the API request wasn't actually made
     assert!(!publish::upload_path().join("api/v1/crates/new").exists());
 }
+
+#[test]
+fn index_not_in_publish_list() {
+    publish::setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish = [
+                "test"
+            ]
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("publish")
+                 .arg("--index").arg(publish::registry().to_string()),
+                execs().with_status(101).with_stderr("\
+[ERROR] some crates cannot be published.
+`foo` is marked as unpublishable
+"));
+}
+
+#[test]
+fn publish_empty_list() {
+    publish::setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish = []
+        "#)
+        .file("src/main.rs", "fn main() {}");
+
+    assert_that(p.cargo_process("publish")
+                 .arg("--index").arg(publish::registry().to_string()),
+                execs().with_status(101).with_stderr("\
+[ERROR] some crates cannot be published.
+`foo` is marked as unpublishable
+"));
+}
+
+#[test]
+fn publish_allowed_index() {
+    publish::setup();
+
+    let p = project("foo");
+    p.build();
+
+    repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &format!(r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            publish = ["{}"]
+        "#, publish::registry().to_string()))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("publish")
+                 .arg("--index").arg(publish::registry().to_string()),
+                execs().with_status(0));
+}

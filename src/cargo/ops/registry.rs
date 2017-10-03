@@ -41,10 +41,14 @@ pub struct PublishOpts<'cfg> {
 pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
     let pkg = ws.current()?;
 
-    if !pkg.publish() {
-        bail!("some crates cannot be published.\n\
-               `{}` is marked as unpublishable", pkg.name());
+    if let &Some(ref allowed_registries) = pkg.publish() {
+        let index = opts.index.clone();
+        if index.is_none() || !allowed_registries.contains(&index.unwrap()) {
+            bail!("some crates cannot be published.\n\
+                   `{}` is marked as unpublishable", pkg.name());
+        }
     }
+
     if !pkg.manifest().patch().is_empty() {
         bail!("published crates cannot contain [patch] sections");
     }
