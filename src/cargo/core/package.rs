@@ -94,7 +94,7 @@ impl Package {
     pub fn targets(&self) -> &[Target] { self.manifest.targets() }
     pub fn version(&self) -> &Version { self.package_id().version() }
     pub fn authors(&self) -> &Vec<String> { &self.manifest.metadata().authors }
-    pub fn publish(&self) -> bool { self.manifest.publish() }
+    pub fn publish(&self) -> &Option<Vec<String>> { self.manifest.publish() }
 
     pub fn has_custom_build(&self) -> bool {
         self.targets().iter().any(|t| t.is_custom_build())
