@@ -8,6 +8,16 @@ use hamcrest::assert_that;
 
 #[test]
 fn oldest_lockfile_still_works() {
+    let cargo_commands = vec![
+        "build",
+        "update"
+    ];
+    for cargo_command in cargo_commands {
+        oldest_lockfile_still_works_with_command(cargo_command);
+    }
+}
+
+fn oldest_lockfile_still_works_with_command(cargo_command: &str) {
     Package::new("foo", "0.1.0").publish();
 
     let expected_lockfile =
@@ -53,24 +63,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         "#)
         .file("src/lib.rs", "")
         .file("Cargo.lock", old_lockfile);
+
     p.build();
 
-    let cargo_commands = vec![
-        "build",
-        "update"
-    ];
+    assert_that(p.cargo(cargo_command),
+                execs().with_status(0));
 
-    for cargo_command in cargo_commands {
-        assert_that(p.cargo(cargo_command),
-                    execs().with_status(0));
-
-        let lock = p.read_lockfile();
-        for (l, r) in expected_lockfile.lines().zip(lock.lines()) {
-            assert!(lines_match(l, r), "Lines differ:\n{}\n\n{}", l, r);
-        }
-
-        assert_eq!(lock.lines().count(), expected_lockfile.lines().count());
+    let lock = p.read_lockfile();
+    for (l, r) in expected_lockfile.lines().zip(lock.lines()) {
+        assert!(lines_match(l, r), "Lines differ:\n{}\n\n{}", l, r);
     }
+
+    assert_eq!(lock.lines().count(), expected_lockfile.lines().count());
 }
 
 #[test]
