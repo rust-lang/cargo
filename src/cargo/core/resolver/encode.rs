@@ -14,6 +14,8 @@ use super::Resolve;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EncodableResolve {
     package: Option<Vec<EncodableDependency>>,
+    /// `root` is optional to allow forward compatibility.
+    root: Option<EncodableDependency>,
     metadata: Option<Metadata>,
 
     #[serde(default, skip_serializing_if = "Patch::is_empty")]
@@ -31,7 +33,13 @@ impl EncodableResolve {
     pub fn into_resolve(self, ws: &Workspace) -> CargoResult<Resolve> {
         let path_deps = build_path_deps(ws);
 
-        let packages = self.package.unwrap_or_default();
+        let packages = {
+            let mut packages = self.package.unwrap_or_default();
+            if let Some(root) = self.root {
+                packages.insert(0, root);
+            }
+            packages
+        };
 
         // `PackageId`s in the lock file don't include the `source` part
         // for workspace members, so we reconstruct proper ids.
@@ -303,6 +311,7 @@ impl<'de> de::Deserialize<'de> for EncodablePackageId {
 pub struct WorkspaceResolve<'a, 'cfg: 'a> {
     pub ws: &'a Workspace<'cfg>,
     pub resolve: &'a Resolve,
+    pub use_root_key: bool,
 }
 
 impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
@@ -312,7 +321,15 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
         let mut ids: Vec<&PackageId> = self.resolve.graph.iter().collect();
         ids.sort();
 
+        let root = self.ws.members().max_by_key(|member| {
+            member.name()
+        }).map(Package::package_id);
+
         let encodable = ids.iter().filter_map(|&id| {
+            if self.use_root_key && root.unwrap() == id {
+                return None
+            }
+
             Some(encodable_resolve_node(id, self.resolve))
         }).collect::<Vec<_>>();
 
@@ -330,6 +347,11 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
 
         let metadata = if metadata.is_empty() { None } else { Some(metadata) };
 
+        let root = match root {
+            Some(root) if self.use_root_key => Some(encodable_resolve_node(root, self.resolve)),
+            _ => None,
+        };
+
         let patch = Patch {
             unused: self.resolve.unused_patches().iter().map(|id| {
                 EncodableDependency {
@@ -343,6 +365,7 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
         };
         EncodableResolve {
             package: Some(encodable),
+            root: root,
             metadata: metadata,
             patch: patch,
         }.serialize(s)
