@@ -65,7 +65,11 @@ pub fn run(ws: &Workspace,
     let mut process = compile.target_process(exe, pkg)?;
     process.args(args).cwd(config.cwd());
     for (key, value) in env.iter() {
-        process.env(key, value);
+        if value == "" {
+            process.env_remove(key);
+        } else {
+            process.env(key, value);
+        }
     }
 
     config.shell().status("Running", process.to_string())?;

@@ -48,7 +48,7 @@ Options:
     --no-default-features        Do not build the `default` feature
     --target TRIPLE              Build for the target triple
     --manifest-path PATH         Path to the manifest to execute
-    -e ENVVAR, --env ENVVAR ...  Set environment variable
+    --env ENVVAR ...             Set environment variable
     -v, --verbose ...            Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
@@ -62,10 +62,11 @@ bin target it will be run. Otherwise `--bin` specifies the bin target to run,
 and `--example` specifies the example target to run. At most one of `--bin` or
 `--example` can be provided.
 
-Environment variables can be set using one or more `-e` options. The argument
-to `-e` takes the form `KEY=VALUE`, causing the environment variable `KEY`
-to be set to `VALUE` for the target process. Environment variables set this
-way are not visible during compilation.
+Environment variables for the target process can be set using one or more
+`--env` options. The argument to `--env` takes the form `NAME=VALUE`.
+Environment variables set this way are not visible during compilation.
+Environment variables set to the empty string are removed from the environment
+of the target process, yet still visible during compilation.
 
 All of the trailing arguments are passed to the binary to run. If you're passing
 arguments to both Cargo and the binary, the ones after `--` go to the binary,
@@ -96,15 +97,15 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
     let mut envmap = HashMap::new();
     for env_arg in options.flag_env {
         let mut env_arg = env_arg.splitn(2, '=');
-        let key = match env_arg.next() {
-            Some(k) => k,
-            None => return Err(CliError::new("Environment variables take the \
-                                             form KEY=VALUE".into(), 101))
-        };
+        let key = env_arg.next().unwrap();
+        if key == "" {
+            return Err(CliError::new("Environment variable names can't be \
+                                      empty.".into(), 101));
+        }
         let value = match env_arg.next() {
             Some(k) => k,
             None => return Err(CliError::new("Environment variables take the \
-                                             form KEY=VALUE".into(), 101))
+                                              form NAME=VALUE".into(), 101))
         };
         if envmap.insert(key.to_owned(), value.to_owned()).is_some() {
             config.shell().warn(format!("Environment variable `{}` is set \
