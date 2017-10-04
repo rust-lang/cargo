@@ -92,7 +92,7 @@ fn cargo_compile_with_invalid_manifest() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  no `package` or `project` section found.
+  no `package` section found.
 "))
 }
 
