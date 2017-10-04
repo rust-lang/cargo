@@ -802,7 +802,7 @@ fn override_an_override() {
             "serde:0.8.0" = { path = "serde" }
         "#)
         .file("Cargo.lock", r#"
-            [root]
+            [[package]]
             name = "local"
             version = "0.0.1"
             dependencies = [
