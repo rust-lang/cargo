@@ -955,10 +955,10 @@ fn build_requirements<'a, 'b: 'a>(s: &'a Summary, method: &'b Method)
     match *method {
         Method::Everything => {
             for key in s.features().keys() {
-                reqs.add_feature(key)?;
+                reqs.require_feature(key)?;
             }
             for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-                reqs.add_feature(dep.name())?;
+                reqs.require_dependency(dep.name());
             }
         }
         Method::Required { features: requested_features, .. } =>  {
@@ -971,7 +971,7 @@ fn build_requirements<'a, 'b: 'a>(s: &'a Summary, method: &'b Method)
         Method::Everything |
         Method::Required { uses_default_features: true, .. } => {
             if s.features().get("default").is_some() {
-                reqs.add_feature("default")?;
+                reqs.require_feature("default")?;
             }
         }
         Method::Required { uses_default_features: false, .. } => {}
