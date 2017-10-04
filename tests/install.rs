@@ -62,17 +62,17 @@ fn multiple_pkgs() {
     assert_that(cargo_process("install").args(&["foo", "bar", "baz"]),
                 execs().with_status(101).with_stderr(&format!("\
 [UPDATING] registry `[..]`
-[DOWNLOADING] foo v0.0.1 (registry file://[..])
+[DOWNLOADING] foo v0.0.1 (registry `file://[..]`)
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]foo[..]
-[DOWNLOADING] bar v0.0.2 (registry file://[..])
+[DOWNLOADING] bar v0.0.2 (registry `file://[..]`)
 [INSTALLING] bar v0.0.2
 [COMPILING] bar v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]bar[..]
-error: could not find `baz` in `registry [..]`
+error: could not find `baz` in registry `[..]`
    
 Summary: Successfully installed foo, bar! Failed to install baz (see error(s) above).
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -121,7 +121,7 @@ fn missing() {
     assert_that(cargo_process("install").arg("bar"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
-[ERROR] could not find `bar` in `registry [..]`
+[ERROR] could not find `bar` in registry `[..]`
 "));
 }
 
@@ -131,7 +131,7 @@ fn bad_version() {
     assert_that(cargo_process("install").arg("foo").arg("--vers=0.2.0"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
-[ERROR] could not find `foo` in `registry [..]` with version `=0.2.0`
+[ERROR] could not find `foo` in registry `[..]` with version `=0.2.0`
 "));
 }
 
