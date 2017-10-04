@@ -513,7 +513,7 @@ impl TomlManifest {
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
         let project = project.ok_or_else(|| {
-            CargoError::from("no `package` or `project` section found.")
+            CargoError::from("no `package` section found.")
         })?;
 
         let package_name = project.name.trim();
