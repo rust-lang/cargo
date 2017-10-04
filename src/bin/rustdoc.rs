@@ -83,7 +83,7 @@ current package is documented. For more information on SPEC and its format, see
 the `cargo help pkgid` command.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,

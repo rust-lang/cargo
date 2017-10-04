@@ -18,7 +18,7 @@ Options:
     --color WHEN             Coloring: auto, always, never
 ";
 
-pub fn execute(_: Options, _: &Config) -> CliResult {
+pub fn execute(_: Options, _: &mut Config) -> CliResult {
     debug!("executing; cmd=cargo-version; args={:?}", env::args().collect::<Vec<_>>());
 
     println!("{}", cargo::version());
