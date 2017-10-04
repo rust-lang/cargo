@@ -907,11 +907,11 @@ impl<'r> Requirements<'r> {
         self.deps.entry(pkg).or_insert((false, Vec::new())).0 = true;
     }
 
-    fn require_feature(&mut self, feat: &'r str, recursive: &'r Vec<String>) -> CargoResult<()> {
+    fn require_feature(&mut self, feat: &'r str) -> CargoResult<()> {
         if self.seen(feat) {
             return Ok(());
         }
-        for f in recursive {
+        for f in self.summary.features().get(feat).expect("must be a valid feature") {
             if f == &feat {
                 bail!("Cyclic feature dependency: feature `{}` depends on itself", feat);
             }
@@ -935,13 +935,10 @@ impl<'r> Requirements<'r> {
                 self.require_crate_feature(feat_or_package, feat);
             }
             None => {
-                match self.summary.features().get(feat_or_package) {
-                    Some(recursive) => {
-                        self.require_feature(feat_or_package, recursive)?;
-                    }
-                    None => {
-                        self.require_dependency(feat_or_package);
-                    }
+                if self.summary.features().contains_key(feat_or_package) {
+                    self.require_feature(feat_or_package)?;
+                } else {
+                    self.require_dependency(feat_or_package);
                 }
             }
         }
