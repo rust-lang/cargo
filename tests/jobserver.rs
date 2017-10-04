@@ -1,7 +1,6 @@
 extern crate cargotest;
 extern crate hamcrest;
 
-use std::str;
 use std::net::TcpListener;
 use std::thread;
 use std::process::Command;
