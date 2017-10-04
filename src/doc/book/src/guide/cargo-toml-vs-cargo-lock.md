@@ -71,7 +71,7 @@ Cargo will take the latest commit and write that information out into our
 `Cargo.lock` when we build for the first time. That file will look like this:
 
 ```toml
-[root]
+[[package]]
 name = "hello_world"
 version = "0.1.0"
 dependencies = [

@@ -145,7 +145,7 @@ fn preserve_line_endings_issue_2076() {
 
     let lock0 = p.read_lockfile();
 
-    assert!(lock0.starts_with("[root]\n"));
+    assert!(lock0.starts_with("[[package]]\n"));
 
     let lock1 = lock0.replace("\n", "\r\n");
     {
@@ -157,7 +157,7 @@ fn preserve_line_endings_issue_2076() {
 
     let lock2 = p.read_lockfile();
 
-    assert!(lock2.starts_with("[root]\r\n"));
+    assert!(lock2.starts_with("[[package]]\r\n"));
     assert_eq!(lock1, lock2);
 }
 
