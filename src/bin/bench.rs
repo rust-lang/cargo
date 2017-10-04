@@ -1,5 +1,7 @@
 use std::env;
 
+use run::parse_env_options;
+
 use cargo::core::Workspace;
 use cargo::ops::{self, MessageFormat, Packages};
 use cargo::util::{CliResult, CliError, Config, CargoErrorKind};
@@ -32,6 +34,7 @@ pub struct Options {
     flag_no_fail_fast: bool,
     flag_frozen: bool,
     flag_locked: bool,
+    flag_env: Vec<String>,
     arg_args: Vec<String>,
     flag_all: bool,
     flag_exclude: Vec<String>,
@@ -67,6 +70,7 @@ Options:
     --no-default-features        Do not build the `default` feature
     --target TRIPLE              Build for the target triple
     --manifest-path PATH         Path to the manifest to build benchmarks for
+    --env ENVVAR ...             Set environment variable
     -v, --verbose ...            Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
@@ -93,6 +97,12 @@ The --jobs argument affects the building of the benchmark executable but does
 not affect how many jobs are used when running the benchmarks.
 
 Compilation can be customized with the `bench` profile in the manifest.
+
+Environment variables for the benchmark binaries can be set using one or more
+`--env` options. The argument to `--env` takes the form `NAME=VALUE`.
+Environment variables set this way are not visible during compilation.
+Environment variables set to the empty string are removed from the environment
+of the benchmark binaries, yet still visible during compilation.
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult {
@@ -114,10 +124,13 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                     &options.flag_exclude,
                                     &options.flag_package)?;
 
+    let envmap = parse_env_options(&options.flag_env, config)?;
+
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
         no_fail_fast: options.flag_no_fail_fast,
         only_doc: false,
+        env: &envmap,
         compile_opts: ops::CompileOptions {
             config: config,
             jobs: options.flag_jobs,

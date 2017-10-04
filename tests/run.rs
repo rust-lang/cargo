@@ -855,3 +855,71 @@ fn run_multiple_packages() {
                     .with_status(101)
                     .with_stderr_contains("[ERROR] package `d3` is not a member of the workspace"));
 }
+
+#[test]
+fn run_set_environment() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            build = "build.rs"
+        "#)
+        .file("build.rs", r#"
+        use std::env;
+        fn main() {
+            if env::var("RUSTC").unwrap() == "foobar" {
+                panic!("Environment should not get mangled by `--env`");
+            }
+            if env::var("CARGO_TEST_EMPTY_VAR").unwrap() != "NOT_EMPTY" {
+                panic!("Env should be visible to build script");
+            }
+        }
+        "#)
+        .file("src/main.rs", r#"
+            use std::env;
+            fn main() {
+                if (env::var("RUSTC").unwrap() != "foobar")
+                   | (env::var("foo").unwrap() != "bar")
+                   | (env::var("CARGO_TEST_EMPTY_VAR").is_ok()) {
+                    panic!("Environment was not set properly");
+                }
+            }
+        "#);
+
+    assert_that(p.cargo_process("run")
+                 .env("CARGO_TEST_EMPTY_VAR", "NOT_EMPTY")
+                 .arg("--env").arg("RUSTC=foobar")
+                 .arg("--env").arg("foo=foo")
+                 .arg("--env").arg("foo=bar")
+                 .arg("--env").arg("CARGO_TEST_EMPTY_VAR="),
+                execs()
+                .with_status(0)
+                .with_stderr_contains("[WARNING] Environment variable `foo` \
+                                      is set multiple times."));
+}
+
+#[test]
+fn run_set_environment_bad_arg() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    assert_that(p.cargo("run")
+                 .arg("--env").arg("foobar"),
+                execs()
+                .with_status(101)
+                .with_stderr_contains("[ERROR] Environment variables take the \
+                                       form NAME=VALUE"));
+    assert_that(p.cargo("run")
+                 .arg("--env").arg("=foobar"),
+                execs()
+                .with_status(101)
+                .with_stderr_contains("[ERROR] Environment variable names \
+                                       can't be empty."));
+}

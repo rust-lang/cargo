@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ffi::{OsString, OsStr};
 
 use ops::{self, Compilation};
@@ -10,6 +11,7 @@ pub struct TestOptions<'a> {
     pub no_run: bool,
     pub no_fail_fast: bool,
     pub only_doc: bool,
+    pub env: &'a HashMap<String, String>,
 }
 
 pub fn run_tests(ws: &Workspace,
@@ -92,8 +94,17 @@ fn run_unit_tests(options: &TestOptions,
             Some(path) => path,
             None => &**exe,
         };
+
         let mut cmd = compilation.target_process(exe, pkg)?;
         cmd.args(test_args);
+        for (key, value) in options.env.iter() {
+            if value == "" {
+                cmd.env_remove(key);
+            } else {
+                cmd.env(key, value);
+            }
+        }
+
         config.shell().concise(|shell| {
             shell.status("Running", to_display.display().to_string())
         })?;
@@ -167,6 +178,14 @@ fn run_doc_tests(options: &TestOptions,
             if let Some(cfgs) = compilation.cfgs.get(package.package_id()) {
                 for cfg in cfgs.iter() {
                     p.arg("--cfg").arg(cfg);
+                }
+            }
+
+            for (key, value) in options.env.iter() {
+                if value == "" {
+                    p.env_remove(key);
+                } else {
+                    p.env(key, value);
                 }
             }
 

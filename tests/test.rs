@@ -2837,3 +2837,45 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
     assert_that(workspace.cargo("test").arg("--all").arg("--target").arg(rustc_host()),
                 execs().with_status(0));
 }
+
+#[test]
+fn test_set_environment() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            build = "build.rs"
+        "#)
+        .file("build.rs", r#"
+            use std::env;
+            fn main() {
+                if env::var("CARGO_TEST_EMPTY_VAR").unwrap() != "NOT_EMPTY" {
+                    panic!("Env should be visible to build script");
+                }
+            }
+        "#)
+        .file("src/lib.rs", r#"
+            /// ```
+            /// use std::env;
+            /// assert!(env::var("CARGO_TEST_EMPTY_VAR").is_err());
+            /// ```
+            pub fn foobar() {}
+
+            #[test]
+            fn env_is_set() {
+                use std::env;
+                assert_eq!(env::var("CARGO_TEST_VALUE_IS_SET").unwrap(),
+                           "VALUE");
+            }
+        "#);
+
+    assert_that(p.cargo_process("test")
+                 .env("CARGO_TEST_EMPTY_VAR", "NOT_EMPTY")
+                 .arg("--env").arg("CARGO_TEST_VALUE_IS_SET=VALUE")
+                 .arg("--env").arg("CARGO_TEST_EMPTY_VAR="),
+                execs()
+                .with_status(0)
+                .with_stdout_contains("test src/lib.rs - foobar (line 2) ... ok")
+                .with_stdout_contains("test env_is_set ... ok"));
+}
