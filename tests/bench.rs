@@ -1269,3 +1269,44 @@ fn bench_virtual_manifest_all_implied() {
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
                        .with_stdout_contains("test bench_foo ... bench: [..]"));
 }
+
+#[test]
+fn bench_set_environment() {
+    if !is_nightly() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            build = "build.rs"
+        "#)
+        .file("build.rs", r#"
+            use std::env;
+            fn main() {
+                if env::var("CARGO_TEST_EMPTY_VAR").unwrap() != "NOT_EMPTY" {
+                    panic!("Env should be visible to build script");
+                }
+            }
+        "#)
+        .file("src/main.rs", r#"
+            #![cfg_attr(test, feature(test))]
+            #[cfg(test)]
+            extern crate test;
+            #[bench]
+            fn env_is_set(_ben: &mut test::Bencher) {
+                use std::env;
+                assert!(env::var("CARGO_TEST_EMPTY_VAR").is_err());
+                assert_eq!(env::var("CARGO_TEST_VALUE_IS_SET").unwrap(),
+                           "VALUE");
+            }
+        "#);
+
+    assert_that(p.cargo_process("bench")
+                 .env("CARGO_TEST_EMPTY_VAR", "NOT_EMPTY")
+                 .arg("--env").arg("CARGO_TEST_VALUE_IS_SET=VALUE")
+                 .arg("--env").arg("CARGO_TEST_EMPTY_VAR="),
+                execs()
+                .with_status(0)
+                .with_stdout_contains("test env_is_set ... bench: [..]"));
+}

@@ -94,24 +94,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
     let packages = Vec::from_iter(options.flag_package.iter().cloned());
     let spec = Packages::Packages(&packages);
 
-    let mut envmap = HashMap::new();
-    for env_arg in options.flag_env {
-        let mut env_arg = env_arg.splitn(2, '=');
-        let key = env_arg.next().unwrap();
-        if key == "" {
-            return Err(CliError::new("Environment variable names can't be \
-                                      empty.".into(), 101));
-        }
-        let value = match env_arg.next() {
-            Some(k) => k,
-            None => return Err(CliError::new("Environment variables take the \
-                                              form NAME=VALUE".into(), 101))
-        };
-        if envmap.insert(key.to_owned(), value.to_owned()).is_some() {
-            config.shell().warn(format!("Environment variable `{}` is set \
-                                         multiple times.", key))?;
-        }
-    }
+    let envmap = parse_env_options(&options.flag_env, config)?;
 
     let compile_opts = ops::CompileOptions {
         config: config,
@@ -161,4 +144,26 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             })
         }
     }
+}
+
+pub fn parse_env_options(flag_env: &Vec<String>, config: &Config) -> Result<HashMap<String, String>, CliError> {
+    let mut envmap = HashMap::new();
+    for env_arg in flag_env {
+        let mut env_arg = env_arg.splitn(2, '=');
+        let key = env_arg.next().unwrap();
+        if key == "" {
+            return Err(CliError::new("Environment variable names can't be \
+                                      empty.".into(), 101));
+        }
+        let value = match env_arg.next() {
+            Some(k) => k,
+            None => return Err(CliError::new("Environment variables take the \
+                                              form NAME=VALUE".into(), 101))
+        };
+        if envmap.insert(key.to_owned(), value.to_owned()).is_some() {
+            config.shell().warn(format!("Environment variable `{}` is set \
+                                         multiple times.", key))?;
+        }
+    }
+    Ok(envmap)
 }
