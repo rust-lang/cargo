@@ -1,4 +1,4 @@
-use std::cell::{RefCell, RefMut, Cell, Ref};
+use std::cell::{RefCell, RefMut};
 use std::collections::HashSet;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::HashMap;
@@ -49,11 +49,16 @@ pub struct Config {
     /// The location of the rustdoc executable
     rustdoc: LazyCell<PathBuf>,
     /// Whether we are printing extra verbose messages
-    extra_verbose: Cell<bool>,
-    frozen: Cell<bool>,
-    locked: Cell<bool>,
+    extra_verbose: bool,
+    /// TODO to do with Cargo.lock
+    frozen: bool,
+    /// TODO to do with Cargo.lock
+    locked: bool,
+    /// A global static IPC control mechanism (used for managing parallel builds)
     jobserver: Option<jobserver::Client>,
-    cli_flags: RefCell<CliUnstable>,
+    /// Cli flags of the form "-Z something"
+    cli_flags: CliUnstable,
+    /// A handle on curl easy mode for http calls
     easy: LazyCell<RefCell<Easy>>,
 }
 
@@ -80,9 +85,9 @@ impl Config {
             values: LazyCell::new(),
             cargo_exe: LazyCell::new(),
             rustdoc: LazyCell::new(),
-            extra_verbose: Cell::new(false),
-            frozen: Cell::new(false),
-            locked: Cell::new(false),
+            extra_verbose: false,
+            frozen: false,
+            locked: false,
             jobserver: unsafe {
                 if GLOBAL_JOBSERVER.is_null() {
                     None
@@ -90,7 +95,7 @@ impl Config {
                     Some((*GLOBAL_JOBSERVER).clone())
                 }
             },
-            cli_flags: RefCell::new(CliUnstable::default()),
+            cli_flags: CliUnstable::default(),
             easy: LazyCell::new(),
         }
     }
@@ -435,28 +440,28 @@ impl Config {
 
         self.shell().set_verbosity(verbosity);
         self.shell().set_color_choice(color.map(|s| &s[..]))?;
-        self.extra_verbose.set(extra_verbose);
-        self.frozen.set(frozen);
-        self.locked.set(locked);
-        self.cli_flags.borrow_mut().parse(unstable_flags)?;
+        self.extra_verbose = extra_verbose;
+        self.frozen = frozen;
+        self.locked = locked;
+        self.cli_flags.parse(unstable_flags)?;
 
         Ok(())
     }
 
-    pub fn cli_unstable(&self) -> Ref<CliUnstable> {
-        self.cli_flags.borrow()
+    pub fn cli_unstable(&self) -> &CliUnstable {
+        &self.cli_flags
     }
 
     pub fn extra_verbose(&self) -> bool {
-        self.extra_verbose.get()
+        self.extra_verbose
     }
 
     pub fn network_allowed(&self) -> bool {
-        !self.frozen.get()
+        !self.frozen
     }
 
     pub fn lock_update_allowed(&self) -> bool {
-        !self.frozen.get() && !self.locked.get()
+        !self.frozen && !self.locked
     }
 
     /// Loads configuration from the filesystem
