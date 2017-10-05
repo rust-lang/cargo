@@ -717,6 +717,10 @@ impl TomlManifest {
         let mut nested_paths = Vec::new();
         let mut warnings = Vec::new();
         let mut deps = Vec::new();
+        let empty = Vec::new();
+        let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
+        let features = Features::new(&cargo_features, &mut warnings)?;
+
         let (replace, patch) = {
             let mut cx = Context {
                 pkgid: None,
@@ -726,7 +730,7 @@ impl TomlManifest {
                 config: config,
                 warnings: &mut warnings,
                 platform: None,
-                features: &Features::default(), // @alex: is this right?
+                features: &features,
                 root: root
             };
             (me.replace(&mut cx)?, me.patch(&mut cx)?)
