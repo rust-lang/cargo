@@ -366,19 +366,14 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             add_custom_env(&mut rustc, &build_state, &current_id, kind)?;
         }
 
-        // FIXME(rust-lang/rust#18913): we probably shouldn't have to do
-        //                              this manually
         for &(ref filename, ref _link_dst, _linkable) in filenames.iter() {
-            let mut dsts = vec![root.join(filename)];
             // If there is both an rmeta and rlib, rustc will prefer to use the
             // rlib, even if it is older. Therefore, we must delete the rlib to
             // force using the new rmeta.
-            if dsts[0].extension() == Some(OsStr::new("rmeta")) {
-                dsts.push(root.join(filename).with_extension("rlib"));
-            }
-            for dst in &dsts {
-                if fs::metadata(dst).is_ok() {
-                    fs::remove_file(dst).chain_err(|| {
+            if filename.extension() == Some(OsStr::new("rmeta")) {
+                let dst = root.join(filename).with_extension("rlib");
+                if dst.exists() {
+                    fs::remove_file(&dst).chain_err(|| {
                         format!("Could not remove file: {}.", dst.display())
                     })?;
                 }
