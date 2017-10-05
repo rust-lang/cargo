@@ -742,3 +742,41 @@ Caused by:
   to different sources
 "));
 }
+
+#[test]
+fn patch_in_virtual() {
+    Package::new("foo", "0.1.0").publish();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["bar"]
+
+            [patch.crates-io]
+            foo = { path = "foo" }
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", r#""#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            foo = "0.1"
+        "#)
+        .file("bar/src/lib.rs", r#""#);
+
+    assert_that(p.cargo_process("build"),
+                execs().with_status(0));
+    assert_that(p.cargo("build"),
+                execs().with_status(0).with_stderr("\
+[FINISHED] [..]
+"));
+}
