@@ -3371,7 +3371,7 @@ fn cdylib_final_outputs() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
-            name = "foo"
+            name = "foo-bar"
             authors = []
             version = "0.1.0"
 
@@ -3383,11 +3383,11 @@ fn cdylib_final_outputs() {
     assert_that(p.cargo_process("build"), execs().with_status(0));
 
     let files = if cfg!(windows) {
-        vec!["foo.dll.lib", "foo.dll"]
+        vec!["foo_bar.dll.lib", "foo_bar.dll"]
     } else if cfg!(target_os = "macos") {
-        vec!["libfoo.dylib"]
+        vec!["libfoo_bar.dylib"]
     } else {
-        vec!["libfoo.so"]
+        vec!["libfoo_bar.so"]
     };
 
     for file in files {
@@ -3408,7 +3408,7 @@ fn wasm32_final_outputs() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
-            name = "foo"
+            name = "foo-bar"
             authors = []
             version = "0.1.0"
         "#)
@@ -3449,11 +3449,11 @@ fn wasm32_final_outputs() {
 
     let pkgid = packages
         .package_ids()
-        .filter(|id| id.name() == "foo")
+        .filter(|id| id.name() == "foo-bar")
         .collect::<Vec<_>>();
     let pkg = packages.get(pkgid[0]).expect("Can't get package");
 
-    let target = Target::bin_target("foo", p.root().join("src/main.rs"), None);
+    let target = Target::bin_target("foo-bar", p.root().join("src/main.rs"), None);
 
     let unit = Unit {
         pkg: &pkg,
@@ -3478,7 +3478,7 @@ fn wasm32_final_outputs() {
     let target_filenames = ctx.target_filenames(&unit).expect("Can't get target file names");
 
     // Verify the result.
-    let mut expected = vec!["debug/foo.js", "debug/foo.wasm"];
+    let mut expected = vec!["debug/foo-bar.js", "debug/foo_bar.wasm"];
 
     assert_eq!(target_filenames.len(), expected.len());
 
