@@ -186,23 +186,13 @@ impl SourceId {
         let registries = config.get_table("registries")?;
         match registries.as_ref().and_then(|registries| registries.val.get(key)) {
             Some(registry)  => {
-                let index = match *registry {
-                    CV::Table(ref registry, _)  => {
-                        match registry.get("index") {
-                            Some(index) => index.string(&format!("registries.{}", key))?.0,
-                            None => return Err(format!("No index for registry `{}`", key).into()),
-                        }
-                    }
-                    _ => registry.expected("table", &format!("registries.{}", key))?
-                };
-
-                let url = index.to_url()?;
+                let index = config.get_str(&format!("registries.{}.index", key))?.to_url()?;
 
                 Ok(SourceId {
                     inner: Arc::new(SourceIdInner {
                         kind: Kind::Registry,
-                        canonical_url: git::canonicalize_url(&url)?,
-                        url: url,
+                        canonical_url: git::canonicalize_url(&index)?,
+                        url: index,
                         precise: None,
                     }),
                 })
