@@ -2837,3 +2837,33 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
     assert_that(workspace.cargo("test").arg("--all").arg("--target").arg(rustc_host()),
                 execs().with_status(0));
 }
+
+#[test]
+fn test_hint_not_masked_by_doctest() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", r#"
+            /// ```
+            /// assert_eq!(1, 1);
+            /// ```
+            pub fn this_works() {}
+        "#)
+        .file("tests/integ.rs", r#"
+            #[test]
+            fn this_fails() {
+                panic!();
+            }
+        "#);
+    assert_that(p.cargo_process("test")
+                 .arg("--no-fail-fast"),
+                execs()
+                .with_status(101)
+                .with_stdout_contains("test this_fails ... FAILED")
+                .with_stdout_contains("[..]this_works (line [..]ok")
+                .with_stderr_contains("[ERROR] test failed, to rerun pass \
+                                      '--test integ'"));
+}
