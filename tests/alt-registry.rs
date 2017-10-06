@@ -73,6 +73,77 @@ fn depend_on_alt_registry() {
 }
 
 #[test]
+fn depend_on_alt_registry_depends_on_same_registry() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            version = "0.0.1"
+            registry = "alternative"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    Package::new("baz", "0.0.1").alternative(true).publish();
+    Package::new("bar", "0.0.1").dep("baz", "0.0.1").alternative(true).publish();
+
+    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+                execs().with_status(0).with_stderr(&format!("\
+[UPDATING] registry `{reg}`
+[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[COMPILING] baz v0.0.1 (registry `file://[..]`)
+[COMPILING] bar v0.0.1 (registry `file://[..]`)
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
+",
+        dir = p.url(),
+        reg = registry::alt_registry())));
+}
+
+
+#[test]
+fn depend_on_alt_registry_depends_on_crates_io() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            version = "0.0.1"
+            registry = "alternative"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    Package::new("baz", "0.0.1").publish();
+    Package::new("bar", "0.0.1").dep("baz", "0.0.1").alternative(true).publish();
+
+    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+                execs().with_status(0).with_stderr(&format!("\
+[UPDATING] registry `{reg}`
+[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
+[COMPILING] baz v0.0.1
+[COMPILING] bar v0.0.1
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
+",
+        dir = p.url(),
+        reg = registry::alt_registry())));
+}
+
+#[test]
 fn registry_incompatible_with_path() {
     let p = project("foo")
         .file("Cargo.toml", r#"
