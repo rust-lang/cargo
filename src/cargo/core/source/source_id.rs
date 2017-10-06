@@ -14,7 +14,7 @@ use ops;
 use sources::git;
 use sources::{PathSource, GitSource, RegistrySource, CRATES_IO};
 use sources::DirectorySource;
-use util::{Config, ConfigValue as CV, CargoResult, ToUrl};
+use util::{Config, CargoResult, ToUrl};
 
 /// Unique identifier for a source of packages.
 #[derive(Clone, Eq, Debug)]
@@ -183,22 +183,17 @@ impl SourceId {
     }
 
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
-        let registries = config.get_table("registries")?;
-        match registries.as_ref().and_then(|registries| registries.val.get(key)) {
-            Some(registry)  => {
-                let index = config.get_str(&format!("registries.{}.index", key))?.to_url()?;
-
-                Ok(SourceId {
-                    inner: Arc::new(SourceIdInner {
-                        kind: Kind::Registry,
-                        canonical_url: git::canonicalize_url(&index)?,
-                        url: index,
-                        precise: None,
-                    }),
-                })
-            }
-            None => Err(format!("Required unknown registry source: `{}`", key).into())
-        }
+        if let Some(index) = config.get_string(&format!("registries.{}.index", key))? {
+            let url = index.val.to_url()?;
+            Ok(SourceId {
+                inner: Arc::new(SourceIdInner {
+                    kind: Kind::Registry,
+                    canonical_url: git::canonicalize_url(&url)?,
+                    url: url,
+                    precise: None,
+                }),
+            })
+        } else { Err(format!("No index found for registry: `{}`", key).into()) }
     }
 
     /// Get this source URL
