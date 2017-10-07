@@ -82,7 +82,10 @@ pub enum WorkspaceConfig {
     Member { root: Option<String> },
 }
 
-/// Configuration of a workspace root in a manifest.
+/// Intermediate configuration of a workspace root in a manifest.
+///
+/// Knows the Workspace Root path, as well as `members` and `exclude` lists of path patterns, which
+/// together tell if some path is recognized as a member by this root or not.
 #[derive(Debug, Clone)]
 pub struct WorkspaceRootConfig {
     root_dir: PathBuf,
@@ -207,7 +210,7 @@ impl<'cfg> Workspace<'cfg> {
         let root = self.root_manifest.as_ref().unwrap_or(&self.current_manifest);
         match *self.packages.get(root) {
             MaybePackage::Package(ref p) => p.manifest().profiles(),
-            MaybePackage::Virtual(ref m) => m.profiles(),
+            MaybePackage::Virtual(ref vm) => vm.profiles(),
         }
     }
 
@@ -238,7 +241,7 @@ impl<'cfg> Workspace<'cfg> {
         };
         match *self.packages.get(path) {
             MaybePackage::Package(ref p) => p.manifest().replace(),
-            MaybePackage::Virtual(ref v) => v.replace(),
+            MaybePackage::Virtual(ref vm) => vm.replace(),
         }
     }
 
@@ -252,7 +255,7 @@ impl<'cfg> Workspace<'cfg> {
         };
         match *self.packages.get(path) {
             MaybePackage::Package(ref p) => p.manifest().patch(),
-            MaybePackage::Virtual(ref v) => v.patch(),
+            MaybePackage::Virtual(ref vm) => vm.patch(),
         }
     }
 
@@ -306,20 +309,20 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         for path in paths::ancestors(manifest_path).skip(2) {
-            let manifest = path.join("Cargo.toml");
-            debug!("find_root - trying {}", manifest.display());
-            if manifest.exists() {
-                match *self.packages.load(&manifest)?.workspace_config() {
-                    WorkspaceConfig::Root(ref root_config) => {
+            let ances_manifest_path = path.join("Cargo.toml");
+            debug!("find_root - trying {}", ances_manifest_path.display());
+            if ances_manifest_path.exists() {
+                match *self.packages.load(&ances_manifest_path)?.workspace_config() {
+                    WorkspaceConfig::Root(ref ances_root_config) => {
                         debug!("find_root - found a root checking exclusion");
-                        if !root_config.is_excluded(manifest_path) {
+                        if !ances_root_config.is_excluded(&manifest_path) {
                             debug!("find_root - found!");
-                            return Ok(Some(manifest))
+                            return Ok(Some(ances_manifest_path))
                         }
                     }
                     WorkspaceConfig::Member { root: Some(ref path_to_root) } => {
                         debug!("find_root - found pointer");
-                        return Ok(Some(read_root_pointer(&manifest, path_to_root)?))
+                        return Ok(Some(read_root_pointer(&ances_manifest_path, path_to_root)?))
                     }
                     WorkspaceConfig::Member { .. } => {}
                 }
@@ -491,6 +494,8 @@ impl<'cfg> Workspace<'cfg> {
             let current_dir = self.current_manifest.parent().unwrap();
             let root_pkg = self.packages.get(root);
 
+            // FIXME: Make this more generic by using a relative path resolver between member and
+            // root.
             let members_msg = match current_dir.strip_prefix(root_dir) {
                 Ok(rel) => {
                     format!("this may be fixable by adding `{}` to the \
@@ -578,11 +583,10 @@ impl<'cfg> Packages<'cfg> {
                     read_manifest(manifest_path, &source_id, self.config)?;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {
-                        MaybePackage::Package(Package::new(manifest,
-                                                           manifest_path))
+                        MaybePackage::Package(Package::new(manifest, manifest_path))
                     }
-                    EitherManifest::Virtual(v) => {
-                        MaybePackage::Virtual(v)
+                    EitherManifest::Virtual(vm) => {
+                        MaybePackage::Virtual(vm)
                     }
                 }))
             }
@@ -616,13 +620,14 @@ impl<'a, 'cfg> Iterator for Members<'a, 'cfg> {
 impl MaybePackage {
     fn workspace_config(&self) -> &WorkspaceConfig {
         match *self {
-            MaybePackage::Virtual(ref v) => v.workspace_config(),
-            MaybePackage::Package(ref v) => v.manifest().workspace_config(),
+            MaybePackage::Package(ref p) => p.manifest().workspace_config(),
+            MaybePackage::Virtual(ref vm) => vm.workspace_config(),
         }
     }
 }
 
 impl WorkspaceRootConfig {
+    /// Create a new Intermediate Workspace Root configuration.
     pub fn new(
         root_dir: &Path,
         members: &Option<Vec<String>>,
@@ -635,6 +640,9 @@ impl WorkspaceRootConfig {
         }
     }
 
+    /// Checks the path against the `excluded` list.
+    ///
+    /// This method does NOT consider the `members` list.
     fn is_excluded(&self, manifest_path: &Path) -> bool {
         let excluded = self.exclude.iter().any(|ex| {
             manifest_path.starts_with(self.root_dir.join(ex))
