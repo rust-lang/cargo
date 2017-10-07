@@ -26,7 +26,7 @@ Options:
     --color WHEN             Coloring: auto, always, never
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     debug!("executing; cmd=cargo-read-manifest; args={:?}",
            env::args().collect::<Vec<_>>());
     config.shell().set_color_choice(options.flag_color.as_ref().map(|s| &s[..]))?;

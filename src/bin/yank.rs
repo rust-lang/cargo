@@ -45,7 +45,7 @@ download the yanked version to use it. Cargo will, however, not allow any new
 crates to be locked to any yanked version.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,

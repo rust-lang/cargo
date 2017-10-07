@@ -109,8 +109,8 @@ impl fmt::Display for VersionInfo {
 }
 
 pub fn call_main_without_stdin<'de, Flags: Deserialize<'de>>(
-            exec: fn(Flags, &Config) -> CliResult,
-            config: &Config,
+            exec: fn(Flags, &mut Config) -> CliResult,
+            config: &mut Config,
             usage: &str,
             args: &[String],
             options_first: bool) -> CliResult
