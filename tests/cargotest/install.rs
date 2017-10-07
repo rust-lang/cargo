@@ -12,7 +12,7 @@ pub fn cargo_home() -> PathBuf {
 
 pub struct InstalledExe(pub &'static str);
 
-fn exe(name: &str) -> String {
+pub fn exe(name: &str) -> String {
     if cfg!(windows) {format!("{}.exe", name)} else {name.to_string()}
 }
 

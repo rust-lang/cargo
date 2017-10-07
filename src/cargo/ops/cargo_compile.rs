@@ -92,7 +92,7 @@ impl<'a> CompileOptions<'a> {
 pub enum CompileMode {
     Test,
     Build,
-    Check,
+    Check { test: bool },
     Bench,
     Doc { deps: bool },
     Doctest,
@@ -478,7 +478,7 @@ fn generate_auto_targets<'a>(mode: CompileMode, targets: &'a [Target],
             }
             base
         }
-        CompileMode::Build | CompileMode::Check => {
+        CompileMode::Build | CompileMode::Check{..} => {
             targets.iter().filter(|t| {
                 t.is_bin() || t.is_lib()
             }).map(|t| BuildProposal {
@@ -603,9 +603,16 @@ fn generate_targets<'a>(pkg: &'a Package,
         CompileMode::Test => test,
         CompileMode::Bench => &profiles.bench,
         CompileMode::Build => build,
-        CompileMode::Check => &profiles.check,
+        CompileMode::Check {test: false} => &profiles.check,
+        CompileMode::Check {test: true} => &profiles.check_test,
         CompileMode::Doc { .. } => &profiles.doc,
         CompileMode::Doctest => &profiles.doctest,
+    };
+
+    let test_profile = if profile.check {
+        &profiles.check_test
+    } else {
+        profile
     };
 
     let targets = match *filter {
@@ -631,15 +638,14 @@ fn generate_targets<'a>(pkg: &'a Package,
                     bail!("no library targets found")
                 }
             }
-
             targets.append(&mut propose_indicated_targets(
                 pkg, bins, "bin", Target::is_bin, profile)?);
             targets.append(&mut propose_indicated_targets(
-                pkg, examples, "example", Target::is_example, build)?);
+                pkg, examples, "example", Target::is_example, profile)?);
             targets.append(&mut propose_indicated_targets(
-                pkg, tests, "test", Target::is_test, test)?);
+                pkg, tests, "test", Target::is_test, test_profile)?);
             targets.append(&mut propose_indicated_targets(
-                pkg, benches, "bench", Target::is_bench, &profiles.bench)?);
+                pkg, benches, "bench", Target::is_bench, test_profile)?);
             targets
         }
     };
