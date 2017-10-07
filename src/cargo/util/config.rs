@@ -50,9 +50,9 @@ pub struct Config {
     rustdoc: LazyCell<PathBuf>,
     /// Whether we are printing extra verbose messages
     extra_verbose: bool,
-    /// TODO to do with Cargo.lock
+    /// `frozen` is set if we shouldn't access the network
     frozen: bool,
-    /// TODO to do with Cargo.lock
+    /// `locked` is set if we should not update lock files
     locked: bool,
     /// A global static IPC control mechanism (used for managing parallel builds)
     jobserver: Option<jobserver::Client>,
