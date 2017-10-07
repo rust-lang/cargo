@@ -189,6 +189,7 @@ pub struct Profiles {
     pub doc: Profile,
     pub custom_build: Profile,
     pub check: Profile,
+    pub check_test: Profile,
     pub doctest: Profile,
 }
 
@@ -657,6 +658,14 @@ impl Profile {
     pub fn default_check() -> Profile {
         Profile {
             check: true,
+            ..Profile::default_dev()
+        }
+    }
+
+    pub fn default_check_test() -> Profile {
+        Profile {
+            check: true,
+            test: true,
             ..Profile::default_dev()
         }
     }

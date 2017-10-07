@@ -2,7 +2,7 @@ use std::env;
 
 use cargo::core::Workspace;
 use cargo::ops::{self, CompileOptions, MessageFormat, Packages};
-use cargo::util::{CliResult, Config};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
 pub const USAGE: &'static str = "
@@ -28,6 +28,7 @@ Options:
     --benches                    Check all benches
     --all-targets                Check all targets (lib and bin targets by default)
     --release                    Check artifacts in release mode, with optimizations
+    --profile PROFILE            Profile to build the selected target for
     --features FEATURES          Space-separated list of features to also check
     --all-features               Check all available features
     --no-default-features        Do not check the `default` feature
@@ -53,6 +54,9 @@ Note that `--exclude` has to be specified in conjunction with the `--all` flag.
 Compilation can be configured via the use of profiles which are configured in
 the manifest. The default profile for this command is `dev`, but passing
 the --release flag will use the `release` profile instead.
+
+The `--profile test` flag can be used to check unit tests with the
+`#[cfg(test)]` attribute.
 ";
 
 #[derive(Deserialize)]
@@ -83,6 +87,7 @@ pub struct Options {
     flag_frozen: bool,
     flag_all: bool,
     flag_exclude: Vec<String>,
+    flag_profile: Option<String>,
     #[serde(rename = "flag_Z")]
     flag_z: Vec<String>,
 }
@@ -106,6 +111,17 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                                     &options.flag_exclude,
                                     &options.flag_package)?;
 
+    let test = options.flag_tests ||
+        match options.flag_profile.as_ref().map(|t| &t[..]) {
+            Some("test") => true,
+            None => false,
+            Some(profile) => {
+                let err = format!("unknown profile: `{}`, only `test` is currently supported",
+                                  profile).into();
+                return Err(CliError::new(err, 101))
+            }
+        };
+
     let opts = CompileOptions {
         config: config,
         jobs: options.flag_jobs,
@@ -114,10 +130,10 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
         spec: spec,
-        mode: ops::CompileMode::Check,
+        mode: ops::CompileMode::Check{test:test},
         release: options.flag_release,
-        filter: ops::CompileFilter::new(options.flag_lib,
-                                        &options.flag_bin, options.flag_bins,
+        filter: ops::CompileFilter::new(options.flag_lib || options.flag_tests,
+                                        &options.flag_bin, options.flag_bins || options.flag_tests,
                                         &options.flag_test, options.flag_tests,
                                         &options.flag_example, options.flag_examples,
                                         &options.flag_bench, options.flag_benches,
