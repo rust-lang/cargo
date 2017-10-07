@@ -45,7 +45,7 @@ given, then all packages' artifacts are removed. For more information on SPEC
 and its format, see the `cargo help pkgid` command.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     debug!("executing; cmd=cargo-clean; args={:?}", env::args().collect::<Vec<_>>());
     config.configure(options.flag_verbose,
                      options.flag_quiet,

@@ -95,7 +95,7 @@ not affect how many jobs are used when running the benchmarks.
 Compilation can be customized with the `bench` profile in the manifest.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     debug!("executing; cmd=cargo-bench; args={:?}",
            env::args().collect::<Vec<_>>());
 
