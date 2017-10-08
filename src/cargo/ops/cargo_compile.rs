@@ -611,6 +611,16 @@ fn generate_targets<'a>(pkg: &'a Package,
 
     let test_profile = if profile.check {
         &profiles.check_test
+    } else if mode == CompileMode::Build {
+        test
+    } else {
+        profile
+    };
+
+    let bench_profile = if profile.check {
+        &profiles.check_test
+    } else if mode == CompileMode::Build {
+        &profiles.bench
     } else {
         profile
     };
@@ -645,7 +655,7 @@ fn generate_targets<'a>(pkg: &'a Package,
             targets.append(&mut propose_indicated_targets(
                 pkg, tests, "test", Target::is_test, test_profile)?);
             targets.append(&mut propose_indicated_targets(
-                pkg, benches, "bench", Target::is_bench, test_profile)?);
+                pkg, benches, "bench", Target::is_bench, bench_profile)?);
             targets
         }
     };

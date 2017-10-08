@@ -3902,3 +3902,59 @@ fn uplift_dsym_of_bin_on_mac() {
     assert_that(&p.bin("c.dSYM"), is_not(existing_dir()));
     assert_that(&p.bin("d.dSYM"), is_not(existing_dir()));
 }
+
+// Make sure that `cargo build` chooses the correct profile for building
+// targets based on filters (assuming --profile is not specified).
+#[test]
+fn build_filter_infer_profile() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
+        .file("tests/t1.rs", "")
+        .file("benches/b1.rs", "")
+        .file("examples/ex1.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("build").arg("-v"),
+        execs().with_status(0)
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
+            --emit=dep-info,link[..]")
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
+            --emit=dep-info,link[..]")
+        );
+
+    p.root().join("target").rm_rf();
+    assert_that(p.cargo("build").arg("-v").arg("--test=t1"),
+        execs().with_status(0)
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
+            --emit=dep-info,link[..]")
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name t1 tests[/]t1.rs --emit=dep-info,link[..]")
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
+            --emit=dep-info,link[..]")
+        );
+
+    p.root().join("target").rm_rf();
+    assert_that(p.cargo("build").arg("-v").arg("--bench=b1"),
+        execs().with_status(0)
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
+            --emit=dep-info,link[..]")
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name b1 benches[/]b1.rs --emit=dep-info,link \
+            -C opt-level=3[..]")
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
+            --emit=dep-info,link[..]")
+        );
+}

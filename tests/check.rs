@@ -478,9 +478,9 @@ fn check_unit_test_profile() {
                     badtext
                 }
             }
-        "#);
+        "#)
+        .build();
 
-    foo.build();
     assert_that(foo.cargo("check"),
                 execs().with_status(0));
     assert_that(foo.cargo("check").arg("--profile").arg("test"),
@@ -529,9 +529,9 @@ fn check_unit_test_all_tests() {
             mod tests {
                 fn unused_unit_b1() {}
             }
-        "#);
+        "#)
+        .build();
 
-    p.build();
     assert_that(p.cargo("check"),
                 execs().with_status(0)
                 .with_stderr_contains("[..]unused_normal_lib[..]")
@@ -575,8 +575,8 @@ fn check_artifacts()
         .file("src/main.rs", "fn main() {}")
         .file("tests/t1.rs", "")
         .file("examples/ex1.rs", "fn main() {}")
-        .file("benches/b1.rs", "");
-    p.build();
+        .file("benches/b1.rs", "")
+        .build();
     assert_that(p.cargo("check"), execs().with_status(0));
     assert_that(&p.root().join("target/debug/libfoo.rmeta"),
         existing_file());
