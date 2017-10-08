@@ -217,7 +217,7 @@ fn build_with_args_to_one_of_multiple_tests() {
 [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib --emit=dep-info,link \
         -C debuginfo=2 -C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar tests[/]bar.rs --emit=dep-info,link -C debuginfo=2 \
+[RUNNING] `rustc --crate-name bar tests[/]bar.rs --crate-type bin --emit=dep-info,link -C debuginfo=2 \
         -C debug-assertions [..]--test[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", url = p.url())));
