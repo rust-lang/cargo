@@ -1262,7 +1262,8 @@ fn test_run_implicit_example_target() {
                 execs().with_status(0)
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]", dir = prj.url())));
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]debug[/]examples[/]myexm-[..][EXE]", dir = prj.url())));
 }
 
 #[test]
