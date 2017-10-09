@@ -507,6 +507,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // - OSX encodes the dylib name in the executable
         // - Windows rustc multiple files of which we can't easily link all of them
         //
+        // No metadata for bin because of an issue
+        // - wasm32 rustc/emcc encodes the .wasm name in the .js (rust-lang/cargo#4535)
+        //
         // Two exceptions
         // 1) Upstream dependencies (we aren't exporting + need to resolve name conflict)
         // 2) __CARGO_DEFAULT_LIB_METADATA env var
@@ -522,9 +525,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // doing this eventually.
         let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
         if !unit.profile.test &&
-            (unit.target.is_dylib() || unit.target.is_cdylib()) &&
+            (unit.target.is_dylib() || unit.target.is_cdylib() ||
+                 (unit.target.is_bin() && self.target_triple().starts_with("wasm32-"))) &&
             unit.pkg.package_id().source_id().is_path() &&
-            !__cargo_default_lib_metadata.is_ok() {
+            !__cargo_default_lib_metadata.is_ok()
+        {
             return None;
         }
 
@@ -690,11 +695,30 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     };
                     match *crate_type_info {
                         Some((ref prefix, ref suffix)) => {
-                            let filename = out_dir.join(format!("{}{}{}", prefix, stem, suffix));
-                            let link_dst = link_stem.clone().map(|(ld, ls)| {
-                                ld.join(format!("{}{}{}", prefix, ls, suffix))
-                            });
-                            ret.push((filename, link_dst, linkable));
+                            let suffixes = add_target_specific_suffixes(
+                                &self.target_triple(),
+                                &crate_type,
+                                suffix,
+                                linkable,
+                            );
+                            for (suffix, linkable, should_replace_hyphens) in suffixes {
+                                // wasm bin target will generate two files in deps such as
+                                // "web-stuff.js" and "web_stuff.wasm". Note the different usages of
+                                // "-" and "_". should_replace_hyphens is a flag to indicate that
+                                // we need to convert the stem "web-stuff" to "web_stuff", so we
+                                // won't miss "web_stuff.wasm".
+                                let conv = |s: String| if should_replace_hyphens {
+                                    s.replace("-", "_")
+                                } else {
+                                    s
+                                };
+                                let filename =
+                                    out_dir.join(format!("{}{}{}", prefix, conv(stem.clone()), suffix));
+                                let link_dst = link_stem.clone().map(|(ld, ls)| {
+                                    ld.join(format!("{}{}{}", prefix, conv(ls), suffix))
+                                });
+                                ret.push((filename, link_dst, linkable));
+                            }
                             Ok(())
                         }
                         // not supported, don't worry about it
@@ -1230,4 +1254,34 @@ fn parse_crate_type(
     };
 
     Ok(Some((prefix.to_string(), suffix.to_string())))
+}
+
+// (not a rustdoc)
+// Return a list of 3-tuples (suffix, linkable, should_replace_hyphens).
+//
+// should_replace_hyphens will be used by the caller to replace "-" with "_"
+// in a bin_stem. See the caller side (calc_target_filenames()) for details.
+fn add_target_specific_suffixes(
+    target_triple: &str,
+    crate_type: &str,
+    suffix: &str,
+    linkable: bool,
+) -> Vec<(String, bool, bool)> {
+    let mut ret = vec![(suffix.to_string(), linkable, false)];
+
+    // rust-lang/cargo#4500
+    if target_triple.ends_with("pc-windows-msvc") && crate_type.ends_with("dylib") &&
+        suffix == ".dll"
+    {
+        ret.push((".dll.lib".to_string(), false, false));
+    }
+
+    // rust-lang/cargo#4535
+    if target_triple.starts_with("wasm32-") && crate_type == "bin" &&
+        suffix == ".js"
+    {
+        ret.push((".wasm".to_string(), false, true));
+    }
+
+    ret
 }
