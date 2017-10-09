@@ -514,8 +514,8 @@ Most of the time workspaces will not need to be dealt with as `cargo new` and
 ## Virtual Manifest
 
 In workspace manifests, if the `package` table is present, the workspace root
-crate will be treated as a normal package, as well as a worksapce. If the
-`package` table is not present in a worksapce manifest, it is called a *virtual
+crate will be treated as a normal package, as well as a workspace. If the
+`package` table is not present in a workspace manifest, it is called a *virtual
 manifest*.
 
 When working with *virtual manifests*, package-related cargo commands, like
