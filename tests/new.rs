@@ -19,6 +19,14 @@ fn cargo_process(s: &str) -> ProcessBuilder {
     p
 }
 
+fn create_empty_gitconfig() {
+    // This helps on Windows where libgit2 is very aggressive in attempting to
+    // find a git config file.
+    let gitconfig = paths::home().join(".gitconfig");
+    File::create(gitconfig).unwrap();
+}
+
+
 #[test]
 fn simple_lib() {
     assert_that(cargo_process("new").arg("--lib").arg("foo").arg("--vcs").arg("none")
@@ -189,6 +197,7 @@ fn finds_author_user() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
+    create_empty_gitconfig();
     assert_that(cargo_process("new").arg("foo").env("USER", "foo")
                                     .cwd(td.path()),
                 execs().with_status(0));
@@ -204,6 +213,7 @@ fn finds_author_user_escaped() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
+    create_empty_gitconfig();
     assert_that(cargo_process("new").arg("foo").env("USER", "foo \"bar\"")
                                     .cwd(td.path()),
                 execs().with_status(0));
@@ -219,6 +229,7 @@ fn finds_author_username() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
+    create_empty_gitconfig();
     assert_that(cargo_process("new").arg("foo")
                                     .env_remove("USER")
                                     .env("USERNAME", "foo")
@@ -255,6 +266,7 @@ fn finds_author_email() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
+    create_empty_gitconfig();
     assert_that(cargo_process("new").arg("foo")
                                     .env("USER", "bar")
                                     .env("EMAIL", "baz")
@@ -326,6 +338,7 @@ fn finds_git_author() {
     // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
     // the hierarchy
     let td = TempDir::new("cargo").unwrap();
+    create_empty_gitconfig();
     assert_that(cargo_process("new").arg("foo")
                                     .env_remove("USER")
                                     .env("GIT_COMMITTER_NAME", "gitfoo")
