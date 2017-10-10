@@ -194,7 +194,8 @@ impl<'cfg> PackageRegistry<'cfg> {
             let summary = match summaries.next() {
                 Some(summary) => summary,
                 None => {
-                    bail!("patch for `{}` in `{}` did not resolve to any crates",
+                    bail!("patch for `{}` in `{}` did not resolve to any crates. Your patched \
+                           dependency may conflict with the version in Cargo.lock.",
                           dep.name(), url)
                 }
             };
