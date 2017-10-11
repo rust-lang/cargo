@@ -962,3 +962,11 @@ fn test_install_git_cannot_be_a_base_url() {
 error: invalid url `github.com:rust-lang-nursery/rustfmt.git`: cannot-be-a-base-URLs are not supported
 "));
 }
+
+#[test]
+fn uninstall_multiple_and_specifying_bin() {
+    assert_that(cargo_process("uninstall").args(&["foo", "bar"]).arg("--bin").arg("baz"),
+                execs().with_status(101).with_stderr("\
+error: A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.
+"));
+}
