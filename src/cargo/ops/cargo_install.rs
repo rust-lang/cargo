@@ -560,6 +560,10 @@ pub fn uninstall(root: Option<&str>,
                  specs: Vec<&str>,
                  bins: &[String],
                  config: &Config) -> CargoResult<()> {
+    if specs.len() > 1 && bins.len() > 0 {
+        bail!("A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.");
+    }
+
     let root = resolve_root(root, config)?;
     let scheduled_error = if specs.len() == 1 {
         uninstall_one(root, specs[0], bins, config)?;
