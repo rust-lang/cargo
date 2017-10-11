@@ -84,6 +84,21 @@ only on `nightly` toolchain. If you can, test both toolchains.
 * Push your commits to GitHub and create a pull request against Cargo's
 `master` branch.
 
+### Running tests on Windows
+
+To ensure all of Cargo's tests pass on Windows, there are a few things to
+verify with your environment. Besides having a normal Rust development
+environment (with CMake installed), check the following:
+
+* `sh` from MSYS should be in your PATH (ahead of any other `sh` installations
+  such as Cygwin).  If you install Git for Windows, choose the option `Use Git
+  and optional Unix tools from the Windows Command Prompt` to use the shell
+  that is bundled with Git, or place the path `C:\Program Files\Git\usr\bin`
+  towards the top of your PATH list.
+* Avoid using a `~/.cargo/config` file.  Some tests run in a temp directory
+  within your home directory, and will inadvertently pick up any settings you
+  have there.
+
 ## Pull requests
 
 After the pull request is made, a friendly bot will automatically assign a
