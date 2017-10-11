@@ -82,16 +82,15 @@ error: some crates failed to install
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_home(), has_installed_exe("bar"));
 
-    assert_that(cargo_process("uninstall").arg("foo"),
+    assert_that(cargo_process("uninstall").args(&["foo", "bar"]),
                 execs().with_status(0).with_stderr(&format!("\
 [REMOVING] {home}[..]bin[..]foo[..]
-",
-        home = cargo_home().display())));
-    assert_that(cargo_process("uninstall").arg("bar"),
-                execs().with_status(0).with_stderr(&format!("\
 [REMOVING] {home}[..]bin[..]bar[..]
+   
+Summary: Successfully uninstalled foo, bar!
 ",
         home = cargo_home().display())));
+
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
     assert_that(cargo_home(), is_not(has_installed_exe("bar")));
 }
