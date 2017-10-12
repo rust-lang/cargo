@@ -78,11 +78,11 @@ pub fn is_bad_artifact_name(name: &str) -> bool {
 }
 
 impl Layout {
-    /// Calcuate the paths for build output, lock the build directory, and return as a Layout.
+    /// Calculate the paths for build output, lock the build directory, and return as a Layout.
     ///
     /// This function will block if the directory is already locked.
     ///
-    /// Differs from `at` in that it calculates the root path from the workspace target directory,
+    /// Differs from `at` in that this calculates the root path from the workspace target directory,
     /// adding the target triple and the profile (debug, release, ...).
     pub fn new(ws: &Workspace,
                triple: Option<&str>,
@@ -98,7 +98,7 @@ impl Layout {
         Layout::at(ws.config(), path)
     }
 
-    /// Calcuate the paths for build output, lock the build directory, and return as a Layout.
+    /// Calculate the paths for build output, lock the build directory, and return as a Layout.
     ///
     /// This function will block if the directory is already locked.
     pub fn at(config: &Config, root: Filesystem) -> CargoResult<Layout> {
