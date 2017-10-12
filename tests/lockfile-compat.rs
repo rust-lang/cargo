@@ -64,7 +64,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file("src/lib.rs", "")
         .file("Cargo.lock", old_lockfile);
 
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo(cargo_command),
                 execs().with_status(0));
@@ -110,7 +110,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum foo 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "checksum"
 "#);
 
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -165,7 +165,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "checksum"
 "#);
 
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
@@ -217,7 +217,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [metadata]
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "<none>"
 "#);
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("fetch"),
                 execs().with_status(101).with_stderr("\
@@ -278,7 +278,7 @@ source = "git+{0}"
 "checksum foo 0.1.0 (git+{0})" = "checksum"
 "#, git.url()));
 
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("fetch"),
                 execs().with_status(101).with_stderr("\
@@ -312,7 +312,7 @@ fn current_lockfile_format() {
             foo = "0.1.0"
         "#)
         .file("src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
 
@@ -371,7 +371,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file("src/lib.rs", "")
         .file("Cargo.lock", lockfile);
 
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
 
@@ -394,7 +394,7 @@ fn locked_correct_error() {
             foo = "0.1.0"
         "#)
         .file("src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").arg("--locked"),
                 execs().with_status(101).with_stderr("\

@@ -34,10 +34,11 @@ fn run_test(path_env: Option<&OsStr>) {
             [dependencies]
             bar = "*"
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(foo.cargo_process("build"),
+    assert_that(foo.cargo("build"),
                 execs().with_status(0));
 
     let index = find_index();

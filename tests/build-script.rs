@@ -28,8 +28,9 @@ fn custom_build_script_failed() {
             fn main() {
                 std::process::exit(101);
             }
-        "#);
-    assert_that(p.cargo_process("build").arg("-v"),
+        "#)
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.5.0 ({url})
@@ -111,10 +112,9 @@ fn custom_build_env_vars() {
         "#,
         p.root().join("target").join("debug").join("build").display());
 
-    let p = p.file("bar/build.rs", &file_content);
+    let p = p.file("bar/build.rs", &file_content).build();
 
-
-    assert_that(p.cargo_process("build").arg("--features").arg("bar_feat"),
+    assert_that(p.cargo("build").arg("--features").arg("bar_feat"),
                 execs().with_status(0));
 }
 
@@ -136,9 +136,10 @@ fn custom_build_script_wrong_rustc_flags() {
             fn main() {
                 println!("cargo:rustc-flags=-aaa -bbb");
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr_contains(&format!("\
 [ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ({})`: \
@@ -177,10 +178,11 @@ fn custom_build_script_rustc_flags() {
             fn main() {
                 println!("cargo:rustc-flags=-l nonexistinglib -L /dummy/path1 -L /dummy/path2");
             }
-        "#);
+        "#)
+        .build();
 
     // TODO: TEST FAILS BECAUSE OF WRONG STDOUT (but otherwise, the build works)
-    assert_that(p.cargo_process("build").arg("--verbose"),
+    assert_that(p.cargo("build").arg("--verbose"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
 [COMPILING] bar v0.5.0 ({url})
@@ -208,9 +210,10 @@ fn links_no_build_cmd() {
             authors = []
             links = "a"
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] package `foo v0.5.0 (file://[..])` specifies that it links to `a` but does \
@@ -243,9 +246,10 @@ fn links_duplicates() {
             build = "build.rs"
         "#)
         .file("a-sys/src/lib.rs", "")
-        .file("a-sys/build.rs", "");
+        .file("a-sys/build.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] Multiple packages link to native library `a`. A native library can be \
@@ -296,9 +300,10 @@ fn links_duplicates_deep_dependency() {
             build = "build.rs"
         "#)
         .file("a/a-sys/src/lib.rs", "")
-        .file("a/a-sys/build.rs", "");
+        .file("a/a-sys/build.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] Multiple packages link to native library `a`. A native library can be \
@@ -353,9 +358,10 @@ fn overrides_and_links() {
             build = "build.rs"
         "#)
         .file("a/src/lib.rs", "")
-        .file("a/build.rs", "not valid rust code");
+        .file("a/build.rs", "not valid rust code")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                        .with_stderr("\
 [..]
@@ -387,9 +393,10 @@ fn unused_overrides() {
             rustc-flags = "-L foo -L bar"
             foo = "bar"
             bar = "baz"
-        "#, target));
+        "#, target))
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -432,9 +439,10 @@ fn links_passes_env_vars() {
                 println!("cargo:foo=bar");
                 println!("cargo:bar=baz");
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -451,9 +459,10 @@ fn only_rerun_build_script() {
         .file("src/lib.rs", "")
         .file("build.rs", r#"
             fn main() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
     p.root().move_into_the_past();
 
@@ -489,8 +498,8 @@ fn rebuild_continues_to_pass_env_vars() {
                 println!("cargo:bar=baz");
                 std::thread::sleep(Duration::from_millis(500));
             }
-        "#);
-    a.build();
+        "#)
+        .build();
     a.root().move_into_the_past();
 
     let p = project("foo")
@@ -511,9 +520,10 @@ fn rebuild_continues_to_pass_env_vars() {
                 assert_eq!(env::var("DEP_FOO_FOO").unwrap(), "bar");
                 assert_eq!(env::var("DEP_FOO_BAR").unwrap(), "baz");
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
     p.root().move_into_the_past();
 
@@ -537,10 +547,11 @@ fn testing_and_such() {
         .file("src/lib.rs", "")
         .file("build.rs", r#"
             fn main() {}
-        "#);
+        "#)
+        .build();
 
     println!("build");
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
     p.root().move_into_the_past();
 
@@ -625,9 +636,10 @@ fn propagation_of_l_flags() {
         .file(".cargo/config", &format!(r#"
             [target.{}.foo]
             rustc-flags = "-L foo"
-        "#, target));
+        "#, target))
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
+    assert_that(p.cargo("build").arg("-v").arg("-j1"),
                 execs().with_status(0)
                        .with_stderr_contains("\
 [RUNNING] `rustc --crate-name a [..] -L bar[..]-L foo[..]`
@@ -679,9 +691,10 @@ fn propagation_of_l_flags_new() {
         .file(".cargo/config", &format!(r#"
             [target.{}.foo]
             rustc-link-search = ["foo"]
-        "#, target));
+        "#, target))
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v").arg("-j1"),
+    assert_that(p.cargo("build").arg("-v").arg("-j1"),
                 execs().with_status(0)
                        .with_stderr_contains("\
 [RUNNING] `rustc --crate-name a [..] -L bar[..]-L foo[..]`
@@ -714,9 +727,10 @@ fn build_deps_simple() {
             version = "0.5.0"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
+        .file("a/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] a v0.5.0 (file://[..])
@@ -754,9 +768,10 @@ fn build_deps_not_for_normal() {
             version = "0.5.0"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
+        .file("a/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
+    assert_that(p.cargo("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [..]can't find crate for `aaaaa`[..]
@@ -806,9 +821,10 @@ fn build_cmd_with_a_build_cmd() {
             version = "0.5.0"
             authors = []
         "#)
-        .file("b/src/lib.rs", "");
+        .file("b/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] b v0.5.0 (file://[..])
@@ -856,10 +872,11 @@ fn out_dir_is_preserved() {
                 let out = env::var("OUT_DIR").unwrap();
                 File::create(Path::new(&out).join("foo")).unwrap();
             }
-        "#);
+        "#)
+        .build();
 
     // Make the file
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
     p.root().move_into_the_past();
 
@@ -902,8 +919,9 @@ fn output_separate_lines() {
                 println!("cargo:rustc-flags=-L foo");
                 println!("cargo:rustc-flags=-l static=foo");
             }
-        "#);
-    assert_that(p.cargo_process("build").arg("-v"),
+        "#)
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [COMPILING] foo v0.5.0 (file://[..])
@@ -930,8 +948,9 @@ fn output_separate_lines_new() {
                 println!("cargo:rustc-link-search=foo");
                 println!("cargo:rustc-link-lib=static=foo");
             }
-        "#);
-    assert_that(p.cargo_process("build").arg("-v"),
+        "#)
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [COMPILING] foo v0.5.0 (file://[..])
@@ -975,8 +994,8 @@ fn code_generation() {
                     }
                 ").unwrap();
             }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("run"),
                 execs().with_status(0)
@@ -1005,9 +1024,10 @@ fn release_with_build_script() {
         .file("src/lib.rs", "")
         .file("build.rs", r#"
             fn main() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v").arg("--release"),
+    assert_that(p.cargo("build").arg("-v").arg("--release"),
                 execs().with_status(0));
 }
 
@@ -1021,8 +1041,9 @@ fn build_script_only() {
               authors = []
               build = "build.rs"
         "#)
-        .file("build.rs", r#"fn main() {}"#);
-    assert_that(p.cargo_process("build").arg("-v"),
+        .file("build.rs", r#"fn main() {}"#)
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
@@ -1068,8 +1089,9 @@ fn shared_dep_with_a_build_script() {
             [dependencies.a]
             path = "../a"
         "#)
-        .file("b/src/lib.rs", "");
-    assert_that(p.cargo_process("build").arg("-v"),
+        .file("b/src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -1111,8 +1133,9 @@ fn transitive_dep_host() {
             [dependencies.a]
             path = "../a"
         "#)
-        .file("b/src/lib.rs", "");
-    assert_that(p.cargo_process("build"),
+        .file("b/src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -1148,8 +1171,9 @@ fn test_a_lib_with_a_build_command() {
                     fn foo() -> i32 { 1 }
                 ").unwrap();
             }
-        "#);
-    assert_that(p.cargo_process("test"),
+        "#)
+        .build();
+    assert_that(p.cargo("test"),
                 execs().with_status(0));
 }
 
@@ -1174,20 +1198,21 @@ fn test_dev_dep_build_script() {
             build = "build.rs"
         "#)
         .file("a/build.rs", "fn main() {}")
-        .file("a/src/lib.rs", "");
+        .file("a/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("test"), execs().with_status(0));
+    assert_that(p.cargo("test"), execs().with_status(0));
 }
 
 #[test]
 fn build_script_with_dynamic_native_dependency() {
 
-    let workspace = project("ws")
+    let _workspace = project("ws")
         .file("Cargo.toml", r#"
             [workspace]
             members = ["builder", "foo"]
-        "#);
-    workspace.build();
+        "#)
+        .build();
 
     let build = project("ws/builder")
         .file("Cargo.toml", r#"
@@ -1204,8 +1229,8 @@ fn build_script_with_dynamic_native_dependency() {
         .file("src/lib.rs", r#"
             #[no_mangle]
             pub extern fn foo() {}
-        "#);
-    build.build();
+        "#)
+        .build();
 
     let foo = project("ws/foo")
         .file("Cargo.toml", r#"
@@ -1247,8 +1272,8 @@ fn build_script_with_dynamic_native_dependency() {
                 extern { fn foo(); }
                 unsafe { foo() }
             }
-        "#);
-    foo.build();
+        "#)
+        .build();
 
     assert_that(build.cargo("build").arg("-v")
                 .env("RUST_LOG", "cargo::ops::cargo_rustc"),
@@ -1278,8 +1303,9 @@ fn profile_and_opt_level_set_correctly() {
                   assert_eq!(env::var("PROFILE").unwrap(), "release");
                   assert_eq!(env::var("DEBUG").unwrap(), "false");
               }
-        "#);
-    assert_that(build.cargo_process("bench"),
+        "#)
+        .build();
+    assert_that(build.cargo("bench"),
                 execs().with_status(0));
 }
 
@@ -1300,8 +1326,9 @@ fn build_script_with_lto() {
         .file("build.rs", r#"
               fn main() {
               }
-        "#);
-    assert_that(build.cargo_process("build"),
+        "#)
+        .build();
+    assert_that(build.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -1335,9 +1362,10 @@ fn test_duplicate_deps() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "pub fn do_nothing() {}");
+        .file("bar/src/lib.rs", "pub fn do_nothing() {}")
+        .build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
@@ -1358,8 +1386,9 @@ fn cfg_feedback() {
             fn main() {
                 println!("cargo:rustc-cfg=foo");
             }
-        "#);
-    assert_that(build.cargo_process("build").arg("-v"),
+        "#)
+        .build();
+    assert_that(build.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -1384,9 +1413,10 @@ fn cfg_override() {
         .file(".cargo/config", &format!(r#"
             [target.{}.a]
             rustc-cfg = ["foo"]
-        "#, target));
+        "#, target))
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -1428,8 +1458,9 @@ fn cfg_test() {
             #[cfg(foo)]
             #[test]
             fn test_bar() {}
-        "#);
-    assert_that(p.cargo_process("test").arg("-v"),
+        "#)
+        .build();
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] [..] build.rs [..]
@@ -1484,8 +1515,9 @@ fn cfg_doc() {
         .file("bar/src/lib.rs", r#"
             #[cfg(bar)]
             pub fn bar() {}
-        "#);
-    assert_that(p.cargo_process("doc"),
+        "#)
+        .build();
+    assert_that(p.cargo("doc"),
                 execs().with_status(0));
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/fn.foo.html"), existing_file());
@@ -1531,8 +1563,9 @@ fn cfg_override_test() {
             #[cfg(foo)]
             #[test]
             fn test_bar() {}
-        "#);
-    assert_that(p.cargo_process("test").arg("-v"),
+        "#)
+        .build();
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] `[..]`
@@ -1585,8 +1618,9 @@ fn cfg_override_doc() {
         .file("bar/src/lib.rs", r#"
             #[cfg(bar)]
             pub fn bar() {}
-        "#) ;
-    assert_that(p.cargo_process("doc"),
+        "#)
+        .build();
+    assert_that(p.cargo("doc"),
                 execs().with_status(0));
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/fn.foo.html"), existing_file());
@@ -1613,8 +1647,9 @@ fn env_build() {
             fn main() {
                 println!("cargo:rustc-env=FOO=foo");
             }
-        "#);
-    assert_that(p.cargo_process("build").arg("-v"),
+        "#)
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
     assert_that(p.cargo("run").arg("-v"),
                 execs().with_status(0).with_stdout("foo\n"));
@@ -1645,8 +1680,9 @@ fn env_test() {
             fn test_foo() {
                 assert_eq!("foo", foo::FOO);
             }
-        "#);
-    assert_that(p.cargo_process("test").arg("-v"),
+        "#)
+        .build();
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [RUNNING] [..] build.rs [..]
@@ -1681,8 +1717,9 @@ fn env_doc() {
             fn main() {
                 println!("cargo:rustc-env=FOO=foo");
             }
-        "#);
-    assert_that(p.cargo_process("doc").arg("-v"),
+        "#)
+        .build();
+    assert_that(p.cargo("doc").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -1721,9 +1758,10 @@ fn flags_go_into_tests() {
             fn main() {
                 println!("cargo:rustc-link-search=test");
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test").arg("-v").arg("--test=foo"),
+    assert_that(p.cargo("test").arg("-v").arg("--test=foo"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] a v0.5.0 ([..]
@@ -1796,9 +1834,10 @@ fn diamond_passes_args_only_once() {
                 println!("cargo:rustc-link-search=native=test");
             }
         "#)
-        .file("c/src/lib.rs", "");
+        .file("c/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] c v0.5.0 ([..]
 [RUNNING] `rustc [..]`
@@ -1832,9 +1871,10 @@ fn adding_an_override_invalidates() {
             fn main() {
                 println!("cargo:rustc-link-search=native=foo");
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..]`
@@ -1873,9 +1913,10 @@ fn changing_an_override_invalidates() {
             [target.{}.foo]
             rustc-link-search = [\"native=foo\"]
         ", target))
-        .file("build.rs", "");
+        .file("build.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..] -L native=foo`
@@ -1916,9 +1957,10 @@ fn fresh_builds_possible_with_link_libs() {
             rustc-link-search = [\"./b\"]
             rustc-flags = \"-l z -L ./\"
         ", target))
-        .file("build.rs", "");
+        .file("build.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..]`
@@ -1957,9 +1999,10 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
             d = \"\"
             e = \"\"
         ", target))
-        .file("build.rs", "");
+        .file("build.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.5.0 ([..]
 [RUNNING] `rustc [..]`
@@ -1992,8 +2035,8 @@ fn rebuild_only_on_explicit_paths() {
                 println!("cargo:rerun-if-changed=foo");
                 println!("cargo:rerun-if-changed=bar");
             }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
@@ -2089,9 +2132,10 @@ fn doctest_recieves_build_link_args() {
             fn main() {
                 println!("cargo:rustc-link-search=native=bar");
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test").arg("-v"),
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0)
                        .with_stderr_contains("\
 [RUNNING] `rustdoc --test [..] --crate-name foo [..]-L native=bar[..]`
@@ -2130,9 +2174,10 @@ fn please_respect_the_dag() {
             fn main() {
                 println!("cargo:rustc-link-search=native=bar");
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                        .with_stderr_contains("\
 [RUNNING] `rustc [..] -L native=foo -L native=bar[..]`
@@ -2167,9 +2212,10 @@ fn non_utf8_output() {
         .file("src/main.rs", r#"
             #[cfg(foo)]
             fn main() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -2198,9 +2244,10 @@ fn custom_target_dir() {
             build = "build.rs"
         "#)
         .file("a/build.rs", "fn main() {}")
-        .file("a/src/lib.rs", "");
+        .file("a/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -2238,9 +2285,10 @@ fn panic_abort_with_build_scripts() {
             version = "0.5.0"
             authors = []
         "#)
-        .file("b/src/lib.rs", "");
+        .file("b/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v").arg("--release"),
+    assert_that(p.cargo("build").arg("-v").arg("--release"),
                 execs().with_status(0));
 }
 
@@ -2260,9 +2308,10 @@ fn warnings_emitted() {
                 println!("cargo:warning=foo");
                 println!("cargo:warning=bar");
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 ([..])
@@ -2304,9 +2353,10 @@ fn warnings_hidden_for_upstream() {
             [dependencies]
             bar = "*"
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`
@@ -2350,9 +2400,10 @@ fn warnings_printed_on_vv() {
             [dependencies]
             bar = "*"
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-vv"),
+    assert_that(p.cargo("build").arg("-vv"),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`
@@ -2387,9 +2438,10 @@ fn output_shows_on_vv() {
                 std::io::stderr().write_all(b"stderr\n").unwrap();
                 std::io::stdout().write_all(b"stdout\n").unwrap();
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-vv"),
+    assert_that(p.cargo("build").arg("-vv"),
                 execs().with_status(0)
                        .with_stdout("\
 stdout
@@ -2426,9 +2478,10 @@ fn links_with_dots() {
         .file(".cargo/config", &format!(r#"
             [target.{}.'a.b']
             rustc-link-search = ["foo"]
-        "#, target));
+        "#, target))
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                        .with_stderr_contains("\
 [RUNNING] `rustc --crate-name foo [..] [..] -L foo[..]`
@@ -2437,7 +2490,7 @@ fn links_with_dots() {
 
 #[test]
 fn rustc_and_rustdoc_set_correctly() {
-    let build = project("builder")
+    let p = project("builder")
         .file("Cargo.toml", r#"
             [package]
             name = "builder"
@@ -2453,14 +2506,15 @@ fn rustc_and_rustdoc_set_correctly() {
                   assert_eq!(env::var("RUSTC").unwrap(), "rustc");
                   assert_eq!(env::var("RUSTDOC").unwrap(), "rustdoc");
               }
-        "#);
-    assert_that(build.cargo_process("bench"),
+        "#)
+        .build();
+    assert_that(p.cargo("bench"),
                 execs().with_status(0));
 }
 
 #[test]
 fn cfg_env_vars_available() {
-    let build = project("builder")
+    let p = project("builder")
         .file("Cargo.toml", r#"
             [package]
             name = "builder"
@@ -2480,14 +2534,15 @@ fn cfg_env_vars_available() {
                     assert_eq!(fam, "windows");
                 }
             }
-        "#);
-    assert_that(build.cargo_process("bench"),
+        "#)
+        .build();
+    assert_that(p.cargo("bench"),
                 execs().with_status(0));
 }
 
 #[test]
 fn switch_features_rerun() {
-    let build = project("builder")
+    let p = project("builder")
         .file("Cargo.toml", r#"
             [package]
             name = "builder"
@@ -2520,14 +2575,14 @@ fn switch_features_rerun() {
                     f.write_all(b"bar").unwrap();
                 }
             }
-        "#);
-    build.build();
+        "#)
+        .build();
 
-    assert_that(build.cargo("run").arg("-v").arg("--features=foo"),
+    assert_that(p.cargo("run").arg("-v").arg("--features=foo"),
                 execs().with_status(0).with_stdout("foo\n"));
-    assert_that(build.cargo("run").arg("-v"),
+    assert_that(p.cargo("run").arg("-v"),
                 execs().with_status(0).with_stdout("bar\n"));
-    assert_that(build.cargo("run").arg("-v").arg("--features=foo"),
+    assert_that(p.cargo("run").arg("-v").arg("--features=foo"),
                 execs().with_status(0).with_stdout("foo\n"));
 }
 
@@ -2551,8 +2606,8 @@ fn assume_build_script_when_build_rs_present() {
             fn main() {
                 println!("cargo:rustc-cfg=foo");
             }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("run").arg("-v"),
                 execs().with_status(0));
@@ -2579,8 +2634,8 @@ fn if_build_set_to_false_dont_treat_build_rs_as_build_script() {
             fn main() {
                 println!("cargo:rustc-cfg=foo");
             }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("run").arg("-v"),
                 execs().with_status(0));
@@ -2667,9 +2722,10 @@ fn deterministic_rustc_dependency_flags() {
         "#)
         .file("src/main.rs", r#"
             fn main() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                     .with_stderr_contains("\
 [RUNNING] `rustc --crate-name foo [..] -L native=test1 -L native=test2 \

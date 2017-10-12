@@ -1,4 +1,3 @@
-use std::cell::Cell;
 use std::env;
 use std::error::Error;
 use std::ffi::OsStr;
@@ -94,39 +93,101 @@ impl SymlinkBuilder {
 }
 
 #[derive(PartialEq,Clone)]
+pub struct Project{
+    root: PathBuf,
+}
+
+#[must_use]
+#[derive(PartialEq,Clone)]
 pub struct ProjectBuilder {
     name: String,
-    root: PathBuf,
+    root: Project,
     files: Vec<FileBuilder>,
     symlinks: Vec<SymlinkBuilder>,
-    is_build: Cell<bool>,
 }
 
 impl ProjectBuilder {
+    pub fn root(&self) -> PathBuf {
+        self.root.root()
+    }
+
+    pub fn build_dir(&self) -> PathBuf {
+        self.root.build_dir()
+    }
+
+    pub fn target_debug_dir(&self) -> PathBuf {
+        self.root.target_debug_dir()
+    }
+
     pub fn new(name: &str, root: PathBuf) -> ProjectBuilder {
         ProjectBuilder {
             name: name.to_string(),
-            root: root,
+            root: Project{ root },
             files: vec![],
             symlinks: vec![],
-            is_build: Cell::new(false),
         }
     }
 
+    pub fn file<B: AsRef<Path>>(mut self, path: B,
+                                body: &str) -> Self {
+        self._file(path.as_ref(), body);
+        self
+    }
+
+    fn _file(&mut self, path: &Path, body: &str) {
+        self.files.push(FileBuilder::new(self.root.root.join(path), body));
+    }
+
+    pub fn symlink<T: AsRef<Path>>(mut self, dst: T,
+                                   src: T) -> Self {
+        self.symlinks.push(SymlinkBuilder::new(self.root.root.join(dst),
+                                               self.root.root.join(src)));
+        self
+    }
+
+    pub fn build(self) -> Project {
+        // First, clean the directory if it already exists
+        self.rm_root();
+
+        // Create the empty directory
+        self.root.root.mkdir_p();
+
+        for file in self.files.iter() {
+            file.mk();
+        }
+
+        for symlink in self.symlinks.iter() {
+            symlink.mk();
+        }
+
+        let ProjectBuilder{ name: _, root, files: _, symlinks: _, .. } = self;
+        root
+    }
+
+    fn rm_root(&self) {
+        self.root.root.rm_rf()
+    }
+}
+
+impl Project {
     pub fn root(&self) -> PathBuf {
         self.root.clone()
     }
 
-    pub fn url(&self) -> Url { path2url(self.root()) }
+    pub fn build_dir(&self) -> PathBuf {
+        self.root.join("target")
+    }
 
     pub fn target_debug_dir(&self) -> PathBuf {
         self.build_dir().join("debug")
     }
 
-    pub fn example_lib(&self, name: &str, kind: &str) -> PathBuf {
-        let prefix = ProjectBuilder::get_lib_prefix(kind);
+    pub fn url(&self) -> Url { path2url(self.root()) }
 
-        let extension = ProjectBuilder::get_lib_extension(kind);
+    pub fn example_lib(&self, name: &str, kind: &str) -> PathBuf {
+        let prefix = Project::get_lib_prefix(kind);
+
+        let extension = Project::get_lib_extension(kind);
 
         let lib_file_name = format!("{}{}.{}",
                                     prefix,
@@ -153,8 +214,8 @@ impl ProjectBuilder {
                         .join(&format!("{}{}", b, env::consts::EXE_SUFFIX))
     }
 
-    pub fn build_dir(&self) -> PathBuf {
-        self.root.join("target")
+    pub fn change_file(&self, path: &str, body: &str) {
+        FileBuilder::new(self.root.join(path), body).mk()
     }
 
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
@@ -164,60 +225,9 @@ impl ProjectBuilder {
     }
 
     pub fn cargo(&self, cmd: &str) -> ProcessBuilder {
-        assert!(self.is_build.get(),
-                "call `.build()` before calling `.cargo()`, \
-                 or use `.cargo_process()`");
         let mut p = self.process(&cargo_exe());
         p.arg(cmd);
         return p;
-    }
-
-    pub fn cargo_process(&self, cmd: &str) -> ProcessBuilder {
-        self.build();
-        self.cargo(cmd)
-    }
-
-    pub fn file<B: AsRef<Path>>(mut self, path: B,
-                                body: &str) -> ProjectBuilder {
-        self._file(path.as_ref(), body);
-        self
-    }
-
-    fn _file(&mut self, path: &Path, body: &str) {
-        self.files.push(FileBuilder::new(self.root.join(path), body));
-    }
-
-    pub fn change_file(&self, path: &str, body: &str) {
-        assert!(self.is_build.get());
-        FileBuilder::new(self.root.join(path), body).mk()
-    }
-
-    pub fn symlink<T: AsRef<Path>>(mut self, dst: T,
-                                   src: T) -> ProjectBuilder {
-        self.symlinks.push(SymlinkBuilder::new(self.root.join(dst),
-                                               self.root.join(src)));
-        self
-    }
-
-    // TODO: return something different than a ProjectBuilder
-    pub fn build(&self) -> &ProjectBuilder {
-        assert!(!self.is_build.get(),
-                "can `.build()` project only once");
-        self.is_build.set(true);
-        // First, clean the directory if it already exists
-        self.rm_root();
-
-        // Create the empty directory
-        self.root.mkdir_p();
-
-        for file in self.files.iter() {
-            file.mk();
-        }
-
-        for symlink in self.symlinks.iter() {
-            symlink.mk();
-        }
-        self
     }
 
     pub fn read_lockfile(&self) -> String {
@@ -262,10 +272,6 @@ impl ProjectBuilder {
             }
             _ => unreachable!()
         }
-    }
-
-    fn rm_root(&self) {
-        self.root.rm_rf()
     }
 }
 

@@ -21,9 +21,10 @@ fn net_retry_loads_from_config() {
         retry=1
         [http]
         timeout=1
-         "#);
+         "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101)
                 .with_stderr_contains("[WARNING] spurious network error \
 (1 tries remaining): [..]"));
@@ -45,9 +46,10 @@ fn net_retry_git_outputs_warning() {
         [http]
         timeout=1
          "#)
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v").arg("-j").arg("1"),
+    assert_that(p.cargo("build").arg("-v").arg("-j").arg("1"),
                 execs().with_status(101)
                 .with_stderr_contains("[WARNING] spurious network error \
 (2 tries remaining): [..]")

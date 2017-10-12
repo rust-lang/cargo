@@ -57,7 +57,7 @@ pub fn init() {
     "#, reg = registry()).as_bytes()));
 
     // Init a new registry
-    repo(&registry_path())
+    let _ = repo(&registry_path())
         .file("config.json", &format!(r#"
             {{"dl":"{0}","api":"{0}"}}
         "#, dl_url()))

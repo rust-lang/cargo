@@ -29,9 +29,10 @@ fn cargo_test_simple() {
             #[test]
             fn test_hello() {
                 assert_eq!(hello(), "hello")
-            }"#);
+            }"#)
+        .build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(process(&p.bin("foo")),
@@ -76,9 +77,10 @@ fn cargo_test_release() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "pub fn bar() {}");
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
 
-    assert_that(p.cargo_process("test").arg("-v").arg("--release"),
+    assert_that(p.cargo("test").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [RUNNING] [..] -C opt-level=3 [..]
@@ -120,9 +122,10 @@ fn cargo_test_overflow_checks() {
                     [1, i32::max_value()].iter().sum::<i32>();
                 });
                 assert!(r.is_err());
-            }"#);
+            }"#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--release"),
+    assert_that(p.cargo("build").arg("--release"),
                 execs().with_status(0));
     assert_that(&p.release_bin("foo"), existing_file());
 
@@ -137,9 +140,10 @@ fn cargo_test_verbose() {
         .file("src/main.rs", r#"
             fn main() {}
             #[test] fn test_hello() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test").arg("-v").arg("hello"),
+    assert_that(p.cargo("test").arg("-v").arg("hello"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({url})
 [RUNNING] `rustc [..] src[/]main.rs [..]`
@@ -169,9 +173,10 @@ fn many_similar_names() {
         .file("tests/foo.rs", r#"
             extern crate foo;
             #[test] fn test_test() { foo::foo() }
-        "#);
+        "#)
+        .build();
 
-    let output = p.cargo_process("test").arg("-v").exec_with_output().unwrap();
+    let output = p.cargo("test").arg("-v").exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("test bin_test"), "bin_test missing\n{}", output);
     assert!(output.contains("test lib_test"), "lib_test missing\n{}", output);
@@ -194,9 +199,10 @@ fn cargo_test_failing_test_in_bin() {
             #[test]
             fn test_hello() {
                 assert_eq!(hello(), "nope")
-            }"#);
+            }"#)
+        .build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(process(&p.bin("foo")),
@@ -239,9 +245,10 @@ fn cargo_test_failing_test_in_test() {
             #[test]
             fn test_hello() {
                 assert!(false)
-            }"#);
+            }"#)
+        .build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
 
     assert_that(process(&p.bin("foo")),
@@ -280,9 +287,10 @@ fn cargo_test_failing_test_in_lib() {
             #[test]
             fn test_hello() {
                 assert!(false)
-            }"#);
+            }"#)
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_stderr(format!("\
 [COMPILING] foo v0.5.0 ({url})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -338,9 +346,10 @@ fn test_with_lib_dep() {
 
             #[test]
             fn bin_test() {}
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -376,8 +385,9 @@ fn test_with_deep_lib_dep() {
             fn bar_test() {
                 foo::foo();
             }
-        ");
-    let p2 = project("foo")
+        ")
+        .build();
+    let _p2 = project("foo")
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -389,10 +399,10 @@ fn test_with_deep_lib_dep() {
 
             #[test]
             fn foo_test() {}
-        ");
+        ")
+        .build();
 
-    p2.build();
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ([..])
@@ -428,9 +438,10 @@ fn external_test_explicit() {
 
             #[test]
             fn external_test() { assert_eq!(foo::get_hello(), "Hello") }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -458,9 +469,10 @@ fn external_test_named_test() {
         .file("tests/test.rs", r#"
             #[test]
             fn foo() { }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0))
 }
 
@@ -484,9 +496,10 @@ fn external_test_implicit() {
 
             #[test]
             fn external_test() { assert_eq!(foo::get_hello(), "Hello") }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -511,8 +524,9 @@ fn dont_run_examples() {
         "#)
         .file("examples/dont-run-me-i-will-fail.rs", r#"
             fn main() { panic!("Examples should not be run by 'cargo test'"); }
-        "#);
-    assert_that(p.cargo_process("test"),
+        "#)
+        .build();
+    assert_that(p.cargo("test"),
                 execs().with_status(0));
 }
 
@@ -528,9 +542,10 @@ fn pass_through_command_line() {
         .file("src/lib.rs", "
             #[test] fn foo() {}
             #[test] fn bar() {}
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test").arg("bar"),
+    assert_that(p.cargo("test").arg("bar"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -561,9 +576,10 @@ fn cargo_test_twice() {
 
             #[test]
             fn dummy_test() { }
-            "#);
+            "#)
+        .build();
 
-    p.cargo_process("build");
+    p.cargo("build");
 
     for _ in 0..2 {
         assert_that(p.cargo("test"),
@@ -594,9 +610,10 @@ fn lib_bin_same_name() {
 
             #[test]
             fn bin_test() {}
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -630,9 +647,10 @@ fn lib_with_standard_name() {
 
             #[test]
             fn test() { syntax::foo() }
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
@@ -669,9 +687,10 @@ fn lib_with_standard_name2() {
 
             #[test]
             fn test() { syntax::foo() }
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
@@ -703,9 +722,10 @@ fn lib_without_name() {
 
             #[test]
             fn test() { syntax::foo() }
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
@@ -740,9 +760,10 @@ fn bin_without_name() {
 
             #[test]
             fn test() { syntax::foo() }
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
@@ -785,9 +806,10 @@ fn bench_without_name() {
 
             #[bench]
             fn external_bench(_b: &mut test::Bencher) {}
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
@@ -829,9 +851,10 @@ fn test_without_name() {
 
             #[test]
             fn external_test() { assert_eq!(syntax::get_hello(), "Hello") }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
@@ -873,9 +896,10 @@ fn example_without_name() {
             fn main() {
                 println!("example1");
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
@@ -904,9 +928,10 @@ fn bin_there_for_integration() {
                 let status = Command::new("target/debug/foo").status().unwrap();
                 assert_eq!(status.code(), Some(101));
             }
-        "#);
+        "#)
+        .build();
 
-    let output = p.cargo_process("test").arg("-v").exec_with_output().unwrap();
+    let output = p.cargo("test").arg("-v").exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
     assert!(output.contains("main_test ... ok"), "no main_test\n{}", output);
     assert!(output.contains("test_test ... ok"), "no test_test\n{}", output);
@@ -954,9 +979,10 @@ fn test_dylib() {
         "#)
         .file("bar/src/lib.rs", "
              pub fn baz() {}
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
@@ -990,9 +1016,10 @@ fn test_twice_with_build_cmd() {
         .file("src/lib.rs", "
             #[test]
             fn foo() {}
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1024,9 +1051,10 @@ fn test_then_build() {
         .file("src/lib.rs", "
             #[test]
             fn foo() {}
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1053,9 +1081,10 @@ fn test_no_run() {
         .file("src/lib.rs", "
             #[test]
             fn foo() { panic!() }
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("test").arg("--no-run"),
+    assert_that(p.cargo("test").arg("--no-run"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1082,9 +1111,10 @@ fn test_run_specific_bin_target() {
             path="src/bin2.rs"
         "#)
         .file("src/bin1.rs", "#[test] fn test1() { }")
-        .file("src/bin2.rs", "#[test] fn test2() { }");
+        .file("src/bin2.rs", "#[test] fn test2() { }")
+        .build();
 
-    assert_that(prj.cargo_process("test").arg("--bin").arg("bin2"),
+    assert_that(prj.cargo("test").arg("--bin").arg("bin2"),
                 execs().with_status(0)
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1111,9 +1141,10 @@ fn test_run_implicit_bin_target() {
         .file("tests/mytest.rs", "#[test] fn test_in_test() { }")
         .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
         .file("examples/myexm.rs", "#[test] fn test_in_exm() { }
-               fn main() { panic!(\"Don't execute me!\"); }");
+               fn main() { panic!(\"Don't execute me!\"); }")
+        .build();
 
-    assert_that(prj.cargo_process("test").arg("--bins"),
+    assert_that(prj.cargo("test").arg("--bins"),
                 execs().with_status(0)
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1134,9 +1165,10 @@ fn test_run_specific_test_target() {
         .file("src/bin/a.rs", "fn main() { }")
         .file("src/bin/b.rs", "#[test] fn test_b() { } fn main() { }")
         .file("tests/a.rs", "#[test] fn test_a() { }")
-        .file("tests/b.rs", "#[test] fn test_b() { }");
+        .file("tests/b.rs", "#[test] fn test_b() { }")
+        .build();
 
-    assert_that(prj.cargo_process("test").arg("--test").arg("b"),
+    assert_that(prj.cargo("test").arg("--test").arg("b"),
                 execs().with_status(0)
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1163,9 +1195,10 @@ fn test_run_implicit_test_target() {
         .file("tests/mytest.rs", "#[test] fn test_in_test() { }")
         .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
         .file("examples/myexm.rs", "#[test] fn test_in_exm() { }
-               fn main() { panic!(\"Don't execute me!\"); }");
+               fn main() { panic!(\"Don't execute me!\"); }")
+        .build();
 
-    assert_that(prj.cargo_process("test").arg("--tests"),
+    assert_that(prj.cargo("test").arg("--tests"),
                 execs().with_status(0)
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1192,9 +1225,10 @@ fn test_run_implicit_bench_target() {
         .file("tests/mytest.rs", "#[test] fn test_in_test() { }")
         .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
         .file("examples/myexm.rs", "#[test] fn test_in_exm() { }
-               fn main() { panic!(\"Don't execute me!\"); }");
+               fn main() { panic!(\"Don't execute me!\"); }")
+        .build();
 
-    assert_that(prj.cargo_process("test").arg("--benches"),
+    assert_that(prj.cargo("test").arg("--benches"),
                 execs().with_status(0)
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1221,9 +1255,10 @@ fn test_run_implicit_example_target() {
         .file("tests/mytest.rs", "#[test] fn test_in_test() { }")
         .file("benches/mybench.rs", "#[test] fn test_in_bench() { }")
         .file("examples/myexm.rs", "#[test] fn test_in_exm() { }
-               fn main() { panic!(\"Don't execute me!\"); }");
+               fn main() { panic!(\"Don't execute me!\"); }")
+        .build();
 
-    assert_that(prj.cargo_process("test").arg("--examples"),
+    assert_that(prj.cargo("test").arg("--examples"),
                 execs().with_status(0)
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1249,9 +1284,10 @@ fn test_no_harness() {
             harness = false
         "#)
         .file("src/main.rs", "fn main() {}")
-        .file("foo.rs", "fn main() {}");
+        .file("foo.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("test").arg("--").arg("--nocapture"),
+    assert_that(p.cargo("test").arg("--").arg("--nocapture"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1304,7 +1340,7 @@ fn selective_testing() {
         "#)
         .file("d2/src/lib.rs", "")
         .file("d2/src/main.rs", "#[allow(unused_extern_crates)] extern crate d2; fn main() {}");
-    p.build();
+    let p = p.build();
 
     println!("d1");
     assert_that(p.cargo("test").arg("-p").arg("d1"),
@@ -1373,9 +1409,10 @@ fn almost_cyclic_but_not_quite() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("c/src/lib.rs", "");
+        .file("c/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(p.cargo("test"),
                 execs().with_status(0));
 }
@@ -1406,9 +1443,10 @@ fn build_then_selective_test() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("b/src/lib.rs", "");
+        .file("b/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     p.root().move_into_the_past();
     assert_that(p.cargo("test").arg("-p").arg("b"),
                 execs().with_status(0));
@@ -1452,8 +1490,9 @@ fn example_dev_dep() {
             pub fn bar() {
                 f8!();
             }
-        "#);
-    assert_that(p.cargo_process("test"),
+        "#)
+        .build();
+    assert_that(p.cargo("test"),
                 execs().with_status(0));
     assert_that(p.cargo("run")
                  .arg("--example").arg("e1").arg("--release").arg("-v"),
@@ -1489,7 +1528,7 @@ fn selective_testing_with_docs() {
             path = "d1.rs"
         "#)
         .file("d1/d1.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("test").arg("-p").arg("d1"),
                 execs().with_status(0)
@@ -1511,9 +1550,10 @@ fn example_bin_same_name() {
             authors = []
         "#)
         .file("src/bin/foo.rs", r#"fn main() { println!("bin"); }"#)
-        .file("examples/foo.rs", r#"fn main() { println!("example"); }"#);
+        .file("examples/foo.rs", r#"fn main() { println!("example"); }"#)
+        .build();
 
-    assert_that(p.cargo_process("test").arg("--no-run").arg("-v"),
+    assert_that(p.cargo("test").arg("--no-run").arg("-v"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -1550,10 +1590,11 @@ fn test_with_example_twice() {
             authors = []
         "#)
         .file("src/bin/foo.rs", r#"fn main() { println!("bin"); }"#)
-        .file("examples/foo.rs", r#"fn main() { println!("example"); }"#);
+        .file("examples/foo.rs", r#"fn main() { println!("example"); }"#)
+        .build();
 
     println!("first");
-    assert_that(p.cargo_process("test").arg("-v"),
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0));
     assert_that(&p.bin("examples/foo"), existing_file());
     println!("second");
@@ -1587,9 +1628,10 @@ fn example_with_dev_dep() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
+        .file("a/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("test").arg("-v"),
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0)
                        .with_stderr("\
 [..]
@@ -1611,9 +1653,10 @@ fn bin_is_preserved() {
             authors = []
         "#)
         .file("src/lib.rs", "")
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
 
@@ -1633,7 +1676,7 @@ fn bad_example() {
             authors = []
         "#)
         .file("src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("run").arg("--example").arg("foo"),
                 execs().with_status(101).with_stderr("\
@@ -1662,9 +1705,10 @@ fn doctest_feature() {
             /// ```
             #[cfg(feature = "bar")]
             pub fn foo() -> i32 { 1 }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test").arg("--features").arg("bar"),
+    assert_that(p.cargo("test").arg("--features").arg("bar"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo [..]
@@ -1689,9 +1733,10 @@ fn dashes_to_underscores() {
             /// assert_eq!(foo_bar::foo(), 1);
             /// ```
             pub fn foo() -> i32 { 1 }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test").arg("-v"),
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -1719,9 +1764,10 @@ fn doctest_dev_dep() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("b/src/lib.rs", "");
+        .file("b/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("test").arg("-v"),
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -1740,9 +1786,10 @@ fn filter_no_doc_tests() {
             /// ```
             pub fn foo() {}
         "#)
-        .file("tests/foo.rs", "");
+        .file("tests/foo.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("test").arg("--test=foo"),
+    assert_that(p.cargo("test").arg("--test=foo"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -1769,9 +1816,10 @@ fn dylib_doctest() {
             /// foo::foo();
             /// ```
             pub fn foo() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -1799,9 +1847,10 @@ fn dylib_doctest2() {
             /// foo::foo();
             /// ```
             pub fn foo() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0).with_stdout(""));
 }
 
@@ -1834,8 +1883,9 @@ fn cyclic_dev_dep_doc_test() {
         .file("bar/src/lib.rs", r#"
             #[allow(unused_extern_crates)]
             extern crate foo;
-        "#);
-    assert_that(p.cargo_process("test"),
+        "#)
+        .build();
+    assert_that(p.cargo("test"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [COMPILING] bar v0.0.1 ([..])
@@ -1868,8 +1918,9 @@ fn dev_dep_with_build_script() {
             build = "build.rs"
         "#)
         .file("bar/src/lib.rs", "")
-        .file("bar/build.rs", "fn main() {}");
-    assert_that(p.cargo_process("test"),
+        .file("bar/build.rs", "fn main() {}")
+        .build();
+    assert_that(p.cargo("test"),
                 execs().with_status(0));
 }
 
@@ -1917,8 +1968,9 @@ fn no_fail_fast() {
         fn sub_one_test() {
             assert_eq!(sub_one(1), 0);
         }
-        "#);
-    assert_that(p.cargo_process("test").arg("--no-fail-fast"),
+        "#)
+        .build();
+    assert_that(p.cargo("test").arg("--no-fail-fast"),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [COMPILING] foo v0.0.1 ([..])
@@ -1975,7 +2027,7 @@ fn test_multiple_packages() {
                 doctest = false
         "#)
         .file("d2/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("test").arg("-p").arg("d1").arg("-p").arg("d2"),
                 execs().with_status(0)
@@ -1998,7 +2050,7 @@ fn bin_does_not_rebuild_tests() {
         .file("src/lib.rs", "")
         .file("src/main.rs", "fn main() {}")
         .file("tests/foo.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0));
@@ -2040,7 +2092,7 @@ fn selective_test_wonky_profile() {
             authors = []
         "#)
         .file("a/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("test").arg("-v").arg("--no-run").arg("--release")
                  .arg("-p").arg("foo").arg("-p").arg("a"),
@@ -2067,7 +2119,7 @@ fn selective_test_optional_dep() {
             authors = []
         "#)
         .file("a/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("test").arg("-v").arg("--no-run")
                  .arg("--features").arg("a").arg("-p").arg("a"),
@@ -2102,7 +2154,7 @@ fn only_test_docs() {
             }
         "#)
         .file("tests/foo.rs", "this is not rust");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("test").arg("--doc"),
                 execs().with_status(0)
@@ -2140,8 +2192,9 @@ fn test_panic_abort_with_dep() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "");
-    assert_that(p.cargo_process("test").arg("-v"),
+        .file("bar/src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -2163,8 +2216,9 @@ fn cfg_test_even_with_no_harness() {
             fn main() {
                 println!("hello!");
             }
-        "#);
-    assert_that(p.cargo_process("test").arg("-v"),
+        "#)
+        .build();
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0)
                        .with_stdout("hello!\n")
                        .with_stderr("\
@@ -2197,8 +2251,9 @@ fn panic_abort_multiple() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
-    assert_that(p.cargo_process("test")
+        .file("a/src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("test")
                  .arg("--release").arg("-v")
                  .arg("-p").arg("foo")
                  .arg("-p").arg("a"),
@@ -2272,7 +2327,7 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
                 authors = []
             "#)
         .file("libs/mock_serde_codegen/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("test")
                 .arg("--package").arg("feature_a")
@@ -2315,7 +2370,7 @@ fn test_release_ignore_panic() {
             authors = []
         "#)
         .file("a/src/lib.rs", "");
-    p.build();
+    let p = p.build();
     println!("test");
     assert_that(p.cargo("test").arg("-v"), execs().with_status(0));
     println!("bench");
@@ -2346,9 +2401,10 @@ fn test_many_with_features() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
+        .file("a/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("test").arg("-v")
+    assert_that(p.cargo("test").arg("-v")
                  .arg("-p").arg("a")
                  .arg("-p").arg("foo")
                  .arg("--features").arg("foo"),
@@ -2380,9 +2436,10 @@ fn test_all_workspace() {
         .file("bar/src/lib.rs", r#"
             #[test]
             fn bar_test() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test")
+    assert_that(p.cargo("test")
                  .arg("--all"),
                 execs().with_status(0)
                        .with_stdout_contains("test foo_test ... ok")
@@ -2422,9 +2479,10 @@ fn test_all_exclude() {
             pub fn baz() {
                 assert!(false);
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test")
+    assert_that(p.cargo("test")
                     .arg("--all")
                     .arg("--exclude")
                     .arg("baz"),
@@ -2457,9 +2515,10 @@ fn test_all_virtual_manifest() {
         .file("b/src/lib.rs", r#"
             #[test]
             fn b() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test")
+    assert_that(p.cargo("test")
                  .arg("--all"),
                 execs().with_status(0)
                        .with_stdout_contains("test a ... ok")
@@ -2490,9 +2549,10 @@ fn test_virtual_manifest_all_implied() {
         .file("b/src/lib.rs", r#"
             #[test]
             fn b() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test"),
+    assert_that(p.cargo("test"),
                 execs().with_status(0)
                        .with_stdout_contains("test a ... ok")
                        .with_stdout_contains("test b ... ok"));
@@ -2516,11 +2576,12 @@ fn test_all_member_dependency_same_name() {
         .file("a/src/lib.rs", r#"
             #[test]
             fn a() {}
-        "#);
+        "#)
+        .build();
 
     Package::new("a", "0.1.0").publish();
 
-    assert_that(p.cargo_process("test")
+    assert_that(p.cargo("test")
                  .arg("--all"),
                 execs().with_status(0)
                        .with_stdout_contains("test a ... ok"));
@@ -2552,9 +2613,10 @@ fn doctest_only_with_dev_dep() {
         "#)
         .file("b/src/lib.rs", r#"
             pub fn b() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test").arg("--doc").arg("-v"),
+    assert_that(p.cargo("test").arg("--doc").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -2597,9 +2659,10 @@ fn test_many_targets() {
         "#)
         .file("tests/c.rs", r#"
             does not compile
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test").arg("--verbose")
+    assert_that(p.cargo("test").arg("--verbose")
                     .arg("--bin").arg("a").arg("--bin").arg("b")
                     .arg("--example").arg("a").arg("--example").arg("b")
                     .arg("--test").arg("a").arg("--test").arg("b"),
@@ -2647,11 +2710,12 @@ fn doctest_and_registry() {
             [dependencies]
             b = "0.1"
         "#)
-        .file("c/src/lib.rs", "");
+        .file("c/src/lib.rs", "")
+        .build();
 
     Package::new("b", "0.1.0").publish();
 
-    assert_that(p.cargo_process("test").arg("--all").arg("-v"),
+    assert_that(p.cargo("test").arg("--all").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -2669,9 +2733,10 @@ fn cargo_test_env() {
 
     let p = project("env_test")
         .file("Cargo.toml", &basic_lib_manifest("env_test"))
-        .file("src/lib.rs", &src);
+        .file("src/lib.rs", &src)
+        .build();
 
-    let mut pr = p.cargo_process("test");
+    let mut pr = p.cargo("test");
     let cargo = cargo_exe().canonicalize().unwrap();
     assert_that(pr.args(&["--lib", "--", "--nocapture"]),
                 execs().with_status(0)
@@ -2697,9 +2762,10 @@ fn test_order() {
         "#)
         .file("tests/z.rs", r#"
             #[test] fn test_z() {}
-        "#);
+        "#)
+        .build();
 
-        assert_that(p.cargo_process("test").arg("--all"),
+        assert_that(p.cargo("test").arg("--all"),
             execs().with_status(0)
                    .with_stdout_contains("
 running 1 test
@@ -2738,9 +2804,10 @@ fn cyclic_dev() {
         "#)
         .file("tests/foo.rs", r#"
             extern crate foo;
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test").arg("--all"),
+    assert_that(p.cargo("test").arg("--all"),
                 execs().with_status(0));
 }
 
@@ -2775,8 +2842,8 @@ fn publish_a_crate_without_tests() {
             [dependencies]
             testless = "0.1.0"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("test"), execs().with_status(0));
     assert_that(p.cargo("test").arg("--package").arg("testless"),
@@ -2827,13 +2894,13 @@ fn find_dependency_of_proc_macro_dependency_with_target() {
             pub fn noop(_input: TokenStream) -> TokenStream {
                 "".parse().unwrap()
             }
-        "#);
+        "#)
+        .build();
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0")
         .dep("foo", "0.1")
         .file("src/lib.rs", "extern crate foo;")
         .publish();
-    workspace.build();
     assert_that(workspace.cargo("test").arg("--all").arg("--target").arg(rustc_host()),
                 execs().with_status(0));
 }
@@ -2857,8 +2924,9 @@ fn test_hint_not_masked_by_doctest() {
             fn this_fails() {
                 panic!();
             }
-        "#);
-    assert_that(p.cargo_process("test")
+        "#)
+        .build();
+    assert_that(p.cargo("test")
                  .arg("--no-fail-fast"),
                 execs()
                 .with_status(101)
