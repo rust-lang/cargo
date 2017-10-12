@@ -8,7 +8,8 @@ use cargo::util::{CliResult, CargoResultExt, Config};
 
 #[derive(Deserialize)]
 pub struct Options {
-    flag_host: Option<String>,
+    flag_host: Option<String>, // TODO: Depricated, remove
+    flag_index: Option<String>,
     arg_token: Option<String>,
     flag_verbose: u32,
     flag_quiet: Option<bool>,
@@ -27,7 +28,8 @@ Usage:
 
 Options:
     -h, --help               Print this message
-    --host HOST              Host to set the token for
+    --index INDEX            Registry index to search in
+    --host HOST              DEPRECATED, renamed to '--index'
     -v, --verbose ...        Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
@@ -44,26 +46,59 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      options.flag_frozen,
                      options.flag_locked,
                      &options.flag_z)?;
-    let token = match options.arg_token.clone() {
+
+    // TODO: Depricated
+    // remove once it has been decided --host can be safely removed
+    // We may instead want to repurpose the host flag, as
+    // mentioned in this issue
+    // https://github.com/rust-lang/cargo/issues/4208
+
+    let msg = "The flag '--host' is no longer valid.
+
+Previous versions of Cargo accepted this flag, but it is being
+deprecated. The flag is being renamed to 'index', as the flag
+wants the location of the index in which to search. Please
+use '--index' instead.
+
+This will soon become a hard error, so it's either recommended
+to update to a fixed version or contact the upstream maintainer
+about this warning.";
+
+    let index = match options.flag_host {
+        Some(host) => {
+            if !host.is_empty() {
+                config.shell().warn(&msg)?;
+                Some(host)
+            } else {
+                options.flag_index
+            }
+        },
+        None => options.flag_index
+    };
+
+    let token = match options.arg_token {
         Some(token) => token,
         None => {
-            let src = SourceId::crates_io(config)?;
-            let mut src = RegistrySource::remote(&src, config);
-            src.update()?;
-            let config = src.config()?.unwrap();
-            let host = options.flag_host.clone().unwrap_or(config.api);
-            println!("please visit {}me and paste the API Token below", host);
+            let index = match index {
+                Some(index) => index,
+                None => {
+                    let src = SourceId::crates_io(config)?;
+                    let mut src = RegistrySource::remote(&src, config);
+                    src.update()?;
+                    src.config()?.unwrap().api
+                }
+            };
+
+            println!("please visit {}me and paste the API Token below", index);
             let mut line = String::new();
             let input = io::stdin();
             input.lock().read_line(&mut line).chain_err(|| {
                 "failed to read stdin"
             })?;
-            line
+            line.trim().to_string()
         }
     };
 
-    let token = token.trim().to_string();
     ops::registry_login(config, token)?;
     Ok(())
 }
-
