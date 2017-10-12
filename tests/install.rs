@@ -207,8 +207,8 @@ fn install_path() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(0));
@@ -237,8 +237,8 @@ fn multiple_crates_error() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("a/src/main.rs", "fn main() {}");
-    p.build();
+        .file("a/src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--git").arg(p.url().to_string()),
                 execs().with_status(101).with_stderr("\
@@ -263,8 +263,8 @@ fn multiple_crates_select() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("a/src/main.rs", "fn main() {}");
-    p.build();
+        .file("a/src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--git").arg(p.url().to_string())
                                         .arg("foo"),
@@ -297,8 +297,8 @@ fn multiple_crates_auto_binaries() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
-    p.build();
+        .file("a/src/lib.rs", "")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(0));
@@ -329,8 +329,8 @@ fn multiple_crates_auto_examples() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
-    p.build();
+        .file("a/src/lib.rs", "")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root())
                                         .arg("--example=foo"),
@@ -357,8 +357,8 @@ fn no_binaries_or_examples() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
-    p.build();
+        .file("a/src/lib.rs", "")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(101).with_stderr("\
@@ -376,8 +376,8 @@ fn no_binaries() {
             authors = []
         "#)
         .file("src/lib.rs", "")
-        .file("examples/foo.rs", "fn main() {}");
-    p.build();
+        .file("examples/foo.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()).arg("foo"),
                 execs().with_status(101).with_stderr("\
@@ -396,8 +396,8 @@ fn examples() {
             authors = []
         "#)
         .file("src/lib.rs", "")
-        .file("examples/foo.rs", "extern crate foo; fn main() {}");
-    p.build();
+        .file("examples/foo.rs", "extern crate foo; fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root())
                                         .arg("--example=foo"),
@@ -415,8 +415,8 @@ fn install_twice() {
             authors = []
         "#)
         .file("src/bin/foo-bin1.rs", "fn main() {}")
-        .file("src/bin/foo-bin2.rs", "fn main() {}");
-    p.build();
+        .file("src/bin/foo-bin2.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(0));
@@ -438,8 +438,8 @@ fn install_force() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(0));
@@ -451,8 +451,8 @@ fn install_force() {
             version = "0.2.0"
             authors = []
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stderr(&format!("\
@@ -481,8 +481,8 @@ fn install_force_partial_overlap() {
             authors = []
         "#)
         .file("src/bin/foo-bin1.rs", "fn main() {}")
-        .file("src/bin/foo-bin2.rs", "fn main() {}");
-    p.build();
+        .file("src/bin/foo-bin2.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(0));
@@ -495,8 +495,8 @@ fn install_force_partial_overlap() {
             authors = []
         "#)
         .file("src/bin/foo-bin2.rs", "fn main() {}")
-        .file("src/bin/foo-bin3.rs", "fn main() {}");
-    p.build();
+        .file("src/bin/foo-bin3.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stderr(&format!("\
@@ -529,8 +529,8 @@ fn install_force_bin() {
             authors = []
         "#)
         .file("src/bin/foo-bin1.rs", "fn main() {}")
-        .file("src/bin/foo-bin2.rs", "fn main() {}");
-    p.build();
+        .file("src/bin/foo-bin2.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(0));
@@ -543,8 +543,8 @@ fn install_force_bin() {
             authors = []
         "#)
         .file("src/bin/foo-bin1.rs", "fn main() {}")
-        .file("src/bin/foo-bin2.rs", "fn main() {}");
-    p.build();
+        .file("src/bin/foo-bin2.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--force")
                     .arg("--bin")
@@ -578,8 +578,8 @@ fn compile_failure() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/main.rs", "");
-    p.build();
+        .file("src/main.rs", "")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(101).with_stderr_contains("\
@@ -602,8 +602,8 @@ fn git_repo() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     // use `--locked` to test that we don't even try to write a lockfile
     assert_that(cargo_process("install").arg("--locked").arg("--git").arg(p.url().to_string()),
@@ -702,8 +702,8 @@ fn uninstall_piecemeal() {
             authors = []
         "#)
         .file("src/bin/foo.rs", "fn main() {}")
-        .file("src/bin/bar.rs", "fn main() {}");
-    p.build();
+        .file("src/bin/bar.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(0));
@@ -756,8 +756,8 @@ fn installs_from_cwd_by_default() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").cwd(p.root()),
                 execs().with_status(0));
@@ -773,9 +773,10 @@ fn do_not_rebuilds_on_local_install() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--release"),
+    assert_that(p.cargo("build").arg("--release"),
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stderr("[INSTALLING] [..]
@@ -837,8 +838,8 @@ fn git_with_lockfile() {
             [[package]]
             name = "bar"
             version = "0.1.0"
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(cargo_process("install").arg("--git").arg(p.url().to_string()),
                 execs().with_status(0));
@@ -853,8 +854,8 @@ fn q_silences_warnings() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(cargo_process("install").arg("-q").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stderr(""));
@@ -899,8 +900,8 @@ fn use_path_workspace() {
             [dependencies]
             foo = "1"
         "#)
-        .file("baz/src/lib.rs", "");
-    p.build();
+        .file("baz/src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
     let lock = p.read_lockfile();

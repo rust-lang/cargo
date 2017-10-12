@@ -21,9 +21,10 @@ fn modifying_and_moving() {
         .file("src/main.rs", r#"
             mod a; fn main() {}
         "#)
-        .file("src/a.rs", "");
+        .file("src/a.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -63,9 +64,10 @@ fn modify_only_some_files() {
             fn main() {}
         "#)
         .file("src/b.rs", "")
-        .file("tests/test.rs", "");
+        .file("tests/test.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -122,9 +124,10 @@ fn rebuild_sub_package_then_while_package() {
             authors = []
             version = "0.0.1"
         "#)
-        .file("b/src/lib.rs", "");
+        .file("b/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
 
     File::create(&p.root().join("b/src/lib.rs")).unwrap().write_all(br#"
@@ -156,9 +159,10 @@ fn changing_lib_features_caches_targets() {
             [features]
             foo = []
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
@@ -206,9 +210,10 @@ fn changing_profiles_caches_targets() {
             [profile.test]
             panic = "unwind"
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling foo v0.0.1 ([..])
@@ -301,10 +306,11 @@ fn changing_bin_paths_common_target_features_caches_targets() {
             fn main() {
                 yo();
             }
-        "#);
+        "#)
+        .build();
 
     /* Build and rebuild a/. Ensure dep_crate only builds once */
-    assert_that(p.cargo_process("run").cwd(p.root().join("a")),
+    assert_that(p.cargo("run").cwd(p.root().join("a")),
                 execs().with_status(0)
                        .with_stdout("ftest off")
                        .with_stderr("\
@@ -389,9 +395,10 @@ fn changing_bin_features_caches_targets() {
                 let msg = if cfg!(feature = "foo") { "feature on" } else { "feature off" };
                 println!("{}", msg);
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("run"),
+    assert_that(p.cargo("run"),
                 execs().with_status(0)
                        .with_stdout("feature off")
                        .with_stderr("\
@@ -442,8 +449,8 @@ fn rebuild_tests_if_lib_changes() {
             extern crate foo;
             #[test]
             fn test() { foo::foo(); }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -501,9 +508,10 @@ fn no_rebuild_transitive_target_deps() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("c/src/lib.rs", "");
+        .file("c/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
     assert_that(p.cargo("test").arg("--no-run"),
                 execs().with_status(0)
@@ -540,9 +548,10 @@ fn rerun_if_changed_in_dep() {
                 println!("cargo:rerun-if-changed=build.rs");
             }
         "#)
-        .file("a/src/lib.rs", "");
+        .file("a/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
@@ -597,8 +606,8 @@ fn same_build_dir_cached_packages() {
         .file(".cargo/config", r#"
             [build]
             target-dir = "./target"
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build").cwd(p.root().join("a1")),
                 execs().with_status(0).with_stderr(&format!("\
@@ -634,9 +643,10 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
+        .file("a/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
 
     p.root().move_into_the_past();
@@ -666,9 +676,10 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("a/src/lib.rs", "");
+        .file("a/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
 
     p.root().move_into_the_future();
@@ -695,9 +706,10 @@ fn rebuild_if_environment_changes() {
             fn main() {
                 println!("{}", env!("CARGO_PKG_DESCRIPTION"));
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("run"),
+    assert_that(p.cargo("run"),
                 execs().with_status(0)
                 .with_stdout("old desc").with_stderr(&format!("\
 [COMPILING] env_change v0.0.1 ({dir})

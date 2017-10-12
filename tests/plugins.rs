@@ -37,8 +37,9 @@ fn plugin_to_the_max() {
             #![plugin(bar)]
 
             pub fn foo() {}
-        "#);
-    let bar = project("bar")
+        "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -64,8 +65,9 @@ fn plugin_to_the_max() {
             pub fn foo(_reg: &mut Registry) {
                 println!("{}", baz::baz());
             }
-        "#);
-    let baz = project("baz")
+        "#)
+        .build();
+    let _baz = project("baz")
         .file("Cargo.toml", r#"
             [package]
             name = "baz"
@@ -76,11 +78,10 @@ fn plugin_to_the_max() {
             name = "baz"
             crate_type = ["dylib"]
         "#)
-        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }");
-    bar.build();
-    baz.build();
+        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }")
+        .build();
 
-    assert_that(foo.cargo_process("build"),
+    assert_that(foo.cargo("build"),
                 execs().with_status(0));
     assert_that(foo.cargo("doc"),
                 execs().with_status(0));
@@ -94,8 +95,8 @@ fn plugin_with_dynamic_native_dependency() {
         .file("Cargo.toml", r#"
             [workspace]
             members = ["builder", "foo"]
-        "#);
-    workspace.build();
+        "#)
+        .build();
 
     let build = project("ws/builder")
         .file("Cargo.toml", r#"
@@ -111,8 +112,8 @@ fn plugin_with_dynamic_native_dependency() {
         .file("src/lib.rs", r#"
             #[no_mangle]
             pub extern fn foo() {}
-        "#);
-    build.build();
+        "#)
+        .build();
 
     let foo = project("ws/foo")
         .file("Cargo.toml", r#"
@@ -164,8 +165,8 @@ fn plugin_with_dynamic_native_dependency() {
             pub fn bar(_reg: &mut Registry) {
                 unsafe { foo() }
             }
-        "#);
-    foo.build();
+        "#)
+        .build();
 
     assert_that(build.cargo("build"),
                 execs().with_status(0));
@@ -198,9 +199,10 @@ fn plugin_integration() {
         "#)
         .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
-        .file("tests/it_works.rs", "");
+        .file("tests/it_works.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("test").arg("-v"),
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -232,9 +234,10 @@ fn doctest_a_plugin() {
         "#)
         .file("bar/src/lib.rs", r#"
             pub fn bar() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("test").arg("-v"),
+    assert_that(p.cargo("test").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -243,7 +246,7 @@ fn doctest_a_plugin() {
 fn native_plugin_dependency_with_custom_ar_linker() {
     let target = rustc_host();
 
-    let foo = project("foo")
+    let _foo = project("foo")
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -253,7 +256,8 @@ fn native_plugin_dependency_with_custom_ar_linker() {
             [lib]
             plugin = true
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
     let bar = project("bar")
         .file("Cargo.toml", r#"
@@ -270,10 +274,10 @@ fn native_plugin_dependency_with_custom_ar_linker() {
             [target.{}]
             ar = "nonexistent-ar"
             linker = "nonexistent-linker"
-        "#, target));
+        "#, target))
+        .build();
 
-    foo.build();
-    assert_that(bar.cargo_process("build").arg("--verbose"),
+    assert_that(bar.cargo("build").arg("--verbose"),
                 execs().with_stderr_contains("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
@@ -287,7 +291,7 @@ fn panic_abort_plugins() {
         return
     }
 
-    let bar = project("bar")
+    let p = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -313,9 +317,10 @@ fn panic_abort_plugins() {
         .file("foo/src/lib.rs", r#"
             #![feature(rustc_private)]
             extern crate syntax;
-        "#);
+        "#)
+        .build();
 
-    assert_that(bar.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -325,7 +330,7 @@ fn shared_panic_abort_plugins() {
         return
     }
 
-    let bar = project("top")
+    let p = project("top")
         .file("Cargo.toml", r#"
             [package]
             name = "top"
@@ -365,8 +370,9 @@ fn shared_panic_abort_plugins() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "");
+        .file("bar/src/lib.rs", "")
+        .build();
 
-    assert_that(bar.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0));
 }

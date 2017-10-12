@@ -21,9 +21,10 @@ fn invalid1() {
             [features]
             bar = ["baz"]
         "#)
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -47,9 +48,10 @@ fn invalid2() {
             [dependencies.bar]
             path = "foo"
         "#)
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -73,9 +75,10 @@ fn invalid3() {
             [dependencies.baz]
             path = "foo"
         "#)
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -105,8 +108,8 @@ fn invalid4() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "");
-    p.build();
+        .file("bar/src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
@@ -139,9 +142,10 @@ fn invalid5() {
             path = "bar"
             optional = true
         "#)
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -162,9 +166,10 @@ fn invalid6() {
             [features]
             foo = ["bar/baz"]
         "#)
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--features").arg("foo"),
+    assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -186,9 +191,10 @@ fn invalid7() {
             foo = ["bar/baz"]
             bar = []
         "#)
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--features").arg("foo"),
+    assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -217,9 +223,10 @@ fn invalid8() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "");
+        .file("bar/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--features").arg("foo"),
+    assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] feature names may not contain slashes: `foo/bar`
 "));
@@ -244,9 +251,10 @@ fn invalid9() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "");
+        .file("bar/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--features").arg("bar"),
+    assert_that(p.cargo("build").arg("--features").arg("bar"),
                 execs().with_status(0).with_stderr("\
 warning: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with \
 that name, but only optional dependencies can be used as features. [..]
@@ -286,9 +294,10 @@ fn invalid10() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bar/baz/src/lib.rs", "");
+        .file("bar/baz/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 warning: Package `bar v0.0.1 ([..])` does not have feature `baz`. It has a required dependency with \
 that name, but only optional dependencies can be used as features. [..]
@@ -343,8 +352,9 @@ fn no_transitive_dep_feature_requirement() {
         .file("bar/src/lib.rs", r#"
             #[cfg(feature = "qux")]
             pub fn test() { print!("test"); }
-        "#);
-    assert_that(p.cargo_process("build"),
+        "#)
+        .build();
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] feature names may not contain slashes: `bar/qux`
 "));
@@ -377,9 +387,10 @@ fn no_feature_doesnt_build() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "pub fn bar() {}");
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -427,9 +438,10 @@ fn default_feature_pulled_in() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bar/src/lib.rs", "pub fn bar() {}");
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
@@ -459,9 +471,10 @@ fn cyclic_feature() {
             [features]
             default = ["default"]
         "#)
-        .file("src/main.rs", "");
+        .file("src/main.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Cyclic feature dependency: feature `default` depends on itself
 "));
@@ -480,9 +493,10 @@ fn cyclic_feature2() {
             foo = ["bar"]
             bar = ["foo"]
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
 }
 
@@ -533,9 +547,10 @@ fn groups_on_groups_on_groups() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("baz/src/lib.rs", "pub fn baz() {}");
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -581,9 +596,10 @@ fn many_cli_features() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("baz/src/lib.rs", "pub fn baz() {}");
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--features").arg("bar baz"),
+    assert_that(p.cargo("build").arg("--features").arg("bar baz"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -645,9 +661,10 @@ fn union_features() {
         .file("d2/src/lib.rs", r#"
             #[cfg(feature = "f1")] pub fn f1() {}
             #[cfg(feature = "f2")] pub fn f2() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] d2 v0.0.1 ({dir}/d2)
 [COMPILING] d1 v0.0.1 ({dir}/d1)
@@ -681,9 +698,10 @@ fn many_features_no_rebuilds() {
             ftest2 = []
             fall   = ["ftest", "ftest2"]
         "#)
-        .file("a/src/lib.rs", "");
+        .file("a/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] a v0.1.0 ({dir}/a)
 [COMPILING] b v0.1.0 ({dir})
@@ -709,9 +727,10 @@ fn empty_features() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--features").arg(""),
+    assert_that(p.cargo("build").arg("--features").arg(""),
                 execs().with_status(0));
 }
 
@@ -747,9 +766,10 @@ fn transitive_features() {
         .file("bar/src/lib.rs", r#"
             #[cfg(feature = "baz")]
             pub fn baz() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--features").arg("foo"),
+    assert_that(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(0));
 }
 
@@ -802,9 +822,10 @@ fn everything_in_the_lockfile() {
             [features]
             f3 = []
         "#)
-        .file("d3/src/lib.rs", "");
+        .file("d3/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("fetch"), execs().with_status(0));
+    assert_that(p.cargo("fetch"), execs().with_status(0));
     let loc = p.root().join("Cargo.lock");
     let mut lockfile = String::new();
     t!(t!(File::open(&loc)).read_to_string(&mut lockfile));
@@ -847,9 +868,10 @@ fn no_rebuild_when_frobbing_default_feature() {
             default = ["f1"]
             f1 = []
         "#)
-        .file("a/src/lib.rs", "");
+        .file("a/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
 }
@@ -894,9 +916,10 @@ fn unions_work_with_no_default_features() {
         .file("a/src/lib.rs", r#"
             #[cfg(feature = "f1")]
             pub fn a() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
 }
@@ -922,9 +945,10 @@ fn optional_and_dev_dep() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("foo/src/lib.rs", "");
+        .file("foo/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] test v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -964,9 +988,10 @@ fn activating_feature_activates_dep() {
         .file("foo/src/lib.rs", r#"
             #[cfg(feature = "a")]
             pub fn bar() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--features").arg("a").arg("-v"),
+    assert_that(p.cargo("build").arg("--features").arg("a").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -1015,8 +1040,8 @@ fn dep_feature_in_cmd_line() {
         .file("bar/src/lib.rs", r#"
             #[cfg(feature = "some-feat")]
             pub fn test() { print!("test"); }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     // The foo project requires that feature "some-feat" in "bar" is enabled.
     // Building without any features enabled should fail:
@@ -1079,9 +1104,10 @@ fn all_features_flag_enables_all_features() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("baz/src/lib.rs", "pub fn baz() {}");
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--all-features"),
+    assert_that(p.cargo("build").arg("--all-features"),
                 execs().with_status(0));
 }
 
@@ -1122,9 +1148,10 @@ fn many_cli_features_comma_delimited() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("baz/src/lib.rs", "pub fn baz() {}");
+        .file("baz/src/lib.rs", "pub fn baz() {}")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--features").arg("bar,baz"),
+    assert_that(p.cargo("build").arg("--features").arg("bar,baz"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -1196,9 +1223,10 @@ fn many_cli_features_comma_and_space_delimited() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("bap/src/lib.rs", "pub fn bap() {}");
+        .file("bap/src/lib.rs", "pub fn bap() {}")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--features").arg("bar,baz bam bap"),
+    assert_that(p.cargo("build").arg("--features").arg("bar,baz bam bap"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])

@@ -32,11 +32,12 @@ fn simple_cross_package() {
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, cross_compile::alternate_arch()));
+        "#, cross_compile::alternate_arch()))
+        .build();
 
     let target = cross_compile::alternate();
 
-    assert_that(p.cargo_process("package").arg("--target").arg(&target),
+    assert_that(p.cargo("package").arg("--target").arg(&target),
                 execs().with_status(0).with_status(0).with_stderr(&format!(
 "   Packaging foo v0.0.0 ({dir})
    Verifying foo v0.0.0 ({dir})
@@ -80,9 +81,8 @@ fn publish_with_target() {
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, cross_compile::alternate_arch()));
-
-    p.build();
+        "#, cross_compile::alternate_arch()))
+        .build();
 
     let target = cross_compile::alternate();
 
