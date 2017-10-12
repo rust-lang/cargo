@@ -1150,15 +1150,16 @@ fn env_args(config: &Config,
     let compiling_with_target = build_config.requested_target.is_some();
     let is_target_kind = kind == Kind::Target;
 
+    let mut name = name.to_owned();
     if compiling_with_target && !is_target_kind {
         // This is probably a build script or plugin and we're
-        // compiling with --target. In this scenario there are
-        // no rustflags we can apply.
-        return Ok(Vec::new());
+        // compiling with --target. In this scenario we apply the _HOST
+        // version of the flags.
+        name.push_str("_HOST");
     }
 
     // First try RUSTFLAGS from the environment
-    if let Ok(a) = env::var(name) {
+    if let Ok(a) = env::var(&name[..]) {
         let args = a.split(' ')
             .map(str::trim)
             .filter(|s| !s.is_empty())
