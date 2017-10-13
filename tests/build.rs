@@ -15,7 +15,7 @@ use cargotest::support::paths::{CargoPathExt,root};
 use cargotest::support::{ProjectBuilder};
 use cargotest::support::{project, execs, main_file, basic_bin_manifest};
 use cargotest::support::registry::Package;
-use hamcrest::{assert_that, existing_file, is_not};
+use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 use tempdir::TempDir;
 
 #[test]
@@ -2718,6 +2718,9 @@ fn compiler_json_error_format() {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
+            [profile.dev]
+            debug = false   # prevent the *.dSYM from affecting the test result
+
             [dependencies.bar]
             path = "bar"
         "#)
@@ -2751,7 +2754,7 @@ fn compiler_json_error_format() {
         "reason":"compiler-artifact",
         "profile": {
             "debug_assertions": true,
-            "debuginfo": 2,
+            "debuginfo": null,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
@@ -2791,7 +2794,7 @@ fn compiler_json_error_format() {
         },
         "profile": {
             "debug_assertions": true,
-            "debuginfo": 2,
+            "debuginfo": null,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
@@ -2811,7 +2814,7 @@ fn compiler_json_error_format() {
         "reason":"compiler-artifact",
         "profile": {
             "debug_assertions": true,
-            "debuginfo": 2,
+            "debuginfo": null,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
@@ -2839,7 +2842,7 @@ fn compiler_json_error_format() {
         },
         "profile": {
             "debug_assertions": true,
-            "debuginfo": 2,
+            "debuginfo": null,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
@@ -2871,7 +2874,7 @@ fn message_format_json_forward_stderr() {
         .file("src/main.rs", "fn main() { let unused = 0; }")
         .build();
 
-    assert_that(p.cargo("rustc").arg("--bin").arg("foo")
+    assert_that(p.cargo("rustc").arg("--release").arg("--bin").arg("foo")
                 .arg("--message-format").arg("JSON"),
                 execs().with_status(0)
                 .with_json(r#"
@@ -2897,10 +2900,10 @@ fn message_format_json_forward_stderr() {
             "src_path":"[..]"
         },
         "profile":{
-            "debug_assertions":true,
-            "debuginfo":2,
-            "opt_level":"0",
-            "overflow_checks": true,
+            "debug_assertions":false,
+            "debuginfo":null,
+            "opt_level":"3",
+            "overflow_checks": false,
             "test":false
         },
         "features":[],
@@ -3873,4 +3876,29 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
                 execs().with_status(101).with_stderr_contains(
                     "[..]can't find `a_bin` bin, specify bin.path"
                 ));
+}
+
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[test]
+fn uplift_dsym_of_bin_on_mac() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("src/main.rs", "fn main() { panic!(); }")
+        .file("src/bin/b.rs", "fn main() { panic!(); }")
+        .file("examples/c.rs", "fn main() { panic!(); }")
+        .file("tests/d.rs", "fn main() { panic!(); }")
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("--bins").arg("--examples").arg("--tests"),
+        execs().with_status(0)
+    );
+    assert_that(&p.bin("foo.dSYM"), existing_dir());
+    assert_that(&p.bin("b.dSYM"), existing_dir());
+    assert_that(&p.bin("c.dSYM"), is_not(existing_dir()));
+    assert_that(&p.bin("d.dSYM"), is_not(existing_dir()));
 }
