@@ -21,7 +21,7 @@ pub struct Summary {
 struct Inner {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
-    features: BTreeMap<String, Vec<String>>,
+    features: FeatureMap,
     checksum: Option<String>,
     links: Option<InternedString>,
 }
@@ -110,7 +110,7 @@ impl Summary {
     pub fn dependencies(&self) -> &[Dependency] {
         &self.inner.dependencies
     }
-    pub fn features(&self) -> &BTreeMap<String, Vec<String>> {
+    pub fn features(&self) -> &FeatureMap {
         &self.inner.features
     }
     pub fn checksum(&self) -> Option<&str> {
@@ -158,3 +158,5 @@ impl PartialEq for Summary {
         self.inner.package_id == other.inner.package_id
     }
 }
+
+pub type FeatureMap = BTreeMap<String, Vec<String>>;
