@@ -23,7 +23,7 @@ use self::job_queue::JobQueue;
 use self::output_depinfo::output_depinfo;
 
 pub use self::compilation::Compilation;
-pub use self::context::{Context, Unit};
+pub use self::context::{Context, Unit, TargetFileType};
 pub use self::custom_build::{BuildOutput, BuildMap, BuildScripts};
 pub use self::layout::is_bad_artifact_name;
 
@@ -179,7 +179,11 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
     queue.execute(&mut cx)?;
 
     for unit in units.iter() {
-        for &(ref dst, ref link_dst, _) in cx.target_filenames(unit)?.iter() {
+        for &(ref dst, ref link_dst, file_type) in cx.target_filenames(unit)?.iter() {
+            if file_type == TargetFileType::DebugInfo {
+                continue;
+            }
+
             let bindst = match *link_dst {
                 Some(ref link_dst) => link_dst,
                 None => dst,
@@ -505,7 +509,7 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         // above. This means that `cargo build` will produce binaries in
         // `target/debug` which one probably expects.
         let mut destinations = vec![];
-        for &(ref src, ref link_dst, _linkable) in filenames.iter() {
+        for &(ref src, ref link_dst, _file_type) in filenames.iter() {
             // This may have been a `cargo rustc` command which changes the
             // output, so the source may not actually exist.
             if !src.exists() {
@@ -887,8 +891,8 @@ fn build_deps_args<'a, 'cfg>(cmd: &mut ProcessBuilder,
     fn link_to<'a, 'cfg>(cmd: &mut ProcessBuilder,
                          cx: &mut Context<'a, 'cfg>,
                          unit: &Unit<'a>) -> CargoResult<()> {
-        for &(ref dst, _, ref linkable) in cx.target_filenames(unit)?.iter() {
-            if !*linkable {
+        for &(ref dst, _, file_type) in cx.target_filenames(unit)?.iter() {
+            if file_type != TargetFileType::Linkable {
                 continue
             }
             let mut v = OsString::new();
