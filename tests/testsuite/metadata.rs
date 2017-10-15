@@ -192,7 +192,9 @@ optional_feat = []
                 ],
                 "features": {
                   "default": [
-                    "default_feat"
+                    {
+                       "Feature": "default_feat"
+                    }
                   ],
                   "default_feat": [],
                   "optional_feat": []

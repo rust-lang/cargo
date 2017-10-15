@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use core::{Dependency, PackageId, SourceId, Summary};
+use core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
 use core::interning::InternedString;
 use util::Graph;
 use util::CargoResult;
@@ -170,7 +170,24 @@ impl Context {
         let deps = s.dependencies();
         let deps = deps.iter().filter(|d| d.is_transitive() || dev_deps);
 
-        let mut reqs = build_requirements(s, method)?;
+        // Requested features stored in the Method are stored as string references, but we want to
+        // transform them into FeatureValues here. In order to pass the borrow checker with
+        // storage of the FeatureValues that outlives the Requirements object, we do the
+        // transformation here, and pass the FeatureValues to build_requirements().
+        let values = if let Method::Required {
+            all_features: false,
+            features: requested,
+            ..
+        } = *method
+        {
+            requested
+                .iter()
+                .map(|f| FeatureValue::new(f, s))
+                .collect::<Vec<FeatureValue>>()
+        } else {
+            vec![]
+        };
+        let mut reqs = build_requirements(s, method, &values)?;
         let mut ret = Vec::new();
 
         // Next, collect all actually enabled dependencies and their features.
@@ -269,8 +286,12 @@ impl Context {
 fn build_requirements<'a, 'b: 'a>(
     s: &'a Summary,
     method: &'b Method,
+    requested: &'a [FeatureValue],
 ) -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
+    for fv in requested.iter() {
+        reqs.require_value(fv)?;
+    }
     match *method {
         Method::Everything
         | Method::Required {
@@ -283,12 +304,7 @@ fn build_requirements<'a, 'b: 'a>(
                 reqs.require_dependency(dep.name().as_str());
             }
         }
-        Method::Required {
-            features: requested_features,
-            ..
-        } => for feat in requested_features.iter() {
-            reqs.add_feature(feat)?;
-        },
+        _ => {} // Explicitly requested features are handled through `requested`
     }
     match *method {
         Method::Everything
@@ -359,50 +375,34 @@ impl<'r> Requirements<'r> {
     }
 
     fn require_feature(&mut self, feat: &'r str) -> CargoResult<()> {
-        if self.seen(feat) {
+        if feat.is_empty() || self.seen(feat) {
             return Ok(());
         }
-        for f in self.summary
+        for fv in self.summary
             .features()
             .get(feat)
             .expect("must be a valid feature")
         {
-            if f == feat {
-                bail!(
+            match *fv {
+                FeatureValue::Feature(ref dep_feat) if **dep_feat == *feat => bail!(
                     "Cyclic feature dependency: feature `{}` depends on itself",
                     feat
-                );
+                ),
+                _ => {}
             }
-            self.add_feature(f)?;
+            self.require_value(&fv)?;
         }
         Ok(())
     }
 
-    fn add_feature(&mut self, feat: &'r str) -> CargoResult<()> {
-        if feat.is_empty() {
-            return Ok(());
-        }
-
-        // If this feature is of the form `foo/bar`, then we just lookup package
-        // `foo` and enable its feature `bar`. Otherwise this feature is of the
-        // form `foo` and we need to recurse to enable the feature `foo` for our
-        // own package, which may end up enabling more features or just enabling
-        // a dependency.
-        let mut parts = feat.splitn(2, '/');
-        let feat_or_package = parts.next().unwrap();
-        match parts.next() {
-            Some(feat) => {
-                self.require_crate_feature(feat_or_package, feat);
-            }
-            None => {
-                if self.summary.features().contains_key(feat_or_package) {
-                    self.require_feature(feat_or_package)?;
-                } else {
-                    self.require_dependency(feat_or_package);
-                }
+    fn require_value(&mut self, fv: &'r FeatureValue) -> CargoResult<()> {
+        match *fv {
+            FeatureValue::Feature(ref feat) => self.require_feature(feat),
+            FeatureValue::Crate(ref dep) => Ok(self.require_dependency(dep)),
+            FeatureValue::CrateFeature(ref dep, ref dep_feat) => {
+                Ok(self.require_crate_feature(dep, dep_feat))
             }
         }
-        Ok(())
     }
 }
 

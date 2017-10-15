@@ -1,4 +1,5 @@
 use std::{cmp, env};
+use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::iter::repeat;
 use std::time::Duration;
@@ -213,12 +214,23 @@ fn transmit(
         return Ok(());
     }
 
+    let string_features = pkg.summary()
+        .features()
+        .iter()
+        .map(|(feat, values)| {
+            (
+                feat.clone(),
+                values.iter().map(|fv| fv.to_string()).collect(),
+            )
+        })
+        .collect::<BTreeMap<String, Vec<String>>>();
+
     let publish = registry.publish(
         &NewCrate {
             name: pkg.name().to_string(),
             vers: pkg.version().to_string(),
             deps,
-            features: pkg.summary().features().clone(),
+            features: string_features,
             authors: authors.clone(),
             description: description.clone(),
             homepage: homepage.clone(),

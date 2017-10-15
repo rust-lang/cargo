@@ -9,7 +9,7 @@ pub use self::registry::Registry;
 pub use self::resolver::Resolve;
 pub use self::shell::{Shell, Verbosity};
 pub use self::source::{GitReference, Source, SourceId, SourceMap};
-pub use self::summary::{FeatureMap, Summary};
+pub use self::summary::{FeatureMap, FeatureValue, Summary};
 pub use self::workspace::{Members, Workspace, WorkspaceConfig, WorkspaceRootConfig};
 
 pub mod source;
