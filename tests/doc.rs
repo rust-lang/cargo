@@ -3,7 +3,8 @@ extern crate hamcrest;
 extern crate cargo;
 
 use std::str;
-use std::fs;
+use std::fs::{self, File};
+use std::io::Read;
 
 use cargotest::rustc_host;
 use cargotest::support::{project, execs, path2url};
@@ -255,6 +256,7 @@ fn doc_multiple_targets_same_name() {
             version = "0.1.0"
             [[bin]]
             name = "foo_lib"
+            path = "src/foo_lib.rs"
         "#)
         .file("foo/src/foo_lib.rs", "")
         .file("bar/Cargo.toml", r#"
@@ -267,12 +269,17 @@ fn doc_multiple_targets_same_name() {
         .file("bar/src/lib.rs", "")
         .build();
 
+        let root = path2url(p.root());
+
         assert_that(p.cargo("doc").arg("--all"),
                     execs()
-                    .with_status(101)
-                    .with_stderr_contains("[..] target `foo_lib` [..]")
-                    .with_stderr_contains("[..] binary by package `foo v0.1.0[..]`[..]")
-                    .with_stderr_contains("[..] library by package `bar v0.1.0[..]` [..]"));
+                    .with_status(0)
+                    .with_stderr_contains(&format!("[DOCUMENTING] foo v0.1.0 ({}/foo)", root))
+                    .with_stderr_contains(&format!("[DOCUMENTING] bar v0.1.0 ({}/bar)", root))
+                    .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"));
+        assert_that(&p.root().join("target/doc"), existing_dir());
+        let doc_file = p.root().join("target/doc/foo_lib/index.html");
+        assert_that(&doc_file, existing_file());
 }
 
 #[test]
@@ -339,7 +346,7 @@ fn doc_multiple_targets_same_name_undoced() {
 }
 
 #[test]
-fn doc_lib_bin_same_name() {
+fn doc_lib_bin_same_name_documents_lib() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -347,15 +354,31 @@ fn doc_lib_bin_same_name() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/main.rs", "fn main() {}")
-        .file("src/lib.rs", "fn foo() {}")
+        .file("src/main.rs", r#"
+            //! Binary documentation
+            extern crate foo;
+            fn main() {
+                foo::foo();
+            }
+        "#)
+        .file("src/lib.rs", r#"
+            //! Library documentation
+            pub fn foo() {}
+        "#)
         .build();
 
     assert_that(p.cargo("doc"),
-                execs().with_status(101)
-                       .with_stderr("\
-[ERROR] The target `foo` is specified as a library and as a binary by package \
-`foo [..]`. It can be documented[..]"));
+                execs().with_status(0).with_stderr(&format!("\
+[..] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+", dir = path2url(p.root()))));
+    assert_that(&p.root().join("target/doc"), existing_dir());
+    let doc_file = p.root().join("target/doc/foo/index.html");
+    assert_that(&doc_file, existing_file());
+    let mut doc_html = String::new();
+    File::open(&doc_file).unwrap().read_to_string(&mut doc_html).unwrap();
+    assert!(doc_html.contains("Library"));
+    assert!(!doc_html.contains("Binary"));
 }
 
 #[test]
@@ -503,7 +526,7 @@ fn output_not_captured() {
     if let CargoError(CargoErrorKind::ProcessErrorKind(perr), ..) = error {
         let output = perr.output.unwrap();
         let stderr = str::from_utf8(&output.stderr).unwrap();
-    
+
         assert!(stderr.contains("☃"), "no snowman\n{}", stderr);
         assert!(stderr.contains("unknown start of token"), "no message{}", stderr);
     } else {
