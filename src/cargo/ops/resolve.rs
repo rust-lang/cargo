@@ -257,15 +257,11 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => root_replace.to_vec(),
     };
 
-    let config = if warn {
-        Some(ws.config())
-    } else {
-        None
-    };
     let mut resolved = resolver::resolve(&summaries,
                                          &replace,
                                          registry,
-                                         config)?;
+                                         Some(ws.config()),
+                                         warn)?;
     resolved.register_used_patches(registry.patches());
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;

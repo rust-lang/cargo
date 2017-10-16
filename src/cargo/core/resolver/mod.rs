@@ -47,10 +47,11 @@
 
 use std::cmp::Ordering;
 use std::collections::{HashSet, HashMap, BinaryHeap, BTreeMap};
-use std::iter::FromIterator;
 use std::fmt;
+use std::iter::FromIterator;
 use std::ops::Range;
 use std::rc::Rc;
+use std::time::{Instant, Duration};
 
 use semver;
 use url::Url;
@@ -362,7 +363,8 @@ type Activations = HashMap<String, HashMap<SourceId, Vec<Summary>>>;
 pub fn resolve(summaries: &[(Summary, Method)],
                replacements: &[(PackageIdSpec, Dependency)],
                registry: &mut Registry,
-               config: Option<&Config>) -> CargoResult<Resolve> {
+               config: Option<&Config>,
+               print_warnings: bool) -> CargoResult<Resolve> {
     let cx = Context {
         resolve_graph: RcList::new(),
         resolve_features: HashMap::new(),
@@ -372,7 +374,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
         warnings: RcList::new(),
     };
     let _p = profile::start("resolving");
-    let cx = activate_deps_loop(cx, registry, summaries)?;
+    let cx = activate_deps_loop(cx, registry, summaries, config)?;
 
     let mut resolve = Resolve {
         graph: cx.graph(),
@@ -398,11 +400,13 @@ pub fn resolve(summaries: &[(Summary, Method)],
 
     // If we have a shell, emit warnings about required deps used as feature.
     if let Some(config) = config {
-        let mut shell = config.shell();
-        let mut warnings = &cx.warnings;
-        while let Some(ref head) = warnings.head {
-            shell.warn(&head.0)?;
-            warnings = &head.1;
+        if print_warnings {
+            let mut shell = config.shell();
+            let mut warnings = &cx.warnings;
+            while let Some(ref head) = warnings.head {
+                shell.warn(&head.0)?;
+                warnings = &head.1;
+            }
         }
     }
 
@@ -420,7 +424,7 @@ fn activate(cx: &mut Context,
             parent: Option<&Summary>,
             candidate: Candidate,
             method: &Method)
-            -> CargoResult<Option<DepsFrame>> {
+            -> CargoResult<Option<(DepsFrame, Duration)>> {
     if let Some(parent) = parent {
         cx.resolve_graph.push(GraphNode::Link(parent.package_id().clone(),
                                            candidate.summary.package_id().clone()));
@@ -448,12 +452,13 @@ fn activate(cx: &mut Context,
         }
     };
 
+    let now = Instant::now();
     let deps = cx.build_deps(registry, &candidate, method)?;
-
-    Ok(Some(DepsFrame {
+    let frame = DepsFrame {
         parent: candidate,
         remaining_siblings: RcVecIter::new(Rc::new(deps)),
-    }))
+    };
+    Ok(Some((frame, now.elapsed())))
 }
 
 struct RcVecIter<T> {
@@ -580,7 +585,8 @@ impl RemainingCandidates {
 /// dependency graph, cx.resolve is returned.
 fn activate_deps_loop<'a>(mut cx: Context<'a>,
                           registry: &mut Registry,
-                          summaries: &[(Summary, Method)])
+                          summaries: &[(Summary, Method)],
+                          config: Option<&Config>)
                           -> CargoResult<Context<'a>> {
     // Note that a `BinaryHeap` is used for the remaining dependencies that need
     // activation. This heap is sorted such that the "largest value" is the most
@@ -594,9 +600,17 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     for &(ref summary, ref method) in summaries {
         debug!("initial activation: {}", summary.package_id());
         let candidate = Candidate { summary: summary.clone(), replace: None };
-        remaining_deps.extend(activate(&mut cx, registry, None, candidate,
-                                       method)?);
+        let res = activate(&mut cx, registry, None, candidate, method)?;
+        if let Some((frame, _)) = res {
+            remaining_deps.push(frame);
+        }
     }
+
+    let mut ticks = 0;
+    let start = Instant::now();
+    let time_to_print = Duration::from_millis(500);
+    let mut printed = false;
+    let mut deps_time = Duration::new(0, 0);
 
     // Main resolution loop, this is the workhorse of the resolution algorithm.
     //
@@ -612,6 +626,28 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     // backtracking states where if we hit an error we can return to in order to
     // attempt to continue resolving.
     while let Some(mut deps_frame) = remaining_deps.pop() {
+
+        // If we spend a lot of time here (we shouldn't in most cases) then give
+        // a bit of a visual indicator as to what we're doing. Only enable this
+        // when stderr is a tty (a human is likely to be watching) to ensure we
+        // get deterministic output otherwise when observed by tools.
+        //
+        // Also note that we hit this loop a lot, so it's fairly performance
+        // sensitive. As a result try to defer a possibly expensive operation
+        // like `Instant::now` by only checking every N iterations of this loop
+        // to amortize the cost of the current time lookup.
+        ticks += 1;
+        if let Some(config) = config {
+            if config.shell().is_err_tty() &&
+                !printed &&
+                ticks % 1000 == 0 &&
+                start.elapsed() - deps_time > time_to_print
+            {
+                printed = true;
+                config.shell().status("Resolving", "dependency graph...")?;
+            }
+        }
+
         let frame = match deps_frame.remaining_siblings.next() {
             Some(sibling) => {
                 let parent = Summary::clone(&deps_frame.parent);
@@ -695,8 +731,11 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         };
         trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
                candidate.summary.version());
-        remaining_deps.extend(activate(&mut cx, registry, Some(&parent),
-                              candidate, &method)?);
+        let res = activate(&mut cx, registry, Some(&parent), candidate, &method)?;
+        if let Some((frame, dur)) = res {
+            remaining_deps.push(frame);
+            deps_time += dur;
+        }
     }
 
     Ok(cx)
