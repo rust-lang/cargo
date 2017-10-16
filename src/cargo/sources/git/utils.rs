@@ -11,7 +11,7 @@ use serde::ser::{self, Serialize};
 use url::Url;
 
 use core::GitReference;
-use util::{ToUrl, internal, Config, network};
+use util::{ToUrl, internal, Config, network, Progress};
 use util::errors::{CargoResult, CargoResultExt, CargoError};
 
 #[derive(PartialEq, Clone, Debug)]
@@ -140,10 +140,6 @@ impl GitRemote {
 }
 
 impl GitDatabase {
-    fn path(&self) -> &Path {
-        &self.path
-    }
-
     pub fn copy_to(&self, rev: GitRevision, dest: &Path, cargo_config: &Config)
                    -> CargoResult<GitCheckout> {
         let checkout = match git2::Repository::open(dest) {
@@ -151,12 +147,12 @@ impl GitDatabase {
                 let mut checkout = GitCheckout::new(dest, self, rev, repo);
                 if !checkout.is_fresh() {
                     checkout.fetch(cargo_config)?;
-                    checkout.reset()?;
+                    checkout.reset(cargo_config)?;
                     assert!(checkout.is_fresh());
                 }
                 checkout
             }
-            Err(..) => GitCheckout::clone_into(dest, self, rev)?,
+            Err(..) => GitCheckout::clone_into(dest, self, rev, cargo_config)?,
         };
         checkout.update_submodules(cargo_config)?;
         Ok(checkout)
@@ -220,37 +216,26 @@ impl<'a> GitCheckout<'a> {
         }
     }
 
-    fn clone_into(into: &Path, database: &'a GitDatabase,
-                  revision: GitRevision)
+    fn clone_into(into: &Path,
+                  database: &'a GitDatabase,
+                  revision: GitRevision,
+                  config: &Config)
                   -> CargoResult<GitCheckout<'a>>
     {
-        let repo = GitCheckout::clone_repo(database.path(), into)?;
-        let checkout = GitCheckout::new(into, database, revision, repo);
-        checkout.reset()?;
-        Ok(checkout)
-    }
-
-    fn clone_repo(source: &Path, into: &Path) -> CargoResult<git2::Repository> {
         let dirname = into.parent().unwrap();
-
         fs::create_dir_all(&dirname).chain_err(|| {
             format!("Couldn't mkdir {}", dirname.display())
         })?;
-
         if fs::metadata(&into).is_ok() {
             fs::remove_dir_all(into).chain_err(|| {
                 format!("Couldn't rmdir {}", into.display())
             })?;
         }
-
-        let url = source.to_url()?;
-        let url = url.to_string();
-        let repo = git2::Repository::clone(&url, into)
-            .chain_err(|| {
-                internal(format!("failed to clone {} into {}", source.display(),
-                             into.display()))
-        })?;
-        Ok(repo)
+        let repo = git2::Repository::init(into)?;
+        let mut checkout = GitCheckout::new(into, database, revision, repo);
+        checkout.fetch(config)?;
+        checkout.reset(config)?;
+        Ok(checkout)
     }
 
     fn is_fresh(&self) -> bool {
@@ -271,7 +256,7 @@ impl<'a> GitCheckout<'a> {
         Ok(())
     }
 
-    fn reset(&self) -> CargoResult<()> {
+    fn reset(&self, config: &Config) -> CargoResult<()> {
         // If we're interrupted while performing this reset (e.g. we die because
         // of a signal) Cargo needs to be sure to try to check out this repo
         // again on the next go-round.
@@ -284,7 +269,7 @@ impl<'a> GitCheckout<'a> {
         let _ = fs::remove_file(&ok_file);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
         let object = self.repo.find_object(self.revision.0, None)?;
-        self.repo.reset(&object, git2::ResetType::Hard, None)?;
+        reset(&self.repo, &object, config)?;
         File::create(ok_file)?;
         Ok(())
     }
@@ -339,7 +324,7 @@ impl<'a> GitCheckout<'a> {
                 Err(..) => {
                     let path = parent.workdir().unwrap().join(child.path());
                     let _ = fs::remove_dir_all(&path);
-                    git2::Repository::clone(url, &path)?
+                    git2::Repository::init(&path)?
                 }
             };
 
@@ -351,8 +336,8 @@ impl<'a> GitCheckout<'a> {
                                  child.name().unwrap_or(""), url))
             })?;
 
-            repo.find_object(head, None)
-                .and_then(|obj| { repo.reset(&obj, git2::ResetType::Hard, None)})?;
+            let obj = repo.find_object(head, None)?;
+            reset(&repo, &obj, cargo_config)?;
             update_submodules(&repo, cargo_config)
         }
     }
@@ -558,6 +543,18 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
     })
 }
 
+fn reset(repo: &git2::Repository,
+         obj: &git2::Object,
+         config: &Config) -> CargoResult<()> {
+    let mut pb = Progress::new("Checkout", config);
+    let mut opts = git2::build::CheckoutBuilder::new();
+    opts.progress(|_, cur, max| {
+        drop(pb.tick(cur, max));
+    });
+    repo.reset(obj, git2::ResetType::Hard, Some(&mut opts))?;
+    Ok(())
+}
+
 pub fn fetch(repo: &mut git2::Repository,
              url: &Url,
              refspec: &str,
@@ -588,9 +585,14 @@ pub fn fetch(repo: &mut git2::Repository,
     maybe_gc_repo(repo)?;
 
     debug!("doing a fetch for {}", url);
+    let mut progress = Progress::new("Fetch", config);
     with_authentication(url.as_str(), &repo.config()?, |f| {
         let mut cb = git2::RemoteCallbacks::new();
         cb.credentials(f);
+
+        cb.transfer_progress(|stats| {
+            progress.tick(stats.indexed_objects(), stats.total_objects()).is_ok()
+        });
 
         // Create a local anonymous remote in the repository to fetch the url
         let mut remote = repo.remote_anonymous(url.as_str())?;
