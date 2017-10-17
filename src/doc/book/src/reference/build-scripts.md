@@ -18,9 +18,10 @@ build = "build.rs"
 
 The Rust file designated by the `build` command (relative to the package root)
 will be compiled and invoked before anything else is compiled in the package,
-allowing your Rust code to depend on the built or generated artifacts. Note that
-if you do not specify a value for `build` but your package root does contains a
-`"build.rs"` file, Cargo will compile and invoke this file for you.
+allowing your Rust code to depend on the built or generated artifacts.
+By default Cargo looks up for `"build.rs"` file in a package root (even if you
+do not specify a value for `build`). Use `build = "custom_build_name.rs"` to specify
+a custom build name or `build = false` to disable automatic detection of the build script.
 
 Some example use cases of the build command are:
 
