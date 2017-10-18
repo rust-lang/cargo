@@ -28,7 +28,7 @@ matrix:
       install:
         - mdbook --help || cargo install mdbook --force
       script:
-        - cargo test
+        - cargo test --locked
         - cargo doc --no-deps
         - sh src/ci/dox.sh
       after_success: |
@@ -45,7 +45,7 @@ matrix:
 before_script:
   - rustup target add $ALT
 script:
-  - cargo test
+  - cargo test --locked
 
 env:
   global:
