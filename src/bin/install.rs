@@ -24,6 +24,7 @@ pub struct Options {
 
     arg_crate: Vec<String>,
     flag_vers: Option<String>,
+    flag_version: Option<String>,
 
     flag_git: Option<String>,
     flag_branch: Option<String>,
@@ -43,7 +44,8 @@ Usage:
     cargo install [options] --list
 
 Specifying what crate to install:
-    --vers VERS               Specify a version to install from crates.io
+    --vers VERSION            Specify a version to install from crates.io
+    --version VERSION
     --git URL                 Git URL to install the specified crate from
     --branch BRANCH           Branch to use when installing from git
     --tag TAG                 Tag to use when installing from git
@@ -151,7 +153,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     };
 
     let krates = options.arg_crate.iter().map(|s| &s[..]).collect::<Vec<_>>();
-    let vers = options.flag_vers.as_ref().map(|s| &s[..]);
+    let vers = options.flag_version.as_ref().or(options.flag_vers.as_ref()).map(|s| &s[..]);
     let root = options.flag_root.as_ref().map(|s| &s[..]);
 
     if options.flag_list {

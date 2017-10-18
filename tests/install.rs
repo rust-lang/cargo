@@ -922,6 +922,28 @@ fn vers_precise() {
 }
 
 #[test]
+fn version_too() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    assert_that(cargo_process("install").arg("foo").arg("--version").arg("0.1.1"),
+                execs().with_status(0).with_stderr_contains("\
+                    [DOWNLOADING] foo v0.1.1 (registry [..])
+"));
+}
+
+#[test]
+fn version_preferred() {
+    pkg("foo", "0.1.1");
+    pkg("foo", "0.1.2");
+
+    assert_that(cargo_process("install").arg("foo").arg("--version").arg("0.1.1").arg("--vers").arg("0.1.2"),
+                execs().with_status(0).with_stderr_contains("\
+                    [DOWNLOADING] foo v0.1.1 (registry [..])
+"));
+}
+
+#[test]
 fn legacy_version_requirement() {
     pkg("foo", "0.1.1");
 
