@@ -1,6 +1,6 @@
 use cargo::ops;
 use cargo::core::{SourceId, GitReference};
-use cargo::util::{CliResult, Config, ToUrl};
+use cargo::util::{CargoError, CliResult, Config, ToUrl};
 
 #[derive(Deserialize)]
 pub struct Options {
@@ -153,7 +153,11 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     };
 
     let krates = options.arg_crate.iter().map(|s| &s[..]).collect::<Vec<_>>();
-    let vers = options.flag_version.as_ref().or(options.flag_vers.as_ref()).map(|s| &s[..]);
+    let vers = match (&options.flag_vers, &options.flag_version) {
+        (&Some(_), &Some(_)) => return Err(CargoError::from("Invalid arguments.").into()),
+        (&Some(ref v), _) | (_, &Some(ref v)) => Some(v.as_ref()),
+        _ => None,
+    };
     let root = options.flag_root.as_ref().map(|s| &s[..]);
 
     if options.flag_list {

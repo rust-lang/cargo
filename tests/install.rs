@@ -933,13 +933,13 @@ fn version_too() {
 }
 
 #[test]
-fn version_preferred() {
+fn not_both_vers_and_version() {
     pkg("foo", "0.1.1");
     pkg("foo", "0.1.2");
 
     assert_that(cargo_process("install").arg("foo").arg("--version").arg("0.1.1").arg("--vers").arg("0.1.2"),
-                execs().with_status(0).with_stderr_contains("\
-                    [DOWNLOADING] foo v0.1.1 (registry [..])
+                execs().with_status(101).with_stderr_contains("\
+error: Invalid arguments.
 "));
 }
 
