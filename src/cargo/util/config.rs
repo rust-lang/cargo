@@ -153,10 +153,42 @@ impl Config {
 
     /// Get the path to the `cargo` executable
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
-        self.cargo_exe.get_or_try_init(||
-            env::current_exe().and_then(|path| path.canonicalize())
-            .chain_err(|| "couldn't get the path to cargo executable")
-        ).map(AsRef::as_ref)
+        self.cargo_exe.get_or_try_init(|| {
+            fn from_current_exe() -> CargoResult<PathBuf> {
+                env::current_exe()
+                    .and_then(|path| path.canonicalize())
+                    .map_err(CargoError::from)
+            }
+
+            fn from_argv() -> CargoResult<PathBuf> {
+                env::args_os()
+                    .next()
+                    .ok_or(CargoError::from("no argv[0]"))
+                    .map(PathBuf::from)
+                    .and_then(|argv0| argv0.canonicalize().or_else(|_| probe_path(argv0)))
+            }
+
+            fn probe_path(argv0: PathBuf) -> CargoResult<PathBuf> {
+                // canonicalize failed, probe PATH if no dir sep in argv0
+                if argv0.components().count() > 1 {
+                    return Err(CargoError::from("no cargo executable candidate found"));
+                }
+
+                let paths = env::var_os("PATH").ok_or(CargoError::from("no PATH"))?;
+                for path in env::split_paths(&paths) {
+                    let candidate = PathBuf::from(path).join(&argv0);
+                    if candidate.is_file() {
+                        return candidate.canonicalize().map_err(CargoError::from);
+                    }
+                }
+
+                Err(CargoError::from("no cargo executable candidate found in PATH"))
+            }
+
+            from_current_exe()
+                .or_else(|_| from_argv())
+                .chain_err(|| "couldn't get the path to cargo executable")
+        }).map(AsRef::as_ref)
     }
 
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
