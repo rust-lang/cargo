@@ -111,8 +111,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                                     &options.flag_exclude,
                                     &options.flag_package)?;
 
-    let test = options.flag_tests ||
-        match options.flag_profile.as_ref().map(|t| &t[..]) {
+    let test = match options.flag_profile.as_ref().map(|t| &t[..]) {
             Some("test") => true,
             None => false,
             Some(profile) => {
@@ -132,8 +131,8 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         spec: spec,
         mode: ops::CompileMode::Check{test:test},
         release: options.flag_release,
-        filter: ops::CompileFilter::new(options.flag_lib || options.flag_tests,
-                                        &options.flag_bin, options.flag_bins || options.flag_tests,
+        filter: ops::CompileFilter::new(options.flag_lib,
+                                        &options.flag_bin, options.flag_bins,
                                         &options.flag_test, options.flag_tests,
                                         &options.flag_example, options.flag_examples,
                                         &options.flag_bench, options.flag_benches,
