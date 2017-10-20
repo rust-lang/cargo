@@ -488,9 +488,9 @@ fn check_unit_test_profile() {
                 .with_stderr_contains("[..]badtext[..]"));
 }
 
+// Verify what is checked with various command-line filters.
 #[test]
-fn check_unit_test_all_tests() {
-    // Lib unit.
+fn check_filters() {
     let p = project("foo")
         .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/lib.rs", r#"
@@ -533,36 +533,54 @@ fn check_unit_test_all_tests() {
         .build();
 
     assert_that(p.cargo("check"),
-                execs().with_status(0)
-                .with_stderr_contains("[..]unused_normal_lib[..]")
-                .with_stderr_contains("[..]unused_normal_bin[..]")
-                .with_stderr_does_not_contain("unused_noraml_t1")
-                .with_stderr_does_not_contain("unused_noraml_ex1")
-                .with_stderr_does_not_contain("unused_noraml_b1")
-                .with_stderr_does_not_contain("unused_unit_"));
+        execs().with_status(0)
+        .with_stderr_contains("[..]unused_normal_lib[..]")
+        .with_stderr_contains("[..]unused_normal_bin[..]")
+        .with_stderr_does_not_contain("unused_normal_t1")
+        .with_stderr_does_not_contain("unused_normal_ex1")
+        .with_stderr_does_not_contain("unused_normal_b1")
+        .with_stderr_does_not_contain("unused_unit_"));
     p.root().join("target").rm_rf();
     assert_that(p.cargo("check").arg("--tests").arg("-v"),
-                execs().with_status(0)
-                .with_stderr_contains("[..]unused_unit_lib[..]")
-                .with_stderr_contains("[..]unused_unit_bin[..]")
-                .with_stderr_contains("[..]unused_unit_t1[..]")
-                .with_stderr_does_not_contain("unused_normal_ex1")
-                .with_stderr_does_not_contain("unused_normal_b1")
-                .with_stderr_does_not_contain("unused_unit_ex1")
-                .with_stderr_does_not_contain("unused_unit_b1"));
+        execs().with_status(0)
+        .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..] --test [..]")
+        .with_stderr_contains("[..] --crate-name foo src[/]lib.rs --crate-type lib [..]")
+        .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..] --test [..]")
+        .with_stderr_contains("[..] --crate-name foo src[/]main.rs --crate-type bin [..]")
+        .with_stderr_contains("[..]unused_unit_lib[..]")
+        .with_stderr_contains("[..]unused_unit_bin[..]")
+        .with_stderr_contains("[..]unused_normal_lib[..]")
+        .with_stderr_contains("[..]unused_normal_bin[..]")
+        .with_stderr_contains("[..]unused_unit_t1[..]")
+        .with_stderr_contains("[..]unused_normal_ex1[..]")
+        .with_stderr_contains("[..]unused_unit_ex1[..]")
+        .with_stderr_does_not_contain("unused_normal_b1")
+        .with_stderr_does_not_contain("unused_unit_b1"));
+    p.root().join("target").rm_rf();
+    assert_that(p.cargo("check").arg("--test").arg("t1").arg("-v"),
+        execs().with_status(0)
+        .with_stderr_contains("[..]unused_normal_lib[..]")
+        .with_stderr_contains("[..]unused_normal_bin[..]")
+        .with_stderr_contains("[..]unused_unit_t1[..]")
+        .with_stderr_does_not_contain("unused_unit_lib")
+        .with_stderr_does_not_contain("unused_unit_bin")
+        .with_stderr_does_not_contain("unused_normal_ex1")
+        .with_stderr_does_not_contain("unused_normal_b1")
+        .with_stderr_does_not_contain("unused_unit_ex1")
+        .with_stderr_does_not_contain("unused_unit_b1"));
     p.root().join("target").rm_rf();
     assert_that(p.cargo("check").arg("--all-targets").arg("-v"),
-                execs().with_status(0)
-                .with_stderr_contains("[..]unused_normal_lib[..]")
-                .with_stderr_contains("[..]unused_normal_bin[..]")
-                .with_stderr_contains("[..]unused_normal_t1[..]")
-                .with_stderr_contains("[..]unused_normal_ex1[..]")
-                .with_stderr_contains("[..]unused_normal_b1[..]")
-                .with_stderr_contains("[..]unused_unit_b1[..]")
-                .with_stderr_contains("[..]unused_unit_t1[..]")
-                .with_stderr_does_not_contain("unused_unit_lib")
-                .with_stderr_does_not_contain("unused_unit_bin")
-                .with_stderr_does_not_contain("unused_unit_ex1"));
+        execs().with_status(0)
+        .with_stderr_contains("[..]unused_normal_lib[..]")
+        .with_stderr_contains("[..]unused_normal_bin[..]")
+        .with_stderr_contains("[..]unused_normal_t1[..]")
+        .with_stderr_contains("[..]unused_normal_ex1[..]")
+        .with_stderr_contains("[..]unused_normal_b1[..]")
+        .with_stderr_contains("[..]unused_unit_b1[..]")
+        .with_stderr_contains("[..]unused_unit_t1[..]")
+        .with_stderr_contains("[..]unused_unit_lib[..]")
+        .with_stderr_contains("[..]unused_unit_bin[..]")
+        .with_stderr_contains("[..]unused_unit_ex1[..]"));
 }
 
 #[test]

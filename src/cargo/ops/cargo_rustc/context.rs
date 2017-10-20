@@ -862,7 +862,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         ret.extend(self.maybe_lib(unit));
 
         // Integration tests/benchmarks require binaries to be built
-        if unit.profile.test && !unit.profile.check &&
+        if unit.profile.test &&
            (unit.target.is_test() || unit.target.is_bench()) {
             ret.extend(unit.pkg.targets().iter().filter(|t| {
                 let no_required_features = Vec::new();
@@ -876,7 +876,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 Unit {
                     pkg: unit.pkg,
                     target: t,
-                    profile: self.lib_profile(),
+                    profile: self.lib_or_check_profile(unit, t),
                     kind: unit.kind.for_target(t),
                 }
             }));
