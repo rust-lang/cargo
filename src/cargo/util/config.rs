@@ -155,12 +155,19 @@ impl Config {
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
         self.cargo_exe.get_or_try_init(|| {
             fn from_current_exe() -> CargoResult<PathBuf> {
+                // Try fetching the path to `cargo` using env::current_exe().
+                // The method varies per operating system and might fail; in particular,
+                // it depends on /proc being mounted on Linux, and some environments
+                // (like containers or chroots) may not have that available.
                 env::current_exe()
                     .and_then(|path| path.canonicalize())
                     .map_err(CargoError::from)
             }
 
             fn from_argv() -> CargoResult<PathBuf> {
+                // Grab argv[0] and attempt to resolve it to an absolute path.
+                // Path::canonicalize succeeds only when the path is already absolute,
+                // or it's a relative path accessible from the current directory.
                 env::args_os()
                     .next()
                     .ok_or(CargoError::from("no argv[0]"))
@@ -169,7 +176,12 @@ impl Config {
             }
 
             fn probe_path(argv0: PathBuf) -> CargoResult<PathBuf> {
-                // canonicalize failed, probe PATH if no dir sep in argv0
+                // Path::canonicalize failed, so finally, if argv[0] has no directory
+                // separator in it, we look through the PATH environment variable checking
+                // for a matching file in each directory.
+                // A directory separator implies either (a) an absolute path, so we
+                // shouldn't check PATH, or (b) a relative path with a directory component,
+                // which wouldn't search PATH in any shell anyway.
                 if argv0.components().count() > 1 {
                     return Err(CargoError::from("no cargo executable candidate found"));
                 }
