@@ -393,13 +393,13 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let name = opts.name;
     let cfg = global_config(config)?;
     // Please ensure that ignore and hgignore are in sync.
-    let ignore = ["/target/\n", "**/*.rs.bk\n",
+    let ignore = ["\n", "/target/\n", "**/*.rs.bk\n",
         if !opts.bin { "Cargo.lock\n" } else { "" }]
         .concat();
     // Mercurial glob ignores can't be rooted, so just sticking a 'syntax: glob' at the top of the
     // file will exclude too much. Instead, use regexp-based ignores. See 'hg help ignore' for
     // more.
-    let hgignore = ["^target/\n", "glob:*.rs.bk\n",
+    let hgignore = ["\n", "^target/\n", "glob:*.rs.bk\n",
         if !opts.bin { "glob:Cargo.lock\n" } else { "" }]
         .concat();
 
