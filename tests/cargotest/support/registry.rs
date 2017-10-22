@@ -39,7 +39,7 @@ struct Dependency {
     kind: String,
     target: Option<String>,
     features: Vec<String>,
-    index: Option<String>,
+    registry: Option<String>,
 }
 
 pub fn init() {
@@ -137,8 +137,8 @@ impl Package {
     pub fn registry_dep(&mut self,
                         name: &str,
                         vers: &str,
-                        index: &str) -> &mut Package {
-        self.full_dep(name, vers, None, "normal", &[], Some(index))
+                        registry: &str) -> &mut Package {
+        self.full_dep(name, vers, None, "normal", &[], Some(registry))
     }
 
     pub fn dev_dep(&mut self, name: &str, vers: &str) -> &mut Package {
@@ -151,14 +151,14 @@ impl Package {
                 target: Option<&str>,
                 kind: &str,
                 features: &[&str],
-                index: Option<&str>) -> &mut Package {
+                registry: Option<&str>) -> &mut Package {
         self.deps.push(Dependency {
             name: name.to_string(),
             vers: vers.to_string(),
             kind: kind.to_string(),
             target: target.map(|s| s.to_string()),
             features: features.iter().map(|s| s.to_string()).collect(),
-            index: index.map(|s| s.to_string()),
+            registry: registry.map(|s| s.to_string()),
         });
         self
     }
@@ -181,7 +181,7 @@ impl Package {
                 "target": dep.target,
                 "optional": false,
                 "kind": dep.kind,
-                "index": dep.index,
+                "registry": dep.registry,
             })
         }).collect::<Vec<_>>();
         let cksum = {
