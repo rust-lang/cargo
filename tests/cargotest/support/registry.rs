@@ -39,6 +39,7 @@ struct Dependency {
     kind: String,
     target: Option<String>,
     features: Vec<String>,
+    index: Option<String>,
 }
 
 pub fn init() {
@@ -116,25 +117,32 @@ impl Package {
     }
 
     pub fn dep(&mut self, name: &str, vers: &str) -> &mut Package {
-        self.full_dep(name, vers, None, "normal", &[])
+        self.full_dep(name, vers, None, "normal", &[], None)
     }
 
     pub fn feature_dep(&mut self,
                        name: &str,
                        vers: &str,
                        features: &[&str]) -> &mut Package {
-        self.full_dep(name, vers, None, "normal", features)
+        self.full_dep(name, vers, None, "normal", features, None)
     }
 
     pub fn target_dep(&mut self,
                       name: &str,
                       vers: &str,
                       target: &str) -> &mut Package {
-        self.full_dep(name, vers, Some(target), "normal", &[])
+        self.full_dep(name, vers, Some(target), "normal", &[], None)
+    }
+
+    pub fn registry_dep(&mut self,
+                        name: &str,
+                        vers: &str,
+                        index: &str) -> &mut Package {
+        self.full_dep(name, vers, None, "normal", &[], Some(index))
     }
 
     pub fn dev_dep(&mut self, name: &str, vers: &str) -> &mut Package {
-        self.full_dep(name, vers, None, "dev", &[])
+        self.full_dep(name, vers, None, "dev", &[], None)
     }
 
     fn full_dep(&mut self,
@@ -142,13 +150,15 @@ impl Package {
                 vers: &str,
                 target: Option<&str>,
                 kind: &str,
-                features: &[&str]) -> &mut Package {
+                features: &[&str],
+                index: Option<&str>) -> &mut Package {
         self.deps.push(Dependency {
             name: name.to_string(),
             vers: vers.to_string(),
             kind: kind.to_string(),
             target: target.map(|s| s.to_string()),
             features: features.iter().map(|s| s.to_string()).collect(),
+            index: index.map(|s| s.to_string()),
         });
         self
     }
@@ -171,6 +181,7 @@ impl Package {
                 "target": dep.target,
                 "optional": false,
                 "kind": dep.kind,
+                "index": dep.index,
             })
         }).collect::<Vec<_>>();
         let cksum = {

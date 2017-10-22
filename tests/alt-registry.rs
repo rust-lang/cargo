@@ -208,7 +208,8 @@ fn alt_registry_dep_with_crates_io_dep() {
         .file("src/main.rs", "fn main() {}");
     p.build();
 
-    Package::new("alt_reg_dep", "0.1.1").alternative(true).dep("crates_io_dep", "0.0.2").publish();
+    Package::new("crates_io_dep", "0.0.2").publish();
+    Package::new("alt_reg_dep", "0.1.1").alternative(true).registry_dep("crates_io_dep", "0.0.2", registry::registry().as_str()).publish();
 
     assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0).with_stderr(&format!("\
@@ -216,8 +217,8 @@ fn alt_registry_dep_with_crates_io_dep() {
 [UPDATING] registry `{crates_io_reg}`
 [DOWNLOADING] alt_reg_dep v0.1.1 (registry `file://[..]`)
 [DOWNLOADING] crates_io_dep v0.0.2 (registry `file://[..]`)
+[COMPILING] crates_io_dep v0.0.2 (registry `file://[..]`)
 [COMPILING] alt_reg_dep v0.1.1 (registry `file://[..]`)
-[COMPILING] crates_io_dep v0.0.2
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
 ",
