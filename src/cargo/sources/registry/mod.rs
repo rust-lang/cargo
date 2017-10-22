@@ -225,7 +225,7 @@ struct RegistryDependency<'a> {
     default_features: bool,
     target: Option<Cow<'a, str>>,
     kind: Option<Cow<'a, str>>,
-    index: Option<String>,
+    registry: Option<String>,
 }
 
 pub trait RegistryData {
@@ -485,11 +485,11 @@ impl<'de> de::Deserialize<'de> for DependencyList {
 fn parse_registry_dependency(dep: RegistryDependency)
                              -> CargoResult<Dependency> {
     let RegistryDependency {
-        name, req, features, optional, default_features, target, kind, index
+        name, req, features, optional, default_features, target, kind, registry
     } = dep;
 
-    let id = if let Some(index) = index {
-        SourceId::for_registry(&index.to_url()?)?
+    let id = if let Some(registry) = registry {
+        SourceId::for_registry(&registry.to_url()?)?
     } else {
         DEFAULT_ID.with(|id| {
             id.clone()
