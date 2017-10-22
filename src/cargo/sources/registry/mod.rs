@@ -175,6 +175,7 @@ use sources::PathSource;
 use util::{CargoResult, Config, internal, FileLock, Filesystem};
 use util::errors::CargoResultExt;
 use util::hex;
+use util::to_url::ToUrl;
 
 const INDEX_LOCK: &'static str = ".cargo-index-lock";
 pub static CRATES_IO: &'static str = "https://github.com/rust-lang/crates.io-index";
@@ -224,6 +225,7 @@ struct RegistryDependency<'a> {
     default_features: bool,
     target: Option<Cow<'a, str>>,
     kind: Option<Cow<'a, str>>,
+    index: Option<String>,
 }
 
 pub trait RegistryData {
@@ -483,12 +485,18 @@ impl<'de> de::Deserialize<'de> for DependencyList {
 fn parse_registry_dependency(dep: RegistryDependency)
                              -> CargoResult<Dependency> {
     let RegistryDependency {
-        name, req, features, optional, default_features, target, kind
+        name, req, features, optional, default_features, target, kind, index
     } = dep;
 
-    let mut dep = DEFAULT_ID.with(|id| {
-        Dependency::parse_no_deprecated(&name, Some(&req), id)
-    })?;
+    let id = if let Some(index) = index {
+        SourceId::for_registry(&index.to_url()?)?
+    } else {
+        DEFAULT_ID.with(|id| {
+            id.clone()
+        })
+    };
+
+    let mut dep = Dependency::parse_no_deprecated(&name, Some(&req), &id)?;
     let kind = match kind.as_ref().map(|s| &s[..]).unwrap_or("") {
         "dev" => Kind::Development,
         "build" => Kind::Build,
@@ -512,5 +520,6 @@ fn parse_registry_dependency(dep: RegistryDependency)
        .set_features(features)
        .set_platform(platform)
        .set_kind(kind);
+
     Ok(dep)
 }
