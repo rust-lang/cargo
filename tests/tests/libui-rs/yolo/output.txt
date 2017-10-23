@@ -270,7 +270,7 @@ automatically applying suggestion (--yolo)
 automatically applying suggestion (--yolo)
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r, 'r> std::ops::FnMut(&'r menus::MenuItem, &'r windows::Window)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r, 's> std::ops::FnMut(&'r menus::MenuItem, &'s windows::Window)>`)
 [1;34m  -->[0m src/menus.rs:50:17-51:76
 [1;33mSuggestion - Replace:[0m
 
