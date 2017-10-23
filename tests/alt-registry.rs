@@ -226,3 +226,39 @@ fn alt_registry_dep_with_crates_io_dep() {
         crates_io_reg = registry::registry(),
         alt_reg = registry::alt_registry())));
 }
+
+#[test]
+fn alt_reg_dep_with_alt_reg_dep() {
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            version = "0.1.1"
+            registry = "alternative"
+        "#)
+        .file("src/main.rs", "fn main() {}");
+    p.build();
+
+    Package::new("baz", "0.0.2").alternative(true).publish();
+    Package::new("bar", "0.1.1").alternative(true).registry_dep("baz", "0.0.2", registry::alt_registry().as_str()).publish();
+
+    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+                execs().with_status(0).with_stderr(&format!("\
+[UPDATING] registry `{alt_reg}`
+[DOWNLOADING] bar v0.1.1 (registry `file://[..]`)
+[DOWNLOADING] baz v0.0.2 (registry `file://[..]`)
+[COMPILING] baz v0.0.2 (registry `file://[..]`)
+[COMPILING] bar v0.1.1 (registry `file://[..]`)
+[COMPILING] foo v0.0.1 ({dir})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
+",
+        dir = p.url(),
+        alt_reg = registry::alt_registry())));
+}
