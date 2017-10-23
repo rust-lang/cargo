@@ -62,18 +62,13 @@ My current example output for diagnostics is based on [libui-rs](https://github.
 Run `rustfix`:
 
 ```sh
-$ cd tests/fixtures/libui-rs/
-$ cargo run -- --from-file clippy.json
+$ cargo test
 ```
 
 ### Generate the example diagnostics JSON yourself
 
 ```sh
-$ git clone https://github.com/pcwalton/libui-rs.git
-# HEAD is at 13299d28f69f8009be8e08e453a9b0024f153a60
-$ cd libui-rs/ui/
-$ cargo clippy -- -Z unstable-options --error-format json 2&> clippy.json
-# Manually remove the first line ("Compiling....")
+$ APPLY_RUSTFIX=1 cargo test
 ```
 
 ## Gotchas
