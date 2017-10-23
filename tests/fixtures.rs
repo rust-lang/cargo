@@ -47,9 +47,9 @@ fn fixtures() {
 
                 let manifest = format!("--manifest-path={}", &manifest[1..manifest.len() - 1]);
                 let cmd = if yolo {
-                    cmd!("cargo", "run", manifest, "--quiet", "--", "--clippy", "--yolo")
+                    cmd!("cargo", "run", manifest, "--bin", "rustfix", "--quiet", "--", "--clippy", "--yolo")
                 } else {
-                    cmd!("cargo", "run", manifest, "--quiet", "--", "--clippy")
+                    cmd!("cargo", "run", manifest, "--bin", "rustfix", "--quiet", "--", "--clippy")
                 };
                 cmd.dir(&dir)
                     .stdin(test.join("input.txt"))
