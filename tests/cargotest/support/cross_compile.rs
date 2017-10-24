@@ -36,11 +36,13 @@ pub fn disabled() -> bool {
             .build();
 
         let result = p.cargo("build")
-            .arg("--target").arg(&cross_target)
+            .arg("--target").arg(&cross_target).arg("--verbose")
             .exec_with_output();
 
         if result.is_ok() {
             CAN_RUN_CROSS_TESTS.store(true, Ordering::SeqCst);
+        } else {
+            println!("cross_test build failed! {:?}", result);
         }
     });
 
