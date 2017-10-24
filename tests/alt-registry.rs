@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate cargotest;
 extern crate hamcrest;
 
@@ -19,8 +20,8 @@ fn is_feature_gated() {
             version = "0.0.1"
             registry = "alternative"
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
@@ -44,8 +45,8 @@ fn depend_on_alt_registry() {
             version = "0.0.1"
             registry = "alternative"
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
@@ -87,11 +88,11 @@ fn depend_on_alt_registry_depends_on_same_registry() {
             version = "0.0.1"
             registry = "alternative"
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     Package::new("baz", "0.0.1").alternative(true).publish();
-    Package::new("bar", "0.0.1").dep("baz", "0.0.1").alternative(true).publish();
+    Package::new("bar", "0.0.1").registry_dep("baz", "0.0.1", registry::alt_registry().as_str()).alternative(true).publish();
 
     assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0).with_stderr(&format!("\
@@ -123,24 +124,26 @@ fn depend_on_alt_registry_depends_on_crates_io() {
             version = "0.0.1"
             registry = "alternative"
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     Package::new("baz", "0.0.1").publish();
-    Package::new("bar", "0.0.1").dep("baz", "0.0.1").alternative(true).publish();
+    Package::new("bar", "0.0.1").registry_dep("baz", "0.0.1", registry::registry().as_str()).alternative(true).publish();
 
     assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0).with_stderr(&format!("\
+[UPDATING] registry `{alt_reg}`
 [UPDATING] registry `{reg}`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
-[COMPILING] baz v0.0.1
-[COMPILING] bar v0.0.1
+[COMPILING] baz v0.0.1 (registry `file://[..]`)
+[COMPILING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
 ",
         dir = p.url(),
-        reg = registry::alt_registry())));
+        alt_reg = registry::alt_registry(),
+        reg = registry::registry())));
 }
 
 #[test]
@@ -158,8 +161,8 @@ fn registry_incompatible_with_path() {
             path = ""
             registry = "alternative"
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(101)
@@ -181,8 +184,8 @@ fn registry_incompatible_with_git() {
             git = ""
             registry = "alternative"
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(101)
@@ -204,8 +207,8 @@ fn cannot_publish_with_registry_dependency() {
             version = "0.0.1"
             registry = "alternative"
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
@@ -233,8 +236,8 @@ fn alt_registry_and_crates_io_deps() {
             version = "0.1.0"
             registry = "alternative"
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     Package::new("crates_io_dep", "0.0.1").publish();
     Package::new("alt_reg_dep", "0.1.0").alternative(true).publish();
@@ -258,78 +261,4 @@ fn alt_registry_and_crates_io_deps() {
                        .with_stderr_contains("\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs"))
 
-}
-
-#[test]
-fn alt_registry_dep_with_crates_io_dep() {
-
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            cargo-features = ["alternative-registries"]
-
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies.alt_reg_dep]
-            version = "0.1.1"
-            registry = "alternative"
-        "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
-
-    Package::new("crates_io_dep", "0.0.2").publish();
-    Package::new("alt_reg_dep", "0.1.1").alternative(true).registry_dep("crates_io_dep", "0.0.2", registry::registry().as_str()).publish();
-
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
-                execs().with_status(0).with_stderr(&format!("\
-[UPDATING] registry `{alt_reg}`
-[UPDATING] registry `{crates_io_reg}`
-[DOWNLOADING] alt_reg_dep v0.1.1 (registry `file://[..]`)
-[DOWNLOADING] crates_io_dep v0.0.2 (registry `file://[..]`)
-[COMPILING] crates_io_dep v0.0.2 (registry `file://[..]`)
-[COMPILING] alt_reg_dep v0.1.1 (registry `file://[..]`)
-[COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
-",
-        dir = p.url(),
-        crates_io_reg = registry::registry(),
-        alt_reg = registry::alt_registry())));
-}
-
-#[test]
-fn alt_reg_dep_with_alt_reg_dep() {
-
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            cargo-features = ["alternative-registries"]
-
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-
-            [dependencies.bar]
-            version = "0.1.1"
-            registry = "alternative"
-        "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
-
-    Package::new("baz", "0.0.2").alternative(true).publish();
-    Package::new("bar", "0.1.1").alternative(true).registry_dep("baz", "0.0.2", registry::alt_registry().as_str()).publish();
-
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
-                execs().with_status(0).with_stderr(&format!("\
-[UPDATING] registry `{alt_reg}`
-[DOWNLOADING] bar v0.1.1 (registry `file://[..]`)
-[DOWNLOADING] baz v0.0.2 (registry `file://[..]`)
-[COMPILING] baz v0.0.2 (registry `file://[..]`)
-[COMPILING] bar v0.1.1 (registry `file://[..]`)
-[COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
-",
-        dir = p.url(),
-        alt_reg = registry::alt_registry())));
 }
