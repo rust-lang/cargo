@@ -127,11 +127,11 @@ fn handle_suggestions(
     }
 
     'suggestions: for suggestion in suggestions {
-        println!("\n\n{info}: {message}\n",
+        print!("\n\n{info}: {message}\n",
             info = "Info".green().bold(),
             message = split_at_lint_name(&suggestion.message));
         for snippet in suggestion.snippets {
-            println!("{arrow} {file}:{range}\n",
+            print!("{arrow} {file}:{range}\n",
                 arrow = "  -->".blue().bold(),
                 file = snippet.file_name,
                 range = snippet.line_range);

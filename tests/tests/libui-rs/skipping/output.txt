@@ -1,9 +1,7 @@
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Button)>`)
-
 [1;34m  -->[0m src/controls.rs:245:17-245:78
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 
@@ -19,9 +17,7 @@
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Entry)>`)
-
 [1;34m  -->[0m src/controls.rs:350:17-350:77
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 
@@ -37,9 +33,7 @@
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::Entry`
-
 [1;34m  -->[0m src/controls.rs:373:5-378:6
-
 [0]: try this
 [1;33mSuggestion - Replace:[0m
 

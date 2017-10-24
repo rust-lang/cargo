@@ -1,9 +1,7 @@
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Button)>`)
-
 [1;34m  -->[0m src/controls.rs:245:17-245:78
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 
@@ -18,9 +16,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Entry)>`)
-
 [1;34m  -->[0m src/controls.rs:350:17-350:77
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 
@@ -35,9 +31,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::Entry`
-
 [1;34m  -->[0m src/controls.rs:373:5-378:6
-
 [0]: try this
 [1;33mSuggestion - Replace:[0m
 
@@ -58,9 +52,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Checkbox)>`)
-
 [1;34m  -->[0m src/controls.rs:415:17-415:80
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 
@@ -75,9 +67,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::Tab`
-
 [1;34m  -->[0m src/controls.rs:526:5-531:6
-
 [0]: try this
 [1;33mSuggestion - Replace:[0m
 
@@ -98,9 +88,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Spinbox)>`)
-
 [1;34m  -->[0m src/controls.rs:621:17-621:79
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 
@@ -115,9 +103,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::ProgressBar`
-
 [1;34m  -->[0m src/controls.rs:648:5-653:6
-
 [0]: try this
 [1;33mSuggestion - Replace:[0m
 
@@ -138,9 +124,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Slider)>`)
-
 [1;34m  -->[0m src/controls.rs:689:17-689:78
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 
@@ -155,9 +139,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Combobox)>`)
-
 [1;34m  -->[0m src/controls.rs:758:17-758:80
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 
@@ -172,9 +154,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::Combobox`
-
 [1;34m  -->[0m src/controls.rs:765:5-770:6
-
 [0]: try this
 [1;33mSuggestion - Replace:[0m
 
@@ -195,9 +175,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::RadioButtons`
-
 [1;34m  -->[0m src/controls.rs:796:5-801:6
-
 [0]: try this
 [1;33mSuggestion - Replace:[0m
 
@@ -218,9 +196,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::MultilineEntry)>`)
-
 [1;34m  -->[0m src/controls.rs:866:17-867:73
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 
@@ -236,9 +212,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::MultilineEntry`
-
 [1;34m  -->[0m src/controls.rs:890:5-895:6
-
 [0]: try this
 [1;33mSuggestion - Replace:[0m
 
@@ -259,9 +233,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::FontButton)>`)
-
 [1;34m  -->[0m src/controls.rs:1182:17-1182:82
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 
@@ -276,9 +248,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::FontButton`
-
 [1;34m  -->[0m src/controls.rs:1189:5-1194:6
-
 [0]: try this
 [1;33mSuggestion - Replace:[0m
 
@@ -299,9 +269,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::ColorButton)>`)
-
 [1;34m  -->[0m src/controls.rs:1237:17-1237:83
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 
@@ -316,9 +284,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::ColorButton`
-
 [1;34m  -->[0m src/controls.rs:1244:5-1249:6
-
 [0]: try this
 [1;33mSuggestion - Replace:[0m
 
@@ -339,9 +305,7 @@ automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r, 's> std::ops::FnMut(&'r menus::MenuItem, &'s windows::Window)>`)
-
 [1;34m  -->[0m src/menus.rs:50:17-51:76
-
 [0]: try
 [1;33mSuggestion - Replace:[0m
 

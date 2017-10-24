@@ -1,9 +1,7 @@
 
 
 [1;32mInfo[0m: cannot find type `Iter` in this scope
-
 [1;34m  -->[0m src/lib.rs:2:12-2:16
-
 [0]: possible candidates are found in other modules, you can import them into scope
 [1;33mSuggestion - Replace:[0m
 
