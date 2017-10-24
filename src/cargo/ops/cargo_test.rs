@@ -42,11 +42,12 @@ pub fn run_tests(ws: &Workspace,
     }
 
     let (doctest, docerrors) = run_doc_tests(options, test_args, &compilation)?;
+    let test = if docerrors.is_empty() { test } else { doctest };
     errors.extend(docerrors);
     if errors.is_empty() {
         Ok(None)
     } else {
-        Ok(Some(CargoTestError::new(doctest, errors)))
+        Ok(Some(CargoTestError::new(test, errors)))
     }
 }
 
@@ -105,9 +106,9 @@ fn run_unit_tests(options: &TestOptions,
 
         match result {
             Err(CargoError(CargoErrorKind::ProcessErrorKind(e), .. )) => {
-                 errors.push(e);
+                errors.push((kind.clone(), test.clone(), e));
                 if !options.no_fail_fast {
-                    return Ok((Test::UnitTest(kind.clone(), test.clone()), errors))
+                    break;
                 }
             }
             Err(e) => {
@@ -117,7 +118,13 @@ fn run_unit_tests(options: &TestOptions,
             Ok(()) => {}
         }
     }
-    Ok((Test::Multiple, errors))
+
+    if errors.len() == 1 {
+        let (kind, test, e) = errors.pop().unwrap();
+        Ok((Test::UnitTest(kind, test), vec![e]))
+    } else {
+        Ok((Test::Multiple, errors.into_iter().map((|(_, _, e)| e)).collect()))
+    }
 }
 
 fn run_doc_tests(options: &TestOptions,

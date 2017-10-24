@@ -60,7 +60,7 @@ updated.
 For more information about package id specifications, see `cargo help pkgid`.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     debug!("executing; cmd=cargo-update; args={:?}", env::args().collect::<Vec<_>>());
     config.configure(options.flag_verbose,
                      options.flag_quiet,

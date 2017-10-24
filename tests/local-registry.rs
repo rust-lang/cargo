@@ -46,9 +46,10 @@ fn simple() {
             pub fn bar() {
                 foo::foo();
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] foo v0.0.1 ([..])
 [COMPILING] foo v0.0.1
@@ -86,9 +87,10 @@ fn multiple_versions() {
             pub fn bar() {
                 foo::foo();
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] foo v0.1.0 ([..])
 [COMPILING] foo v0.1.0
@@ -138,9 +140,10 @@ fn multiple_names() {
                 foo::foo();
                 bar::bar();
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -183,9 +186,10 @@ fn interdependent() {
                 foo::foo();
                 bar::bar();
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -244,9 +248,10 @@ fn path_dep_rewritten() {
                 foo::foo();
                 bar::bar();
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -279,10 +284,10 @@ fn invalid_dir_bad() {
 
             [source.my-awesome-local-directory]
             local-registry = '/path/to/nowhere'
-        "#);
+        "#)
+        .build();
 
-
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to load source for a dependency on `foo`
 
@@ -317,8 +322,8 @@ fn different_directory_replacing_the_registry_is_bad() {
             [dependencies]
             foo = "*"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     // Generate a lock file against the crates.io registry
     Package::new("foo", "0.0.1").publish();
@@ -381,9 +386,10 @@ fn crates_io_registry_url_is_optional() {
             pub fn bar() {
                 foo::foo();
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] foo v0.0.1 ([..])
 [COMPILING] foo v0.0.1

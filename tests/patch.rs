@@ -55,9 +55,10 @@ fn replace() {
         "#)
         .file("foo/src/lib.rs", r#"
             pub fn foo() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] deep-foo v0.1.0 ([..])
@@ -102,9 +103,10 @@ fn nonexistent() {
         "#)
         .file("foo/src/lib.rs", r#"
             pub fn foo() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [COMPILING] foo v0.1.0 (file://[..])
@@ -124,8 +126,8 @@ fn patch_git() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", "");
-    foo.build();
+        .file("src/lib.rs", "")
+        .build();
 
     let p = project("bar")
         .file("Cargo.toml", &format!(r#"
@@ -154,9 +156,10 @@ fn patch_git() {
         "#)
         .file("foo/src/lib.rs", r#"
             pub fn foo() {}
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] git repository `file://[..]`
 [COMPILING] foo v0.1.0 (file://[..])
@@ -176,8 +179,8 @@ fn patch_to_git() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn foo() {}");
-    foo.build();
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
 
     Package::new("foo", "0.1.0").publish();
 
@@ -199,9 +202,10 @@ fn patch_to_git() {
             pub fn bar() {
                 foo::foo();
             }
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("build"),//.env("RUST_LOG", "cargo=trace"),
+    assert_that(p.cargo("build"),//.env("RUST_LOG", "cargo=trace"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] git repository `file://[..]`
 [UPDATING] registry `file://[..]`
@@ -239,9 +243,10 @@ fn unused() {
         "#)
         .file("foo/src/lib.rs", r#"
             not rust code
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] foo v0.1.0 [..]
@@ -273,8 +278,8 @@ fn unused_git() {
             version = "0.2.0"
             authors = []
         "#)
-        .file("src/lib.rs", "");
-    foo.build();
+        .file("src/lib.rs", "")
+        .build();
 
     let p = project("bar")
         .file("Cargo.toml", &format!(r#"
@@ -289,9 +294,10 @@ fn unused_git() {
             [patch.crates-io]
             foo = {{ git = '{}' }}
         "#, foo.url()))
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] git repository `file://[..]`
 [UPDATING] registry `file://[..]`
@@ -325,9 +331,10 @@ fn add_patch() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("foo/src/lib.rs", r#""#);
+        .file("foo/src/lib.rs", r#""#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] foo v0.1.0 [..]
@@ -382,9 +389,10 @@ fn add_ignored_patch() {
             version = "0.1.1"
             authors = []
         "#)
-        .file("foo/src/lib.rs", r#""#);
+        .file("foo/src/lib.rs", r#""#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [DOWNLOADING] foo v0.1.0 [..]
@@ -440,9 +448,10 @@ fn new_minor() {
             version = "0.1.1"
             authors = []
         "#)
-        .file("foo/src/lib.rs", r#""#);
+        .file("foo/src/lib.rs", r#""#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [COMPILING] foo v0.1.1 [..]
@@ -485,9 +494,10 @@ fn transitive_new_minor() {
             version = "0.1.1"
             authors = []
         "#)
-        .file("foo/src/lib.rs", r#""#);
+        .file("foo/src/lib.rs", r#""#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [COMPILING] foo v0.1.1 [..]
@@ -521,9 +531,10 @@ fn new_major() {
             version = "0.2.0"
             authors = []
         "#)
-        .file("foo/src/lib.rs", r#""#);
+        .file("foo/src/lib.rs", r#""#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [COMPILING] foo v0.2.0 [..]
@@ -592,9 +603,10 @@ fn transitive_new_major() {
             version = "0.2.0"
             authors = []
         "#)
-        .file("foo/src/lib.rs", r#""#);
+        .file("foo/src/lib.rs", r#""#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [COMPILING] foo v0.2.0 [..]
@@ -637,10 +649,11 @@ fn remove_patch() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("bar/src/lib.rs", r#""#);
+        .file("bar/src/lib.rs", r#""#)
+        .build();
 
     // Generate a lock file where `bar` is unused
-    assert_that(p.cargo_process("build"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     let mut lock_file1 = String::new();
     File::open(p.root().join("Cargo.lock")).unwrap()
         .read_to_string(&mut lock_file1).unwrap();
@@ -696,9 +709,10 @@ fn non_crates_io() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("foo/src/lib.rs", r#""#);
+        .file("foo/src/lib.rs", r#""#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to parse manifest at `[..]`
@@ -729,9 +743,10 @@ fn replace_with_crates_io() {
             version = "0.1.0"
             authors = []
         "#)
-        .file("foo/src/lib.rs", r#""#);
+        .file("foo/src/lib.rs", r#""#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 [UPDATING] [..]
@@ -740,5 +755,44 @@ error: failed to resolve patches for `[..]`
 Caused by:
   patch for `foo` in `[..]` points to the same source, but patches must point \
   to different sources
+"));
+}
+
+#[test]
+fn patch_in_virtual() {
+    Package::new("foo", "0.1.0").publish();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["bar"]
+
+            [patch.crates-io]
+            foo = { path = "foo" }
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", r#""#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            foo = "0.1"
+        "#)
+        .file("bar/src/lib.rs", r#""#)
+        .build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+    assert_that(p.cargo("build"),
+                execs().with_status(0).with_stderr("\
+[FINISHED] [..]
 "));
 }

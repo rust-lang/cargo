@@ -126,7 +126,7 @@ fn transmit(config: &Config,
         ref keywords, ref readme, ref repository, ref license, ref license_file,
         ref categories, ref badges,
     } = *manifest.metadata();
-    let readme = match *readme {
+    let readme_content = match *readme {
         Some(ref readme) => Some(paths::read(&pkg.root().join(readme))?),
         None => None,
     };
@@ -153,7 +153,8 @@ fn transmit(config: &Config,
         documentation: documentation.clone(),
         keywords: keywords.clone(),
         categories: categories.clone(),
-        readme: readme,
+        readme: readme_content,
+        readme_file: readme.clone(),
         repository: repository.clone(),
         license: license.clone(),
         license_file: license_file.clone(),

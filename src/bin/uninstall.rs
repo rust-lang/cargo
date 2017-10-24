@@ -40,7 +40,7 @@ uninstalled for a crate but the `--bin` and `--example` flags can be used to
 only uninstall particular binaries.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,

@@ -7,7 +7,7 @@ use hamcrest::assert_that;
 
 #[test]
 fn bad1() {
-    let foo = project("foo")
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -18,8 +18,9 @@ fn bad1() {
         .file(".cargo/config", r#"
               [target]
               nonexistent-target = "foo"
-        "#);
-    assert_that(foo.cargo_process("build").arg("-v")
+        "#)
+        .build();
+    assert_that(p.cargo("build").arg("-v")
                    .arg("--target=nonexistent-target"),
                 execs().with_status(101).with_stderr("\
 [ERROR] expected table for configuration key `target.nonexistent-target`, \
@@ -29,7 +30,7 @@ but found string in [..]config
 
 #[test]
 fn bad2() {
-    let foo = project("foo")
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -40,8 +41,9 @@ fn bad2() {
         .file(".cargo/config", r#"
               [http]
                 proxy = 3.0
-        "#);
-    assert_that(foo.cargo_process("publish").arg("-v"),
+        "#)
+        .build();
+    assert_that(p.cargo("publish").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Couldn't load Cargo configuration
 
@@ -61,7 +63,7 @@ Caused by:
 
 #[test]
 fn bad3() {
-    let foo = project("foo")
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
             name = "foo"
@@ -72,10 +74,11 @@ fn bad3() {
         .file(".cargo/config", r#"
             [http]
               proxy = true
-        "#);
+        "#)
+        .build();
     Package::new("foo", "1.0.0").publish();
 
-    assert_that(foo.cargo_process("publish").arg("-v"),
+    assert_that(p.cargo("publish").arg("-v"),
                 execs().with_status(101).with_stderr("\
 error: failed to update registry [..]
 
@@ -87,12 +90,13 @@ expected a string, but found a boolean for `http.proxy` in [..]config
 
 #[test]
 fn bad4() {
-    let foo = project("foo")
+    let p = project("foo")
         .file(".cargo/config", r#"
             [cargo-new]
               name = false
-        "#);
-    assert_that(foo.cargo_process("new").arg("-v").arg("foo"),
+        "#)
+        .build();
+    assert_that(p.cargo("new").arg("-v").arg("foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Failed to create project `foo` at `[..]`
 
@@ -104,16 +108,16 @@ expected a string, but found a boolean for `cargo-new.name` in [..]config
 
 #[test]
 fn bad5() {
-    let foo = project("foo")
+    let p = project("foo")
         .file(".cargo/config", r#"
             foo = ""
         "#)
         .file("foo/.cargo/config", r#"
             foo = 2
-        "#);
-    foo.build();
-    assert_that(foo.cargo("new")
-                   .arg("-v").arg("foo").cwd(&foo.root().join("foo")),
+        "#)
+        .build();
+    assert_that(p.cargo("new")
+                   .arg("-v").arg("foo").cwd(&p.root().join("foo")),
                 execs().with_status(101).with_stderr("\
 [ERROR] Failed to create project `foo` at `[..]`
 
@@ -135,19 +139,20 @@ Caused by:
 
 #[test]
 fn bad_cargo_config_jobs() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-        [package]
-        name = "foo"
-        version = "0.0.0"
-        authors = []
-    "#)
-    .file("src/lib.rs", "")
-    .file(".cargo/config", r#"
-        [build]
-        jobs = -1
-    "#);
-    assert_that(foo.cargo_process("build").arg("-v"),
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [build]
+            jobs = -1
+        "#)
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [ERROR] build.jobs must be positive, but found -1 in [..]
 "));
@@ -155,56 +160,59 @@ fn bad_cargo_config_jobs() {
 
 #[test]
 fn default_cargo_config_jobs() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-        [package]
-        name = "foo"
-        version = "0.0.0"
-        authors = []
-    "#)
-    .file("src/lib.rs", "")
-    .file(".cargo/config", r#"
-        [build]
-        jobs = 1
-    "#);
-    assert_that(foo.cargo_process("build").arg("-v"),
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [build]
+            jobs = 1
+        "#)
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
 #[test]
 fn good_cargo_config_jobs() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-        [package]
-        name = "foo"
-        version = "0.0.0"
-        authors = []
-    "#)
-    .file("src/lib.rs", "")
-    .file(".cargo/config", r#"
-        [build]
-        jobs = 4
-    "#);
-    assert_that(foo.cargo_process("build").arg("-v"),
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .file(".cargo/config", r#"
+            [build]
+            jobs = 4
+        "#)
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
 #[test]
 fn invalid_global_config() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-        [package]
-        name = "foo"
-        version = "0.0.0"
-        authors = []
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
 
-        [dependencies]
-        foo = "0.1.0"
-    "#)
-    .file(".cargo/config", "4")
-    .file("src/lib.rs", "");
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file(".cargo/config", "4")
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(foo.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Couldn't load Cargo configuration
 
@@ -221,17 +229,18 @@ Caused by:
 
 #[test]
 fn bad_cargo_lock() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-        [package]
-        name = "foo"
-        version = "0.0.0"
-        authors = []
-    "#)
-    .file("Cargo.lock", "[[package]]\nfoo = 92")
-    .file("src/lib.rs", "");
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file("Cargo.lock", "[[package]]\nfoo = 92")
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(foo.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse lock file at: [..]Cargo.lock
 
@@ -256,7 +265,7 @@ fn duplicate_packages_in_cargo_lock() {
         "#)
         .file("src/lib.rs", "")
         .file("Cargo.lock", r#"
-            [root]
+            [[package]]
             name = "bar"
             version = "0.0.1"
             dependencies = [
@@ -272,8 +281,8 @@ fn duplicate_packages_in_cargo_lock() {
             name = "foo"
             version = "0.1.0"
             source = "registry+https://github.com/rust-lang/crates.io-index"
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build").arg("--verbose"),
                 execs().with_status(101).with_stderr("\
@@ -300,7 +309,7 @@ fn bad_source_in_cargo_lock() {
         "#)
         .file("src/lib.rs", "")
         .file("Cargo.lock", r#"
-            [root]
+            [[package]]
             name = "bar"
             version = "0.0.1"
             dependencies = [
@@ -311,8 +320,8 @@ fn bad_source_in_cargo_lock() {
             name = "foo"
             version = "0.1.0"
             source = "You shall not parse"
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build").arg("--verbose"),
                 execs().with_status(101).with_stderr("\
@@ -334,14 +343,14 @@ fn bad_dependency_in_lockfile() {
         "#)
         .file("src/lib.rs", "")
         .file("Cargo.lock", r#"
-            [root]
+            [[package]]
             name = "foo"
             version = "0.0.1"
             dependencies = [
              "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
             ]
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build").arg("--verbose"),
                 execs().with_status(101).with_stderr("\
@@ -355,19 +364,20 @@ Caused by:
 
 #[test]
 fn bad_git_dependency() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-        [package]
-        name = "foo"
-        version = "0.0.0"
-        authors = []
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
 
-        [dependencies]
-        foo = { git = "file:.." }
-    "#)
-    .file("src/lib.rs", "");
+            [dependencies]
+            foo = { git = "file:.." }
+        "#)
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(foo.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] git repository `file:///`
 [ERROR] failed to load source for a dependency on `foo`
@@ -385,19 +395,20 @@ Caused by:
 
 #[test]
 fn bad_crate_type() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-        [package]
-        name = "foo"
-        version = "0.0.0"
-        authors = []
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
 
-        [lib]
-        crate-type = ["bad_type", "rlib"]
-    "#)
-    .file("src/lib.rs", "");
+            [lib]
+            crate-type = ["bad_type", "rlib"]
+        "#)
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(foo.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr_contains("\
 error: failed to run `rustc` to learn about target-specific information
 "));
@@ -405,21 +416,22 @@ error: failed to run `rustc` to learn about target-specific information
 
 #[test]
 fn malformed_override() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-        [package]
-        name = "foo"
-        version = "0.0.0"
-        authors = []
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
 
-        [target.x86_64-apple-darwin.freetype]
-        native = {
-          foo: "bar"
-        }
-    "#)
-    .file("src/lib.rs", "");
+            [target.x86_64-apple-darwin.freetype]
+            native = {
+              foo: "bar"
+            }
+        "#)
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(foo.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -433,25 +445,26 @@ Caused by:
 
 #[test]
 fn duplicate_binary_names() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-       [package]
-       name = "qqq"
-       version = "0.1.0"
-       authors = ["A <a@a.a>"]
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+           [package]
+           name = "qqq"
+           version = "0.1.0"
+           authors = ["A <a@a.a>"]
 
-       [[bin]]
-       name = "e"
-       path = "a.rs"
+           [[bin]]
+           name = "e"
+           path = "a.rs"
 
-       [[bin]]
-       name = "e"
-       path = "b.rs"
-    "#)
-    .file("a.rs", r#"fn main() -> () {}"#)
-    .file("b.rs", r#"fn main() -> () {}"#);
+           [[bin]]
+           name = "e"
+           path = "b.rs"
+        "#)
+        .file("a.rs", r#"fn main() -> () {}"#)
+        .file("b.rs", r#"fn main() -> () {}"#)
+        .build();
 
-    assert_that(foo.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -462,25 +475,26 @@ Caused by:
 
 #[test]
 fn duplicate_example_names() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-       [package]
-       name = "qqq"
-       version = "0.1.0"
-       authors = ["A <a@a.a>"]
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+           [package]
+           name = "qqq"
+           version = "0.1.0"
+           authors = ["A <a@a.a>"]
 
-       [[example]]
-       name = "ex"
-       path = "examples/ex.rs"
+           [[example]]
+           name = "ex"
+           path = "examples/ex.rs"
 
-       [[example]]
-       name = "ex"
-       path = "examples/ex2.rs"
-    "#)
-    .file("examples/ex.rs", r#"fn main () -> () {}"#)
-    .file("examples/ex2.rs", r#"fn main () -> () {}"#);
+           [[example]]
+           name = "ex"
+           path = "examples/ex2.rs"
+        "#)
+        .file("examples/ex.rs", r#"fn main () -> () {}"#)
+        .file("examples/ex2.rs", r#"fn main () -> () {}"#)
+        .build();
 
-    assert_that(foo.cargo_process("build").arg("--example").arg("ex"),
+    assert_that(p.cargo("build").arg("--example").arg("ex"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -491,25 +505,26 @@ Caused by:
 
 #[test]
 fn duplicate_bench_names() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-       [package]
-       name = "qqq"
-       version = "0.1.0"
-       authors = ["A <a@a.a>"]
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+           [package]
+           name = "qqq"
+           version = "0.1.0"
+           authors = ["A <a@a.a>"]
 
-       [[bench]]
-       name = "ex"
-       path = "benches/ex.rs"
+           [[bench]]
+           name = "ex"
+           path = "benches/ex.rs"
 
-       [[bench]]
-       name = "ex"
-       path = "benches/ex2.rs"
-    "#)
-    .file("benches/ex.rs", r#"fn main () {}"#)
-    .file("benches/ex2.rs", r#"fn main () {}"#);
+           [[bench]]
+           name = "ex"
+           path = "benches/ex2.rs"
+        "#)
+        .file("benches/ex.rs", r#"fn main () {}"#)
+        .file("benches/ex2.rs", r#"fn main () {}"#)
+        .build();
 
-    assert_that(foo.cargo_process("bench"),
+    assert_that(p.cargo("bench"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -520,40 +535,41 @@ Caused by:
 
 #[test]
 fn duplicate_deps() {
-    let foo = project("foo")
-    .file("shim-bar/Cargo.toml", r#"
-       [package]
-       name = "bar"
-       version = "0.0.1"
-       authors = []
-    "#)
-    .file("shim-bar/src/lib.rs", r#"
-            pub fn a() {}
-    "#)
-    .file("linux-bar/Cargo.toml", r#"
-       [package]
-       name = "bar"
-       version = "0.0.1"
-       authors = []
-    "#)
-    .file("linux-bar/src/lib.rs", r#"
-            pub fn a() {}
-    "#)
-    .file("Cargo.toml", r#"
-       [package]
-       name = "qqq"
-       version = "0.0.1"
-       authors = []
+    let p = project("foo")
+        .file("shim-bar/Cargo.toml", r#"
+           [package]
+           name = "bar"
+           version = "0.0.1"
+           authors = []
+        "#)
+        .file("shim-bar/src/lib.rs", r#"
+                pub fn a() {}
+        "#)
+        .file("linux-bar/Cargo.toml", r#"
+           [package]
+           name = "bar"
+           version = "0.0.1"
+           authors = []
+        "#)
+        .file("linux-bar/src/lib.rs", r#"
+                pub fn a() {}
+        "#)
+        .file("Cargo.toml", r#"
+           [package]
+           name = "qqq"
+           version = "0.0.1"
+           authors = []
 
-       [dependencies]
-       bar = { path = "shim-bar" }
+           [dependencies]
+           bar = { path = "shim-bar" }
 
-       [target.x86_64-unknown-linux-gnu.dependencies]
-       bar = { path = "linux-bar" }
-    "#)
-    .file("src/main.rs", r#"fn main () {}"#);
+           [target.x86_64-unknown-linux-gnu.dependencies]
+           bar = { path = "linux-bar" }
+        "#)
+        .file("src/main.rs", r#"fn main () {}"#)
+        .build();
 
-    assert_that(foo.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -565,40 +581,41 @@ have a single canonical source path irrespective of build target.
 
 #[test]
 fn duplicate_deps_diff_sources() {
-    let foo = project("foo")
-    .file("shim-bar/Cargo.toml", r#"
-       [package]
-       name = "bar"
-       version = "0.0.1"
-       authors = []
-    "#)
-    .file("shim-bar/src/lib.rs", r#"
-            pub fn a() {}
-    "#)
-    .file("linux-bar/Cargo.toml", r#"
-       [package]
-       name = "bar"
-       version = "0.0.1"
-       authors = []
-    "#)
-    .file("linux-bar/src/lib.rs", r#"
-            pub fn a() {}
-    "#)
-    .file("Cargo.toml", r#"
-       [package]
-       name = "qqq"
-       version = "0.0.1"
-       authors = []
+    let p = project("foo")
+        .file("shim-bar/Cargo.toml", r#"
+           [package]
+           name = "bar"
+           version = "0.0.1"
+           authors = []
+        "#)
+        .file("shim-bar/src/lib.rs", r#"
+                pub fn a() {}
+        "#)
+        .file("linux-bar/Cargo.toml", r#"
+           [package]
+           name = "bar"
+           version = "0.0.1"
+           authors = []
+        "#)
+        .file("linux-bar/src/lib.rs", r#"
+                pub fn a() {}
+        "#)
+        .file("Cargo.toml", r#"
+           [package]
+           name = "qqq"
+           version = "0.0.1"
+           authors = []
 
-       [target.i686-unknown-linux-gnu.dependencies]
-       bar = { path = "shim-bar" }
+           [target.i686-unknown-linux-gnu.dependencies]
+           bar = { path = "shim-bar" }
 
-       [target.x86_64-unknown-linux-gnu.dependencies]
-       bar = { path = "linux-bar" }
-    "#)
-    .file("src/main.rs", r#"fn main () {}"#);
+           [target.x86_64-unknown-linux-gnu.dependencies]
+           bar = { path = "linux-bar" }
+        "#)
+        .file("src/main.rs", r#"fn main () {}"#)
+        .build();
 
-    assert_that(foo.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -620,17 +637,17 @@ fn unused_keys() {
            [target.foo]
            bar = "3"
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 warning: unused manifest key: target.foo.bar
 [COMPILING] foo v0.1.0 (file:///[..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
-    let mut p = project("foo");
-    p = p
+    let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
 
@@ -641,8 +658,9 @@ warning: unused manifest key: target.foo.bar
         "#)
         .file("src/lib.rs", r#"
             pub fn foo() {}
-        "#);
-    assert_that(p.cargo_process("build"),
+        "#)
+        .build();
+    assert_that(p.cargo("build"),
                 execs().with_status(0)
                     .with_stderr("\
 warning: unused manifest key: project.bulid
@@ -650,8 +668,7 @@ warning: unused manifest key: project.bulid
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
-    let mut p = project("bar");
-    p = p
+    let p = project("bar")
         .file("Cargo.toml", r#"
             [project]
 
@@ -664,8 +681,9 @@ warning: unused manifest key: project.bulid
         "#)
         .file("src/lib.rs", r#"
             pub fn foo() {}
-        "#);
-    assert_that(p.cargo_process("build"),
+        "#)
+        .build();
+    assert_that(p.cargo("build"),
                 execs().with_status(0)
                     .with_stderr("\
 warning: unused manifest key: lib.build
@@ -678,20 +696,21 @@ warning: unused manifest key: lib.build
 #[test]
 fn empty_dependencies() {
     let p = project("empty_deps")
-    .file("Cargo.toml", r#"
-        [package]
-        name = "empty_deps"
-        version = "0.0.0"
-        authors = []
+        .file("Cargo.toml", r#"
+            [package]
+            name = "empty_deps"
+            version = "0.0.0"
+            authors = []
 
-        [dependencies]
-        foo = {}
-    "#)
-    .file("src/main.rs", "fn main() {}");
+            [dependencies]
+            foo = {}
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     Package::new("foo", "0.0.1").publish();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr_contains("\
 warning: dependency (foo) specified without providing a local path, Git repository, or version \
 to use. This will be considered an error in future versions
@@ -701,18 +720,19 @@ to use. This will be considered an error in future versions
 #[test]
 fn invalid_toml_historically_allowed_is_warned() {
     let p = project("empty_deps")
-    .file("Cargo.toml", r#"
-        [package]
-        name = "empty_deps"
-        version = "0.0.0"
-        authors = []
-    "#)
-    .file(".cargo/config", r#"
-        [foo] bar = 2
-    "#)
-    .file("src/main.rs", "fn main() {}");
+        .file("Cargo.toml", r#"
+            [package]
+            name = "empty_deps"
+            version = "0.0.0"
+            authors = []
+        "#)
+        .file(".cargo/config", r#"
+            [foo] bar = 2
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 warning: TOML file found which contains invalid syntax and will soon not parse
 at `[..]config`.
@@ -728,21 +748,22 @@ in the future.
 
 #[test]
 fn ambiguous_git_reference() {
-    let foo = project("foo")
-    .file("Cargo.toml", r#"
-        [package]
-        name = "foo"
-        version = "0.0.0"
-        authors = []
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            authors = []
 
-        [dependencies.bar]
-        git = "https://127.0.0.1"
-        branch = "master"
-        tag = "some-tag"
-    "#)
-    .file("src/lib.rs", "");
+            [dependencies.bar]
+            git = "https://127.0.0.1"
+            branch = "master"
+            tag = "some-tag"
+        "#)
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(foo.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_stderr_contains("\
 [WARNING] dependency (bar) specification is ambiguous. \
 Only one of `branch`, `tag` or `rev` is allowed. \
@@ -762,9 +783,10 @@ fn bad_source_config1() {
         .file("src/lib.rs", "")
         .file(".cargo/config", r#"
             [source.foo]
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: no source URL specified for `source.foo`, need [..]
 "));
@@ -787,9 +809,10 @@ fn bad_source_config2() {
             [source.crates-io]
             registry = 'http://example.com'
             replace-with = 'bar'
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to load source for a dependency on `bar`
 
@@ -819,9 +842,10 @@ fn bad_source_config3() {
             [source.crates-io]
             registry = 'http://example.com'
             replace-with = 'crates-io'
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to load source for a dependency on `bar`
 
@@ -854,9 +878,10 @@ fn bad_source_config4() {
             [source.bar]
             registry = 'http://example.com'
             replace-with = 'crates-io'
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to load source for a dependency on `bar`
 
@@ -889,9 +914,10 @@ fn bad_source_config5() {
 
             [source.bar]
             registry = 'not a url'
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: configuration key `source.bar.registry` specified an invalid URL (in [..])
 
@@ -913,9 +939,10 @@ fn both_git_and_path_specified() {
         git = "https://127.0.0.1"
         path = "bar"
     "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(foo.cargo_process("build").arg("-v"),
+    assert_that(foo.cargo("build").arg("-v"),
                 execs().with_stderr_contains("\
 [WARNING] dependency (bar) specification is ambiguous. \
 Only one of `git` or `path` is allowed. \
@@ -940,9 +967,10 @@ fn bad_source_config6() {
             [source.crates-io]
             registry = 'http://example.com'
             replace-with = ['not', 'a', 'string']
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: expected a string, but found a array for `source.crates-io.replace-with` in [..]
 "));
@@ -961,9 +989,10 @@ fn ignored_git_revision() {
         path = "bar"
         branch = "spam"
     "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(foo.cargo_process("build").arg("-v"),
+    assert_that(foo.cargo("build").arg("-v"),
                 execs().with_stderr_contains("\
 [WARNING] key `branch` is ignored for dependency (bar). \
 This will be considered an error in future versions"));
@@ -986,11 +1015,12 @@ fn bad_source_config7() {
             [source.foo]
             registry = 'http://example.com'
             local-registry = 'file:///another/file'
-        "#);
+        "#)
+        .build();
 
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: more than one source URL specified for `source.foo`
 "));
@@ -1008,9 +1038,10 @@ fn bad_dependency() {
             [dependencies]
             bar = 3
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 
@@ -1031,9 +1062,10 @@ fn bad_debuginfo() {
             [profile.dev]
             debug = 'a'
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 
@@ -1052,9 +1084,10 @@ fn bad_opt_level() {
             authors = []
             build = 3
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 

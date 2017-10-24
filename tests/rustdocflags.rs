@@ -13,8 +13,8 @@ fn parses_env() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo").arg("-v"),
                 execs().with_status(0)
@@ -36,8 +36,8 @@ fn parses_config() {
         .file(".cargo/config", r#"
             [build]
             rustdocflags = ["--cfg", "foo"]
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("doc").arg("-v"),
                 execs().with_status(0)
@@ -55,8 +55,8 @@ fn bad_flags() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--bogus"),
                 execs().with_status(101));
@@ -71,8 +71,8 @@ fn rerun() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo"),
                 execs().with_status(0));
