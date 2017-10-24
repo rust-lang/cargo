@@ -154,8 +154,7 @@ all of its own dependencies, and others can also start using the crate as well.
 However, crates that use dependencies specified with only a path are not
 permitted on [crates.io]. If we wanted to publish our `hello_world` crate, we
 would need to publish a version of `hello_utils` to [crates.io](https://crates.io)
-(or specify a `git` repository location) and specify its version in
-the dependencies line as well:
+and specify its version in the dependencies line as well:
 
 ```toml
 [dependencies]

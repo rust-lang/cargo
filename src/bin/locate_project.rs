@@ -23,8 +23,7 @@ pub struct ProjectLocation {
     root: String
 }
 
-pub fn execute(flags: LocateProjectFlags,
-               config: &Config) -> CliResult {
+pub fn execute(flags: LocateProjectFlags, config: &mut Config) -> CliResult {
     let root = find_root_manifest_for_wd(flags.flag_manifest_path, config.cwd())?;
 
     let string = root.to_str()

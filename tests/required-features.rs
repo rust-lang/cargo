@@ -36,8 +36,8 @@ fn build_bin_default_features() {
         .file("src/lib.rs", r#"
             #[cfg(feature = "a")]
             pub fn foo() {}
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -73,8 +73,8 @@ fn build_bin_arg_features() {
             name = "foo"
             required-features = ["a"]
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(p.cargo("build").arg("--features").arg("a"),
                 execs().with_status(0));
@@ -107,8 +107,8 @@ fn build_bin_multiple_required_features() {
             required-features = ["a"]
         "#)
         .file("src/foo_1.rs", "fn main() {}")
-        .file("src/foo_2.rs", "fn main() {}");
-    p.build();
+        .file("src/foo_2.rs", "fn main() {}")
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -143,8 +143,8 @@ fn build_example_default_features() {
             name = "foo"
             required-features = ["a"]
         "#)
-        .file("examples/foo.rs", "fn main() {}");
-    p.build();
+        .file("examples/foo.rs", "fn main() {}")
+        .build();
 
     assert_that(p.cargo("build").arg("--example=foo"),
                 execs().with_status(0));
@@ -173,8 +173,8 @@ fn build_example_arg_features() {
             name = "foo"
             required-features = ["a"]
         "#)
-        .file("examples/foo.rs", "fn main() {}");
-    p.build();
+        .file("examples/foo.rs", "fn main() {}")
+        .build();
 
     assert_that(p.cargo("build").arg("--example=foo").arg("--features").arg("a"),
                 execs().with_status(0));
@@ -205,8 +205,8 @@ fn build_example_multiple_required_features() {
             required-features = ["a"]
         "#)
         .file("examples/foo_1.rs", "fn main() {}")
-        .file("examples/foo_2.rs", "fn main() {}");
-    p.build();
+        .file("examples/foo_2.rs", "fn main() {}")
+        .build();
 
     assert_that(p.cargo("build").arg("--example=foo_1"),
                 execs().with_status(101).with_stderr("\
@@ -260,8 +260,8 @@ fn test_default_features() {
             name = "foo"
             required-features = ["a"]
         "#)
-        .file("tests/foo.rs", "#[test]\nfn test() {}");
-    p.build();
+        .file("tests/foo.rs", "#[test]\nfn test() {}")
+        .build();
 
     assert_that(p.cargo("test"),
                 execs().with_status(0).with_stderr(format!("\
@@ -304,8 +304,8 @@ fn test_arg_features() {
             name = "foo"
             required-features = ["a"]
         "#)
-        .file("tests/foo.rs", "#[test]\nfn test() {}");
-    p.build();
+        .file("tests/foo.rs", "#[test]\nfn test() {}")
+        .build();
 
     assert_that(p.cargo("test").arg("--features").arg("a"),
                 execs().with_status(0).with_stderr(format!("\
@@ -339,8 +339,8 @@ fn test_multiple_required_features() {
             required-features = ["a"]
         "#)
         .file("tests/foo_1.rs", "#[test]\nfn test() {}")
-        .file("tests/foo_2.rs", "#[test]\nfn test() {}");
-    p.build();
+        .file("tests/foo_2.rs", "#[test]\nfn test() {}")
+        .build();
 
     assert_that(p.cargo("test"),
                 execs().with_status(0).with_stderr(format!("\
@@ -390,8 +390,8 @@ fn bench_default_features() {
 
             #[bench]
             fn bench(_: &mut test::Bencher) {
-            }"#);
-    p.build();
+            }"#)
+        .build();
 
     assert_that(p.cargo("bench"),
                 execs().with_status(0).with_stderr(format!("\
@@ -444,8 +444,8 @@ fn bench_arg_features() {
 
             #[bench]
             fn bench(_: &mut test::Bencher) {
-            }"#);
-    p.build();
+            }"#)
+        .build();
 
     assert_that(p.cargo("bench").arg("--features").arg("a"),
                 execs().with_status(0).with_stderr(format!("\
@@ -495,8 +495,8 @@ fn bench_multiple_required_features() {
 
             #[bench]
             fn bench(_: &mut test::Bencher) {
-            }"#);
-    p.build();
+            }"#)
+        .build();
 
     assert_that(p.cargo("bench"),
                 execs().with_status(0).with_stderr(format!("\
@@ -541,8 +541,8 @@ fn install_default_features() {
             required-features = ["a"]
         "#)
         .file("src/main.rs", "fn main() {}")
-        .file("examples/foo.rs", "fn main() {}");
-    p.build();
+        .file("examples/foo.rs", "fn main() {}")
+        .build();
 
     assert_that(p.cargo("install"),
                 execs().with_status(0));
@@ -611,8 +611,8 @@ fn install_arg_features() {
             name = "foo"
             required-features = ["a"]
         "#)
-        .file("src/main.rs", "fn main() {}");
-    p.build();
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     assert_that(p.cargo("install").arg("--features").arg("a"),
                 execs().with_status(0));
@@ -647,8 +647,8 @@ fn install_multiple_required_features() {
             required-features = ["a"]
         "#)
         .file("src/foo_1.rs", "fn main() {}")
-        .file("src/foo_2.rs", "fn main() {}");
-    p.build();
+        .file("src/foo_2.rs", "fn main() {}")
+        .build();
 
     assert_that(p.cargo("install"),
                 execs().with_status(0));
@@ -721,8 +721,8 @@ fn dep_feature_in_toml() {
             [features]
             a = []
         "#)
-        .file("bar/src/lib.rs", "");
-    p.build();
+        .file("bar/src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -811,8 +811,8 @@ fn dep_feature_in_cmd_line() {
             [features]
             a = []
         "#)
-        .file("bar/src/lib.rs", "");
-    p.build();
+        .file("bar/src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -903,8 +903,8 @@ fn test_skips_compiling_bin_with_missing_required_features() {
         "#)
         .file("src/bin/foo.rs", "extern crate bar; fn main() {}")
         .file("tests/foo.rs", "")
-        .file("benches/foo.rs", "");
-    p.build();
+        .file("benches/foo.rs", "")
+        .build();
 
     assert_that(p.cargo("test"),
                 execs().with_status(0).with_stderr(format!("\
@@ -951,8 +951,8 @@ fn run_default() {
             required-features = ["a"]
         "#)
         .file("src/lib.rs", "")
-        .file("src/main.rs", "extern crate foo; fn main() {}");
-    p.build();
+        .file("src/main.rs", "extern crate foo; fn main() {}")
+        .build();
 
     assert_that(p.cargo("run"),
                 execs().with_status(101).with_stderr("\
@@ -990,8 +990,8 @@ fn run_default_multiple_required_features() {
         "#)
         .file("src/lib.rs", "")
         .file("src/foo1.rs", "extern crate foo; fn main() {}")
-        .file("src/foo2.rs", "extern crate foo; fn main() {}");
-    p.build();
+        .file("src/foo2.rs", "extern crate foo; fn main() {}")
+        .build();
 
     assert_that(p.cargo("run"),
                 execs().with_status(101).with_stderr("\

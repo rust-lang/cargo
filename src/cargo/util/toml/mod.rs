@@ -12,7 +12,7 @@ use serde_ignored;
 use toml;
 use url::Url;
 
-use core::{SourceId, Profiles, PackageIdSpec, GitReference, WorkspaceConfig};
+use core::{SourceId, Profiles, PackageIdSpec, GitReference, WorkspaceConfig, WorkspaceRootConfig};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::{EitherManifest, VirtualManifest, Features, Feature};
 use core::dependency::{Kind, Platform};
@@ -520,7 +520,7 @@ impl TomlManifest {
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
         let project = project.ok_or_else(|| {
-            CargoError::from("no `package` or `project` section found.")
+            CargoError::from("no `package` section found.")
         })?;
 
         let package_name = project.name.trim();
@@ -642,10 +642,9 @@ impl TomlManifest {
         let workspace_config = match (me.workspace.as_ref(),
                                       project.workspace.as_ref()) {
             (Some(config), None) => {
-                WorkspaceConfig::Root {
-                    members: config.members.clone(),
-                    exclude: config.exclude.clone().unwrap_or_default(),
-                }
+                WorkspaceConfig::Root(
+                    WorkspaceRootConfig::new(&package_root, &config.members, &config.exclude)
+                )
             }
             (None, root) => {
                 WorkspaceConfig::Member { root: root.cloned() }
@@ -738,10 +737,9 @@ impl TomlManifest {
         let profiles = build_profiles(&me.profile);
         let workspace_config = match me.workspace {
             Some(ref config) => {
-                WorkspaceConfig::Root {
-                    members: config.members.clone(),
-                    exclude: config.exclude.clone().unwrap_or_default(),
-                }
+                WorkspaceConfig::Root(
+                    WorkspaceRootConfig::new(&root, &config.members, &config.exclude)
+                )
             }
             None => {
                 bail!("virtual manifests must be configured with [workspace]");

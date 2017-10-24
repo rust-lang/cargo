@@ -77,8 +77,8 @@ fn ctrl_c_kills_everyone() {
                 let _ = socket.read(&mut [0; 10]);
                 panic!("that read should never return");
             }}
-        "#, addr));
-    p.build();
+        "#, addr))
+        .build();
 
     let mut cargo = p.cargo("build").build_command();
     cargo.stdin(Stdio::piped())

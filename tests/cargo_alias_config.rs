@@ -13,9 +13,10 @@ fn alias_incorrect_config_type() {
         .file(".cargo/config",r#"
             [alias]
             b-cargo-test = 5
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("b-cargo-test").arg("-v"),
+    assert_that(p.cargo("b-cargo-test").arg("-v"),
                 execs().with_status(101).
                 with_stderr_contains("[ERROR] invalid configuration \
 for key `alias.b-cargo-test`
@@ -33,9 +34,10 @@ fn alias_default_config_overrides_config() {
         .file(".cargo/config",r#"
             [alias]
             b = "not_build"
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("b").arg("-v"),
+    assert_that(p.cargo("b").arg("-v"),
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]"));
 }
@@ -50,9 +52,10 @@ fn alias_config() {
         .file(".cargo/config",r#"
             [alias]
             b-cargo-test = "build"
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("b-cargo-test").arg("-v"),
+    assert_that(p.cargo("b-cargo-test").arg("-v"),
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]
 [RUNNING] `rustc --crate-name foo [..]"));
@@ -68,9 +71,10 @@ fn alias_list_test() {
         .file(".cargo/config",r#"
             [alias]
             b-cargo-test = ["build", "--release"]
-         "#);
+         "#)
+        .build();
 
-    assert_that(p.cargo_process("b-cargo-test").arg("-v"),
+    assert_that(p.cargo("b-cargo-test").arg("-v"),
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]").
                 with_stderr_contains("[RUNNING] `rustc --crate-name [..]")
@@ -87,9 +91,10 @@ fn alias_with_flags_config() {
         .file(".cargo/config",r#"
             [alias]
             b-cargo-test = "build --release"
-         "#);
+         "#)
+        .build();
 
-    assert_that(p.cargo_process("b-cargo-test").arg("-v"),
+    assert_that(p.cargo("b-cargo-test").arg("-v"),
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]").
                 with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]")
@@ -106,9 +111,10 @@ fn cant_shadow_builtin() {
         .file(".cargo/config",r#"
             [alias]
             build = "fetch"
-         "#);
+         "#)
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 ([..])

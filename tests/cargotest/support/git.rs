@@ -6,12 +6,15 @@ use url::Url;
 use git2;
 
 use cargo::util::ProcessError;
-use support::{ProjectBuilder, project, path2url};
+use support::{ProjectBuilder, Project, project, path2url};
 
+#[must_use]
 pub struct RepoBuilder {
     repo: git2::Repository,
     files: Vec<PathBuf>,
 }
+
+pub struct Repository(git2::Repository);
 
 pub fn repo(p: &Path) -> RepoBuilder { RepoBuilder::init(p) }
 
@@ -40,34 +43,40 @@ impl RepoBuilder {
         self
     }
 
-    pub fn build(&self) {
-        let mut index = t!(self.repo.index());
-        for file in self.files.iter() {
-            t!(index.add_path(file));
+    pub fn build(self) -> Repository {
+        {
+            let mut index = t!(self.repo.index());
+            for file in self.files.iter() {
+                t!(index.add_path(file));
+            }
+            t!(index.write());
+            let id = t!(index.write_tree());
+            let tree = t!(self.repo.find_tree(id));
+            let sig = t!(self.repo.signature());
+            t!(self.repo.commit(Some("HEAD"), &sig, &sig,
+                                "Initial commit", &tree, &[]));
         }
-        t!(index.write());
-        let id = t!(index.write_tree());
-        let tree = t!(self.repo.find_tree(id));
-        let sig = t!(self.repo.signature());
-        t!(self.repo.commit(Some("HEAD"), &sig, &sig,
-                            "Initial commit", &tree, &[]));
-    }
-
-    pub fn root(&self) -> &Path {
-        self.repo.workdir().unwrap()
-    }
-
-    pub fn url(&self) -> Url {
-        path2url(self.repo.workdir().unwrap().to_path_buf())
+        let RepoBuilder{ repo, .. } = self;
+        Repository(repo)
     }
 }
 
-pub fn new<F>(name: &str, callback: F) -> Result<ProjectBuilder, ProcessError>
+impl Repository {
+    pub fn root(&self) -> &Path {
+        self.0.workdir().unwrap()
+    }
+
+    pub fn url(&self) -> Url {
+        path2url(self.0.workdir().unwrap().to_path_buf())
+    }
+}
+
+pub fn new<F>(name: &str, callback: F) -> Result<Project, ProcessError>
     where F: FnOnce(ProjectBuilder) -> ProjectBuilder
 {
     let mut git_project = project(name);
     git_project = callback(git_project);
-    git_project.build();
+    let git_project = git_project.build();
 
     let repo = t!(git2::Repository::init(&git_project.root()));
     let mut cfg = t!(repo.config());

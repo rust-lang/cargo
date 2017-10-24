@@ -39,7 +39,7 @@ Options:
     -Z FLAG ...             Unstable (nightly-only) flags to Cargo
 ";
 
-pub fn execute(args: Flags, config: &Config) -> CliResult {
+pub fn execute(args: Flags, config: &mut Config) -> CliResult {
     config.configure(args.flag_verbose,
                      args.flag_quiet,
                      &args.flag_color,
