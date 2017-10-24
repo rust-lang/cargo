@@ -84,6 +84,8 @@ fn fixtures() {
                     }
                 }
 
+                assert!(cmd!("git", "checkout", ".").dir(&dir).run().unwrap().status.success());
+
                 println!("Success!\n");
             }
         }
