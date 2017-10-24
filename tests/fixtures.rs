@@ -39,7 +39,8 @@ fn fixtures() {
                 assert!(cmd!("git", "checkout", ".").dir(&dir).run().unwrap().status.success());
                 assert!(cmd!("cargo", "clean").dir(&dir).run().unwrap().status.success());
                 // we only want to rustfix the final project, not any dependencies
-                assert!(cmd!("cargo", "build").dir(&dir).run().unwrap().status.success());
+                // we don't care if the final build succeeds, since we're also testing error suggestions
+                let _ = cmd!("cargo", "build").dir(&dir).stderr_null().stdout_null().run();
 
                 let manifest = format!("{:?}", root_dir.join("Cargo.toml"));
 
@@ -60,9 +61,9 @@ fn fixtures() {
                 if std::env::var("APPLY_RUSTFIX").is_ok() {
                     std::fs::copy(dir.join("output.txt"), test.join("output.txt")).unwrap();
 
-                    cmd!("git", "diff").dir(&dir).stdout(test.join("diff.diff")).run().unwrap();
+                    cmd!("git", "diff", ".").dir(&dir).stdout(test.join("diff.diff")).run().unwrap();
                 } else {
-                    cmd!("git", "diff").dir(&dir).stdout(dir.join("diff.diff")).run().unwrap();
+                    cmd!("git", "diff", ".").dir(&dir).stdout(dir.join("diff.diff")).run().unwrap();
 
                     let diff = cmd!("diff", dir.join("diff.diff"), test.join("diff.diff"))
                         .dir(&dir)

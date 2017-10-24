@@ -1,7 +1,10 @@
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Button)>`)
+
 [1;34m  -->[0m src/controls.rs:245:17-245:78
+
+[0]: try
 [1;33mSuggestion - Replace:[0m
 
 [31mmem::transmute::<*mut c_void, &mut Box<FnMut(&Button)>>(data)[0m(&button)
@@ -10,12 +13,16 @@
 
     &mut *(data as *mut Box<FnMut(&Button)>)
 
-[1;32m==>[0m [32mWhat do you want to do? [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
+
+[1;32m==>[0m [32mWhat do you want to do? [0-9] replace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
 [1;32m  >[0m Suggestion accepted. I'll remember that and apply it later.
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Entry)>`)
+
 [1;34m  -->[0m src/controls.rs:350:17-350:77
+
+[0]: try
 [1;33mSuggestion - Replace:[0m
 
 [31mmem::transmute::<*mut c_void, &mut Box<FnMut(&Entry)>>(data)[0m(&entry);
@@ -24,12 +31,16 @@
 
     &mut *(data as *mut Box<FnMut(&Entry)>)
 
-[1;32m==>[0m [32mWhat do you want to do? [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
+
+[1;32m==>[0m [32mWhat do you want to do? [0-9] replace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
 [1;32m  >[0m Suggestion accepted. I'll remember that and apply it later.
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::Entry`
-[1;34m  -->[0m src/controls.rs:373:5-373:5
+
+[1;34m  -->[0m src/controls.rs:373:5-378:6
+
+[0]: try this
 [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn new() -> Entry {
@@ -44,7 +55,8 @@
     
         
 
-[1;32m==>[0m [32mWhat do you want to do? [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
+
+[1;32m==>[0m [32mWhat do you want to do? [0-9] replace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
 [1;32m  >[0m Thanks for playing!
 Good work. Let me just apply these 2 changes!
 ..
