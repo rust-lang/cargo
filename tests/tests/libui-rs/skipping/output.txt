@@ -13,7 +13,7 @@ try
     &mut *(data as *mut Box<FnMut(&Button)>)
 
 
-[1;32m==>[0m [32mWhat do you want to do? [0-9] replace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
+[1;32m==>[0m [32mWhat do you want to do? [0-9] | [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
 [1;32m  >[0m Suggestion accepted. I'll remember that and apply it later.
 
 
@@ -30,7 +30,7 @@ try
     &mut *(data as *mut Box<FnMut(&Entry)>)
 
 
-[1;32m==>[0m [32mWhat do you want to do? [0-9] replace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
+[1;32m==>[0m [32mWhat do you want to do? [0-9] | [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
 [1;32m  >[0m Skipped.
 
 
@@ -53,7 +53,7 @@ try this
         
 
 
-[1;32m==>[0m [32mWhat do you want to do? [0-9] replace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
+[1;32m==>[0m [32mWhat do you want to do? [0-9] | [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
 [1;32m  >[0m Thanks for playing!
 Good work. Let me just apply these 1 changes!
 .

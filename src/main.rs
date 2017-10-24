@@ -23,7 +23,7 @@ use rustfix::{Suggestion, Replacement};
 use rustfix::diagnostics::Diagnostic;
 
 const USER_OPTIONS: &'static str = "What do you want to do? \
-    [0-9] replace | [s]kip | save and [q]uit | [a]bort (without saving)";
+    [0-9] | [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)";
 
 fn main() {
     let program = try_main();
@@ -188,6 +188,17 @@ fn handle_suggestions(
                 }
                 "a" => {
                     return Err(ProgramError::UserAbort);
+                }
+                "r" => {
+                    if suggestion.solutions.len() == 1 && suggestion.solutions[0].replacements.len() == 1 {
+                        let mut solutions = suggestion.solutions;
+                        accepted_suggestions.push(solutions.remove(0).replacements.remove(0));
+                        println!("Suggestion accepted. I'll remember that and apply it later.");
+                        continue 'suggestions;
+                    } else {
+                        println!("{error}: multiple suggestions apply, please pick a number",
+                            error = "Error".red().bold());
+                    }
                 }
                 s => {
                     if let Ok(i) = usize::from_str(s) {
