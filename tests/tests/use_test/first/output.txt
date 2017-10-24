@@ -2,8 +2,9 @@
 
 [1;32mInfo[0m: cannot find type `Iter` in this scope
 [1;34m  -->[0m src/lib.rs:2:12-2:16
-[0]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -12,8 +13,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[1]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[1]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -22,8 +22,7 @@
     use std::collections::btree_map::Iter;
     
 
-[2]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[2]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -32,8 +31,7 @@
     use std::collections::btree_set::Iter;
     
 
-[3]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[3]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -42,8 +40,7 @@
     use std::collections::hash_map::Iter;
     
 
-[4]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[4]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -52,8 +49,7 @@
     use std::collections::hash_set::Iter;
     
 
-[5]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[5]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -62,8 +58,7 @@
     use std::collections::linked_list::Iter;
     
 
-[6]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[6]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -72,8 +67,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[7]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[7]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -82,8 +76,7 @@
     use std::option::Iter;
     
 
-[8]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[8]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -92,8 +85,7 @@
     use std::path::Iter;
     
 
-[9]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[9]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -102,8 +94,7 @@
     use std::result::Iter;
     
 
-[10]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[10]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -112,8 +103,7 @@
     use std::slice::Iter;
     
 
-[11]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[11]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -122,8 +112,9 @@
     use std::sync::mpsc::Iter;
     
 
-[12]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[12]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -132,8 +123,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[13]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[13]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -142,8 +132,7 @@
     use std::collections::btree_map::Iter;
     
 
-[14]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[14]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -152,8 +141,7 @@
     use std::collections::btree_set::Iter;
     
 
-[15]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[15]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -162,8 +150,7 @@
     use std::collections::hash_map::Iter;
     
 
-[16]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[16]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -172,8 +159,7 @@
     use std::collections::hash_set::Iter;
     
 
-[17]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[17]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -182,8 +168,7 @@
     use std::collections::linked_list::Iter;
     
 
-[18]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[18]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -192,8 +177,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[19]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[19]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -202,8 +186,7 @@
     use std::option::Iter;
     
 
-[20]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[20]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -212,8 +195,7 @@
     use std::path::Iter;
     
 
-[21]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[21]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -222,8 +204,7 @@
     use std::result::Iter;
     
 
-[22]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[22]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -232,8 +213,7 @@
     use std::slice::Iter;
     
 
-[23]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[23]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -242,8 +222,9 @@
     use std::sync::mpsc::Iter;
     
 
-[24]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[24]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -252,8 +233,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[25]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[25]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -262,8 +242,7 @@
     use std::collections::btree_map::Iter;
     
 
-[26]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[26]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -272,8 +251,7 @@
     use std::collections::btree_set::Iter;
     
 
-[27]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[27]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -282,8 +260,7 @@
     use std::collections::hash_map::Iter;
     
 
-[28]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[28]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -292,8 +269,7 @@
     use std::collections::hash_set::Iter;
     
 
-[29]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[29]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -302,8 +278,7 @@
     use std::collections::linked_list::Iter;
     
 
-[30]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[30]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -312,8 +287,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[31]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[31]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -322,8 +296,7 @@
     use std::option::Iter;
     
 
-[32]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[32]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -332,8 +305,7 @@
     use std::path::Iter;
     
 
-[33]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[33]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -342,8 +314,7 @@
     use std::result::Iter;
     
 
-[34]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[34]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -352,8 +323,7 @@
     use std::slice::Iter;
     
 
-[35]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[35]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -362,8 +332,9 @@
     use std::sync::mpsc::Iter;
     
 
-[36]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[36]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -372,8 +343,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[37]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[37]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -382,8 +352,7 @@
     use std::collections::btree_map::Iter;
     
 
-[38]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[38]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -392,8 +361,7 @@
     use std::collections::btree_set::Iter;
     
 
-[39]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[39]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -402,8 +370,7 @@
     use std::collections::hash_map::Iter;
     
 
-[40]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[40]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -412,8 +379,7 @@
     use std::collections::hash_set::Iter;
     
 
-[41]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[41]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -422,8 +388,7 @@
     use std::collections::linked_list::Iter;
     
 
-[42]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[42]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -432,8 +397,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[43]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[43]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -442,8 +406,7 @@
     use std::option::Iter;
     
 
-[44]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[44]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -452,8 +415,7 @@
     use std::path::Iter;
     
 
-[45]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[45]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -462,8 +424,7 @@
     use std::result::Iter;
     
 
-[46]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[46]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -472,8 +433,7 @@
     use std::slice::Iter;
     
 
-[47]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[47]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -482,8 +442,9 @@
     use std::sync::mpsc::Iter;
     
 
-[48]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[48]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -492,8 +453,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[49]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[49]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -502,8 +462,7 @@
     use std::collections::btree_map::Iter;
     
 
-[50]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[50]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -512,8 +471,7 @@
     use std::collections::btree_set::Iter;
     
 
-[51]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[51]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -522,8 +480,7 @@
     use std::collections::hash_map::Iter;
     
 
-[52]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[52]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -532,8 +489,7 @@
     use std::collections::hash_set::Iter;
     
 
-[53]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[53]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -542,8 +498,7 @@
     use std::collections::linked_list::Iter;
     
 
-[54]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[54]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -552,8 +507,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[55]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[55]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -562,8 +516,7 @@
     use std::option::Iter;
     
 
-[56]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[56]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -572,8 +525,7 @@
     use std::path::Iter;
     
 
-[57]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[57]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -582,8 +534,7 @@
     use std::result::Iter;
     
 
-[58]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[58]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -592,8 +543,7 @@
     use std::slice::Iter;
     
 
-[59]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[59]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -602,8 +552,9 @@
     use std::sync::mpsc::Iter;
     
 
-[60]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[60]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -612,8 +563,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[61]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[61]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -622,8 +572,7 @@
     use std::collections::btree_map::Iter;
     
 
-[62]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[62]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -632,8 +581,7 @@
     use std::collections::btree_set::Iter;
     
 
-[63]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[63]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -642,8 +590,7 @@
     use std::collections::hash_map::Iter;
     
 
-[64]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[64]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -652,8 +599,7 @@
     use std::collections::hash_set::Iter;
     
 
-[65]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[65]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -662,8 +608,7 @@
     use std::collections::linked_list::Iter;
     
 
-[66]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[66]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -672,8 +617,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[67]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[67]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -682,8 +626,7 @@
     use std::option::Iter;
     
 
-[68]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[68]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -692,8 +635,7 @@
     use std::path::Iter;
     
 
-[69]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[69]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -702,8 +644,7 @@
     use std::result::Iter;
     
 
-[70]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[70]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -712,8 +653,7 @@
     use std::slice::Iter;
     
 
-[71]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[71]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -722,8 +662,9 @@
     use std::sync::mpsc::Iter;
     
 
-[72]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[72]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -732,8 +673,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[73]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[73]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -742,8 +682,7 @@
     use std::collections::btree_map::Iter;
     
 
-[74]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[74]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -752,8 +691,7 @@
     use std::collections::btree_set::Iter;
     
 
-[75]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[75]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -762,8 +700,7 @@
     use std::collections::hash_map::Iter;
     
 
-[76]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[76]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -772,8 +709,7 @@
     use std::collections::hash_set::Iter;
     
 
-[77]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[77]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -782,8 +718,7 @@
     use std::collections::linked_list::Iter;
     
 
-[78]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[78]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -792,8 +727,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[79]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[79]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -802,8 +736,7 @@
     use std::option::Iter;
     
 
-[80]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[80]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -812,8 +745,7 @@
     use std::path::Iter;
     
 
-[81]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[81]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -822,8 +754,7 @@
     use std::result::Iter;
     
 
-[82]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[82]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -832,8 +763,7 @@
     use std::slice::Iter;
     
 
-[83]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[83]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -842,8 +772,9 @@
     use std::sync::mpsc::Iter;
     
 
-[84]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[84]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -852,8 +783,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[85]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[85]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -862,8 +792,7 @@
     use std::collections::btree_map::Iter;
     
 
-[86]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[86]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -872,8 +801,7 @@
     use std::collections::btree_set::Iter;
     
 
-[87]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[87]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -882,8 +810,7 @@
     use std::collections::hash_map::Iter;
     
 
-[88]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[88]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -892,8 +819,7 @@
     use std::collections::hash_set::Iter;
     
 
-[89]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[89]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -902,8 +828,7 @@
     use std::collections::linked_list::Iter;
     
 
-[90]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[90]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -912,8 +837,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[91]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[91]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -922,8 +846,7 @@
     use std::option::Iter;
     
 
-[92]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[92]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -932,8 +855,7 @@
     use std::path::Iter;
     
 
-[93]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[93]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -942,8 +864,7 @@
     use std::result::Iter;
     
 
-[94]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[94]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -952,8 +873,7 @@
     use std::slice::Iter;
     
 
-[95]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[95]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -962,8 +882,9 @@
     use std::sync::mpsc::Iter;
     
 
-[96]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[96]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -972,8 +893,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[97]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[97]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -982,8 +902,7 @@
     use std::collections::btree_map::Iter;
     
 
-[98]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[98]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -992,8 +911,7 @@
     use std::collections::btree_set::Iter;
     
 
-[99]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[99]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1002,8 +920,7 @@
     use std::collections::hash_map::Iter;
     
 
-[100]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[100]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1012,8 +929,7 @@
     use std::collections::hash_set::Iter;
     
 
-[101]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[101]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1022,8 +938,7 @@
     use std::collections::linked_list::Iter;
     
 
-[102]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[102]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1032,8 +947,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[103]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[103]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1042,8 +956,7 @@
     use std::option::Iter;
     
 
-[104]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[104]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1052,8 +965,7 @@
     use std::path::Iter;
     
 
-[105]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[105]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1062,8 +974,7 @@
     use std::result::Iter;
     
 
-[106]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[106]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1072,8 +983,7 @@
     use std::slice::Iter;
     
 
-[107]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[107]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1082,8 +992,9 @@
     use std::sync::mpsc::Iter;
     
 
-[108]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[108]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1092,8 +1003,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[109]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[109]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1102,8 +1012,7 @@
     use std::collections::btree_map::Iter;
     
 
-[110]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[110]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1112,8 +1021,7 @@
     use std::collections::btree_set::Iter;
     
 
-[111]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[111]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1122,8 +1030,7 @@
     use std::collections::hash_map::Iter;
     
 
-[112]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[112]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1132,8 +1039,7 @@
     use std::collections::hash_set::Iter;
     
 
-[113]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[113]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1142,8 +1048,7 @@
     use std::collections::linked_list::Iter;
     
 
-[114]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[114]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1152,8 +1057,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[115]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[115]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1162,8 +1066,7 @@
     use std::option::Iter;
     
 
-[116]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[116]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1172,8 +1075,7 @@
     use std::path::Iter;
     
 
-[117]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[117]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1182,8 +1084,7 @@
     use std::result::Iter;
     
 
-[118]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[118]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1192,8 +1093,7 @@
     use std::slice::Iter;
     
 
-[119]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[119]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1202,8 +1102,9 @@
     use std::sync::mpsc::Iter;
     
 
-[120]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[120]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1212,8 +1113,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[121]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[121]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1222,8 +1122,7 @@
     use std::collections::btree_map::Iter;
     
 
-[122]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[122]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1232,8 +1131,7 @@
     use std::collections::btree_set::Iter;
     
 
-[123]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[123]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1242,8 +1140,7 @@
     use std::collections::hash_map::Iter;
     
 
-[124]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[124]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1252,8 +1149,7 @@
     use std::collections::hash_set::Iter;
     
 
-[125]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[125]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1262,8 +1158,7 @@
     use std::collections::linked_list::Iter;
     
 
-[126]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[126]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1272,8 +1167,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[127]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[127]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1282,8 +1176,7 @@
     use std::option::Iter;
     
 
-[128]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[128]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1292,8 +1185,7 @@
     use std::path::Iter;
     
 
-[129]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[129]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1302,8 +1194,7 @@
     use std::result::Iter;
     
 
-[130]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[130]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1312,8 +1203,7 @@
     use std::slice::Iter;
     
 
-[131]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[131]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1322,8 +1212,9 @@
     use std::sync::mpsc::Iter;
     
 
-[132]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+
+possible candidates are found in other modules, you can import them into scope
+[132]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1332,8 +1223,7 @@
     use std::collections::binary_heap::Iter;
     
 
-[133]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[133]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1342,8 +1232,7 @@
     use std::collections::btree_map::Iter;
     
 
-[134]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[134]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1352,8 +1241,7 @@
     use std::collections::btree_set::Iter;
     
 
-[135]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[135]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1362,8 +1250,7 @@
     use std::collections::hash_map::Iter;
     
 
-[136]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[136]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1372,8 +1259,7 @@
     use std::collections::hash_set::Iter;
     
 
-[137]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[137]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1382,8 +1268,7 @@
     use std::collections::linked_list::Iter;
     
 
-[138]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[138]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1392,8 +1277,7 @@
     use std::collections::vec_deque::Iter;
     
 
-[139]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[139]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1402,8 +1286,7 @@
     use std::option::Iter;
     
 
-[140]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[140]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1412,8 +1295,7 @@
     use std::path::Iter;
     
 
-[141]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[141]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1422,8 +1304,7 @@
     use std::result::Iter;
     
 
-[142]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[142]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 
@@ -1432,8 +1313,7 @@
     use std::slice::Iter;
     
 
-[143]: possible candidates are found in other modules, you can import them into scope
-[1;33mSuggestion - Replace:[0m
+[143]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn foo() {
 

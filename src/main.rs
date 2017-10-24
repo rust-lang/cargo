@@ -137,26 +137,30 @@ fn handle_suggestions(
                 range = snippet.line_range);
         }
 
-        for (i, suggestion) in suggestion.replacements.iter().enumerate() {
-            let snippet = &suggestion.snippet;
-            println!("[{id}]: {msg}\n\
-                {suggestion}\n\n\
-                {lead}{text}{tail}\n\n\
-                {with}\n\n\
-                {replacement}\n",
-                id = i,
-                msg = snippet.sub_message.as_ref().map(|s| &**s).unwrap_or(""),
-                suggestion = "Suggestion - Replace:".yellow().bold(),
-                lead = indent(4, &snippet.text.0),
-                text = snippet.text.1.red(),
-                tail = snippet.text.2,
-                with = "with:".yellow().bold(),
-                replacement = indent(4, &suggestion.replacement));
+        let mut i = 0;
+        for solution in suggestion.solutions.iter() {
+            println!("\n{}", solution.message);
+            for suggestion in solution.replacements.iter() {
+                let snippet = &suggestion.snippet;
+                println!("[{id}]: {suggestion}\n\n\
+                    {lead}{text}{tail}\n\n\
+                    {with}\n\n\
+                    {replacement}\n",
+                    id = i,
+                    suggestion = "Suggestion - Replace:".yellow().bold(),
+                    lead = indent(4, &snippet.text.0),
+                    text = snippet.text.1.red(),
+                    tail = snippet.text.2,
+                    with = "with:".yellow().bold(),
+                    replacement = indent(4, &suggestion.replacement));
+                i += 1;
+            }
         }
         println!();
 
-        if mode == AutofixMode::Yolo && suggestion.replacements.len() == 1 {
-            let mut replacements = suggestion.replacements;
+        if mode == AutofixMode::Yolo && suggestion.solutions.len() == 1 && suggestion.solutions[0].replacements.len() == 1 {
+            let mut solutions = suggestion.solutions;
+            let mut replacements = solutions.remove(0).replacements;
             accepted_suggestions.push(replacements.remove(0));
             println!("automatically applying suggestion (--yolo)");
             continue 'suggestions;
@@ -187,10 +191,19 @@ fn handle_suggestions(
                 }
                 s => {
                     if let Ok(i) = usize::from_str(s) {
-                        let mut replacements = suggestion.replacements;
-                        accepted_suggestions.push(replacements.remove(i));
-                        println!("Suggestion accepted. I'll remember that and apply it later.");
-                        continue 'suggestions;
+                        let replacement = suggestion.solutions
+                            .iter()
+                            .flat_map(|sol| sol.replacements.iter())
+                            .nth(i);
+                        if let Some(replacement) = replacement {
+                            accepted_suggestions.push(replacement.clone());
+                            println!("Suggestion accepted. I'll remember that and apply it later.");
+                            continue 'suggestions;
+                        } else {
+                            println!("{error}: {i} is not a valid suggestion index",
+                                error = "Error".red().bold(),
+                                i = i);
+                        }
                     } else {
                         println!("{error}: I didn't quite get that. {user_options}",
                                     error = "Error".red().bold(),
