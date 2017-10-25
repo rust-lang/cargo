@@ -2,7 +2,9 @@
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Button)>`)
 [1;34m  -->[0m src/controls.rs:245:17-245:78
-[1;33mSuggestion - Replace:[0m
+
+try
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31mmem::transmute::<*mut c_void, &mut Box<FnMut(&Button)>>(data)[0m(&button)
 
@@ -10,12 +12,15 @@
 
     &mut *(data as *mut Box<FnMut(&Button)>)
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Entry)>`)
 [1;34m  -->[0m src/controls.rs:350:17-350:77
-[1;33mSuggestion - Replace:[0m
+
+try
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31mmem::transmute::<*mut c_void, &mut Box<FnMut(&Entry)>>(data)[0m(&entry);
 
@@ -23,12 +28,15 @@ automatically applying suggestion (--yolo)
 
     &mut *(data as *mut Box<FnMut(&Entry)>)
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::Entry`
-[1;34m  -->[0m src/controls.rs:373:5-373:5
-[1;33mSuggestion - Replace:[0m
+[1;34m  -->[0m src/controls.rs:373:5-378:6
+
+try this
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn new() -> Entry {
 
@@ -42,12 +50,15 @@ automatically applying suggestion (--yolo)
     
         
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Checkbox)>`)
 [1;34m  -->[0m src/controls.rs:415:17-415:80
-[1;33mSuggestion - Replace:[0m
+
+try
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31mmem::transmute::<*mut c_void, &mut Box<FnMut(&Checkbox)>>(data)[0m(&checkbox);
 
@@ -55,12 +66,15 @@ automatically applying suggestion (--yolo)
 
     &mut *(data as *mut Box<FnMut(&Checkbox)>)
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::Tab`
-[1;34m  -->[0m src/controls.rs:526:5-526:5
-[1;33mSuggestion - Replace:[0m
+[1;34m  -->[0m src/controls.rs:526:5-531:6
+
+try this
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn new() -> Tab {
 
@@ -74,12 +88,15 @@ automatically applying suggestion (--yolo)
     
         
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Spinbox)>`)
 [1;34m  -->[0m src/controls.rs:621:17-621:79
-[1;33mSuggestion - Replace:[0m
+
+try
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31mmem::transmute::<*mut c_void, &mut Box<FnMut(&Spinbox)>>(data)[0m(&spinbox);
 
@@ -87,12 +104,15 @@ automatically applying suggestion (--yolo)
 
     &mut *(data as *mut Box<FnMut(&Spinbox)>)
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::ProgressBar`
-[1;34m  -->[0m src/controls.rs:648:5-648:5
-[1;33mSuggestion - Replace:[0m
+[1;34m  -->[0m src/controls.rs:648:5-653:6
+
+try this
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn new() -> ProgressBar {
 
@@ -106,12 +126,15 @@ automatically applying suggestion (--yolo)
     
         
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Slider)>`)
 [1;34m  -->[0m src/controls.rs:689:17-689:78
-[1;33mSuggestion - Replace:[0m
+
+try
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31mmem::transmute::<*mut c_void, &mut Box<FnMut(&Slider)>>(data)[0m(&slider);
 
@@ -119,12 +142,15 @@ automatically applying suggestion (--yolo)
 
     &mut *(data as *mut Box<FnMut(&Slider)>)
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Combobox)>`)
 [1;34m  -->[0m src/controls.rs:758:17-758:80
-[1;33mSuggestion - Replace:[0m
+
+try
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31mmem::transmute::<*mut c_void, &mut Box<FnMut(&Combobox)>>(data)[0m(&combobox);
 
@@ -132,12 +158,15 @@ automatically applying suggestion (--yolo)
 
     &mut *(data as *mut Box<FnMut(&Combobox)>)
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::Combobox`
-[1;34m  -->[0m src/controls.rs:765:5-765:5
-[1;33mSuggestion - Replace:[0m
+[1;34m  -->[0m src/controls.rs:765:5-770:6
+
+try this
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn new() -> Combobox {
 
@@ -151,12 +180,15 @@ automatically applying suggestion (--yolo)
     
         
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::RadioButtons`
-[1;34m  -->[0m src/controls.rs:796:5-796:5
-[1;33mSuggestion - Replace:[0m
+[1;34m  -->[0m src/controls.rs:796:5-801:6
+
+try this
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn new() -> RadioButtons {
 
@@ -170,12 +202,15 @@ automatically applying suggestion (--yolo)
     
         
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::MultilineEntry)>`)
 [1;34m  -->[0m src/controls.rs:866:17-867:73
-[1;33mSuggestion - Replace:[0m
+
+try
+[0]: [1;33mSuggestion - Replace:[0m
 
                    [31mmem::transmute::<*mut c_void,
                                 &mut Box<FnMut(&MultilineEntry)>>(data)[0m(&multiline_entry);
@@ -184,12 +219,15 @@ automatically applying suggestion (--yolo)
 
     &mut *(data as *mut Box<FnMut(&MultilineEntry)>)
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::MultilineEntry`
-[1;34m  -->[0m src/controls.rs:890:5-890:5
-[1;33mSuggestion - Replace:[0m
+[1;34m  -->[0m src/controls.rs:890:5-895:6
+
+try this
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn new() -> MultilineEntry {
 
@@ -203,12 +241,15 @@ automatically applying suggestion (--yolo)
     
         
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::FontButton)>`)
 [1;34m  -->[0m src/controls.rs:1182:17-1182:82
-[1;33mSuggestion - Replace:[0m
+
+try
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31mmem::transmute::<*mut c_void, &mut Box<FnMut(&FontButton)>>(data)[0m(&font_button);
 
@@ -216,12 +257,15 @@ automatically applying suggestion (--yolo)
 
     &mut *(data as *mut Box<FnMut(&FontButton)>)
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::FontButton`
-[1;34m  -->[0m src/controls.rs:1189:5-1189:5
-[1;33mSuggestion - Replace:[0m
+[1;34m  -->[0m src/controls.rs:1189:5-1194:6
+
+try this
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn new() -> FontButton {
 
@@ -235,12 +279,15 @@ automatically applying suggestion (--yolo)
     
         
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::ColorButton)>`)
 [1;34m  -->[0m src/controls.rs:1237:17-1237:83
-[1;33mSuggestion - Replace:[0m
+
+try
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31mmem::transmute::<*mut c_void, &mut Box<FnMut(&ColorButton)>>(data)[0m(&color_button);
 
@@ -248,12 +295,15 @@ automatically applying suggestion (--yolo)
 
     &mut *(data as *mut Box<FnMut(&ColorButton)>)
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: you should consider adding a `Default` implementation for `controls::ColorButton`
-[1;34m  -->[0m src/controls.rs:1244:5-1244:5
-[1;33mSuggestion - Replace:[0m
+[1;34m  -->[0m src/controls.rs:1244:5-1249:6
+
+try this
+[0]: [1;33mSuggestion - Replace:[0m
 
 [31m[0mpub fn new() -> ColorButton {
 
@@ -267,12 +317,15 @@ automatically applying suggestion (--yolo)
     
         
 
+
 automatically applying suggestion (--yolo)
 
 
 [1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r, 's> std::ops::FnMut(&'r menus::MenuItem, &'s windows::Window)>`)
 [1;34m  -->[0m src/menus.rs:50:17-51:76
-[1;33mSuggestion - Replace:[0m
+
+try
+[0]: [1;33mSuggestion - Replace:[0m
 
                    [31mmem::transmute::<*mut c_void,
                                 &mut Box<FnMut(&MenuItem, &Window)>>(data)[0m(&menu_item, &window);
@@ -280,6 +333,7 @@ automatically applying suggestion (--yolo)
 [1;33mwith:[0m
 
     &mut *(data as *mut Box<FnMut(&MenuItem, &Window)>)
+
 
 automatically applying suggestion (--yolo)
 Good work. Let me just apply these 18 changes!

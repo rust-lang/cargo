@@ -1,0 +1,1329 @@
+
+
+[1;32mInfo[0m: cannot find type `Iter` in this scope
+[1;34m  -->[0m src/lib.rs:2:12-2:16
+
+possible candidates are found in other modules, you can import them into scope
+[0]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[1]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[2]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[3]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[4]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[5]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[6]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[7]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[8]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[9]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[10]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[11]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+possible candidates are found in other modules, you can import them into scope
+[12]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[13]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[14]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[15]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[16]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[17]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[18]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[19]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[20]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[21]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[22]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[23]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+possible candidates are found in other modules, you can import them into scope
+[24]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[25]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[26]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[27]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[28]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[29]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[30]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[31]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[32]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[33]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[34]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[35]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+possible candidates are found in other modules, you can import them into scope
+[36]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[37]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[38]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[39]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[40]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[41]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[42]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[43]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[44]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[45]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[46]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[47]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+possible candidates are found in other modules, you can import them into scope
+[48]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[49]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[50]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[51]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[52]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[53]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[54]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[55]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[56]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[57]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[58]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[59]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+possible candidates are found in other modules, you can import them into scope
+[60]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[61]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[62]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[63]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[64]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[65]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[66]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[67]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[68]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[69]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[70]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[71]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+possible candidates are found in other modules, you can import them into scope
+[72]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[73]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[74]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[75]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[76]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[77]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[78]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[79]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[80]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[81]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[82]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[83]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+possible candidates are found in other modules, you can import them into scope
+[84]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[85]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[86]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[87]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[88]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[89]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[90]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[91]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[92]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[93]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[94]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[95]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+possible candidates are found in other modules, you can import them into scope
+[96]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[97]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[98]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[99]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[100]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[101]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[102]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[103]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[104]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[105]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[106]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[107]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+possible candidates are found in other modules, you can import them into scope
+[108]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[109]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[110]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[111]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[112]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[113]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[114]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[115]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[116]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[117]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[118]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[119]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+possible candidates are found in other modules, you can import them into scope
+[120]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[121]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[122]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[123]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[124]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[125]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[126]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[127]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[128]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[129]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[130]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[131]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+possible candidates are found in other modules, you can import them into scope
+[132]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::binary_heap::Iter;
+    
+
+[133]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_map::Iter;
+    
+
+[134]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::btree_set::Iter;
+    
+
+[135]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_map::Iter;
+    
+
+[136]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::hash_set::Iter;
+    
+
+[137]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::linked_list::Iter;
+    
+
+[138]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::collections::vec_deque::Iter;
+    
+
+[139]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::option::Iter;
+    
+
+[140]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::path::Iter;
+    
+
+[141]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::result::Iter;
+    
+
+[142]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::slice::Iter;
+    
+
+[143]: [1;33mSuggestion - Replace:[0m
+
+[31m[0mpub fn foo() {
+
+[1;33mwith:[0m
+
+    use std::sync::mpsc::Iter;
+    
+
+
+[1;32m==>[0m [32mWhat do you want to do? [0-9] | [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
+[1;32m  >[0m [1;31mError[0m: multiple suggestions apply, please pick a number
+[1;32m==>[0m [32mWhat do you want to do? [0-9] | [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)[0m
+[1;32m  >[0m Let's get outta here!

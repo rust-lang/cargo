@@ -17,11 +17,13 @@ use std::process::Command;
 use colored::Colorize;
 use clap::{Arg, App};
 
-use rustfix::Suggestion;
+use std::str::FromStr;
+
+use rustfix::{Suggestion, Replacement};
 use rustfix::diagnostics::Diagnostic;
 
 const USER_OPTIONS: &'static str = "What do you want to do? \
-    [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)";
+    [0-9] | [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)";
 
 fn main() {
     let program = try_main();
@@ -59,7 +61,7 @@ fn try_main() -> Result<(), ProgramError> {
         .get_matches();
 
     let mut extra_args = Vec::new();
-    
+
     if !matches.is_present("clippy") {
         extra_args.push("-Aclippy");
     }
@@ -78,10 +80,10 @@ fn try_main() -> Result<(), ProgramError> {
         // Convert JSON string (and eat parsing errors)
         .flat_map(|line| serde_json::from_str::<CargoMessage>(line))
         // One diagnostic line might have multiple suggestions
-        .flat_map(|cargo_msg| rustfix::collect_suggestions(&cargo_msg.message, None))
+        .filter_map(|cargo_msg| rustfix::collect_suggestions(&cargo_msg.message))
         .collect();
 
-    try!(handle_suggestions(&suggestions, mode));
+    try!(handle_suggestions(suggestions, mode));
 
     Ok(())
 }
@@ -113,8 +115,11 @@ enum AutofixMode {
     Yolo,
 }
 
-fn handle_suggestions(suggestions: &[Suggestion], mode: AutofixMode) -> Result<(), ProgramError> {
-    let mut accepted_suggestions: Vec<&Suggestion> = vec![];
+fn handle_suggestions(
+    suggestions: Vec<Suggestion>,
+    mode: AutofixMode,
+) -> Result<(), ProgramError> {
+    let mut accepted_suggestions: Vec<Replacement> = vec![];
 
     if suggestions.is_empty() {
         println!("I don't have any suggestions for you right now. Check back later!");
@@ -122,26 +127,41 @@ fn handle_suggestions(suggestions: &[Suggestion], mode: AutofixMode) -> Result<(
     }
 
     'suggestions: for suggestion in suggestions {
-        println!("\n\n{info}: {message}\n\
-            {arrow} {file}:{range}\n\
-            {suggestion}\n\n\
-            {lead}{text}{tail}\n\n\
-            {with}\n\n\
-            {replacement}\n",
+        print!("\n\n{info}: {message}\n",
             info = "Info".green().bold(),
-            message = split_at_lint_name(&suggestion.message),
-            arrow = "  -->".blue().bold(),
-            suggestion = "Suggestion - Replace:".yellow().bold(),
-            file = suggestion.file_name,
-            range = suggestion.line_range,
-            lead = indent(4, &suggestion.text.0),
-            text = suggestion.text.1.red(),
-            tail = suggestion.text.2,
-            with = "with:".yellow().bold(),
-            replacement = indent(4, &suggestion.replacement));
-        
-        if mode == AutofixMode::Yolo {
-            accepted_suggestions.push(suggestion);
+            message = split_at_lint_name(&suggestion.message));
+        for snippet in suggestion.snippets {
+            print!("{arrow} {file}:{range}\n",
+                arrow = "  -->".blue().bold(),
+                file = snippet.file_name,
+                range = snippet.line_range);
+        }
+
+        let mut i = 0;
+        for solution in suggestion.solutions.iter() {
+            println!("\n{}", solution.message);
+            for suggestion in solution.replacements.iter() {
+                let snippet = &suggestion.snippet;
+                println!("[{id}]: {suggestion}\n\n\
+                    {lead}{text}{tail}\n\n\
+                    {with}\n\n\
+                    {replacement}\n",
+                    id = i,
+                    suggestion = "Suggestion - Replace:".yellow().bold(),
+                    lead = indent(4, &snippet.text.0),
+                    text = snippet.text.1.red(),
+                    tail = snippet.text.2,
+                    with = "with:".yellow().bold(),
+                    replacement = indent(4, &suggestion.replacement));
+                i += 1;
+            }
+        }
+        println!();
+
+        if mode == AutofixMode::Yolo && suggestion.solutions.len() == 1 && suggestion.solutions[0].replacements.len() == 1 {
+            let mut solutions = suggestion.solutions;
+            let mut replacements = solutions.remove(0).replacements;
+            accepted_suggestions.push(replacements.remove(0));
             println!("automatically applying suggestion (--yolo)");
             continue 'suggestions;
         }
@@ -162,11 +182,6 @@ fn handle_suggestions(suggestions: &[Suggestion], mode: AutofixMode) -> Result<(
                     println!("Skipped.");
                     continue 'suggestions;
                 }
-                "r" => {
-                    accepted_suggestions.push(suggestion);
-                    println!("Suggestion accepted. I'll remember that and apply it later.");
-                    continue 'suggestions;
-                }
                 "q" => {
                     println!("Thanks for playing!");
                     break 'suggestions;
@@ -174,11 +189,38 @@ fn handle_suggestions(suggestions: &[Suggestion], mode: AutofixMode) -> Result<(
                 "a" => {
                     return Err(ProgramError::UserAbort);
                 }
-                _ => {
-                    println!("{error}: I didn't quite get that. {user_options}",
+                "r" => {
+                    if suggestion.solutions.len() == 1 && suggestion.solutions[0].replacements.len() == 1 {
+                        let mut solutions = suggestion.solutions;
+                        accepted_suggestions.push(solutions.remove(0).replacements.remove(0));
+                        println!("Suggestion accepted. I'll remember that and apply it later.");
+                        continue 'suggestions;
+                    } else {
+                        println!("{error}: multiple suggestions apply, please pick a number",
+                            error = "Error".red().bold());
+                    }
+                }
+                s => {
+                    if let Ok(i) = usize::from_str(s) {
+                        let replacement = suggestion.solutions
+                            .iter()
+                            .flat_map(|sol| sol.replacements.iter())
+                            .nth(i);
+                        if let Some(replacement) = replacement {
+                            accepted_suggestions.push(replacement.clone());
+                            println!("Suggestion accepted. I'll remember that and apply it later.");
+                            continue 'suggestions;
+                        } else {
+                            println!("{error}: {i} is not a valid suggestion index",
                                 error = "Error".red().bold(),
-                                user_options = USER_OPTIONS);
-                    continue 'userinput;
+                                i = i);
+                        }
+                    } else {
+                        println!("{error}: I didn't quite get that. {user_options}",
+                                    error = "Error".red().bold(),
+                                    user_options = USER_OPTIONS);
+                        continue 'userinput;
+                    }
                 }
             }
         }
@@ -274,25 +316,25 @@ fn indent(size: u32, s: &str) -> String {
 ///
 /// This function is as stupid as possible. Make sure you call for the replacemnts in one file in
 /// reverse order to not mess up the lines for replacements further down the road.
-fn apply_suggestion(suggestion: &Suggestion) -> Result<(), ProgramError> {
+fn apply_suggestion(suggestion: &Replacement) -> Result<(), ProgramError> {
     use std::cmp::max;
 
-    let file_content = try!(read_file_to_string(&suggestion.file_name));
+    let file_content = try!(read_file_to_string(&suggestion.snippet.file_name));
     let mut new_content = String::new();
 
     // Add the lines before the section we want to replace
     new_content.push_str(&file_content.lines()
-        .take(max(suggestion.line_range.start.line - 1, 0) as usize)
+        .take(max(suggestion.snippet.line_range.start.line - 1, 0) as usize)
         .collect::<Vec<_>>()
         .join("\n"));
     new_content.push_str("\n");
 
     // Parts of line before replacement
     new_content.push_str(&file_content.lines()
-        .nth(suggestion.line_range.start.line - 1)
+        .nth(suggestion.snippet.line_range.start.line - 1)
         .unwrap_or("")
         .chars()
-        .take(suggestion.line_range.start.column - 1)
+        .take(suggestion.snippet.line_range.start.column - 1)
         .collect::<String>());
 
     // Insert new content! Finally!
@@ -300,21 +342,21 @@ fn apply_suggestion(suggestion: &Suggestion) -> Result<(), ProgramError> {
 
     // Parts of line after replacement
     new_content.push_str(&file_content.lines()
-        .nth(suggestion.line_range.end.line - 1)
+        .nth(suggestion.snippet.line_range.end.line - 1)
         .unwrap_or("")
         .chars()
-        .skip(suggestion.line_range.end.column - 1)
+        .skip(suggestion.snippet.line_range.end.column - 1)
         .collect::<String>());
 
     // Add the lines after the section we want to replace
     new_content.push_str("\n");
     new_content.push_str(&file_content.lines()
-        .skip(suggestion.line_range.end.line as usize)
+        .skip(suggestion.snippet.line_range.end.line as usize)
         .collect::<Vec<_>>()
         .join("\n"));
     new_content.push_str("\n");
 
-    let mut file = try!(File::create(&suggestion.file_name));
+    let mut file = try!(File::create(&suggestion.snippet.file_name));
     let new_content = new_content.as_bytes();
 
     try!(file.set_len(new_content.len() as u64));
