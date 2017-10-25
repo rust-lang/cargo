@@ -52,20 +52,6 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
                 }
             }
         }
-        for (bin, bin_package) in bin_names.iter() {
-            if let Some(lib_package) = lib_names.get(bin) {
-                bail!("The target `{}` is specified as a library {}. It can be \
-                       documented only once. Consider renaming or marking one \
-                       of the targets as `doc = false`.",
-                       bin,
-                       if lib_package == bin_package {
-                           format!("and as a binary by package `{}`", lib_package)
-                       } else {
-                           format!("by package `{}` and as a binary by \
-                                    package `{}`", lib_package, bin_package)
-                       });
-            }
-        }
     }
 
     ops::compile(ws, &options.compile_opts)?;

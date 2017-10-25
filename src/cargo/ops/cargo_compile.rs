@@ -489,7 +489,10 @@ fn generate_auto_targets<'a>(mode: CompileMode, targets: &'a [Target],
         }
         CompileMode::Doc { .. } => {
             targets.iter().filter(|t| {
-                t.documented()
+                t.documented() && (
+                    !t.is_bin() ||
+                    !targets.iter().any(|l| l.is_lib() && l.name() == t.name())
+                )
             }).map(|t| BuildProposal {
                 target: t,
                 profile: profile,
