@@ -20,8 +20,9 @@ fn read_env_vars_for_config() {
             fn main() {
                 assert_eq!(env::var("NUM_JOBS").unwrap(), "100");
             }
-        "#);
+        "#)
+        .build();
 
-    assert_that(p.cargo_process("build").env("CARGO_BUILD_JOBS", "100"),
+    assert_that(p.cargo("build").env("CARGO_BUILD_JOBS", "100"),
                 execs().with_status(0));
 }

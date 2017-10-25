@@ -116,7 +116,7 @@ To get the list of all options available for the test binaries use this:
   cargo test -- --help
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     debug!("executing; cmd=cargo-test; args={:?}",
            env::args().collect::<Vec<_>>());
 

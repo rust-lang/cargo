@@ -87,7 +87,7 @@ pub struct Options {
     flag_z: Vec<String>,
 }
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     debug!("executing; cmd=cargo-check; args={:?}",
            env::args().collect::<Vec<_>>());
 

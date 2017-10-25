@@ -1,7 +1,7 @@
 extern crate cargotest;
 extern crate hamcrest;
 
-use cargotest::support::{project, execs, ProjectBuilder};
+use cargotest::support::{project, execs, Project};
 use cargotest::support::registry::Package;
 use hamcrest::assert_that;
 
@@ -30,7 +30,7 @@ fn make_lib(lib_src: &str) {
         .publish();
 }
 
-fn make_upstream(main_src: &str) -> ProjectBuilder {
+fn make_upstream(main_src: &str) -> Project {
     project("bar")
         .file("Cargo.toml", r#"
             [package]
@@ -42,13 +42,14 @@ fn make_upstream(main_src: &str) -> ProjectBuilder {
             foo = "*"
         "#)
         .file("src/main.rs", &format!("fn main() {{ {} }}", main_src))
+        .build()
 }
 
 #[test]
 fn no_warning_on_success() {
     make_lib("");
     let upstream = make_upstream("");
-    assert_that(upstream.cargo_process("build"),
+    assert_that(upstream.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`
@@ -63,7 +64,7 @@ fn no_warning_on_success() {
 fn no_warning_on_bin_failure() {
     make_lib("");
     let upstream = make_upstream("hi()");
-    assert_that(upstream.cargo_process("build"),
+    assert_that(upstream.cargo("build"),
                 execs().with_status(101)
                        .with_stdout_does_not_contain("hidden stdout")
                        .with_stderr_does_not_contain("hidden stderr")
@@ -79,7 +80,7 @@ fn no_warning_on_bin_failure() {
 fn warning_on_lib_failure() {
     make_lib("err()");
     let upstream = make_upstream("");
-    assert_that(upstream.cargo_process("build"),
+    assert_that(upstream.cargo("build"),
                 execs().with_status(101)
                        .with_stdout_does_not_contain("hidden stdout")
                        .with_stderr_does_not_contain("hidden stderr")

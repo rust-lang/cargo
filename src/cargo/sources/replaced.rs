@@ -29,7 +29,7 @@ impl<'cfg> Registry for ReplacedSource<'cfg> {
         self.inner.query(&dep, &mut |summary| {
             f(summary.map_source(replace_with, to_replace))
         }).chain_err(|| {
-            format!("failed to query replaced source `{}`",
+            format!("failed to query replaced source {}",
                     self.to_replace)
         })
     }
@@ -50,7 +50,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
 
     fn update(&mut self) -> CargoResult<()> {
         self.inner.update().chain_err(|| {
-            format!("failed to update replaced source `{}`",
+            format!("failed to update replaced source {}",
                     self.to_replace)
         })
     }
@@ -58,7 +58,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
     fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
         let id = id.with_source_id(&self.replace_with);
         let pkg = self.inner.download(&id).chain_err(|| {
-            format!("failed to download replaced source `{}`",
+            format!("failed to download replaced source {}",
                     self.to_replace)
         })?;
         Ok(pkg.map_source(&self.replace_with, &self.to_replace))

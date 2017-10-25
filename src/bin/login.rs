@@ -37,7 +37,7 @@ Options:
 
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -51,7 +51,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
             let mut src = RegistrySource::remote(&src, config);
             src.update()?;
             let config = src.config()?.unwrap();
-            let host = options.flag_host.clone().unwrap_or(config.api);
+            let host = options.flag_host.clone().unwrap_or(config.api.unwrap());
             println!("please visit {}me and paste the API Token below", host);
             let mut line = String::new();
             let input = io::stdin();

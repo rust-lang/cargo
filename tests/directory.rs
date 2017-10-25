@@ -66,7 +66,7 @@ impl VendorPackage {
         let p = self.p.take().unwrap();
         let json = serde_json::to_string(&self.cksum).unwrap();
         let p = p.file(".cargo-checksum.json", &json);
-        p.build();
+        let _ = p.build();
     }
 }
 
@@ -100,8 +100,8 @@ fn simple() {
             pub fn bar() {
                 foo::foo();
             }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
@@ -196,7 +196,7 @@ error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[
 
 Caused by:
   no matching package named `baz` found (required by `bar`)
-location searched: registry https://github.com/rust-lang/crates.io-index
+location searched: registry `https://github.com/rust-lang/crates.io-index`
 version required: ^9.8.7
 "));
 }
@@ -253,7 +253,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 fn not_there() {
     setup();
 
-    project("index").build();
+    let _ = project("index").build();
 
     let p = project("bar")
         .file("Cargo.toml", r#"
@@ -271,8 +271,8 @@ fn not_there() {
             pub fn bar() {
                 foo::foo();
             }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
@@ -324,8 +324,8 @@ fn multiple() {
             pub fn bar() {
                 foo::foo();
             }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
@@ -353,8 +353,8 @@ fn crates_io_then_directory() {
             pub fn bar() {
                 foo::foo();
             }
-        "#);
-    p.build();
+        "#)
+        .build();
 
     let cksum = Package::new("foo", "0.1.0")
                         .file("src/lib.rs", "pub fn foo() -> u32 { 0 }")
@@ -402,8 +402,8 @@ fn crates_io_then_bad_checksum() {
             [dependencies]
             foo = "0.1.0"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     Package::new("foo", "0.1.0").publish();
 
@@ -463,8 +463,8 @@ fn bad_file_checksum() {
             [dependencies]
             foo = "0.1.0"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
@@ -505,8 +505,8 @@ fn only_dot_files_ok() {
             [dependencies]
             foo = "0.1.0"
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
 }
@@ -545,8 +545,8 @@ fn git_lock_file_doesnt_change() {
             [dependencies]
             git = {{ git = '{0}' }}
         "#, git.url()))
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
 
@@ -600,8 +600,8 @@ fn git_override_requires_lockfile() {
             [dependencies]
             git = { git = 'https://example.com/' }
         "#)
-        .file("src/lib.rs", "");
-    p.build();
+        .file("src/lib.rs", "")
+        .build();
 
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));

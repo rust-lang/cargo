@@ -5,7 +5,7 @@ use std::str::FromStr;
 use serde::ser;
 use serde::de;
 
-use core::{Package, PackageId, SourceId, Workspace};
+use core::{Package, PackageId, SourceId, Workspace, Dependency};
 use util::{Graph, Config, internal};
 use util::errors::{CargoResult, CargoResultExt, CargoError};
 
@@ -14,7 +14,7 @@ use super::Resolve;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EncodableResolve {
     package: Option<Vec<EncodableDependency>>,
-    /// `root` is optional to allow forward compatibility.
+    /// `root` is optional to allow backward compatibility.
     root: Option<EncodableDependency>,
     metadata: Option<Metadata>,
 
@@ -60,7 +60,12 @@ impl EncodableResolve {
                 let id = match pkg.source.as_ref().or_else(|| path_deps.get(&pkg.name)) {
                     // We failed to find a local package in the workspace.
                     // It must have been removed and should be ignored.
-                    None => continue,
+                    None => {
+                        debug!("path dependency now missing {} v{}",
+                               pkg.name,
+                               pkg.version);
+                        continue
+                    }
                     Some(source) => PackageId::new(&pkg.name, &pkg.version, source)?
                 };
 
@@ -199,33 +204,48 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
         visited.insert(member.package_id().source_id().clone());
     }
     for member in members.iter() {
-        build(member, ws.config(), &mut ret, &mut visited);
+        build_pkg(member, ws.config(), &mut ret, &mut visited);
+    }
+    for (_, deps) in ws.root_patch() {
+        for dep in deps {
+            build_dep(dep, ws.config(), &mut ret, &mut visited);
+        }
+    }
+    for &(_, ref dep) in ws.root_replace() {
+        build_dep(dep, ws.config(), &mut ret, &mut visited);
     }
 
     return ret;
 
-    fn build(pkg: &Package,
-             config: &Config,
-             ret: &mut HashMap<String, SourceId>,
-             visited: &mut HashSet<SourceId>) {
-        let replace = pkg.manifest().replace().iter().map(|p| &p.1);
-        let patch = pkg.manifest().patch().values().flat_map(|v| v);
-        let deps = pkg.dependencies()
-                      .iter()
-                      .chain(replace)
-                      .chain(patch)
-                      .map(|d| d.source_id())
-                      .filter(|id| !visited.contains(id) && id.is_path())
-                      .filter_map(|id| id.url().to_file_path().ok())
-                      .map(|path| path.join("Cargo.toml"))
-                      .filter_map(|path| Package::for_path(&path, config).ok())
-                      .collect::<Vec<_>>();
-        for pkg in deps {
-            ret.insert(pkg.name().to_string(),
-                       pkg.package_id().source_id().clone());
-            visited.insert(pkg.package_id().source_id().clone());
-            build(&pkg, config, ret, visited);
+    fn build_pkg(pkg: &Package,
+                 config: &Config,
+                 ret: &mut HashMap<String, SourceId>,
+                 visited: &mut HashSet<SourceId>) {
+        for dep in pkg.dependencies() {
+            build_dep(dep, config, ret, visited);
         }
+    }
+
+    fn build_dep(dep: &Dependency,
+                 config: &Config,
+                 ret: &mut HashMap<String, SourceId>,
+                 visited: &mut HashSet<SourceId>) {
+        let id = dep.source_id();
+        if visited.contains(id) || !id.is_path() {
+            return
+        }
+        let path = match id.url().to_file_path() {
+            Ok(p) => p.join("Cargo.toml"),
+            Err(_) => return,
+        };
+        let pkg = match Package::for_path(&path, config) {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+        ret.insert(pkg.name().to_string(),
+                   pkg.package_id().source_id().clone());
+        visited.insert(pkg.package_id().source_id().clone());
+        build_pkg(&pkg, config, ret, visited);
     }
 }
 
@@ -311,7 +331,6 @@ impl<'de> de::Deserialize<'de> for EncodablePackageId {
 pub struct WorkspaceResolve<'a, 'cfg: 'a> {
     pub ws: &'a Workspace<'cfg>,
     pub resolve: &'a Resolve,
-    pub use_root_key: bool,
 }
 
 impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
@@ -321,15 +340,7 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
         let mut ids: Vec<&PackageId> = self.resolve.graph.iter().collect();
         ids.sort();
 
-        let root = self.ws.members().max_by_key(|member| {
-            member.name()
-        }).map(Package::package_id);
-
         let encodable = ids.iter().filter_map(|&id| {
-            if self.use_root_key && root.unwrap() == id {
-                return None
-            }
-
             Some(encodable_resolve_node(id, self.resolve))
         }).collect::<Vec<_>>();
 
@@ -347,11 +358,6 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
 
         let metadata = if metadata.is_empty() { None } else { Some(metadata) };
 
-        let root = match root {
-            Some(root) if self.use_root_key => Some(encodable_resolve_node(root, self.resolve)),
-            _ => None,
-        };
-
         let patch = Patch {
             unused: self.resolve.unused_patches().iter().map(|id| {
                 EncodableDependency {
@@ -365,7 +371,7 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
         };
         EncodableResolve {
             package: Some(encodable),
-            root: root,
+            root: None,
             metadata: metadata,
             patch: patch,
         }.serialize(s)

@@ -40,29 +40,12 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
         Ok(s)
     });
 
-    // Forward compatibility: if `orig` uses rootless format
-    // from the future, do the same.
-    let use_root_key = if let Ok(ref orig) = orig {
-        !orig.starts_with("[[package]]")
-    } else {
-        true
-    };
-
     let toml = toml::Value::try_from(WorkspaceResolve {
         ws: ws,
         resolve: resolve,
-        use_root_key: use_root_key,
     }).unwrap();
 
     let mut out = String::new();
-
-    // Note that we do not use e.toml.to_string() as we want to control the
-    // exact format the toml is in to ensure pretty diffs between updates to the
-    // lockfile.
-    if let Some(root) = toml.get("root") {
-        out.push_str("[root]\n");
-        emit_package(root.as_table().unwrap(), &mut out);
-    }
 
     let deps = toml["package"].as_array().unwrap();
     for dep in deps.iter() {

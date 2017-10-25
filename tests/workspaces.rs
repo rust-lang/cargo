@@ -31,7 +31,7 @@ fn simple_explicit() {
             workspace = ".."
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
@@ -66,7 +66,7 @@ fn inferred_root() {
             authors = []
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
@@ -104,7 +104,7 @@ fn inferred_path_dep() {
         "#)
         .file("bar/src/main.rs", "fn main() {}")
         .file("bar/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
@@ -153,7 +153,7 @@ fn transitive_path_dep() {
         "#)
         .file("baz/src/main.rs", "fn main() {}")
         .file("baz/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(&p.bin("foo"), existing_file());
@@ -201,7 +201,7 @@ fn parent_pointer_works() {
         "#)
         .file("bar/src/main.rs", "fn main() {}")
         .file("bar/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").cwd(p.root().join("foo")),
                 execs().with_status(0));
@@ -232,7 +232,7 @@ fn same_names_in_workspace() {
             workspace = ".."
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101)
@@ -262,7 +262,7 @@ fn parent_doesnt_point_to_child() {
             authors = []
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(101)
@@ -286,7 +286,7 @@ fn invalid_parent_pointer() {
             workspace = "foo"
         "#)
         .file("src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101)
@@ -311,7 +311,7 @@ fn invalid_members() {
             members = ["foo"]
         "#)
         .file("src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101)
@@ -335,7 +335,7 @@ fn bare_workspace_ok() {
             [workspace]
         "#)
         .file("src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
 }
@@ -363,7 +363,7 @@ fn two_roots() {
             members = [".."]
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101)
@@ -392,7 +392,7 @@ fn workspace_isnt_root() {
             authors = []
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101)
@@ -430,7 +430,7 @@ fn dangling_member() {
             workspace = "../baz"
         "#)
         .file("baz/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101)
@@ -460,7 +460,7 @@ fn cycle() {
             workspace = ".."
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101));
@@ -492,7 +492,7 @@ fn share_dependencies() {
             dep1 = "< 0.1.5"
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     Package::new("dep1", "0.1.3").publish();
     Package::new("dep1", "0.1.8").publish();
@@ -531,7 +531,7 @@ fn fetch_fetches_all() {
             dep1 = "*"
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     Package::new("dep1", "0.1.3").publish();
 
@@ -569,7 +569,7 @@ fn lock_works_for_everyone() {
             dep1 = "0.1"
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     Package::new("dep1", "0.1.0").publish();
     Package::new("dep2", "0.1.0").publish();
@@ -616,7 +616,7 @@ fn virtual_works() {
             authors = []
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
     assert_that(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(0));
     assert_that(&p.root().join("Cargo.lock"), existing_file());
@@ -638,7 +638,7 @@ fn explicit_package_argument_works_with_virtual_manifest() {
             authors = []
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
     assert_that(p.cargo("build").cwd(p.root()).args(&["--package", "bar"]),
                 execs().with_status(0));
     assert_that(&p.root().join("Cargo.lock"), existing_file());
@@ -659,7 +659,7 @@ fn virtual_misconfigure() {
             authors = []
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
     assert_that(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(101)
                        .with_stderr("\
@@ -686,7 +686,7 @@ fn virtual_build_all_implied() {
             authors = []
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 }
@@ -697,7 +697,7 @@ fn virtual_build_no_members() {
         .file("Cargo.toml", r#"
             [workspace]
         "#);
-    p.build();
+    let p = p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
@@ -721,7 +721,7 @@ fn include_virtual() {
         .file("bar/Cargo.toml", r#"
             [workspace]
         "#);
-    p.build();
+    let p = p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
@@ -771,7 +771,7 @@ fn members_include_path_deps() {
             authors = []
         "#)
         .file("p3/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").cwd(p.root().join("p1")),
                 execs().with_status(0));
@@ -800,7 +800,7 @@ fn new_warns_you_this_will_not_work() {
             [workspace]
         "#)
         .file("src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("new").arg("--lib").arg("bar").env("USER", "foo"),
                 execs().with_status(0)
@@ -844,7 +844,7 @@ fn lock_doesnt_change_depending_on_crate() {
             bar = "*"
         "#)
         .file("baz/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     Package::new("foo", "1.0.0").publish();
     Package::new("bar", "1.0.0").publish();
@@ -894,7 +894,7 @@ fn rebuild_please() {
                 assert_eq!(lib::foo(), 0);
             }
         "#);
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("run").cwd(p.root().join("bin")),
                 execs().with_status(0));
@@ -939,7 +939,7 @@ fn workspace_in_git() {
         .file("src/lib.rs", r#"
             pub fn foo() -> u32 { 0 }
         "#);
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -961,7 +961,7 @@ fn lockfile_can_specify_nonexistant_members() {
         "#)
         .file("a/src/main.rs", "fn main() {}")
         .file("Cargo.lock", r#"
-            [root]
+            [[package]]
             name = "a"
             version = "0.1.0"
 
@@ -970,7 +970,7 @@ fn lockfile_can_specify_nonexistant_members() {
             version = "0.1.0"
         "#);
 
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").cwd(p.root().join("a")), execs().with_status(0));
 }
@@ -988,7 +988,7 @@ fn you_cannot_generate_lockfile_for_empty_workspaces() {
             authors = []
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("update"),
                 execs().with_status(101)
@@ -1039,7 +1039,7 @@ fn workspace_with_transitive_dev_deps() {
             authors = ["mbrubeck@example.com"]
         "#)
         .file("baz/src/lib.rs", r#"pub fn do_stuff() {}"#);
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("test").args(&["-p", "bar"]),
                 execs().with_status(0));
@@ -1056,7 +1056,7 @@ fn error_if_parent_cargo_toml_is_invalid() {
             authors = []
         "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(101)
@@ -1085,7 +1085,7 @@ fn relative_path_for_member_works() {
         workspace = "../foo"
     "#)
         .file("bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").cwd(p.root().join("foo")), execs().with_status(0));
     assert_that(p.cargo("build").cwd(p.root().join("bar")), execs().with_status(0));
@@ -1113,7 +1113,7 @@ fn relative_path_for_root_works() {
         authors = []
     "#)
         .file("subproj/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").cwd(p.root())
                     .arg("--manifest-path").arg("./Cargo.toml"),
@@ -1146,7 +1146,7 @@ fn path_dep_outside_workspace_is_not_member() {
             authors = []
         "#)
         .file("foo/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").cwd(p.root().join("ws")),
                 execs().with_status(0));
@@ -1186,7 +1186,7 @@ fn test_in_and_out_of_workspace() {
             authors = []
         "#)
         .file("bar/src/lib.rs", "pub fn f() { }");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").cwd(p.root().join("ws")),
                 execs().with_status(0));
@@ -1239,7 +1239,7 @@ fn test_path_dependency_under_member() {
             authors = []
         "#)
         .file("foo/bar/src/lib.rs", "pub fn f() { }");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").cwd(p.root().join("ws")),
                 execs().with_status(0));
@@ -1274,7 +1274,7 @@ fn excluded_simple() {
             authors = []
         "#)
         .file("foo/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -1312,7 +1312,7 @@ fn exclude_members_preferred() {
             authors = []
         "#)
         .file("foo/bar/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -1355,7 +1355,7 @@ fn exclude_but_also_depend() {
             authors = []
         "#)
         .file("foo/bar/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
@@ -1380,6 +1380,71 @@ fn glob_syntax() {
             [workspace]
             members = ["crates/*"]
             exclude = ["crates/qux"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("crates/bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+            workspace = "../.."
+        "#)
+        .file("crates/bar/src/main.rs", "fn main() {}")
+        .file("crates/baz/Cargo.toml", r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+            authors = []
+            workspace = "../.."
+        "#)
+        .file("crates/baz/src/main.rs", "fn main() {}")
+        .file("crates/qux/Cargo.toml", r#"
+            [project]
+            name = "qux"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("crates/qux/src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("bar"), is_not(existing_file()));
+    assert_that(&p.bin("baz"), is_not(existing_file()));
+
+    assert_that(p.cargo("build").cwd(p.root().join("crates/bar")),
+                execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("bar"), existing_file());
+
+    assert_that(p.cargo("build").cwd(p.root().join("crates/baz")),
+                execs().with_status(0));
+    assert_that(&p.bin("foo"), existing_file());
+    assert_that(&p.bin("baz"), existing_file());
+
+    assert_that(p.cargo("build").cwd(p.root().join("crates/qux")),
+                execs().with_status(0));
+    assert_that(&p.bin("qux"), is_not(existing_file()));
+
+    assert_that(&p.root().join("Cargo.lock"), existing_file());
+    assert_that(&p.root().join("crates/bar/Cargo.lock"), is_not(existing_file()));
+    assert_that(&p.root().join("crates/baz/Cargo.lock"), is_not(existing_file()));
+    assert_that(&p.root().join("crates/qux/Cargo.lock"), existing_file());
+}
+
+/*FIXME: This fails because of how workspace.exclude and workspace.members are working.
+#[test]
+fn glob_syntax_2() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["crates/b*"]
+            exclude = ["crates/q*"]
         "#)
         .file("src/main.rs", "fn main() {}")
         .file("crates/bar/Cargo.toml", r#"
@@ -1431,6 +1496,7 @@ fn glob_syntax() {
     assert_that(&p.root().join("crates/baz/Cargo.lock"), is_not(existing_file()));
     assert_that(&p.root().join("crates/qux/Cargo.lock"), existing_file());
 }
+*/
 
 #[test]
 fn glob_syntax_invalid_members() {
@@ -1446,7 +1512,7 @@ fn glob_syntax_invalid_members() {
         "#)
         .file("src/main.rs", "fn main() {}")
         .file("crates/bar/src/main.rs", "fn main() {}");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101)
@@ -1506,7 +1572,7 @@ fn dep_used_with_separate_features() {
         "#)
         .file("caller2/src/main.rs", "fn main() {}")
         .file("caller2/src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     // Build the entire workspace
     assert_that(p.cargo("build").arg("--all"),
@@ -1551,3 +1617,38 @@ fn dep_used_with_separate_features() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
+
+/*FIXME: This fails because of how workspace.exclude and workspace.members are working.
+#[test]
+fn include_and_exclude() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo"]
+            exclude = ["foo/bar"]
+            "#)
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            "#)
+        .file("foo/src/lib.rs", "")
+        .file("foo/bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+            "#)
+        .file("foo/bar/src/lib.rs", "");
+    p.build();
+
+    assert_that(p.cargo("build").cwd(p.root().join("foo")),
+    execs().with_status(0));
+    assert_that(&p.root().join("target"), existing_dir());
+    assert_that(&p.root().join("foo/target"), is_not(existing_dir()));
+    assert_that(p.cargo("build").cwd(p.root().join("foo/bar")),
+    execs().with_status(0));
+    assert_that(&p.root().join("foo/bar/target"), existing_dir());
+}
+*/

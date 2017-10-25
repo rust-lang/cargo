@@ -19,6 +19,14 @@ fn cargo_process(s: &str) -> ProcessBuilder {
     p
 }
 
+fn create_empty_gitconfig() {
+    // This helps on Windows where libgit2 is very aggressive in attempting to
+    // find a git config file.
+    let gitconfig = paths::home().join(".gitconfig");
+    File::create(gitconfig).unwrap();
+}
+
+
 #[test]
 fn simple_lib() {
     assert_that(cargo_process("new").arg("--lib").arg("foo").arg("--vcs").arg("none")
@@ -69,8 +77,7 @@ fn simple_bin() {
 
 #[test]
 fn both_lib_and_bin() {
-    let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("--lib").arg("--bin").arg("foo").cwd(td.path())
+    assert_that(cargo_process("new").arg("--lib").arg("--bin").arg("foo")
                                     .env("USER", "foo"),
                 execs().with_status(101).with_stderr(
                     "[ERROR] can't specify both lib and binary outputs"));
@@ -78,6 +85,9 @@ fn both_lib_and_bin() {
 
 #[test]
 fn simple_git() {
+    // Run inside a temp directory so that cargo will initialize a git repo.
+    // If this ran inside paths::root() it would detect that we are already
+    // inside a git repo and skip the initialization.
     let td = TempDir::new("cargo").unwrap();
     assert_that(cargo_process("new").arg("--lib").arg("foo").cwd(td.path())
                                     .env("USER", "foo"),
@@ -186,14 +196,11 @@ fn explicit_name_not_stripped() {
 
 #[test]
 fn finds_author_user() {
-    // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
-    // the hierarchy
-    let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("foo").env("USER", "foo")
-                                    .cwd(td.path()),
+    create_empty_gitconfig();
+    assert_that(cargo_process("new").arg("foo").env("USER", "foo"),
                 execs().with_status(0));
 
-    let toml = td.path().join("foo/Cargo.toml");
+    let toml = paths::root().join("foo/Cargo.toml");
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["foo"]"#));
@@ -201,14 +208,11 @@ fn finds_author_user() {
 
 #[test]
 fn finds_author_user_escaped() {
-    // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
-    // the hierarchy
-    let td = TempDir::new("cargo").unwrap();
-    assert_that(cargo_process("new").arg("foo").env("USER", "foo \"bar\"")
-                                    .cwd(td.path()),
+    create_empty_gitconfig();
+    assert_that(cargo_process("new").arg("foo").env("USER", "foo \"bar\""),
                 execs().with_status(0));
 
-    let toml = td.path().join("foo/Cargo.toml");
+    let toml = paths::root().join("foo/Cargo.toml");
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["foo \"bar\""]"#));
@@ -216,16 +220,13 @@ fn finds_author_user_escaped() {
 
 #[test]
 fn finds_author_username() {
-    // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
-    // the hierarchy
-    let td = TempDir::new("cargo").unwrap();
+    create_empty_gitconfig();
     assert_that(cargo_process("new").arg("foo")
                                     .env_remove("USER")
-                                    .env("USERNAME", "foo")
-                                    .cwd(td.path()),
+                                    .env("USERNAME", "foo"),
                 execs().with_status(0));
 
-    let toml = td.path().join("foo/Cargo.toml");
+    let toml = paths::root().join("foo/Cargo.toml");
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["foo"]"#));
@@ -233,18 +234,14 @@ fn finds_author_username() {
 
 #[test]
 fn finds_author_priority() {
-    // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
-    // the hierarchy
-    let td = TempDir::new("cargo").unwrap();
     assert_that(cargo_process("new").arg("foo")
                                     .env("USER", "bar2")
                                     .env("EMAIL", "baz2")
                                     .env("CARGO_NAME", "bar")
-                                    .env("CARGO_EMAIL", "baz")
-                                    .cwd(td.path()),
+                                    .env("CARGO_EMAIL", "baz"),
                 execs().with_status(0));
 
-    let toml = td.path().join("foo/Cargo.toml");
+    let toml = paths::root().join("foo/Cargo.toml");
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
@@ -252,16 +249,13 @@ fn finds_author_priority() {
 
 #[test]
 fn finds_author_email() {
-    // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
-    // the hierarchy
-    let td = TempDir::new("cargo").unwrap();
+    create_empty_gitconfig();
     assert_that(cargo_process("new").arg("foo")
                                     .env("USER", "bar")
-                                    .env("EMAIL", "baz")
-                                    .cwd(td.path()),
+                                    .env("EMAIL", "baz"),
                 execs().with_status(0));
 
-    let toml = td.path().join("foo/Cargo.toml");
+    let toml = paths::root().join("foo/Cargo.toml");
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["bar <baz>"]"#));
@@ -307,14 +301,12 @@ fn finds_local_author_git() {
 
 #[test]
 fn finds_git_email() {
-    let td = TempDir::new("cargo").unwrap();
     assert_that(cargo_process("new").arg("foo")
                                     .env("GIT_AUTHOR_NAME", "foo")
-                                    .env("GIT_AUTHOR_EMAIL", "gitfoo")
-                                    .cwd(td.path()),
+                                    .env("GIT_AUTHOR_EMAIL", "gitfoo"),
                 execs().with_status(0));
 
-    let toml = td.path().join("foo/Cargo.toml");
+    let toml = paths::root().join("foo/Cargo.toml");
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["foo <gitfoo>"]"#), contents);
@@ -323,16 +315,13 @@ fn finds_git_email() {
 
 #[test]
 fn finds_git_author() {
-    // Use a temp dir to make sure we don't pick up .cargo/config somewhere in
-    // the hierarchy
-    let td = TempDir::new("cargo").unwrap();
+    create_empty_gitconfig();
     assert_that(cargo_process("new").arg("foo")
                                     .env_remove("USER")
-                                    .env("GIT_COMMITTER_NAME", "gitfoo")
-                                    .cwd(td.path()),
+                                    .env("GIT_COMMITTER_NAME", "gitfoo"),
                 execs().with_status(0));
 
-    let toml = td.path().join("foo/Cargo.toml");
+    let toml = paths::root().join("foo/Cargo.toml");
     let mut contents = String::new();
     File::open(&toml).unwrap().read_to_string(&mut contents).unwrap();
     assert!(contents.contains(r#"authors = ["gitfoo"]"#));
@@ -366,7 +355,6 @@ fn author_prefers_cargo() {
 #[test]
 fn git_prefers_command_line() {
     let root = paths::root();
-    let td = TempDir::new("cargo").unwrap();
     fs::create_dir(&root.join(".cargo")).unwrap();
     File::create(&root.join(".cargo/config")).unwrap().write_all(br#"
         [cargo-new]
@@ -376,10 +364,9 @@ fn git_prefers_command_line() {
     "#).unwrap();
 
     assert_that(cargo_process("new").arg("foo").arg("--vcs").arg("git")
-                                    .cwd(td.path())
                                     .env("USER", "foo"),
                 execs().with_status(0));
-    assert!(td.path().join("foo/.gitignore").exists());
+    assert!(paths::root().join("foo/.gitignore").exists());
 }
 
 #[test]

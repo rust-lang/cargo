@@ -1,6 +1,6 @@
 use cargo::ops;
 use cargo::core::{SourceId, GitReference};
-use cargo::util::{CliResult, Config, ToUrl};
+use cargo::util::{CargoError, CliResult, Config, ToUrl};
 
 #[derive(Deserialize)]
 pub struct Options {
@@ -24,6 +24,7 @@ pub struct Options {
 
     arg_crate: Vec<String>,
     flag_vers: Option<String>,
+    flag_version: Option<String>,
 
     flag_git: Option<String>,
     flag_branch: Option<String>,
@@ -43,7 +44,8 @@ Usage:
     cargo install [options] --list
 
 Specifying what crate to install:
-    --vers VERS               Specify a version to install from crates.io
+    --vers VERSION            Specify a version to install from crates.io
+    --version VERSION
     --git URL                 Git URL to install the specified crate from
     --branch BRANCH           Branch to use when installing from git
     --tag TAG                 Tag to use when installing from git
@@ -101,7 +103,7 @@ the more explicit `install --path .`.
 The `--list` option will list all installed packages (and their versions).
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
@@ -151,7 +153,11 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
     };
 
     let krates = options.arg_crate.iter().map(|s| &s[..]).collect::<Vec<_>>();
-    let vers = options.flag_vers.as_ref().map(|s| &s[..]);
+    let vers = match (&options.flag_vers, &options.flag_version) {
+        (&Some(_), &Some(_)) => return Err(CargoError::from("Invalid arguments.").into()),
+        (&Some(ref v), _) | (_, &Some(ref v)) => Some(v.as_ref()),
+        _ => None,
+    };
     let root = options.flag_root.as_ref().map(|s| &s[..]);
 
     if options.flag_list {
