@@ -8,9 +8,36 @@ use hamcrest::assert_that;
 
 #[test]
 fn oldest_lockfile_still_works() {
+    let cargo_commands = vec![
+        "build",
+        "update"
+    ];
+    for cargo_command in cargo_commands {
+        oldest_lockfile_still_works_with_command(cargo_command);
+    }
+}
+
+fn oldest_lockfile_still_works_with_command(cargo_command: &str) {
     Package::new("foo", "0.1.0").publish();
 
-    let lockfile = r#"
+    let expected_lockfile =
+r#"[[package]]
+name = "bar"
+version = "0.0.1"
+dependencies = [
+ "foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "[..]"
+"#;
+
+    let old_lockfile = r#"
 [root]
 name = "bar"
 version = "0.0.1"
@@ -35,14 +62,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
             foo = "0.1.0"
         "#)
         .file("src/lib.rs", "")
-        .file("Cargo.lock", lockfile);
-    p.build();
+        .file("Cargo.lock", old_lockfile);
 
-    assert_that(p.cargo("build"),
+    let p = p.build();
+
+    assert_that(p.cargo(cargo_command),
                 execs().with_status(0));
 
     let lock = p.read_lockfile();
-    assert!(lock.starts_with(lockfile.trim()));
+    for (l, r) in expected_lockfile.lines().zip(lock.lines()) {
+        assert!(lines_match(l, r), "Lines differ:\n{}\n\n{}", l, r);
+    }
+
+    assert_eq!(lock.lines().count(), expected_lockfile.lines().count());
 }
 
 #[test]
@@ -61,7 +93,7 @@ fn totally_wild_checksums_works() {
         "#)
         .file("src/lib.rs", "")
         .file("Cargo.lock", r#"
-[root]
+[[package]]
 name = "bar"
 version = "0.0.1"
 dependencies = [
@@ -78,14 +110,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum foo 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "checksum"
 "#);
 
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 
     let lock = p.read_lockfile();
     assert!(lock.starts_with(r#"
-[root]
+[[package]]
 name = "bar"
 version = "0.0.1"
 dependencies = [
@@ -117,7 +149,7 @@ fn wrong_checksum_is_an_error() {
         "#)
         .file("src/lib.rs", "")
         .file("Cargo.lock", r#"
-[root]
+[[package]]
 name = "bar"
 version = "0.0.1"
 dependencies = [
@@ -133,7 +165,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "checksum"
 "#);
 
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
@@ -170,7 +202,7 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
         "#)
         .file("src/lib.rs", "")
         .file("Cargo.lock", r#"
-[root]
+[[package]]
 name = "bar"
 version = "0.0.1"
 dependencies = [
@@ -185,7 +217,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [metadata]
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "<none>"
 "#);
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("fetch"),
                 execs().with_status(101).with_stderr("\
@@ -230,7 +262,7 @@ fn listed_checksum_bad_if_we_cannot_compute() {
         "#, git.url()))
         .file("src/lib.rs", "")
         .file("Cargo.lock", &format!(r#"
-[root]
+[[package]]
 name = "bar"
 version = "0.0.1"
 dependencies = [
@@ -246,7 +278,7 @@ source = "git+{0}"
 "checksum foo 0.1.0 (git+{0})" = "checksum"
 "#, git.url()));
 
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("fetch"),
                 execs().with_status(101).with_stderr("\
@@ -280,14 +312,14 @@ fn current_lockfile_format() {
             foo = "0.1.0"
         "#)
         .file("src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
 
     let actual = p.read_lockfile();
 
     let expected = "\
-[root]
+[[package]]
 name = \"bar\"
 version = \"0.0.1\"
 dependencies = [
@@ -339,7 +371,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
         .file("src/lib.rs", "")
         .file("Cargo.lock", lockfile);
 
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
 
@@ -362,7 +394,7 @@ fn locked_correct_error() {
             foo = "0.1.0"
         "#)
         .file("src/lib.rs", "");
-    p.build();
+    let p = p.build();
 
     assert_that(p.cargo("build").arg("--locked"),
                 execs().with_status(101).with_stderr("\

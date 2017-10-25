@@ -3,11 +3,11 @@ use std::io::prelude::*;
 use std::fs::{self, File};
 
 use support::paths;
-use support::git::repo;
+use support::git::{repo, Repository};
 
 use url::Url;
 
-pub fn setup() {
+pub fn setup() -> Repository {
     let config = paths::root().join(".cargo/config");
     t!(fs::create_dir_all(config.parent().unwrap()));
     t!(t!(File::create(&config)).write_all(br#"
@@ -21,7 +21,7 @@ pub fn setup() {
             "dl": "{0}",
             "api": "{0}"
         }}"#, upload()))
-        .build();
+        .build()
 }
 
 fn registry_path() -> PathBuf { paths::root().join("registry") }

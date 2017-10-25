@@ -87,11 +87,18 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
                        a version", dep.name())
             }
         } else if dep.source_id() != registry_src {
-            bail!("crates cannot be published to crates.io with dependencies sourced from \
-                   a repository\neither publish `{}` as its own crate on crates.io and \
-                   specify a crates.io version as a dependency or pull it into this \
-                   repository and specify it with a path and version\n(crate `{}` has \
-                   repository path `{}`)", dep.name(), dep.name(),  dep.source_id());
+            if dep.source_id().is_registry() {
+                bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
+                       registries either publish `{}` on crates.io or pull it into this repository\n\
+                       and specify it with a path and version\n\
+                       (crate `{}` is pulled from {}", dep.name(), dep.name(), dep.source_id());
+            } else {
+                bail!("crates cannot be published to crates.io with dependencies sourced from \
+                       a repository\neither publish `{}` as its own crate on crates.io and \
+                       specify a crates.io version as a dependency or pull it into this \
+                       repository and specify it with a path and version\n(crate `{}` has \
+                       repository path `{}`)", dep.name(), dep.name(),  dep.source_id());
+            }
         }
     }
     Ok(())
@@ -123,7 +130,7 @@ fn transmit(config: &Config,
         ref keywords, ref readme, ref repository, ref license, ref license_file,
         ref categories, ref badges,
     } = *manifest.metadata();
-    let readme = match *readme {
+    let readme_content = match *readme {
         Some(ref readme) => Some(paths::read(&pkg.root().join(readme))?),
         None => None,
     };
@@ -150,7 +157,8 @@ fn transmit(config: &Config,
         documentation: documentation.clone(),
         keywords: keywords.clone(),
         categories: categories.clone(),
-        readme: readme,
+        readme: readme_content,
+        readme_file: readme.clone(),
         repository: repository.clone(),
         license: license.clone(),
         license_file: license_file.clone(),
@@ -209,7 +217,7 @@ pub fn registry(config: &Config,
         src.update().chain_err(|| {
             format!("failed to update {}", sid)
         })?;
-        (src.config()?).unwrap().api
+        (src.config()?).unwrap().api.unwrap()
     };
     let handle = http_handle(config)?;
     Ok((Registry::new_handle(api_host, token, handle), sid))

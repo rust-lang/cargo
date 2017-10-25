@@ -32,9 +32,10 @@ pub fn disabled() -> bool {
     CHECK.call_once(|| {
         let p = project("cross_test")
             .file("Cargo.toml", &basic_bin_manifest("cross_test"))
-            .file("src/cross_test.rs", &main_file(r#""testing!""#, &[]));
+            .file("src/cross_test.rs", &main_file(r#""testing!""#, &[]))
+            .build();
 
-        let result = p.cargo_process("build")
+        let result = p.cargo("build")
             .arg("--target").arg(&cross_target)
             .exec_with_output();
 

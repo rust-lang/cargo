@@ -64,7 +64,7 @@ arguments to both Cargo and the binary, the ones after `--` go to the binary,
 the ones before go to Cargo.
 ";
 
-pub fn execute(options: Options, config: &Config) -> CliResult {
+pub fn execute(options: Options, config: &mut Config) -> CliResult {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,

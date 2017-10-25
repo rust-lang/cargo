@@ -6,19 +6,20 @@ manifest, see the [manifest format](manifest.html).
 
 # Hierarchical structure
 
-Cargo allows to have local configuration for a particular project or global
-configuration (like git). Cargo also extends this ability to a hierarchical
-strategy. If, for example, Cargo were invoked in `/home/foo/bar/baz`, then the
+Cargo allows local configuration for a particular project as well as global
+configuration, like git. Cargo extends this to a hierarchical strategy.
+If, for example, Cargo were invoked in `/projects/foo/bar/baz`, then the
 following configuration files would be probed for and unified in this order:
 
-* `/home/foo/bar/baz/.cargo/config`
-* `/home/foo/bar/.cargo/config`
-* `/home/foo/.cargo/config`
-* `/home/.cargo/config`
+* `/projects/foo/bar/baz/.cargo/config`
+* `/projects/foo/bar/.cargo/config`
+* `/projects/foo/.cargo/config`
+* `/projects/.cargo/config`
 * `/.cargo/config`
+* `$HOME/.cargo/config`
 
-With this structure you can specify local configuration per-project, and even
-possibly check it into version control. You can also specify personal default
+With this structure, you can specify configuration per-project, and even
+possibly check it into version control. You can also specify personal defaults
 with a configuration file in your home directory.
 
 # Configuration format

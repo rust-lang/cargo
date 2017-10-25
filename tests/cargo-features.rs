@@ -15,8 +15,9 @@ fn feature_required() {
             authors = []
             im-a-teapot = true
         "#)
-        .file("src/lib.rs", "");
-    assert_that(p.cargo_process("build")
+        .file("src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build")
                  .masquerade_as_nightly_cargo(),
                 execs().with_status(101)
                        .with_stderr("\
@@ -59,8 +60,9 @@ fn unknown_feature() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "");
-    assert_that(p.cargo_process("build"),
+        .file("src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to parse manifest at `[..]`
@@ -81,8 +83,9 @@ fn stable_feature_warns() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "");
-    assert_that(p.cargo_process("build"),
+        .file("src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 warning: the cargo feature `test-dummy-stable` is now stable and is no longer \
@@ -104,8 +107,9 @@ fn nightly_feature_requires_nightly() {
             authors = []
             im-a-teapot = true
         "#)
-        .file("src/lib.rs", "");
-    assert_that(p.cargo_process("build")
+        .file("src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build")
                  .masquerade_as_nightly_cargo(),
                 execs().with_status(0)
                        .with_stderr("\
@@ -146,8 +150,9 @@ fn nightly_feature_requires_nightly_in_dep() {
             authors = []
             im-a-teapot = true
         "#)
-        .file("a/src/lib.rs", "");
-    assert_that(p.cargo_process("build")
+        .file("a/src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build")
                  .masquerade_as_nightly_cargo(),
                 execs().with_status(0)
                        .with_stderr("\
@@ -185,8 +190,9 @@ fn cant_publish() {
             authors = []
             im-a-teapot = true
         "#)
-        .file("src/lib.rs", "");
-    assert_that(p.cargo_process("build")
+        .file("src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build")
                  .masquerade_as_nightly_cargo(),
                 execs().with_status(0)
                        .with_stderr("\
@@ -217,8 +223,9 @@ fn z_flags_rejected() {
             authors = []
             im-a-teapot = true
         "#)
-        .file("src/lib.rs", "");
-    assert_that(p.cargo_process("build")
+        .file("src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build")
                  .arg("-Zprint-im-a-teapot"),
                 execs().with_status(101)
                        .with_stderr("\
@@ -255,8 +262,9 @@ fn publish_rejected() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "");
-    assert_that(p.cargo_process("package")
+        .file("src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("package")
                  .masquerade_as_nightly_cargo(),
                 execs().with_status(101)
                        .with_stderr("\

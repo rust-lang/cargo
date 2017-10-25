@@ -157,8 +157,9 @@ fn cfg_easy() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("b/src/lib.rs", "");
-    assert_that(p.cargo_process("build").arg("-v"),
+        .file("b/src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -182,8 +183,9 @@ fn dont_include() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("b/src/lib.rs", "");
-    assert_that(p.cargo_process("build"),
+        .file("b/src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -208,9 +210,10 @@ fn works_through_the_registry() {
             [dependencies]
             bar = "0.1.0"
         "#)
-        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate bar;");
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate bar;")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
@@ -242,9 +245,10 @@ fn ignore_version_from_other_platform() {
             [target.'cfg({})'.dependencies]
             foo = "0.2.0"
         "#, this_family, other_family))
-        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate foo;");
+        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate foo;")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
@@ -266,9 +270,10 @@ fn bad_target_spec() {
             [target.'cfg(4)'.dependencies]
             bar = "0.1.0"
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -292,9 +297,10 @@ fn bad_target_spec2() {
             [target.'cfg(foo =)'.dependencies]
             bar = "0.1.0"
         "#)
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build"),
+    assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -336,8 +342,9 @@ fn multiple_match_ok() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("b/src/lib.rs", "");
-    assert_that(p.cargo_process("build").arg("-v"),
+        .file("b/src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -360,7 +367,8 @@ fn any_ok() {
             version = "0.0.1"
             authors = []
         "#)
-        .file("b/src/lib.rs", "");
-    assert_that(p.cargo_process("build").arg("-v"),
+        .file("b/src/lib.rs", "")
+        .build();
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }

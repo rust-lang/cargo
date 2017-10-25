@@ -29,10 +29,11 @@ fn simple_cross() {
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, cross_compile::alternate_arch()));
+        "#, cross_compile::alternate_arch()))
+        .build();
 
     let target = cross_compile::alternate();
-    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+    assert_that(p.cargo("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
@@ -66,10 +67,11 @@ fn simple_cross_config() {
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, cross_compile::alternate_arch()));
+        "#, cross_compile::alternate_arch()))
+        .build();
 
     let target = cross_compile::alternate();
-    assert_that(p.cargo_process("build").arg("-v"),
+    assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(0));
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
@@ -94,19 +96,20 @@ fn simple_deps() {
         .file("src/main.rs", r#"
             extern crate bar;
             fn main() { bar::bar(); }
-        "#);
-    let p2 = project("bar")
+        "#)
+        .build();
+    let _p2 = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn bar() {}");
-    p2.build();
+        .file("src/lib.rs", "pub fn bar() {}")
+        .build();
 
     let target = cross_compile::alternate();
-    assert_that(p.cargo_process("build").arg("--target").arg(&target),
+    assert_that(p.cargo("build").arg("--target").arg(&target),
                 execs().with_status(0));
     assert_that(&p.target_bin(&target, "foo"), existing_file());
 
@@ -139,8 +142,9 @@ fn plugin_deps() {
             fn main() {
                 assert_eq!(bar!(), baz::baz());
             }
-        "#);
-    let bar = project("bar")
+        "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -171,20 +175,20 @@ fn plugin_deps() {
                           -> Box<MacResult + 'static> {
                 MacEager::expr(quote_expr!(cx, 1))
             }
-        "#);
-    let baz = project("baz")
+        "#)
+        .build();
+    let _baz = project("baz")
         .file("Cargo.toml", r#"
             [package]
             name = "baz"
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }");
-    bar.build();
-    baz.build();
+        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }")
+        .build();
 
     let target = cross_compile::alternate();
-    assert_that(foo.cargo_process("build").arg("--target").arg(&target),
+    assert_that(foo.cargo("build").arg("--target").arg(&target),
                 execs().with_status(0));
     assert_that(&foo.target_bin(&target, "foo"), existing_file());
 
@@ -217,8 +221,9 @@ fn plugin_to_the_max() {
             fn main() {
                 assert_eq!(bar!(), baz::baz());
             }
-        "#);
-    let bar = project("bar")
+        "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -253,20 +258,20 @@ fn plugin_to_the_max() {
                           -> Box<MacResult + 'static> {
                 MacEager::expr(quote_expr!(cx, baz::baz()))
             }
-        "#);
-    let baz = project("baz")
+        "#)
+        .build();
+    let _baz = project("baz")
         .file("Cargo.toml", r#"
             [package]
             name = "baz"
             version = "0.0.1"
             authors = []
         "#)
-        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }");
-    bar.build();
-    baz.build();
+        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }")
+        .build();
 
     let target = cross_compile::alternate();
-    assert_that(foo.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+    assert_that(foo.cargo("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
     println!("second");
     assert_that(foo.cargo("build").arg("-v")
@@ -295,9 +300,10 @@ fn linker_and_ar() {
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, cross_compile::alternate_arch()));
+        "#, cross_compile::alternate_arch()))
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--target").arg(&target)
+    assert_that(p.cargo("build").arg("--target").arg(&target)
                                               .arg("-v"),
                 execs().with_status(101)
                        .with_stderr_contains(&format!("\
@@ -337,8 +343,9 @@ fn plugin_with_extra_dylib_dep() {
             #![plugin(bar)]
 
             fn main() {}
-        "#);
-    let bar = project("bar")
+        "#)
+        .build();
+    let _bar = project("bar")
         .file("Cargo.toml", r#"
             [package]
             name = "bar"
@@ -364,8 +371,9 @@ fn plugin_with_extra_dylib_dep() {
             pub fn foo(reg: &mut Registry) {
                 println!("{}", baz::baz());
             }
-        "#);
-    let baz = project("baz")
+        "#)
+        .build();
+    let _baz = project("baz")
         .file("Cargo.toml", r#"
             [package]
             name = "baz"
@@ -376,12 +384,11 @@ fn plugin_with_extra_dylib_dep() {
             name = "baz"
             crate_type = ["dylib"]
         "#)
-        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }");
-    bar.build();
-    baz.build();
+        .file("src/lib.rs", "pub fn baz() -> i32 { 1 }")
+        .build();
 
     let target = cross_compile::alternate();
-    assert_that(foo.cargo_process("build").arg("--target").arg(&target),
+    assert_that(foo.cargo("build").arg("--target").arg(&target),
                 execs().with_status(0));
 }
 
@@ -412,10 +419,11 @@ fn cross_tests() {
             use std::env;
             pub fn foo() {{ assert_eq!(env::consts::ARCH, "{}"); }}
             #[test] fn test_foo() {{ foo() }}
-        "#, cross_compile::alternate_arch()));
+        "#, cross_compile::alternate_arch()))
+        .build();
 
     let target = cross_compile::alternate();
-    assert_that(p.cargo_process("test").arg("--target").arg(&target),
+    assert_that(p.cargo("test").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({foo})
@@ -442,8 +450,8 @@ fn no_cross_doctests() {
             //! extern crate foo;
             //! assert!(true);
             //! ```
-        "#);
-    p.build();
+        "#)
+        .build();
 
     let host_output = format!("\
 [COMPILING] foo v0.0.0 ({foo})
@@ -495,10 +503,11 @@ fn simple_cargo_run() {
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, cross_compile::alternate_arch()));
+        "#, cross_compile::alternate_arch()))
+        .build();
 
     let target = cross_compile::alternate();
-    assert_that(p.cargo_process("run").arg("--target").arg(&target),
+    assert_that(p.cargo("run").arg("--target").arg(&target),
                 execs().with_status(0));
 }
 
@@ -535,9 +544,10 @@ fn cross_with_a_build_script() {
                 assert_eq!(path.file_name().unwrap().to_str().unwrap(), "target");
             }}
         "#, target))
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+    assert_that(p.cargo("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 (file://[..])
@@ -609,9 +619,10 @@ fn build_script_needed_for_host_and_target() {
             #[allow(unused_extern_crates)]
             extern crate d1;
             pub fn d2() { d1::d1(); }
-        ");
+        ")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+    assert_that(p.cargo("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
                        .with_stderr_contains(&format!("\
 [COMPILING] d1 v0.0.0 ({url}/d1)", url = p.url()))
@@ -673,10 +684,11 @@ fn build_deps_for_the_right_arch() {
             path = "../d1"
         "#)
         .file("d2/build.rs", "extern crate d1; fn main() {}")
-        .file("d2/src/lib.rs", "");
+        .file("d2/src/lib.rs", "")
+        .build();
 
     let target = cross_compile::alternate();
-    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+    assert_that(p.cargo("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
 }
 
@@ -715,10 +727,11 @@ fn build_script_only_host() {
                                            .contains("target/debug/build/d1-"),
                         "bad: {:?}", env::var("OUT_DIR"));
             }
-        "#);
+        "#)
+        .build();
 
     let target = cross_compile::alternate();
-    assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
+    assert_that(p.cargo("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0));
 }
 
@@ -738,9 +751,10 @@ fn plugin_build_script_right_arch() {
             plugin = true
         "#)
         .file("build.rs", "fn main() {}")
-        .file("src/lib.rs", "");
+        .file("src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(cross_compile::alternate()),
+    assert_that(p.cargo("build").arg("-v").arg("--target").arg(cross_compile::alternate()),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
@@ -793,9 +807,10 @@ fn build_script_with_platform_specific_dependencies() {
             version = "0.0.0"
             authors = []
         "#)
-        .file("d2/src/lib.rs", "");
+        .file("d2/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
+    assert_that(p.cargo("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] d2 v0.0.0 ([..])
@@ -848,9 +863,10 @@ fn platform_specific_dependencies_do_not_leak() {
             version = "0.0.0"
             authors = []
         "#)
-        .file("d2/src/lib.rs", "");
+        .file("d2/src/lib.rs", "")
+        .build();
 
-    assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
+    assert_that(p.cargo("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [..] can't find crate for `d2`[..]"));
@@ -917,8 +933,8 @@ fn platform_specific_variables_reflected_in_build_scripts() {
         .file("d2/build.rs", r#"
             fn main() { println!("cargo:val=1") }
         "#)
-        .file("d2/src/lib.rs", "");
-    p.build();
+        .file("d2/src/lib.rs", "")
+        .build();
 
     assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
     assert_that(p.cargo("build").arg("-v").arg("--target").arg(&target),
@@ -974,9 +990,10 @@ fn cross_test_dylib() {
              pub fn baz() {{
                 assert_eq!(env::consts::ARCH, "{}");
             }}
-        "#, cross_compile::alternate_arch()));
+        "#, cross_compile::alternate_arch()))
+        .build();
 
-    assert_that(p.cargo_process("test").arg("--target").arg(&target),
+    assert_that(p.cargo("test").arg("--target").arg(&target),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)

@@ -1,4 +1,4 @@
-use std::cell::{RefCell, RefMut, Cell, Ref};
+use std::cell::{RefCell, RefMut};
 use std::collections::HashSet;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::HashMap;
@@ -49,11 +49,16 @@ pub struct Config {
     /// The location of the rustdoc executable
     rustdoc: LazyCell<PathBuf>,
     /// Whether we are printing extra verbose messages
-    extra_verbose: Cell<bool>,
-    frozen: Cell<bool>,
-    locked: Cell<bool>,
+    extra_verbose: bool,
+    /// `frozen` is set if we shouldn't access the network
+    frozen: bool,
+    /// `locked` is set if we should not update lock files
+    locked: bool,
+    /// A global static IPC control mechanism (used for managing parallel builds)
     jobserver: Option<jobserver::Client>,
-    cli_flags: RefCell<CliUnstable>,
+    /// Cli flags of the form "-Z something"
+    cli_flags: CliUnstable,
+    /// A handle on curl easy mode for http calls
     easy: LazyCell<RefCell<Easy>>,
 }
 
@@ -80,9 +85,9 @@ impl Config {
             values: LazyCell::new(),
             cargo_exe: LazyCell::new(),
             rustdoc: LazyCell::new(),
-            extra_verbose: Cell::new(false),
-            frozen: Cell::new(false),
-            locked: Cell::new(false),
+            extra_verbose: false,
+            frozen: false,
+            locked: false,
             jobserver: unsafe {
                 if GLOBAL_JOBSERVER.is_null() {
                     None
@@ -90,7 +95,7 @@ impl Config {
                     Some((*GLOBAL_JOBSERVER).clone())
                 }
             },
-            cli_flags: RefCell::new(CliUnstable::default()),
+            cli_flags: CliUnstable::default(),
             easy: LazyCell::new(),
         }
     }
@@ -107,37 +112,46 @@ impl Config {
         Ok(Config::new(shell, cwd, homedir))
     }
 
+    /// The user's cargo home directory (OS-dependent)
     pub fn home(&self) -> &Filesystem { &self.home_path }
 
+    /// The cargo git directory (`<cargo_home>/git`)
     pub fn git_path(&self) -> Filesystem {
         self.home_path.join("git")
     }
 
+    /// The cargo registry index directory (`<cargo_home>/registry/index`)
     pub fn registry_index_path(&self) -> Filesystem {
         self.home_path.join("registry").join("index")
     }
 
+    /// The cargo registry cache directory (`<cargo_home>/registry/path`)
     pub fn registry_cache_path(&self) -> Filesystem {
         self.home_path.join("registry").join("cache")
     }
 
+    /// The cargo registry source directory (`<cargo_home>/registry/src`)
     pub fn registry_source_path(&self) -> Filesystem {
         self.home_path.join("registry").join("src")
     }
 
+    /// Get a reference to the shell, for e.g. writing error messages
     pub fn shell(&self) -> RefMut<Shell> {
         self.shell.borrow_mut()
     }
 
+    /// Get the path to the `rustdoc` executable
     pub fn rustdoc(&self) -> CargoResult<&Path> {
         self.rustdoc.get_or_try_init(|| self.get_tool("rustdoc")).map(AsRef::as_ref)
     }
 
+    /// Get the path to the `rustc` executable
     pub fn rustc(&self) -> CargoResult<&Rustc> {
         self.rustc.get_or_try_init(|| Rustc::new(self.get_tool("rustc")?,
                                                  self.maybe_get_tool("rustc_wrapper")?))
     }
 
+    /// Get the path to the `cargo` executable
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
         self.cargo_exe.get_or_try_init(||
             env::current_exe().and_then(|path| path.canonicalize())
@@ -384,7 +398,7 @@ impl Config {
         })
     }
 
-    pub fn configure(&self,
+    pub fn configure(&mut self,
                      verbose: u32,
                      quiet: Option<bool>,
                      color: &Option<String>,
@@ -426,30 +440,31 @@ impl Config {
 
         self.shell().set_verbosity(verbosity);
         self.shell().set_color_choice(color.map(|s| &s[..]))?;
-        self.extra_verbose.set(extra_verbose);
-        self.frozen.set(frozen);
-        self.locked.set(locked);
-        self.cli_flags.borrow_mut().parse(unstable_flags)?;
+        self.extra_verbose = extra_verbose;
+        self.frozen = frozen;
+        self.locked = locked;
+        self.cli_flags.parse(unstable_flags)?;
 
         Ok(())
     }
 
-    pub fn cli_unstable(&self) -> Ref<CliUnstable> {
-        self.cli_flags.borrow()
+    pub fn cli_unstable(&self) -> &CliUnstable {
+        &self.cli_flags
     }
 
     pub fn extra_verbose(&self) -> bool {
-        self.extra_verbose.get()
+        self.extra_verbose
     }
 
     pub fn network_allowed(&self) -> bool {
-        !self.frozen.get()
+        !self.frozen
     }
 
     pub fn lock_update_allowed(&self) -> bool {
-        !self.frozen.get() && !self.locked.get()
+        !self.frozen && !self.locked
     }
 
+    /// Loads configuration from the filesystem
     pub fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
 
@@ -483,6 +498,7 @@ impl Config {
         }
     }
 
+    /// Loads credentials config from the credentials file into the ConfigValue object, if present.
     fn load_credentials(&self, cfg: &mut ConfigValue) -> CargoResult<()> {
         let home_path = self.home_path.clone().into_path_unlocked();
         let credentials = home_path.join("credentials");
@@ -516,6 +532,8 @@ impl Config {
 
         match (registry, value) {
             (&mut CV::Table(ref mut old, _), CV::Table(ref mut new, _)) => {
+                // Take ownership of `new` by swapping it with an empty hashmap, so we can move
+                // into an iterator.
                 let new = mem::replace(new, HashMap::new());
                 for (key, value) in new {
                     old.insert(key, value);
@@ -762,7 +780,7 @@ impl ConfigValue {
         }
     }
 
-    fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
+    pub fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
         Err(format!("expected a {}, but found a {} for `{}` in {}",
                     wanted, self.desc(), key,
                     self.definition_path().display()).into())

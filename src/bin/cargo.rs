@@ -75,7 +75,7 @@ See 'cargo help <command>' for more information on a specific command.
 fn main() {
     env_logger::init().unwrap();
 
-    let config = match Config::default() {
+    let mut config = match Config::default() {
         Ok(cfg) => cfg,
         Err(e) => {
             let mut shell = Shell::new();
@@ -92,7 +92,7 @@ fn main() {
             })
             .collect());
         let rest = &args;
-        cargo::call_main_without_stdin(execute, &config, USAGE, rest, true)
+        cargo::call_main_without_stdin(execute, &mut config, USAGE, rest, true)
     })();
 
     match result {
@@ -146,7 +146,7 @@ each_subcommand!(declare_mod);
   because they are fundamental (and intertwined). Other commands can rely
   on this top-level information.
 */
-fn execute(flags: Flags, config: &Config) -> CliResult {
+fn execute(flags: Flags, config: &mut Config) -> CliResult {
     config.configure(flags.flag_verbose,
                    flags.flag_quiet,
                    &flags.flag_color,
@@ -250,11 +250,12 @@ fn execute(flags: Flags, config: &Config) -> CliResult {
     execute_external_subcommand(config, &args[1], &args)
 }
 
-fn try_execute_builtin_command(config: &Config, args: &[String]) -> Option<CliResult> {
+fn try_execute_builtin_command(config: &mut Config, args: &[String]) -> Option<CliResult> {
     macro_rules! cmd {
         ($name:ident) => (if args[1] == stringify!($name).replace("_", "-") {
             config.shell().set_verbosity(Verbosity::Verbose);
-            let r = cargo::call_main_without_stdin($name::execute, config,
+            let r = cargo::call_main_without_stdin($name::execute,
+                                                   config,
                                                    $name::USAGE,
                                                    &args,
                                                    false);

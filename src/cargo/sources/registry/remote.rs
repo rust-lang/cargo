@@ -166,8 +166,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let _lock = self.index_path.open_rw(Path::new(INDEX_LOCK),
                                             self.config,
                                             "the registry index")?;
-        self.config.shell().status("Updating",
-             format!("registry `{}`", self.source_id.url()))?;
+        self.config.shell().status("Updating", self.source_id.display_registry())?;
 
         // git fetch origin master
         let url = self.source_id.url();
