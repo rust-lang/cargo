@@ -292,10 +292,10 @@ fn invalid_dir_bad() {
 [ERROR] failed to load source for a dependency on `foo`
 
 Caused by:
-  Unable to update registry https://[..]
+  Unable to update registry `https://[..]`
 
 Caused by:
-  failed to update replaced source `registry https://[..]`
+  failed to update replaced source registry `https://[..]`
 
 Caused by:
   local registry path is not a directory: [..]path[..]to[..]nowhere
