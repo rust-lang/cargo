@@ -153,10 +153,57 @@ impl Config {
 
     /// Get the path to the `cargo` executable
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
-        self.cargo_exe.get_or_try_init(||
-            env::current_exe().and_then(|path| path.canonicalize())
-            .chain_err(|| "couldn't get the path to cargo executable")
-        ).map(AsRef::as_ref)
+        self.cargo_exe.get_or_try_init(|| {
+            fn from_current_exe() -> CargoResult<PathBuf> {
+                // Try fetching the path to `cargo` using env::current_exe().
+                // The method varies per operating system and might fail; in particular,
+                // it depends on /proc being mounted on Linux, and some environments
+                // (like containers or chroots) may not have that available.
+                env::current_exe()
+                    .and_then(|path| path.canonicalize())
+                    .map_err(CargoError::from)
+            }
+
+            fn from_argv() -> CargoResult<PathBuf> {
+                // Grab argv[0] and attempt to resolve it to an absolute path.
+                // If argv[0] has one component, it must have come from a PATH lookup,
+                // so probe PATH in that case.
+                // Otherwise, it has multiple components and is either:
+                // - a relative path (e.g. `./cargo`, `target/debug/cargo`), or
+                // - an absolute path (e.g. `/usr/local/bin/cargo`).
+                // In either case, Path::canonicalize will return the full absolute path
+                // to the target if it exists
+                env::args_os()
+                    .next()
+                    .ok_or(CargoError::from("no argv[0]"))
+                    .map(PathBuf::from)
+                    .and_then(|argv0| {
+                        if argv0.components().count() == 1 {
+                            probe_path(argv0)
+                        } else {
+                            argv0.canonicalize().map_err(CargoError::from)
+                        }
+                    })
+            }
+
+            fn probe_path(argv0: PathBuf) -> CargoResult<PathBuf> {
+                let paths = env::var_os("PATH").ok_or(CargoError::from("no PATH"))?;
+                for path in env::split_paths(&paths) {
+                    let candidate = PathBuf::from(path).join(&argv0);
+                    if candidate.is_file() {
+                        // PATH may have a component like "." in it, so we still need to
+                        // canonicalize.
+                        return candidate.canonicalize().map_err(CargoError::from);
+                    }
+                }
+
+                Err(CargoError::from("no cargo executable candidate found in PATH"))
+            }
+
+            from_current_exe()
+                .or_else(|_| from_argv())
+                .chain_err(|| "couldn't get the path to cargo executable")
+        }).map(AsRef::as_ref)
     }
 
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
