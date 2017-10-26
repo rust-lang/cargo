@@ -166,30 +166,33 @@ impl Config {
 
             fn from_argv() -> CargoResult<PathBuf> {
                 // Grab argv[0] and attempt to resolve it to an absolute path.
-                // Path::canonicalize succeeds only when the path is already absolute,
-                // or it's a relative path accessible from the current directory.
+                // If argv[0] has one component, it must have come from a PATH lookup,
+                // so probe PATH in that case.
+                // Otherwise, it has multiple components and is either:
+                // - a relative path (e.g. `./cargo`, `target/debug/cargo`), or
+                // - an absolute path (e.g. `/usr/local/bin/cargo`).
+                // In either case, Path::canonicalize will return the full absolute path
+                // to the target if it exists
                 env::args_os()
                     .next()
                     .ok_or(CargoError::from("no argv[0]"))
                     .map(PathBuf::from)
-                    .and_then(|argv0| argv0.canonicalize().or_else(|_| probe_path(argv0)))
+                    .and_then(|argv0| {
+                        if argv0.components().count() == 1 {
+                            probe_path(argv0)
+                        } else {
+                            argv0.canonicalize().map_err(CargoError::from)
+                        }
+                    })
             }
 
             fn probe_path(argv0: PathBuf) -> CargoResult<PathBuf> {
-                // Path::canonicalize failed, so finally, if argv[0] has no directory
-                // separator in it, we look through the PATH environment variable checking
-                // for a matching file in each directory.
-                // A directory separator implies either (a) an absolute path, so we
-                // shouldn't check PATH, or (b) a relative path with a directory component,
-                // which wouldn't search PATH in any shell anyway.
-                if argv0.components().count() > 1 {
-                    return Err(CargoError::from("no cargo executable candidate found"));
-                }
-
                 let paths = env::var_os("PATH").ok_or(CargoError::from("no PATH"))?;
                 for path in env::split_paths(&paths) {
                     let candidate = PathBuf::from(path).join(&argv0);
                     if candidate.is_file() {
+                        // PATH may have a component like "." in it, so we still need to
+                        // canonicalize.
                         return candidate.canonicalize().map_err(CargoError::from);
                     }
                 }
