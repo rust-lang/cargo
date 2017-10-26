@@ -147,7 +147,7 @@ fn rustdoc_only_bar_dependency() {
 
 
 #[test]
-fn rustdoc_same_name_err() {
+fn rustdoc_same_name_documents_lib() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -164,7 +164,13 @@ fn rustdoc_same_name_err() {
     assert_that(p.cargo("rustdoc").arg("-v")
                  .arg("--").arg("--cfg=foo"),
                 execs()
-                .with_status(101)
-                .with_stderr("[ERROR] The target `foo` is specified as a \
-library and as a binary by package `foo [..]`. It can be documented[..]"));
+                .with_status(0)
+                .with_stderr(format!("\
+[DOCUMENTING] foo v0.0.1 ([..])
+[RUNNING] `rustdoc --crate-name foo src[/]lib.rs \
+        -o {dir}[/]target[/]doc \
+        --cfg=foo \
+        -L dependency={dir}[/]target[/]debug[/]deps`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+", dir = p.root().display())));
 }

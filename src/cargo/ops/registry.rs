@@ -83,11 +83,18 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
                        a version", dep.name())
             }
         } else if dep.source_id() != registry_src {
-            bail!("crates cannot be published to crates.io with dependencies sourced from \
-                   a repository\neither publish `{}` as its own crate on crates.io and \
-                   specify a crates.io version as a dependency or pull it into this \
-                   repository and specify it with a path and version\n(crate `{}` has \
-                   repository path `{}`)", dep.name(), dep.name(),  dep.source_id());
+            if dep.source_id().is_registry() {
+                bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
+                       registries either publish `{}` on crates.io or pull it into this repository\n\
+                       and specify it with a path and version\n\
+                       (crate `{}` is pulled from {}", dep.name(), dep.name(), dep.source_id());
+            } else {
+                bail!("crates cannot be published to crates.io with dependencies sourced from \
+                       a repository\neither publish `{}` as its own crate on crates.io and \
+                       specify a crates.io version as a dependency or pull it into this \
+                       repository and specify it with a path and version\n(crate `{}` has \
+                       repository path `{}`)", dep.name(), dep.name(),  dep.source_id());
+            }
         }
     }
     Ok(())
@@ -206,7 +213,7 @@ pub fn registry(config: &Config,
         src.update().chain_err(|| {
             format!("failed to update {}", sid)
         })?;
-        (src.config()?).unwrap().api
+        (src.config()?).unwrap().api.unwrap()
     };
     let handle = http_handle(config)?;
     Ok((Registry::new_handle(api_host, token, handle), sid))
