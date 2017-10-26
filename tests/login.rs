@@ -30,20 +30,35 @@ fn setup_old_credentials() {
 fn setup_new_credentials() {
     let config = cargo_home().join("credentials");
     t!(fs::create_dir_all(config.parent().unwrap()));
-    t!(t!(File::create(&config)).write_all(br#"
+    t!(t!(File::create(&config)).write_all(format!(r#"
         token = "api-token"
-    "#));
+
+        ["{registry}"]
+        token = "api-token"
+    "#, registry = registry().to_string())
+    .as_bytes()));
 }
 
-fn check_host_token(toml: toml::Value) -> bool {
+fn check_host_token(mut toml: toml::Value, host_key: &str) -> bool {
+    for &key in [host_key, "token"].into_iter() {
+        if key.is_empty() {
+            continue
+        }
+
+        match toml {
+            toml::Value::Table(table) => {
+                if let Some(v) = table.get(key) {
+                    toml = v.clone();
+                } else {
+                    return false;
+                }
+            }
+            _ => break,
+        }
+    }
+
     match toml {
-        toml::Value::Table(table) => match table.get("token") {
-            Some(v) => match v {
-                &toml::Value::String(ref token) => (token.as_str() == TOKEN),
-                _ => false,
-            },
-            None => false,
-        },
+        toml::Value::String(token) => (&token == TOKEN),
         _ => false,
     }
 }
@@ -68,7 +83,7 @@ fn login_with_old_credentials() {
 
     contents.clear();
     File::open(&credentials).unwrap().read_to_string(&mut contents).unwrap();
-    assert!(check_host_token(contents.parse().unwrap()));
+    assert!(check_host_token(contents.parse().unwrap(), &registry().to_string()));
 }
 
 #[test]
@@ -87,7 +102,7 @@ fn login_with_new_credentials() {
 
     let mut contents = String::new();
     File::open(&credentials).unwrap().read_to_string(&mut contents).unwrap();
-    assert!(check_host_token(contents.parse().unwrap()));
+    assert!(check_host_token(contents.parse().unwrap(), &registry().to_string()));
 }
 
 #[test]
@@ -101,6 +116,8 @@ fn login_without_credentials() {
     assert_that(cargo_process().arg("login")
                 .arg("--host").arg(registry().to_string()).arg(TOKEN),
                 execs().with_status(0));
+    assert_that(cargo_process().arg("login").arg(TOKEN),
+                execs().with_status(0));
 
     let config = cargo_home().join("config");
     assert_that(&config, is_not(existing_file()));
@@ -110,7 +127,9 @@ fn login_without_credentials() {
 
     let mut contents = String::new();
     File::open(&credentials).unwrap().read_to_string(&mut contents).unwrap();
-    assert!(check_host_token(contents.parse().unwrap()));
+    let toml: toml::Value = contents.parse().unwrap();
+    assert!(check_host_token(toml.clone(), &registry().to_string()));
+    assert!(check_host_token(toml, ""));
 }
 
 #[test]
@@ -118,11 +137,19 @@ fn new_credentials_is_used_instead_old() {
     setup_old_credentials();
     setup_new_credentials();
 
+    assert_that(cargo_process().arg("login").arg(TOKEN),
+                execs().with_status(0));
+
     assert_that(cargo_process().arg("login")
                 .arg("--host").arg(registry().to_string()).arg(TOKEN),
                 execs().with_status(0));
 
     let config = Config::new(Shell::new(), cargo_home(), cargo_home());
+
     let token = config.get_string("registry.token").unwrap().map(|p| p.val);
     assert_eq!(token.unwrap(), TOKEN);
+
+    let token_host = config.get_string(&format!(r#"registry.{}.token"#, registry().to_string()))
+                       .unwrap().map(|p| p.val);
+    assert_eq!(token_host.unwrap(), TOKEN);
 }

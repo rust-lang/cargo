@@ -885,23 +885,36 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
 }
 
 pub fn save_credentials(cfg: &Config,
-                       token: String) -> CargoResult<()> {
+                        token: String,
+                        host: Option<String>) -> CargoResult<()> {
     let mut file = {
         cfg.home_path.create_dir()?;
         cfg.home_path.open_rw(Path::new("credentials"), cfg,
-                                   "credentials' config file")?
+                              "credentials' config file")?
+    };
+
+    let (key, value) = {
+        let key = "token".to_string();
+        let value = ConfigValue::String(token, file.path().to_path_buf());
+
+        if let Some(host) = host {
+            let mut map = HashMap::new();
+            map.insert(key, value);
+            (host, CV::Table(map, file.path().to_path_buf()))
+        } else {
+            (key, value)
+        }
     };
 
     let mut contents = String::new();
     file.read_to_string(&mut contents).chain_err(|| {
-        format!("failed to read configuration file `{}`",
-                      file.path().display())
+        format!("failed to read configuration file `{}`", file.path().display())
     })?;
+
     let mut toml = cargo_toml::parse(&contents, file.path(), cfg)?;
     toml.as_table_mut()
         .unwrap()
-        .insert("token".to_string(),
-                ConfigValue::String(token, file.path().to_path_buf()).into_toml());
+        .insert(key, value.into_toml());
 
     let contents = toml.to_string();
     file.seek(SeekFrom::Start(0))?;

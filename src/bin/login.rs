@@ -44,26 +44,28 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      options.flag_frozen,
                      options.flag_locked,
                      &options.flag_z)?;
-    let token = match options.arg_token.clone() {
+    let token = match options.arg_token {
         Some(token) => token,
         None => {
-            let src = SourceId::crates_io(config)?;
-            let mut src = RegistrySource::remote(&src, config);
-            src.update()?;
-            let config = src.config()?.unwrap();
-            let host = options.flag_host.clone().unwrap_or(config.api.unwrap());
+            let host = match options.flag_host {
+                Some(ref host) => host.clone(),
+                None => {
+                    let src = SourceId::crates_io(config)?;
+                    let mut src = RegistrySource::remote(&src, config);
+                    src.update()?;
+                    src.config()?.unwrap().api.unwrap()
+                }
+            };
             println!("please visit {}me and paste the API Token below", host);
             let mut line = String::new();
             let input = io::stdin();
             input.lock().read_line(&mut line).chain_err(|| {
                 "failed to read stdin"
             })?;
-            line
+            line.trim().to_string()
         }
     };
 
-    let token = token.trim().to_string();
-    ops::registry_login(config, token)?;
+    ops::registry_login(config, token, options.flag_host)?;
     Ok(())
 }
-
