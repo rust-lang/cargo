@@ -390,7 +390,7 @@ fn select_pkg<'a, T>(mut source: T,
                 None => {
                     let vers_info = vers.map(|v| format!(" with version `{}`", v))
                                         .unwrap_or_default();
-                    Err(format!("could not find `{}` in `{}`{}", name,
+                    Err(format!("could not find `{}` in {}{}", name,
                                 source.source_id(), vers_info).into())
                 }
             }

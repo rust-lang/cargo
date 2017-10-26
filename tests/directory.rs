@@ -196,7 +196,7 @@ error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[
 
 Caused by:
   no matching package named `baz` found (required by `bar`)
-location searched: registry https://github.com/rust-lang/crates.io-index
+location searched: registry `https://github.com/rust-lang/crates.io-index`
 version required: ^9.8.7
 "));
 }
