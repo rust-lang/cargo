@@ -311,7 +311,7 @@ debug-assertions = true
 codegen-units = 1
 panic = 'unwind'
 
-# The benchmarking profile, used for `cargo bench`.
+# The benchmarking profile, used for `cargo bench` and `cargo test --release`.
 [profile.bench]
 opt-level = 3
 debug = false
