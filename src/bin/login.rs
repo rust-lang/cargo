@@ -85,11 +85,12 @@ about this warning.";
                     let src = SourceId::crates_io(config)?;
                     let mut src = RegistrySource::remote(&src, config);
                     src.update()?;
-                    src.config()?.unwrap().api
+                    src.config()?.unwrap().api.unwrap()
                 }
             };
 
             println!("please visit {}me and paste the API Token below", index);
+          
             let mut line = String::new();
             let input = io::stdin();
             input.lock().read_line(&mut line).chain_err(|| {

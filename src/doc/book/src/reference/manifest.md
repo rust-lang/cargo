@@ -155,6 +155,7 @@ repository = "..."
 
 # This points to a file under the package root (relative to this `Cargo.toml`).
 # The contents of this file are stored and indexed in the registry.
+# crates.io will render this file and place the result on the crate's page.
 readme = "..."
 
 # This is a list of up to five keywords that describe this crate. Keywords
@@ -310,7 +311,7 @@ debug-assertions = true
 codegen-units = 1
 panic = 'unwind'
 
-# The benchmarking profile, used for `cargo bench`.
+# The benchmarking profile, used for `cargo bench` and `cargo test --release`.
 [profile.bench]
 opt-level = 3
 debug = false

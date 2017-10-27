@@ -18,7 +18,7 @@ use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 
 use super::job::Work;
-use super::context::{Context, Unit};
+use super::context::{Context, Unit, TargetFileType};
 use super::custom_build::BuildDeps;
 
 /// A tuple result of the `prepare_foo` functions in this module.
@@ -87,7 +87,10 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         missing_outputs = !root.join(unit.target.crate_name())
                                .join("index.html").exists();
     } else {
-        for &(ref src, ref link_dst, _) in cx.target_filenames(unit)?.iter() {
+        for &(ref src, ref link_dst, file_type) in cx.target_filenames(unit)?.iter() {
+            if file_type == TargetFileType::DebugInfo {
+                continue;
+            }
             missing_outputs |= !src.exists();
             if let Some(ref link_dst) = *link_dst {
                 missing_outputs |= !link_dst.exists();
