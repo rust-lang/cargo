@@ -403,13 +403,17 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
         if !opts.bin { "glob:Cargo.lock\n" } else { "" }]
         .concat();
 
-    let in_existing_vcs_repo = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
-    let vcs = match (opts.version_control, cfg.version_control, in_existing_vcs_repo) {
-        (None, None, false) => VersionControl::Git,
-        (None, Some(option), false) => option,
-        (Some(option), _, _) => option,
-        (_, _, true) => VersionControl::NoVcs,
-    };
+    let vcs = opts.version_control
+              .unwrap_or_else(|| {
+                  let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path),
+                                                          config.cwd());
+                  match (cfg.version_control, in_existing_vcs) {
+                      (None, false) => VersionControl::Git,
+                      (Some(opt), false) => opt,
+                      (_, true) => VersionControl::NoVcs,
+                  }
+              });
+
     match vcs {
         VersionControl::Git => {
             if !fs::metadata(&path.join(".git")).is_ok() {
