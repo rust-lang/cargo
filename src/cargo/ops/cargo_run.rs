@@ -25,25 +25,28 @@ pub fn run(ws: &Workspace,
         }
     };
 
-    let mut bins = pkg.manifest().targets().iter().filter(|a| {
+    let bins: Vec<_> = pkg.manifest().targets().iter().filter(|a| {
         !a.is_lib() && !a.is_custom_build() && if !options.filter.is_specific() {
             a.is_bin()
         } else {
             options.filter.matches(a)
         }
-    });
-    if bins.next().is_none() {
+    })
+    .map(|bin| bin.name())
+    .collect();
+
+    if bins.len() == 0 {
         if !options.filter.is_specific() {
             bail!("a bin target must be available for `cargo run`")
         } else {
             // this will be verified in cargo_compile
         }
     }
-    if bins.next().is_some() {
+    if bins.len() > 1 {
         if !options.filter.is_specific() {
             bail!("`cargo run` requires that a project only have one \
                    executable; use the `--bin` option to specify which one \
-                   to run")
+                   to run ({})", bins.join(", "))
         } else {
             bail!("`cargo run` can run at most one executable, but \
                    multiple were specified")
