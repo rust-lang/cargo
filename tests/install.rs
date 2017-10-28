@@ -970,3 +970,24 @@ fn uninstall_multiple_and_specifying_bin() {
 error: A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.
 "));
 }
+
+#[test]
+fn uninstall_multiple_and_some_pkg_does_not_exist() {
+    pkg("foo", "0.0.1");
+
+    assert_that(cargo_process("install").arg("foo"),
+                execs().with_status(0));
+
+    assert_that(cargo_process("uninstall").args(&["foo", "bar"]),
+                execs().with_status(101).with_stderr(&format!("\
+[REMOVING] {home}[..]bin[..]foo[..]
+error: package id specification `bar` matched no packages
+   
+Summary: Successfully uninstalled foo! Failed to uninstall bar (see error(s) above).
+error: some packages failed to uninstall
+",
+        home = cargo_home().display())));
+
+    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
+    assert_that(cargo_home(), is_not(has_installed_exe("bar")));
+}
