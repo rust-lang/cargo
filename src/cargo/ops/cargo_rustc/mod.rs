@@ -533,15 +533,28 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                     format!("failed to remove: {}", dst.display())
                 })?;
             }
-            fs::hard_link(src, dst)
-                 .or_else(|err| {
-                     debug!("hard link failed {}. falling back to fs::copy", err);
-                     fs::copy(src, dst).map(|_| ())
-                 })
-                 .chain_err(|| {
+
+            let link_result = if src.is_dir() {
+                #[cfg(unix)]
+                use std::os::unix::fs::symlink;
+                #[cfg(target_os = "redox")]
+                use std::os::redox::fs::symlink;
+                #[cfg(windows)]
+                use std::os::windows::fs::symlink_dir as symlink;
+
+                symlink(src, dst)
+            } else {
+                fs::hard_link(src, dst)
+            };
+            link_result
+                .or_else(|err| {
+                    debug!("link failed {}. falling back to fs::copy", err);
+                    fs::copy(src, dst).map(|_| ())
+                })
+                .chain_err(|| {
                      format!("failed to link or copy `{}` to `{}`",
                              src.display(), dst.display())
-            })?;
+                })?;
         }
 
         if json_messages {
