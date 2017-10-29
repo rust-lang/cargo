@@ -3877,6 +3877,13 @@ fn uplift_dsym_of_bin_on_mac() {
     );
     assert_that(&p.bin("foo.dSYM"), existing_dir());
     assert_that(&p.bin("b.dSYM"), existing_dir());
+    assert!(
+        p.bin("b.dSYM")
+            .symlink_metadata()
+            .expect("read metadata from b.dSYM")
+            .file_type()
+            .is_symlink()
+    );
     assert_that(&p.bin("c.dSYM"), is_not(existing_dir()));
     assert_that(&p.bin("d.dSYM"), is_not(existing_dir()));
 }
