@@ -3943,3 +3943,31 @@ fn build_filter_infer_profile() {
             --emit=dep-info,link[..]")
         );
 }
+
+#[test]
+fn all_targets_no_lib() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    assert_that(p.cargo("build").arg("-v").arg("--all-targets"),
+        execs().with_status(0)
+        // bin
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
+            --emit=dep-info,link[..]")
+        // bench
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            -C opt-level=3 --test [..]")
+        // unit test
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            -C debuginfo=2 --test [..]")
+        );
+}
