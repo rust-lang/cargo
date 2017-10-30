@@ -194,8 +194,9 @@ impl<'cfg> PackageRegistry<'cfg> {
             let summary = match summaries.next() {
                 Some(summary) => summary,
                 None => {
-                    bail!("patch for `{}` in `{}` did not resolve to any crates. Your patched \
-                           dependency may conflict with the version in Cargo.lock.",
+                    bail!("patch for `{}` in `{}` did not resolve to any crates. If this is \
+                           unexpected, you may wish to consult: \
+                           https://github.com/rust-lang/cargo/issues/4678",
                           dep.name(), url)
                 }
             };
