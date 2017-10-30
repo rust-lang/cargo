@@ -262,3 +262,50 @@ fn alt_registry_and_crates_io_deps() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs"))
 
 }
+
+#[test]
+fn block_publish_due_to_no_token() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // Setup the registry by publishing a package
+    Package::new("bar", "0.0.1").alternative(true).publish();
+
+    // Now perform the actual publish
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative"),
+                execs().with_status(101));
+}
+
+#[test]
+fn publish_to_alt_registry() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // Setup the registry by publishing a package
+    Package::new("bar", "0.0.1").alternative(true).publish();
+
+    // Login so that we have the token available
+    assert_that(p.cargo("login")
+                 .arg("--registry").arg("alternative").arg("TOKEN"),
+                execs().with_status(0));
+
+    // Now perform the actual publish
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative"),
+                execs().with_status(0));
+}

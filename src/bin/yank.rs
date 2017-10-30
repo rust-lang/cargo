@@ -15,6 +15,7 @@ pub struct Options {
     flag_locked: bool,
     #[serde(rename = "flag_Z")]
     flag_z: Vec<String>,
+    flag_registry: Option<String>,
 }
 
 pub static USAGE: &'static str = "
@@ -35,6 +36,7 @@ Options:
     --frozen            Require Cargo.lock and cache are up to date
     --locked            Require Cargo.lock is up to date
     -Z FLAG ...         Unstable (nightly-only) flags to Cargo
+    --registry REGISTRY Registry to use
 
 The yank command removes a previously pushed crate's version from the server's
 index. This command does not delete any data, and the crate will still be
@@ -57,7 +59,8 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
               options.flag_vers,
               options.flag_token,
               options.flag_index,
-              options.flag_undo)?;
+              options.flag_undo,
+              options.flag_registry)?;
     Ok(())
 }
 

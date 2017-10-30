@@ -16,6 +16,7 @@ pub struct Options {
     arg_query: Vec<String>,
     #[serde(rename = "flag_Z")]
     flag_z: Vec<String>,
+    flag_registry: Option<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -36,6 +37,7 @@ Options:
     --frozen                 Require Cargo.lock and cache are up to date
     --locked                 Require Cargo.lock is up to date
     -Z FLAG ...              Unstable (nightly-only) flags to Cargo
+    --registry REGISTRY      Registry to use
 ";
 
 pub fn execute(options: Options, config: &mut Config) -> CliResult {
@@ -50,6 +52,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         flag_host: host,    // TODO: Depricated, remove
         flag_limit: limit,
         arg_query: query,
+        flag_registry: registry,
         ..
     } = options;
 
@@ -77,6 +80,6 @@ about this warning.";
         host
     };
 
-    ops::search(&query.join("+"), config, index, cmp::min(100, limit.unwrap_or(10)) as u8)?;
+    ops::search(&query.join("+"), config, index, cmp::min(100, limit.unwrap_or(10)) as u8, registry)?;
     Ok(())
 }
