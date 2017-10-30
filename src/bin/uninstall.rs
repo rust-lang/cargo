@@ -13,14 +13,14 @@ pub struct Options {
     #[serde(rename = "flag_Z")]
     flag_z: Vec<String>,
 
-    arg_spec: String,
+    arg_spec: Vec<String>,
 }
 
 pub const USAGE: &'static str = "
 Remove a Rust binary
 
 Usage:
-    cargo uninstall [options] <spec>
+    cargo uninstall [options] <spec>...
     cargo uninstall (-h | --help)
 
 Options:
@@ -49,7 +49,9 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      &options.flag_z)?;
 
     let root = options.flag_root.as_ref().map(|s| &s[..]);
-    ops::uninstall(root, &options.arg_spec, &options.flag_bin, config)?;
+    let specs = options.arg_spec.iter().map(|s| &s[..]).collect::<Vec<_>>();
+
+    ops::uninstall(root, specs, &options.flag_bin, config)?;
     Ok(())
 }
 
