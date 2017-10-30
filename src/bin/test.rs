@@ -101,7 +101,7 @@ for the --jobs argument is the number of CPUs. If you want to control the
 number of simultaneous running test cases, pass the `--test-threads` option
 to the test binaries:
 
-  cargo test -- --test-threads=1
+    cargo test -- --test-threads=1
 
 Compilation can be configured via the `test` profile in the manifest.
 
@@ -109,11 +109,11 @@ By default the rust test harness hides output from test execution to
 keep results readable. Test output can be recovered (e.g. for debugging)
 by passing `--nocapture` to the test binaries:
 
-  cargo test -- --nocapture
+    cargo test -- --nocapture
 
 To get the list of all options available for the test binaries use this:
 
-  cargo test -- --help
+    cargo test -- --help
 ";
 
 pub fn execute(options: Options, config: &mut Config) -> CliResult {
