@@ -545,6 +545,7 @@ impl<'cfg> Workspace<'cfg> {
                 doc: Profile::default_doc(),
                 custom_build: Profile::default_custom_build(),
                 check: Profile::default_check(),
+                check_test: Profile::default_check_test(),
                 doctest: Profile::default_doctest(),
             };
 

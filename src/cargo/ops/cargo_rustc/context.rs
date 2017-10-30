@@ -876,7 +876,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 Unit {
                     pkg: unit.pkg,
                     target: t,
-                    profile: self.lib_profile(),
+                    profile: self.lib_or_check_profile(unit, t),
                     kind: unit.kind.for_target(t),
                 }
             }));
