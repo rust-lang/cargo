@@ -1203,7 +1203,9 @@ fn test_run_implicit_test_target() {
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] target[/]debug[/]deps[/]mytest-[..][EXE]", dir = prj.url()))
+[RUNNING] target[/]debug[/]deps[/]mybin-[..][EXE]
+[RUNNING] target[/]debug[/]deps[/]mytest-[..][EXE]
+[RUNNING] target[/]debug[/]examples[/]myexm-[..][EXE]", dir = prj.url()))
                        .with_stdout_contains("test test_in_test ... ok"));
 }
 
@@ -1233,6 +1235,7 @@ fn test_run_implicit_bench_target() {
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]debug[/]deps[/]mybin-[..][EXE]
 [RUNNING] target[/]debug[/]deps[/]mybench-[..][EXE]", dir = prj.url()))
                        .with_stdout_contains("test test_in_bench ... ok"));
 }
@@ -1262,7 +1265,8 @@ fn test_run_implicit_example_target() {
                 execs().with_status(0)
                        .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]", dir = prj.url())));
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[RUNNING] target[/]debug[/]examples[/]myexm-[..][EXE]", dir = prj.url())));
 }
 
 #[test]

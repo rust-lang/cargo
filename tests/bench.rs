@@ -81,6 +81,7 @@ fn bench_bench_implicit() {
                .with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
 [RUNNING] target[/]release[/]deps[/]mybench-[..][EXE]
 ", dir = p.url()))
                .with_stdout_contains("test run2 ... bench: [..]"));
@@ -1323,7 +1324,7 @@ fn bench_virtual_manifest_all_implied() {
         .build();
 
     // The order in which foo and bar are built is not guaranteed
-    
+
     assert_that(p.cargo("bench"),
                 execs().with_status(0)
                        .with_stderr_contains("\

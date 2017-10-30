@@ -102,7 +102,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         Some("dev") | None => CompileMode::Build,
         Some("test") => CompileMode::Test,
         Some("bench") => CompileMode::Bench,
-        Some("check") => CompileMode::Check,
+        Some("check") => CompileMode::Check {test: false},
         Some(mode) => {
             let err = format!("unknown profile: `{}`, use dev,
                                      test, or bench", mode).into();
