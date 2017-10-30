@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate cargotest;
 extern crate hamcrest;
 
@@ -280,7 +279,7 @@ fn block_publish_due_to_no_token() {
 
     // Now perform the actual publish
     assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
-                 .arg("--registry").arg("alternative"),
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(101));
 }
 
@@ -300,12 +299,12 @@ fn publish_to_alt_registry() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     // Login so that we have the token available
-    assert_that(p.cargo("login")
-                 .arg("--registry").arg("alternative").arg("TOKEN"),
+    assert_that(p.cargo("login").masquerade_as_nightly_cargo()
+                .arg("--registry").arg("alternative").arg("TOKEN").arg("-Zunstable-options"),
                 execs().with_status(0));
 
     // Now perform the actual publish
     assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
-                 .arg("--registry").arg("alternative"),
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(0));
 }
