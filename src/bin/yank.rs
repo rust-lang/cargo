@@ -1,5 +1,5 @@
 use cargo::ops;
-use cargo::util::{CliResult, Config};
+use cargo::util::{CargoError, CliResult, Config};
 
 #[derive(Deserialize)]
 pub struct Options {
@@ -54,6 +54,11 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      options.flag_frozen,
                      options.flag_locked,
                      &options.flag_z)?;
+
+    if options.flag_registry.is_some() && !config.cli_unstable().unstable_options {
+        return Err(CargoError::from("registry option is an unstable feature and requires -Zunstable-options to use.").into());
+    }
+
     ops::yank(config,
               options.arg_crate,
               options.flag_vers,

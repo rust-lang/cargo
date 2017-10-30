@@ -7,7 +7,7 @@ extern crate toml;
 use std::io::prelude::*;
 use std::fs::{self, File};
 
-use cargotest::cargo_process;
+use cargotest::{ChannelChanger, cargo_process};
 use cargotest::support::execs;
 use cargotest::support::registry::registry;
 use cargotest::install::cargo_home;
@@ -157,8 +157,8 @@ fn registry_credentials() {
 
     let reg = "test-reg";
 
-    assert_that(cargo_process().arg("login")
-                .arg("--registry").arg(reg).arg(TOKEN),
+    assert_that(cargo_process().arg("login").masquerade_as_nightly_cargo()
+                .arg("--registry").arg(reg).arg(TOKEN).arg("-Zunstable-options"),
                 execs().with_status(0));
 
     // Ensure that we have not updated the default token
@@ -175,8 +175,8 @@ fn registry_credentials_with_dots() {
 
     let reg = "test.reg";
 
-    assert_that(cargo_process().arg("login")
-                .arg("--registry").arg(reg).arg(TOKEN),
+    assert_that(cargo_process().arg("login").masquerade_as_nightly_cargo()
+                .arg("--registry").arg(reg).arg(TOKEN).arg("-Zunstable-options"),
                 execs().with_status(0));
 
     // Ensure that we have not updated the default token

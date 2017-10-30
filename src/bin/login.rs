@@ -4,7 +4,7 @@ use std::io;
 use cargo::ops;
 use cargo::core::{SourceId, Source};
 use cargo::sources::RegistrySource;
-use cargo::util::{CliResult, CargoResultExt, Config};
+use cargo::util::{CargoError, CliResult, CargoResultExt, Config};
 
 #[derive(Deserialize)]
 pub struct Options {
@@ -46,6 +46,11 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      options.flag_frozen,
                      options.flag_locked,
                      &options.flag_z)?;
+
+    if options.flag_registry.is_some() && !config.cli_unstable().unstable_options {
+        return Err(CargoError::from("registry option is an unstable feature and requires -Zunstable-options to use.").into());
+    }
+
     let token = match options.arg_token {
         Some(token) => token,
         None => {

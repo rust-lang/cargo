@@ -1,5 +1,5 @@
 use cargo::ops;
-use cargo::util::{CliResult, Config};
+use cargo::util::{CargoError, CliResult, Config};
 
 use std::cmp;
 
@@ -55,6 +55,10 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         flag_registry: registry,
         ..
     } = options;
+
+    if registry.is_some() && !config.cli_unstable().unstable_options {
+        return Err(CargoError::from("registry option is an unstable feature and requires -Zunstable-options to use.").into());
+    }
 
     // TODO: Depricated
     // remove once it has been decided --host can be safely removed

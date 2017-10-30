@@ -1,5 +1,5 @@
 use cargo::ops;
-use cargo::util::{CliResult, Config};
+use cargo::util::{CargoError, CliResult, Config};
 
 #[derive(Deserialize)]
 pub struct Options {
@@ -65,6 +65,11 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         list: options.flag_list,
         registry: options.flag_registry,
     };
+
+    if opts.registry.is_some() && !config.cli_unstable().unstable_options {
+        return Err(CargoError::from("registry option is an unstable feature and requires -Zunstable-options to use.").into());
+    }
+
     ops::modify_owners(config, &opts)?;
     Ok(())
 }
