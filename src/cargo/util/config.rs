@@ -20,6 +20,8 @@ use toml;
 use core::shell::Verbosity;
 use core::{Shell, CliUnstable};
 use ops;
+use url::Url;
+use util::ToUrl;
 use util::Rustc;
 use util::errors::{CargoResult, CargoResultExt, CargoError, internal};
 use util::paths;
@@ -546,9 +548,9 @@ impl Config {
     }
 
     /// Gets the index for a registry.
-    pub fn get_registry_index(&self, registry: &str) -> CargoResult<String> {
+    pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         Ok(match self.get_string(&format!("registries.{}.index", registry))? {
-            Some(index) => index.val,
+            Some(index) => index.val.to_url()?,
             None => return Err(CargoError::from(format!("No index found for registry: `{}`", registry)).into()),
         })
     }

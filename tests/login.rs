@@ -22,10 +22,10 @@ const CONFIG_FILE: &str = r#"
     token = "api-token"
 
     [registries.test-reg]
-    index = "dummy_index"
+    index = "http://dummy_index/"
 
     [registries.test.reg]
-    index = "dummy_index"
+    index = "http://dummy_index/"
 "#;
 
 fn setup_old_credentials() {

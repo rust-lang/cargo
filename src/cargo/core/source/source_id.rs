@@ -183,8 +183,7 @@ impl SourceId {
     }
 
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
-        let index = config.get_registry_index(key)?;
-        let url = index.to_url()?;
+        let url = config.get_registry_index(key)?;
         Ok(SourceId {
             inner: Arc::new(SourceIdInner {
                 kind: Kind::Registry,
