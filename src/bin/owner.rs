@@ -16,6 +16,7 @@ pub struct Options {
     flag_locked: bool,
     #[serde(rename = "flag_Z")]
     flag_z: Vec<String>,
+    flag_registry: Option<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -37,6 +38,7 @@ Options:
     --frozen                 Require Cargo.lock and cache are up to date
     --locked                 Require Cargo.lock is up to date
     -Z FLAG ...              Unstable (nightly-only) flags to Cargo
+    --registry REGISTRY      Registry to use
 
 This command will modify the owners for a package on the specified registry (or
 default). Note that owners of a package can upload new versions, yank old
@@ -61,6 +63,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         to_add: options.flag_add,
         to_remove: options.flag_remove,
         list: options.flag_list,
+        registry: options.flag_registry,
     };
     ops::modify_owners(config, &opts)?;
     Ok(())
