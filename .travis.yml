@@ -24,7 +24,7 @@ matrix:
 
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
-      rust: nightly-2017-10-10
+      rust: nightly
       install:
         - mdbook --help || cargo install mdbook --force
       script:
