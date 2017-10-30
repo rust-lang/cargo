@@ -170,6 +170,7 @@ pub enum CompileFilter<'a> {
         required_features_filterable: bool,
     },
     Only {
+        all_targets: bool,
         lib: bool,
         bins: FilterRule<'a>,
         examples: FilterRule<'a>,
@@ -389,6 +390,7 @@ impl<'a> CompileFilter<'a> {
 
         if all_targets {
             CompileFilter::Only {
+                all_targets: true,
                 lib: true, bins: FilterRule::All,
                 examples: FilterRule::All, benches: FilterRule::All,
                 tests: FilterRule::All,
@@ -396,6 +398,7 @@ impl<'a> CompileFilter<'a> {
         } else if lib_only || rule_bins.is_specific() || rule_tsts.is_specific()
                     || rule_exms.is_specific() || rule_bens.is_specific() {
             CompileFilter::Only {
+                all_targets: false,
                 lib: lib_only, bins: rule_bins,
                 examples: rule_exms, benches: rule_bens,
                 tests: rule_tsts,
@@ -410,7 +413,7 @@ impl<'a> CompileFilter<'a> {
     pub fn matches(&self, target: &Target) -> bool {
         match *self {
             CompileFilter::Default { .. } => true,
-            CompileFilter::Only { lib, bins, examples, tests, benches } => {
+            CompileFilter::Only { lib, bins, examples, tests, benches, .. } => {
                 let rule = match *target.kind() {
                     TargetKind::Bin => bins,
                     TargetKind::Test => tests,
@@ -637,7 +640,7 @@ fn generate_targets<'a>(pkg: &'a Package,
             };
             generate_auto_targets(mode, pkg.targets(), profile, deps, required_features_filterable)
         }
-        CompileFilter::Only { lib, bins, examples, tests, benches } => {
+        CompileFilter::Only { all_targets, lib, bins, examples, tests, benches } => {
             let mut targets = Vec::new();
 
             if lib {
@@ -647,7 +650,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                         profile: profile,
                         required: true,
                     });
-                } else {
+                } else if !all_targets {
                     bail!("no library targets found")
                 }
             }
