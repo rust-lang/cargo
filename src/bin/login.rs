@@ -55,8 +55,8 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         Some(token) => token,
         None => {
             let host = match options.flag_registry {
-                Some(ref registry) => {
-                    config.get_registry_index(registry)?
+                Some(ref _registry) => {
+                    return Err(CargoError::from("token must be provided when --registry is provided.").into());
                 }
                 None => {
                     let src = SourceId::crates_io(config)?;

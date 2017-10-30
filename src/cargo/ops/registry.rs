@@ -196,7 +196,7 @@ pub fn registry_configuration(config: &Config,
 
     let (index, token) = match registry {
         Some(registry) => {
-            let index = Some(config.get_registry_index(&registry)?);
+            let index = Some(config.get_registry_index(&registry)?.to_string());
             let table = config.get_table(&format!("registry.{}", registry))?.map(|t| t.val);
             let token = table.and_then(|table| {
                 match table.get("token".into()) {
