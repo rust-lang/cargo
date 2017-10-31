@@ -17,7 +17,7 @@ pub fn run(ws: &Workspace,
             0 => ws.current()?,
             1 => ws.members()
                 .find(|pkg| pkg.name() == xs[0])
-                .ok_or_else(|| 
+                .ok_or_else(||
                     CargoError::from(
                         format!("package `{}` is not a member of the workspace", xs[0]))
                 )?,
@@ -46,7 +46,7 @@ pub fn run(ws: &Workspace,
         if !options.filter.is_specific() {
             bail!("`cargo run` requires that a project only have one \
                    executable; use the `--bin` option to specify which one \
-                   to run ({})", bins.join(", "))
+                   to run\navailable binaries: {}", bins.join(", "))
         } else {
             bail!("`cargo run` can run at most one executable, but \
                    multiple were specified")
