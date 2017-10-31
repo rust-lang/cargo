@@ -59,4 +59,8 @@ impl Rustc {
             util::process(&self.path)
         }
     }
+
+    pub fn version_channel_date(&self) -> CargoResult<&str> {
+        self.verbose_version.lines().next().ok_or(internal("rustc -v didn't have any lines"))
+    }
 }
