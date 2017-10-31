@@ -304,6 +304,18 @@ pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
     config::save_credentials(config, token)
 }
 
+pub fn registry_whoami(config: &Config, index: Option<String>) -> CargoResult<()> {
+    let RegistryConfig { token, .. } = registry_configuration(config)?;
+    let (mut registry, _) = registry(config, token.clone(), index)?;
+
+    match registry.whoami() {
+        Ok(user) => config.shell().status("Whoami", format!("Currently logged in as `{}`", user.login))?,
+        Err(e) => config.shell().status("Whoami", format!("{}", e))?,
+    };
+
+    Ok(())
+}
+
 pub struct OwnersOptions {
     pub krate: Option<String>,
     pub token: Option<String>,

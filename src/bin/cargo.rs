@@ -132,6 +132,7 @@ macro_rules! each_subcommand{
         $mac!(update);
         $mac!(verify_project);
         $mac!(version);
+        $mac!(whoami);
         $mac!(yank);
     }
 }

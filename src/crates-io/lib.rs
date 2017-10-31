@@ -117,6 +117,7 @@ pub struct Warnings {
 }
 
 #[derive(Deserialize)] struct R { ok: bool }
+#[derive(Deserialize)] struct MeResponse { user: Option<User> }
 #[derive(Deserialize)] struct OwnerResponse { ok: bool, msg: String }
 #[derive(Deserialize)] struct ApiErrorList { errors: Vec<ApiError> }
 #[derive(Deserialize)] struct ApiError { detail: String }
@@ -255,6 +256,15 @@ impl Registry {
                                  &[])?;
         assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
+    }
+
+    pub fn whoami(&mut self) -> Result<User> {
+        let body = self.get(String::from("/me"))?;
+
+        match serde_json::from_str::<MeResponse>(&body)?.user {
+            Some(user) => Ok(user),
+            _ => Err(Error::from_kind(ErrorKind::TokenMissing))
+        }
     }
 
     fn put(&mut self, path: String, b: &[u8]) -> Result<String> {
