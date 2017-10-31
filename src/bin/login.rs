@@ -4,7 +4,7 @@ use std::io;
 use cargo::ops;
 use cargo::core::{SourceId, Source};
 use cargo::sources::RegistrySource;
-use cargo::util::{CliResult, CargoResultExt, Config};
+use cargo::util::{CargoError, CliResult, CargoResultExt, Config};
 
 #[derive(Deserialize)]
 pub struct Options {
@@ -17,6 +17,7 @@ pub struct Options {
     flag_locked: bool,
     #[serde(rename = "flag_Z")]
     flag_z: Vec<String>,
+    flag_registry: Option<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -34,6 +35,7 @@ Options:
     --frozen                 Require Cargo.lock and cache are up to date
     --locked                 Require Cargo.lock is up to date
     -Z FLAG ...              Unstable (nightly-only) flags to Cargo
+    --registry REGISTRY      Registry to use
 
 ";
 
@@ -44,26 +46,36 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      options.flag_frozen,
                      options.flag_locked,
                      &options.flag_z)?;
-    let token = match options.arg_token.clone() {
+
+    if options.flag_registry.is_some() && !config.cli_unstable().unstable_options {
+        return Err(CargoError::from("registry option is an unstable feature and requires -Zunstable-options to use.").into());
+    }
+
+    let token = match options.arg_token {
         Some(token) => token,
         None => {
-            let src = SourceId::crates_io(config)?;
-            let mut src = RegistrySource::remote(&src, config);
-            src.update()?;
-            let config = src.config()?.unwrap();
-            let host = options.flag_host.clone().unwrap_or(config.api.unwrap());
+            let host = match options.flag_registry {
+                Some(ref _registry) => {
+                    return Err(CargoError::from("token must be provided when --registry is provided.").into());
+                }
+                None => {
+                    let src = SourceId::crates_io(config)?;
+                    let mut src = RegistrySource::remote(&src, config);
+                    src.update()?;
+                    let config = src.config()?.unwrap();
+                    options.flag_host.clone().unwrap_or(config.api.unwrap())
+                }
+            };
             println!("please visit {}me and paste the API Token below", host);
             let mut line = String::new();
             let input = io::stdin();
             input.lock().read_line(&mut line).chain_err(|| {
                 "failed to read stdin"
             })?;
-            line
+            line.trim().to_string()
         }
     };
 
-    let token = token.trim().to_string();
-    ops::registry_login(config, token)?;
+    ops::registry_login(config, token, options.flag_registry)?;
     Ok(())
 }
-
