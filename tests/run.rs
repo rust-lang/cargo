@@ -256,7 +256,7 @@ fn too_many_bins() {
                 execs().with_status(101)
                        .with_stderr("[ERROR] `cargo run` requires that a project only \
                                      have one executable; use the `--bin` option \
-                                     to specify which one to run ([..])\n"));
+                                     to specify which one to run\navailable binaries: [..]\n"));
 }
 
 #[test]
@@ -278,7 +278,7 @@ fn too_many_bins_implicit() {
                 execs().with_status(101)
                        .with_stderr("[ERROR] `cargo run` requires that a project only \
                                      have one executable; use the `--bin` option \
-                                     to specify which one to run ([..])\n"));
+                                     to specify which one to run\navailable binaries: [..]\n"));
 }
 
 #[test]

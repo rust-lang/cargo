@@ -996,5 +996,5 @@ fn run_default_multiple_required_features() {
     assert_that(p.cargo("run"),
                 execs().with_status(101).with_stderr("\
 error: `cargo run` requires that a project only have one executable; \
-use the `--bin` option to specify which one to run (foo1, foo2)"));
+use the `--bin` option to specify which one to run\navailable binaries: foo1, foo2"));
 }
