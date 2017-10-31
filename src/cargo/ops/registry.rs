@@ -16,7 +16,7 @@ use core::dependency::Kind;
 use core::manifest::ManifestMetadata;
 use ops;
 use sources::{RegistrySource};
-use util::config::{self, Config, ConfigValue};
+use util::config::{self, Config};
 use util::paths;
 use util::ToUrl;
 use util::errors::{CargoError, CargoResult, CargoResultExt};
@@ -196,16 +196,8 @@ pub fn registry_configuration(config: &Config,
 
     let (index, token) = match registry {
         Some(registry) => {
-            let index = Some(config.get_registry_index(&registry)?.to_string());
-            let table = config.get_table(&format!("registry.{}", registry))?.map(|t| t.val);
-            let token = table.and_then(|table| {
-                match table.get("token".into()) {
-                    Some(&ConfigValue::String(ref i, _)) => Some(i.to_string()),
-                    _ => None,
-                }
-            });
-
-            (index, token)
+            (Some(config.get_registry_index(&registry)?.to_string()),
+             config.get_string(&format!("registry.{}.token", registry))?.map(|p| p.val))
         }
         None => {
             // Checking out for default index and token
