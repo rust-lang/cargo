@@ -29,7 +29,6 @@ pub struct RegistryConfig {
 
 pub struct PublishOpts<'cfg> {
     pub config: &'cfg Config,
-    pub token: Option<String>,
     pub index: Option<String>,
     pub verify: bool,
     pub allow_dirty: bool,
@@ -50,7 +49,6 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
     }
 
     let (mut registry, reg_id) = registry(opts.config,
-                                          opts.token.clone(),
                                           opts.index.clone())?;
     verify_dependencies(pkg, &reg_id)?;
 
@@ -196,14 +194,12 @@ pub fn registry_configuration(config: &Config) -> CargoResult<RegistryConfig> {
 }
 
 pub fn registry(config: &Config,
-                token: Option<String>,
                 index: Option<String>) -> CargoResult<(Registry, SourceId)> {
     // Parse all configuration options
     let RegistryConfig {
-        token: token_config,
+        token,
         index: _index_config,
     } = registry_configuration(config)?;
-    let token = token.or(token_config);
     let sid = match index {
         Some(index) => SourceId::for_registry(&index.to_url()?)?,
         None => SourceId::crates_io(config)?,
@@ -306,7 +302,6 @@ pub fn registry_login(config: &Config, token: String) -> CargoResult<()> {
 
 pub struct OwnersOptions {
     pub krate: Option<String>,
-    pub token: Option<String>,
     pub index: Option<String>,
     pub to_add: Option<Vec<String>>,
     pub to_remove: Option<Vec<String>>,
@@ -323,8 +318,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         }
     };
 
-    let (mut registry, _) = registry(config, opts.token.clone(),
-                                          opts.index.clone())?;
+    let (mut registry, _) = registry(config, opts.index.clone())?;
 
     if let Some(ref v) = opts.to_add {
         let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
@@ -365,7 +359,6 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
 pub fn yank(config: &Config,
             krate: Option<String>,
             version: Option<String>,
-            token: Option<String>,
             index: Option<String>,
             undo: bool) -> CargoResult<()> {
     let name = match krate {
@@ -381,7 +374,7 @@ pub fn yank(config: &Config,
         None => bail!("a version must be specified to yank")
     };
 
-    let (mut registry, _) = registry(config, token, index)?;
+    let (mut registry, _) = registry(config, index)?;
 
     if undo {
         config.shell().status("Unyank", format!("{}:{}", name, version))?;
@@ -410,7 +403,7 @@ pub fn search(query: &str,
         }
     }
 
-    let (mut registry, _) = registry(config, None, index)?;
+    let (mut registry, _) = registry(config, index)?;
     let (crates, total_crates) = registry.search(query, limit).map_err(|e| {
         CargoError::from(format!("failed to retrieve search results from the registry: {}", e))
     })?;

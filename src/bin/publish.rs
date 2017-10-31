@@ -7,7 +7,6 @@ use cargo::util::important_paths::find_root_manifest_for_wd;
 pub struct Options {
     flag_index: Option<String>,
     flag_host: Option<String>,  // TODO: Deprecated, remove
-    flag_token: Option<String>,
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
     flag_verbose: u32,
@@ -33,7 +32,6 @@ Options:
     -h, --help               Print this message
     --index INDEX            Registry index to upload the package to
     --host HOST              DEPRECATED, renamed to '--index'
-    --token TOKEN            Token to use when uploading
     --no-verify              Don't verify package tarball before publish
     --allow-dirty            Allow publishing with a dirty source directory
     --target TRIPLE          Build for the target triple
@@ -58,7 +56,6 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      &options.flag_z)?;
 
     let Options {
-        flag_token: token,
         flag_index: index,
         flag_host: host,    // TODO: Deprecated, remove
         flag_manifest_path,
@@ -91,7 +88,6 @@ about this warning.";
     let ws = Workspace::new(&root, config)?;
     ops::publish(&ws, &ops::PublishOpts {
         config: config,
-        token: token,
         index:
             if host.clone().is_none() || host.clone().unwrap().is_empty() { index }
             else { config.shell().warn(&msg)?; host },  // TODO: Deprecated, remove

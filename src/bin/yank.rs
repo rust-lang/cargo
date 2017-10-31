@@ -4,7 +4,6 @@ use cargo::util::{CliResult, Config};
 #[derive(Deserialize)]
 pub struct Options {
     arg_crate: Option<String>,
-    flag_token: Option<String>,
     flag_vers: Option<String>,
     flag_index: Option<String>,
     flag_verbose: u32,
@@ -28,7 +27,6 @@ Options:
     --vers VERSION      The version to yank or un-yank
     --undo              Undo a yank, putting a version back into the index
     --index INDEX       Registry index to yank from
-    --token TOKEN       API token to use when authenticating
     -v, --verbose ...   Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
@@ -55,7 +53,6 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     ops::yank(config,
               options.arg_crate,
               options.flag_vers,
-              options.flag_token,
               options.flag_index,
               options.flag_undo)?;
     Ok(())
