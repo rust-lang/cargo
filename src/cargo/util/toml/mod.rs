@@ -200,6 +200,8 @@ pub struct DetailedTomlDependency {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TomlManifest {
+    #[serde(rename = "cargo-features")]
+    cargo_features: Option<Vec<String>>,
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
     profile: Option<TomlProfiles>,
@@ -223,8 +225,6 @@ pub struct TomlManifest {
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
-    #[serde(rename = "cargo-features")]
-    cargo_features: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -694,7 +694,12 @@ impl TomlManifest {
         };
         let profiles = build_profiles(&me.profile);
         let publish = match project.publish {
-            Some(VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
+            Some(VecStringOrBool::VecString(ref vecstring)) => {
+                features.require(Feature::alternative_registries()).chain_err(|| {
+                    "the `publish` manifest key is unstable for anything other than a value of true or false"
+                })?;
+                Some(vecstring.clone())
+            },
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
             _ => None,
         };

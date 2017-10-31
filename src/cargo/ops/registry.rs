@@ -69,6 +69,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         allow_dirty: opts.allow_dirty,
         target: opts.target,
         jobs: opts.jobs,
+        registry: opts.registry.clone(),
     })?.unwrap();
 
     // Upload said tarball to the specified destination

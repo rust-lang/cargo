@@ -61,6 +61,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         allow_dirty: options.flag_allow_dirty,
         target: options.flag_target.as_ref().map(|t| &t[..]),
         jobs: options.flag_jobs,
+        registry: None,
     })?;
     Ok(())
 }

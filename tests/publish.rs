@@ -503,11 +503,47 @@ See [..]
 }
 
 #[test]
+fn block_publish_feature_not_enabled() {
+    publish::setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish = [
+                "test"
+            ]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
+                execs().with_status(101).with_stderr("\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  the `publish` manifest key is unstable for anything other than a value of true or false
+
+Caused by:
+  feature `alternative-registries` is required
+
+consider adding `cargo-features = [\"alternative-registries\"]` to the manifest
+"));
+}
+
+#[test]
 fn registry_not_in_publish_list() {
     publish::setup();
 
     let p = project("foo")
         .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -535,6 +571,8 @@ fn publish_empty_list() {
 
     let p = project("foo")
         .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -562,6 +600,8 @@ fn publish_allowed_registry() {
 
     let _ = repo(&paths::root().join("foo"))
         .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -586,6 +626,8 @@ fn block_publish_no_registry() {
 
     let p = project("foo")
         .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
             [project]
             name = "foo"
             version = "0.0.1"
