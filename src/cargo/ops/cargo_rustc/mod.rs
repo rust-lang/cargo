@@ -285,6 +285,12 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
             freshness = Freshness::Dirty;
         }
 
+        // Force recompilation for top-level targets when running the `check`
+        // command, so we can always emit warnings even if the files haven't changed.
+        if unit.profile.check && unit.pkg.package_id() == cx.ws.current()?.package_id() {
+            freshness = Freshness::Dirty;
+        }
+
         (dirty, fresh, freshness)
     };
     jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness)?;
