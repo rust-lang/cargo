@@ -102,4 +102,9 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
 
         Ok(crate_file)
     }
+
+    fn is_crate_downloaded(&self, pkg: &PackageId) -> bool {
+        let crate_file = format!("{}-{}.crate", pkg.name(), pkg.version());
+        self.root.open_ro(&crate_file, self.config, "crate file").is_ok()
+    }
 }

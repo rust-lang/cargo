@@ -159,7 +159,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let should_update = actual_rev.is_err() ||
                             self.source_id.precise().is_none();
 
-        let (repo, actual_rev) = if should_update {
+        let (repo, actual_rev) = if should_update && self.config.network_allowed() {
             self.config.shell().status("Updating",
                 format!("git repository `{}`", self.remote.url()))?;
 

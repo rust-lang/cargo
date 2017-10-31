@@ -6,7 +6,7 @@ use util::Config;
 use util::errors::{CargoError, CargoErrorKind, CargoResult};
 use git2;
 
-fn maybe_spurious<E, EKind>(err: &E) -> bool
+pub fn maybe_spurious<E, EKind>(err: &E) -> bool
     where E: ChainedError<ErrorKind=EKind> + 'static {
     //Error inspection in non-verbose mode requires inspecting the
     //error kind to avoid printing Internal errors. The downcasting

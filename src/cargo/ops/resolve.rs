@@ -44,7 +44,7 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     let resolve = if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        let resolve = resolve_with_registry(ws, &mut registry, false)?;
+        let resolve = resolve_with_registry(ws, &mut registry, true)?;
 
         // Second, resolve with precisely what we're doing. Filter out
         // transitive dependencies if necessary, specify features, handle
@@ -257,7 +257,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         None => root_replace.to_vec(),
     };
 
-    let config = if warn {
+    let config = if warn || !ws.config().network_allowed() {
         Some(ws.config())
     } else {
         None

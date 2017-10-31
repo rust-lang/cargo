@@ -149,7 +149,7 @@ impl GitDatabase {
         let checkout = match git2::Repository::open(dest) {
             Ok(repo) => {
                 let mut checkout = GitCheckout::new(dest, self, rev, repo);
-                if !checkout.is_fresh() {
+                if !checkout.is_fresh() && cargo_config.network_allowed() {
                     checkout.fetch(cargo_config)?;
                     checkout.reset()?;
                     assert!(checkout.is_fresh());

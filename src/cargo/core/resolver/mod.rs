@@ -372,7 +372,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
         warnings: RcList::new(),
     };
     let _p = profile::start("resolving");
-    let cx = activate_deps_loop(cx, registry, summaries)?;
+    let cx = activate_deps_loop(cx, registry, summaries, &config)?;
 
     let mut resolve = Resolve {
         graph: cx.graph(),
@@ -580,7 +580,8 @@ impl RemainingCandidates {
 /// dependency graph, cx.resolve is returned.
 fn activate_deps_loop<'a>(mut cx: Context<'a>,
                           registry: &mut Registry,
-                          summaries: &[(Summary, Method)])
+                          summaries: &[(Summary, Method)],
+                          config: &Option<&Config>)
                           -> CargoResult<Context<'a>> {
     // Note that a `BinaryHeap` is used for the remaining dependencies that need
     // activation. This heap is sorted such that the "largest value" is the most
@@ -682,7 +683,8 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                     None => return Err(activation_error(&cx, registry, &parent,
                                                         &dep,
                                                         cx.prev_active(&dep),
-                                                        &candidates)),
+                                                        &candidates,
+                                                        config)),
                     Some(candidate) => candidate,
                 }
             }
@@ -745,7 +747,8 @@ fn activation_error(cx: &Context,
                     parent: &Summary,
                     dep: &Dependency,
                     prev_active: &[Summary],
-                    candidates: &[Candidate]) -> CargoError {
+                    candidates: &[Candidate],
+                    config: &Option<&Config>) -> CargoError {
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}` \
                                (required by `{}`):\n\
@@ -800,7 +803,7 @@ fn activation_error(cx: &Context,
         b.version().cmp(a.version())
     });
 
-    let msg = if !candidates.is_empty() {
+    let mut msg = if !candidates.is_empty() {
         let versions = {
             let mut versions = candidates.iter().take(3).map(|cand| {
                 cand.version().to_string()
@@ -842,6 +845,13 @@ fn activation_error(cx: &Context,
                 dep.source_id(),
                 dep.version_req())
     };
+    // If airplane mode is enabled, then this probably just means that we
+    // haven't downloaded the package yet
+    if let &Some(conf) = config {
+        if conf.cli_unstable().airplane {
+            msg.push_str("\nthis may be failing due to the -Zairplane flag");
+        }
+    }
 
     msg.into()
 }
