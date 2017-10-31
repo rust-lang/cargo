@@ -43,8 +43,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
     let pkg = ws.current()?;
 
     if let &Some(ref allowed_registries) = pkg.publish() {
-        let index = opts.index.clone();
-        if index.is_none() || !allowed_registries.contains(&index.unwrap()) {
+        if opts.registry.is_none() || !allowed_registries.contains(&opts.registry.clone().unwrap()) {
             bail!("some crates cannot be published.\n\
                    `{}` is marked as unpublishable", pkg.name());
         }

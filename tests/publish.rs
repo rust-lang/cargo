@@ -7,6 +7,7 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::io::SeekFrom;
 
+use cargotest::ChannelChanger;
 use cargotest::support::git::repo;
 use cargotest::support::paths;
 use cargotest::support::{project, execs, publish};
@@ -502,7 +503,7 @@ See [..]
 }
 
 #[test]
-fn index_not_in_publish_list() {
+fn registry_not_in_publish_list() {
     publish::setup();
 
     let p = project("foo")
@@ -517,10 +518,11 @@ fn index_not_in_publish_list() {
                 "test"
             ]
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("publish")
-                 .arg("--index").arg(publish::registry().to_string()),
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
@@ -541,10 +543,11 @@ fn publish_empty_list() {
             description = "foo"
             publish = []
         "#)
-        .file("src/main.rs", "fn main() {}");
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
-    assert_that(p.cargo_process("publish")
-                 .arg("--index").arg(publish::registry().to_string()),
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
@@ -552,14 +555,13 @@ fn publish_empty_list() {
 }
 
 #[test]
-fn publish_allowed_index() {
+fn publish_allowed_registry() {
     publish::setup();
 
-    let p = project("foo");
-    p.build();
+    let p = project("foo").build();
 
-    repo(&paths::root().join("foo"))
-        .file("Cargo.toml", &format!(r#"
+    let _ = repo(&paths::root().join("foo"))
+        .file("Cargo.toml", r#"
             [project]
             name = "foo"
             version = "0.0.1"
@@ -568,12 +570,37 @@ fn publish_allowed_index() {
             description = "foo"
             documentation = "foo"
             homepage = "foo"
-            publish = ["{}"]
-        "#, publish::registry().to_string()))
+            publish = ["alternative"]
+        "#)
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish")
-                 .arg("--index").arg(publish::registry().to_string()),
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(0));
+}
+
+#[test]
+fn block_publish_no_registry() {
+    publish::setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--index").arg(publish::registry().to_string()),
+                execs().with_status(101).with_stderr("\
+[ERROR] some crates cannot be published.
+`foo` is marked as unpublishable
+"));
 }
