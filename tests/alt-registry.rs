@@ -280,7 +280,8 @@ fn block_publish_due_to_no_token() {
     // Now perform the actual publish
     assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
-                execs().with_status(101));
+                execs().with_status(101)
+                .with_stderr_contains("error: no upload token found, please run `cargo login`"));
 }
 
 #[test]
