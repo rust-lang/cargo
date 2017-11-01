@@ -1,6 +1,6 @@
 use cargo::core::Workspace;
 use cargo::ops;
-use cargo::util::{CliResult, Config};
+use cargo::util::{CargoError, CliResult, Config};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(Deserialize)]
@@ -21,6 +21,7 @@ pub struct Options {
     flag_locked: bool,
     #[serde(rename = "flag_Z")]
     flag_z: Vec<String>,
+    flag_registry: Option<String>,
 }
 
 pub const USAGE: &'static str = "
@@ -46,6 +47,7 @@ Options:
     --frozen                 Require Cargo.lock and cache are up to date
     --locked                 Require Cargo.lock is up to date
     -Z FLAG ...              Unstable (nightly-only) flags to Cargo
+    --registry REGISTRY      Registry to publish to
 
 ";
 
@@ -67,9 +69,13 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         flag_jobs: jobs,
         flag_dry_run: dry_run,
         flag_target: target,
+        flag_registry: registry,
         ..
     } = options;
 
+    if registry.is_some() && !config.cli_unstable().unstable_options {
+        return Err(CargoError::from("registry option is an unstable feature and requires -Zunstable-options to use.").into());
+    }
 
     // TODO: Deprecated
     // remove once it has been decided --host can be removed
@@ -100,6 +106,7 @@ about this warning.";
         target: target.as_ref().map(|t| &t[..]),
         jobs: jobs,
         dry_run: dry_run,
+        registry: registry,
     })?;
     Ok(())
 }
