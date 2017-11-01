@@ -150,11 +150,6 @@ impl SourceId {
         SourceId::new(Kind::Registry, url.clone())
     }
 
-    /// Create a SourceId from an alternative registry url
-    pub fn for_alt_registry(url: &Url) -> CargoResult<SourceId> {
-        SourceId::new(Kind::AltRegistry, url.clone())
-    }
-
     /// Create a SourceId from a local registry path
     pub fn for_local_registry(path: &Path) -> CargoResult<SourceId> {
         let url = path.to_url()?;

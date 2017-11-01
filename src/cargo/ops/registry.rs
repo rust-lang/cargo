@@ -243,7 +243,7 @@ pub fn registry(config: &Config,
     } = registry_configuration(config, registry.clone())?;
     let token = token.or(token_config);
     let sid = match (index_config, index, registry) {
-        (Some(index), _, Some(_registry)) => SourceId::for_alt_registry(&index.to_url()?)?,
+        (_, _, Some(registry)) => SourceId::alt_registry(config, &registry)?,
         (Some(index), _, _) | (None, Some(index), _) => SourceId::for_registry(&index.to_url()?)?,
         (None, None, _) => SourceId::crates_io(config)?,
     };
