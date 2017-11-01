@@ -23,9 +23,6 @@ const CONFIG_FILE: &str = r#"
 
     [registries.test-reg]
     index = "http://dummy_index/"
-
-    [registries.test.reg]
-    index = "http://dummy_index/"
 "#;
 
 fn setup_old_credentials() {
@@ -156,24 +153,6 @@ fn registry_credentials() {
     setup_new_credentials();
 
     let reg = "test-reg";
-
-    assert_that(cargo_process().arg("login").masquerade_as_nightly_cargo()
-                .arg("--registry").arg(reg).arg(TOKEN).arg("-Zunstable-options"),
-                execs().with_status(0));
-
-    // Ensure that we have not updated the default token
-    assert!(check_token(ORIGINAL_TOKEN, None));
-
-    // Also ensure that we get the new token for the registry
-    assert!(check_token(TOKEN, Some(reg)));
-}
-
-#[test]
-fn registry_credentials_with_dots() {
-    setup_old_credentials();
-    setup_new_credentials();
-
-    let reg = "test.reg";
 
     assert_that(cargo_process().arg("login").masquerade_as_nightly_cargo()
                 .arg("--registry").arg(reg).arg(TOKEN).arg("-Zunstable-options"),
