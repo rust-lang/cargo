@@ -165,7 +165,7 @@ impl SourceId {
     /// This is the main cargo registry by default, but it can be overridden in
     /// a `.cargo/config`.
     pub fn crates_io(config: &Config) -> CargoResult<SourceId> {
-        let cfg = ops::registry_configuration(config)?;
+        let cfg = ops::registry_configuration(config, None)?;
         let url = if let Some(ref index) = cfg.index {
             static WARNED: AtomicBool = ATOMIC_BOOL_INIT;
             if !WARNED.swap(true, SeqCst) {
@@ -183,17 +183,15 @@ impl SourceId {
     }
 
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
-        if let Some(index) = config.get_string(&format!("registries.{}.index", key))? {
-            let url = index.val.to_url()?;
-            Ok(SourceId {
-                inner: Arc::new(SourceIdInner {
-                    kind: Kind::Registry,
-                    canonical_url: git::canonicalize_url(&url)?,
-                    url: url,
-                    precise: None,
-                }),
-            })
-        } else { Err(format!("No index found for registry: `{}`", key).into()) }
+        let url = config.get_registry_index(key)?;
+        Ok(SourceId {
+            inner: Arc::new(SourceIdInner {
+                kind: Kind::Registry,
+                canonical_url: git::canonicalize_url(&url)?,
+                url: url,
+                precise: None,
+            }),
+        })
     }
 
     /// Get this source URL
