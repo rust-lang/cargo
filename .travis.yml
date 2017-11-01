@@ -6,6 +6,10 @@ dist: trusty
 git:
   depth: 1
 
+# Using 'cache: cargo' to cache target/ and all of $HOME/.cargo/
+# doesn't work well: the cache is large and it takes several minutes
+# to move it to and from S3. So instead we only cache the mdbook
+# binary.
 cache:
   directories:
     - $HOME/.cargo/bin/
@@ -24,7 +28,7 @@ matrix:
 
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
-      rust: nightly-2017-10-10
+      rust: nightly
       install:
         - mdbook --help || cargo install mdbook --force
       script:

@@ -20,6 +20,8 @@ pub fn dl_path() -> PathBuf { paths::root().join("dl") }
 pub fn dl_url() -> Url { Url::from_file_path(&*dl_path()).ok().unwrap() }
 pub fn alt_registry_path() -> PathBuf { paths::root().join("alternative-registry") }
 pub fn alt_registry() -> Url { Url::from_file_path(&*alt_registry_path()).ok().unwrap() }
+pub fn alt_dl_path() -> PathBuf { paths::root().join("alt_dl") }
+pub fn alt_dl_url() -> Url { Url::from_file_path(&*alt_dl_path()).ok().unwrap() }
 
 pub struct Package {
     name: String,
@@ -75,9 +77,9 @@ pub fn init() {
     repo(&alt_registry_path())
         .file("config.json", &format!(r#"
             {{"dl":"{0}","api":"{0}"}}
-        "#, dl_url()))
+        "#, alt_dl_url()))
         .build();
-    fs::create_dir_all(dl_path().join("api/v1/crates")).unwrap();
+    fs::create_dir_all(alt_dl_path().join("api/v1/crates")).unwrap();
 }
 
 impl Package {
@@ -299,7 +301,8 @@ impl Package {
             registry_path().join(format!("{}-{}.crate", self.name,
                                          self.vers))
         } else {
-            dl_path().join(&self.name).join(&self.vers).join("download")
+            let dl_path = if self.alternative { alt_dl_path() } else { dl_path() };
+            dl_path.join(&self.name).join(&self.vers).join("download")
         }
     }
 }

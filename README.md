@@ -1,8 +1,11 @@
+# Cargo
+
 Cargo downloads your Rust project’s dependencies and compiles your project.
 
 Learn more at http://doc.crates.io/
 
 ## Code Status
+
 [![Build Status](https://travis-ci.org/rust-lang/cargo.svg?branch=master)](https://travis-ci.org/rust-lang/cargo)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/rust-lang/cargo?branch=master&svg=true)](https://ci.appveyor.com/project/rust-lang-libs/cargo)
 
@@ -58,11 +61,10 @@ Please report all issues on the github [issue tracker][issues].
 
 [issues]: https://github.com/rust-lang/cargo/issues
 
-
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md)
-
+See [CONTRIBUTING.md](CONTRIBUTING.md). You may also find the arhitecture
+documentation useful ([ARCHITECTURE.md](ARCHITECTURE.md)).
 
 ## License
 
@@ -79,6 +81,8 @@ for use in the OpenSSL Toolkit (http://www.openssl.org/).
 In binary form, this product includes software that is licensed under the
 terms of the GNU General Public License, version 2, with a linking exception,
 which can be obtained from the [upstream repository][1].
+
+See LICENSE-THIRD-PARTY for details.
 
 [1]: https://github.com/libgit2/libgit2
 

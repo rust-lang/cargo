@@ -557,10 +557,57 @@ pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
 }
 
 pub fn uninstall(root: Option<&str>,
-                 spec: &str,
+                 specs: Vec<&str>,
                  bins: &[String],
                  config: &Config) -> CargoResult<()> {
+    if specs.len() > 1 && bins.len() > 0 {
+        bail!("A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.");
+    }
+
     let root = resolve_root(root, config)?;
+    let scheduled_error = if specs.len() == 1 {
+        uninstall_one(root, specs[0], bins, config)?;
+        false
+    } else {
+        let mut succeeded = vec![];
+        let mut failed = vec![];
+        for spec in specs {
+            let root = root.clone();
+            match uninstall_one(root, spec, bins, config) {
+                Ok(()) => succeeded.push(spec),
+                Err(e) => {
+                    ::handle_error(e, &mut config.shell());
+                    failed.push(spec)
+                }
+            }
+        }
+
+        let mut summary = vec![];
+        if !succeeded.is_empty() {
+            summary.push(format!("Successfully uninstalled {}!", succeeded.join(", ")));
+        }
+        if !failed.is_empty() {
+            summary.push(format!("Failed to uninstall {} (see error(s) above).", failed.join(", ")));
+        }
+
+        if !succeeded.is_empty() || !failed.is_empty() {
+            config.shell().status("\nSummary:", summary.join(" "))?;
+        }
+
+        !failed.is_empty()
+    };
+
+    if scheduled_error {
+        bail!("some packages failed to uninstall");
+    }
+
+    Ok(())
+}
+
+pub fn uninstall_one(root: Filesystem,
+                     spec: &str,
+                     bins: &[String],
+                     config: &Config) -> CargoResult<()> {
     let crate_metadata = metadata(config, &root)?;
     let mut metadata = read_crate_list(&crate_metadata)?;
     let mut to_remove = Vec::new();

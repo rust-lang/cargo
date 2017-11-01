@@ -2,7 +2,7 @@ extern crate cargotest;
 extern crate hamcrest;
 
 use cargotest::ChannelChanger;
-use cargotest::support::registry::{self, Package};
+use cargotest::support::registry::{self, Package, alt_dl_path};
 use cargotest::support::{project, execs};
 use hamcrest::assert_that;
 
@@ -280,7 +280,8 @@ fn block_publish_due_to_no_token() {
     // Now perform the actual publish
     assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
-                execs().with_status(101));
+                execs().with_status(101)
+                .with_stderr_contains("error: no upload token found, please run `cargo login`"));
 }
 
 #[test]
@@ -307,4 +308,7 @@ fn publish_to_alt_registry() {
     assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(0));
+
+    // Ensure that the crate is uploaded
+    assert!(alt_dl_path().join("api/v1/crates/new").exists());
 }
