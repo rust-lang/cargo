@@ -74,7 +74,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
 
     // Upload said tarball to the specified destination
     opts.config.shell().status("Uploading", pkg.package_id().to_string())?;
-    transmit(opts.config, pkg, tarball.file(), &mut registry, opts.dry_run)?;
+    transmit(opts.config, pkg, tarball.file(), &mut registry, &reg_id, opts.dry_run)?;
 
     Ok(())
 }
@@ -90,10 +90,14 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
             }
         } else if dep.source_id() != registry_src {
             if dep.source_id().is_registry() {
-                bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
-                       registries either publish `{}` on crates.io or pull it into this repository\n\
-                       and specify it with a path and version\n\
-                       (crate `{}` is pulled from {}", dep.name(), dep.name(), dep.source_id());
+                // Block requests to send to a registry if it is not an alternative
+                // registry
+                if !registry_src.is_alt_registry() {
+                    bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
+                           registries either publish `{}` on crates.io or pull it into this repository\n\
+                           and specify it with a path and version\n\
+                           (crate `{}` is pulled from {}", dep.name(), dep.name(), dep.source_id());
+                }
             } else {
                 bail!("crates cannot be published to crates.io with dependencies sourced from \
                        a repository\neither publish `{}` as its own crate on crates.io and \
@@ -110,8 +114,19 @@ fn transmit(config: &Config,
             pkg: &Package,
             tarball: &File,
             registry: &mut Registry,
+            registry_id: &SourceId,
             dry_run: bool) -> CargoResult<()> {
+
     let deps = pkg.dependencies().iter().map(|dep| {
+
+        // If the dependency is from a different registry, then include the
+        // registry in the dependency.
+        let dep_registry = if dep.source_id() != registry_id {
+            Some(dep.source_id().url().to_string())
+        } else {
+            None
+        };
+
         NewCrateDependency {
             optional: dep.is_optional(),
             default_features: dep.uses_default_features(),
@@ -124,6 +139,7 @@ fn transmit(config: &Config,
                 Kind::Build => "build",
                 Kind::Development => "dev",
             }.to_string(),
+            registry: dep_registry,
         }
     }).collect::<Vec<NewCrateDependency>>();
     let manifest = pkg.manifest();
@@ -226,9 +242,10 @@ pub fn registry(config: &Config,
         index: index_config,
     } = registry_configuration(config, registry.clone())?;
     let token = token.or(token_config);
-    let sid = match (index_config, index) {
-        (Some(index), _) | (None, Some(index)) => SourceId::for_registry(&index.to_url()?)?,
-        (None, None) => SourceId::crates_io(config)?,
+    let sid = match (index_config, index, registry) {
+        (Some(index), _, Some(_registry)) => SourceId::for_alt_registry(&index.to_url()?)?,
+        (Some(index), _, _) | (None, Some(index), _) => SourceId::for_registry(&index.to_url()?)?,
+        (None, None, _) => SourceId::crates_io(config)?,
     };
     let api_host = {
         let mut src = RegistrySource::remote(&sid, config);
