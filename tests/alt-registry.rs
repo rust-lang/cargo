@@ -65,11 +65,13 @@ fn depend_on_alt_registry() {
     // Don't download a second time
     assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0).with_stderr(&format!("\
+[UPDATING] registry `{reg}`
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
 ",
-        dir = p.url())));
+        dir = p.url(),
+        reg = registry::alt_registry())));
 }
 
 #[test]
@@ -91,7 +93,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .build();
 
     Package::new("baz", "0.0.1").alternative(true).publish();
-    Package::new("bar", "0.0.1").registry_dep("baz", "0.0.1", registry::alt_registry().as_str()).alternative(true).publish();
+    Package::new("bar", "0.0.1").dep("baz", "0.0.1").alternative(true).publish();
 
     assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0).with_stderr(&format!("\
@@ -106,7 +108,6 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         dir = p.url(),
         reg = registry::alt_registry())));
 }
-
 
 #[test]
 fn depend_on_alt_registry_depends_on_crates_io() {
@@ -192,7 +193,7 @@ fn registry_incompatible_with_git() {
 }
 
 #[test]
-fn cannot_publish_with_registry_dependency() {
+fn publish_with_registry_dependency() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             cargo-features = ["alternative-registries"]
@@ -211,9 +212,14 @@ fn cannot_publish_with_registry_dependency() {
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
+    // Login so that we have the token available
+    assert_that(p.cargo("login").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("TOKEN").arg("-Zunstable-options"),
+                execs().with_status(0));
+
     assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
-                 .arg("--index").arg(registry::alt_registry().to_string()),
-                execs().with_status(101));
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
+                execs().with_status(0));
 }
 
 #[test]
@@ -288,6 +294,8 @@ fn block_publish_due_to_no_token() {
 fn publish_to_alt_registry() {
     let p = project("foo")
         .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
             [project]
             name = "foo"
             version = "0.0.1"
@@ -301,7 +309,7 @@ fn publish_to_alt_registry() {
 
     // Login so that we have the token available
     assert_that(p.cargo("login").masquerade_as_nightly_cargo()
-                .arg("--registry").arg("alternative").arg("TOKEN").arg("-Zunstable-options"),
+                 .arg("--registry").arg("alternative").arg("TOKEN").arg("-Zunstable-options"),
                 execs().with_status(0));
 
     // Now perform the actual publish
@@ -311,4 +319,35 @@ fn publish_to_alt_registry() {
 
     // Ensure that the crate is uploaded
     assert!(alt_dl_path().join("api/v1/crates/new").exists());
+}
+
+#[test]
+fn publish_with_crates_io_dep() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = ["me"]
+            license = "MIT"
+            description = "foo"
+
+            [dependencies.bar]
+            version = "0.0.1"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1").publish();
+
+    // Login so that we have the token available
+    assert_that(p.cargo("login").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("TOKEN").arg("-Zunstable-options"),
+                execs().with_status(0));
+
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
+                execs().with_status(0));
 }
