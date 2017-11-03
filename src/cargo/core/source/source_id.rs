@@ -32,6 +32,8 @@ struct SourceIdInner {
     kind: Kind,
     // e.g. the exact git revision of the specified branch for a Git Source
     precise: Option<String>,
+    /// Optional name to associate with the source
+    name: Option<String>,
 }
 
 /// The possible kinds of code source. Along with a URL, this fully defines the
@@ -72,6 +74,7 @@ impl SourceId {
                 canonical_url: git::canonicalize_url(&url)?,
                 url: url,
                 precise: None,
+                name: None,
             }),
         };
         Ok(source_id)
@@ -190,8 +193,14 @@ impl SourceId {
                 canonical_url: git::canonicalize_url(&url)?,
                 url: url,
                 precise: None,
+                name: Some(key.to_string()),
             }),
         })
+    }
+
+    /// Get the optional name associated with the source
+    pub fn name(&self) -> &Option<String> {
+        &self.inner.name
     }
 
     /// Get this source URL

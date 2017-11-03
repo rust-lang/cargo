@@ -209,10 +209,20 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             .push(&pkg.version().to_string())
             .push("download");
 
+        let proxy_key = match self.source_id.name() {
+            &None => "registry.proxy".to_string(),
+            &Some(ref registry) => format!("registries.{}.proxy", registry),
+        };
+
+        if let Some(cache) = self.config.get_string(&proxy_key)? {
+            url = cache.val.to_url()?.join(url.path())?;
+        }
+
         // TODO: don't download into memory, but ensure that if we ctrl-c a
         //       download we should resume either from the start or the middle
         //       on the next time
         let url = url.to_string();
+
         let mut handle = self.config.http()?.borrow_mut();
         handle.get(true)?;
         handle.url(&url)?;
