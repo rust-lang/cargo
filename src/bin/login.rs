@@ -21,7 +21,7 @@ pub struct Options {
 }
 
 pub const USAGE: &'static str = "
-Save an api token from the registry locally
+Save an api token from the registry locally. If token is not specified, it will be read from stdin.
 
 Usage:
     cargo login [options] [<token>]
