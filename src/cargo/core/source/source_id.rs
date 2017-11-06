@@ -32,6 +32,8 @@ struct SourceIdInner {
     kind: Kind,
     // e.g. the exact git revision of the specified branch for a Git Source
     precise: Option<String>,
+    /// Name of the registry source for alternative registries
+    name: Option<String>,
 }
 
 /// The possible kinds of code source. Along with a URL, this fully defines the
@@ -44,8 +46,6 @@ enum Kind {
     Path,
     /// represents a remote registry
     Registry,
-    /// represents a remote alternative registry
-    AltRegistry,
     /// represents a local filesystem-based registry
     LocalRegistry,
     /// represents a directory-based registry
@@ -74,6 +74,7 @@ impl SourceId {
                 canonical_url: git::canonicalize_url(&url)?,
                 url: url,
                 precise: None,
+                name: None,
             }),
         };
         Ok(source_id)
@@ -188,10 +189,11 @@ impl SourceId {
         let url = config.get_registry_index(key)?;
         Ok(SourceId {
             inner: Arc::new(SourceIdInner {
-                kind: Kind::AltRegistry,
+                kind: Kind::Registry,
                 canonical_url: git::canonicalize_url(&url)?,
                 url: url,
                 precise: None,
+                name: Some(key.to_string()),
             }),
         })
     }
@@ -213,14 +215,14 @@ impl SourceId {
     /// Is this source from a registry (either local or not)
     pub fn is_registry(&self) -> bool {
         match self.inner.kind {
-            Kind::Registry | Kind::AltRegistry | Kind::LocalRegistry => true,
-            _                                                        => false,
+            Kind::Registry | Kind::LocalRegistry => true,
+            _                                    => false,
         }
     }
 
     /// Is this source from an alternative registry
     pub fn is_alt_registry(&self) -> bool {
-        self.inner.kind == Kind::AltRegistry
+        self.is_registry() && self.inner.name.is_some()
     }
 
     /// Is this source from a git repository
@@ -243,7 +245,7 @@ impl SourceId {
                 };
                 Ok(Box::new(PathSource::new(&path, self, config)))
             }
-            Kind::Registry | Kind::AltRegistry => Ok(Box::new(RegistrySource::remote(self, config))),
+            Kind::Registry => Ok(Box::new(RegistrySource::remote(self, config))),
             Kind::LocalRegistry => {
                 let path = match self.inner.url.to_file_path() {
                     Ok(p) => p,
@@ -368,7 +370,6 @@ impl fmt::Display for SourceId {
                 Ok(())
             }
             SourceIdInner { kind: Kind::Registry, ref url, .. } |
-            SourceIdInner { kind: Kind::AltRegistry, ref url, .. } |
             SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
                 write!(f, "registry `{}`", url)
             }
@@ -466,8 +467,7 @@ impl<'a> fmt::Display for SourceIdToUrl<'a> {
                 }
                 Ok(())
             }
-            SourceIdInner { kind: Kind::Registry, ref url, .. } |
-            SourceIdInner { kind: Kind::AltRegistry, ref url, .. } => {
+            SourceIdInner { kind: Kind::Registry, ref url, .. } => {
                 write!(f, "registry+{}", url)
             }
             SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
