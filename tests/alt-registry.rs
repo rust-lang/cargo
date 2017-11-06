@@ -193,6 +193,29 @@ fn registry_incompatible_with_git() {
 }
 
 #[test]
+fn cannot_publish_to_crates_io_with_registry_dependency() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            [dependencies.bar]
+            version = "0.0.1"
+            registry = "alternative"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1").alternative(true).publish();
+
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--index").arg(registry::registry().to_string()),
+                execs().with_status(101));
+}
+
+#[test]
 fn publish_with_registry_dependency() {
     let p = project("foo")
         .file("Cargo.toml", r#"

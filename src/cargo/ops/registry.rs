@@ -96,7 +96,7 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
                     bail!("crates cannot be published to crates.io with dependencies sourced from other\n\
                            registries either publish `{}` on crates.io or pull it into this repository\n\
                            and specify it with a path and version\n\
-                           (crate `{}` is pulled from {}", dep.name(), dep.name(), dep.source_id());
+                           (crate `{}` is pulled from {})", dep.name(), dep.name(), dep.source_id());
                 }
             } else {
                 bail!("crates cannot be published to crates.io with dependencies sourced from \
