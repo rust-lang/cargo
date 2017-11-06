@@ -701,7 +701,7 @@ impl TomlManifest {
                 Some(vecstring.clone())
             },
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
-            _ => None,
+            None | Some(VecStringOrBool::Bool(true)) => None,
         };
         let mut manifest = Manifest::new(summary,
                                          targets,
