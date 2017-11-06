@@ -3,6 +3,7 @@ use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::mem;
 use std::path::Path;
+use std::str;
 
 use git2;
 use hex::ToHex;
@@ -14,7 +15,7 @@ use sources::git;
 use sources::registry::{RegistryData, RegistryConfig, INDEX_LOCK};
 use util::network;
 use util::{FileLock, Filesystem, LazyCell};
-use util::{Config, Sha256, ToUrl};
+use util::{Config, Sha256, ToUrl, Progress};
 use util::errors::{CargoErrorKind, CargoResult, CargoResultExt};
 
 pub struct RemoteRegistry<'cfg> {
@@ -222,8 +223,13 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         network::with_retry(self.config, || {
             state = Sha256::new();
             body = Vec::new();
+            let mut pb = Progress::new("Fetch", self.config);
             {
+                handle.progress(true)?;
                 let mut handle = handle.transfer();
+                handle.progress_function(|dl_total, dl_cur, _, _| {
+                    pb.tick(dl_cur as usize, dl_total as usize).is_ok()
+                })?;
                 handle.write_function(|buf| {
                     state.update(buf);
                     body.extend_from_slice(buf);
