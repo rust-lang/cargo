@@ -65,13 +65,11 @@ fn depend_on_alt_registry() {
     // Don't download a second time
     assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0).with_stderr(&format!("\
-[UPDATING] registry `{reg}`
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
 ",
-        dir = p.url(),
-        reg = registry::alt_registry())));
+        dir = p.url())));
 }
 
 #[test]
