@@ -50,7 +50,7 @@ macro_rules! flush {
 }
 
 /// A list of `--only` aliases
-const ALIAS: &[(&str, &[&str])] = &[
+const ALIASES: &[(&str, &[&str])] = &[
     ("use", &["E0412"]),
 ];
 
@@ -82,14 +82,16 @@ fn try_main() -> Result<(), ProgramError> {
         AutofixMode::None
     };
 
-    let mut only: Option<HashSet<String>> = matches.values_of("only").map(|values| values.map(|s| s.to_string()).collect());
+    let mut only: HashSet<String> = matches
+        .values_of("only")
+        .map_or(HashSet::new(), |values| {
+            values.map(ToString::to_string).collect()
+        });
 
-    if let Some(ref mut set) = only {
-        for alias in ALIAS {
-            if set.remove(alias.0) {
-                for alias in alias.1 {
-                    set.insert(alias.to_string());
-                }
+    for alias in ALIASES {
+        if only.remove(alias.0) {
+            for alias in alias.1 {
+                only.insert(alias.to_string());
             }
         }
     }

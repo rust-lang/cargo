@@ -108,10 +108,10 @@ fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
     })
 }
 
-pub fn collect_suggestions(diagnostic: &Diagnostic, only: &Option<HashSet<String>>) -> Option<Suggestion> {
-    if let Some(ref set) = *only {
+pub fn collect_suggestions(diagnostic: &Diagnostic, only: &HashSet<String>) -> Option<Suggestion> {
+    if !only.is_empty() {
         if let Some(ref code) = diagnostic.code {
-            if !set.contains(&code.code) {
+            if !only.contains(&code.code) {
                 // This is not the code we are looking for
                 return None;
             }
