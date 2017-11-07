@@ -96,13 +96,13 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
             } else {
                 format!("{} -> v{}", removed[0], added[0].version())
             };
-            print_change("Updating", msg, Cyan)?;
+            print_change("Updating", msg, Green)?;
         } else {
             for package in removed.iter() {
                 print_change("Removing", format!("{}", package), Red)?;
             }
             for package in added.iter() {
-                print_change("Adding", format!("{}", package), Green)?;
+                print_change("Adding", format!("{}", package), Cyan)?;
             }
         }
     }
