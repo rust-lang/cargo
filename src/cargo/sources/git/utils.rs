@@ -624,7 +624,7 @@ pub fn fetch(repo: &mut git2::Repository,
 /// failing that we just blow away the repository and start over.
 fn maybe_gc_repo(repo: &mut git2::Repository) -> CargoResult<()> {
     // Here we arbitrarily declare that if you have more than 100 files in your
-    // `pack` folder that we need to do a gc.
+    // `pack` folder we check if we have gc using git gc --auto
     let entries = match repo.path().join("objects/pack").read_dir() {
         Ok(e) => e.count(),
         Err(_) => {
@@ -640,11 +640,12 @@ fn maybe_gc_repo(repo: &mut git2::Repository) -> CargoResult<()> {
         return Ok(())
     }
 
-    // First up, try a literal `git gc` by shelling out to git. This is pretty
-    // likely to fail though as we may not have `git` installed. Note that
-    // libgit2 doesn't currently implement the gc operation, so there's no
+    // Let git decide if we need to run gc honoring the userside
+    // settings in .gitconfig. This is pretty likely to fail
+    // though as we may not have `git` installed. Note that libgit2
+    // doesn't currently implement the gc operation, so there's no
     // equivalent there.
-    match Command::new("git").arg("gc").current_dir(repo.path()).output() {
+    match Command::new("git").arg("gc").arg("--auto").current_dir(repo.path()).output() {
         Ok(out) => {
             debug!("git-gc status: {}\n\nstdout ---\n{}\nstderr ---\n{}",
                    out.status,
