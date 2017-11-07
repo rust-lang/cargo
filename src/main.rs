@@ -139,6 +139,35 @@ enum AutofixMode {
     Yolo,
 }
 
+fn prelude(suggestion: &Replacement) {
+    let snippet = &suggestion.snippet;
+    if snippet.text.1.is_empty() {
+        if suggestion.replacement.ends_with('\n') || suggestion.replacement.starts_with('\n') {
+            println!("{}", "Insert line:".yellow().bold());
+        } else {
+            println!("{}", "At:".yellow().bold());
+            println!(
+                "{lead}{text}{tail}",
+                lead = indent(4, &snippet.text.0),
+                text = "⍉".red(),
+                tail = snippet.text.2,
+            );
+            println!("{}\n", indent(snippet.text.0.len() as u32, "^").red());
+            println!("{}\n", "insert:".yellow().bold());
+        }
+    } else {
+        println!("{}\n", "Replace:".yellow().bold());
+        println!(
+            "{lead}{text}{tail}\n\n\
+            {with}\n",
+            with = "with:".yellow().bold(),
+            lead = indent(4, &snippet.text.0),
+            text = snippet.text.1.red(),
+            tail = snippet.text.2,
+        );
+    }
+}
+
 fn handle_suggestions(
     suggestions: Vec<Suggestion>,
     mode: AutofixMode,
@@ -164,19 +193,23 @@ fn handle_suggestions(
         let mut i = 0;
         for solution in suggestion.solutions.iter() {
             println!("\n{}", solution.message);
+
+            // check whether we can squash all suggestions into a list
+            if solution.replacements.len() > 1 {
+                let first = solution.replacements[0].clone();
+                if solution.replacements.iter().all(|s| first.snippet.file_name == s.snippet.file_name && first.snippet.line_range == s.snippet.line_range) {
+                    prelude(&first);
+                    for suggestion in solution.replacements.iter() {
+                        println!("[{}]: {}", i, suggestion.replacement.trim());
+                        i += 1;
+                    }
+                    continue;
+                }
+            }
             for suggestion in solution.replacements.iter() {
-                let snippet = &suggestion.snippet;
-                println!("[{id}]: {suggestion}\n\n\
-                    {lead}{text}{tail}\n\n\
-                    {with}\n\n\
-                    {replacement}\n",
-                    id = i,
-                    suggestion = "Suggestion - Replace:".yellow().bold(),
-                    lead = indent(4, &snippet.text.0),
-                    text = snippet.text.1.red(),
-                    tail = snippet.text.2,
-                    with = "with:".yellow().bold(),
-                    replacement = indent(4, &suggestion.replacement));
+                print!("[{}]: ", i);
+                prelude(&suggestion);
+                println!("{}", indent(4, &suggestion.replacement));
                 i += 1;
             }
         }
