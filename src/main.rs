@@ -142,6 +142,7 @@ enum AutofixMode {
 fn prelude(suggestion: &Replacement) {
     let snippet = &suggestion.snippet;
     if snippet.text.1.is_empty() {
+        // Check whether this suggestion wants to be inserted before or after another line
         if suggestion.replacement.ends_with('\n') || suggestion.replacement.starts_with('\n') {
             println!("{}", "Insert line:".yellow().bold());
         } else {
@@ -197,7 +198,12 @@ fn handle_suggestions(
             // check whether we can squash all suggestions into a list
             if solution.replacements.len() > 1 {
                 let first = solution.replacements[0].clone();
-                if solution.replacements.iter().all(|s| first.snippet.file_name == s.snippet.file_name && first.snippet.line_range == s.snippet.line_range) {
+                let all_suggestions_replace_the_same_span = solution
+                    .replacements
+                    .iter()
+                    .all(|s| first.snippet.file_name == s.snippet.file_name
+                         && first.snippet.line_range == s.snippet.line_range);
+                if all_suggestions_replace_the_same_span {
                     prelude(&first);
                     for suggestion in solution.replacements.iter() {
                         println!("[{}]: {}", i, suggestion.replacement.trim());
@@ -206,7 +212,7 @@ fn handle_suggestions(
                     continue;
                 }
             }
-            for suggestion in solution.replacements.iter() {
+            for suggestion in &solution.replacements {
                 print!("[{}]: ", i);
                 prelude(&suggestion);
                 println!("{}", indent(4, &suggestion.replacement));
