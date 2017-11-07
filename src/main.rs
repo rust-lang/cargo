@@ -143,7 +143,9 @@ fn prelude(suggestion: &Replacement) {
     let snippet = &suggestion.snippet;
     if snippet.text.1.is_empty() {
         // Check whether this suggestion wants to be inserted before or after another line
-        if suggestion.replacement.ends_with('\n') || suggestion.replacement.starts_with('\n') {
+        let wants_to_be_on_own_line = suggestion.replacement.ends_with('\n')
+                                   || suggestion.replacement.starts_with('\n');
+        if wants_to_be_on_own_line {
             println!("{}", "Insert line:".yellow().bold());
         } else {
             println!("{}", "At:".yellow().bold());
