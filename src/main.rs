@@ -13,6 +13,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::error::Error;
 use std::process::Command;
+use std::collections::HashSet;
 
 use colored::Colorize;
 use clap::{Arg, App};
@@ -48,6 +49,11 @@ macro_rules! flush {
     () => (try!(std::io::stdout().flush());)
 }
 
+/// A list of `--only` aliases
+const ALIASES: &[(&str, &[&str])] = &[
+    ("use", &["E0412"]),
+];
+
 fn try_main() -> Result<(), ProgramError> {
     let matches = App::new("rustfix")
         .about("Automatically apply suggestions made by rustc")
@@ -58,6 +64,10 @@ fn try_main() -> Result<(), ProgramError> {
         .arg(Arg::with_name("yolo")
             .long("yolo")
             .help("Automatically apply all unambiguous suggestions"))
+        .arg(Arg::with_name("only")
+            .long("only")
+            .help("Only show errors or lints with the specific id(s) (comma separated)")
+            .use_delimiter(true))
         .get_matches();
 
     let mut extra_args = Vec::new();
@@ -72,6 +82,20 @@ fn try_main() -> Result<(), ProgramError> {
         AutofixMode::None
     };
 
+    let mut only: HashSet<String> = matches
+        .values_of("only")
+        .map_or(HashSet::new(), |values| {
+            values.map(ToString::to_string).collect()
+        });
+
+    for alias in ALIASES {
+        if only.remove(alias.0) {
+            for alias in alias.1 {
+                only.insert(alias.to_string());
+            }
+        }
+    }
+
     // Get JSON output from rustc...
     let json = get_json(&extra_args)?;
 
@@ -80,7 +104,7 @@ fn try_main() -> Result<(), ProgramError> {
         // Convert JSON string (and eat parsing errors)
         .flat_map(|line| serde_json::from_str::<CargoMessage>(line))
         // One diagnostic line might have multiple suggestions
-        .filter_map(|cargo_msg| rustfix::collect_suggestions(&cargo_msg.message))
+        .filter_map(|cargo_msg| rustfix::collect_suggestions(&cargo_msg.message, &only))
         .collect();
 
     try!(handle_suggestions(suggestions, mode));

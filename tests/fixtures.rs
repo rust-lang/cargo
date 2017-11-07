@@ -1,7 +1,8 @@
 #[macro_use]
 extern crate duct;
 
-use std::io::{BufReader, BufRead};
+use std::io::{BufReader, BufRead, Read};
+use std::fs::File;
 
 #[test]
 fn fixtures() {
@@ -32,7 +33,6 @@ fn fixtures() {
 
             for entry in tests {
                 let test = entry.unwrap().path();
-                let yolo = test.file_name().unwrap() == "yolo";
 
                 println!("Running test: {}", test.file_name().unwrap().to_str().unwrap());
 
@@ -47,11 +47,21 @@ fn fixtures() {
                 println!("Running cargo clippy to obtain suggestions");
 
                 let manifest = format!("--manifest-path={}", &manifest[1..manifest.len() - 1]);
-                let cmd = if yolo {
-                    cmd!("cargo", "run", manifest, "--bin", "rustfix", "--quiet", "--", "--clippy", "--yolo")
-                } else {
-                    cmd!("cargo", "run", manifest, "--bin", "rustfix", "--quiet", "--", "--clippy")
-                };
+                let mut args = vec![
+                    "run".to_owned(),
+                    manifest,
+                    "--bin".to_owned(),
+                    "rustfix".to_owned(),
+                    "--quiet".to_owned(),
+                    "--".to_owned(),
+                    "--clippy".to_owned(),
+                ];
+                if let Ok(mut file) = File::open(test.join("args.txt")) {
+                    let mut extra_args = String::new();
+                    file.read_to_string(&mut extra_args).unwrap();
+                    args.extend(extra_args.split_whitespace().map(|s| s.to_string()));
+                }
+                let cmd = duct::cmd("cargo", args);
                 cmd.dir(&dir)
                     .stdin(test.join("input.txt"))
                     .stdout(dir.join("output.txt"))

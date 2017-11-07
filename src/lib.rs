@@ -2,6 +2,8 @@
 extern crate serde_derive;
 extern crate serde_json;
 
+use std::collections::HashSet;
+
 pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
 
@@ -106,7 +108,18 @@ fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
     })
 }
 
-pub fn collect_suggestions(diagnostic: &Diagnostic) -> Option<Suggestion> {
+pub fn collect_suggestions(diagnostic: &Diagnostic, only: &HashSet<String>) -> Option<Suggestion> {
+    if !only.is_empty() {
+        if let Some(ref code) = diagnostic.code {
+            if !only.contains(&code.code) {
+                // This is not the code we are looking for
+                return None;
+            }
+        } else {
+            // No code, probably a weird builtin warning/error
+            return None;
+        }
+    }
 
     let snippets = diagnostic.spans
         .iter()
