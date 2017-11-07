@@ -6,7 +6,7 @@
 pub struct Diagnostic {
     /// The primary error message.
     pub message: String,
-    code: Option<DiagnosticCode>,
+    pub code: Option<DiagnosticCode>,
     /// "error: internal compiler error", "error", "warning", "note", "help".
     level: String,
     pub spans: Vec<DiagnosticSpan>,
@@ -70,9 +70,9 @@ struct DiagnosticSpanMacroExpansion {
 }
 
 #[derive(Deserialize, Debug)]
-struct DiagnosticCode {
+pub struct DiagnosticCode {
     /// The code itself.
-    code: String,
+    pub code: String,
     /// An explanation for the code.
     explanation: Option<String>,
 }
