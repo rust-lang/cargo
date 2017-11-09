@@ -25,18 +25,18 @@ Usage:
     cargo yank [options] [<crate>]
 
 Options:
-    -h, --help          Print this message
-    --vers VERSION      The version to yank or un-yank
-    --undo              Undo a yank, putting a version back into the index
-    --index INDEX       Registry index to yank from
-    --token TOKEN       API token to use when authenticating
-    -v, --verbose ...   Use verbose output (-vv very verbose/build.rs output)
-    -q, --quiet         No output printed to stdout
-    --color WHEN        Coloring: auto, always, never
-    --frozen            Require Cargo.lock and cache are up to date
-    --locked            Require Cargo.lock is up to date
-    -Z FLAG ...         Unstable (nightly-only) flags to Cargo
-    --registry REGISTRY Registry to use
+    -h, --help               Print this message
+    --vers VERSION           The version to yank or un-yank
+    --undo                   Undo a yank, putting a version back into the index
+    --index INDEX            Registry index to yank from
+    --token TOKEN            API token to use when authenticating
+    -v, --verbose ...        Use verbose output (-vv very verbose/build.rs output)
+    -q, --quiet              No output printed to stdout
+    --color WHEN             Coloring: auto, always, never
+    --frozen                 Require Cargo.lock and cache are up to date
+    --locked                 Require Cargo.lock is up to date
+    -Z FLAG ...              Unstable (nightly-only) flags to Cargo
+    --registry REGISTRY      Registry to use
 
 The yank command removes a previously pushed crate's version from the server's
 index. This command does not delete any data, and the crate will still be
