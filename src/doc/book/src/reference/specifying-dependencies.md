@@ -384,7 +384,7 @@ Path overrides are specified through `.cargo/config` instead of `Cargo.toml`,
 and you can find [more documentation about this configuration][config-docs].
 Inside of `.cargo/config` you'll specify a key called `paths`:
 
-[config-docs]: config.html
+[config-docs]: reference/config.html
 
 ```toml
 paths = ["/path/to/uuid"]
