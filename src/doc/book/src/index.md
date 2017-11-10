@@ -9,7 +9,7 @@ dependencies, compiles your project, makes packages, and upload them to
 
 ### Sections
 
-**[Getting Started](getting-started.html)**
+**[Getting Started](getting-started/index.html)**
 
 To get started with Cargo, install Cargo (and Rust) and set up your first crate.
 
