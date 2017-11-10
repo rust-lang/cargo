@@ -1,6 +1,6 @@
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Button)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> bitflags::<unnamed>::ops::FnMut(&'r controls::Button)>`)
 [1;34m  -->[0m src/controls.rs:245:17-245:78
 
 try
@@ -15,7 +15,7 @@ try
 automatically applying suggestion (--yolo)
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Entry)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> bitflags::<unnamed>::ops::FnMut(&'r controls::Entry)>`)
 [1;34m  -->[0m src/controls.rs:350:17-350:77
 
 try
@@ -35,7 +35,7 @@ automatically applying suggestion (--yolo)
 
 try this
 [0]: [1;33mAt:[0m
-[31m⍉[0mpub fn new() -> Entry {
+[31mv[0mpub fn new() -> Entry {
 [31m^[0m
 
 [1;33minsert:[0m
@@ -51,7 +51,7 @@ try this
 automatically applying suggestion (--yolo)
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Checkbox)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> bitflags::<unnamed>::ops::FnMut(&'r controls::Checkbox)>`)
 [1;34m  -->[0m src/controls.rs:415:17-415:80
 
 try
@@ -71,7 +71,7 @@ automatically applying suggestion (--yolo)
 
 try this
 [0]: [1;33mAt:[0m
-[31m⍉[0mpub fn new() -> Tab {
+[31mv[0mpub fn new() -> Tab {
 [31m^[0m
 
 [1;33minsert:[0m
@@ -87,7 +87,7 @@ try this
 automatically applying suggestion (--yolo)
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Spinbox)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> bitflags::<unnamed>::ops::FnMut(&'r controls::Spinbox)>`)
 [1;34m  -->[0m src/controls.rs:621:17-621:79
 
 try
@@ -107,7 +107,7 @@ automatically applying suggestion (--yolo)
 
 try this
 [0]: [1;33mAt:[0m
-[31m⍉[0mpub fn new() -> ProgressBar {
+[31mv[0mpub fn new() -> ProgressBar {
 [31m^[0m
 
 [1;33minsert:[0m
@@ -123,7 +123,7 @@ try this
 automatically applying suggestion (--yolo)
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Slider)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> bitflags::<unnamed>::ops::FnMut(&'r controls::Slider)>`)
 [1;34m  -->[0m src/controls.rs:689:17-689:78
 
 try
@@ -138,7 +138,7 @@ try
 automatically applying suggestion (--yolo)
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Combobox)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> bitflags::<unnamed>::ops::FnMut(&'r controls::Combobox)>`)
 [1;34m  -->[0m src/controls.rs:758:17-758:80
 
 try
@@ -158,7 +158,7 @@ automatically applying suggestion (--yolo)
 
 try this
 [0]: [1;33mAt:[0m
-[31m⍉[0mpub fn new() -> Combobox {
+[31mv[0mpub fn new() -> Combobox {
 [31m^[0m
 
 [1;33minsert:[0m
@@ -179,7 +179,7 @@ automatically applying suggestion (--yolo)
 
 try this
 [0]: [1;33mAt:[0m
-[31m⍉[0mpub fn new() -> RadioButtons {
+[31mv[0mpub fn new() -> RadioButtons {
 [31m^[0m
 
 [1;33minsert:[0m
@@ -195,7 +195,7 @@ try this
 automatically applying suggestion (--yolo)
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::MultilineEntry)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> bitflags::<unnamed>::ops::FnMut(&'r controls::MultilineEntry)>`)
 [1;34m  -->[0m src/controls.rs:866:17-867:73
 
 try
@@ -216,7 +216,7 @@ automatically applying suggestion (--yolo)
 
 try this
 [0]: [1;33mAt:[0m
-[31m⍉[0mpub fn new() -> MultilineEntry {
+[31mv[0mpub fn new() -> MultilineEntry {
 [31m^[0m
 
 [1;33minsert:[0m
@@ -232,7 +232,7 @@ try this
 automatically applying suggestion (--yolo)
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::FontButton)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> bitflags::<unnamed>::ops::FnMut(&'r controls::FontButton)>`)
 [1;34m  -->[0m src/controls.rs:1182:17-1182:82
 
 try
@@ -252,7 +252,7 @@ automatically applying suggestion (--yolo)
 
 try this
 [0]: [1;33mAt:[0m
-[31m⍉[0mpub fn new() -> FontButton {
+[31mv[0mpub fn new() -> FontButton {
 [31m^[0m
 
 [1;33minsert:[0m
@@ -268,7 +268,7 @@ try this
 automatically applying suggestion (--yolo)
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::ColorButton)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> bitflags::<unnamed>::ops::FnMut(&'r controls::ColorButton)>`)
 [1;34m  -->[0m src/controls.rs:1237:17-1237:83
 
 try
@@ -288,7 +288,7 @@ automatically applying suggestion (--yolo)
 
 try this
 [0]: [1;33mAt:[0m
-[31m⍉[0mpub fn new() -> ColorButton {
+[31mv[0mpub fn new() -> ColorButton {
 [31m^[0m
 
 [1;33minsert:[0m
@@ -304,7 +304,7 @@ try this
 automatically applying suggestion (--yolo)
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r, 's> std::ops::FnMut(&'r menus::MenuItem, &'s windows::Window)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r, 's> bitflags::<unnamed>::ops::FnMut(&'r menus::MenuItem, &'s windows::Window)>`)
 [1;34m  -->[0m src/menus.rs:50:17-51:76
 
 try

@@ -1,6 +1,6 @@
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Button)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> bitflags::<unnamed>::ops::FnMut(&'r controls::Button)>`)
 [1;34m  -->[0m src/controls.rs:245:17-245:78
 
 try
@@ -16,7 +16,7 @@ try
 [1;32m  >[0m Suggestion accepted. I'll remember that and apply it later.
 
 
-[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> std::ops::FnMut(&'r controls::Entry)>`)
+[1;32mInfo[0m: transmute from a pointer type (`*mut libc::c_void`) to a reference type (`&mut std::boxed::Box<for<'r> bitflags::<unnamed>::ops::FnMut(&'r controls::Entry)>`)
 [1;34m  -->[0m src/controls.rs:350:17-350:77
 
 try
@@ -37,7 +37,7 @@ try
 
 try this
 [0]: [1;33mAt:[0m
-[31m⍉[0mpub fn new() -> Entry {
+[31mv[0mpub fn new() -> Entry {
 [31m^[0m
 
 [1;33minsert:[0m

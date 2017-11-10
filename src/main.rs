@@ -152,7 +152,7 @@ fn prelude(suggestion: &Replacement) {
             println!(
                 "{lead}{text}{tail}",
                 lead = indent(4, &snippet.text.0),
-                text = "⍉".red(),
+                text = "v".red(),
                 tail = snippet.text.2,
             );
             println!("{}\n", indent(snippet.text.0.len() as u32, "^").red());
