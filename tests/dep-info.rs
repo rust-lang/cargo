@@ -31,6 +31,7 @@ fn build_dep_info_lib() {
             name = "ex"
             crate-type = ["lib"]
         "#)
+        .file("build.rs", "fn main() {}")
         .file("src/lib.rs", "")
         .file("examples/ex.rs", "")
         .build();
