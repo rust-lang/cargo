@@ -74,7 +74,7 @@ on the platform. Cargo also supports [platform-specific
 dependencies][target-deps], and we plan to support more per-platform
 configuration in `Cargo.toml` in the future.
 
-[target-deps]: reference/manifest.html#the-dependencies-section
+[target-deps]: reference/specifying-dependencies.html#platform-specific-dependencies
 
 In the longer-term, we’re looking at ways to conveniently cross-compile
 projects using Cargo.
