@@ -287,7 +287,7 @@ impl ColorChoice {
     }
 }
 
-#[cfg(unix)]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 mod imp {
     use std::mem;
 
@@ -305,6 +305,13 @@ mod imp {
                 None
             }
         }
+    }
+}
+
+#[cfg(all(unix, not(any(target_os = "linux", target_os = "macos"))))]
+mod imp {
+    pub fn stderr_width() -> Option<usize> {
+        None
     }
 }
 
