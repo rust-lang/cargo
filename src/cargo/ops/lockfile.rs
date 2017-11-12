@@ -69,7 +69,7 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
     // If the lockfile contents haven't changed so don't rewrite it. This is
     // helpful on read-only filesystems.
     if let Ok(orig) = orig {
-        if are_equal_lockfiles(orig, &out, ws.config().lock_update_allowed()) {
+        if are_equal_lockfiles(orig, &out, ws) {
             return Ok(())
         }
     }
@@ -91,20 +91,25 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
     })
 }
 
-fn are_equal_lockfiles(mut orig: String, current: &str, lock_update_allowed: bool) -> bool {
+fn are_equal_lockfiles(mut orig: String, current: &str, ws: &Workspace) -> bool {
     if has_crlf_line_endings(&orig) {
         orig = orig.replace("\r\n", "\n");
     }
 
-    // Old lockfiles have unused `[root]` section,
-    // just ignore it if we are in the `--frozen` mode.
-    if !lock_update_allowed && orig.starts_with("[root]") {
-        orig = orig.replacen("[root]", "[[package]]", 1);
-        match (orig.parse::<toml::Value>(), current.parse::<toml::Value>()) {
-            (Ok(ref a), Ok(ref b)) if a == b => return true,
-            _ => {}
+    // If we want to try and avoid updating the lockfile, parse both and
+    // compare them; since this is somewhat expensive, don't do it in the
+    // common case where we can update lockfiles.
+    if !ws.config().lock_update_allowed() {
+        let res: CargoResult<bool> = (|| {
+            let old: resolver::EncodableResolve = toml::from_str(&orig)?;
+            let new: resolver::EncodableResolve = toml::from_str(current)?;
+            Ok(old.into_resolve(ws)? == new.into_resolve(ws)?)
+        })();
+        if let Ok(true) = res {
+            return true;
         }
     }
+
     current == orig
 }
 
