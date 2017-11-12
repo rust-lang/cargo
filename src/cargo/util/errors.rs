@@ -17,6 +17,7 @@ use serde_json;
 use toml;
 use registry;
 use ignore;
+use url;
 
 error_chain! {
     types {
@@ -40,6 +41,7 @@ error_chain! {
         Parse(string::ParseError);
         Git(git2::Error);
         Curl(curl::Error);
+        UrlParse(url::ParseError);
     }
 
     errors {
@@ -87,6 +89,7 @@ impl CargoError {
             CargoErrorKind::Git(_) |
             CargoErrorKind::Internal(_) |
             CargoErrorKind::CargoTestErrorKind(_) |
+            CargoErrorKind::UrlParse(_) |
             CargoErrorKind::__Nonexhaustive { .. } => false
         }
     }
