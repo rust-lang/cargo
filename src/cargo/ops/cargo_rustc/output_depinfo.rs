@@ -19,23 +19,32 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
     relpath.to_str().ok_or_else(|| internal("path not utf-8")).map(|f| f.replace(" ", "\\ "))
 }
 
-fn add_deps_for_unit<'a, 'b>(deps: &mut HashSet<PathBuf>, context: &mut Context<'a, 'b>,
-    unit: &Unit<'a>, visited: &mut HashSet<Unit<'a>>) -> CargoResult<()>
+fn add_deps_for_unit<'a, 'b>(
+    deps: &mut HashSet<PathBuf>,
+    context: &mut Context<'a, 'b>,
+    unit: &Unit<'a>,
+    visited: &mut HashSet<Unit<'a>>,
+)
+    -> CargoResult<()>
 {
     if !visited.insert(*unit) {
         return Ok(());
     }
 
-    // Add dependencies from rustc dep-info output (stored in fingerprint directory)
-    let dep_info_loc = fingerprint::dep_info_loc(context, unit);
-    if let Some(paths) = fingerprint::parse_dep_info(&dep_info_loc)? {
-        for path in paths {
-            deps.insert(path);
+    // units representing the execution of a build script don't actually
+    // generate a dep info file, so we just keep on going below
+    if !unit.profile.run_custom_build {
+        // Add dependencies from rustc dep-info output (stored in fingerprint directory)
+        let dep_info_loc = fingerprint::dep_info_loc(context, unit);
+        if let Some(paths) = fingerprint::parse_dep_info(&dep_info_loc)? {
+            for path in paths {
+                deps.insert(path);
+            }
+        } else {
+            debug!("can't find dep_info for {:?} {:?}",
+                unit.pkg.package_id(), unit.profile);
+            return Err(internal("dep_info missing"));
         }
-    } else {
-        debug!("can't find dep_info for {:?} {:?}",
-            unit.pkg.package_id(), unit.profile);
-        return Err(internal("dep_info missing"));
     }
 
     // Add rerun-if-changed dependencies
