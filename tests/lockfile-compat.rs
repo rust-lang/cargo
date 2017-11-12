@@ -22,16 +22,16 @@ fn oldest_lockfile_still_works_with_command(cargo_command: &str) {
 
     let expected_lockfile =
 r#"[[package]]
-name = "bar"
+name = "foo"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "zzz"
 version = "0.0.1"
 dependencies = [
  "foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
-
-[[package]]
-name = "foo"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "[..]"
@@ -39,7 +39,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
     let old_lockfile =
 r#"[root]
-name = "bar"
+name = "zzz"
 version = "0.0.1"
 dependencies = [
  "foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -54,7 +54,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
     let p = project("bar")
         .file("Cargo.toml", r#"
             [project]
-            name = "bar"
+            name = "zzz"
             version = "0.0.1"
             authors = []
 
@@ -83,7 +83,7 @@ fn frozen_flag_preserves_old_lockfile() {
 
     let old_lockfile =
         r#"[root]
-name = "bar"
+name = "zzz"
 version = "0.0.1"
 dependencies = [
  "foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -101,7 +101,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
     let p = project("bar")
         .file("Cargo.toml", r#"
             [project]
-            name = "bar"
+            name = "zzz"
             version = "0.0.1"
             authors = []
 
