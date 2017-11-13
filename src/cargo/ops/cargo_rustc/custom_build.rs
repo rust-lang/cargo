@@ -5,6 +5,7 @@ use std::str;
 use std::sync::{Mutex, Arc};
 
 use core::PackageId;
+use ops::MessageFormat;
 use util::{Freshness, Cfg};
 use util::errors::{CargoResult, CargoResultExt, CargoError};
 use util::{internal, profile, paths};
@@ -188,7 +189,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
                output_file.clone());
     let build_scripts = super::load_build_deps(cx, unit);
     let kind = unit.kind;
-    let json_messages = cx.build_config.json_messages;
+    let json_messages = cx.build_config.message_format == MessageFormat::Json;
 
     // Check to see if the build script has already run, and if it has keep
     // track of whether it has told us about some explicit dependencies

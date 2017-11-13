@@ -101,7 +101,14 @@ pub enum CompileMode {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 pub enum MessageFormat {
     Human,
-    Json
+    Json,
+    Short,
+}
+
+impl Default for MessageFormat {
+    fn default() -> Self {
+        MessageFormat::Human
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -306,7 +313,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         let mut build_config = scrape_build_config(config, jobs, target)?;
         build_config.release = release;
         build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
-        build_config.json_messages = message_format == MessageFormat::Json;
+        build_config.message_format = message_format;
         if let CompileMode::Doc { deps } = mode {
             build_config.doc_all = deps;
         }
