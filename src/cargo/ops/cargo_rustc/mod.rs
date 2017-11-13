@@ -12,6 +12,7 @@ use serde_json;
 use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::shell::ColorChoice;
+use ops::MessageFormat;
 use util::{self, ProcessBuilder, machine_message};
 use util::{Config, internal, profile, join_paths};
 use util::errors::{CargoResult, CargoResultExt};
@@ -67,8 +68,8 @@ pub struct BuildConfig {
     pub test: bool,
     /// Whether we are building documentation
     pub doc_all: bool,
-    /// Whether to print std output in json format (for machine reading)
-    pub json_messages: bool,
+    /// What format to use when outputting messages from the compiler
+    pub message_format: MessageFormat,
 }
 
 /// Information required to build for a target
@@ -344,7 +345,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
     rustc.args(&cx.incremental_args(unit)?);
     rustc.args(&cx.rustflags_args(unit)?);
-    let json_messages = cx.build_config.json_messages;
+    let json_messages = cx.build_config.message_format == MessageFormat::Json;
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
 
@@ -501,7 +502,7 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let features = cx.resolve.features_sorted(&package_id).into_iter()
         .map(|s| s.to_owned())
         .collect();
-    let json_messages = cx.build_config.json_messages;
+    let json_messages = cx.build_config.message_format == MessageFormat::Json;
 
     Ok(Work::new(move |_| {
         // If we're a "root crate", e.g. the target of this compilation, then we
@@ -741,8 +742,10 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         ColorChoice::CargoAuto => {}
     }
 
-    if cx.build_config.json_messages {
-        cmd.arg("--error-format").arg("json");
+    match cx.build_config.message_format {
+        MessageFormat::Json => { cmd.arg("--error-format").arg("json"); }
+        MessageFormat::Short => { cmd.arg("--error-format").arg("short"); }
+        MessageFormat::Human => {}
     }
 
     if !test {

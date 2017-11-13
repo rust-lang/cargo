@@ -49,7 +49,7 @@ Options:
     -v, --verbose ...            Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet                  No output printed to stdout
     --color WHEN                 Coloring: auto, always, never
-    --message-format FMT         Error format: human, json [default: human]
+    --message-format FMT         Error format: human, json, short [default: human]
     --frozen                     Require Cargo.lock and cache are up to date
     --locked                     Require Cargo.lock is up to date
     -Z FLAG ...                  Unstable (nightly-only) flags to Cargo
