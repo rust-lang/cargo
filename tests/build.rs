@@ -2864,7 +2864,7 @@ fn wrong_message_format_option() {
     assert_that(p.cargo("build").arg("--message-format").arg("XML"),
                 execs().with_status(1)
                        .with_stderr_contains(
-r#"[ERROR] Could not match 'xml' with any of the allowed variants: ["Human", "Json"]"#));
+r#"[ERROR] Could not match 'xml' with any of the allowed variants: ["Human", "Json", "Short"]"#));
 }
 
 #[test]
