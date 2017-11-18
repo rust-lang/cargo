@@ -200,6 +200,8 @@ pub struct DetailedTomlDependency {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TomlManifest {
+    #[serde(rename = "cargo-features")]
+    cargo_features: Option<Vec<String>>,
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
     profile: Option<TomlProfiles>,
@@ -223,8 +225,6 @@ pub struct TomlManifest {
     patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     workspace: Option<TomlWorkspace>,
     badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
-    #[serde(rename = "cargo-features")]
-    cargo_features: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -381,6 +381,44 @@ impl<'de> de::Deserialize<'de> for StringOrBool {
     }
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum VecStringOrBool {
+    VecString(Vec<String>),
+    Bool(bool),
+}
+
+impl<'de> de::Deserialize<'de> for VecStringOrBool {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: de::Deserializer<'de>
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = VecStringOrBool;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a boolean or vector of strings")
+            }
+
+            fn visit_seq<V>(self, v: V) -> Result<Self::Value, V::Error>
+                where V: de::SeqAccess<'de>
+            {
+                let seq = de::value::SeqAccessDeserializer::new(v);
+                Vec::deserialize(seq).map(VecStringOrBool::VecString)
+            }
+
+            fn visit_bool<E>(self, b: bool) -> Result<Self::Value, E>
+                where E: de::Error,
+            {
+                Ok(VecStringOrBool::Bool(b))
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TomlProject {
     name: String,
@@ -390,7 +428,7 @@ pub struct TomlProject {
     links: Option<String>,
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
-    publish: Option<bool>,
+    publish: Option<VecStringOrBool>,
     workspace: Option<String>,
     #[serde(rename = "im-a-teapot")]
     im_a_teapot: Option<bool>,
@@ -655,7 +693,16 @@ impl TomlManifest {
             }
         };
         let profiles = build_profiles(&me.profile);
-        let publish = project.publish.unwrap_or(true);
+        let publish = match project.publish {
+            Some(VecStringOrBool::VecString(ref vecstring)) => {
+                features.require(Feature::alternative_registries()).chain_err(|| {
+                    "the `publish` manifest key is unstable for anything other than a value of true or false"
+                })?;
+                Some(vecstring.clone())
+            },
+            Some(VecStringOrBool::Bool(false)) => Some(vec![]),
+            None | Some(VecStringOrBool::Bool(true)) => None,
+        };
         let mut manifest = Manifest::new(summary,
                                          targets,
                                          exclude,

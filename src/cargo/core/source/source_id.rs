@@ -32,6 +32,8 @@ struct SourceIdInner {
     kind: Kind,
     // e.g. the exact git revision of the specified branch for a Git Source
     precise: Option<String>,
+    /// Name of the registry source for alternative registries
+    name: Option<String>,
 }
 
 /// The possible kinds of code source. Along with a URL, this fully defines the
@@ -72,6 +74,7 @@ impl SourceId {
                 canonical_url: git::canonicalize_url(&url)?,
                 url: url,
                 precise: None,
+                name: None,
             }),
         };
         Ok(source_id)
@@ -190,6 +193,7 @@ impl SourceId {
                 canonical_url: git::canonicalize_url(&url)?,
                 url: url,
                 precise: None,
+                name: Some(key.to_string()),
             }),
         })
     }
@@ -211,9 +215,14 @@ impl SourceId {
     /// Is this source from a registry (either local or not)
     pub fn is_registry(&self) -> bool {
         match self.inner.kind {
-            Kind::Registry | Kind::LocalRegistry    => true,
-            _                                       => false,
+            Kind::Registry | Kind::LocalRegistry => true,
+            _                                    => false,
         }
+    }
+
+    /// Is this source from an alternative registry
+    pub fn is_alt_registry(&self) -> bool {
+        self.is_registry() && self.inner.name.is_some()
     }
 
     /// Is this source from a git repository
