@@ -7,6 +7,7 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::io::SeekFrom;
 
+use cargotest::ChannelChanger;
 use cargotest::support::git::repo;
 use cargotest::support::paths;
 use cargotest::support::{project, execs, publish};
@@ -499,4 +500,149 @@ See [..]
 
     // Ensure the API request wasn't actually made
     assert!(!publish::upload_path().join("api/v1/crates/new").exists());
+}
+
+#[test]
+fn block_publish_feature_not_enabled() {
+    publish::setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish = [
+                "test"
+            ]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
+                execs().with_status(101).with_stderr("\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  the `publish` manifest key is unstable for anything other than a value of true or false
+
+Caused by:
+  feature `alternative-registries` is required
+
+consider adding `cargo-features = [\"alternative-registries\"]` to the manifest
+"));
+}
+
+#[test]
+fn registry_not_in_publish_list() {
+    publish::setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish = [
+                "test"
+            ]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
+                execs().with_status(101).with_stderr("\
+[ERROR] some crates cannot be published.
+`foo` is marked as unpublishable
+"));
+}
+
+#[test]
+fn publish_empty_list() {
+    publish::setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
+                execs().with_status(101).with_stderr("\
+[ERROR] some crates cannot be published.
+`foo` is marked as unpublishable
+"));
+}
+
+#[test]
+fn publish_allowed_registry() {
+    publish::setup();
+
+    let p = project("foo").build();
+
+    let _ = repo(&paths::root().join("foo"))
+        .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            publish = ["alternative"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
+                execs().with_status(0));
+}
+
+#[test]
+fn block_publish_no_registry() {
+    publish::setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--index").arg(publish::registry().to_string()),
+                execs().with_status(101).with_stderr("\
+[ERROR] some crates cannot be published.
+`foo` is marked as unpublishable
+"));
 }
