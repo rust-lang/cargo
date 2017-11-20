@@ -19,6 +19,7 @@ pub struct Options {
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_message_format: MessageFormat,
+    flag_build_plan: bool,
     flag_release: bool,
     flag_lib: bool,
     flag_bin: Vec<String>,
@@ -68,6 +69,7 @@ Options:
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
     --message-format FMT     Error format: human, json [default: human]
+    --build-plan             Generate a build plan
     --frozen                 Require Cargo.lock and cache are up to date
     --locked                 Require Cargo.lock is up to date
     -Z FLAG ...              Unstable (nightly-only) flags to Cargo
@@ -129,6 +131,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult {
                                         &options.flag_bench, options.flag_benches,
                                         options.flag_all_targets),
         message_format: options.flag_message_format,
+        build_plan: options.flag_build_plan,
         target_rustdoc_args: None,
         target_rustc_args: options.arg_opts.as_ref().map(|a| &a[..]),
     };

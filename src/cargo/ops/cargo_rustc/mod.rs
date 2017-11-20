@@ -17,6 +17,7 @@ use util::{Config, internal, profile, join_paths};
 use util::errors::{CargoResult, CargoResultExt};
 use util::Freshness;
 
+use self::build_plan::{BuildPlan, buildkey};
 use self::job::{Job, Work};
 use self::job_queue::JobQueue;
 
@@ -27,6 +28,7 @@ pub use self::context::{Context, Unit};
 pub use self::custom_build::{BuildOutput, BuildMap, BuildScripts};
 pub use self::layout::is_bad_artifact_name;
 
+mod build_plan;
 mod compilation;
 mod context;
 mod custom_build;
@@ -51,6 +53,7 @@ pub struct BuildConfig {
     pub test: bool,
     pub doc_all: bool,
     pub json_messages: bool,
+    pub build_plan: bool,
 }
 
 #[derive(Clone, Default)]
@@ -138,6 +141,8 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                                    build_config, profiles)?;
 
     let mut queue = JobQueue::new(&cx);
+    let mut plan = BuildPlan::new();
+    let build_plan = cx.build_config.build_plan;
 
     cx.prepare()?;
     cx.probe_target_info(&units)?;
@@ -150,11 +155,15 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         // part of this, that's all done next as part of the `execute`
         // function which will run everything in order with proper
         // parallelism.
-        compile(&mut cx, &mut queue, unit, exec.clone())?;
+        compile(&mut cx, &mut queue, &mut plan, unit, exec.clone())?;
     }
 
     // Now that we've figured out everything that we're going to do, do it!
-    queue.execute(&mut cx)?;
+    queue.execute(&mut cx, &mut plan)?;
+
+    if build_plan {
+        plan.output_plan();
+    }
 
     for unit in units.iter() {
         for &(ref dst, ref link_dst, _) in cx.target_filenames(unit)?.iter() {
@@ -226,8 +235,10 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
 
 fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
                          jobs: &mut JobQueue<'a>,
+                         plan: &mut BuildPlan,
                          unit: &Unit<'a>,
                          exec: Arc<Executor>) -> CargoResult<()> {
+    let build_plan = cx.build_config.build_plan;
     if !cx.compiled.insert(*unit) {
         return Ok(())
     }
@@ -244,6 +255,8 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     } else if unit.profile.doc && unit.profile.test {
         // we run these targets later, so this is just a noop for now
         (Work::noop(), Work::noop(), Freshness::Fresh)
+    } else if build_plan {
+        (rustc(cx, unit, exec.clone())?, Work::noop(), Freshness::Dirty)
     } else {
         let (mut freshness, dirty, fresh) = fingerprint::prepare_target(cx, unit)?;
         let work = if unit.profile.doc {
@@ -262,11 +275,14 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         (dirty, fresh, freshness)
     };
     jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness)?;
+    if build_plan {
+        plan.add(cx, unit)?;
+    }
     drop(p);
 
     // Be sure to compile all dependencies of this target as well.
     for unit in cx.dep_targets(unit)?.iter() {
-        compile(cx, jobs, unit, exec.clone())?;
+        compile(cx, jobs, plan, unit, exec.clone())?;
     }
 
     Ok(())
@@ -277,8 +293,10 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                    exec: Arc<Executor>) -> CargoResult<Work> {
     let crate_types = unit.target.rustc_crate_types();
     let mut rustc = prepare_rustc(cx, crate_types, unit)?;
+    let build_plan = cx.build_config.build_plan;
 
     let name = unit.pkg.name().to_string();
+    let module_name = buildkey(unit);
 
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
@@ -338,10 +356,12 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         // previous build scripts, we include them in the rustc invocation.
         if let Some(build_deps) = build_deps {
             let build_state = build_state.outputs.lock().unwrap();
-            add_native_deps(&mut rustc, &build_state, &build_deps,
-                                 pass_l_flag, &current_id)?;
-            add_plugin_deps(&mut rustc, &build_state, &build_deps,
-                                 &root_output)?;
+            if !build_plan {
+                add_native_deps(&mut rustc, &build_state, &build_deps,
+                                     pass_l_flag, &current_id)?;
+                add_plugin_deps(&mut rustc, &build_state, &build_deps,
+                                     &root_output)?;
+            }
             add_custom_env(&mut rustc, &build_state, &current_id, kind)?;
         }
 
@@ -394,6 +414,8 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             ).chain_err(|| {
                 format!("Could not compile `{}`.", name)
             })?;
+        } else if build_plan {
+            state.build_plan(module_name, rustc.clone(), filenames.clone());
         } else {
             exec.exec(rustc, &package_id, &target).map_err(|e| e.into_internal()).chain_err(|| {
                 format!("Could not compile `{}`.", name)
