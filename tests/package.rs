@@ -485,7 +485,7 @@ fn no_duplicates_from_modified_tracked_files() {
     assert_that(cargo.arg("package").arg("--list"),
                 execs().with_status(0).with_stdout("\
 Cargo.toml
-src/main.rs
+src[/]main.rs
 "));
 }
 
@@ -513,7 +513,7 @@ fn exclude_publishable_path_deps() {
     assert_that(p.cargo("package").arg("--list"),
                 execs().with_status(0).with_stdout("\
 Cargo.toml
-src/main.rs
+src[/]main.rs
 "));
 }
 
@@ -543,9 +543,9 @@ fn include_unpublishable_path_deps() {
     assert_that(p.cargo("package").arg("--list"),
                 execs().with_status(0).with_stdout("\
 Cargo.toml
-bar/Cargo.toml
-bar/src/lib.rs
-src/main.rs
+bar[/]Cargo.toml
+bar[/]src[/]lib.rs
+src[/]main.rs
 "));
 }
 
