@@ -136,6 +136,41 @@ in the future.", file.display());
     })
 }
 
+#[derive(Deserialize)]
+struct SourceManifest {
+    package: Option<SourcePackage>,
+    project: Option<SourcePackage>,
+}
+
+#[derive(Deserialize)]
+struct SourcePackage {
+    publish: Option<VecStringOrBool>,
+}
+
+/// Check if the manifest file (if exists) has package.publish=true
+///
+/// We do not validate the manifest here to avoid dealing with recursion.
+pub fn is_remote_source(manifest_path: &Path) -> bool {
+    use ::std::io::Read;
+
+    if let Ok(mut file) = fs::File::open(manifest_path) {
+        let mut content = String::new();
+        if file.read_to_string(&mut content).is_ok() {
+            if let Ok(config) = toml::from_str::<SourceManifest>(&content) {
+                let pkg = config.package.or(config.project);
+                if let Some(pkg) = pkg {
+                    return match pkg.publish {
+                        Some(VecStringOrBool::VecString(ref registries)) => !registries.is_empty(),
+                        Some(VecStringOrBool::Bool(false)) => false,
+                        Some(VecStringOrBool::Bool(true)) | None => true,
+                    };
+                }
+            }
+        }
+    }
+    false
+}
+
 type TomlLibTarget = TomlTarget;
 type TomlBinTarget = TomlTarget;
 type TomlExampleTarget = TomlTarget;
@@ -447,7 +482,7 @@ pub struct TomlProject {
     metadata: Option<toml::Value>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TomlWorkspace {
     members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
@@ -473,11 +508,10 @@ struct Context<'a, 'b> {
 
 impl TomlManifest {
     pub fn prepare_for_publish(&self) -> TomlManifest {
-        let mut package = self.package.as_ref()
+        let package = self.package.as_ref()
                               .or_else(|| self.project.as_ref())
                               .unwrap()
                               .clone();
-        package.workspace = None;
         return TomlManifest {
             package: Some(package),
             project: None,
@@ -510,7 +544,7 @@ impl TomlManifest {
             }),
             replace: None,
             patch: None,
-            workspace: None,
+            workspace: self.workspace.clone(),
             badges: self.badges.clone(),
             cargo_features: self.cargo_features.clone(),
         };
@@ -528,9 +562,7 @@ impl TomlManifest {
         fn map_dependency(dep: &TomlDependency) -> TomlDependency {
             match *dep {
                 TomlDependency::Detailed(ref d) => {
-                    let mut d = d.clone();
-                    d.path.take(); // path dependencies become crates.io deps
-                    TomlDependency::Detailed(d)
+                    TomlDependency::Detailed(d.clone())
                 }
                 TomlDependency::Simple(ref s) => {
                     TomlDependency::Detailed(DetailedTomlDependency {
@@ -888,7 +920,7 @@ impl TomlDependency {
                      cx: &mut Context,
                      kind: Option<Kind>)
                      -> CargoResult<Dependency> {
-        let details = match *self {
+        let mut details = match *self {
             TomlDependency::Simple(ref version) => DetailedTomlDependency {
                 version: Some(version.clone()),
                 .. Default::default()
@@ -903,6 +935,22 @@ impl TomlDependency {
                                version to use. This will be considered an \
                                error in future versions", name);
             cx.warnings.push(msg);
+        }
+
+        if details.git.is_none() && details.registry.is_none() &&
+            details.path.is_some() {
+            match kind {
+                // `cargo [build|test|bench]` are not affected.
+                Some(Kind::Normal) => {
+                    let path = cx.root.join(PathBuf::from(details.path.clone().unwrap()));
+                    if is_remote_source(&path.join("Cargo.toml")) {
+                        // if package is allowed to be published,
+                        // then path dependency will become crates.io deps
+                        details.path.take();
+                    }
+                }
+                _ => (),
+            }
         }
 
         if details.git.is_none() {

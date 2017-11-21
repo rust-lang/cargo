@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt::{self, Debug, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -7,11 +8,13 @@ use git2;
 use glob::Pattern;
 use ignore::Match;
 use ignore::gitignore::GitignoreBuilder;
+use same_file::is_same_file;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
 use util::{self, CargoError, CargoResult, internal};
 use util::Config;
+use util::toml::is_remote_source;
 
 pub struct PathSource<'cfg> {
     source_id: SourceId,
@@ -188,6 +191,26 @@ impl<'cfg> PathSource<'cfg> {
             }
         };
 
+        // filter for publish-able packages
+
+        let mut remote_prefixes = HashSet::<PathBuf>::new();
+        let mut local_should_package = |path: &Path| -> bool {
+            for ref prefix in remote_prefixes.iter() {
+                if path.starts_with(prefix) {
+                    return false;
+                }
+            }
+            if let Some(dirpath) = path.parent() {
+                if !is_same_file(dirpath, root).unwrap_or(false) {
+                    if is_remote_source(&dirpath.join("Cargo.toml")) {
+                        remote_prefixes.insert(dirpath.to_path_buf());
+                        return false;
+                    }
+                }
+            }
+            true
+        };
+
         // matching to paths
 
         let mut filter = |path: &Path| -> CargoResult<bool> {
@@ -238,7 +261,7 @@ impl<'cfg> PathSource<'cfg> {
             }
 
             // Update to ignore_should_package for Stage 2
-            Ok(glob_should_package)
+            Ok(glob_should_package && local_should_package(path))
         };
 
         // attempt git-prepopulate only if no `include` (rust-lang/cargo#4135)
@@ -332,7 +355,7 @@ impl<'cfg> PathSource<'cfg> {
             }
         });
 
-        let mut subpackages_found = Vec::new();
+        let mut ignored_subpackages_found = Vec::new();
 
         for (file_path, is_dir) in index_files.chain(untracked) {
             let file_path = file_path?;
@@ -351,16 +374,20 @@ impl<'cfg> PathSource<'cfg> {
                 Some("Cargo.lock") |
                 Some("target") => continue,
 
-                // Keep track of all sub-packages found and also strip out all
-                // matches we've found so far. Note, though, that if we find
-                // our own `Cargo.toml` we keep going.
+                // Keep track of all published sub-packages found and also
+                // strip out all matches we've found so far. Note, though,
+                // that if we find our own `Cargo.toml` we keep going.
                 Some("Cargo.toml") => {
                     let path = file_path.parent().unwrap();
-                    if path != pkg_path {
+                    if !is_same_file(&path, pkg_path)? {
                         warn!("subpackage found: {}", path.display());
-                        ret.retain(|p| !p.starts_with(path));
-                        subpackages_found.push(path.to_path_buf());
-                        continue
+                        if is_remote_source(&file_path) {
+                            // if package is allowed to be published,
+                            // then path dependency will become crates.io deps
+                            ret.retain(|p| !p.starts_with(&path));
+                            ignored_subpackages_found.push(path.to_path_buf());
+                            continue
+                        }
                     }
                 }
 
@@ -369,7 +396,7 @@ impl<'cfg> PathSource<'cfg> {
 
             // If this file is part of any other sub-package we've found so far,
             // skip it.
-            if subpackages_found.iter().any(|p| file_path.starts_with(p)) {
+            if ignored_subpackages_found.iter().any(|p| file_path.starts_with(p)) {
                 continue
             }
 
@@ -433,8 +460,8 @@ impl<'cfg> PathSource<'cfg> {
             }
             return Ok(())
         }
-        // Don't recurse into any sub-packages that we have
-        if !is_root && fs::metadata(&path.join("Cargo.toml")).is_ok() {
+
+        if !is_root && is_remote_source(&path.join("Cargo.toml")) {
             return Ok(())
         }
 

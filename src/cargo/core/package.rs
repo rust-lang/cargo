@@ -142,8 +142,8 @@ impl Package {
             #\n\
             # When uploading crates to the registry Cargo will automatically\n\
             # \"normalize\" Cargo.toml files for maximal compatibility\n\
-            # with all versions of Cargo and also rewrite `path` dependencies\n\
-            # to registry (e.g. crates.io) dependencies\n\
+            # with all versions of Cargo and also change publishable `path`\n\
+            # dependencies to registry (e.g. crates.io) dependencies\n\
             #\n\
             # If you believe there's an error in this file please file an\n\
             # issue against the rust-lang/cargo repository. If you're\n\

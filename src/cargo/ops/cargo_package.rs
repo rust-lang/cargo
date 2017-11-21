@@ -7,6 +7,7 @@ use std::sync::Arc;
 use flate2::read::GzDecoder;
 use flate2::{GzBuilder, Compression};
 use git2;
+use same_file::is_same_file;
 use tar::{Archive, Builder, Header, EntryType};
 
 use core::{Package, Workspace, Source, SourceId};
@@ -203,8 +204,9 @@ fn tar(ws: &Workspace,
     let pkg = ws.current()?;
     let config = ws.config();
     let root = pkg.root();
-    for file in src.list_files(pkg)?.iter() {
-        let relative = util::without_prefix(file, root).unwrap();
+    let manifest_path = pkg.manifest_path();
+    for filepath in src.list_files(pkg)?.iter() {
+        let relative = util::without_prefix(filepath, root).unwrap();
         check_filename(relative)?;
         let relative = relative.to_str().ok_or_else(|| {
             format!("non-utf8 path in source directory: {}",
@@ -238,15 +240,15 @@ fn tar(ws: &Workspace,
         header.set_path(&path).chain_err(|| {
             format!("failed to add to archive: `{}`", relative)
         })?;
-        let mut file = File::open(file).chain_err(|| {
-            format!("failed to open for archiving: `{}`", file.display())
+        let mut file = File::open(filepath).chain_err(|| {
+            format!("failed to open for archiving: `{}`", filepath.display())
         })?;
         let metadata = file.metadata().chain_err(|| {
             format!("could not learn metadata for: `{}`", relative)
         })?;
         header.set_metadata(&metadata);
 
-        if relative == "Cargo.toml" {
+        if filepath.ends_with("Cargo.toml") {
             let orig = Path::new(&path).with_file_name("Cargo.toml.orig");
             header.set_path(&orig)?;
             header.set_cksum();
@@ -255,7 +257,12 @@ fn tar(ws: &Workspace,
             })?;
 
             let mut header = Header::new_ustar();
-            let toml = pkg.to_registry_toml()?;
+            let toml = if is_same_file(manifest_path, filepath)? {
+                pkg.to_registry_toml()?
+            } else {
+                let pkg = Package::for_path(&filepath, config).unwrap();
+                pkg.to_registry_toml()?
+            };
             header.set_path(&path)?;
             header.set_entry_type(EntryType::file());
             header.set_mode(0o644);
