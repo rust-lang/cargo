@@ -257,40 +257,26 @@ fn package_with_publishable_path_deps() {
 [ARCHIVING] [..]
 [ARCHIVING] [..]
 [VERIFYING] foo v0.0.1 ({dir})
+[UPDATING] registry [..]
 error: failed to verify package tarball
 
 Caused by:
-  failed to load source for a dependency on `notyet`
-
-Caused by:
-  Unable to update {dir}[..]
-
-Caused by:
-  failed to read `[..]notyet[/]Cargo.toml`
-
-Caused by:
-  [..] (os error [..])
+  no matching package named `notyet` found (required by `foo`)
+location searched: registry [..]
+version required: ^0.0.1
 ", dir = p.url())));
 
     Package::new("notyet", "0.0.1").publish();
 
     assert_that(p.cargo("package"),
-                execs().with_status(101).with_stderr(format!("\
+                execs().with_status(0).with_stderr(format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
-error: failed to verify package tarball
-
-Caused by:
-  failed to load source for a dependency on `notyet`
-
-Caused by:
-  Unable to update file://[..]notyet
-
-Caused by:
-  failed to read `[..]notyet[/]Cargo.toml`
-
-Caused by:
-  [..] (os error [..])
+[UPDATING] registry [..]
+[DOWNLOADING] notyet v0.0.1 (registry [..])
+[COMPILING] notyet v0.0.1
+[COMPILING] foo v0.0.1 [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
 }
 
