@@ -848,7 +848,6 @@ version = "1.0"
 
 [dependencies.bar]
 version = "0.1"
-path = "bar"
 
 [dependencies.def]
 version = "1.0"
