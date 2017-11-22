@@ -229,6 +229,12 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         cx.compilation.cfgs.entry(unit.pkg.package_id().clone())
             .or_insert_with(HashSet::new)
             .extend(feats.iter().map(|feat| format!("feature=\"{}\"", feat)));
+        let rustdocflags = cx.rustdocflags_args(&unit)?;
+        if !rustdocflags.is_empty() {
+            cx.compilation.rustdocflags.entry(unit.pkg.package_id().clone())
+                .or_insert_with(Vec::new)
+                .extend(rustdocflags);
+        }
 
         output_depinfo(&mut cx, unit)?;
     }

@@ -50,6 +50,9 @@ pub struct Compilation<'cfg> {
     /// Features per package enabled during this compilation.
     pub cfgs: HashMap<PackageId, HashSet<String>>,
 
+    /// Flags to pass to rustdoc when invoked from cargo test, per package.
+    pub rustdocflags: HashMap<PackageId, Vec<String>>,
+
     pub target: String,
 
     config: &'cfg Config,
@@ -72,6 +75,7 @@ impl<'cfg> Compilation<'cfg> {
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
             cfgs: HashMap::new(),
+            rustdocflags: HashMap::new(),
             config: config,
             target: String::new(),
             target_runner: LazyCell::new(),
