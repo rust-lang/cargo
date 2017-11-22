@@ -507,7 +507,7 @@ struct Context<'a, 'b> {
 }
 
 impl TomlManifest {
-    pub fn prepare_for_publish(&self) -> TomlManifest {
+    pub fn prepare_for_publish(&self, root: &Path) -> TomlManifest {
         let package = self.package.as_ref()
                               .or_else(|| self.project.as_ref())
                               .unwrap()
@@ -521,23 +521,23 @@ impl TomlManifest {
             example: self.example.clone(),
             test: self.test.clone(),
             bench: self.bench.clone(),
-            dependencies: map_deps(self.dependencies.as_ref()),
+            dependencies: map_deps(self.dependencies.as_ref(), root),
             dev_dependencies: map_deps(self.dev_dependencies.as_ref()
-                                         .or_else(|| self.dev_dependencies2.as_ref())),
+                                         .or_else(|| self.dev_dependencies2.as_ref()), root),
             dev_dependencies2: None,
             build_dependencies: map_deps(self.build_dependencies.as_ref()
-                                         .or_else(|| self.build_dependencies2.as_ref())),
+                                         .or_else(|| self.build_dependencies2.as_ref()), root),
             build_dependencies2: None,
             features: self.features.clone(),
             target: self.target.as_ref().map(|target_map| {
                 target_map.iter().map(|(k, v)| {
                     (k.clone(), TomlPlatform {
-                        dependencies: map_deps(v.dependencies.as_ref()),
+                        dependencies: map_deps(v.dependencies.as_ref(), root),
                         dev_dependencies: map_deps(v.dev_dependencies.as_ref()
-                                                     .or_else(|| v.dev_dependencies2.as_ref())),
+                                                     .or_else(|| v.dev_dependencies2.as_ref()), root),
                         dev_dependencies2: None,
                         build_dependencies: map_deps(v.build_dependencies.as_ref()
-                                                     .or_else(|| v.build_dependencies2.as_ref())),
+                                                     .or_else(|| v.build_dependencies2.as_ref()), root),
                         build_dependencies2: None,
                     })
                 }).collect()
@@ -549,20 +549,29 @@ impl TomlManifest {
             cargo_features: self.cargo_features.clone(),
         };
 
-        fn map_deps(deps: Option<&BTreeMap<String, TomlDependency>>)
+        fn map_deps(deps: Option<&BTreeMap<String, TomlDependency>>, root: &Path)
                         -> Option<BTreeMap<String, TomlDependency>>
         {
             let deps = match deps {
                 Some(deps) => deps,
                 None => return None
             };
-            Some(deps.iter().map(|(k, v)| (k.clone(), map_dependency(v))).collect())
+            Some(deps.iter().map(|(k, v)| (k.clone(), map_dependency(v, root))).collect())
         }
 
-        fn map_dependency(dep: &TomlDependency) -> TomlDependency {
+        fn map_dependency(dep: &TomlDependency, root: &Path) -> TomlDependency {
             match *dep {
                 TomlDependency::Detailed(ref d) => {
-                    TomlDependency::Detailed(d.clone())
+                    let mut dep = d.clone();
+                    if let Some(ref path) = d.path {
+                        let path = root.join(PathBuf::from(path));
+                        if is_remote_source(&path.join("Cargo.toml")) {
+                            // if package is allowed to be published,
+                            // then path dependency will become crates.io deps
+                            dep.path.take();
+                        }
+                    }
+                    TomlDependency::Detailed(dep)
                 }
                 TomlDependency::Simple(ref s) => {
                     TomlDependency::Detailed(DetailedTomlDependency {
@@ -920,7 +929,7 @@ impl TomlDependency {
                      cx: &mut Context,
                      kind: Option<Kind>)
                      -> CargoResult<Dependency> {
-        let mut details = match *self {
+        let details = match *self {
             TomlDependency::Simple(ref version) => DetailedTomlDependency {
                 version: Some(version.clone()),
                 .. Default::default()
@@ -935,22 +944,6 @@ impl TomlDependency {
                                version to use. This will be considered an \
                                error in future versions", name);
             cx.warnings.push(msg);
-        }
-
-        if details.git.is_none() && details.registry.is_none() &&
-            details.path.is_some() {
-            match kind {
-                // `cargo [build|test|bench]` are not affected.
-                Some(Kind::Normal) => {
-                    let path = cx.root.join(PathBuf::from(details.path.clone().unwrap()));
-                    if is_remote_source(&path.join("Cargo.toml")) {
-                        // if package is allowed to be published,
-                        // then path dependency will become crates.io deps
-                        details.path.take();
-                    }
-                }
-                _ => (),
-            }
         }
 
         if details.git.is_none() {
