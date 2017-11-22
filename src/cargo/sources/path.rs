@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -193,19 +193,18 @@ impl<'cfg> PathSource<'cfg> {
 
         // filter for publish-able packages
 
-        let mut remote_prefixes = HashSet::<PathBuf>::new();
+        let mut remote_prefixes = HashMap::<PathBuf, bool>::new();
         let mut local_should_package = |path: &Path| -> bool {
-            for ref prefix in remote_prefixes.iter() {
+            for (ref prefix, is_remote) in remote_prefixes.iter() {
                 if path.starts_with(prefix) {
-                    return false;
+                    return !is_remote;
                 }
             }
             if let Some(dirpath) = path.parent() {
                 if !is_same_file(dirpath, root).unwrap_or(false) {
-                    if is_remote_source(&dirpath.join("Cargo.toml")) {
-                        remote_prefixes.insert(dirpath.to_path_buf());
-                        return false;
-                    }
+                    let is_remote = is_remote_source(&dirpath.join("Cargo.toml"));
+                    remote_prefixes.insert(dirpath.to_path_buf(), is_remote);
+                    return !is_remote;
                 }
             }
             true
