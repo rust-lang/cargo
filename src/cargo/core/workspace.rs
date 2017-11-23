@@ -399,8 +399,10 @@ impl<'cfg> Workspace<'cfg> {
                 }
                 self.default_members.push(manifest_path)
             }
-        } else {
+        } else if self.is_virtual() {
             self.default_members = self.members.clone()
+        } else {
+            self.default_members.push(self.current_manifest.clone())
         }
 
         self.find_path_deps(&root_manifest_path, &root_manifest_path, false)

@@ -149,17 +149,11 @@ impl<'a> Packages<'a> {
             Packages::Packages(packages) => {
                 packages.iter().map(|p| PackageIdSpec::parse(p)).collect::<CargoResult<Vec<_>>>()?
             }
-            Packages::Default if ws.is_virtual() => {
+            Packages::Default => {
                 ws.default_members()
                     .map(Package::package_id)
                     .map(PackageIdSpec::from_package_id)
                     .collect()
-            }
-            Packages::Default => {
-                ws.current_opt()
-                    .map(Package::package_id)
-                    .map(PackageIdSpec::from_package_id)
-                    .into_iter().collect()
             }
         };
         Ok(specs)
