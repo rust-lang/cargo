@@ -46,7 +46,16 @@ pub struct Workspace<'cfg> {
     // set above.
     members: Vec<PathBuf>,
 
-    // The subset of `members` that are “default”.
+    // The subset of `members` that are used by the
+    // `build`, `check`, `test`, and `bench` subcommands
+    // when no package is selected with `--package` / `-p` and `--all`
+    // is not used.
+    //
+    // This is set by the `default-members` config
+    // in the `[workspace]` section.
+    // When unset, this is the same as `members` for virtual workspaces
+    // (`--all` is implied)
+    // or only the root package for non-virtual workspaces.
     default_members: Vec<PathBuf>,
 
     // True, if this is a temporary workspace created for the purposes of
