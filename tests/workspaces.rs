@@ -692,6 +692,59 @@ fn virtual_build_all_implied() {
 }
 
 #[test]
+fn virtual_default_members() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["bar", "baz"]
+            default-members = ["bar"]
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("baz/Cargo.toml", r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("baz/src/main.rs", "fn main() {}");
+    let p = p.build();
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+    assert_that(&p.bin("bar"), existing_file());
+    assert_that(&p.bin("baz"), is_not(existing_file()));
+}
+
+#[test]
+fn virtual_default_member_is_not_a_member() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["bar"]
+            default-members = ["something-else"]
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("bar/src/main.rs", "fn main() {}");
+    let p = p.build();
+    assert_that(p.cargo("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+error: package `[..]something-else` is listed in workspace’s default-members \
+but is not a member.
+"));
+}
+
+#[test]
 fn virtual_build_no_members() {
     let p = project("foo")
         .file("Cargo.toml", r#"

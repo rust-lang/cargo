@@ -11,7 +11,8 @@ pub fn run(ws: &Workspace,
     let config = ws.config();
 
     let pkg = match options.spec {
-        Packages::All => unreachable!("cargo run supports single package only"),
+        Packages::All |
+        Packages::Default |
         Packages::OptOut(_) => unreachable!("cargo run supports single package only"),
         Packages::Packages(xs) => match xs.len() {
             0 => ws.current()?,

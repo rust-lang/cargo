@@ -46,6 +46,9 @@ pub struct Workspace<'cfg> {
     // set above.
     members: Vec<PathBuf>,
 
+    // The subset of `members` that are “default”.
+    default_members: Vec<PathBuf>,
+
     // True, if this is a temporary workspace created for the purposes of
     // cargo install or cargo package.
     is_ephemeral: bool,
@@ -90,6 +93,7 @@ pub enum WorkspaceConfig {
 pub struct WorkspaceRootConfig {
     root_dir: PathBuf,
     members: Option<Vec<String>>,
+    default_members: Option<Vec<String>>,
     exclude: Vec<String>,
 }
 
@@ -121,6 +125,7 @@ impl<'cfg> Workspace<'cfg> {
             root_manifest: None,
             target_dir: target_dir,
             members: Vec::new(),
+            default_members: Vec::new(),
             is_ephemeral: false,
             require_optional_deps: true,
         };
@@ -157,6 +162,7 @@ impl<'cfg> Workspace<'cfg> {
             root_manifest: None,
             target_dir: None,
             members: Vec::new(),
+            default_members: Vec::new(),
             is_ephemeral: true,
             require_optional_deps: require_optional_deps,
         };
@@ -170,6 +176,7 @@ impl<'cfg> Workspace<'cfg> {
                 ws.config.target_dir()?
             };
             ws.members.push(ws.current_manifest.clone());
+            ws.default_members.push(ws.current_manifest.clone());
         }
         Ok(ws)
     }
@@ -267,6 +274,14 @@ impl<'cfg> Workspace<'cfg> {
         }
     }
 
+    /// Returns an iterator over default packages in this workspace
+    pub fn default_members<'a>(&'a self) -> Members<'a, 'cfg> {
+        Members {
+            ws: self,
+            iter: self.default_members.iter(),
+        }
+    }
+
     pub fn is_ephemeral(&self) -> bool {
         self.is_ephemeral
     }
@@ -345,21 +360,47 @@ impl<'cfg> Workspace<'cfg> {
             None => {
                 debug!("find_members - only me as a member");
                 self.members.push(self.current_manifest.clone());
+                self.default_members.push(self.current_manifest.clone());
                 return Ok(())
             }
         };
 
-        let members_paths = {
+        let members_paths;
+        let default_members_paths;
+        {
             let root_package = self.packages.load(&root_manifest_path)?;
             match *root_package.workspace_config() {
-                WorkspaceConfig::Root(ref root_config) => root_config.members_paths()?,
+                WorkspaceConfig::Root(ref root_config) => {
+                    members_paths = root_config.members_paths(
+                        root_config.members.as_ref().unwrap_or(&vec![])
+                    )?;
+                    default_members_paths = if let Some(ref default) = root_config.default_members {
+                        Some(root_config.members_paths(default)?)
+                    } else {
+                        None
+                    }
+                }
                 _ => bail!("root of a workspace inferred but wasn't a root: {}",
                            root_manifest_path.display()),
             }
-        };
+        }
 
         for path in members_paths {
             self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)?;
+        }
+
+        if let Some(default) = default_members_paths {
+            for path in default {
+                let manifest_path = paths::normalize_path(&path.join("Cargo.toml"));
+                if !self.members.contains(&manifest_path) {
+                    bail!("package `{}` is listed in workspace’s default-members \
+                           but is not a member.",
+                          path.display())
+                }
+                self.default_members.push(manifest_path)
+            }
+        } else {
+            self.default_members = self.members.clone()
         }
 
         self.find_path_deps(&root_manifest_path, &root_manifest_path, false)
@@ -370,7 +411,7 @@ impl<'cfg> Workspace<'cfg> {
                       root_manifest: &Path,
                       is_path_dep: bool) -> CargoResult<()> {
         let manifest_path = paths::normalize_path(manifest_path);
-        if self.members.iter().any(|p| p == &manifest_path) {
+        if self.members.contains(&manifest_path) {
             return Ok(())
         }
         if is_path_dep
@@ -632,11 +673,13 @@ impl WorkspaceRootConfig {
     pub fn new(
         root_dir: &Path,
         members: &Option<Vec<String>>,
+        default_members: &Option<Vec<String>>,
         exclude: &Option<Vec<String>>,
     ) -> WorkspaceRootConfig {
         WorkspaceRootConfig {
             root_dir: root_dir.to_path_buf(),
             members: members.clone(),
+            default_members: default_members.clone(),
             exclude: exclude.clone().unwrap_or_default(),
         }
     }
@@ -665,21 +708,19 @@ impl WorkspaceRootConfig {
         self.members.is_some()
     }
 
-    fn members_paths(&self) -> CargoResult<Vec<PathBuf>> {
+    fn members_paths(&self, globs: &[String]) -> CargoResult<Vec<PathBuf>> {
         let mut expanded_list = Vec::new();
 
-        if let Some(globs) = self.members.clone() {
-            for glob in globs {
-                let pathbuf = self.root_dir.join(glob);
-                let expanded_paths = Self::expand_member_path(&pathbuf)?;
+        for glob in globs {
+            let pathbuf = self.root_dir.join(glob);
+            let expanded_paths = Self::expand_member_path(&pathbuf)?;
 
-                // If glob does not find any valid paths, then put the original
-                // path in the expanded list to maintain backwards compatibility.
-                if expanded_paths.is_empty() {
-                    expanded_list.push(pathbuf);
-                } else {
-                    expanded_list.extend(expanded_paths);
-                }
+            // If glob does not find any valid paths, then put the original
+            // path in the expanded list to maintain backwards compatibility.
+            if expanded_paths.is_empty() {
+                expanded_list.push(pathbuf);
+            } else {
+                expanded_list.extend(expanded_paths);
             }
         }
 

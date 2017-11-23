@@ -147,8 +147,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                                          options.flag_all_targets);
     }
 
-    let spec = Packages::from_flags(ws.is_virtual(),
-                                    options.flag_all,
+    let spec = Packages::from_flags(options.flag_all,
                                     &options.flag_exclude,
                                     &options.flag_package)?;
 

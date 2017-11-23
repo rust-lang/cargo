@@ -450,6 +450,8 @@ pub struct TomlProject {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TomlWorkspace {
     members: Option<Vec<String>>,
+    #[serde(rename = "default-members")]
+    default_members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
 }
 
@@ -681,7 +683,9 @@ impl TomlManifest {
                                       project.workspace.as_ref()) {
             (Some(config), None) => {
                 WorkspaceConfig::Root(
-                    WorkspaceRootConfig::new(&package_root, &config.members, &config.exclude)
+                    WorkspaceRootConfig::new(
+                        &package_root, &config.members, &config.default_members, &config.exclude,
+                    )
                 )
             }
             (None, root) => {
@@ -785,7 +789,9 @@ impl TomlManifest {
         let workspace_config = match me.workspace {
             Some(ref config) => {
                 WorkspaceConfig::Root(
-                    WorkspaceRootConfig::new(&root, &config.members, &config.exclude)
+                    WorkspaceRootConfig::new(
+                        &root, &config.members, &config.default_members, &config.exclude,
+                    )
                 )
             }
             None => {
