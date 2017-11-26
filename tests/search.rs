@@ -11,6 +11,7 @@ use cargo::util::ProcessBuilder;
 use cargotest::support::execs;
 use cargotest::support::git::repo;
 use cargotest::support::paths;
+use cargotest::support::registry::COMMANDS;
 use hamcrest::assert_that;
 use url::Url;
 
@@ -27,8 +28,9 @@ fn setup() {
     let _ = repo(&registry_path())
         .file("config.json", &format!(r#"{{
             "dl": "{0}",
-            "api": "{0}"
-        }}"#, api()))
+            "api": "{0}",
+            "commands": {1}
+        }}"#, api(), COMMANDS))
         .build();
 }
 
