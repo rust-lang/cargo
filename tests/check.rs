@@ -301,7 +301,7 @@ fn issue_3419() {
 
 // Check on a dylib should have a different metadata hash than build.
 #[test]
-fn check_dylib() {
+fn dylib_check_preserves_build_cache() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [package]
@@ -317,25 +317,21 @@ fn check_dylib() {
         .file("src/lib.rs", "")
         .build();
 
-    let build_output = t!(String::from_utf8(
-        t!(p.cargo("build").arg("-v").exec_with_output())
-            .stderr,
-    ));
-    let build_metadata = build_output
-        .split_whitespace()
-        .find(|arg| arg.starts_with("metadata="))
-        .unwrap();
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                .with_stderr("\
+[..]Compiling foo v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
 
-    let check_output = t!(String::from_utf8(
-        t!(p.cargo("check").arg("-v").exec_with_output())
-            .stderr,
-    ));
-    let check_metadata = check_output
-        .split_whitespace()
-        .find(|arg| arg.starts_with("metadata="))
-        .unwrap();
+    assert_that(p.cargo("check"),
+                execs().with_status(0));
 
-    assert_ne!(build_metadata, check_metadata);
+    assert_that(p.cargo("build"),
+                execs().with_status(0)
+                .with_stderr("\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
 }
 
 // test `cargo rustc --profile check`
