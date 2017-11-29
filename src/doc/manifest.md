@@ -520,9 +520,19 @@ crate will be treated as a normal package, as well as a workspace. If the
 manifest*.
 
 When working with *virtual manifests*, package-related cargo commands, like
-`cargo build`, won't be available anymore. But, most of such commands support
-the `--all` option, will execute the command for all the non-virtual manifest in
-the workspace.
+`cargo build`, default to the set of packages specified by the `default-members`
+configuration:
+
+```toml
+[workspace]
+members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
+
+# The members that commands like `cargo build` apply to by deault.
+# This must expand to a subset of `members`.
+# Optional key, defaults to the same as `members`
+# (as if `--all` were used on the command line).
+default-members = ["path/to/member2", "path/to/member3/*"]
+```
 
 # The project layout
 

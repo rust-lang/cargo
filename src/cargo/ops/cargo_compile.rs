@@ -106,26 +106,23 @@ pub enum MessageFormat {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Packages<'a> {
+    Default,
     All,
     OptOut(&'a [String]),
     Packages(&'a [String]),
 }
 
 impl<'a> Packages<'a> {
-    pub fn from_flags(virtual_ws: bool, all: bool, exclude: &'a [String], package: &'a [String])
+    pub fn from_flags(all: bool, exclude: &'a [String], package: &'a [String])
         -> CargoResult<Self>
     {
-        let all = all || (virtual_ws && package.is_empty());
-
-        let packages = match (all, &exclude) {
-            (true, exclude) if exclude.is_empty() => Packages::All,
-            (true, exclude) => Packages::OptOut(exclude),
-            (false, exclude) if !exclude.is_empty() => bail!("--exclude can only be used together \
-                                                           with --all"),
-            _ => Packages::Packages(package),
-        };
-
-        Ok(packages)
+        Ok(match (all, exclude.len(), package.len()) {
+            (false, 0, 0) => Packages::Default,
+            (false, 0, _) => Packages::Packages(package),
+            (false, _, _) => bail!("--exclude can only be used together with --all"),
+            (true, 0, _) => Packages::All,
+            (true, _, _) => Packages::OptOut(exclude),
+        })
     }
 
     pub fn into_package_id_specs(self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
@@ -151,6 +148,12 @@ impl<'a> Packages<'a> {
             }
             Packages::Packages(packages) => {
                 packages.iter().map(|p| PackageIdSpec::parse(p)).collect::<CargoResult<Vec<_>>>()?
+            }
+            Packages::Default => {
+                ws.default_members()
+                    .map(Package::package_id)
+                    .map(PackageIdSpec::from_package_id)
+                    .collect()
             }
         };
         Ok(specs)
