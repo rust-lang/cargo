@@ -47,6 +47,35 @@ fn simple_explicit() {
 }
 
 #[test]
+fn simple_explicit_default_members() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [workspace]
+            members = ["bar"]
+            default-members = ["bar"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+            workspace = ".."
+        "#)
+        .file("bar/src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(&p.bin("bar"), existing_file());
+    assert_that(&p.bin("foo"), is_not(existing_file()));
+}
+
+#[test]
 fn inferred_root() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -689,6 +718,59 @@ fn virtual_build_all_implied() {
     let p = p.build();
     assert_that(p.cargo("build"),
                 execs().with_status(0));
+}
+
+#[test]
+fn virtual_default_members() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["bar", "baz"]
+            default-members = ["bar"]
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("baz/Cargo.toml", r#"
+            [project]
+            name = "baz"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("bar/src/main.rs", "fn main() {}")
+        .file("baz/src/main.rs", "fn main() {}");
+    let p = p.build();
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+    assert_that(&p.bin("bar"), existing_file());
+    assert_that(&p.bin("baz"), is_not(existing_file()));
+}
+
+#[test]
+fn virtual_default_member_is_not_a_member() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["bar"]
+            default-members = ["something-else"]
+        "#)
+        .file("bar/Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("bar/src/main.rs", "fn main() {}");
+    let p = p.build();
+    assert_that(p.cargo("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+error: package `[..]something-else` is listed in workspace’s default-members \
+but is not a member.
+"));
 }
 
 #[test]
