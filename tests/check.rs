@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate cargotest;
 extern crate hamcrest;
 extern crate glob;
@@ -296,6 +297,45 @@ fn issue_3419() {
 
     assert_that(p.cargo("check"),
                 execs().with_status(0));
+}
+
+// Check on a dylib should have a different metadata hash than build.
+#[test]
+fn check_dylib() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [lib]
+            crate-type = ["dylib"]
+
+            [dependencies]
+        "#)
+        .file("src/lib.rs", "")
+        .build();
+
+    let build_output = t!(String::from_utf8(
+        t!(p.cargo("build").arg("-v").exec_with_output())
+            .stderr,
+    ));
+    let build_metadata = build_output
+        .split_whitespace()
+        .find(|arg| arg.starts_with("metadata="))
+        .unwrap();
+
+    let check_output = t!(String::from_utf8(
+        t!(p.cargo("check").arg("-v").exec_with_output())
+            .stderr,
+    ));
+    let check_metadata = check_output
+        .split_whitespace()
+        .find(|arg| arg.starts_with("metadata="))
+        .unwrap();
+
+    assert_ne!(build_metadata, check_metadata);
 }
 
 // test `cargo rustc --profile check`
