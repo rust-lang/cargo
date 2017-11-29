@@ -720,19 +720,28 @@ other copies. The syntax is similar to the `[dependencies]` section:
 [patch.crates-io]
 foo = { git = 'https://github.com/example/foo' }
 bar = { path = 'my/local/bar' }
+
+[dependencies.baz]
+git = 'https://github.com/example/baz'
+
+[patch.'https://github.com/example/baz']
+baz = { git = 'https://github.com/example/patched-baz', branch = 'my-branch' }
 ```
 
 The `[patch]` table is made of dependency-like sub-tables. Each key after
 `[patch]` is a URL of the source that's being patched, or `crates-io` if
 you're modifying the https://crates.io registry. In the example above
 `crates-io` could be replaced with a git URL such as
-`https://github.com/rust-lang-nursery/log`.
+`https://github.com/rust-lang-nursery/log`; the second `[patch]`
+section in the example uses this to specify a source called `baz`.
 
 Each entry in these tables is a normal dependency specification, the same as
 found in the `[dependencies]` section of the manifest. The dependencies listed
 in the `[patch]` section are resolved and used to patch the source at the
 URL specified. The above manifest snippet patches the `crates-io` source (e.g.
-crates.io itself) with the `foo` crate and `bar` crate.
+crates.io itself) with the `foo` crate and `bar` crate. It also
+patches the `https://github.com/example/baz` source with a `my-branch` that
+comes from elsewhere.
 
 Sources can be patched with versions of crates that do not exist, and they can
 also be patched with versions of crates that already exist. If a source is
