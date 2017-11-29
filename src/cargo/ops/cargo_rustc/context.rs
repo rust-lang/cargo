@@ -535,7 +535,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // just here for rustbuild. We need a more principled method
         // doing this eventually.
         let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
-        if !unit.profile.test &&
+        if !(unit.profile.test || unit.profile.check) &&
             (unit.target.is_dylib() || unit.target.is_cdylib() ||
                  (unit.target.is_bin() && self.target_triple().starts_with("wasm32-"))) &&
             unit.pkg.package_id().source_id().is_path() &&
