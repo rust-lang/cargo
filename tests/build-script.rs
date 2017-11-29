@@ -103,6 +103,8 @@ fn custom_build_env_vars() {
 
                 let _feat = env::var("CARGO_FEATURE_FOO").unwrap();
 
+                let _cargo = env::var("CARGO").unwrap();
+
                 let rustc = env::var("RUSTC").unwrap();
                 assert_eq!(rustc, "rustc");
 
