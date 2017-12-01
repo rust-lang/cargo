@@ -333,6 +333,9 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         for path in paths::ancestors(manifest_path).skip(2) {
+            if self.config.home() == path {
+                return Ok(None);
+            }
             let ances_manifest_path = path.join("Cargo.toml");
             debug!("find_root - trying {}", ances_manifest_path.display());
             if ances_manifest_path.exists() {
