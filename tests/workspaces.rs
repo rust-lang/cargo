@@ -1700,6 +1700,54 @@ fn dep_used_with_separate_features() {
 "));
 }
 
+#[test]
+fn dont_recurse_out_of_cargo_home() {
+    let git_project = git::new("dep", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [package]
+                name = "dep"
+                version = "0.1.0"
+            "#)
+            .file("src/lib.rs", "")
+            .file("build.rs", r#"
+                use std::env;
+                use std::path::Path;
+                use std::process::{self, Command};
+
+                fn main() {
+                    let cargo = env::var_os("CARGO").unwrap();
+                    let cargo_manifest_dir = env::var_os("CARGO_MANIFEST_DIR").unwrap();
+                    let output = Command::new(cargo)
+                        .args(&["metadata", "--format-version", "1", "--manifest-path"])
+                        .arg(&Path::new(&cargo_manifest_dir).join("Cargo.toml"))
+                        .output()
+                        .unwrap();
+                    if !output.status.success() {
+                        eprintln!("{}", String::from_utf8(output.stderr).unwrap());
+                        process::exit(1);
+                    }
+                }
+            "#)
+    }).unwrap();
+    let p = project("lib")
+        .file("Cargo.toml", &format!(r#"
+            [package]
+            name = "lib"
+            version = "0.1.0"
+
+            [dependencies.dep]
+            git = "{}"
+
+            [workspace]
+        "#, git_project.url()))
+        .file("src/lib.rs", "");
+    let p = p.build();
+
+    assert_that(p.cargo("build").env("CARGO_HOME", p.root().join(".cargo")),
+                execs().with_status(0));
+}
+
 /*FIXME: This fails because of how workspace.exclude and workspace.members are working.
 #[test]
 fn include_and_exclude() {

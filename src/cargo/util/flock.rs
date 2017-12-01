@@ -233,6 +233,18 @@ impl Filesystem {
     }
 }
 
+impl PartialEq<Path> for Filesystem {
+    fn eq(&self, other: &Path) -> bool {
+        self.root == other
+    }
+}
+
+impl PartialEq<Filesystem> for Path {
+    fn eq(&self, other: &Filesystem) -> bool {
+        self == other.root
+    }
+}
+
 /// Acquires a lock on a file in a "nice" manner.
 ///
 /// Almost all long-running blocking actions in Cargo have a status message
