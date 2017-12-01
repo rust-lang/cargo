@@ -86,3 +86,22 @@ fn rerun() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
+
+#[test]
+fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file("src/lib.rs", r#"
+            //! ```
+            //! assert!(cfg!(do_not_choke));
+            //! ```
+        "#)
+        .build();
+
+    assert_that(p.cargo("test").arg("--doc").env("RUSTDOCFLAGS", "--cfg do_not_choke"),
+                execs().with_status(0));
+}
