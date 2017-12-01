@@ -199,6 +199,10 @@ fn run_doc_tests(options: &TestOptions,
                 p.arg("--extern").arg(&arg);
             }
 
+            if let Some(flags) = compilation.rustdocflags.get(package.package_id()) {
+                p.args(flags);
+            }
+
             config.shell().verbose(|shell| {
                 shell.status("Running", p.to_string())
             })?;
