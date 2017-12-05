@@ -10,7 +10,6 @@ use hex::ToHex;
 use serde_json;
 
 use core::{PackageId, SourceId};
-use ops;
 use sources::git;
 use sources::registry::{RegistryData, RegistryConfig, INDEX_LOCK};
 use util::network;
@@ -159,7 +158,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         //
         // This way if there's a problem the error gets printed before we even
         // hit the index, which may not actually read this configuration.
-        ops::http_handle(self.config)?;
+        self.config.http()?;
 
         self.repo()?;
         self.head.set(None);
