@@ -1,4 +1,4 @@
-use std::env;
+use std::{cmp, env};
 use std::fs::{self, File};
 use std::iter::repeat;
 use std::time::Duration;
@@ -465,12 +465,16 @@ pub fn search(query: &str,
               index: Option<String>,
               limit: u8,
               reg: Option<String>) -> CargoResult<()> {
-    fn truncate_with_ellipsis(s: &str, max_length: usize) -> String {
-        if s.len() < max_length {
-            s.to_string()
-        } else {
-            format!("{}…", &s[..max_length - 1])
+    fn truncate_with_ellipsis(s: &str, max_width: usize) -> String {
+        // We should truncate at grapheme-boundary and compute character-widths,
+        // yet the dependencies on unicode-segmentation and unicode-width are
+        // not worth it.
+        let mut chars = s.chars();
+        let mut prefix = (&mut chars).take(max_width - 1).collect::<String>();
+        if chars.next().is_some() {
+            prefix.push('…');
         }
+        prefix
     }
 
     let (mut registry, _) = registry(config, None, index, reg)?;
@@ -478,19 +482,23 @@ pub fn search(query: &str,
         CargoError::from(format!("failed to retrieve search results from the registry: {}", e))
     })?;
 
-    let list_items = crates.iter()
-        .map(|krate| (
-            format!("{} = \"{}\"", krate.name, krate.max_version),
-            krate.description.as_ref().map(|desc|
-                truncate_with_ellipsis(&desc.replace("\n", " "), 128))
-        ))
-        .collect::<Vec<_>>();
-    let description_margin = list_items.iter()
-        .map(|&(ref left, _)| left.len() + 4)
-        .max()
-        .unwrap_or(0);
+    let names = crates.iter()
+        .map(|krate| format!("{} = \"{}\"", krate.name, krate.max_version))
+        .collect::<Vec<String>>();
 
-    for (name, description) in list_items.into_iter() {
+    let description_margin = names.iter()
+        .map(|s| s.len() + 4)
+        .max()
+        .unwrap_or_default();
+
+    let description_length = cmp::max(80, 128 - description_margin);
+
+    let descriptions = crates.iter()
+        .map(|krate|
+            krate.description.as_ref().map(|desc|
+                truncate_with_ellipsis(&desc.replace("\n", " "), description_length)));
+
+    for (name, description) in names.into_iter().zip(descriptions) {
         let line = match description {
             Some(desc) => {
                 let space = repeat(' ').take(description_margin - name.len())
