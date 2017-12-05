@@ -474,10 +474,6 @@ impl<T> RcVecIter<T> {
             vec: vec,
         }
     }
-
-    fn cur_index(&self) -> usize {
-        self.rest.start - 1
-    }
 }
 
 // Not derived to avoid `T: Clone`
@@ -548,6 +544,7 @@ impl Ord for DepsFrame {
 }
 
 struct BacktrackFrame<'a> {
+    cur: usize,
     context_backup: Context<'a>,
     deps_backup: BinaryHeap<DepsFrame>,
     remaining_candidates: RemainingCandidates,
@@ -692,6 +689,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                 // we can try the next one if this one fails.
                 if has_another {
                     backtrack_stack.push(BacktrackFrame {
+                        cur,
                         context_backup: Context::clone(&cx),
                         deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
                         remaining_candidates: remaining_candidates,
@@ -759,6 +757,7 @@ fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
              frame.remaining_candidates.clone().next(prev_active).is_some())
         };
         if let Some(candidate) = next {
+            *cur = frame.cur;
             if has_another {
                 *cx = frame.context_backup.clone();
                 *remaining_deps = frame.deps_backup.clone();
@@ -773,7 +772,6 @@ fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
                 *dep = frame.dep;
                 *features = frame.features;
             }
-            *cur = remaining_deps.peek().unwrap().remaining_siblings.cur_index();
             return Some(candidate)
         }
     }
