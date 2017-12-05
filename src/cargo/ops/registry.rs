@@ -273,6 +273,16 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     // connect phase as well as a "low speed" timeout so if we don't receive
     // many bytes in a large-ish period of time then we time out.
     let mut handle = Easy::new();
+    configure_http_handle(config, &mut handle)?;
+    Ok(handle)
+}
+
+/// Configure a libcurl http handle with the defaults options for Cargo
+pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<()> {
+    // The timeout option for libcurl by default times out the entire transfer,
+    // but we probably don't want this. Instead we only set timeouts for the
+    // connect phase as well as a "low speed" timeout so if we don't receive
+    // many bytes in a large-ish period of time then we time out.
     handle.connect_timeout(Duration::new(30, 0))?;
     handle.low_speed_limit(10 /* bytes per second */)?;
     handle.low_speed_time(Duration::new(30, 0))?;
@@ -290,7 +300,7 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
         handle.connect_timeout(Duration::new(timeout as u64, 0))?;
         handle.low_speed_time(Duration::new(timeout as u64, 0))?;
     }
-    Ok(handle)
+    Ok(())
 }
 
 /// Find an explicit HTTP proxy if one is available.
