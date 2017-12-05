@@ -633,7 +633,11 @@ impl Config {
         let http = self.easy.get_or_try_init(|| {
             ops::http_handle(self).map(RefCell::new)
         })?;
-        http.borrow_mut().reset();
+        {
+            let mut http = http.borrow_mut();
+            http.reset();
+            ops::configure_http_handle(self, &mut http)?;
+        }
         Ok(http)
     }
 }
