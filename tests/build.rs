@@ -3856,9 +3856,11 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
                 ));
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
 #[test]
 fn uplift_dsym_of_bin_on_mac() {
+    if !cfg!(any(target_os = "macos", target_os = "ios")) {
+        return
+    }
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
