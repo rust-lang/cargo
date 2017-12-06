@@ -519,20 +519,23 @@ crate will be treated as a normal package, as well as a workspace. If the
 `package` table is not present in a workspace manifest, it is called a *virtual
 manifest*.
 
-When working with *virtual manifests*, package-related cargo commands, like
-`cargo build`, default to the set of packages specified by the `default-members`
-configuration:
+## Package selection
+
+In a workspace, package-related cargo commands like `cargo build` apply to
+packages selected by `-p` / `--package` or `--all` command-line parameters.
+When neither is specified, the optional `default-members` configuration is used:
 
 ```toml
 [workspace]
 members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
-
-# The members that commands like `cargo build` apply to by deault.
-# This must expand to a subset of `members`.
-# Optional key, defaults to the same as `members`
-# (as if `--all` were used on the command line).
-default-members = ["path/to/member2", "path/to/member3/*"]
+default-members = ["path/to/member2", "path/to/member3/foo"]
 ```
+
+When specified, `default-members` must expand to a subset of `members`.
+
+When `default-members` is not specified, the default is the root manifest
+if it is a package, or every member manifest (as if `--all` were specified
+on the command-line) for virtual workspaces.
 
 # The project layout
 
