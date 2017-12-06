@@ -641,7 +641,7 @@ fn filter_dynamic_search_path<'a, I>(paths :I, root_output: &PathBuf) -> Vec<Pat
 fn prepare_rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                            crate_types: &[&str],
                            unit: &Unit<'a>) -> CargoResult<ProcessBuilder> {
-    let mut base = cx.compilation.rustc_process(unit.pkg)?;
+    let mut base = cx.compilation.rustc_process(unit.pkg, &cx.ws)?;
     base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, crate_types);
     build_deps_args(&mut base, cx, unit)?;
@@ -651,7 +651,7 @@ fn prepare_rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
 fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                      unit: &Unit<'a>) -> CargoResult<Work> {
-    let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg)?;
+    let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg, &cx.ws)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name())
            .cwd(cx.config.cwd())

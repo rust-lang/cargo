@@ -22,9 +22,9 @@ pub fn run_tests(ws: &Workspace,
     }
     let (test, mut errors) = if options.only_doc {
         assert!(options.compile_opts.filter.is_specific());
-        run_doc_tests(options, test_args, &compilation)?
+        run_doc_tests(options, test_args, &compilation, ws)?
     } else {
-        run_unit_tests(options, test_args, &compilation)?
+        run_unit_tests(options, test_args, &compilation, ws)?
     };
 
     // If we have an error and want to fail fast, return
@@ -41,7 +41,7 @@ pub fn run_tests(ws: &Workspace,
         }
     }
 
-    let (doctest, docerrors) = run_doc_tests(options, test_args, &compilation)?;
+    let (doctest, docerrors) = run_doc_tests(options, test_args, &compilation, ws)?;
     let test = if docerrors.is_empty() { test } else { doctest };
     errors.extend(docerrors);
     if errors.is_empty() {
@@ -61,7 +61,7 @@ pub fn run_benches(ws: &Workspace,
     if options.no_run {
         return Ok(None)
     }
-    let (test, errors) = run_unit_tests(options, &args, &compilation)?;
+    let (test, errors) = run_unit_tests(options, &args, &compilation, ws)?;
     match errors.len() {
         0 => Ok(None),
         _ => Ok(Some(CargoTestError::new(test, errors))),
@@ -81,7 +81,8 @@ fn compile_tests<'a>(ws: &Workspace<'a>,
 /// Run the unit and integration tests of a project.
 fn run_unit_tests(options: &TestOptions,
                   test_args: &[String],
-                  compilation: &Compilation)
+                  compilation: &Compilation,
+                  ws: &Workspace)
                   -> CargoResult<(Test, Vec<ProcessError>)> {
     let config = options.compile_opts.config;
     let cwd = options.compile_opts.config.cwd();
@@ -93,7 +94,7 @@ fn run_unit_tests(options: &TestOptions,
             Some(path) => path,
             None => &**exe,
         };
-        let mut cmd = compilation.target_process(exe, pkg)?;
+        let mut cmd = compilation.target_process(exe, pkg, ws)?;
         cmd.args(test_args);
         config.shell().concise(|shell| {
             shell.status("Running", to_display.display().to_string())
@@ -129,7 +130,8 @@ fn run_unit_tests(options: &TestOptions,
 
 fn run_doc_tests(options: &TestOptions,
                  test_args: &[String],
-                 compilation: &Compilation)
+                 compilation: &Compilation,
+                 ws: &Workspace)
                  -> CargoResult<(Test, Vec<ProcessError>)> {
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
@@ -147,7 +149,7 @@ fn run_doc_tests(options: &TestOptions,
     for (package, tests) in libs {
         for (lib, name, crate_name) in tests {
             config.shell().status("Doc-tests", name)?;
-            let mut p = compilation.rustdoc_process(package)?;
+            let mut p = compilation.rustdoc_process(package, ws)?;
             p.arg("--test").arg(lib)
              .arg("--crate-name").arg(&crate_name);
 

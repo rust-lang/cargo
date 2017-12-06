@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use semver::Version;
 
-use core::{PackageId, Package, Target, TargetKind};
+use core::{PackageId, Package, Target, TargetKind, Workspace};
 use util::{self, CargoResult, Config, LazyCell, ProcessBuilder, process, join_paths};
 
 /// A structure returning the result of a compilation.
@@ -83,19 +83,19 @@ impl<'cfg> Compilation<'cfg> {
     }
 
     /// See `process`.
-    pub fn rustc_process(&self, pkg: &Package) -> CargoResult<ProcessBuilder> {
-        self.fill_env(self.config.rustc()?.process(), pkg, true)
+    pub fn rustc_process(&self, pkg: &Package, ws: &Workspace) -> CargoResult<ProcessBuilder> {
+        self.fill_env(self.config.rustc()?.process(), pkg, ws, true)
     }
 
     /// See `process`.
-    pub fn rustdoc_process(&self, pkg: &Package) -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(&*self.config.rustdoc()?), pkg, false)
+    pub fn rustdoc_process(&self, pkg: &Package, ws: &Workspace) -> CargoResult<ProcessBuilder> {
+        self.fill_env(process(&*self.config.rustdoc()?), pkg, ws, false)
     }
 
     /// See `process`.
-    pub fn host_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
+    pub fn host_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package, ws: &Workspace)
                                          -> CargoResult<ProcessBuilder> {
-        self.fill_env(process(cmd), pkg, true)
+        self.fill_env(process(cmd), pkg, ws, true)
     }
 
     fn target_runner(&self) -> CargoResult<&Option<(PathBuf, Vec<String>)>> {
@@ -106,7 +106,7 @@ impl<'cfg> Compilation<'cfg> {
     }
 
     /// See `process`.
-    pub fn target_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
+    pub fn target_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package, ws: &Workspace)
                                            -> CargoResult<ProcessBuilder> {
         let builder = if let Some((ref runner, ref args)) = *self.target_runner()? {
             let mut builder = process(runner);
@@ -116,7 +116,7 @@ impl<'cfg> Compilation<'cfg> {
         } else {
             process(cmd)
         };
-        self.fill_env(builder, pkg, false)
+        self.fill_env(builder, pkg, ws, false)
     }
 
     /// Prepares a new process with an appropriate environment to run against
@@ -124,7 +124,7 @@ impl<'cfg> Compilation<'cfg> {
     ///
     /// The package argument is also used to configure environment variables as
     /// well as the working directory of the child process.
-    fn fill_env(&self, mut cmd: ProcessBuilder, pkg: &Package, is_host: bool)
+    fn fill_env(&self, mut cmd: ProcessBuilder, pkg: &Package, ws: &Workspace, is_host: bool)
                 -> CargoResult<ProcessBuilder> {
 
         let mut search_path = if is_host {
@@ -161,6 +161,7 @@ impl<'cfg> Compilation<'cfg> {
         // consider adding the corresponding properties to the hash
         // in Context::target_metadata()
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
+           .env("CARGO_WORKSPACE_DIR", ws.root())
            .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
            .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
            .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
@@ -171,6 +172,7 @@ impl<'cfg> Compilation<'cfg> {
            .env("CARGO_PKG_HOMEPAGE", metadata.homepage.as_ref().unwrap_or(&String::new()))
            .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
            .cwd(pkg.root());
+
         Ok(cmd)
     }
 }
