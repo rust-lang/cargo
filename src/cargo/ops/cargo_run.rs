@@ -63,7 +63,7 @@ pub fn run(ws: &Workspace,
         Some(path) => path.to_path_buf(),
         None => exe.to_path_buf(),
     };
-    let mut process = compile.target_process(exe, pkg)?;
+    let mut process = compile.target_process(exe, pkg, ws)?;
     process.args(args).cwd(config.cwd());
 
     config.shell().status("Running", process.to_string())?;

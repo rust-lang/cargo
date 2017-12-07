@@ -925,14 +925,15 @@ fn crate_env_vars() {
             static VERSION_PRE: &'static str = env!("CARGO_PKG_VERSION_PRE");
             static VERSION: &'static str = env!("CARGO_PKG_VERSION");
             static CARGO_MANIFEST_DIR: &'static str = env!("CARGO_MANIFEST_DIR");
+            static CARGO_WORKSPACE_DIR: &'static str = env!("CARGO_WORKSPACE_DIR");
             static PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
             static HOMEPAGE: &'static str = env!("CARGO_PKG_HOMEPAGE");
             static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
 
             fn main() {
-                let s = format!("{}-{}-{} @ {} in {}", VERSION_MAJOR,
+                let s = format!("{}-{}-{} @ {} in {} ({})", VERSION_MAJOR,
                                 VERSION_MINOR, VERSION_PATCH, VERSION_PRE,
-                                CARGO_MANIFEST_DIR);
+                                CARGO_MANIFEST_DIR, CARGO_WORKSPACE_DIR);
                  assert_eq!(s, foo::version());
                  println!("{}", s);
                  assert_eq!("foo", PKG_NAME);
@@ -945,12 +946,13 @@ fn crate_env_vars() {
         "#)
         .file("src/lib.rs", r#"
             pub fn version() -> String {
-                format!("{}-{}-{} @ {} in {}",
+                format!("{}-{}-{} @ {} in {} ({})",
                         env!("CARGO_PKG_VERSION_MAJOR"),
                         env!("CARGO_PKG_VERSION_MINOR"),
                         env!("CARGO_PKG_VERSION_PATCH"),
                         env!("CARGO_PKG_VERSION_PRE"),
-                        env!("CARGO_MANIFEST_DIR"))
+                        env!("CARGO_MANIFEST_DIR"),
+                        env!("CARGO_WORKSPACE_DIR"))
             }
         "#)
         .build();
@@ -960,8 +962,8 @@ fn crate_env_vars() {
 
     println!("bin");
     assert_that(process(&p.bin("foo")),
-                execs().with_status(0).with_stdout(&format!("0-5-1 @ alpha.1 in {}\n",
-                                                   p.root().display())));
+                execs().with_status(0).with_stdout(&format!("0-5-1 @ alpha.1 in {} ({})\n",
+                                                   p.root().display(), p.root().display())));
 
     println!("test");
     assert_that(p.cargo("test").arg("-v"),
