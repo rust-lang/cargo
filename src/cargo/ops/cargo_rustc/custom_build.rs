@@ -6,7 +6,7 @@ use std::sync::{Mutex, Arc};
 
 use core::PackageId;
 use util::{Freshness, Cfg};
-use util::errors::{CargoResult, CargoResultExt, CargoError};
+use util::errors::{CargoResult, CargoResultExt};
 use util::{self, internal, profile, paths};
 use util::machine_message;
 
@@ -258,9 +258,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
             &mut |err_line| { state.stderr(err_line); Ok(()) },
             true,
         ).map_err(|e| {
-            CargoError::from(
-                format!("failed to run custom build command for `{}`\n{}",
-                        pkg_name, e.description()))
+            format_err!("failed to run custom build command for `{}`\n{}",
+                        pkg_name, e)
 
         })?;
 

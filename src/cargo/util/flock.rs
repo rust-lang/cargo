@@ -1,5 +1,5 @@
 use std::fs::{self, File, OpenOptions};
-use std::io::*;
+use std::io::{Seek, Read, Write, SeekFrom};
 use std::io;
 use std::path::{Path, PathBuf, Display};
 
@@ -9,7 +9,7 @@ use fs2::{FileExt, lock_contended_error};
 use libc;
 
 use util::Config;
-use util::errors::{CargoResult, CargoResultExt};
+use util::errors::{CargoResult, CargoResultExt, CargoError};
 
 pub struct FileLock {
     f: Option<File>,
@@ -295,18 +295,19 @@ fn acquire(config: &Config,
 
         Err(e) => {
             if e.raw_os_error() != lock_contended_error().raw_os_error() {
-                return Err(e).chain_err(|| {
-                    format!("failed to lock file: {}", path.display())
-                })
+                let e = CargoError::from(e);
+                let cx = format!("failed to lock file: {}", path.display());
+                return Err(e.context(cx).into())
             }
         }
     }
     let msg = format!("waiting for file lock on {}", msg);
     config.shell().status_with_color("Blocking", &msg, Cyan)?;
 
-    return block().chain_err(|| {
+    block().chain_err(|| {
         format!("failed to lock file: {}", path.display())
-    });
+    })?;
+    return Ok(());
 
     #[cfg(all(target_os = "linux", not(target_env = "musl")))]
     fn is_on_nfs_mount(path: &Path) -> bool {

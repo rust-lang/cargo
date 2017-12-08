@@ -233,13 +233,12 @@ impl<'a> JobQueue<'a> {
                             self.emit_warnings(Some(msg), key, cx)?;
 
                             if self.active > 0 {
-                                error = Some("build failed".into());
+                                error = Some(format_err!("build failed"));
                                 handle_error(e, &mut *cx.config.shell());
                                 cx.config.shell().warn(
                                             "build failed, waiting for other \
                                              jobs to finish...")?;
-                            }
-                            else {
+                            } else {
                                 error = Some(e);
                             }
                         }

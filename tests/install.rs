@@ -73,8 +73,7 @@ fn multiple_pkgs() {
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]bar[..]
 error: could not find `baz` in registry `[..]`
-   
-Summary: Successfully installed foo, bar! Failed to install baz (see error(s) above).
+[SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
 error: some crates failed to install
 ",
@@ -86,8 +85,7 @@ error: some crates failed to install
                 execs().with_status(0).with_stderr(&format!("\
 [REMOVING] {home}[..]bin[..]foo[..]
 [REMOVING] {home}[..]bin[..]bar[..]
-   
-Summary: Successfully uninstalled foo, bar!
+[SUMMARY] Successfully uninstalled foo, bar!
 ",
         home = cargo_home().display())));
 
@@ -938,7 +936,7 @@ fn not_both_vers_and_version() {
 
     assert_that(cargo_process("install").arg("foo").arg("--version").arg("0.1.1").arg("--vers").arg("0.1.2"),
                 execs().with_status(101).with_stderr_contains("\
-error: Invalid arguments.
+error: invalid arguments
 "));
 }
 
@@ -982,8 +980,7 @@ fn uninstall_multiple_and_some_pkg_does_not_exist() {
                 execs().with_status(101).with_stderr(&format!("\
 [REMOVING] {home}[..]bin[..]foo[..]
 error: package id specification `bar` matched no packages
-   
-Summary: Successfully uninstalled foo! Failed to uninstall bar (see error(s) above).
+[SUMMARY] Successfully uninstalled foo! Failed to uninstall bar (see error(s) above).
 error: some packages failed to uninstall
 ",
         home = cargo_home().display())));

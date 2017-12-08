@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use core::{Package, SourceId, PackageId, EitherManifest};
 use util::{self, Config};
-use util::errors::{CargoResult, CargoResultExt, CargoError};
+use util::errors::{CargoResult, CargoError};
 use util::important_paths::find_project_manifest_exact;
 use util::toml::read_manifest;
 
@@ -64,7 +64,7 @@ pub fn read_packages(path: &Path, source_id: &SourceId, config: &Config)
     if all_packages.is_empty() {
         match errors.pop() {
             Some(err) => Err(err),
-            None => Err(format!("Could not find Cargo.toml in `{}`", path.display()).into()),
+            None => Err(format_err!("Could not find Cargo.toml in `{}`", path.display())),
         }
     } else {
         Ok(all_packages.into_iter().map(|(_, v)| v).collect())
@@ -86,9 +86,9 @@ fn walk(path: &Path, callback: &mut FnMut(&Path) -> CargoResult<bool>)
             return Ok(())
         }
         Err(e) => {
-            return Err(e).chain_err(|| {
-                format!("failed to read directory `{}`", path.display())
-            })
+            let cx = format!("failed to read directory `{}`", path.display());
+            let e = CargoError::from(e);
+            return Err(e.context(cx).into())
         }
     };
     for dir in dirs {

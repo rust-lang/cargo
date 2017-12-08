@@ -78,7 +78,7 @@ pub fn package(ws: &Workspace,
     config.shell().status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
     tar(ws, &src, dst.file(), &filename).chain_err(|| {
-        "failed to prepare local package for uploading"
+        format_err!("failed to prepare local package for uploading")
     })?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
@@ -207,8 +207,8 @@ fn tar(ws: &Workspace,
         let relative = util::without_prefix(file, root).unwrap();
         check_filename(relative)?;
         let relative = relative.to_str().ok_or_else(|| {
-            format!("non-utf8 path in source directory: {}",
-                    relative.display())
+            format_err!("non-utf8 path in source directory: {}",
+                        relative.display())
         })?;
         config.shell().verbose(|shell| {
             shell.status("Archiving", &relative)

@@ -31,7 +31,8 @@ impl<'cfg> Registry for ReplacedSource<'cfg> {
         }).chain_err(|| {
             format!("failed to query replaced source {}",
                     self.to_replace)
-        })
+        })?;
+        Ok(())
     }
 
     fn supports_checksums(&self) -> bool {
@@ -52,7 +53,8 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         self.inner.update().chain_err(|| {
             format!("failed to update replaced source {}",
                     self.to_replace)
-        })
+        })?;
+        Ok(())
     }
 
     fn download(&mut self, id: &PackageId) -> CargoResult<Package> {

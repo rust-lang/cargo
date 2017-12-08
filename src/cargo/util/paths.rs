@@ -6,17 +6,21 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf, Component};
 
 use util::{internal, CargoResult};
-use util::errors::CargoResultExt;
+use util::errors::{CargoResultExt, Internal, CargoError};
 
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsString> {
-    env::join_paths(paths.iter()).or_else(|e| {
-        let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
-        Err(internal(format!("failed to join path array: {:?}", paths))).chain_err(|| {
-            format!("failed to join search paths together: {}\n\
-                           Does ${} have an unterminated quote character?",
-                          e, env)
-        })
-    })
+    let err = match env::join_paths(paths.iter()) {
+        Ok(paths) => return Ok(paths),
+        Err(e) => e,
+    };
+    let paths = paths.iter().map(Path::new).collect::<Vec<_>>();
+    let err = CargoError::from(err);
+    let explain = Internal::new(format_err!("failed to join path array: {:?}", paths));
+    let err = CargoError::from(err.context(explain));
+    let more_explain = format!("failed to join search paths together\n\
+                                Does ${} have an unterminated quote character?",
+                               env);
+    return Err(err.context(more_explain).into())
 }
 
 pub fn dylib_path_envvar() -> &'static str {
@@ -76,7 +80,7 @@ pub fn read(path: &Path) -> CargoResult<String> {
 }
 
 pub fn read_bytes(path: &Path) -> CargoResult<Vec<u8>> {
-    (|| -> CargoResult<_> {
+    let res = (|| -> CargoResult<_> {
         let mut ret = Vec::new();
         let mut f = File::open(path)?;
         if let Ok(m) = f.metadata() {
@@ -86,7 +90,8 @@ pub fn read_bytes(path: &Path) -> CargoResult<Vec<u8>> {
         Ok(ret)
     })().chain_err(|| {
         format!("failed to read `{}`", path.display())
-    })
+    })?;
+    Ok(res)
 }
 
 pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
@@ -96,7 +101,8 @@ pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
         Ok(())
     })().chain_err(|| {
         format!("failed to write `{}`", path.display())
-    })
+    })?;
+    Ok(())
 }
 
 pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
@@ -111,7 +117,8 @@ pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
         Ok(())
     })().chain_err(|| {
         internal(format!("failed to write `{}`", path.display()))
-    })
+    })?;
+    Ok(())
 }
 
 #[cfg(unix)]
@@ -123,8 +130,8 @@ pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
 pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
     match path.as_os_str().to_str() {
         Some(s) => Ok(s.as_bytes()),
-        None => Err(format!("invalid non-unicode path: {}",
-                            path.display()).into())
+        None => Err(format_err!("invalid non-unicode path: {}",
+                                path.display())),
     }
 }
 
@@ -139,7 +146,7 @@ pub fn bytes2path(bytes: &[u8]) -> CargoResult<PathBuf> {
     use std::str;
     match str::from_utf8(bytes) {
         Ok(s) => Ok(PathBuf::from(s)),
-        Err(..) => Err("invalid non-unicode path".into()),
+        Err(..) => Err(format_err!("invalid non-unicode path")),
     }
 }
 

@@ -27,9 +27,9 @@ pub fn execute(flags: LocateProjectFlags, config: &mut Config) -> CliResult {
     let root = find_root_manifest_for_wd(flags.flag_manifest_path, config.cwd())?;
 
     let string = root.to_str()
-                      .ok_or_else(|| "Your project path contains \
-                                             characters not representable in \
-                                             Unicode".into())
+                      .ok_or_else(|| format_err!("your project path contains \
+                                                  characters not representable in \
+                                                  Unicode"))
                       .map_err(|e| CliError::new(e, 1))?;
 
     let location = ProjectLocation { root: string.to_string() };

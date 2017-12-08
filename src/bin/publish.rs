@@ -1,6 +1,6 @@
 use cargo::core::Workspace;
 use cargo::ops;
-use cargo::util::{CargoError, CliResult, Config};
+use cargo::util::{CliResult, Config};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(Deserialize)]
@@ -74,7 +74,8 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     } = options;
 
     if registry.is_some() && !config.cli_unstable().unstable_options {
-        return Err(CargoError::from("registry option is an unstable feature and requires -Zunstable-options to use.").into());
+        return Err(format_err!("registry option is an unstable feature and \
+                                requires -Zunstable-options to use.").into())
     }
 
     // TODO: Deprecated

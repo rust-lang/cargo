@@ -2,7 +2,7 @@ use std::ffi::{OsString, OsStr};
 
 use ops::{self, Compilation};
 use util::{self, CargoTestError, Test, ProcessError};
-use util::errors::{CargoResult, CargoErrorKind, CargoError};
+use util::errors::CargoResult;
 use core::Workspace;
 
 pub struct TestOptions<'a> {
@@ -105,15 +105,12 @@ fn run_unit_tests(options: &TestOptions,
         let result = cmd.exec();
 
         match result {
-            Err(CargoError(CargoErrorKind::ProcessErrorKind(e), .. )) => {
+            Err(e) => {
+                let e = e.downcast::<ProcessError>()?;
                 errors.push((kind.clone(), test.clone(), e));
                 if !options.no_fail_fast {
                     break;
                 }
-            }
-            Err(e) => {
-                //This is an unexpected Cargo error rather than a test failure
-                return Err(e)
             }
             Ok(()) => {}
         }
@@ -206,7 +203,8 @@ fn run_doc_tests(options: &TestOptions,
             config.shell().verbose(|shell| {
                 shell.status("Running", p.to_string())
             })?;
-            if let Err(CargoError(CargoErrorKind::ProcessErrorKind(e), .. )) = p.exec() {
+            if let Err(e) = p.exec() {
+                let e = e.downcast::<ProcessError>()?;
                 errors.push(e);
                 if !options.no_fail_fast {
                     return Ok((Test::Doc, errors));

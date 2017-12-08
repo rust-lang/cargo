@@ -1,7 +1,7 @@
 pub use self::cfg::{Cfg, CfgExpr};
 pub use self::config::{Config, ConfigValue, homedir};
 pub use self::dependency_queue::{DependencyQueue, Fresh, Dirty, Freshness};
-pub use self::errors::{CargoResult, CargoResultExt, CargoError, CargoErrorKind, Test, CliResult};
+pub use self::errors::{CargoResult, CargoResultExt, CargoError, Test, CliResult};
 pub use self::errors::{CliError, ProcessError, CargoTestError};
 pub use self::errors::{process_error, internal};
 pub use self::flock::{FileLock, Filesystem};

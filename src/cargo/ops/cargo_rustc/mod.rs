@@ -14,7 +14,7 @@ use core::{Profile, Profiles, Workspace};
 use core::shell::ColorChoice;
 use util::{self, ProcessBuilder, machine_message};
 use util::{Config, internal, profile, join_paths};
-use util::errors::{CargoResult, CargoResultExt};
+use util::errors::{CargoResult, CargoResultExt, Internal};
 use util::Freshness;
 
 use self::job::{Job, Work};
@@ -422,9 +422,11 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                 format!("Could not compile `{}`.", name)
             })?;
         } else {
-            exec.exec(rustc, &package_id, &target).map_err(|e| e.into_internal()).chain_err(|| {
-                format!("Could not compile `{}`.", name)
-            })?;
+            exec.exec(rustc, &package_id, &target)
+                .map_err(Internal::new)
+                .chain_err(|| {
+                    format!("Could not compile `{}`.", name)
+                })?;
         }
 
         if do_rename && real_name != crate_name {
@@ -702,7 +704,8 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             }
         }
         state.running(&rustdoc);
-        rustdoc.exec().chain_err(|| format!("Could not document `{}`.", name))
+        rustdoc.exec().chain_err(|| format!("Could not document `{}`.", name))?;
+        Ok(())
     }))
 }
 

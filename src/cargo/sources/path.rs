@@ -10,7 +10,7 @@ use ignore::gitignore::GitignoreBuilder;
 
 use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
 use ops;
-use util::{self, CargoError, CargoResult, internal};
+use util::{self, CargoResult, internal};
 use util::Config;
 
 pub struct PathSource<'cfg> {
@@ -116,7 +116,7 @@ impl<'cfg> PathSource<'cfg> {
                 p
             };
             Pattern::new(pattern).map_err(|e| {
-                CargoError::from(format!("could not parse glob pattern `{}`: {}", p, e))
+                format_err!("could not parse glob pattern `{}`: {}", p, e)
             })
         };
 
@@ -168,10 +168,10 @@ impl<'cfg> PathSource<'cfg> {
                 ) {
                     Match::None => Ok(true),
                     Match::Ignore(_) => Ok(false),
-                    Match::Whitelist(pattern) => Err(CargoError::from(format!(
+                    Match::Whitelist(pattern) => Err(format_err!(
                         "exclude rules cannot start with `!`: {}",
                         pattern.original()
-                    ))),
+                    )),
                 }
             } else {
                 match ignore_include.matched_path_or_any_parents(
@@ -180,10 +180,10 @@ impl<'cfg> PathSource<'cfg> {
                 ) {
                     Match::None => Ok(false),
                     Match::Ignore(_) => Ok(true),
-                    Match::Whitelist(pattern) => Err(CargoError::from(format!(
+                    Match::Whitelist(pattern) => Err(format_err!(
                         "include rules cannot start with `!`: {}",
                         pattern.original()
-                    ))),
+                    )),
                 }
             }
         };
@@ -377,7 +377,7 @@ impl<'cfg> PathSource<'cfg> {
                 warn!("  found submodule {}", file_path.display());
                 let rel = util::without_prefix(&file_path, root).unwrap();
                 let rel = rel.to_str().ok_or_else(|| {
-                    CargoError::from(format!("invalid utf-8 filename: {}", rel.display()))
+                    format_err!("invalid utf-8 filename: {}", rel.display())
                 })?;
                 // Git submodules are currently only named through `/` path
                 // separators, explicitly not `\` which windows uses. Who knew?

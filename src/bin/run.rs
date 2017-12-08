@@ -2,7 +2,7 @@ use std::iter::FromIterator;
 
 use cargo::core::Workspace;
 use cargo::ops::{self, MessageFormat, Packages};
-use cargo::util::{CliResult, CliError, Config, CargoErrorKind};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::{find_root_manifest_for_wd};
 
 #[derive(Deserialize)]
@@ -118,8 +118,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
             // bad and we always want to forward that up.
             let exit = match err.exit {
                 Some(exit) => exit,
-                None => return Err(
-                    CliError::new(CargoErrorKind::ProcessErrorKind(err).into(), 101)),
+                None => return Err(CliError::new(err.into(), 101)),
             };
 
             // If `-q` was passed then we suppress extra error information about
@@ -129,7 +128,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
             Err(if options.flag_quiet == Some(true) {
                 CliError::code(exit_code)
             } else {
-                CliError::new(CargoErrorKind::ProcessErrorKind(err).into(), exit_code)
+                CliError::new(err.into(), exit_code)
             })
         }
     }
