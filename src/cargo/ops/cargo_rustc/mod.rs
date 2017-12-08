@@ -357,6 +357,8 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let exec = exec.clone();
 
     let root_output = cx.target_root().to_path_buf();
+    let pkg_root = unit.pkg.root().to_path_buf();
+    let cwd = rustc.get_cwd().unwrap_or(cx.config.cwd()).to_path_buf();
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -437,12 +439,15 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             }
         }
 
-        if fs::metadata(&rustc_dep_info_loc).is_ok() {
-            info!("Renaming dep_info {:?} to {:?}", rustc_dep_info_loc, dep_info_loc);
-            fs::rename(&rustc_dep_info_loc, &dep_info_loc).chain_err(|| {
-                internal(format!("could not rename dep info: {:?}",
-                              rustc_dep_info_loc))
-            })?;
+        if rustc_dep_info_loc.exists() {
+            fingerprint::translate_dep_info(&rustc_dep_info_loc,
+                                            &dep_info_loc,
+                                            &pkg_root,
+                                            &cwd)
+                .chain_err(|| {
+                    internal(format!("could not parse/generate dep info at: {}",
+                                     rustc_dep_info_loc.display()))
+                })?;
         }
 
         Ok(())
@@ -713,22 +718,20 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 //
 // The first returned value here is the argument to pass to rustc, and the
 // second is the cwd that rustc should operate in.
-fn path_args(cx: &Context, unit: &Unit) -> (PathBuf, Option<PathBuf>) {
+fn path_args(cx: &Context, unit: &Unit) -> (PathBuf, PathBuf) {
     let ws_root = cx.ws.root();
     let src = unit.target.src_path();
     assert!(src.is_absolute());
     match src.strip_prefix(ws_root) {
-        Ok(path) => (path.to_path_buf(), Some(ws_root.to_path_buf())),
-        Err(_) => (src.to_path_buf(), None),
+        Ok(path) => (path.to_path_buf(), ws_root.to_path_buf()),
+        Err(_) => (src.to_path_buf(), unit.pkg.root().to_path_buf()),
     }
 }
 
 fn add_path_args(cx: &Context, unit: &Unit, cmd: &mut ProcessBuilder) {
     let (arg, cwd) = path_args(cx, unit);
     cmd.arg(arg);
-    if let Some(cwd) = cwd {
-        cmd.cwd(cwd);
-    }
+    cmd.cwd(cwd);
 }
 
 fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,

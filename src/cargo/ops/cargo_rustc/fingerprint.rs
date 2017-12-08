@@ -1,8 +1,6 @@
 use std::env;
-use std::fs::{self, File};
+use std::fs;
 use std::hash::{self, Hasher};
-use std::io::prelude::*;
-use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -615,47 +613,28 @@ fn log_compare(unit: &Unit, compare: &CargoResult<()>) {
 }
 
 // Parse the dep-info into a list of paths
-pub fn parse_dep_info(cx: &Context, dep_info: &Path)
+pub fn parse_dep_info(pkg: &Package, dep_info: &Path)
     -> CargoResult<Option<Vec<PathBuf>>>
 {
-    macro_rules! fs_try {
-        ($e:expr) => (match $e { Ok(e) => e, Err(..) => return Ok(None) })
-    }
-    let f = BufReader::new(fs_try!(File::open(dep_info)));
-    let line = match f.lines().next() {
-        Some(Ok(line)) => line,
-        _ => return Ok(None),
+    let data = match paths::read_bytes(dep_info) {
+        Ok(data) => data,
+        Err(_) => return Ok(None),
     };
-    let pos = line.find(": ").ok_or_else(|| {
-        internal(format!("dep-info not in an understood format: {}",
-                         dep_info.display()))
-    })?;
-    let deps = &line[pos + 2..];
-
-    let mut paths = Vec::new();
-    let mut deps = deps.split(' ').map(|s| s.trim()).filter(|s| !s.is_empty());
-    while let Some(s) = deps.next() {
-        let mut file = s.to_string();
-        while file.ends_with('\\') {
-            file.pop();
-            file.push(' ');
-            file.push_str(deps.next().ok_or_else(|| {
-                internal("malformed dep-info format, trailing \\".to_string())
-            })?);
-        }
-
-        // Note that paths emitted in dep info files may be relative, but due to
-        // `path_args` in the module above this the relative paths are always
-        // relative to the root of a workspace.
-        paths.push(cx.ws.root().join(&file));
+    let paths = data.split(|&x| x == 0)
+        .filter(|x| !x.is_empty())
+        .map(|p| util::bytes2path(p).map(|p| pkg.root().join(p)))
+        .collect::<Result<Vec<_>, _>>()?;
+    if paths.len() == 0 {
+        Ok(None)
+    } else {
+        Ok(Some(paths))
     }
-    Ok(Some(paths))
 }
 
-fn dep_info_mtime_if_fresh(cx: &Context, dep_info: &Path)
+fn dep_info_mtime_if_fresh(pkg: &Package, dep_info: &Path)
     -> CargoResult<Option<FileTime>>
 {
-    if let Some(paths) = parse_dep_info(cx, dep_info)? {
+    if let Some(paths) = parse_dep_info(pkg, dep_info)? {
         Ok(mtime_if_fresh(dep_info, paths.iter()))
     } else {
         Ok(None)
@@ -730,3 +709,56 @@ fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
     };
     format!("{}{}-{}", flavor, kind, file_stem)
 }
+
+/// Parses the dep-info file coming out of rustc into a Cargo-specific format.
+///
+/// This function will parse `rustc_dep_info` as a makefile-style dep info to
+/// learn about the all files which a crate depends on. This is then
+/// re-serialized into the `cargo_dep_info` path in a Cargo-specific format.
+///
+/// The `pkg_root` argument here is the absolute path to the directory
+/// containing `Cargo.toml` for this crate that was compiled. The paths listed
+/// in the rustc dep-info file may or may not be absolute but we'll want to
+/// consider all of them relative to the `root` specified.
+///
+/// The `rustc_cwd` argument is the absolute path to the cwd of the compiler
+/// when it was invoked.
+///
+/// The serialized Cargo format will contain a list of files, all of which are
+/// relative if they're under `root`. or absolute if they're elsewehre.
+pub fn translate_dep_info(rustc_dep_info: &Path,
+                          cargo_dep_info: &Path,
+                          pkg_root: &Path,
+                          rustc_cwd: &Path) -> CargoResult<()> {
+    let contents = paths::read(rustc_dep_info)?;
+    let line = match contents.lines().next() {
+        Some(line) => line,
+        None => return Ok(()),
+    };
+    let pos = line.find(": ").ok_or_else(|| {
+        internal(format!("dep-info not in an understood format: {}",
+                         rustc_dep_info.display()))
+    })?;
+    let deps = &line[pos + 2..];
+
+    let mut new_contents = Vec::new();
+    let mut deps = deps.split(' ').map(|s| s.trim()).filter(|s| !s.is_empty());
+    while let Some(s) = deps.next() {
+        let mut file = s.to_string();
+        while file.ends_with('\\') {
+            file.pop();
+            file.push(' ');
+            file.push_str(deps.next().ok_or_else(|| {
+                internal("malformed dep-info format, trailing \\".to_string())
+            })?);
+        }
+
+        let absolute = rustc_cwd.join(file);
+        let path = absolute.strip_prefix(pkg_root).unwrap_or(&absolute);
+        new_contents.extend(util::path2bytes(path)?);
+        new_contents.push(0);
+    }
+    paths::write(cargo_dep_info, &new_contents)?;
+    Ok(())
+}
+
