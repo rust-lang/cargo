@@ -3,7 +3,7 @@
 extern crate curl;
 extern crate url;
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
@@ -11,46 +11,12 @@ extern crate serde_derive;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::{self, Cursor};
+use std::io::Cursor;
 
 use curl::easy::{Easy, List};
-
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
-error_chain! {
-        foreign_links {
-            Curl(curl::Error);
-            Io(io::Error);
-            Json(serde_json::Error);
-        }
-
-        errors {
-            NotOkResponse(code: u32, headers: Vec<String>, body: Vec<u8>){
-                description("failed to get a 200 OK response")
-                display("failed to get a 200 OK response, got {}
-headers:
-    {}
-body:
-{}", code, headers.join("\n    ", ), String::from_utf8_lossy(body))
-            }
-            NonUtf8Body {
-                description("response body was not utf-8")
-                display("response body was not utf-8")
-            }
-            Api(errs: Vec<String>) {
-                display("api errors: {}", errs.join(", "))
-            }
-            Unauthorized {
-                display("unauthorized API access")
-            }
-            TokenMissing{
-                display("no upload token found, please run `cargo login`")
-            }
-            NotFound {
-                display("cannot find crate")
-            }
-        }
-    }
+pub type Result<T> = std::result::Result<T, failure::Error>;
 
 pub struct Registry {
     host: String,
@@ -196,7 +162,7 @@ impl Registry {
 
         let token = match self.token.as_ref() {
             Some(s) => s,
-            None => return Err(Error::from_kind(ErrorKind::TokenMissing)),
+            None => bail!("no upload token found, please run `cargo login`"),
         };
         self.handle.put(true)?;
         self.handle.url(&url)?;
@@ -286,7 +252,7 @@ impl Registry {
         if authorized == Auth::Authorized {
             let token = match self.token.as_ref() {
                 Some(s) => s,
-                None => return Err(Error::from_kind(ErrorKind::TokenMissing)),
+                None => bail!("no upload token found, please run `cargo login`"),
             };
             headers.append(&format!("Authorization: {}", token))?;
         }
@@ -323,22 +289,28 @@ fn handle(handle: &mut Easy,
     match handle.response_code()? {
         0 => {} // file upload url sometimes
         200 => {}
-        403 => return Err(Error::from_kind(ErrorKind::Unauthorized)),
-        404 => return Err(Error::from_kind(ErrorKind::NotFound)),
-        code => return Err(Error::from_kind(ErrorKind::NotOkResponse(code, headers, body))),
+        403 => bail!("received 403 unauthorized response code"),
+        404 => bail!("received 404 not found response code"),
+        code => {
+            bail!("failed to get a 200 OK response, got {}\n\
+                   headers:\n\
+                   \t{}\n\
+                   body:\n\
+                   {}",
+                  code,
+                  headers.join("\n\t"),
+                  String::from_utf8_lossy(&body))
+        }
     }
 
     let body = match String::from_utf8(body) {
         Ok(body) => body,
-        Err(..) => return Err(Error::from_kind(ErrorKind::NonUtf8Body)),
+        Err(..) => bail!("response body was not valid utf-8"),
     };
     match serde_json::from_str::<ApiErrorList>(&body) {
         Ok(errors) => {
-            return Err(Error::from_kind(ErrorKind::Api(errors
-                                                           .errors
-                                                           .into_iter()
-                                                           .map(|s| s.detail)
-                                                           .collect())))
+            let errors = errors.errors.into_iter().map(|s| s.detail);
+            bail!("api errors: {}", errors.collect::<Vec<_>>().join(", "))
         }
         Err(..) => {}
     }

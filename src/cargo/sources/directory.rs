@@ -151,7 +151,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
     fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
         self.packages.get(id).map(|p| &p.0).cloned().ok_or_else(|| {
-            format!("failed to find package with id: {}", id).into()
+            format_err!("failed to find package with id: {}", id)
         })
     }
 

@@ -6,7 +6,7 @@ use core::source::{Source, SourceId};
 use core::GitReference;
 use core::{Package, PackageId, Summary, Registry, Dependency};
 use util::Config;
-use util::errors::{CargoError, CargoResult};
+use util::errors::{CargoResult, Internal};
 use util::hex::short_hash;
 use sources::PathSource;
 use sources::git::utils::{GitRemote, GitRevision};
@@ -76,10 +76,10 @@ fn ident(url: &Url) -> CargoResult<String> {
 pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
     let mut url = url.clone();
 
-    // cannot-be-a-base-urls are not supported 
+    // cannot-be-a-base-urls are not supported
     // eg. github.com:rust-lang-nursery/rustfmt.git
     if url.cannot_be_a_base() {
-        return Err(format!("invalid url `{}`: cannot-be-a-base-URLs are not supported", url).into());
+        bail!("invalid url `{}`: cannot-be-a-base-URLs are not supported", url)
     }
 
     // Strip a trailing slash
@@ -166,7 +166,7 @@ impl<'cfg> Source for GitSource<'cfg> {
             trace!("updating git source `{:?}`", self.remote);
 
             let repo = self.remote.checkout(&db_path, self.config)?;
-            let rev = repo.rev_for(&self.reference).map_err(CargoError::into_internal)?;
+            let rev = repo.rev_for(&self.reference).map_err(Internal::new)?;
             (repo, rev)
         } else {
             (self.remote.db_at(&db_path)?, actual_rev.unwrap())

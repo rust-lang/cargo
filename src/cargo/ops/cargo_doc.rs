@@ -23,8 +23,9 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     let (packages, resolve_with_overrides) = resolve;
 
     if specs.is_empty() {
-        return Err(format!("manifest path `{}` contains no package: The manifest is virtual, \
-                     and the workspace has no members.", ws.current_manifest().display()).into());
+        bail!("manifest path `{}` contains no package: The manifest is virtual, \
+               and the workspace has no members.",
+              ws.current_manifest().display())
     };
 
     let pkgs = specs.iter().map(|p| {

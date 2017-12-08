@@ -56,10 +56,9 @@ pub fn find_root_manifest_for_wd(manifest_path: Option<String>, cwd: &Path)
 pub fn find_project_manifest_exact(pwd: &Path, file: &str) -> CargoResult<PathBuf> {
     let manifest = pwd.join(file);
 
-    if fs::metadata(&manifest).is_ok() {
+    if manifest.exists() {
         Ok(manifest)
     } else {
-        Err(format!("Could not find `{}` in `{}`",
-                          file, pwd.display()).into())
+        bail!("Could not find `{}` in `{}`", file, pwd.display())
     }
 }

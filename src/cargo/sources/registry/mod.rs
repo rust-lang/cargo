@@ -330,9 +330,9 @@ impl<'cfg> RegistrySource<'cfg> {
             // crates.io should also block uploads with these sorts of tarballs,
             // but be extra sure by adding a check here as well.
             if !entry_path.starts_with(prefix) {
-                return Err(format!("invalid tarball downloaded, contains \
-                                    a file at {:?} which isn't under {:?}",
-                                   entry_path, prefix).into())
+                bail!("invalid tarball downloaded, contains \
+                       a file at {:?} which isn't under {:?}",
+                      entry_path, prefix)
             }
 
             // Once that's verified, unpack the entry as usual.

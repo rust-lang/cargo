@@ -21,13 +21,14 @@ pub fn load_pkg_lockfile(ws: &Workspace) -> CargoResult<Option<Resolve>> {
         format!("failed to read file: {}", f.path().display())
     })?;
 
-    (|| -> CargoResult<Option<Resolve>> {
+    let resolve = (|| -> CargoResult<Option<Resolve>> {
         let resolve : toml::Value = cargo_toml::parse(&s, f.path(), ws.config())?;
         let v: resolver::EncodableResolve = resolve.try_into()?;
         Ok(Some(v.into_resolve(ws)?))
     })().chain_err(|| {
         format!("failed to parse lock file at: {}", f.path().display())
-    })
+    })?;
+    Ok(resolve)
 }
 
 pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> {
@@ -88,7 +89,8 @@ pub fn write_pkg_lockfile(ws: &Workspace, resolve: &Resolve) -> CargoResult<()> 
     }).chain_err(|| {
         format!("failed to write {}",
                 ws.root().join("Cargo.lock").display())
-    })
+    })?;
+    Ok(())
 }
 
 fn are_equal_lockfiles(mut orig: String, current: &str, ws: &Workspace) -> bool {

@@ -15,7 +15,7 @@ use sources::registry::{RegistryData, RegistryConfig, INDEX_LOCK};
 use util::network;
 use util::{FileLock, Filesystem, LazyCell};
 use util::{Config, Sha256, ToUrl, Progress};
-use util::errors::{CargoErrorKind, CargoResult, CargoResultExt};
+use util::errors::{CargoResult, CargoResultExt, HttpNot200};
 
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
@@ -239,7 +239,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             let code = handle.response_code()?;
             if code != 200 && code != 0 {
                 let url = handle.effective_url()?.unwrap_or(&url);
-                Err(CargoErrorKind::HttpNot200(code, url.to_string()).into())
+                Err(HttpNot200 { code, url: url.to_string() }.into())
             } else {
                 Ok(())
             }

@@ -114,8 +114,8 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
             Some("test") => true,
             None => false,
             Some(profile) => {
-                let err = format!("unknown profile: `{}`, only `test` is currently supported",
-                                  profile).into();
+                let err = format_err!("unknown profile: `{}`, only `test` is \
+                                       currently supported", profile);
                 return Err(CliError::new(err, 101))
             }
         };

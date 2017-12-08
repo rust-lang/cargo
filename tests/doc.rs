@@ -10,7 +10,7 @@ use cargotest::rustc_host;
 use cargotest::support::{project, execs, path2url};
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
-use cargo::util::{CargoError, CargoErrorKind};
+use cargo::util::ProcessError;
 
 #[test]
 fn simple() {
@@ -633,7 +633,7 @@ fn output_not_captured() {
         .build();
 
     let error = p.cargo("doc").exec_with_output().err().unwrap();
-    if let CargoError(CargoErrorKind::ProcessErrorKind(perr), ..) = error {
+    if let Ok(perr) = error.downcast::<ProcessError>() {
         let output = perr.output.unwrap();
         let stderr = str::from_utf8(&output.stderr).unwrap();
 

@@ -215,7 +215,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                             return Some(Ok(Token::String(&self.orig[start+1..end])))
                         }
                     }
-                    return Some(Err("unterminated string in cfg".into()))
+                    return Some(Err(format_err!("unterminated string in cfg")))
                 }
                 Some((start, ch)) if is_ident_start(ch) => {
                     while let Some(&(end, ch)) = self.s.peek() {
@@ -228,10 +228,10 @@ impl<'a> Iterator for Tokenizer<'a> {
                     return Some(Ok(Token::Ident(&self.orig[start..])))
                 }
                 Some((_, ch)) => {
-                    return Some(Err(format!("unexpected character in \
+                    return Some(Err(format_err!("unexpected character in \
                                                    cfg `{}`, expected parens, \
                                                    a comma, an identifier, or \
-                                                   a string", ch).into()))
+                                                   a string", ch)))
                 }
                 None => return None
             }
