@@ -332,6 +332,17 @@ the new `uuid` crate applies to *both* our dependency on `uuid` and the
 version for this entire crate graph, 1.0.1, and it'll be pulled from the git
 repository.
 
+#### Overriding repository URL
+
+In case the dependency you want to override isn't loaded from `crates.io`, you'll have to change a bit how you use `[patch]`:
+
+```
+[patch."https://github.com/your/repository"]
+my-library = { path = "../my-library/path" }
+```
+
+And that's it!
+
 ### Prepublishing a breaking change
 
 As a final scenario, let's take a look at working with a new major version of a
