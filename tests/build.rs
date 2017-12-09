@@ -3971,3 +3971,34 @@ fn all_targets_no_lib() {
             -C debuginfo=2 --test [..]")
         );
 }
+
+#[test]
+fn no_linkable_target() {
+    // Issue 3169. This is currently not an error as per discussion in PR #4797
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            [dependencies]
+            the_lib = { path = "the_lib" }
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("the_lib/Cargo.toml", r#"
+            [package]
+            name = "the_lib"
+            version = "0.1.0"
+            [lib]
+            name = "the_lib"
+            crate-type = ["staticlib"]
+        "#)
+        .file("the_lib/src/lib.rs", "pub fn foo() {}")
+        .build();
+    assert_that(p.cargo("build"),
+                execs()
+                .with_status(0)
+                .with_stderr_contains("\
+                [WARNING] The package `the_lib` provides no linkable [..] \
+while compiling `foo`. [..] in `the_lib`'s Cargo.toml. [..]"));
+}

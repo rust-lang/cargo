@@ -896,12 +896,31 @@ fn build_deps_args<'a, 'cfg>(cmd: &mut ProcessBuilder,
         });
     }
 
-    for unit in cx.dep_targets(unit)?.iter() {
+    let dep_targets = cx.dep_targets(unit)?;
+
+    // If there is not one linkable target but should, rustc fails later
+    // on if there is an `extern crate` for it. This may turn into a hard
+    // error in the future, see PR #4797
+    if !dep_targets.iter().any(|u| !u.profile.doc && u.target.linkable()) {
+        if let Some(u) = dep_targets.iter()
+                         .filter(|u| !u.profile.doc && u.target.is_lib())
+                         .next() {
+                cx.config.shell().warn(format!("The package `{}` \
+provides no linkable target. The compiler might raise an error while compiling \
+`{}`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `{}`'s \
+Cargo.toml. This warning might turn into a hard error in the future.",
+                                       u.target.crate_name(),
+                                       unit.target.crate_name(),
+                                       u.target.crate_name()))?;
+            }
+    }
+
+    for unit in dep_targets {
         if unit.profile.run_custom_build {
-            cmd.env("OUT_DIR", &cx.build_script_out_dir(unit));
+            cmd.env("OUT_DIR", &cx.build_script_out_dir(&unit));
         }
         if unit.target.linkable() && !unit.profile.doc {
-            link_to(cmd, cx, unit)?;
+            link_to(cmd, cx, &unit)?;
         }
     }
 
