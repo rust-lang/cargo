@@ -31,25 +31,21 @@ impl<'a> Links<'a> {
 
             let describe_path = |pkgid: &PackageId| -> String {
                 let dep_path = resolve.path_to_top(pkgid);
-                if dep_path.is_empty() {
-                    String::from("The root-package ")
-                } else {
-                    let mut dep_path_desc = format!("Package `{}`\n", pkgid);
-                    for dep in dep_path {
-                        write!(dep_path_desc,
-                               "    ... which is depended on by `{}`\n",
-                               dep).unwrap();
-                    }
-                    dep_path_desc
+                let mut dep_path_desc = format!("package `{}`", dep_path[0]);
+                for dep in dep_path.iter().skip(1) {
+                    write!(dep_path_desc,
+                           "\n    ... which is depended on by `{}`",
+                           dep).unwrap();
                 }
+                dep_path_desc
             };
 
-            bail!("Multiple packages link to native library `{}`. \
-                   A native library can be linked only once.\n\
+            bail!("multiple packages link to native library `{}`, \
+                   but a native library can be linked only once\n\
                    \n\
-                   {}links to native library `{}`.\n\
+                   {}\nlinks to native library `{}`\n\
                    \n\
-                   {}also links to native library `{}`.",
+                   {}\nalso links to native library `{}`",
                   lib,
                   describe_path(prev), lib,
                   describe_path(pkg), lib)
