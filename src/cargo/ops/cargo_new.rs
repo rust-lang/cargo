@@ -431,6 +431,7 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
             if !fs::metadata(&path.join(".pijul")).is_ok() {
                 PijulRepo::init(path, config.cwd())?;
             }
+            paths::append(&path.join(".ignore"), ignore.as_bytes())?;
         },
         VersionControl::Fossil => {
             if !fs::metadata(&path.join(".fossil")).is_ok() {
