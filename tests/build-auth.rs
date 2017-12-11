@@ -166,14 +166,14 @@ Caused by:
   {errmsg}
 ",
         errmsg = if cfg!(windows) {
-            "[[..]] failed to send request: [..]\n"
+            "[..]failed to send request: [..]"
         } else if cfg!(target_os = "macos") {
             // OSX is difficult to tests as some builds may use
             // Security.framework and others may use OpenSSL. In that case let's
             // just not verify the error message here.
             "[..]"
         } else {
-            "[..] SSL error: [..]"
+            "[..]SSL error: [..]"
         })));
 
     t.join().ok().unwrap();
@@ -207,7 +207,7 @@ fn ssh_something_happens() {
 ", addr = addr))
                     .with_stderr_contains("\
 Caused by:
-  [[..]] failed to start SSH session: Failed getting banner
+  [..]failed to start SSH session: Failed getting banner[..]
 "));
     t.join().ok().unwrap();
 }
