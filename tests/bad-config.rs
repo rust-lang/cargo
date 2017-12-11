@@ -389,7 +389,7 @@ Caused by:
   failed to clone into: [..]
 
 Caused by:
-  [[..]] 'file:///' is not a valid local file URI
+  [..]'file:///' is not a valid local file URI[..]
 "));
 }
 
