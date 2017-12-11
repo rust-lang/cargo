@@ -277,6 +277,15 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     Ok(handle)
 }
 
+pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
+    let proxy_exists = http_proxy_exists(config)?;
+    let timeout = http_timeout(config)?;
+    let cainfo = config.get_path("http.cainfo")?;
+    let check_revoke = config.get_bool("http.check-revoke")?;
+
+    Ok(proxy_exists || timeout.is_some() || cainfo.is_some() || check_revoke.is_some())
+}
+
 /// Configure a libcurl http handle with the defaults options for Cargo
 pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<()> {
     // The timeout option for libcurl by default times out the entire transfer,
@@ -329,7 +338,7 @@ fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
 /// * `HTTP_PROXY` env var
 /// * `https_proxy` env var
 /// * `HTTPS_PROXY` env var
-pub fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
+fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     if http_proxy(config)?.is_some() {
         Ok(true)
     } else {
@@ -338,7 +347,7 @@ pub fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     }
 }
 
-pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
+fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
     if let Some(s) = config.get_i64("http.timeout")? {
         return Ok(Some(s.val))
     }
