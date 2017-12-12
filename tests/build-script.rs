@@ -254,14 +254,15 @@ fn links_duplicates() {
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] Multiple packages link to native library `a`. A native library can be \
-linked only once.
+[ERROR] multiple packages link to native library `a`, but a native library can \
+be linked only once
 
-The root-package links to native library `a`.
+package `foo v0.5.0 ([..])`
+links to native library `a`
 
-Package `a-sys v0.5.0 (file://[..])`
-    ... which is depended on by `foo v0.5.0 (file://[..])`
-also links to native library `a`.
+package `a-sys v0.5.0 ([..])`
+    ... which is depended on by `foo v0.5.0 ([..])`
+also links to native library `a`
 "));
 }
 
@@ -308,15 +309,16 @@ fn links_duplicates_deep_dependency() {
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] Multiple packages link to native library `a`. A native library can be \
-linked only once.
+[ERROR] multiple packages link to native library `a`, but a native library can \
+be linked only once
 
-The root-package links to native library `a`.
+package `foo v0.5.0 ([..])`
+links to native library `a`
 
-Package `a-sys v0.5.0 (file://[..])`
-    ... which is depended on by `a v0.5.0 (file://[..])`
-    ... which is depended on by `foo v0.5.0 (file://[..])`
-also links to native library `a`.
+package `a-sys v0.5.0 ([..])`
+    ... which is depended on by `a v0.5.0 ([..])`
+    ... which is depended on by `foo v0.5.0 ([..])`
+also links to native library `a`
 "));
 }
 
@@ -2732,5 +2734,63 @@ fn deterministic_rustc_dependency_flags() {
                     .with_stderr_contains("\
 [RUNNING] `rustc --crate-name foo [..] -L native=test1 -L native=test2 \
 -L native=test3 -L native=test4`
+"));
+}
+
+#[test]
+fn links_duplicates_with_cycle() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+            links = "a"
+            build = "build.rs"
+
+            [dependencies.a]
+            path = "a"
+
+            [dev-dependencies]
+            b = { path = "b" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("build.rs", "")
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.5.0"
+            authors = []
+            links = "a"
+            build = "build.rs"
+        "#)
+        .file("a/src/lib.rs", "")
+        .file("a/build.rs", "")
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            foo = { path = ".." }
+        "#)
+        .file("b/src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(101)
+                       .with_stderr("\
+[ERROR] multiple packages link to native library `a`, but a native library can \
+be linked only once
+
+package `foo v0.5.0 ([..])`
+    ... which is depended on by `b v0.5.0 ([..])`
+links to native library `a`
+
+package `a v0.5.0 (file://[..])`
+    ... which is depended on by `foo v0.5.0 ([..])`
+    ... which is depended on by `b v0.5.0 ([..])`
+also links to native library `a`
 "));
 }
