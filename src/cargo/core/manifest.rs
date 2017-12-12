@@ -2,6 +2,7 @@ use std::collections::{HashMap, BTreeMap};
 use std::fmt;
 use std::path::{PathBuf, Path};
 use std::rc::Rc;
+use std::hash::{Hash, Hasher};
 
 use semver::Version;
 use serde::ser;
@@ -199,7 +200,11 @@ pub struct Profiles {
 pub struct Target {
     kind: TargetKind,
     name: String,
-    src_path: PathBuf,
+    // Note that the `src_path` here is excluded from the `Hash` implementation
+    // as it's absolute currently and is otherwise a little too brittle for
+    // causing rebuilds. Instead the hash for the path that we send to the
+    // compiler is handled elsewhere.
+    src_path: NonHashedPathBuf,
     required_features: Option<Vec<String>>,
     tested: bool,
     benched: bool,
@@ -207,6 +212,17 @@ pub struct Target {
     doctest: bool,
     harness: bool, // whether to use the test harness (--test)
     for_host: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+struct NonHashedPathBuf {
+    path: PathBuf,
+}
+
+impl Hash for NonHashedPathBuf {
+    fn hash<H: Hasher>(&self, _: &mut H) {
+        // ...
+    }
 }
 
 #[derive(Serialize)]
@@ -227,7 +243,7 @@ impl ser::Serialize for Target {
             kind: &self.kind,
             crate_types: self.rustc_crate_types(),
             name: &self.name,
-            src_path: &self.src_path,
+            src_path: &self.src_path.path,
         }.serialize(s)
     }
 }
@@ -370,7 +386,7 @@ impl Target {
         Target {
             kind: TargetKind::Bin,
             name: String::new(),
-            src_path: src_path,
+            src_path: NonHashedPathBuf { path: src_path },
             required_features: None,
             doc: false,
             doctest: false,
@@ -459,7 +475,7 @@ impl Target {
 
     pub fn name(&self) -> &str { &self.name }
     pub fn crate_name(&self) -> String { self.name.replace("-", "_") }
-    pub fn src_path(&self) -> &Path { &self.src_path }
+    pub fn src_path(&self) -> &Path { &self.src_path.path }
     pub fn required_features(&self) -> Option<&Vec<String>> { self.required_features.as_ref() }
     pub fn kind(&self) -> &TargetKind { &self.kind }
     pub fn tested(&self) -> bool { self.tested }

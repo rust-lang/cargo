@@ -733,3 +733,38 @@ fn rebuild_if_environment_changes() {
 [RUNNING] `target[/]debug[/]env_change[EXE]`
 ", dir = p.url())));
 }
+
+#[test]
+fn no_rebuild_when_rename_dir() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            foo = { path = "foo" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    let mut new = p.root();
+    new.pop();
+    new.push("bar");
+    fs::rename(p.root(), &new).unwrap();
+
+    assert_that(p.cargo("build").cwd(&new),
+                execs().with_status(0)
+                .with_stderr("\
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+"));
+}
