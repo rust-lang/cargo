@@ -97,9 +97,9 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             // when a dir is removed from a different checkout. Sometimes a
             // mostly-empty dir is left behind.
             //
-            // To help work Cargo work by default in more cases we try to
-            // handle this case by default. If the directory looks like it only
-            // has dotfiles in it (or no files at all) then we skip it.
+            // To help Cargo work by default in more cases we try to handle this
+            // case by default. If the directory looks like it only has dotfiles
+            // in it (or no files at all) then we skip it.
             //
             // In general we don't want to skip completely malformed directories
             // to help with debugging, so we don't just ignore errors in
