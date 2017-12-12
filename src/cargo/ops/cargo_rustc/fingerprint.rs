@@ -1,8 +1,6 @@
 use std::env;
-use std::fs::{self, File, OpenOptions};
+use std::fs;
 use std::hash::{self, Hasher};
-use std::io::prelude::*;
-use std::io::{BufReader, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -99,8 +97,9 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     }
 
     let allow_failure = unit.profile.rustc_args.is_some();
+    let target_root = cx.target_root().to_path_buf();
     let write_fingerprint = Work::new(move |_| {
-        match fingerprint.update_local() {
+        match fingerprint.update_local(&target_root) {
             Ok(()) => {}
             Err(..) if allow_failure => return Ok(()),
             Err(e) => return Err(e)
@@ -139,6 +138,7 @@ pub struct Fingerprint {
     features: String,
     target: u64,
     profile: u64,
+    path: u64,
     #[serde(serialize_with = "serialize_deps", deserialize_with = "deserialize_deps")]
     deps: Vec<(String, Arc<Fingerprint>)>,
     local: Vec<LocalFingerprint>,
@@ -165,6 +165,7 @@ fn deserialize_deps<'de, D>(d: D) -> Result<Vec<(String, Arc<Fingerprint>)>, D::
             rustc: 0,
             target: 0,
             profile: 0,
+            path: 0,
             local: vec![LocalFingerprint::Precalculated(String::new())],
             features: String::new(),
             deps: Vec::new(),
@@ -181,15 +182,27 @@ enum LocalFingerprint {
     EnvBased(String, Option<String>),
 }
 
+impl LocalFingerprint {
+    fn mtime(root: &Path, mtime: Option<FileTime>, path: &Path)
+        -> LocalFingerprint
+    {
+        let mtime = MtimeSlot(Mutex::new(mtime));
+        assert!(path.is_absolute());
+        let path = path.strip_prefix(root).unwrap_or(path);
+        LocalFingerprint::MtimeBased(mtime, path.to_path_buf())
+    }
+}
+
 struct MtimeSlot(Mutex<Option<FileTime>>);
 
 impl Fingerprint {
-    fn update_local(&self) -> CargoResult<()> {
+    fn update_local(&self, root: &Path) -> CargoResult<()> {
         let mut hash_busted = false;
         for local in self.local.iter() {
             match *local {
                 LocalFingerprint::MtimeBased(ref slot, ref path) => {
-                    let meta = fs::metadata(path)
+                    let path = root.join(path);
+                    let meta = fs::metadata(&path)
                         .chain_err(|| {
                             internal(format!("failed to stat `{}`", path.display()))
                         })?;
@@ -227,11 +240,14 @@ impl Fingerprint {
         if self.target != old.target {
             bail!("target configuration has changed")
         }
+        if self.path != old.path {
+            bail!("path to the compiler has changed")
+        }
         if self.profile != old.profile {
             bail!("profile configuration has changed")
         }
         if self.rustflags != old.rustflags {
-            return Err(internal("RUSTFLAGS has changed"))
+            bail!("RUSTFLAGS has changed")
         }
         if self.local.len() != old.local.len() {
             bail!("local lens changed");
@@ -294,13 +310,14 @@ impl hash::Hash for Fingerprint {
             rustc,
             ref features,
             target,
+            path,
             profile,
             ref deps,
             ref local,
             memoized_hash: _,
             ref rustflags,
         } = *self;
-        (rustc, features, target, profile, local, rustflags).hash(h);
+        (rustc, features, target, path, profile, local, rustflags).hash(h);
 
         h.write_usize(deps.len());
         for &(ref name, ref fingerprint) in deps {
@@ -375,8 +392,8 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // And finally, calculate what our own local fingerprint is
     let local = if use_dep_info(unit) {
         let dep_info = dep_info_loc(cx, unit);
-        let mtime = dep_info_mtime_if_fresh(&dep_info)?;
-        LocalFingerprint::MtimeBased(MtimeSlot(Mutex::new(mtime)), dep_info)
+        let mtime = dep_info_mtime_if_fresh(unit.pkg, &dep_info)?;
+        LocalFingerprint::mtime(cx.target_root(), mtime, &dep_info)
     } else {
         let fingerprint = pkg_fingerprint(cx, unit.pkg)?;
         LocalFingerprint::Precalculated(fingerprint)
@@ -392,6 +409,9 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         rustc: util::hash_u64(&cx.config.rustc()?.verbose_version),
         target: util::hash_u64(&unit.target),
         profile: util::hash_u64(&unit.profile),
+        // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
+        // actually affect the output artifact so there's no need to hash it.
+        path: util::hash_u64(&super::path_args(cx, unit).0),
         features: format!("{:?}", cx.resolve.features_sorted(unit.pkg.package_id())),
         deps: deps,
         local: vec![local],
@@ -443,6 +463,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         rustc: 0,
         target: 0,
         profile: 0,
+        path: 0,
         features: String::new(),
         deps: Vec::new(),
         local: local,
@@ -464,7 +485,8 @@ pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // build script.
     let state = Arc::clone(&cx.build_state);
     let key = (unit.pkg.package_id().clone(), unit.kind);
-    let root = unit.pkg.root().to_path_buf();
+    let pkg_root = unit.pkg.root().to_path_buf();
+    let target_root = cx.target_root().to_path_buf();
     let write_fingerprint = Work::new(move |_| {
         if let Some(output_path) = output_path {
             let outputs = state.outputs.lock().unwrap();
@@ -472,8 +494,8 @@ pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
             if !outputs.rerun_if_changed.is_empty() ||
                !outputs.rerun_if_env_changed.is_empty() {
                 let deps = BuildDeps::new(&output_path, Some(outputs));
-                fingerprint.local = local_fingerprints_deps(&deps, &root);
-                fingerprint.update_local()?;
+                fingerprint.local = local_fingerprints_deps(&deps, &target_root, &pkg_root);
+                fingerprint.update_local(&target_root)?;
             }
         }
         write_fingerprint(&loc, &fingerprint)
@@ -516,18 +538,19 @@ fn build_script_local_fingerprints<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     // Ok so now we're in "new mode" where we can have files listed as
     // dependencies as well as env vars listed as dependencies. Process them all
     // here.
-    Ok((local_fingerprints_deps(deps, unit.pkg.root()), Some(output)))
+    Ok((local_fingerprints_deps(deps, cx.target_root(), unit.pkg.root()), Some(output)))
 }
 
-fn local_fingerprints_deps(deps: &BuildDeps, root: &Path) -> Vec<LocalFingerprint> {
+fn local_fingerprints_deps(deps: &BuildDeps, target_root: &Path, pkg_root: &Path)
+    -> Vec<LocalFingerprint>
+{
     debug!("new local fingerprints deps");
     let mut local = Vec::new();
     if !deps.rerun_if_changed.is_empty() {
         let output = &deps.build_script_output;
-        let deps = deps.rerun_if_changed.iter().map(|p| root.join(p));
+        let deps = deps.rerun_if_changed.iter().map(|p| pkg_root.join(p));
         let mtime = mtime_if_fresh(output, deps);
-        let mtime = MtimeSlot(Mutex::new(mtime));
-        local.push(LocalFingerprint::MtimeBased(mtime, output.clone()));
+        local.push(LocalFingerprint::mtime(target_root, mtime, output));
     }
 
     for var in deps.rerun_if_env_changed.iter() {
@@ -584,51 +607,34 @@ fn log_compare(unit: &Unit, compare: &CargoResult<()>) {
     };
     info!("fingerprint error for {}: {}", unit.pkg, ce);
 
-    for cause in ce.iter() {
+    for cause in ce.iter().skip(1) {
         info!("  cause: {}", cause);
     }
 }
 
 // Parse the dep-info into a list of paths
-pub fn parse_dep_info(dep_info: &Path) -> CargoResult<Option<Vec<PathBuf>>> {
-    macro_rules! fs_try {
-        ($e:expr) => (match $e { Ok(e) => e, Err(..) => return Ok(None) })
-    }
-    let mut f = BufReader::new(fs_try!(File::open(dep_info)));
-    // see comments in append_current_dir for where this cwd is manifested from.
-    let mut cwd = Vec::new();
-    if fs_try!(f.read_until(0, &mut cwd)) == 0 {
-        return Ok(None)
-    }
-    let cwd = util::bytes2path(&cwd[..cwd.len()-1])?;
-    let line = match f.lines().next() {
-        Some(Ok(line)) => line,
-        _ => return Ok(None),
+pub fn parse_dep_info(pkg: &Package, dep_info: &Path)
+    -> CargoResult<Option<Vec<PathBuf>>>
+{
+    let data = match paths::read_bytes(dep_info) {
+        Ok(data) => data,
+        Err(_) => return Ok(None),
     };
-    let pos = line.find(": ").ok_or_else(|| {
-        internal(format!("dep-info not in an understood format: {}",
-                         dep_info.display()))
-    })?;
-    let deps = &line[pos + 2..];
-
-    let mut paths = Vec::new();
-    let mut deps = deps.split(' ').map(|s| s.trim()).filter(|s| !s.is_empty());
-    while let Some(s) = deps.next() {
-        let mut file = s.to_string();
-        while file.ends_with('\\') {
-            file.pop();
-            file.push(' ');
-            file.push_str(deps.next().ok_or_else(|| {
-                internal("malformed dep-info format, trailing \\".to_string())
-            })?);
-        }
-        paths.push(cwd.join(&file));
+    let paths = data.split(|&x| x == 0)
+        .filter(|x| !x.is_empty())
+        .map(|p| util::bytes2path(p).map(|p| pkg.root().join(p)))
+        .collect::<Result<Vec<_>, _>>()?;
+    if paths.len() == 0 {
+        Ok(None)
+    } else {
+        Ok(Some(paths))
     }
-    Ok(Some(paths))
 }
 
-fn dep_info_mtime_if_fresh(dep_info: &Path) -> CargoResult<Option<FileTime>> {
-    if let Some(paths) = parse_dep_info(dep_info)? {
+fn dep_info_mtime_if_fresh(pkg: &Package, dep_info: &Path)
+    -> CargoResult<Option<FileTime>>
+{
+    if let Some(paths) = parse_dep_info(pkg, dep_info)? {
         Ok(mtime_if_fresh(dep_info, paths.iter()))
     } else {
         Ok(None)
@@ -704,19 +710,55 @@ fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
     format!("{}{}-{}", flavor, kind, file_stem)
 }
 
-// The dep-info files emitted by the compiler all have their listed paths
-// relative to whatever the current directory was at the time that the compiler
-// was invoked. As the current directory may change over time, we need to record
-// what that directory was at the beginning of the file so we can know about it
-// next time.
-pub fn append_current_dir(path: &Path, cwd: &Path) -> CargoResult<()> {
-    debug!("appending {} <- {}", path.display(), cwd.display());
-    let mut f = OpenOptions::new().read(true).write(true).open(path)?;
-    let mut contents = Vec::new();
-    f.read_to_end(&mut contents)?;
-    f.seek(SeekFrom::Start(0))?;
-    f.write_all(util::path2bytes(cwd)?)?;
-    f.write_all(&[0])?;
-    f.write_all(&contents)?;
+/// Parses the dep-info file coming out of rustc into a Cargo-specific format.
+///
+/// This function will parse `rustc_dep_info` as a makefile-style dep info to
+/// learn about the all files which a crate depends on. This is then
+/// re-serialized into the `cargo_dep_info` path in a Cargo-specific format.
+///
+/// The `pkg_root` argument here is the absolute path to the directory
+/// containing `Cargo.toml` for this crate that was compiled. The paths listed
+/// in the rustc dep-info file may or may not be absolute but we'll want to
+/// consider all of them relative to the `root` specified.
+///
+/// The `rustc_cwd` argument is the absolute path to the cwd of the compiler
+/// when it was invoked.
+///
+/// The serialized Cargo format will contain a list of files, all of which are
+/// relative if they're under `root`. or absolute if they're elsewehre.
+pub fn translate_dep_info(rustc_dep_info: &Path,
+                          cargo_dep_info: &Path,
+                          pkg_root: &Path,
+                          rustc_cwd: &Path) -> CargoResult<()> {
+    let contents = paths::read(rustc_dep_info)?;
+    let line = match contents.lines().next() {
+        Some(line) => line,
+        None => return Ok(()),
+    };
+    let pos = line.find(": ").ok_or_else(|| {
+        internal(format!("dep-info not in an understood format: {}",
+                         rustc_dep_info.display()))
+    })?;
+    let deps = &line[pos + 2..];
+
+    let mut new_contents = Vec::new();
+    let mut deps = deps.split(' ').map(|s| s.trim()).filter(|s| !s.is_empty());
+    while let Some(s) = deps.next() {
+        let mut file = s.to_string();
+        while file.ends_with('\\') {
+            file.pop();
+            file.push(' ');
+            file.push_str(deps.next().ok_or_else(|| {
+                internal("malformed dep-info format, trailing \\".to_string())
+            })?);
+        }
+
+        let absolute = rustc_cwd.join(file);
+        let path = absolute.strip_prefix(pkg_root).unwrap_or(&absolute);
+        new_contents.extend(util::path2bytes(path)?);
+        new_contents.push(0);
+    }
+    paths::write(cargo_dep_info, &new_contents)?;
     Ok(())
 }
+
