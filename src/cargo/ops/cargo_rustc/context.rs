@@ -100,7 +100,7 @@ pub struct Context<'a, 'cfg: 'a> {
     target_info: TargetInfo,
     host_info: TargetInfo,
     profiles: &'a Profiles,
-    incremental_enabled: bool,
+    incremental_env: Option<bool>,
 
     /// For each Unit, a list all files produced as a triple of
     ///
@@ -154,23 +154,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => None,
         };
 
-        // Enable incremental builds if the user opts in. For now,
-        // this is an environment variable until things stabilize a
-        // bit more.
-        let incremental_enabled = match env::var("CARGO_INCREMENTAL") {
-            Ok(v) => v == "1",
-            Err(_) => false,
+        let incremental_env = match env::var("CARGO_INCREMENTAL") {
+            Ok(v) => Some(v == "1"),
+            Err(_) => None,
         };
-
-        // -Z can only be used on nightly builds; other builds complain loudly.
-        // Since incremental builds only work on nightly anyway, we silently
-        // ignore CARGO_INCREMENTAL on anything but nightly. This allows users
-        // to always have CARGO_INCREMENTAL set without getting unexpected
-        // errors on stable/beta builds.
-        let is_nightly =
-            config.rustc()?.verbose_version.contains("-nightly") ||
-            config.rustc()?.verbose_version.contains("-dev");
-        let incremental_enabled = incremental_enabled && is_nightly;
 
         // Load up the jobserver that we'll use to manage our parallelism. This
         // is the same as the GNU make implementation of a jobserver, and
@@ -206,7 +193,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             build_explicit_deps: HashMap::new(),
             links: Links::new(),
             used_in_plugin: HashSet::new(),
-            incremental_enabled: incremental_enabled,
+            incremental_env,
             jobserver: jobserver,
             build_script_overridden: HashSet::new(),
 
@@ -1082,24 +1069,53 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        if self.incremental_enabled {
-            if unit.pkg.package_id().source_id().is_path() {
-                // Only enable incremental compilation for sources the user can modify.
-                // For things that change infrequently, non-incremental builds yield
-                // better performance.
-                // (see also https://github.com/rust-lang/cargo/issues/3972)
-                return Ok(vec![format!("-Zincremental={}",
-                                       self.layout(unit.kind).incremental().display())]);
-            } else if unit.profile.codegen_units.is_none() {
-                // For non-incremental builds we set a higher number of
-                // codegen units so we get faster compiles. It's OK to do
-                // so because the user has already opted into slower
-                // runtime code by setting CARGO_INCREMENTAL.
-                return Ok(vec![format!("-Ccodegen-units={}", ::num_cpus::get())]);
-            }
+        // There's a number of ways to configure incremental compilation right
+        // now. In order of descending priority (first is highest priority) we
+        // have:
+        //
+        // * `CARGO_INCREMENTAL` - this is blanket used unconditionally to turn
+        //   on/off incremental compilation for any cargo subcommand. We'll
+        //   respect this if set.
+        // * `build.incremental` - in `.cargo/config` this blanket key can
+        //   globally for a system configure whether incremental compilation is
+        //   enabled. Note that setting this to `true` will not actually affect
+        //   all builds though. For example a `true` value doesn't enable
+        //   release incremental builds, only dev incremental builds. This can
+        //   be useful to globally disable incremental compilation like
+        //   `CARGO_INCREMENTAL`.
+        // * `profile.dev.incremental` - in `Cargo.toml` specific profiles can
+        //   be configured to enable/disable incremental compilation. This can
+        //   be primarily used to disable incremental when buggy for a project.
+        // * Finally, each profile has a default for whether it will enable
+        //   incremental compilation or not. Primarily development profiles
+        //   have it enabled by default while release profiles have it disabled
+        //   by default.
+        let global_cfg = self.config.get_bool("build.incremental")?.map(|c| c.val);
+        let incremental = match (self.incremental_env, global_cfg, unit.profile.incremental) {
+            (Some(v), _, _) => v,
+            (None, Some(false), _) => false,
+            (None, _, other) => other,
+        };
+
+        if !incremental {
+            return Ok(Vec::new())
         }
 
-        Ok(vec![])
+        // Only enable incremental compilation for sources the user can
+        // modify (aka path sources). For things that change infrequently,
+        // non-incremental builds yield better performance in the compiler
+        // itself (aka crates.io / git dependencies)
+        //
+        // (see also https://github.com/rust-lang/cargo/issues/3972)
+        if !unit.pkg.package_id().source_id().is_path() {
+            return Ok(Vec::new())
+        }
+
+        let dir = self.layout(unit.kind).incremental().display();
+        Ok(vec![
+            "-C".to_string(),
+            format!("incremental={}", dir),
+        ])
     }
 
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {

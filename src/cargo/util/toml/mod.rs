@@ -338,6 +338,7 @@ pub struct TomlProfile {
     panic: Option<String>,
     #[serde(rename = "overflow-checks")]
     overflow_checks: Option<bool>,
+    incremental: Option<bool>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -1123,7 +1124,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
         let &TomlProfile {
             ref opt_level, lto, codegen_units, ref debug, debug_assertions, rpath,
-            ref panic, ref overflow_checks,
+            ref panic, ref overflow_checks, ref incremental,
         } = match toml {
             Some(toml) => toml,
             None => return profile,
@@ -1149,6 +1150,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
             run_custom_build: profile.run_custom_build,
             check: profile.check,
             panic: panic.clone().or(profile.panic),
+            incremental: incremental.unwrap_or(profile.incremental),
         }
     }
 }
