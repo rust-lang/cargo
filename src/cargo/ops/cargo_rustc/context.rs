@@ -292,11 +292,14 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                               crate_types: &BTreeSet<String>,
                               kind: Kind)
                               -> CargoResult<()> {
-        let rustflags = env_args(self.config,
+        let mut rustflags = env_args(self.config,
                                  &self.build_config,
                                  self.info(&kind),
                                  kind,
                                  "RUSTFLAGS")?;
+        // Any other output will confuse parsing
+        rustflags.retain(|arg| !arg.starts_with("--print="));
+
         let mut process = self.config.rustc()?.process();
         process.arg("-")
                .arg("--crate-name").arg("___")
