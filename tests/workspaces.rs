@@ -1782,3 +1782,28 @@ fn include_and_exclude() {
     assert_that(&p.root().join("foo/bar/target"), existing_dir());
 }
 */
+
+#[test]
+fn cargo_home_at_root_works() {
+    let p = project("lib")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "lib"
+            version = "0.1.0"
+
+            [workspace]
+            members = ["a"]
+        "#)
+        .file("src/lib.rs", "")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "a"
+            version = "0.1.0"
+        "#)
+        .file("a/src/lib.rs", "");
+    let p = p.build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(p.cargo("build").arg("--frozen").env("CARGO_HOME", p.root()),
+                execs().with_status(0));
+}

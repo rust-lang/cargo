@@ -333,9 +333,6 @@ impl<'cfg> Workspace<'cfg> {
         }
 
         for path in paths::ancestors(manifest_path).skip(2) {
-            if self.config.home() == path {
-                return Ok(None);
-            }
             let ances_manifest_path = path.join("Cargo.toml");
             debug!("find_root - trying {}", ances_manifest_path.display());
             if ances_manifest_path.exists() {
@@ -353,6 +350,15 @@ impl<'cfg> Workspace<'cfg> {
                     }
                     WorkspaceConfig::Member { .. } => {}
                 }
+            }
+
+            // Don't walk across `CARGO_HOME` when we're looking for the
+            // workspace root. Sometimes a project will be organized with
+            // `CARGO_HOME` pointing inside of the workspace root or in the
+            // current project, but we don't want to mistakenly try to put
+            // crates.io crates into the workspace by accident.
+            if self.config.home() == path {
+                break
             }
         }
 
