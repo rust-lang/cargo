@@ -177,6 +177,8 @@ pub struct Profile {
     pub check: bool,
     #[serde(skip_serializing)]
     pub panic: Option<String>,
+    #[serde(skip_serializing)]
+    pub incremental: bool,
 }
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
@@ -631,6 +633,7 @@ impl Profile {
             debuginfo: Some(2),
             debug_assertions: true,
             overflow_checks: true,
+            incremental: true,
             ..Profile::default()
         }
     }
@@ -712,6 +715,7 @@ impl Default for Profile {
             run_custom_build: false,
             check: false,
             panic: None,
+            incremental: false,
         }
     }
 }

@@ -102,6 +102,7 @@ rustdoc = "rustdoc"       # the doc generator tool
 target = "triple"         # build for the target triple
 target-dir = "target"     # path of where to place all generated artifacts
 rustflags = ["..", ".."]  # custom flags to pass to all compiler invocations
+incremental = true        # whether or not to enable incremental compilation
 
 [term]
 verbose = false        # whether cargo provides verbose output

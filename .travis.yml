@@ -28,8 +28,7 @@ matrix:
 
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
-      # FIXME(rust-lang/rust#46271) should use just `nightly`
-      rust: nightly-2017-11-20
+      rust: nightly
       install:
         - mdbook --help || cargo install mdbook --force
       script:

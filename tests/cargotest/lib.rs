@@ -50,12 +50,16 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      // cargo rides the trains
      .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
 
+     // For now disable incremental by default as support hasn't ridden to the
+     // stable channel yet. Once incremental support hits the stable compiler we
+     // can switch this to one and then fix the tests.
+     .env("CARGO_INCREMENTAL", "0")
+
      .env_remove("__CARGO_DEFAULT_LIB_METADATA")
      .env_remove("RUSTC")
      .env_remove("RUSTDOC")
      .env_remove("RUSTC_WRAPPER")
      .env_remove("RUSTFLAGS")
-     .env_remove("CARGO_INCREMENTAL")
      .env_remove("XDG_CONFIG_HOME")      // see #2345
      .env("GIT_CONFIG_NOSYSTEM", "1")    // keep trying to sandbox ourselves
      .env_remove("EMAIL")
