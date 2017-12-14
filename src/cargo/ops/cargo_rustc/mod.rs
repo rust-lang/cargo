@@ -551,7 +551,9 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                 #[cfg(windows)]
                 use std::os::windows::fs::symlink_dir as symlink;
 
-                symlink(src, dst)
+                let dst_dir = dst.parent().unwrap();
+                assert!(src.starts_with(dst_dir));
+                symlink(src.strip_prefix(dst_dir).unwrap(), dst)
             } else {
                 fs::hard_link(src, dst)
             };
