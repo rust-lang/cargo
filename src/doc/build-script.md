@@ -47,9 +47,13 @@ the source directory of the build script’s package.
 All the lines printed to stdout by a build script are written to a file like
 `target/debug/build/<pkg>/output` (the precise location may depend on your
 configuration). If you would like to see such output directly in your terminal,
-invoke cargo as 'very verbose' with the `-vv` flag. Any line that starts with
-`cargo:` is interpreted directly by Cargo. This line must be of the form
-`cargo:key=value`, like the examples below:
+invoke cargo as 'very verbose' with the `-vv` flag. Note that if neither the
+build script nor project source files are modified, subsequent calls to
+cargo with the `-vv` will **not** print output to the terminal because a
+new build is not executed. Run `cargo clean` before each cargo invokation
+if you want to ensure that output is always displayed on your terminal.
+Any line that starts with `cargo:` is interpreted directly by Cargo. 
+This line must be of the form `cargo:key=value`, like the examples below:
 
 ```notrust
 # specially recognized by Cargo
