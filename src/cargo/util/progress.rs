@@ -2,6 +2,7 @@ use std::cmp;
 use std::iter;
 use std::time::{Instant, Duration};
 
+use core::shell::Verbosity;
 use util::{Config, CargoResult};
 
 pub struct Progress<'cfg> {
@@ -19,6 +20,11 @@ struct State<'cfg> {
 
 impl<'cfg> Progress<'cfg> {
     pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
+        // no progress if `-q` is passed as, well, we're supposed to be quiet
+        if cfg.shell().verbosity() == Verbosity::Quiet {
+            return Progress { state: None }
+        }
+
         Progress {
             state: cfg.shell().err_width().map(|n| {
                 State {
