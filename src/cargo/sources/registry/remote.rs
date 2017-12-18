@@ -11,7 +11,7 @@ use serde_json;
 
 use core::{PackageId, SourceId};
 use sources::git;
-use sources::registry::{RegistryData, RegistryConfig, INDEX_LOCK};
+use sources::registry::{RegistryData, RegistryConfig, INDEX_LOCK, CRATE_TEMPLATE, VERSION_TEMPLATE};
 use util::network;
 use util::{FileLock, Filesystem, LazyCell};
 use util::{Config, Sha256, ToUrl, Progress};
@@ -203,11 +203,15 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         self.config.shell().status("Downloading", pkg)?;
 
         let config = self.config()?.unwrap();
-        let mut url = config.dl.to_url()?;
-        url.path_segments_mut().unwrap()
-            .push(pkg.name())
-            .push(&pkg.version().to_string())
-            .push("download");
+        let mut url = config.dl.clone();
+        if !url.contains(CRATE_TEMPLATE) && !url.contains(VERSION_TEMPLATE) {
+            let suffix = format!("/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE);
+            url.push_str(&suffix);
+        }
+        let url = url
+            .replace(CRATE_TEMPLATE, pkg.name())
+            .replace(VERSION_TEMPLATE, &pkg.version().to_string())
+            .to_url()?;
 
         // TODO: don't download into memory, but ensure that if we ctrl-c a
         //       download we should resume either from the start or the middle

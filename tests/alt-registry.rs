@@ -2,7 +2,7 @@ extern crate cargotest;
 extern crate hamcrest;
 
 use cargotest::ChannelChanger;
-use cargotest::support::registry::{self, Package, alt_dl_path};
+use cargotest::support::registry::{self, Package, alt_api_path};
 use cargotest::support::{project, execs};
 use hamcrest::assert_that;
 
@@ -374,7 +374,7 @@ fn publish_to_alt_registry() {
                 execs().with_status(0));
 
     // Ensure that the crate is uploaded
-    assert!(alt_dl_path().join("api/v1/crates/new").exists());
+    assert!(alt_api_path().join("api/v1/crates/new").exists());
 }
 
 #[test]
