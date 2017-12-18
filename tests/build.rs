@@ -95,7 +95,7 @@ fn cargo_compile_with_invalid_manifest() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  no `package` section found.
+  virtual manifests must be configured with [workspace]
 "))
 }
 

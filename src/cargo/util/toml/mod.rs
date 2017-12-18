@@ -56,30 +56,26 @@ fn do_read_manifest(contents: &str,
     })?;
 
     let manifest = Rc::new(manifest);
-    return match TomlManifest::to_real_manifest(&manifest,
-                                                source_id,
-                                                package_root,
-                                                config) {
-        Ok((mut manifest, paths)) => {
-            for key in unused {
-                manifest.add_warning(format!("unused manifest key: {}", key));
-            }
-            if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
-                bail!("no targets specified in the manifest\n  \
-                       either src/lib.rs, src/main.rs, a [lib] section, or \
-                       [[bin]] section must be present")
-            }
-            Ok((EitherManifest::Real(manifest), paths))
+    return if manifest.project.is_some() || manifest.package.is_some() {
+        let (mut manifest, paths) = TomlManifest::to_real_manifest(&manifest,
+                                                                   source_id,
+                                                                   package_root,
+                                                                   config)?;
+        for key in unused {
+            manifest.add_warning(format!("unused manifest key: {}", key));
         }
-        Err(e) => {
-            match TomlManifest::to_virtual_manifest(&manifest,
-                                                    source_id,
-                                                    package_root,
-                                                    config) {
-                Ok((m, paths)) => Ok((EitherManifest::Virtual(m), paths)),
-                Err(..) => Err(e),
-            }
+        if !manifest.targets().iter().any(|t| !t.is_custom_build()) {
+            bail!("no targets specified in the manifest\n  \
+                   either src/lib.rs, src/main.rs, a [lib] section, or \
+                   [[bin]] section must be present")
         }
+        Ok((EitherManifest::Real(manifest), paths))
+    } else {
+        let (m, paths) = TomlManifest::to_virtual_manifest(&manifest,
+                                                           source_id,
+                                                           package_root,
+                                                           config)?;
+        Ok((EitherManifest::Virtual(m), paths))
     };
 
     fn stringify(dst: &mut String, path: &serde_ignored::Path) {
