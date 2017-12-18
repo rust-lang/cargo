@@ -74,6 +74,13 @@ impl ToPkgId for (&'static str, &'static str) {
     }
 }
 
+impl ToPkgId for (&'static str, String) {
+    fn to_pkgid(&self) -> PackageId {
+        let (name, ref vers) = *self;
+        PackageId::new(name, vers, &registry_loc()).unwrap()
+    }
+}
+
 macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),+]) => ({
         let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
@@ -362,6 +369,79 @@ fn resolving_with_deep_backtracking() {
                                        ("foo", "1.0.0"),
                                        ("bar", "2.0.0"),
                                        ("baz", "1.0.1")])));
+}
+
+#[test]
+fn resolving_with_constrained_sibling_backtrack_parent() {
+    // There is no point in considering all of the backtrack_trap{1,2}
+    // candidates since they can't change the result of failing to
+    // resolve 'constrained'. Cargo should skip past them and resume
+    // resolution once the activation of the parent, 'bar', is rolled back.
+    let mut reglist = vec![
+        pkg!(("foo", "1.0.0") => [dep_req("bar", "1.0"),
+                                  dep_req("constrained", "=1.0.0")]),
+
+        pkg!(("bar", "1.0.0") => [dep_req("backtrack_trap1", "1.0.2"),
+                                  dep_req("backtrack_trap2", "1.0.2"),
+                                  dep_req("constrained", "1.0.0")]),
+        pkg!(("constrained", "1.0.0")),
+        pkg!(("backtrack_trap1", "1.0.0")),
+        pkg!(("backtrack_trap2", "1.0.0")),
+    ];
+    for i in 1..50 {
+        let vsn = format!("1.0.{}", i);
+        reglist.push(pkg!(("bar", vsn.clone()) => [dep_req("backtrack_trap1", "1.0.2"),
+                                                   dep_req("backtrack_trap2", "1.0.2"),
+                                                   dep_req("constrained", "1.0.1")]));
+        reglist.push(pkg!(("backtrack_trap1", vsn.clone())));
+        reglist.push(pkg!(("backtrack_trap2", vsn.clone())));
+        reglist.push(pkg!(("constrained", vsn.clone())));
+    }
+    let reg = registry(reglist);
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("foo", "1"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.0"),
+                                       ("bar", "1.0.0"),
+                                       ("constrained", "1.0.0")])));
+}
+
+#[test]
+fn resolving_with_constrained_sibling_backtrack_activation() {
+    // It makes sense to resolve most-constrained deps first, but
+    // with that logic the backtrack traps here come between the two
+    // attempted resolutions of 'constrained'. When backtracking,
+    // cargo should skip past them and resume resolution once the
+    // number of activations for 'constrained' changes.
+    let mut reglist = vec![
+        pkg!(("foo", "1.0.0") => [dep_req("bar", "=1.0.0"),
+                                  dep_req("backtrack_trap1", "1.0"),
+                                  dep_req("backtrack_trap2", "1.0"),
+                                  dep_req("constrained", "<=1.0.60")]),
+        pkg!(("bar", "1.0.0") => [dep_req("constrained", ">=1.0.60")]),
+    ];
+    for i in 0..45 {
+        let vsn = format!("1.0.{}", i);
+        reglist.push(pkg!(("backtrack_trap1", vsn.clone())));
+        reglist.push(pkg!(("backtrack_trap2", vsn.clone())));
+    }
+    for i in 0..100 {
+        let vsn = format!("1.0.{}", i);
+        reglist.push(pkg!(("constrained", vsn.clone())));
+    }
+    let reg = registry(reglist);
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("foo", "1"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.0"),
+                                       ("bar", "1.0.0"),
+                                       ("constrained", "1.0.60")])));
 }
 
 #[test]
