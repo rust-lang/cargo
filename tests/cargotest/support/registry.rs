@@ -21,7 +21,12 @@ pub fn dl_url() -> Url { Url::from_file_path(&*dl_path()).ok().unwrap() }
 pub fn alt_registry_path() -> PathBuf { paths::root().join("alternative-registry") }
 pub fn alt_registry() -> Url { Url::from_file_path(&*alt_registry_path()).ok().unwrap() }
 pub fn alt_dl_path() -> PathBuf { paths::root().join("alt_dl") }
-pub fn alt_dl_url() -> Url { Url::from_file_path(&*alt_dl_path()).ok().unwrap() }
+pub fn alt_dl_url() -> String {
+    let base = Url::from_file_path(&*alt_dl_path()).ok().unwrap();
+    format!("{}/{{crate}}/{{version}}/{{crate}}-{{version}}.crate", base)
+}
+pub fn alt_api_path() -> PathBuf { paths::root().join("alt_api") }
+pub fn alt_api_url() -> Url { Url::from_file_path(&*alt_api_path()).ok().unwrap() }
 
 pub struct Package {
     name: String,
@@ -76,10 +81,10 @@ pub fn init() {
     // Init an alt registry
     repo(&alt_registry_path())
         .file("config.json", &format!(r#"
-            {{"dl":"{0}","api":"{0}"}}
-        "#, alt_dl_url()))
+            {{"dl":"{}","api":"{}"}}
+        "#, alt_dl_url(), alt_api_url()))
         .build();
-    fs::create_dir_all(alt_dl_path().join("api/v1/crates")).unwrap();
+    fs::create_dir_all(alt_api_path().join("api/v1/crates")).unwrap();
 }
 
 impl Package {
@@ -300,9 +305,13 @@ impl Package {
         if self.local {
             registry_path().join(format!("{}-{}.crate", self.name,
                                          self.vers))
+        } else if self.alternative {
+            alt_dl_path()
+                .join(&self.name)
+                .join(&self.vers)
+                .join(&format!("{}-{}.crate", self.name, self.vers))
         } else {
-            let dl_path = if self.alternative { alt_dl_path() } else { dl_path() };
-            dl_path.join(&self.name).join(&self.vers).join("download")
+            dl_path().join(&self.name).join(&self.vers).join("download")
         }
     }
 }
