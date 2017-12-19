@@ -178,7 +178,9 @@ use util::hex;
 use util::to_url::ToUrl;
 
 const INDEX_LOCK: &'static str = ".cargo-index-lock";
-pub static CRATES_IO: &'static str = "https://github.com/rust-lang/crates.io-index";
+pub const CRATES_IO: &'static str = "https://github.com/rust-lang/crates.io-index";
+const CRATE_TEMPLATE: &'static str = "{crate}";
+const VERSION_TEMPLATE: &'static str = "{version}";
 
 pub struct RegistrySource<'cfg> {
     source_id: SourceId,
@@ -192,9 +194,17 @@ pub struct RegistrySource<'cfg> {
 
 #[derive(Deserialize)]
 pub struct RegistryConfig {
-    /// Download endpoint for all crates. This will be appended with
-    /// `/<crate>/<version>/download` and then will be hit with an HTTP GET
-    /// request to download the tarball for a crate.
+    /// Download endpoint for all crates.
+    ///
+    /// The string is a template which will generate the download URL for the
+    /// tarball of a specific version of a crate. The substrings `{crate}` and
+    /// `{version}` will be replaced with the crate's name and version
+    /// respectively.
+    ///
+    /// For backwards compatibility, if the string does not contain `{crate}` or
+    /// `{version}`, it will be extended with `/{crate}/{version}/download` to
+    /// support registries like crates.io which were crated before the
+    /// templating setup was created.
     pub dl: String,
 
     /// API endpoint for the registry. This is what's actually hit to perform
