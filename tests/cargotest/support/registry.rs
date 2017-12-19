@@ -22,7 +22,8 @@ pub fn alt_registry_path() -> PathBuf { paths::root().join("alternative-registry
 pub fn alt_registry() -> Url { Url::from_file_path(&*alt_registry_path()).ok().unwrap() }
 pub fn alt_dl_path() -> PathBuf { paths::root().join("alt_dl") }
 pub fn alt_dl_url() -> String {
-    format!("file://{}/{{crate}}/{{version}}/{{crate}}-{{version}}.crate", alt_dl_path().display())
+    let base = Url::from_file_path(&*alt_dl_path()).ok().unwrap();
+    format!("{}/{{crate}}/{{version}}/{{crate}}-{{version}}.crate", base)
 }
 pub fn alt_api_path() -> PathBuf { paths::root().join("alt_api") }
 pub fn alt_api_url() -> Url { Url::from_file_path(&*alt_api_path()).ok().unwrap() }
