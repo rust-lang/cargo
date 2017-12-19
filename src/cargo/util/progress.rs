@@ -1,4 +1,5 @@
 use std::cmp;
+use std::env;
 use std::iter;
 use std::time::{Instant, Duration};
 
@@ -20,8 +21,12 @@ struct State<'cfg> {
 
 impl<'cfg> Progress<'cfg> {
     pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
-        // no progress if `-q` is passed as, well, we're supposed to be quiet
-        if cfg.shell().verbosity() == Verbosity::Quiet {
+        // report no progress when -q (for quiet) or TERM=dumb are set
+        let dumb = match env::var("TERM") {
+            Ok(term) => term == "dumb",
+            Err(_) => false,
+        };
+        if cfg.shell().verbosity() == Verbosity::Quiet || dumb {
             return Progress { state: None }
         }
 
