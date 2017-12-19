@@ -226,14 +226,15 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         }
 
         let feats = cx.resolve.features(unit.pkg.package_id());
-        cx.compilation.cfgs.entry(unit.pkg.package_id().clone())
-            .or_insert_with(HashSet::new)
-            .extend(feats.iter().map(|feat| format!("feature=\"{}\"", feat)));
+        if !feats.is_empty() {
+            cx.compilation.cfgs.entry(unit.pkg.package_id().clone()).or_insert_with(|| {
+                feats.iter().map(|feat| format!("feature=\"{}\"", feat)).collect()
+            });
+        }
         let rustdocflags = cx.rustdocflags_args(&unit)?;
         if !rustdocflags.is_empty() {
             cx.compilation.rustdocflags.entry(unit.pkg.package_id().clone())
-                .or_insert_with(Vec::new)
-                .extend(rustdocflags);
+                .or_insert(rustdocflags);
         }
 
         output_depinfo(&mut cx, unit)?;
