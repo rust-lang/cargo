@@ -822,7 +822,7 @@ fn activation_error(cx: &Context,
                                         .collect::<Vec<_>>()
                                         .join(", ")));
 
-        return msg.into()
+        return format_err!("{}", msg)
     }
 
     // Once we're all the way down here, we're definitely lost in the
@@ -886,7 +886,7 @@ fn activation_error(cx: &Context,
                 dep.version_req())
     };
 
-    msg.into()
+    format_err!("{}", msg)
 }
 
 // Returns if `a` and `b` are compatible in the semver sense. This is a
@@ -1116,10 +1116,10 @@ impl<'a> Context<'a> {
 
             let mut summaries = registry.query_vec(dep)?.into_iter();
             let s = summaries.next().ok_or_else(|| {
-                format!("no matching package for override `{}` found\n\
-                         location searched: {}\n\
-                         version required: {}",
-                         spec, dep.source_id(), dep.version_req())
+                format_err!("no matching package for override `{}` found\n\
+                             location searched: {}\n\
+                             version required: {}",
+                            spec, dep.source_id(), dep.version_req())
             })?;
             let summaries = summaries.collect::<Vec<_>>();
             if !summaries.is_empty() {

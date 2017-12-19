@@ -332,8 +332,8 @@ impl Manifest {
     pub fn feature_gate(&self) -> CargoResult<()> {
         if self.im_a_teapot.is_some() {
             self.features.require(Feature::test_dummy_unstable()).chain_err(|| {
-                "the `im-a-teapot` manifest key is unstable and may not work \
-                 properly in England"
+                format_err!("the `im-a-teapot` manifest key is unstable and may \
+                             not work properly in England")
             })?;
         }
 

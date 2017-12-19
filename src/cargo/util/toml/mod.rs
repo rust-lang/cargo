@@ -30,9 +30,10 @@ pub fn read_manifest(path: &Path, source_id: &SourceId, config: &Config)
     trace!("read_manifest; path={}; source-id={}", path.display(), source_id);
     let contents = paths::read(path)?;
 
-    do_read_manifest(&contents, path, source_id, config).chain_err(|| {
+    let ret = do_read_manifest(&contents, path, source_id, config).chain_err(|| {
         format!("failed to parse manifest at `{}`", path.display())
-    })
+    })?;
+    Ok(ret)
 }
 
 fn do_read_manifest(contents: &str,
@@ -127,9 +128,8 @@ in the future.", file.display());
         return Ok(ret)
     }
 
-    Err(first_error).chain_err(|| {
-        "could not parse input as TOML"
-    })
+    let first_error = CargoError::from(first_error);
+    Err(first_error.context("could not parse input as TOML").into())
 }
 
 type TomlLibTarget = TomlTarget;
@@ -556,12 +556,12 @@ impl TomlManifest {
 
         let project = me.project.as_ref().or_else(|| me.package.as_ref());
         let project = project.ok_or_else(|| {
-            CargoError::from("no `package` section found.")
+            format_err!("no `package` section found")
         })?;
 
         let package_name = project.name.trim();
         if package_name.is_empty() {
-            bail!("package name cannot be an empty string.")
+            bail!("package name cannot be an empty string")
         }
 
         let pkgid = project.to_package_id(source_id)?;
@@ -825,9 +825,9 @@ impl TomlManifest {
             let mut dep = replacement.to_dependency(spec.name(), cx, None)?;
             {
                 let version = spec.version().ok_or_else(|| {
-                    CargoError::from(format!("replacements must specify a version \
-                             to replace, but `{}` does not",
-                            spec))
+                    format_err!("replacements must specify a version \
+                                 to replace, but `{}` does not",
+                                spec)
                 })?;
                 dep.set_version_req(VersionReq::exact(version));
             }

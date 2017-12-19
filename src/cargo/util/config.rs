@@ -108,8 +108,8 @@ impl Config {
             "couldn't get the current directory of the process"
         })?;
         let homedir = homedir(&cwd).ok_or_else(|| {
-            "Cargo couldn't find your home directory. \
-             This probably means that $HOME was not set."
+            format_err!("Cargo couldn't find your home directory. \
+                         This probably means that $HOME was not set.")
         })?;
         Ok(Config::new(shell, cwd, homedir))
     }
@@ -161,9 +161,8 @@ impl Config {
                 // The method varies per operating system and might fail; in particular,
                 // it depends on /proc being mounted on Linux, and some environments
                 // (like containers or chroots) may not have that available.
-                env::current_exe()
-                    .and_then(|path| path.canonicalize())
-                    .map_err(CargoError::from)
+                let exe = env::current_exe()?.canonicalize()?;
+                Ok(exe)
             }
 
             fn from_argv() -> CargoResult<PathBuf> {
@@ -175,36 +174,35 @@ impl Config {
                 // - an absolute path (e.g. `/usr/local/bin/cargo`).
                 // In either case, Path::canonicalize will return the full absolute path
                 // to the target if it exists
-                env::args_os()
-                    .next()
-                    .ok_or(CargoError::from("no argv[0]"))
+                let argv0 = env::args_os()
                     .map(PathBuf::from)
-                    .and_then(|argv0| {
-                        if argv0.components().count() == 1 {
-                            probe_path(argv0)
-                        } else {
-                            argv0.canonicalize().map_err(CargoError::from)
-                        }
-                    })
+                    .next()
+                    .ok_or(format_err!("no argv[0]"))?;
+                if argv0.components().count() == 1 {
+                    probe_path(argv0)
+                } else {
+                    Ok(argv0.canonicalize()?)
+                }
             }
 
             fn probe_path(argv0: PathBuf) -> CargoResult<PathBuf> {
-                let paths = env::var_os("PATH").ok_or(CargoError::from("no PATH"))?;
+                let paths = env::var_os("PATH").ok_or(format_err!("no PATH"))?;
                 for path in env::split_paths(&paths) {
                     let candidate = PathBuf::from(path).join(&argv0);
                     if candidate.is_file() {
                         // PATH may have a component like "." in it, so we still need to
                         // canonicalize.
-                        return candidate.canonicalize().map_err(CargoError::from);
+                        return Ok(candidate.canonicalize()?)
                     }
                 }
 
-                Err(CargoError::from("no cargo executable candidate found in PATH"))
+                bail!("no cargo executable candidate found in PATH")
             }
 
-            from_current_exe()
+            let exe = from_current_exe()
                 .or_else(|_| from_argv())
-                .chain_err(|| "couldn't get the path to cargo executable")
+                .chain_err(|| "couldn't get the path to cargo executable")?;
+            Ok(exe)
         }).map(AsRef::as_ref)
     }
 
@@ -214,11 +212,11 @@ impl Config {
 
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
         if self.values.borrow().is_some() {
-            return Err("Config values already found".into());
+            bail!("config values already found")
         }
         match self.values.fill(values) {
             Ok(()) => Ok(()),
-            Err(_) => Err("Could not fill values".into()),
+            Err(_) => bail!("could not fill values"),
         }
     }
 
@@ -443,7 +441,7 @@ impl Config {
 
     pub fn expected<T>(&self, ty: &str, key: &str, val: CV) -> CargoResult<T> {
         val.expected(ty, key).map_err(|e| {
-            format!("invalid configuration for key `{}`\n{}", key, e).into()
+            format_err!("invalid configuration for key `{}`\n{}", key, e)
         })
     }
 
@@ -551,7 +549,7 @@ impl Config {
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         Ok(match self.get_string(&format!("registries.{}.index", registry))? {
             Some(index) => index.val.to_url()?,
-            None => return Err(CargoError::from(format!("No index found for registry: `{}`", registry)).into()),
+            None => bail!("No index found for registry: `{}`", registry),
         })
     }
 
@@ -714,8 +712,8 @@ impl ConfigValue {
                 Ok(CV::List(val.into_iter().map(|toml| {
                     match toml {
                         toml::Value::String(val) => Ok((val, path.to_path_buf())),
-                        v => Err(format!("expected string but found {} \
-                                                in list", v.type_str()).into()),
+                        v => bail!("expected string but found {} in list",
+                                   v.type_str()),
                     }
                 }).collect::<CargoResult<_>>()?, path.to_path_buf()))
             }
@@ -844,9 +842,9 @@ impl ConfigValue {
     }
 
     pub fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
-        Err(format!("expected a {}, but found a {} for `{}` in {}",
-                    wanted, self.desc(), key,
-                    self.definition_path().display()).into())
+        bail!("expected a {}, but found a {} for `{}` in {}",
+              wanted, self.desc(), key,
+              self.definition_path().display())
     }
 }
 
@@ -889,8 +887,8 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     // in our history to be sure we pick up that standard location for
     // information.
     let home = homedir(pwd).ok_or_else(|| {
-        CargoError::from("Cargo couldn't find your home directory. \
-                          This probably means that $HOME was not set.")
+        format_err!("Cargo couldn't find your home directory. \
+                     This probably means that $HOME was not set.")
     })?;
     let config = home.join("config");
     if !stash.contains(&config) && fs::metadata(&config).is_ok() {

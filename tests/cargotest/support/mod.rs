@@ -1,5 +1,4 @@
 use std::env;
-use std::error::Error;
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
@@ -14,7 +13,7 @@ use serde_json::{self, Value};
 use url::Url;
 use hamcrest as ham;
 use cargo::util::ProcessBuilder;
-use cargo::util::{CargoError, CargoErrorKind, ProcessError};
+use cargo::util::{ProcessError};
 
 use support::paths::CargoPathExt;
 
@@ -524,13 +523,13 @@ impl Execs {
 
                 let mut matches = 0;
 
-                while let Some(..) = { 
+                while let Some(..) = {
                     if self.diff_lines(a.clone(), e.clone(), true).is_empty() {
                         matches += 1;
                     }
                     a.next()
                 } {}
-                
+
                 ham::expect(matches == number,
                             format!("expected to find {} occurences:\n\
                                      {}\n\n\
@@ -734,16 +733,14 @@ impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
 
         match res {
             Ok(out) => self.match_output(&out),
-            Err(CargoError(CargoErrorKind::ProcessErrorKind(
-                ProcessError { output: Some(ref out), .. }), ..)) => {
-                self.match_output(out)
-            }
             Err(e) => {
+                let err = e.downcast_ref::<ProcessError>();
+                if let Some(&ProcessError { output: Some(ref out), .. }) = err {
+                    return self.match_output(out)
+                }
                 let mut s = format!("could not exec process {}: {}", process, e);
-                match e.cause() {
-                    Some(cause) => s.push_str(&format!("\ncaused by: {}",
-                                                       cause.description())),
-                    None => {}
+                for cause in e.causes() {
+                    s.push_str(&format!("\ncaused by: {}", cause));
                 }
                 Err(s)
             }
@@ -862,6 +859,7 @@ fn substitute_macros(input: &str) -> String {
         ("[INSTALLING]",  "  Installing"),
         ("[REPLACING]",   "   Replacing"),
         ("[UNPACKING]",   "   Unpacking"),
+        ("[SUMMARY]",     "     Summary"),
         ("[EXE]", if cfg!(windows) {".exe"} else {""}),
         ("[/]", if cfg!(windows) {"\\"} else {"/"}),
     ];

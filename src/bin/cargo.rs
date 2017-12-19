@@ -1,5 +1,7 @@
 extern crate cargo;
 extern crate env_logger;
+#[macro_use]
+extern crate failure;
 extern crate git2_curl;
 extern crate toml;
 #[macro_use]
@@ -15,8 +17,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use cargo::core::shell::{Shell, Verbosity};
-use cargo::util::{self, CliResult, lev_distance, Config, CargoResult, CargoError, CargoErrorKind};
-use cargo::util::CliError;
+use cargo::util::{self, CliResult, lev_distance, Config, CargoResult};
+use cargo::util::{CliError, ProcessError};
 
 #[derive(Deserialize)]
 pub struct Flags {
@@ -87,7 +89,7 @@ fn main() {
         let args: Vec<_> = try!(env::args_os()
             .map(|s| {
                 s.into_string().map_err(|s| {
-                    CargoError::from(format!("invalid unicode in argument: {:?}", s))
+                    format_err!("invalid unicode in argument: {:?}", s)
                 })
             })
             .collect());
@@ -315,15 +317,15 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> C
     let command = match path {
         Some(command) => command,
         None => {
-            return Err(CargoError::from(match find_closest(config, cmd) {
-                    Some(closest) => {
-                        format!("no such subcommand: `{}`\n\n\tDid you mean `{}`?\n",
+            let err = match find_closest(config, cmd) {
+                Some(closest) => {
+                    format_err!("no such subcommand: `{}`\n\n\tDid you mean `{}`?\n",
                                 cmd,
                                 closest)
-                    }
-                    None => format!("no such subcommand: `{}`", cmd),
-                })
-                .into())
+                }
+                None => format_err!("no such subcommand: `{}`", cmd),
+            };
+            return Err(CliError::new(err, 101))
         }
     };
 
@@ -336,7 +338,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> C
         Err(e) => e,
     };
 
-    if let &CargoErrorKind::ProcessErrorKind(ref perr) = err.kind() {
+    if let Some(perr) = err.downcast_ref::<ProcessError>() {
         if let Some(code) = perr.exit.as_ref().and_then(|c| c.code()) {
             return Err(CliError::code(code));
         }

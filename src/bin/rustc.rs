@@ -104,8 +104,8 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         Some("bench") => CompileMode::Bench,
         Some("check") => CompileMode::Check {test: false},
         Some(mode) => {
-            let err = format!("unknown profile: `{}`, use dev,
-                                     test, or bench", mode).into();
+            let err = format_err!("unknown profile: `{}`, use dev,
+                                   test, or bench", mode);
             return Err(CliError::new(err, 101))
         }
     };
