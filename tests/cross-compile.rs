@@ -164,7 +164,9 @@ fn plugin_deps() {
             use rustc_plugin::Registry;
             use syntax::tokenstream::TokenTree;
             use syntax::codemap::Span;
+            use syntax::ast::*;
             use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
+            use syntax::ext::build::AstBuilder;
 
             #[plugin_registrar]
             pub fn foo(reg: &mut Registry) {
@@ -173,7 +175,7 @@ fn plugin_deps() {
 
             fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree])
                           -> Box<MacResult + 'static> {
-                MacEager::expr(quote_expr!(cx, 1))
+                MacEager::expr(cx.expr_lit(sp, LitKind::Int(1, LitIntType::Unsuffixed)))
             }
         "#)
         .build();
@@ -247,7 +249,10 @@ fn plugin_to_the_max() {
             use rustc_plugin::Registry;
             use syntax::tokenstream::TokenTree;
             use syntax::codemap::Span;
+            use syntax::ast::*;
             use syntax::ext::base::{ExtCtxt, MacEager, MacResult};
+            use syntax::ext::build::AstBuilder;
+            use syntax::ptr::P;
 
             #[plugin_registrar]
             pub fn foo(reg: &mut Registry) {
@@ -256,7 +261,9 @@ fn plugin_to_the_max() {
 
             fn expand_bar(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree])
                           -> Box<MacResult + 'static> {
-                MacEager::expr(quote_expr!(cx, baz::baz()))
+                let bar = Ident::from_str("baz");
+                let path = cx.path(sp, vec![bar.clone(), bar]);
+                MacEager::expr(cx.expr_call(sp, cx.expr_path(path), vec![]))
             }
         "#)
         .build();
