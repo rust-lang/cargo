@@ -1,4 +1,5 @@
 use std::cell::{RefCell, Ref, Cell};
+use std::fmt::Write as FmtWrite;
 use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::mem;
@@ -205,8 +206,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let config = self.config()?.unwrap();
         let mut url = config.dl.clone();
         if !url.contains(CRATE_TEMPLATE) && !url.contains(VERSION_TEMPLATE) {
-            let suffix = format!("/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE);
-            url.push_str(&suffix);
+            write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
         }
         let url = url
             .replace(CRATE_TEMPLATE, pkg.name())
