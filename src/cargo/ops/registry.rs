@@ -250,15 +250,16 @@ pub fn registry(config: &Config,
         (Some(index), _, _) | (None, Some(index), _) => SourceId::for_registry(&index.to_url()?)?,
         (None, None, _) => SourceId::crates_io(config)?,
     };
-    let api_host = {
+    let (api_host, commands) = {
         let mut src = RegistrySource::remote(&sid, config);
         src.update().chain_err(|| {
             format!("failed to update {}", sid)
         })?;
-        (src.config()?).unwrap().api.unwrap()
+        let cfg = src.config()?.unwrap();
+        (cfg.api.unwrap(), cfg.commands)
     };
     let handle = http_handle(config)?;
-    Ok((Registry::new_handle(api_host, token, handle), sid))
+    Ok((Registry::new_handle(api_host, commands, token, handle), sid))
 }
 
 /// Create a new HTTP handle with appropriate global configuration for cargo.

@@ -23,6 +23,14 @@ pub fn alt_registry() -> Url { Url::from_file_path(&*alt_registry_path()).ok().u
 pub fn alt_dl_path() -> PathBuf { paths::root().join("alt_dl") }
 pub fn alt_dl_url() -> Url { Url::from_file_path(&*alt_dl_path()).ok().unwrap() }
 
+pub const COMMANDS: &str = r#"{
+    "publish":  ["v1"],
+    "yank":     ["v1"],
+    "search":   ["v1"],
+    "owner":    ["v1"],
+    "login":    ["v1"]
+}"#;
+
 pub struct Package {
     name: String,
     vers: String,
@@ -68,16 +76,16 @@ pub fn init() {
     // Init a new registry
     let _ = repo(&registry_path())
         .file("config.json", &format!(r#"
-            {{"dl":"{0}","api":"{0}"}}
-        "#, dl_url()))
+            {{"dl":"{0}","api":"{0}","commands":{1}}}
+        "#, dl_url(), COMMANDS))
         .build();
     fs::create_dir_all(dl_path().join("api/v1/crates")).unwrap();
 
     // Init an alt registry
     repo(&alt_registry_path())
         .file("config.json", &format!(r#"
-            {{"dl":"{0}","api":"{0}"}}
-        "#, alt_dl_url()))
+            {{"dl":"{0}","api":"{0}","commands":{1}}}
+        "#, alt_dl_url(), COMMANDS))
         .build();
     fs::create_dir_all(alt_dl_path().join("api/v1/crates")).unwrap();
 }

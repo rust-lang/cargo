@@ -53,19 +53,46 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
 
     let token = match options.arg_token {
         Some(token) => token,
-        None => {
-            let host = match options.flag_registry {
-                Some(ref _registry) => {
-                    return Err(CargoError::from("token must be provided when --registry is provided.").into());
-                }
-                None => {
-                    let src = SourceId::crates_io(config)?;
-                    let mut src = RegistrySource::remote(&src, config);
-                    src.update()?;
-                    let config = src.config()?.unwrap();
-                    options.flag_host.clone().unwrap_or(config.api.unwrap())
+        None        => {
+            let host = match options.flag_host.clone() {
+                Some(host)  => host,
+                None        => {
+                    // If the host flag wasn't set, check if the registry supports the login
+                    // interface.
+                    use cargo::util::ToUrl;
+
+                    // Get the registry source ID
+                    let sid = match options.flag_registry {
+                        Some(ref registry)  => {
+                            let ops::RegistryConfig {
+                                index, ..
+                            } = ops::registry_configuration(config, Some(registry.clone()))?;
+                            match index {
+                                Some(index) => SourceId::for_registry(&index.to_url()?)?,
+                                None        => {
+                                    let err_msg = format!("registry `{}` not configured", registry);
+                                    return Err(CargoError::from(err_msg).into())
+                                }
+                            }
+                        }
+                        None            => SourceId::crates_io(config)?,
+                    };
+
+                    // Update the registry and access its configuration
+                    let mut src = RegistrySource::remote(&sid, config);
+                    src.update().chain_err(|| format!("failed to update {}", sid))?;
+                    let src_cfg = src.config()?.unwrap();
+
+                    // If the registry supports the v1 login flow, you can use its
+                    // api root as the host.
+                    if src_cfg.commands.get("login").map_or(false, |vs| vs.iter().any(|v| v == "v1")) {
+                        src_cfg.api.unwrap()
+                    } else {
+                        return Err(CargoError::from("token must be provided when --registry is provided.").into());
+                    }
                 }
             };
+
             println!("please visit {}me and paste the API Token below", host);
             let mut line = String::new();
             let input = io::stdin();

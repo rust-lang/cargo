@@ -3,6 +3,7 @@ use std::io::prelude::*;
 use std::fs::{self, File};
 
 use support::paths;
+use support::registry;
 use support::git::{repo, Repository};
 
 use url::Url;
@@ -30,8 +31,9 @@ pub fn setup() -> Repository {
     repo(&registry_path())
         .file("config.json", &format!(r#"{{
             "dl": "{0}",
-            "api": "{0}"
-        }}"#, upload()))
+            "api": "{0}",
+            "commands": {1}
+        }}"#, upload(), registry::COMMANDS))
         .build()
 }
 
