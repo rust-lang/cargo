@@ -5,7 +5,9 @@ extern crate hamcrest;
 
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::net::TcpListener;
 use std::path::Path;
+use std::thread;
 
 use cargo::util::process;
 use cargotest::sleep_ms;
@@ -865,7 +867,9 @@ Caused by:
 Caused by:
   failed to update submodule `src`
 
-To learn more, run the command again with --verbose.\n", path2url(git_project.root()));
+Caused by:
+  object not found - no match for id [..]
+", path2url(git_project.root()));
 
     assert_that(p.cargo("build"),
                 execs().with_stderr(expected).with_status(101));
@@ -2173,4 +2177,76 @@ fn invalid_git_dependency_manifest() {
                              path2url(git_root.clone()),
                              path2url(git_root),
                              )));
+}
+
+#[test]
+fn failed_submodule_checkout() {
+    let project = project("foo");
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [package]
+                name = "dep1"
+                version = "0.5.0"
+                authors = [""]
+            "#)
+    }).unwrap();
+
+    let git_project2 = git::new("dep2", |project| {
+        project.file("lib.rs", "")
+    }).unwrap();
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let t = thread::spawn(move || {
+        let a = listener.accept().unwrap();
+        drop(a);
+        let a = listener.accept().unwrap();
+        drop(a);
+    });
+
+    let repo = git2::Repository::open(&git_project2.root()).unwrap();
+    let url = format!("http://{}:{}/", addr.ip(), addr.port());
+    {
+        let mut s = repo.submodule(&url, Path::new("bar"), false).unwrap();
+        let subrepo = s.open().unwrap();
+        let mut cfg = subrepo.config().unwrap();
+        cfg.set_str("user.email", "foo@bar.com").unwrap();
+        cfg.set_str("user.name", "Foo Bar").unwrap();
+        git::commit(&subrepo);
+        s.add_finalize().unwrap();
+    }
+    git::commit(&repo);
+    drop((repo, url));
+
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let url = path2url(git_project2.root()).to_string();
+    git::add_submodule(&repo, &url, Path::new("src"));
+    git::commit(&repo);
+    drop(repo);
+
+    let project = project
+        .file("Cargo.toml", &format!(r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+            authors = []
+
+            [dependencies]
+            dep1 = {{ git = '{}' }}
+        "#, git_project.url()))
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(project.cargo("build"),
+                execs().with_status(101)
+                       .with_stderr_contains("  failed to update submodule `src`")
+                       .with_stderr_contains("  failed to update submodule `bar`"));
+    assert_that(project.cargo("build"),
+                execs().with_status(101)
+                       .with_stderr_contains("  failed to update submodule `src`")
+                       .with_stderr_contains("  failed to update submodule `bar`"));
+
+    t.join().unwrap();
 }
