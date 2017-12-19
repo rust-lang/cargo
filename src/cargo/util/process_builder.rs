@@ -9,7 +9,6 @@ use jobserver::Client;
 use shell_escape::escape;
 
 use util::{CargoResult, CargoResultExt, CargoError, process_error, read2};
-use util::errors::CargoErrorKind;
 
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
@@ -128,17 +127,16 @@ impl ProcessBuilder {
     pub fn exec(&self) -> CargoResult<()> {
         let mut command = self.build_command();
         let exit = command.status().chain_err(|| {
-            CargoErrorKind::ProcessErrorKind(
-                process_error(&format!("could not execute process `{}`",
-                                   self.debug_string()), None, None))
+            process_error(&format!("could not execute process `{}`",
+                               self.debug_string()), None, None)
         })?;
 
         if exit.success() {
             Ok(())
         } else {
-            Err(CargoErrorKind::ProcessErrorKind(process_error(
+            Err(process_error(
                 &format!("process didn't exit successfully: `{}`", self.debug_string()),
-                Some(&exit), None)).into())
+                Some(&exit), None).into())
         }
     }
 
@@ -151,9 +149,13 @@ impl ProcessBuilder {
 
         let mut command = self.build_command();
         let error = command.exec();
-        Err(CargoError::with_chain(error,
-            CargoErrorKind::ProcessErrorKind(process_error(
-                &format!("could not execute process `{}`", self.debug_string()), None, None))))
+        Err(CargoError::from(error).context(
+            process_error(
+                &format!("could not execute process `{}`", self.debug_string()),
+                None,
+                None,
+            ),
+        ).into())
     }
 
     /// On unix, executes the process using the unix syscall `execvp`, which will block this
@@ -169,18 +171,18 @@ impl ProcessBuilder {
         let mut command = self.build_command();
 
         let output = command.output().chain_err(|| {
-            CargoErrorKind::ProcessErrorKind(
-                process_error(
-                    &format!("could not execute process `{}`", self.debug_string()),
-                          None, None))
+            process_error(
+                &format!("could not execute process `{}`", self.debug_string()),
+                None,
+                None)
         })?;
 
         if output.status.success() {
             Ok(output)
         } else {
-            Err(CargoErrorKind::ProcessErrorKind(process_error(
+            Err(process_error(
                 &format!("process didn't exit successfully: `{}`", self.debug_string()),
-                Some(&output.status), Some(&output))).into())
+                Some(&output.status), Some(&output)).into())
         }
     }
 
@@ -235,10 +237,11 @@ impl ProcessBuilder {
             })?;
             child.wait()
         })().chain_err(|| {
-            CargoErrorKind::ProcessErrorKind(
-                process_error(&format!("could not execute process `{}`",
-                    self.debug_string()),
-                None, None))
+            process_error(
+                &format!("could not execute process `{}`",
+                         self.debug_string()),
+                None,
+                None)
         })?;
         let output = Output {
             stdout: stdout,
@@ -253,14 +256,16 @@ impl ProcessBuilder {
                 None
             };
             if !output.status.success() {
-                return Err(CargoErrorKind::ProcessErrorKind(process_error(
+                return Err(process_error(
                             &format!("process didn't exit successfully: `{}`", self.debug_string()),
-                            Some(&output.status), to_print)).into())
+                            Some(&output.status), to_print).into())
             } else if let Some(e) = callback_error {
-                return Err(CargoError::with_chain(e,
-                        CargoErrorKind::ProcessErrorKind(process_error(
-                                &format!("failed to parse process output: `{}`", self.debug_string()),
-                                Some(&output.status), to_print))))
+                let cx = process_error(
+                    &format!("failed to parse process output: `{}`", self.debug_string()),
+                    Some(&output.status),
+                    to_print,
+                );
+                return Err(CargoError::from(e).context(cx).into())
             }
         }
 

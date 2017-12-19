@@ -2,7 +2,7 @@
 #![cfg_attr(test, deny(warnings))]
 #![recursion_limit="128"]
 
-#[macro_use] extern crate error_chain;
+#[macro_use] extern crate failure;
 #[macro_use] extern crate log;
 #[macro_use] extern crate scoped_tls;
 #[macro_use] extern crate serde_derive;
@@ -38,25 +38,19 @@ extern crate url;
 extern crate core_foundation;
 
 use std::fmt;
-use std::error::Error;
 
-use error_chain::ChainedError;
 use serde::Deserialize;
 use serde::ser;
 use docopt::Docopt;
+use failure::Error;
 
 use core::Shell;
 use core::shell::Verbosity::Verbose;
 
-pub use util::{CargoError, CargoErrorKind, CargoResult, CliError, CliResult, Config};
+pub use util::{CargoError, CargoResult, CliError, CliResult, Config};
+pub use util::errors::Internal;
 
 pub const CARGO_ENV: &'static str = "CARGO";
-
-macro_rules! bail {
-    ($($fmt:tt)*) => (
-        return Err(::util::errors::CargoError::from(format_args!($($fmt)*).to_string()))
-    )
-}
 
 pub mod core;
 pub mod ops;
@@ -122,7 +116,7 @@ pub fn call_main_without_stdin<'de, Flags: Deserialize<'de>>(
 
     let flags = docopt.deserialize().map_err(|e| {
         let code = if e.fatal() {1} else {0};
-        CliError::new(e.to_string().into(), code)
+        CliError::new(e.into(), code)
     })?;
 
     exec(flags, config)
@@ -151,7 +145,7 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
             drop(writeln!(shell.err(), "{}", error))
         }
 
-        if !handle_cause(error, shell) || hide {
+        if !handle_cause(&error, shell) || hide {
             drop(writeln!(shell.err(), "\nTo learn more, run the command again \
                                         with --verbose."));
         }
@@ -164,44 +158,28 @@ pub fn handle_error(err: CargoError, shell: &mut Shell) {
     debug!("handle_error; err={:?}", &err);
 
     let _ignored_result = shell.error(&err);
-    handle_cause(err, shell);
+    handle_cause(&err, shell);
 }
 
-fn handle_cause<E, EKind>(cargo_err: E, shell: &mut Shell) -> bool
-    where E: ChainedError<ErrorKind=EKind> + 'static
-{
+fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
     fn print(error: String, shell: &mut Shell) {
         drop(writeln!(shell.err(), "\nCaused by:"));
         drop(writeln!(shell.err(), "  {}", error));
     }
 
-    //Error inspection in non-verbose mode requires inspecting the
-    //error kind to avoid printing Internal errors. The downcasting
-    //machinery requires &(Error + 'static), but the iterator (and
-    //underlying `cause`) return &Error. Because the borrows are
-    //constrained to this handling method, and because the original
-    //error object is constrained to be 'static, we're casting away
-    //the borrow's actual lifetime for purposes of downcasting and
-    //inspecting the error chain
-    unsafe fn extend_lifetime(r: &Error) -> &(Error + 'static) {
-        std::mem::transmute::<&Error, &Error>(r)
-    }
-
     let verbose = shell.verbosity();
 
     if verbose == Verbose {
-        //The first error has already been printed to the shell
-        //Print all remaining errors
-        for err in cargo_err.iter().skip(1) {
+        // The first error has already been printed to the shell
+        // Print all remaining errors
+        for err in cargo_err.causes().skip(1) {
             print(err.to_string(), shell);
         }
     } else {
-        //The first error has already been printed to the shell
-        //Print remaining errors until one marked as Internal appears
-        for err in cargo_err.iter().skip(1) {
-            let err = unsafe { extend_lifetime(err) };
-            if let Some(&CargoError(CargoErrorKind::Internal(..), ..)) =
-                err.downcast_ref::<CargoError>() {
+        // The first error has already been printed to the shell
+        // Print remaining errors until one marked as Internal appears
+        for err in cargo_err.causes().skip(1) {
+            if err.downcast_ref::<Internal>().is_some() {
                 return false;
             }
 

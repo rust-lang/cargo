@@ -207,7 +207,7 @@ impl<'cfg> PackageSet<'cfg> {
             internal(format!("couldn't find source for `{}`", id))
         })?;
         let pkg = source.download(id).chain_err(|| {
-            "unable to get packages from source"
+            format_err!("unable to get packages from source")
         })?;
         assert!(slot.fill(pkg).is_ok());
         Ok(slot.borrow().unwrap())

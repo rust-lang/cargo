@@ -211,7 +211,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             }
             Ok(summary)
         }).collect::<CargoResult<Vec<_>>>().chain_err(|| {
-            format!("failed to resolve patches for `{}`", url)
+            format_err!("failed to resolve patches for `{}`", url)
         })?;
 
         self.patches.insert(url.clone(), deps);
@@ -236,7 +236,8 @@ impl<'cfg> PackageRegistry<'cfg> {
             // Ensure the source has fetched all necessary remote data.
             let _p = profile::start(format!("updating: {}", source_id));
             self.sources.get_mut(source_id).unwrap().update()
-        })().chain_err(|| format!("Unable to update {}", source_id))
+        })().chain_err(|| format_err!("Unable to update {}", source_id))?;
+        Ok(())
     }
 
     fn query_overrides(&mut self, dep: &Dependency)
@@ -362,8 +363,8 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
 
                 // Ensure the requested source_id is loaded
                 self.ensure_loaded(dep.source_id(), Kind::Normal).chain_err(|| {
-                    format!("failed to load source for a dependency \
-                             on `{}`", dep.name())
+                    format_err!("failed to load source for a dependency \
+                                 on `{}`", dep.name())
                 })?;
 
                 let source = self.sources.get_mut(dep.source_id());

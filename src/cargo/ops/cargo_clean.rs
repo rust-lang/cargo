@@ -98,11 +98,11 @@ fn rm_rf(path: &Path) -> CargoResult<()> {
     let m = fs::metadata(path);
     if m.as_ref().map(|s| s.is_dir()).unwrap_or(false) {
         fs::remove_dir_all(path).chain_err(|| {
-            "could not remove build directory"
+            format_err!("could not remove build directory")
         })?;
     } else if m.is_ok() {
         fs::remove_file(path).chain_err(|| {
-            "failed to remove build artifact"
+            format_err!("failed to remove build artifact")
         })?;
     }
     Ok(())

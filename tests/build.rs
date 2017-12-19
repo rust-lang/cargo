@@ -222,7 +222,7 @@ fn cargo_compile_with_invalid_package_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  package name cannot be an empty string.
+  package name cannot be an empty string
 "))
 }
 

@@ -2,7 +2,7 @@ use std::env;
 
 use cargo::core::Workspace;
 use cargo::ops::{self, MessageFormat, Packages};
-use cargo::util::{CliResult, CliError, Config, CargoErrorKind};
+use cargo::util::{CliResult, CliError, Config};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
 #[derive(Deserialize)]
@@ -177,8 +177,8 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         None => Ok(()),
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
-                Some(i) => CliError::new(err.hint().into(), i),
-                None => CliError::new(CargoErrorKind::CargoTestErrorKind(err).into(), 101),
+                Some(i) => CliError::new(format_err!("{}", err.hint()), i),
+                None => CliError::new(err.into(), 101),
             })
         }
     }

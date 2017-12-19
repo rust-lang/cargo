@@ -93,7 +93,7 @@ impl SourceId {
     pub fn from_url(string: &str) -> CargoResult<SourceId> {
         let mut parts = string.splitn(2, '+');
         let kind = parts.next().unwrap();
-        let url = parts.next().ok_or_else(|| format!("invalid source `{}`", string))?;
+        let url = parts.next().ok_or_else(|| format_err!("invalid source `{}`", string))?;
 
         match kind {
             "git" => {
@@ -124,7 +124,7 @@ impl SourceId {
                 let url = url.to_url()?;
                 SourceId::new(Kind::Path, url)
             }
-            kind => Err(format!("unsupported source protocol: {}", kind).into())
+            kind => Err(format_err!("unsupported source protocol: {}", kind))
         }
     }
 

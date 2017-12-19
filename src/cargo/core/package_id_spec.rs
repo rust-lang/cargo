@@ -6,7 +6,7 @@ use url::Url;
 
 use core::PackageId;
 use util::{ToUrl, ToSemver};
-use util::errors::{CargoError, CargoResult, CargoResultExt};
+use util::errors::{CargoResult, CargoResultExt};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct PackageIdSpec {
@@ -49,7 +49,7 @@ impl PackageIdSpec {
         where I: IntoIterator<Item=&'a PackageId>
     {
         let spec = PackageIdSpec::parse(spec).chain_err(|| {
-            format!("invalid package id specification: `{}`", spec)
+            format_err!("invalid package id specification: `{}`", spec)
         })?;
         spec.query(i)
     }
@@ -70,11 +70,11 @@ impl PackageIdSpec {
         url.set_fragment(None);
         let (name, version) = {
             let mut path = url.path_segments().ok_or_else(|| {
-                CargoError::from(format!("pkgid urls must have a path: {}", url))
+                format_err!("pkgid urls must have a path: {}", url)
             })?;
             let path_name = path.next_back().ok_or_else(|| {
-                CargoError::from(format!("pkgid urls must have at least one path \
-                                          component: {}", url))
+                format_err!("pkgid urls must have at least one path \
+                             component: {}", url)
             })?;
             match frag {
                 Some(fragment) => {
@@ -150,7 +150,7 @@ impl PackageIdSpec {
                 let mut vec = vec![ret, other];
                 vec.extend(ids);
                 minimize(&mut msg, &vec, self);
-                Err(msg.into())
+                Err(format_err!("{}", msg))
             }
             None => Ok(ret)
         };

@@ -33,7 +33,6 @@ use core::resolver::Resolve;
 use ops::{self, BuildOutput, Executor, DefaultExecutor};
 use util::config::Config;
 use util::{CargoResult, profile};
-use util::errors::{CargoResultExt, CargoError};
 
 /// Contains information about how a package should be compiled.
 #[derive(Debug)]
@@ -194,10 +193,10 @@ pub fn compile_with_exec<'a>(ws: &Workspace<'a>,
     for member in ws.members() {
         for warning in member.manifest().warnings().iter() {
             if warning.is_critical {
-                let err: CargoResult<_> = Err(CargoError::from(warning.message.to_owned()));
-                return err.chain_err(|| {
-                    format!("failed to parse manifest at `{}`", member.manifest_path().display())
-                })
+                let err = format_err!("{}", warning.message);
+                let cx = format_err!("failed to parse manifest at `{}`",
+                                     member.manifest_path().display());
+                return Err(err.context(cx).into())
             } else {
                 options.config.shell().warn(&warning.message)?
             }
@@ -236,9 +235,10 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     let (packages, resolve_with_overrides) = resolve;
 
     if specs.is_empty() {
-        return Err(format!("manifest path `{}` contains no package: The manifest is virtual, \
-                     and the workspace has no members.", ws.current_manifest().display()).into());
-    };
+        bail!("manifest path `{}` contains no package: The manifest is virtual, \
+               and the workspace has no members.",
+              ws.current_manifest().display())
+    }
 
     let to_builds = specs.iter().map(|p| {
         let pkgid = p.query(resolve_with_overrides.iter())?;

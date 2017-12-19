@@ -4,7 +4,7 @@ use std::io;
 use cargo::ops;
 use cargo::core::{SourceId, Source};
 use cargo::sources::RegistrySource;
-use cargo::util::{CargoError, CliResult, CargoResultExt, Config};
+use cargo::util::{CliResult, CargoResultExt, Config, CargoError};
 
 #[derive(Deserialize)]
 pub struct Options {
@@ -48,7 +48,8 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      &options.flag_z)?;
 
     if options.flag_registry.is_some() && !config.cli_unstable().unstable_options {
-        return Err(CargoError::from("registry option is an unstable feature and requires -Zunstable-options to use.").into());
+        return Err(format_err!("registry option is an unstable feature and \
+                                requires -Zunstable-options to use.").into());
     }
 
     let token = match options.arg_token {
@@ -56,7 +57,8 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         None => {
             let host = match options.flag_registry {
                 Some(ref _registry) => {
-                    return Err(CargoError::from("token must be provided when --registry is provided.").into());
+                    return Err(format_err!("token must be provided when \
+                                            --registry is provided.").into())
                 }
                 None => {
                     let src = SourceId::crates_io(config)?;
@@ -71,7 +73,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
             let input = io::stdin();
             input.lock().read_line(&mut line).chain_err(|| {
                 "failed to read stdin"
-            })?;
+            }).map_err(CargoError::from)?;
             line.trim().to_string()
         }
     };

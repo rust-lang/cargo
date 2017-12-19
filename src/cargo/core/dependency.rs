@@ -350,9 +350,10 @@ impl FromStr for Platform {
     fn from_str(s: &str) -> CargoResult<Platform> {
         if s.starts_with("cfg(") && s.ends_with(')') {
             let s = &s[4..s.len()-1];
-            s.parse().map(Platform::Cfg).chain_err(|| {
-                format!("failed to parse `{}` as a cfg expression", s)
-            })
+            let p = s.parse().map(Platform::Cfg).chain_err(|| {
+                format_err!("failed to parse `{}` as a cfg expression", s)
+            })?;
+            Ok(p)
         } else {
             Ok(Platform::Name(s.to_string()))
         }

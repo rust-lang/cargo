@@ -1,101 +1,74 @@
 #![allow(unknown_lints)]
 
-use std::error::Error;
 use std::fmt;
-use std::io;
-use std::num;
 use std::process::{Output, ExitStatus};
 use std::str;
-use std::string;
 
 use core::TargetKind;
+use failure::{Context, Error, Fail};
 
-use curl;
-use git2;
-use semver;
-use serde_json;
-use toml;
-use registry;
-use ignore;
+pub use failure::Error as CargoError;
+pub type CargoResult<T> = Result<T, Error>;
 
-error_chain! {
-    types {
-        CargoError, CargoErrorKind, CargoResultExt, CargoResult;
-    }
+pub trait CargoResultExt<T, E> {
+    fn chain_err<F, D>(self, f: F) -> Result<T, Context<D>>
+        where F: FnOnce() -> D,
+              D: fmt::Display + Send + Sync + 'static;
+}
 
-    links {
-        CrateRegistry(registry::Error, registry::ErrorKind);
-    }
-
-    foreign_links {
-        ParseSemver(semver::ReqParseError);
-        Semver(semver::SemVerError);
-        Ignore(ignore::Error);
-        Io(io::Error);
-        SerdeJson(serde_json::Error);
-        TomlSer(toml::ser::Error);
-        TomlDe(toml::de::Error);
-        ParseInt(num::ParseIntError);
-        ParseBool(str::ParseBoolError);
-        Parse(string::ParseError);
-        Git(git2::Error);
-        Curl(curl::Error);
-    }
-
-    errors {
-        Internal(err: Box<CargoErrorKind>) {
-            description(err.description())
-            display("{}", *err)
-        }
-        ProcessErrorKind(proc_err: ProcessError) {
-            description(&proc_err.desc)
-            display("{}", &proc_err.desc)
-        }
-        CargoTestErrorKind(test_err: CargoTestError) {
-            description(&test_err.desc)
-            display("{}", &test_err.desc)
-        }
-        HttpNot200(code: u32, url: String) {
-            description("failed to get a 200 response")
-            display("failed to get 200 response from `{}`, got {}", url, code)
-        }
+impl<T, E> CargoResultExt<T, E> for Result<T, E>
+	where E: Into<Error>,
+{
+    fn chain_err<F, D>(self, f: F) -> Result<T, Context<D>>
+        where F: FnOnce() -> D,
+              D: fmt::Display + Send + Sync + 'static,
+    {
+        self.map_err(|failure| {
+            let context = f();
+            failure.into().context(context)
+        })
     }
 }
 
-impl CargoError {
-    pub fn into_internal(self) -> Self {
-        CargoError(CargoErrorKind::Internal(Box::new(self.0)), self.1)
-    }
+#[derive(Debug, Fail)]
+#[fail(display = "failed to get 200 response from `{}`, got {}", url, code)]
+pub struct HttpNot200 {
+    pub code: u32,
+    pub url: String,
+}
 
-    fn is_human(&self) -> bool {
-        match self.0 {
-            CargoErrorKind::Msg(_) |
-            CargoErrorKind::TomlSer(_) |
-            CargoErrorKind::TomlDe(_) |
-            CargoErrorKind::Curl(_) |
-            CargoErrorKind::HttpNot200(..) |
-            CargoErrorKind::ProcessErrorKind(_) |
-            CargoErrorKind::CrateRegistry(_) => true,
-            CargoErrorKind::ParseSemver(_) |
-            CargoErrorKind::Semver(_) |
-            CargoErrorKind::Ignore(_) |
-            CargoErrorKind::Io(_) |
-            CargoErrorKind::SerdeJson(_) |
-            CargoErrorKind::ParseInt(_) |
-            CargoErrorKind::ParseBool(_) |
-            CargoErrorKind::Parse(_) |
-            CargoErrorKind::Git(_) |
-            CargoErrorKind::Internal(_) |
-            CargoErrorKind::CargoTestErrorKind(_) |
-            CargoErrorKind::__Nonexhaustive { .. } => false
-        }
+pub struct Internal {
+    inner: Error,
+}
+
+impl Internal {
+    pub fn new(inner: Error) -> Internal {
+        Internal { inner }
     }
 }
 
+impl Fail for Internal {
+    fn cause(&self) -> Option<&Fail> {
+        self.inner.cause().cause()
+    }
+}
+
+impl fmt::Debug for Internal {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.inner.fmt(f)
+    }
+}
+
+impl fmt::Display for Internal {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.inner.fmt(f)
+    }
+}
 
 // =============================================================================
 // Process errors
-#[derive(Debug)]
+#[derive(Debug, Fail)]
+#[fail(display = "{}", desc)]
 pub struct ProcessError {
     pub desc: String,
     pub exit: Option<ExitStatus>,
@@ -106,7 +79,8 @@ pub struct ProcessError {
 // Cargo test errors.
 
 /// Error when testcases fail
-#[derive(Debug)]
+#[derive(Debug, Fail)]
+#[fail(display = "{}", desc)]
 pub struct CargoTestError {
     pub test: Test,
     pub desc: String,
@@ -168,31 +142,10 @@ pub struct CliError {
     pub exit_code: i32
 }
 
-impl Error for CliError {
-    fn description(&self) -> &str {
-        self.error.as_ref().map(|e| e.description())
-            .unwrap_or("unknown cli error")
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        self.error.as_ref().and_then(|e| e.cause())
-    }
-}
-
-impl fmt::Display for CliError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(ref error) = self.error {
-            error.fmt(f)
-        } else {
-            self.description().fmt(f)
-        }
-    }
-}
-
 impl CliError {
     pub fn new(error: CargoError, code: i32) -> CliError {
-        let human = &error.is_human();
-        CliError { error: Some(error), exit_code: code, unknown: !human }
+        let unknown = error.downcast_ref::<Internal>().is_some();
+        CliError { error: Some(error), exit_code: code, unknown }
     }
 
     pub fn code(code: i32) -> CliError {
@@ -284,5 +237,5 @@ pub fn internal<S: fmt::Display>(error: S) -> CargoError {
 }
 
 fn _internal(error: &fmt::Display) -> CargoError {
-    CargoError::from_kind(error.to_string().into()).into_internal()
+    Internal::new(format_err!("{}", error)).into()
 }
