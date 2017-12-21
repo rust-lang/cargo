@@ -82,7 +82,7 @@ pub fn package(ws: &Workspace,
     })?;
     if opts.verify {
         dst.seek(SeekFrom::Start(0))?;
-        run_verify(ws, dst.file(), opts).chain_err(|| {
+        run_verify(ws, &dst, opts).chain_err(|| {
             "failed to verify package tarball"
         })?
     }
@@ -276,15 +276,14 @@ fn tar(ws: &Workspace,
     Ok(())
 }
 
-fn run_verify(ws: &Workspace, tar: &File, opts: &PackageOpts) -> CargoResult<()> {
+fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult<()> {
     let config = ws.config();
     let pkg = ws.current()?;
 
     config.shell().status("Verifying", pkg)?;
 
-    let f = GzDecoder::new(tar)?;
-    let dst = pkg.root().join(&format!("target/package/{}-{}",
-                                       pkg.name(), pkg.version()));
+    let f = GzDecoder::new(tar.file())?;
+    let dst = tar.parent().join(&format!("{}-{}", pkg.name(), pkg.version()));
     if fs::metadata(&dst).is_ok() {
         fs::remove_dir_all(&dst)?;
     }
