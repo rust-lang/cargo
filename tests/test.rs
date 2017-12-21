@@ -2939,3 +2939,24 @@ fn test_hint_not_masked_by_doctest() {
                 .with_stderr_contains("[ERROR] test failed, to rerun pass \
                                       '--test integ'"));
 }
+
+#[test]
+fn cargo_test_bin_helper() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "pub fn main() {}")
+        .file("tests/bin/bin_helper.rs", "pub fn main() {}")
+        .file("tests/bin.rs", r#"
+            #[test]
+            fn test_helper() {
+            use std::process::Command;
+
+            let status = Command::new("target/debug/bin_helper")
+                                .status()
+                                .expect("Failed to start binary helper");
+            assert!(status.success());
+        }"#)
+        .build();
+
+    assert_that(p.cargo("test"), execs().with_status(0));
+}

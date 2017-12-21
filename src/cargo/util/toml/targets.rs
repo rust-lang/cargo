@@ -246,19 +246,23 @@ fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
                package_root: &Path,
                errors: &mut Vec<String>) -> CargoResult<Vec<Target>> {
 
-    let inferred = infer_from_directory(&package_root.join("tests"));
+    let tests_path = package_root.join("tests");
+    let mut result = Vec::new();
 
+    let inferred = infer_from_directory(&tests_path.join("bin"));
+    if !inferred.is_empty() {
+        let targets = clean_targets("test_bin", "test_bin",
+                                    toml_tests, &inferred,
+                                    package_root, errors)?;
+        result.extend(configure_targets(targets, &Target::bin_target));
+    }
+
+    let inferred = infer_from_directory(&tests_path);
     let targets = clean_targets("test", "test",
                                 toml_tests, &inferred,
                                 package_root, errors)?;
 
-    let mut result = Vec::new();
-    for (path, toml) in targets {
-        let mut target = Target::test_target(&toml.name(), path,
-                                             toml.required_features.clone());
-        configure(&toml, &mut target);
-        result.push(target);
-    }
+    result.extend(configure_targets(targets, &Target::test_target));
     Ok(result)
 }
 
@@ -287,15 +291,7 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
                                                  errors,
                                                  &mut legacy_bench_path)?;
 
-    let mut result = Vec::new();
-    for (path, toml) in targets {
-        let mut target = Target::bench_target(&toml.name(), path,
-                                              toml.required_features.clone());
-        configure(&toml, &mut target);
-        result.push(target);
-    }
-
-    Ok(result)
+    Ok(configure_targets(targets, &Target::bench_target))
 }
 
 fn clean_targets(target_kind_human: &str, target_kind: &str,
@@ -460,6 +456,17 @@ fn configure(toml: &TomlTarget, target: &mut Target) {
             (Some(true), _) | (_, Some(true)) => true,
             (Some(false), _) | (_, Some(false)) => false,
         });
+}
+
+fn configure_targets(targets: Vec<(PathBuf, TomlTarget)>,
+                     f: &Fn(&str, PathBuf, Option<Vec<String>>) -> Target) -> Vec<Target> {
+    let mut result = Vec::new();
+    for (path, toml) in targets {
+        let mut target = f(&toml.name(), path, toml.required_features.clone());
+        configure(&toml, &mut target);
+        result.push(target);
+    }
+    result
 }
 
 fn target_path(target: &TomlTarget,
