@@ -348,7 +348,6 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     }.with_extension("d");
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
-    rustc.args(&cx.incremental_args(unit)?);
     rustc.args(&cx.rustflags_args(unit)?);
     let json_messages = cx.build_config.json_messages;
     let package_id = unit.pkg.package_id().clone();
@@ -651,7 +650,7 @@ fn prepare_rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                            unit: &Unit<'a>) -> CargoResult<ProcessBuilder> {
     let mut base = cx.compilation.rustc_process(unit.pkg)?;
     base.inherit_jobserver(&cx.jobserver);
-    build_base_args(cx, &mut base, unit, crate_types);
+    build_base_args(cx, &mut base, unit, crate_types)?;
     build_deps_args(&mut base, cx, unit)?;
     Ok(base)
 }
@@ -743,11 +742,11 @@ fn add_path_args(cx: &Context, unit: &Unit, cmd: &mut ProcessBuilder) {
 fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                              cmd: &mut ProcessBuilder,
                              unit: &Unit<'a>,
-                             crate_types: &[&str]) {
+                             crate_types: &[&str]) -> CargoResult<()> {
     let Profile {
         ref opt_level, lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, overflow_checks, rpath, test, doc: _doc,
-        run_custom_build, ref panic, rustdoc_args: _, check,
+        run_custom_build, ref panic, rustdoc_args: _, check, incremental: _,
     } = *unit.profile;
     assert!(!run_custom_build);
 
@@ -888,6 +887,9 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
     opt(cmd, "-C", "ar=", cx.ar(unit.kind).map(|s| s.as_ref()));
     opt(cmd, "-C", "linker=", cx.linker(unit.kind).map(|s| s.as_ref()));
+    cmd.args(&cx.incremental_args(unit)?);
+
+    Ok(())
 }
 
 

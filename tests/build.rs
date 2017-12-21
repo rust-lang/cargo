@@ -58,14 +58,88 @@ fn cargo_compile_incremental() {
     assert_that(
         p.cargo("build").arg("-v").env("CARGO_INCREMENTAL", "1"),
         execs().with_stderr_contains(
-            "[RUNNING] `rustc [..] -Zincremental=[..][/]target[/]debug[/]incremental`\n")
+            "[RUNNING] `rustc [..] -C incremental=[..][/]target[/]debug[/]incremental[..]`\n")
             .with_status(0));
 
     assert_that(
         p.cargo("test").arg("-v").env("CARGO_INCREMENTAL", "1"),
         execs().with_stderr_contains(
-            "[RUNNING] `rustc [..] -Zincremental=[..][/]target[/]debug[/]incremental`\n")
+            "[RUNNING] `rustc [..] -C incremental=[..][/]target[/]debug[/]incremental[..]`\n")
                .with_status(0));
+}
+
+#[test]
+fn incremental_profile() {
+    if !is_nightly() {
+        return
+    }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [profile.dev]
+            incremental = false
+
+            [profile.release]
+            incremental = true
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("-v").env_remove("CARGO_INCREMENTAL"),
+        execs().with_stderr_does_not_contain("[..]C incremental=[..]")
+            .with_status(0));
+
+    assert_that(
+        p.cargo("build").arg("-v").env("CARGO_INCREMENTAL", "1"),
+        execs().with_stderr_contains("[..]C incremental=[..]")
+            .with_status(0));
+
+    assert_that(
+        p.cargo("build").arg("--release").arg("-v").env_remove("CARGO_INCREMENTAL"),
+        execs().with_stderr_contains("[..]C incremental=[..]")
+            .with_status(0));
+
+    assert_that(
+        p.cargo("build").arg("--release").arg("-v").env("CARGO_INCREMENTAL", "0"),
+        execs().with_stderr_does_not_contain("[..]C incremental=[..]")
+            .with_status(0));
+}
+
+#[test]
+fn incremental_config() {
+    if !is_nightly() {
+        return
+    }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file(".cargo/config", r#"
+            [build]
+            incremental = false
+        "#)
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("-v").env_remove("CARGO_INCREMENTAL"),
+        execs().with_stderr_does_not_contain("[..]C incremental=[..]")
+            .with_status(0));
+
+    assert_that(
+        p.cargo("build").arg("-v").env("CARGO_INCREMENTAL", "1"),
+        execs().with_stderr_contains("[..]C incremental=[..]")
+            .with_status(0));
 }
 
 #[test]
