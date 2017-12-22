@@ -159,13 +159,17 @@ fn install_one(root: &Filesystem,
     };
 
     let mut td_opt = None;
+    let mut needs_cleanup = false;
     let overidden_target_dir = if source_id.is_path() {
         None
+    } else if let Some(dir) = config.target_dir()? {
+        Some(dir)
     } else if let Ok(td) = TempDir::new("cargo-install") {
         let p = td.path().to_owned();
         td_opt = Some(td);
         Some(Filesystem::new(p))
     } else {
+        needs_cleanup = true;
         Some(Filesystem::new(config.cwd().join("target-install")))
     };
 
@@ -311,7 +315,7 @@ fn install_one(root: &Filesystem,
 
     // Reaching here means all actions have succeeded. Clean up.
     installed.success();
-    if !source_id.is_path() {
+    if needs_cleanup {
         // Don't bother grabbing a lock as we're going to blow it all away
         // anyway.
         let target_dir = ws.target_dir().into_path_unlocked();
