@@ -42,6 +42,10 @@ will install the crate in the current directory.
 That is, \f[I]install\f[] is equivalent to the more explicit "install
 \-\-path .".
 .PP
+If the source is crates.io or \f[B]\-\-git\f[] then by default the crate will be built in a temporary target directory.
+To avoid this, the target directory can be specified by setting the \f[B]CARGO_TARGET_DIR\f[] environment variable to a relative path.
+In particular, this can be useful for caching build artifacts on continuous integration systems.
+.PP
 The \f[B]\-\-list\f[] option will list all installed packages (and their
 versions).
 .SH OPTIONS
