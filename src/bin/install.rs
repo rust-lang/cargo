@@ -100,6 +100,12 @@ As a special convenience, omitting the <crate> specification entirely will
 install the crate in the current directory. That is, `install` is equivalent to
 the more explicit `install --path .`.
 
+If the source is crates.io or `--git` then by default the crate will be built
+in a temporary target directory.  To avoid this, the target directory can be
+specified by setting the `CARGO_TARGET_DIR` environment variable to a relative
+path.  In particular, this can be useful for caching build artifacts on
+continuous integration systems.
+
 The `--list` option will list all installed packages (and their versions).
 ";
 
