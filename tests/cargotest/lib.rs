@@ -55,6 +55,11 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      // can switch this to one and then fix the tests.
      .env("CARGO_INCREMENTAL", "0")
 
+     // This env var can switch the git backend from libgit2 to git2-curl, which
+     // can tweak error messages and cause some tests to fail, so let's forcibly
+     // remove it.
+     .env_remove("CARGO_HTTP_CHECK_REVOKE")
+
      .env_remove("__CARGO_DEFAULT_LIB_METADATA")
      .env_remove("RUSTC")
      .env_remove("RUSTDOC")
