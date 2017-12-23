@@ -186,6 +186,7 @@ pub struct DetailedTomlDependency {
     branch: Option<String>,
     tag: Option<String>,
     rev: Option<String>,
+    refspec: Option<String>,
     features: Option<Vec<String>>,
     optional: Option<bool>,
     #[serde(rename = "default-features")]
@@ -938,14 +939,14 @@ impl TomlDependency {
                     cx.warnings.push(msg)
                 }
 
-                let n_details = [&details.branch, &details.tag, &details.rev]
+                let n_details = [&details.branch, &details.tag, &details.rev, &details.refspec]
                     .iter()
                     .filter(|d| d.is_some())
                     .count();
 
                 if n_details > 1 {
                     let msg = format!("dependency ({}) specification is ambiguous. \
-                                       Only one of `branch`, `tag` or `rev` is allowed. \
+                                       Only one of `branch`, `tag`, `rev`, or `refspec` is allowed. \
                                        This will be considered an error in future versions", name);
                     cx.warnings.push(msg)
                 }
@@ -953,6 +954,7 @@ impl TomlDependency {
                 let reference = details.branch.clone().map(GitReference::Branch)
                     .or_else(|| details.tag.clone().map(GitReference::Tag))
                     .or_else(|| details.rev.clone().map(GitReference::Rev))
+                    .or_else(|| details.refspec.clone().map(GitReference::Refspec))
                     .unwrap_or_else(|| GitReference::Branch("master".to_string()));
                 let loc = git.to_url()?;
                 SourceId::for_git(&loc, reference)?

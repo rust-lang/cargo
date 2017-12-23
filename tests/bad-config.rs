@@ -766,7 +766,7 @@ fn ambiguous_git_reference() {
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_stderr_contains("\
 [WARNING] dependency (bar) specification is ambiguous. \
-Only one of `branch`, `tag` or `rev` is allowed. \
+Only one of `branch`, `tag`, `rev`, or `refspec` is allowed. \
 This will be considered an error in future versions
 "));
 }
