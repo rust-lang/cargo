@@ -504,17 +504,17 @@ authors = [{}]
         let default_file_content : &[u8] = if i.bin {
             b"\
 //! This is the top-level module documentation in src/main.rs.
+//!
 //! This text appears on the front page of your crate's documentation;
 //! preview it by running `cargo doc --open`.
 //!
-//! # Example
+//! # Examples
 //!
 //! This is a great place to add an example of how to use your crate!
 //!
 //! ```
 //! assert(true);
 //! ```
-
 fn main() {
     println!(\"Hello, world!\");
 }
@@ -522,17 +522,17 @@ fn main() {
         } else {
             b"\
 //! This is the top-level module documentation in src/lib.rs.
+//!
 //! This text appears on the front page of your crate's documentation;
 //! preview it by running `cargo doc --open`.
 //!
-//! # Example
+//! # Examples
 //!
 //! This is a great place to add an example of how to use your crate!
 //!
 //! ```
 //! assert(true);
 //! ```
-
 #[cfg(test)]
 mod tests {
     #[test]
