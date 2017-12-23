@@ -5,8 +5,10 @@ extern crate hamcrest;
 
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::path::Path;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 
 use cargo::util::process;
@@ -2198,12 +2200,13 @@ fn failed_submodule_checkout() {
 
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
+    let done = Arc::new(AtomicBool::new(false));
+    let done2 = done.clone();
 
     let t = thread::spawn(move || {
-        let a = listener.accept().unwrap();
-        drop(a);
-        let a = listener.accept().unwrap();
-        drop(a);
+        while !done2.load(Ordering::SeqCst) {
+            drop(listener.accept());
+        }
     });
 
     let repo = git2::Repository::open(&git_project2.root()).unwrap();
@@ -2248,5 +2251,7 @@ fn failed_submodule_checkout() {
                        .with_stderr_contains("  failed to update submodule `src`")
                        .with_stderr_contains("  failed to update submodule `bar`"));
 
+    done.store(true, Ordering::SeqCst);
+    drop(TcpStream::connect(&addr));
     t.join().unwrap();
 }
