@@ -615,9 +615,12 @@ pub fn fetch(repo: &mut git2::Repository,
              url: &Url,
              refspec: &str,
              config: &Config) -> CargoResult<()> {
-    if !config.network_allowed() {
+    if config.frozen() {
         bail!("attempting to update a git repository, but --frozen \
                was specified")
+    }
+    if !config.network_allowed() {
+        bail!("can't update a git repository in the offline mode")
     }
 
     // If we're fetching from github, attempt github's special fast path for

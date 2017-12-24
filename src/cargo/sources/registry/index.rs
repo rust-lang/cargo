@@ -110,13 +110,20 @@ impl<'cfg> RegistryIndex<'cfg> {
                                 .map(|s| s.trim())
                                 .filter(|l| !l.is_empty());
 
+            let online = !self.config.cli_unstable().offline;
             // Attempt forwards-compatibility on the index by ignoring
             // everything that we ourselves don't understand, that should
             // allow future cargo implementations to break the
             // interpretation of each line here and older cargo will simply
             // ignore the new lines.
             ret.extend(lines.filter_map(|line| {
-                self.parse_registry_package(line).ok()
+                self.parse_registry_package(line).ok().and_then(|v|{
+                    if online || load.is_crate_downloaded(v.0.package_id()) {
+                        Some(v)
+                    } else {
+                        None
+                    }
+                })
             }));
 
             Ok(())

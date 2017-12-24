@@ -263,9 +263,12 @@ pub fn registry(config: &Config,
 
 /// Create a new HTTP handle with appropriate global configuration for cargo.
 pub fn http_handle(config: &Config) -> CargoResult<Easy> {
-    if !config.network_allowed() {
+    if config.frozen() {
         bail!("attempting to make an HTTP request, but --frozen was \
                specified")
+    }
+    if !config.network_allowed() {
+        bail!("can't make HTTP request in the offline mode")
     }
 
     // The timeout option for libcurl by default times out the entire transfer,

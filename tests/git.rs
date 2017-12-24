@@ -15,7 +15,9 @@ use cargo::util::process;
 use cargotest::sleep_ms;
 use cargotest::support::paths::{self, CargoPathExt};
 use cargotest::support::{git, project, execs, main_file, path2url};
+use cargotest::ChannelChanger;
 use hamcrest::{assert_that,existing_file};
+use hamcrest::matchers::regex::matches_regex;
 
 #[test]
 fn cargo_compile_simple_git_dep() {
@@ -74,6 +76,142 @@ fn cargo_compile_simple_git_dep() {
       process(&project.bin("foo")),
       execs().with_stdout("hello world\n"));
 }
+
+#[test]
+fn cargo_compile_forbird_git_httpsrepo_offline() {
+
+    let p = project("need_remote_repo")
+        .file("Cargo.toml", r#"
+
+            [project]
+            name = "need_remote_repo"
+            version = "0.5.0"
+            authors = ["chabapok@example.com"]
+
+            [dependencies.dep1]
+            git = 'https://github.com/some_user/dep1.git'
+        "#)
+        .file("src/main.rs", "")
+        .build();
+
+
+    assert_that(p.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
+                execs().with_status(101).
+                    with_stderr_does_not_contain("[UPDATING] git repository [..]").
+                    with_stderr("\
+error: failed to load source for a dependency on `dep1`
+
+Caused by:
+  Unable to update https://github.com/some_user/dep1.git
+
+Caused by:
+  can't checkout from 'https://github.com/some_user/dep1.git': you are in the offline mode"));
+}
+
+
+#[test]
+fn cargo_compile_offline_with_cached_git_dep() {
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", r#"
+                [project]
+                name = "dep1"
+                version = "0.5.0"
+                authors = ["chabapok@example.com"]
+
+                [lib]
+                name = "dep1""#)
+            .file("src/lib.rs", r#"
+                pub static COOL_STR:&str = "cached git repo rev1";
+            "#)
+    }).unwrap();
+
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let rev1 = repo.revparse_single("HEAD").unwrap().id();
+
+    // Commit the changes and make sure we trigger a recompile
+    File::create(&git_project.root().join("src/lib.rs")).unwrap().write_all(br#"
+        pub static COOL_STR:&str = "cached git repo rev2";
+    "#).unwrap();
+    git::add(&repo);
+    let rev2 = git::commit(&repo);
+
+    {
+        // cache to regisrty rev1 and rev2
+        let prj = project("cache_git_dep")
+            .file("Cargo.toml", &format!(r#"
+            [project]
+            name = "cache_git_dep"
+            version = "0.5.0"
+
+            [dependencies.dep1]
+            git = '{}'
+            rev = "{}"
+            "#, git_project.url(), rev1.clone()))
+            .file("src/main.rs", "fn main(){}")
+            .build();
+        assert_that(prj.cargo("build"), execs().with_status(0));
+
+        File::create(&prj.root().join("Cargo.toml")).unwrap().write_all(
+            &format!(r#"
+            [project]
+            name = "cache_git_dep"
+            version = "0.5.0"
+
+            [dependencies.dep1]
+            git = '{}'
+            rev = "{}"
+            "#, git_project.url(), rev2.clone()).as_bytes()
+        ).unwrap();
+        assert_that(prj.cargo("build"), execs().with_status(0));
+    }
+
+    let project = project("foo")
+        .file("Cargo.toml", &format!(r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+
+            [dependencies.dep1]
+            git = '{}'
+        "#, git_project.url()))
+        .file("src/main.rs", &main_file(r#""hello from {}", dep1::COOL_STR"#, &["dep1"]))
+        .build();
+
+    let root = project.root();
+    let git_root = git_project.root();
+
+    assert_that(project.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
+                execs().with_stderr(format!("\
+[COMPILING] dep1 v0.5.0 ({}#[..])
+[COMPILING] foo v0.5.0 ({})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+                                            path2url(git_root),
+                                            path2url(root)
+                )));
+
+    assert_that(&project.bin("foo"), existing_file());
+
+    assert_that(process(&project.bin("foo")),
+                execs().with_stdout("hello from cached git repo rev2\n"));
+
+    drop( File::create(&project.root().join("Cargo.toml")).unwrap()
+        .write_all(&format!(r#"
+            [project]
+            name = "foo"
+            version = "0.5.0"
+
+            [dependencies.dep1]
+            git = '{}'
+            rev = "{}"
+    "#, git_project.url(), rev1).as_bytes()).unwrap() );
+
+    let _out = project.cargo("build").masquerade_as_nightly_cargo()
+        .arg("-Zoffline").exec_with_output();
+    assert_that(process(&project.bin("foo")),
+                execs().with_stdout("hello from cached git repo rev1\n"));
+}
+
 
 #[test]
 fn cargo_compile_git_dep_branch() {
