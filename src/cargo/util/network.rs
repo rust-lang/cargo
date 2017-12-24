@@ -6,7 +6,7 @@ use failure::Error;
 use util::Config;
 use util::errors::{CargoResult, HttpNot200};
 
-fn maybe_spurious(err: &Error) -> bool {
+pub fn maybe_spurious(err: &Error) -> bool {
     for e in err.causes() {
         if let Some(git_err) = e.downcast_ref::<git2::Error>() {
             match git_err.class() {

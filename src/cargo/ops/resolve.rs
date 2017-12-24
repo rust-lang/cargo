@@ -44,7 +44,7 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     let resolve = if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        let resolve = resolve_with_registry(ws, &mut registry, false)?;
+        let resolve = resolve_with_registry(ws, &mut registry, true)?;
 
         // Second, resolve with precisely what we're doing. Filter out
         // transitive dependencies if necessary, specify features, handle

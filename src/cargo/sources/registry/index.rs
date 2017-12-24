@@ -115,10 +115,18 @@ impl<'cfg> RegistryIndex<'cfg> {
             // allow future cargo implementations to break the
             // interpretation of each line here and older cargo will simply
             // ignore the new lines.
-            ret.extend(lines.filter_map(|line| {
+            let summaries = lines.filter_map(|line| {
                 self.parse_registry_package(line).ok()
-            }));
-
+            });
+            if self.config.network_allowed() {
+                ret.extend(summaries);
+            } else {
+                // Since we're in airplane mode, we need to further filter
+                // the packages to only ones that we have downloaded
+                ret.extend(summaries.filter(|&(ref sum, _)| {
+                    load.is_crate_downloaded(sum.package_id())
+                }));
+            }
             Ok(())
         });
 
