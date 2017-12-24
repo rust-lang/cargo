@@ -37,6 +37,10 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
         bail!("you can't generate a lockfile for an empty workspace.")
     }
 
+    if opts.config.cli_unstable().offline {
+        bail!("you can't update in the offline mode");
+    }
+
     let previous_resolve = match ops::load_pkg_lockfile(ws)? {
         Some(resolve) => resolve,
         None => return generate_lockfile(ws),

@@ -153,6 +153,10 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn update_index(&mut self) -> CargoResult<()> {
+        if self.config.cli_unstable().offline {
+            return Ok(());
+        }
+
         // Ensure that we'll actually be able to acquire an HTTP handle later on
         // once we start trying to download crates. This will weed out any
         // problems with `.cargo/config` configuration related to HTTP.
@@ -258,6 +262,20 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         dst.seek(SeekFrom::Start(0))?;
         Ok(dst)
     }
+
+
+    fn is_crate_downloaded(&self, pkg: &PackageId) -> bool {
+        let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
+        let path = Path::new(&filename);
+
+        if let Ok(dst) = self.cache_path.open_ro(path, self.config, &filename) {
+            if let Ok(meta) = dst.file().metadata(){
+                return meta.len() > 0;
+            }
+        }
+        false
+    }
+
 }
 
 impl<'cfg> Drop for RemoteRegistry<'cfg> {
