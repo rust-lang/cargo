@@ -2205,7 +2205,9 @@ fn failed_submodule_checkout() {
 
     let t = thread::spawn(move || {
         while !done2.load(Ordering::SeqCst) {
-            drop(listener.accept());
+            if let Ok((mut socket, _)) = listener.accept() {
+                drop(socket.write_all(b"foo\r\n"));
+            }
         }
     });
 
