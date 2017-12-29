@@ -281,7 +281,7 @@ fn native_plugin_dependency_with_custom_ar_linker() {
                 execs().with_stderr_contains("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
-[ERROR] could not exec the linker [..]
+[ERROR] [..]linker[..]
 "));
 }
 
