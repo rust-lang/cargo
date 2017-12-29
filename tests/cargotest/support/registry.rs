@@ -3,7 +3,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{PathBuf, Path};
 
-use flate2::Compression::Default;
+use flate2::Compression;
 use flate2::write::GzEncoder;
 use git2;
 use hex::ToHex;
@@ -273,7 +273,8 @@ impl Package {
         let dst = self.archive_dst();
         t!(fs::create_dir_all(dst.parent().unwrap()));
         let f = t!(File::create(&dst));
-        let mut a = Builder::new(GzEncoder::new(f, Default));
+        let mut a =
+            Builder::new(GzEncoder::new(f, Compression::default()));
         self.append(&mut a, "Cargo.toml", &manifest);
         if self.files.is_empty() {
             self.append(&mut a, "src/lib.rs", "");

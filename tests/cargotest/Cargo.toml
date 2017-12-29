@@ -9,7 +9,7 @@ path = "lib.rs"
 [dependencies]
 cargo = { path = "../.." }
 filetime = "0.1"
-flate2 = "0.2"
+flate2 = "1.0"
 git2 = { version = "0.6", default-features = false }
 hamcrest = "=0.1.1"
 hex = "0.2"
