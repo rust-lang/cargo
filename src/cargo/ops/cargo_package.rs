@@ -196,7 +196,7 @@ fn tar(ws: &Workspace,
     // Prepare the encoder and its header
     let filename = Path::new(filename);
     let encoder = GzBuilder::new().filename(util::path2bytes(filename)?)
-                                  .write(dst, Compression::Best);
+                                  .write(dst, Compression::best());
 
     // Put all package files into a compressed archive
     let mut ar = Builder::new(encoder);
@@ -282,7 +282,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
 
     config.shell().status("Verifying", pkg)?;
 
-    let f = GzDecoder::new(tar.file())?;
+    let f = GzDecoder::new(tar.file());
     let dst = tar.parent().join(&format!("{}-{}", pkg.name(), pkg.version()));
     if fs::metadata(&dst).is_ok() {
         fs::remove_dir_all(&dst)?;

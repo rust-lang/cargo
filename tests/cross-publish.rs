@@ -47,7 +47,7 @@ fn simple_cross_package() {
 
     // Check that the tarball contains the files
     let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f).unwrap();
+    let mut rdr = GzDecoder::new(f);
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
