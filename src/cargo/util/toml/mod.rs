@@ -132,6 +132,41 @@ in the future.", file.display());
     Err(first_error.context("could not parse input as TOML").into())
 }
 
+#[derive(Deserialize)]
+struct SourceManifest {
+    package: Option<SourcePackage>,
+    project: Option<SourcePackage>,
+}
+
+#[derive(Deserialize)]
+struct SourcePackage {
+    publish: Option<VecStringOrBool>,
+}
+
+/// Check if the manifest file (if exists) has package.publish=true
+///
+/// We do not validate the manifest here to avoid dealing with recursion.
+pub fn is_remote_source(manifest_path: &Path) -> bool {
+    use ::std::io::Read;
+
+    if let Ok(mut file) = fs::File::open(manifest_path) {
+        let mut content = String::new();
+        if file.read_to_string(&mut content).is_ok() {
+            if let Ok(config) = toml::from_str::<SourceManifest>(&content) {
+                let pkg = config.package.or(config.project);
+                if let Some(pkg) = pkg {
+                    return match pkg.publish {
+                        Some(VecStringOrBool::VecString(ref registries)) => !registries.is_empty(),
+                        Some(VecStringOrBool::Bool(false)) => false,
+                        Some(VecStringOrBool::Bool(true)) | None => true,
+                    };
+                }
+            }
+        }
+    }
+    false
+}
+
 type TomlLibTarget = TomlTarget;
 type TomlBinTarget = TomlTarget;
 type TomlExampleTarget = TomlTarget;
@@ -444,7 +479,7 @@ pub struct TomlProject {
     metadata: Option<toml::Value>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TomlWorkspace {
     members: Option<Vec<String>>,
     #[serde(rename = "default-members")]
@@ -471,12 +506,11 @@ struct Context<'a, 'b> {
 }
 
 impl TomlManifest {
-    pub fn prepare_for_publish(&self) -> TomlManifest {
-        let mut package = self.package.as_ref()
+    pub fn prepare_for_publish(&self, root: &Path) -> TomlManifest {
+        let package = self.package.as_ref()
                               .or_else(|| self.project.as_ref())
                               .unwrap()
                               .clone();
-        package.workspace = None;
         return TomlManifest {
             package: Some(package),
             project: None,
@@ -486,50 +520,57 @@ impl TomlManifest {
             example: self.example.clone(),
             test: self.test.clone(),
             bench: self.bench.clone(),
-            dependencies: map_deps(self.dependencies.as_ref()),
+            dependencies: map_deps(self.dependencies.as_ref(), root),
             dev_dependencies: map_deps(self.dev_dependencies.as_ref()
-                                         .or_else(|| self.dev_dependencies2.as_ref())),
+                                         .or_else(|| self.dev_dependencies2.as_ref()), root),
             dev_dependencies2: None,
             build_dependencies: map_deps(self.build_dependencies.as_ref()
-                                         .or_else(|| self.build_dependencies2.as_ref())),
+                                         .or_else(|| self.build_dependencies2.as_ref()), root),
             build_dependencies2: None,
             features: self.features.clone(),
             target: self.target.as_ref().map(|target_map| {
                 target_map.iter().map(|(k, v)| {
                     (k.clone(), TomlPlatform {
-                        dependencies: map_deps(v.dependencies.as_ref()),
+                        dependencies: map_deps(v.dependencies.as_ref(), root),
                         dev_dependencies: map_deps(v.dev_dependencies.as_ref()
-                                                     .or_else(|| v.dev_dependencies2.as_ref())),
+                                                     .or_else(|| v.dev_dependencies2.as_ref()), root),
                         dev_dependencies2: None,
                         build_dependencies: map_deps(v.build_dependencies.as_ref()
-                                                     .or_else(|| v.build_dependencies2.as_ref())),
+                                                     .or_else(|| v.build_dependencies2.as_ref()), root),
                         build_dependencies2: None,
                     })
                 }).collect()
             }),
             replace: None,
             patch: None,
-            workspace: None,
+            workspace: self.workspace.clone(),
             badges: self.badges.clone(),
             cargo_features: self.cargo_features.clone(),
         };
 
-        fn map_deps(deps: Option<&BTreeMap<String, TomlDependency>>)
+        fn map_deps(deps: Option<&BTreeMap<String, TomlDependency>>, root: &Path)
                         -> Option<BTreeMap<String, TomlDependency>>
         {
             let deps = match deps {
                 Some(deps) => deps,
                 None => return None
             };
-            Some(deps.iter().map(|(k, v)| (k.clone(), map_dependency(v))).collect())
+            Some(deps.iter().map(|(k, v)| (k.clone(), map_dependency(v, root))).collect())
         }
 
-        fn map_dependency(dep: &TomlDependency) -> TomlDependency {
+        fn map_dependency(dep: &TomlDependency, root: &Path) -> TomlDependency {
             match *dep {
                 TomlDependency::Detailed(ref d) => {
-                    let mut d = d.clone();
-                    d.path.take(); // path dependencies become crates.io deps
-                    TomlDependency::Detailed(d)
+                    let mut dep = d.clone();
+                    if let Some(ref path) = d.path {
+                        let path = root.join(PathBuf::from(path));
+                        if is_remote_source(&path.join("Cargo.toml")) {
+                            // if package is allowed to be published,
+                            // then path dependency will become crates.io deps
+                            dep.path.take();
+                        }
+                    }
+                    TomlDependency::Detailed(dep)
                 }
                 TomlDependency::Simple(ref s) => {
                     TomlDependency::Detailed(DetailedTomlDependency {

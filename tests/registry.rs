@@ -224,7 +224,7 @@ version required: >= 0.0.0
 }
 
 #[test]
-fn package_with_path_deps() {
+fn package_with_publishable_path_deps() {
     Package::new("init", "0.0.1").publish();
 
     let p = project("foo")
@@ -252,14 +252,19 @@ fn package_with_path_deps() {
         .build();
 
     assert_that(p.cargo("package").arg("-v"),
-                execs().with_status(101).with_stderr_contains("\
-[ERROR] failed to verify package tarball
+                execs().with_status(101).with_stderr(format!("\
+[PACKAGING] foo v0.0.1 ({dir})
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[VERIFYING] foo v0.0.1 ({dir})
+[UPDATING] registry [..]
+error: failed to verify package tarball
 
 Caused by:
   no matching package named `notyet` found (required by `foo`)
 location searched: registry [..]
 version required: ^0.0.1
-"));
+", dir = p.url())));
 
     Package::new("notyet", "0.0.1").publish();
 
@@ -267,11 +272,67 @@ version required: ^0.0.1
                 execs().with_status(0).with_stderr(format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
-[UPDATING] registry `[..]`
-[DOWNLOADING] notyet v0.0.1 (registry `file://[..]`)
+[UPDATING] registry [..]
+[DOWNLOADING] notyet v0.0.1 (registry [..])
 [COMPILING] notyet v0.0.1
+[COMPILING] foo v0.0.1 [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+", dir = p.url())));
+}
+
+#[test]
+fn package_with_unpublishable_path_deps() {
+    Package::new("init", "0.0.1").publish();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            repository = "bar"
+
+            [dependencies.notyet]
+            version = "0.0.1"
+            path = "notyet"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("notyet/Cargo.toml", r#"
+            [package]
+            publish = false
+            name = "notyet"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("notyet/src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("package").arg("-v"),
+                execs().with_status(0).with_stderr(format!("\
+[PACKAGING] foo v0.0.1 ({dir})
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[ARCHIVING] [..]
+[VERIFYING] foo v0.0.1 ({dir}[..])
+[COMPILING] notyet v0.0.1 ({dir}[..])
+[RUNNING] `rustc [..]notyet[/]src[/]lib.rs [..]`
 [COMPILING] foo v0.0.1 ({dir}[..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..] secs
+[RUNNING] `rustc [..]src[/]main.rs [..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+", dir = p.url())));
+
+    Package::new("notyet", "0.0.1").publish();
+
+    assert_that(p.cargo("package"),
+                execs().with_status(0).with_stderr(format!("\
+[PACKAGING] foo v0.0.1 ({dir})
+[VERIFYING] foo v0.0.1 ({dir})
+[COMPILING] notyet v0.0.1 ({dir}[..])
+[COMPILING] foo v0.0.1 ({dir}[..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
 }
 

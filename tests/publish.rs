@@ -15,6 +15,19 @@ use flate2::read::GzDecoder;
 use hamcrest::assert_that;
 use tar::Archive;
 
+fn decode_uploaded_package() -> std::io::Result<GzDecoder<File>> {
+    let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
+    // Skip the metadata payload and the size of the tarball
+    let mut sz = [0; 4];
+    assert_eq!(f.read(&mut sz).unwrap(), 4);
+    let sz = ((sz[0] as u32) <<  0) |
+             ((sz[1] as u32) <<  8) |
+             ((sz[2] as u32) << 16) |
+             ((sz[3] as u32) << 24);
+    f.seek(SeekFrom::Current(sz as i64 + 4))?;
+    GzDecoder::new(f)
+}
+
 #[test]
 fn simple() {
     publish::setup();
@@ -178,22 +191,13 @@ See [..]
         dir = p.url(),
         reg = publish::registry())));
 
-    let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
-    // Skip the metadata payload and the size of the tarball
-    let mut sz = [0; 4];
-    assert_eq!(f.read(&mut sz).unwrap(), 4);
-    let sz = ((sz[0] as u32) <<  0) |
-             ((sz[1] as u32) <<  8) |
-             ((sz[2] as u32) << 16) |
-             ((sz[3] as u32) << 24);
-    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
-
     // Verify the tarball
-    let mut rdr = GzDecoder::new(f).unwrap();
+    let mut rdr = decode_uploaded_package().unwrap();
     assert_eq!(rdr.header().filename().unwrap(), "foo-0.0.1.crate".as_bytes());
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
+    let mut count = 0;
     for file in ar.entries().unwrap() {
         let file = file.unwrap();
         let fname = file.header().path_bytes();
@@ -202,7 +206,9 @@ See [..]
                 fname == b"foo-0.0.1/Cargo.toml.orig" ||
                 fname == b"foo-0.0.1/src/main.rs",
                 "unexpected filename: {:?}", file.header().path());
+        count = count + 1;
     }
+    assert!(count == 3, "some files are missing");
 }
 
 #[test]
@@ -645,4 +651,60 @@ fn block_publish_no_registry() {
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
 "));
+}
+
+#[test]
+fn with_path_dependencies() {
+    publish::setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = { path = "bar", version = "*" }
+
+            [workspace]
+            members = ["bar"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            publish = false
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("publish").arg("--index").arg(publish::registry().to_string()),
+                execs().with_status(0).with_stderr_contains(&format!("\
+[UPLOADING] foo v0.0.1 ({dir})
+", dir = p.url())));
+
+    // Verify the tarball
+    let mut rdr = decode_uploaded_package().unwrap();
+    assert_eq!(rdr.header().filename().unwrap(), "foo-0.0.1.crate".as_bytes());
+    let mut contents = Vec::new();
+    rdr.read_to_end(&mut contents).unwrap();
+    let mut ar = Archive::new(&contents[..]);
+    let mut count = 0;
+    for file in ar.entries().unwrap() {
+        let file = file.unwrap();
+        let fname = file.header().path_bytes();
+        let fname = &*fname;
+        assert!(fname == b"foo-0.0.1/Cargo.toml" ||
+                fname == b"foo-0.0.1/Cargo.toml.orig" ||
+                fname == b"foo-0.0.1/src/main.rs" ||
+                fname == b"foo-0.0.1/bar/Cargo.toml" ||
+                fname == b"foo-0.0.1/bar/Cargo.toml.orig" ||
+                fname == b"foo-0.0.1/bar/src/lib.rs",
+                "unexpected filename: {:?}", file.header().path());
+        count = count + 1;
+    }
+    assert!(count == 6, "some files are missing");
 }
