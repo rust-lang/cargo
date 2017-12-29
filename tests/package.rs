@@ -54,7 +54,7 @@ src[/]main.rs
                 execs().with_status(0).with_stdout(""));
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f).unwrap();
+    let mut rdr = GzDecoder::new(f);
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
@@ -531,7 +531,7 @@ src[..]main.rs
                 execs().with_status(0).with_stdout(""));
 
     let f = File::open(&p.root().join("target/package/nested-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f).unwrap();
+    let mut rdr = GzDecoder::new(f);
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
@@ -617,7 +617,7 @@ See [..]
 
     // Check that the tarball contains the added file
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f).unwrap();
+    let mut rdr = GzDecoder::new(f);
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
@@ -748,7 +748,7 @@ fn generated_manifest() {
                 execs().with_status(0));
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f).unwrap();
+    let mut rdr = GzDecoder::new(f);
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
@@ -827,7 +827,7 @@ fn ignore_workspace_specifier() {
                 execs().with_status(0));
 
     let f = File::open(&p.root().join("target/package/bar-0.1.0.crate")).unwrap();
-    let mut rdr = GzDecoder::new(f).unwrap();
+    let mut rdr = GzDecoder::new(f);
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
