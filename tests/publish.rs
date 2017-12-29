@@ -54,8 +54,8 @@ See [..]
     f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
 
     // Verify the tarball
-    let mut rdr = GzDecoder::new(f).unwrap();
-    assert_eq!(rdr.header().filename().unwrap(), b"foo-0.0.1.crate");
+    let mut rdr = GzDecoder::new(f);
+    assert_eq!(rdr.header().unwrap().filename().unwrap(), b"foo-0.0.1.crate");
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
@@ -121,8 +121,8 @@ See [..]
     f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
 
     // Verify the tarball
-    let mut rdr = GzDecoder::new(f).unwrap();
-    assert_eq!(rdr.header().filename().unwrap(), "foo-0.0.1.crate".as_bytes());
+    let mut rdr = GzDecoder::new(f);
+    assert_eq!(rdr.header().unwrap().filename().unwrap(), "foo-0.0.1.crate".as_bytes());
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
@@ -189,8 +189,8 @@ See [..]
     f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
 
     // Verify the tarball
-    let mut rdr = GzDecoder::new(f).unwrap();
-    assert_eq!(rdr.header().filename().unwrap(), "foo-0.0.1.crate".as_bytes());
+    let mut rdr = GzDecoder::new(f);
+    assert_eq!(rdr.header().unwrap().filename().unwrap(), "foo-0.0.1.crate".as_bytes());
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);

@@ -323,7 +323,7 @@ impl<'cfg> RegistrySource<'cfg> {
             return Ok(dst)
         }
 
-        let gz = GzDecoder::new(tarball.file())?;
+        let gz = GzDecoder::new(tarball.file());
         let mut tar = Archive::new(gz);
         let prefix = dst.file_name().unwrap();
         let parent = dst.parent().unwrap();
