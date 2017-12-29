@@ -1236,3 +1236,33 @@ fn many_cli_features_comma_and_space_delimited() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
 }
+
+#[test]
+fn nonexistent_feature_in_target() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            foo = []
+
+            [[example]]
+            name = "bar"
+            required-features = ["baz"]
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("examples/bar.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("build"),
+                execs()
+                .with_status(101)
+                .with_stderr("\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  Target `bar` requires feature `baz`[..]"));
+}

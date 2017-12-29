@@ -62,6 +62,19 @@ pub fn targets(manifest: &TomlManifest,
         targets.push(Target::custom_build_target(&name, package_root.join(custom_build)));
     }
 
+    if let Some(ref features) = manifest.features {
+        for t in targets.iter() {
+            if let Some(req_features) = t.required_features() {
+                for req_feature in req_features {
+                    if !features.contains_key(req_feature) {
+                        bail!("Target `{}` requires feature `{}`, which is \
+not specified in the manifest's `[features]`-section.", t.name(), req_feature);
+                    }
+                }
+            }
+        }
+    }
+
     Ok(targets)
 }
 
