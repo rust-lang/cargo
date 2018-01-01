@@ -277,4 +277,9 @@ fn help() {
                 execs().with_status(0));
     assert_that(cargo_process("help").arg("search"),
                 execs().with_status(0));
+    // Ensure that help output goes to stdout, not stderr.
+    assert_that(cargo_process("search").arg("--help"),
+                execs().with_stderr(""));
+    assert_that(cargo_process("search").arg("--help"),
+                execs().with_stdout_contains("[..] --frozen [..]"));
 }

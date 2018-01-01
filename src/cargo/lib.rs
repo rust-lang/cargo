@@ -142,7 +142,7 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
         } else if fatal {
             drop(shell.error(&error))
         } else {
-            drop(writeln!(shell.err(), "{}", error))
+            println!("{}", error);
         }
 
         if !handle_cause(&error, shell) || hide {
