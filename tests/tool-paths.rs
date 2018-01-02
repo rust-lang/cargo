@@ -1,9 +1,10 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use cargotest::rustc_host;
 use cargotest::support::{path2url, project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn pathless_tools() {
@@ -27,7 +28,7 @@ fn pathless_tools() {
         "#, target))
         .build();
 
-    assert_that(foo.cargo("build").arg("--verbose"),
+    assert_that!(foo.cargo("build").arg("--verbose"),
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
@@ -70,7 +71,7 @@ fn absolute_tools() {
         (r#"/bogus/nonexistent-ar"#, r#"/bogus/nonexistent-linker"#)
     };
 
-    assert_that(foo.cargo("build").arg("--verbose"),
+    assert_that!(foo.cargo("build").arg("--verbose"),
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
@@ -120,7 +121,7 @@ fn relative_tools() {
          format!(r#"{}/./tools/nonexistent-linker"#, prefix))
     };
 
-    assert_that(origin.cargo("build").cwd(foo_path).arg("--verbose"),
+    assert_that!(origin.cargo("build").cwd(foo_path).arg("--verbose"),
                 execs().with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
@@ -147,14 +148,14 @@ fn custom_runner() {
         "#, target))
         .build();
 
-    assert_that(p.cargo("run").args(&["--", "--param"]),
+    assert_that!(p.cargo("run").args(&["--", "--param"]),
                 execs().with_stderr_contains(&format!("\
 [COMPILING] foo v0.0.1 ({url})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target[/]debug[/]foo[EXE] --param`
 ", url = p.url())));
 
-    assert_that(p.cargo("test").args(&["--test", "test", "--verbose", "--", "--param"]),
+    assert_that!(p.cargo("test").args(&["--test", "test", "--verbose", "--", "--param"]),
                 execs().with_stderr_contains(&format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..]`
@@ -162,7 +163,7 @@ fn custom_runner() {
 [RUNNING] `nonexistent-runner -r [..][/]target[/]debug[/]deps[/]test-[..][EXE] --param`
 ", url = p.url())));
 
-    assert_that(p.cargo("bench").args(&["--bench", "bench", "--verbose", "--", "--param"]),
+    assert_that!(p.cargo("bench").args(&["--bench", "bench", "--verbose", "--", "--param"]),
                 execs().with_stderr_contains(&format!("\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..]`

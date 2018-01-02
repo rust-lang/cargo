@@ -1,4 +1,5 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use std::fs;
@@ -6,7 +7,7 @@ use std::env;
 
 use cargotest::{is_nightly, rustc_host};
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn plugin_to_the_max() {
@@ -81,9 +82,9 @@ fn plugin_to_the_max() {
         .file("src/lib.rs", "pub fn baz() -> i32 { 1 }")
         .build();
 
-    assert_that(foo.cargo("build"),
+    assert_that!(foo.cargo("build"),
                 execs().with_status(0));
-    assert_that(foo.cargo("doc"),
+    assert_that!(foo.cargo("doc"),
                 execs().with_status(0));
 }
 
@@ -168,7 +169,7 @@ fn plugin_with_dynamic_native_dependency() {
         "#)
         .build();
 
-    assert_that(build.cargo("build"),
+    assert_that!(build.cargo("build"),
                 execs().with_status(0));
 
     let src = workspace.root().join("target/debug");
@@ -178,7 +179,7 @@ fn plugin_with_dynamic_native_dependency() {
             lib.ends_with(env::consts::DLL_SUFFIX)
     }).unwrap();
 
-    assert_that(foo.cargo("build").env("SRC", &lib).arg("-v"),
+    assert_that!(foo.cargo("build").env("SRC", &lib).arg("-v"),
                 execs().with_status(0));
 }
 
@@ -202,7 +203,7 @@ fn plugin_integration() {
         .file("tests/it_works.rs", "")
         .build();
 
-    assert_that(p.cargo("test").arg("-v"),
+    assert_that!(p.cargo("test").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -237,7 +238,7 @@ fn doctest_a_plugin() {
         "#)
         .build();
 
-    assert_that(p.cargo("test").arg("-v"),
+    assert_that!(p.cargo("test").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -277,7 +278,7 @@ fn native_plugin_dependency_with_custom_ar_linker() {
         "#, target))
         .build();
 
-    assert_that(bar.cargo("build").arg("--verbose"),
+    assert_that!(bar.cargo("build").arg("--verbose"),
                 execs().with_stderr_contains("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
@@ -320,7 +321,7 @@ fn panic_abort_plugins() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -373,6 +374,6 @@ fn shared_panic_abort_plugins() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }

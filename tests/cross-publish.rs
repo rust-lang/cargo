@@ -1,5 +1,6 @@
 extern crate cargo;
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 extern crate flate2;
 extern crate tar;
@@ -9,7 +10,7 @@ use std::path::PathBuf;
 use std::io::prelude::*;
 
 use cargotest::support::{project, execs, cross_compile, publish};
-use hamcrest::{assert_that, contains};
+use hamcrest::prelude::*;
 use flate2::read::GzDecoder;
 use tar::Archive;
 
@@ -37,7 +38,7 @@ fn simple_cross_package() {
 
     let target = cross_compile::alternate();
 
-    assert_that(p.cargo("package").arg("--target").arg(&target),
+    assert_that!(p.cargo("package").arg("--target").arg(&target),
                 execs().with_status(0).with_status(0).with_stderr(&format!(
 "   Packaging foo v0.0.0 ({dir})
    Verifying foo v0.0.0 ({dir})
@@ -55,9 +56,9 @@ fn simple_cross_package() {
     let entry_paths = entries.map(|entry| {
         entry.unwrap().path().unwrap().into_owned()
     }).collect::<Vec<PathBuf>>();
-    assert_that(&entry_paths, contains(vec![PathBuf::from("foo-0.0.0/Cargo.toml")]));
-    assert_that(&entry_paths, contains(vec![PathBuf::from("foo-0.0.0/Cargo.toml.orig")]));
-    assert_that(&entry_paths, contains(vec![PathBuf::from("foo-0.0.0/src/main.rs")]));
+    assert_that!(&entry_paths, contains(vec![PathBuf::from("foo-0.0.0/Cargo.toml")]));
+    assert_that!(&entry_paths, contains(vec![PathBuf::from("foo-0.0.0/Cargo.toml.orig")]));
+    assert_that!(&entry_paths, contains(vec![PathBuf::from("foo-0.0.0/src/main.rs")]));
 }
 
 #[test]
@@ -86,7 +87,7 @@ fn publish_with_target() {
 
     let target = cross_compile::alternate();
 
-    assert_that(p.cargo("publish")
+    assert_that!(p.cargo("publish")
                  .arg("--index").arg(publish::registry().to_string())
                  .arg("--target").arg(&target),
                 execs().with_status(0).with_stderr(&format!(

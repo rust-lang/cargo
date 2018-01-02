@@ -1,9 +1,10 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use cargotest::is_nightly;
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn probe_cfg_before_crate_type_discovery() {
@@ -56,7 +57,7 @@ fn probe_cfg_before_crate_type_discovery() {
         "#)
         .build();
 
-    assert_that(client.cargo("build"),
+    assert_that!(client.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -111,9 +112,9 @@ fn noop() {
         "#)
         .build();
 
-    assert_that(client.cargo("build"),
+    assert_that!(client.cargo("build"),
                 execs().with_status(0));
-    assert_that(client.cargo("build"),
+    assert_that!(client.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -189,9 +190,9 @@ fn impl_and_derive() {
         "#)
         .build();
 
-    assert_that(client.cargo("build"),
+    assert_that!(client.cargo("build"),
                 execs().with_status(0));
-    assert_that(client.cargo("run"),
+    assert_that!(client.cargo("run"),
                 execs().with_status(0).with_stdout("X { success: true }"));
 }
 
@@ -233,7 +234,7 @@ fn plugin_and_proc_macro() {
         .build();
 
     let msg = "  lib.plugin and lib.proc-macro cannot both be true";
-    assert_that(questionable.cargo("build"),
+    assert_that!(questionable.cargo("build"),
                 execs().with_status(101).with_stderr_contains(msg));
 }
 
@@ -274,7 +275,7 @@ fn a() {
 "#)
         .build();
 
-    assert_that(foo.cargo("test"),
+    assert_that!(foo.cargo("test"),
                 execs().with_status(0)
                        .with_stdout_contains("test a ... ok")
                        .with_stdout_contains_n("test [..] ... ok", 2));

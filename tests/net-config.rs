@@ -1,8 +1,9 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn net_retry_loads_from_config() {
@@ -24,7 +25,7 @@ fn net_retry_loads_from_config() {
          "#)
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(101)
                 .with_stderr_contains("[WARNING] spurious network error \
 (1 tries remaining): [..]"));
@@ -49,7 +50,7 @@ fn net_retry_git_outputs_warning() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v").arg("-j").arg("1"),
+    assert_that!(p.cargo("build").arg("-v").arg("-j").arg("1"),
                 execs().with_status(101)
                 .with_stderr_contains("[WARNING] spurious network error \
 (2 tries remaining): [..]")

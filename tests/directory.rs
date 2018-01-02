@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 #[macro_use]
 extern crate serde_derive;
@@ -15,7 +16,7 @@ use cargotest::support::git;
 use cargotest::support::paths;
 use cargotest::support::registry::{Package, cksum};
 use cargotest::support::{project, execs, ProjectBuilder};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 fn setup() {
     let root = paths::root();
@@ -103,7 +104,7 @@ fn simple() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.1.0
 [COMPILING] bar v0.1.0 ([..]bar)
@@ -144,7 +145,7 @@ fn simple_install() {
         "#)
         .build();
 
-    assert_that(cargo_process().arg("install").arg("bar"),
+    assert_that!(cargo_process().arg("install").arg("bar"),
                 execs().with_status(0).with_stderr(
 "  Installing bar v0.1.0
    Compiling foo v0.1.0
@@ -189,7 +190,7 @@ fn simple_install_fail() {
         "#)
         .build();
 
-    assert_that(cargo_process().arg("install").arg("bar"),
+    assert_that!(cargo_process().arg("install").arg("bar"),
                 execs().with_status(101).with_stderr(
 "  Installing bar v0.1.0
 error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`
@@ -238,7 +239,7 @@ fn install_without_feature_dep() {
         "#)
         .build();
 
-    assert_that(cargo_process().arg("install").arg("bar"),
+    assert_that!(cargo_process().arg("install").arg("bar"),
                 execs().with_status(0).with_stderr(
 "  Installing bar v0.1.0
    Compiling foo v0.1.0
@@ -274,7 +275,7 @@ fn not_there() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: no matching package named `foo` found (required by `bar`)
 location searched: [..]
@@ -327,7 +328,7 @@ fn multiple() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.1.0
 [COMPILING] bar v0.1.0 ([..]bar)
@@ -360,7 +361,7 @@ fn crates_io_then_directory() {
                         .file("src/lib.rs", "pub fn foo() -> u32 { 0 }")
                         .publish();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.1.0 ([..])
@@ -382,7 +383,7 @@ fn crates_io_then_directory() {
     v.cksum.package = Some(cksum);
     v.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.1.0
 [COMPILING] bar v0.1.0 ([..]bar)
@@ -407,7 +408,7 @@ fn crates_io_then_bad_checksum() {
 
     Package::new("foo", "0.1.0").publish();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
     setup();
 
@@ -421,7 +422,7 @@ fn crates_io_then_bad_checksum() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: checksum for `foo v0.1.0` changed between lock files
 
@@ -466,7 +467,7 @@ fn bad_file_checksum() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: the listed checksum of `[..]lib.rs` has changed:
 expected: [..]
@@ -508,7 +509,7 @@ fn only_dot_files_ok() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
@@ -548,7 +549,7 @@ fn git_lock_file_doesnt_change() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
 
     let mut lock1 = String::new();
     t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lock1));
@@ -564,7 +565,7 @@ fn git_lock_file_doesnt_change() {
         directory = 'index'
     "#, git.url()).as_bytes()));
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] [..]
@@ -614,7 +615,7 @@ fn git_override_requires_lockfile() {
         directory = 'index'
     "#));
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to load source for a dependency on `git`

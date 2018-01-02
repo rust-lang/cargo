@@ -406,17 +406,17 @@ impl Execs {
         self
     }
 
-    fn match_output(&self, actual: &Output) -> ham::MatchResult {
+    fn match_output(&self, actual: &Output) -> ham::core::MatchResult {
         self.match_status(actual)
             .and(self.match_stdout(actual))
             .and(self.match_stderr(actual))
     }
 
-    fn match_status(&self, actual: &Output) -> ham::MatchResult {
+    fn match_status(&self, actual: &Output) -> ham::core::MatchResult {
         match self.expect_exit_code {
-            None => ham::success(),
+            None => ham::core::success(),
             Some(code) => {
-                ham::expect(
+                ham::core::expect(
                     actual.status.code() == Some(code),
                     format!("exited with {}\n--- stdout\n{}\n--- stderr\n{}",
                             actual.status,
@@ -426,7 +426,7 @@ impl Execs {
         }
     }
 
-    fn match_stdout(&self, actual: &Output) -> ham::MatchResult {
+    fn match_stdout(&self, actual: &Output) -> ham::core::MatchResult {
         self.match_std(self.expect_stdout.as_ref(), &actual.stdout,
                        "stdout", &actual.stderr, MatchKind::Exact)?;
         for expect in self.expect_stdout_contains.iter() {
@@ -465,17 +465,17 @@ impl Execs {
         Ok(())
     }
 
-    fn match_stderr(&self, actual: &Output) -> ham::MatchResult {
+    fn match_stderr(&self, actual: &Output) -> ham::core::MatchResult {
         self.match_std(self.expect_stderr.as_ref(), &actual.stderr,
                        "stderr", &actual.stdout, MatchKind::Exact)
     }
 
     fn match_std(&self, expected: Option<&String>, actual: &[u8],
                  description: &str, extra: &[u8],
-                 kind: MatchKind) -> ham::MatchResult {
+                 kind: MatchKind) -> ham::core::MatchResult {
         let out = match expected {
             Some(out) => out,
-            None => return ham::success(),
+            None => return ham::core::success(),
         };
         let actual = match str::from_utf8(actual) {
             Err(..) => return Err(format!("{} was not utf8 encoded",
@@ -492,7 +492,7 @@ impl Execs {
                 let e = out.lines();
 
                 let diffs = self.diff_lines(a, e, false);
-                ham::expect(diffs.is_empty(),
+                ham::core::expect(diffs.is_empty(),
                             format!("differences:\n\
                                     {}\n\n\
                                     other output:\n\
@@ -510,7 +510,7 @@ impl Execs {
                         diffs = a;
                     }
                 }
-                ham::expect(diffs.is_empty(),
+                ham::core::expect(diffs.is_empty(),
                             format!("expected to find:\n\
                                      {}\n\n\
                                      did not find in output:\n\
@@ -530,7 +530,7 @@ impl Execs {
                     a.next()
                 } {}
 
-                ham::expect(matches == number,
+                ham::core::expect(matches == number,
                             format!("expected to find {} occurences:\n\
                                      {}\n\n\
                                      did not find in output:\n\
@@ -538,7 +538,7 @@ impl Execs {
                                      actual))
             }
             MatchKind::NotPresent => {
-                ham::expect(!actual.contains(out),
+                ham::core::expect(!actual.contains(out),
                             format!("expected not to find:\n\
                                      {}\n\n\
                                      but found in output:\n\
@@ -548,7 +548,7 @@ impl Execs {
         }
     }
 
-    fn match_json(&self, expected: &Value, line: &str) -> ham::MatchResult {
+    fn match_json(&self, expected: &Value, line: &str) -> ham::core::MatchResult {
         let actual = match line.parse() {
              Err(e) => return Err(format!("invalid json, {}:\n`{}`", e, line)),
              Ok(actual) => actual,
@@ -720,14 +720,14 @@ impl fmt::Display for Execs {
     }
 }
 
-impl ham::Matcher<ProcessBuilder> for Execs {
-    fn matches(&self, mut process: ProcessBuilder) -> ham::MatchResult {
+impl ham::core::Matcher<ProcessBuilder> for Execs {
+    fn matches(&self, mut process: ProcessBuilder) -> ham::core::MatchResult {
         self.matches(&mut process)
     }
 }
 
-impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
-    fn matches(&self, process: &'a mut ProcessBuilder) -> ham::MatchResult {
+impl<'a> ham::core::Matcher<&'a mut ProcessBuilder> for Execs {
+    fn matches(&self, process: &'a mut ProcessBuilder) -> ham::core::MatchResult {
         println!("running {}", process);
         let res = process.exec_with_output();
 
@@ -748,8 +748,8 @@ impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
     }
 }
 
-impl ham::Matcher<Output> for Execs {
-    fn matches(&self, output: Output) -> ham::MatchResult {
+impl ham::core::Matcher<Output> for Execs {
+    fn matches(&self, output: Output) -> ham::core::MatchResult {
         self.match_output(&output)
     }
 }
@@ -780,13 +780,13 @@ impl fmt::Display for ShellWrites {
     }
 }
 
-impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
+impl<'a> ham::core::Matcher<&'a [u8]> for ShellWrites {
     fn matches(&self, actual: &[u8])
-        -> ham::MatchResult
+        -> ham::core::MatchResult
     {
         let actual = String::from_utf8_lossy(actual);
         let actual = actual.to_string();
-        ham::expect(actual == self.expected, actual)
+        ham::core::expect(actual == self.expected, actual)
     }
 }
 

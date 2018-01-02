@@ -1,7 +1,9 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
+
 use cargotest::support::{project, execs, basic_bin_manifest};
-use hamcrest::{assert_that};
+use hamcrest::prelude::*;
 
 #[test]
 fn alias_incorrect_config_type() {
@@ -16,7 +18,7 @@ fn alias_incorrect_config_type() {
         "#)
         .build();
 
-    assert_that(p.cargo("b-cargo-test").arg("-v"),
+    assert_that!(p.cargo("b-cargo-test").arg("-v"),
                 execs().with_status(101).
                 with_stderr_contains("[ERROR] invalid configuration \
 for key `alias.b-cargo-test`
@@ -37,7 +39,7 @@ fn alias_default_config_overrides_config() {
         "#)
         .build();
 
-    assert_that(p.cargo("b").arg("-v"),
+    assert_that!(p.cargo("b").arg("-v"),
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]"));
 }
@@ -55,7 +57,7 @@ fn alias_config() {
         "#)
         .build();
 
-    assert_that(p.cargo("b-cargo-test").arg("-v"),
+    assert_that!(p.cargo("b-cargo-test").arg("-v"),
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]
 [RUNNING] `rustc --crate-name foo [..]"));
@@ -74,7 +76,7 @@ fn alias_list_test() {
          "#)
         .build();
 
-    assert_that(p.cargo("b-cargo-test").arg("-v"),
+    assert_that!(p.cargo("b-cargo-test").arg("-v"),
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]").
                 with_stderr_contains("[RUNNING] `rustc --crate-name [..]")
@@ -94,7 +96,7 @@ fn alias_with_flags_config() {
          "#)
         .build();
 
-    assert_that(p.cargo("b-cargo-test").arg("-v"),
+    assert_that!(p.cargo("b-cargo-test").arg("-v"),
                 execs().with_status(0).
                 with_stderr_contains("[COMPILING] foo v0.5.0 [..]").
                 with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]")
@@ -114,7 +116,7 @@ fn cant_shadow_builtin() {
          "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 ([..])

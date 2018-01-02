@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use std::fs::{self, File};
@@ -8,7 +9,7 @@ use std::io::prelude::*;
 use cargotest::support::paths::{self, CargoPathExt};
 use cargotest::support::registry::Package;
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 fn setup() {
     let root = paths::root();
@@ -49,7 +50,7 @@ fn simple() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] foo v0.0.1 ([..])
 [COMPILING] foo v0.0.1
@@ -57,10 +58,10 @@ fn simple() {
 [FINISHED] [..]
 ",
         dir = p.url())));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stderr("\
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stderr("\
 [FINISHED] [..]
 "));
-    assert_that(p.cargo("test"), execs().with_status(0));
+    assert_that!(p.cargo("test"), execs().with_status(0));
 }
 
 #[test]
@@ -90,7 +91,7 @@ fn multiple_versions() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] foo v0.1.0 ([..])
 [COMPILING] foo v0.1.0
@@ -104,7 +105,7 @@ fn multiple_versions() {
             .file("src/lib.rs", "pub fn foo() {}")
             .publish();
 
-    assert_that(p.cargo("update").arg("-v"),
+    assert_that!(p.cargo("update").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] foo v0.1.0 -> v0.2.0
 "));
@@ -143,7 +144,7 @@ fn multiple_names() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -189,7 +190,7 @@ fn interdependent() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -251,7 +252,7 @@ fn path_dep_rewritten() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] [..]
 [UNPACKING] [..]
@@ -287,7 +288,7 @@ fn invalid_dir_bad() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to load source for a dependency on `foo`
 
@@ -327,7 +328,7 @@ fn different_directory_replacing_the_registry_is_bad() {
 
     // Generate a lock file against the crates.io registry
     Package::new("foo", "0.0.1").publish();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
 
     // Switch back to our directory source, and now that we're replacing
     // crates.io make sure that this fails because we're replacing with a
@@ -339,7 +340,7 @@ fn different_directory_replacing_the_registry_is_bad() {
             .local(true)
             .publish();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] checksum for `foo v0.0.1` changed between lock files
 
@@ -389,7 +390,7 @@ fn crates_io_registry_url_is_optional() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr(&format!("\
 [UNPACKING] foo v0.0.1 ([..])
 [COMPILING] foo v0.0.1
@@ -397,8 +398,8 @@ fn crates_io_registry_url_is_optional() {
 [FINISHED] [..]
 ",
         dir = p.url())));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stderr("\
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stderr("\
 [FINISHED] [..]
 "));
-    assert_that(p.cargo("test"), execs().with_status(0));
+    assert_that!(p.cargo("test"), execs().with_status(0));
 }

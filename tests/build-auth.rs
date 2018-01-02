@@ -1,6 +1,7 @@
 extern crate bufstream;
 extern crate git2;
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use std::collections::HashSet;
@@ -11,7 +12,7 @@ use std::thread;
 use bufstream::BufStream;
 use cargotest::support::paths;
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 // Test that HTTP auth is offered from `credential.helper`
 #[test]
@@ -80,7 +81,7 @@ fn http_auth_offered() {
         "#)
         .build();
 
-    assert_that(script.cargo("build").arg("-v"),
+    assert_that!(script.cargo("build").arg("-v"),
                 execs().with_status(0));
     let script = script.bin("script");
 
@@ -106,7 +107,7 @@ fn http_auth_offered() {
         ")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr(&format!("\
 [UPDATING] git repository `http://{addr}/foo/bar`
 [ERROR] failed to load source for a dependency on `bar`
@@ -157,7 +158,7 @@ fn https_something_happens() {
         ")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr_contains(&format!("\
 [UPDATING] git repository `https://{addr}/foo/bar`
 ", addr = addr))
@@ -201,7 +202,7 @@ fn ssh_something_happens() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr_contains(&format!("\
 [UPDATING] git repository `ssh://{addr}/foo/bar`
 ", addr = addr))

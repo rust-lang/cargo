@@ -1,10 +1,11 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use cargotest::ChannelChanger;
 use cargotest::support::registry::{self, Package, alt_api_path};
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn is_feature_gated() {
@@ -24,7 +25,7 @@ fn is_feature_gated() {
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+    assert_that!(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(101)
                 .with_stderr_contains("  feature `alternative-registries` is required"));
 }
@@ -49,7 +50,7 @@ fn depend_on_alt_registry() {
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+    assert_that!(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] bar v0.0.1 (registry `file://[..]`)
@@ -60,10 +61,10 @@ fn depend_on_alt_registry() {
         dir = p.url(),
         reg = registry::alt_registry())));
 
-    assert_that(p.cargo("clean").masquerade_as_nightly_cargo(), execs().with_status(0));
+    assert_that!(p.cargo("clean").masquerade_as_nightly_cargo(), execs().with_status(0));
 
     // Don't download a second time
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+    assert_that!(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] bar v0.0.1 (registry `file://[..]`)
 [COMPILING] foo v0.0.1 ({dir})
@@ -93,7 +94,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
     Package::new("baz", "0.0.1").alternative(true).publish();
     Package::new("bar", "0.0.1").dep("baz", "0.0.1").alternative(true).publish();
 
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+    assert_that!(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
@@ -128,7 +129,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
     Package::new("baz", "0.0.1").alternative(true).publish();
     Package::new("bar", "0.0.1").registry_dep("baz", "0.0.1", registry::alt_registry().as_str()).alternative(true).publish();
 
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+    assert_that!(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
 [DOWNLOADING] [..] v0.0.1 (registry `file://[..]`)
@@ -163,7 +164,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").registry_dep("baz", "0.0.1", registry::registry().as_str()).alternative(true).publish();
 
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+    assert_that!(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{alt_reg}`
 [UPDATING] registry `{reg}`
@@ -197,7 +198,7 @@ fn registry_incompatible_with_path() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+    assert_that!(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(101)
                 .with_stderr_contains("  dependency (bar) specification is ambiguous. Only one of `path` or `registry` is allowed."));
 }
@@ -220,7 +221,7 @@ fn registry_incompatible_with_git() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+    assert_that!(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(101)
                 .with_stderr_contains("  dependency (bar) specification is ambiguous. Only one of `git` or `registry` is allowed."));
 }
@@ -243,7 +244,7 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
 
     Package::new("bar", "0.0.1").alternative(true).publish();
 
-    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--index").arg(registry::registry().to_string()),
                 execs().with_status(101));
 }
@@ -269,11 +270,11 @@ fn publish_with_registry_dependency() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     // Login so that we have the token available
-    assert_that(p.cargo("login").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("login").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("TOKEN").arg("-Zunstable-options"),
                 execs().with_status(0));
 
-    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(0));
 }
@@ -303,7 +304,7 @@ fn alt_registry_and_crates_io_deps() {
     Package::new("crates_io_dep", "0.0.1").publish();
     Package::new("alt_reg_dep", "0.1.0").alternative(true).publish();
 
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo(),
+    assert_that!(p.cargo("build").masquerade_as_nightly_cargo(),
                 execs().with_status(0)
                        .with_stderr_contains(format!("\
 [UPDATING] registry `{}`", registry::alt_registry()))
@@ -340,7 +341,7 @@ fn block_publish_due_to_no_token() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     // Now perform the actual publish
-    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(101)
                 .with_stderr_contains("error: no upload token found, please run `cargo login`"));
@@ -364,12 +365,12 @@ fn publish_to_alt_registry() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     // Login so that we have the token available
-    assert_that(p.cargo("login").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("login").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("TOKEN").arg("-Zunstable-options"),
                 execs().with_status(0));
 
     // Now perform the actual publish
-    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(0));
 
@@ -399,11 +400,11 @@ fn publish_with_crates_io_dep() {
     Package::new("bar", "0.0.1").publish();
 
     // Login so that we have the token available
-    assert_that(p.cargo("login").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("login").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("TOKEN").arg("-Zunstable-options"),
                 execs().with_status(0));
 
-    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(0));
 }

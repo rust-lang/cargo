@@ -1,5 +1,6 @@
 extern crate cargotest;
 extern crate git2;
+#[macro_use]
 extern crate hamcrest;
 extern crate url;
 
@@ -12,7 +13,7 @@ use cargotest::support::{execs, project};
 use cargotest::support::registry::Package;
 use cargotest::support::paths;
 use cargotest::support::git;
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 use url::Url;
 
@@ -38,7 +39,7 @@ fn run_test(path_env: Option<&OsStr>) {
         .build();
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(foo.cargo("build"),
+    assert_that!(foo.cargo("build"),
                 execs().with_status(0));
 
     let index = find_index();
@@ -74,7 +75,7 @@ fn run_test(path_env: Option<&OsStr>) {
         cmd.env("PATH", path);
     }
     cmd.env("RUST_LOG", "trace");
-    assert_that(cmd, execs().with_status(0));
+    assert_that!(cmd, execs().with_status(0));
     let after = find_index().join(".git/objects/pack")
                     .read_dir().unwrap()
                     .count();

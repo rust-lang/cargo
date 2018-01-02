@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use std::fs::File;
@@ -7,7 +8,7 @@ use std::io::prelude::*;
 
 use cargotest::support::paths::CargoPathExt;
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn invalid1() {
@@ -24,7 +25,7 @@ fn invalid1() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -51,7 +52,7 @@ fn invalid2() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -78,7 +79,7 @@ fn invalid3() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -111,7 +112,7 @@ fn invalid4() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Package `bar v0.0.1 ([..])` does not have these features: `bar`
 "));
@@ -123,7 +124,7 @@ fn invalid4() {
         authors = []
     "#);
 
-    assert_that(p.cargo("build").arg("--features").arg("test"),
+    assert_that!(p.cargo("build").arg("--features").arg("test"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Package `foo v0.0.1 ([..])` does not have these features: `test`
 "));
@@ -145,7 +146,7 @@ fn invalid5() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -169,7 +170,7 @@ fn invalid6() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--features").arg("foo"),
+    assert_that!(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -194,7 +195,7 @@ fn invalid7() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--features").arg("foo"),
+    assert_that!(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -226,7 +227,7 @@ fn invalid8() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--features").arg("foo"),
+    assert_that!(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] feature names may not contain slashes: `foo/bar`
 "));
@@ -254,7 +255,7 @@ fn invalid9() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--features").arg("bar"),
+    assert_that!(p.cargo("build").arg("--features").arg("bar"),
                 execs().with_status(0).with_stderr("\
 warning: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with \
 that name, but only optional dependencies can be used as features. [..]
@@ -297,7 +298,7 @@ fn invalid10() {
         .file("bar/baz/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 warning: Package `bar v0.0.1 ([..])` does not have feature `baz`. It has a required dependency with \
 that name, but only optional dependencies can be used as features. [..]
@@ -354,7 +355,7 @@ fn no_transitive_dep_feature_requirement() {
             pub fn test() { print!("test"); }
         "#)
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] feature names may not contain slashes: `bar/qux`
 "));
@@ -390,21 +391,21 @@ fn no_feature_doesnt_build() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
-    assert_that(p.process(&p.bin("foo")),
+    assert_that!(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
 
-    assert_that(p.cargo("build").arg("--features").arg("bar"),
+    assert_that!(p.cargo("build").arg("--features").arg("bar"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
-    assert_that(p.process(&p.bin("foo")),
+    assert_that!(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
 }
 
@@ -441,21 +442,21 @@ fn default_feature_pulled_in() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] bar v0.0.1 ({dir}/bar)
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
-    assert_that(p.process(&p.bin("foo")),
+    assert_that!(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("bar\n"));
 
-    assert_that(p.cargo("build").arg("--no-default-features"),
+    assert_that!(p.cargo("build").arg("--no-default-features"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
-    assert_that(p.process(&p.bin("foo")),
+    assert_that!(p.process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(""));
 }
 
@@ -474,7 +475,7 @@ fn cyclic_feature() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Cyclic feature dependency: feature `default` depends on itself
 "));
@@ -496,7 +497,7 @@ fn cyclic_feature2() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
 }
 
@@ -550,7 +551,7 @@ fn groups_on_groups_on_groups() {
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -599,7 +600,7 @@ fn many_cli_features() {
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("--features").arg("bar baz"),
+    assert_that!(p.cargo("build").arg("--features").arg("bar baz"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -664,7 +665,7 @@ fn union_features() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] d2 v0.0.1 ({dir}/d2)
 [COMPILING] d1 v0.0.1 ({dir}/d1)
@@ -701,7 +702,7 @@ fn many_features_no_rebuilds() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] a v0.1.0 ({dir}/a)
 [COMPILING] b v0.1.0 ({dir})
@@ -709,7 +710,7 @@ fn many_features_no_rebuilds() {
 ", dir = p.url())));
     p.root().move_into_the_past();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [FRESH] a v0.1.0 ([..]/a)
 [FRESH] b v0.1.0 ([..])
@@ -730,7 +731,7 @@ fn empty_features() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("--features").arg(""),
+    assert_that!(p.cargo("build").arg("--features").arg(""),
                 execs().with_status(0));
 }
 
@@ -769,7 +770,7 @@ fn transitive_features() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").arg("--features").arg("foo"),
+    assert_that!(p.cargo("build").arg("--features").arg("foo"),
                 execs().with_status(0));
 }
 
@@ -825,7 +826,7 @@ fn everything_in_the_lockfile() {
         .file("d3/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("fetch"), execs().with_status(0));
+    assert_that!(p.cargo("fetch"), execs().with_status(0));
     let loc = p.root().join("Cargo.lock");
     let mut lockfile = String::new();
     t!(t!(File::open(&loc)).read_to_string(&mut lockfile));
@@ -871,9 +872,9 @@ fn no_rebuild_when_frobbing_default_feature() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stdout(""));
 }
 
 #[test]
@@ -919,9 +920,9 @@ fn unions_work_with_no_default_features() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stdout(""));
 }
 
 #[test]
@@ -948,7 +949,7 @@ fn optional_and_dev_dep() {
         .file("foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] test v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -991,7 +992,7 @@ fn activating_feature_activates_dep() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").arg("--features").arg("a").arg("-v"),
+    assert_that!(p.cargo("build").arg("--features").arg("a").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -1045,22 +1046,22 @@ fn dep_feature_in_cmd_line() {
 
     // The foo project requires that feature "some-feat" in "bar" is enabled.
     // Building without any features enabled should fail:
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101));
 
     // We should be able to enable the feature "derived-feat", which enables "some-feat",
     // on the command line. The feature is enabled, thus building should be successful:
-    assert_that(p.cargo("build").arg("--features").arg("derived/derived-feat"),
+    assert_that!(p.cargo("build").arg("--features").arg("derived/derived-feat"),
                 execs().with_status(0));
 
     // Trying to enable features of transitive dependencies is an error
-    assert_that(p.cargo("build").arg("--features").arg("bar/some-feat"),
+    assert_that!(p.cargo("build").arg("--features").arg("bar/some-feat"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Package `foo v0.0.1 ([..])` does not have these features: `bar`
 "));
 
     // Hierarchical feature specification should still be disallowed
-    assert_that(p.cargo("build").arg("--features").arg("derived/bar/some-feat"),
+    assert_that!(p.cargo("build").arg("--features").arg("derived/bar/some-feat"),
                 execs().with_status(101).with_stderr("\
 [ERROR] feature names may not contain slashes: `bar/some-feat`
 "));
@@ -1107,7 +1108,7 @@ fn all_features_flag_enables_all_features() {
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("--all-features"),
+    assert_that!(p.cargo("build").arg("--all-features"),
                 execs().with_status(0));
 }
 
@@ -1151,7 +1152,7 @@ fn many_cli_features_comma_delimited() {
         .file("baz/src/lib.rs", "pub fn baz() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("--features").arg("bar,baz"),
+    assert_that!(p.cargo("build").arg("--features").arg("bar,baz"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
@@ -1226,7 +1227,7 @@ fn many_cli_features_comma_and_space_delimited() {
         .file("bap/src/lib.rs", "pub fn bap() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("--features").arg("bar,baz bam bap"),
+    assert_that!(p.cargo("build").arg("--features").arg("bar,baz bam bap"),
                 execs().with_status(0).with_stderr(format!("\
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])
 [COMPILING] ba[..] v0.0.1 ({dir}/ba[..])

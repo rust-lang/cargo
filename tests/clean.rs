@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate hamcrest;
 extern crate cargotest;
 
@@ -5,7 +6,7 @@ use std::env;
 
 use cargotest::support::{git, project, execs, main_file, basic_bin_manifest};
 use cargotest::support::registry::Package;
-use hamcrest::{assert_that, existing_dir, existing_file, is_not};
+use hamcrest::prelude::*;
 
 #[test]
 fn cargo_clean_simple() {
@@ -14,12 +15,12 @@ fn cargo_clean_simple() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.build_dir(), existing_dir());
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.build_dir(), existing_dir());
 
-    assert_that(p.cargo("clean"),
+    assert_that!(p.cargo("clean"),
                 execs().with_status(0));
-    assert_that(&p.build_dir(), is_not(existing_dir()));
+    assert_that!(&p.build_dir(), is_not(existing_dir()));
 }
 
 #[test]
@@ -30,12 +31,12 @@ fn different_dir() {
         .file("src/bar/a.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.build_dir(), existing_dir());
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.build_dir(), existing_dir());
 
-    assert_that(p.cargo("clean").cwd(&p.root().join("src")),
+    assert_that!(p.cargo("clean").cwd(&p.root().join("src")),
                 execs().with_status(0).with_stdout(""));
-    assert_that(&p.build_dir(), is_not(existing_dir()));
+    assert_that!(&p.build_dir(), is_not(existing_dir()));
 }
 
 #[test]
@@ -78,7 +79,7 @@ fn clean_multiple_packages() {
         .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }")
         .build();
 
-    assert_that(p.cargo("build").arg("-p").arg("d1").arg("-p").arg("d2")
+    assert_that!(p.cargo("build").arg("-p").arg("d1").arg("-p").arg("d2")
                                         .arg("-p").arg("foo"),
                 execs().with_status(0));
 
@@ -88,16 +89,16 @@ fn clean_multiple_packages() {
                                 .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(d1_path, existing_file());
-    assert_that(d2_path, existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(d1_path, existing_file());
+    assert_that!(d2_path, existing_file());
 
-    assert_that(p.cargo("clean").arg("-p").arg("d1").arg("-p").arg("d2")
+    assert_that!(p.cargo("clean").arg("-p").arg("d1").arg("-p").arg("d2")
                                 .cwd(&p.root().join("src")),
                 execs().with_status(0).with_stdout(""));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(d1_path, is_not(existing_file()));
-    assert_that(d2_path, is_not(existing_file()));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(d1_path, is_not(existing_file()));
+    assert_that!(d2_path, is_not(existing_file()));
 }
 
 #[test]
@@ -122,17 +123,17 @@ fn clean_release() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--release"),
+    assert_that!(p.cargo("build").arg("--release"),
                 execs().with_status(0));
 
-    assert_that(p.cargo("clean").arg("-p").arg("foo"),
+    assert_that!(p.cargo("clean").arg("-p").arg("foo"),
                 execs().with_status(0));
-    assert_that(p.cargo("build").arg("--release"),
+    assert_that!(p.cargo("build").arg("--release"),
                 execs().with_status(0).with_stdout(""));
 
-    assert_that(p.cargo("clean").arg("-p").arg("foo").arg("--release"),
+    assert_that!(p.cargo("clean").arg("-p").arg("foo").arg("--release"),
                 execs().with_status(0));
-    assert_that(p.cargo("build").arg("--release"),
+    assert_that!(p.cargo("build").arg("--release"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
@@ -166,11 +167,11 @@ fn build_script() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").env("FIRST", "1"),
+    assert_that!(p.cargo("build").env("FIRST", "1"),
                 execs().with_status(0));
-    assert_that(p.cargo("clean").arg("-p").arg("foo"),
+    assert_that!(p.cargo("clean").arg("-p").arg("foo"),
                 execs().with_status(0));
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] build.rs [..]`
@@ -205,11 +206,11 @@ fn clean_git() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
-    assert_that(p.cargo("clean").arg("-p").arg("dep"),
+    assert_that!(p.cargo("clean").arg("-p").arg("dep"),
                 execs().with_status(0).with_stdout(""));
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -230,10 +231,10 @@ fn registry() {
 
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
-    assert_that(p.cargo("clean").arg("-p").arg("bar"),
+    assert_that!(p.cargo("clean").arg("-p").arg("bar"),
                 execs().with_status(0).with_stdout(""));
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }

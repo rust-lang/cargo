@@ -1,11 +1,12 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use std::fs::File;
 
 use cargotest::sleep_ms;
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn rerun_if_env_changes() {
@@ -26,30 +27,30 @@ fn rerun_if_env_changes() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] [..]
 "));
-    assert_that(p.cargo("build").env("FOO", "bar"),
+    assert_that!(p.cargo("build").env("FOO", "bar"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] [..]
 "));
-    assert_that(p.cargo("build").env("FOO", "baz"),
+    assert_that!(p.cargo("build").env("FOO", "baz"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] [..]
 "));
-    assert_that(p.cargo("build").env("FOO", "baz"),
+    assert_that!(p.cargo("build").env("FOO", "baz"),
                 execs().with_status(0)
                        .with_stderr("\
 [FINISHED] [..]
 "));
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 ([..])
@@ -78,26 +79,26 @@ fn rerun_if_env_or_file_changes() {
         .file("foo", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] [..]
 "));
-    assert_that(p.cargo("build").env("FOO", "bar"),
+    assert_that!(p.cargo("build").env("FOO", "bar"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 ([..])
 [FINISHED] [..]
 "));
-    assert_that(p.cargo("build").env("FOO", "bar"),
+    assert_that!(p.cargo("build").env("FOO", "bar"),
                 execs().with_status(0)
                        .with_stderr("\
 [FINISHED] [..]
 "));
     sleep_ms(1000);
     File::create(p.root().join("foo")).unwrap();
-    assert_that(p.cargo("build").env("FOO", "bar"),
+    assert_that!(p.cargo("build").env("FOO", "bar"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.5.0 ([..])

@@ -1,9 +1,10 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use cargotest::support::{project, execs};
 use cargotest::support::registry::Package;
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn bad1() {
@@ -20,7 +21,7 @@ fn bad1() {
               nonexistent-target = "foo"
         "#)
         .build();
-    assert_that(p.cargo("build").arg("-v")
+    assert_that!(p.cargo("build").arg("-v")
                    .arg("--target=nonexistent-target"),
                 execs().with_status(101).with_stderr("\
 [ERROR] expected table for configuration key `target.nonexistent-target`, \
@@ -43,7 +44,7 @@ fn bad2() {
                 proxy = 3.0
         "#)
         .build();
-    assert_that(p.cargo("publish").arg("-v"),
+    assert_that!(p.cargo("publish").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Couldn't load Cargo configuration
 
@@ -78,7 +79,7 @@ fn bad3() {
         .build();
     Package::new("foo", "1.0.0").publish();
 
-    assert_that(p.cargo("publish").arg("-v"),
+    assert_that!(p.cargo("publish").arg("-v"),
                 execs().with_status(101).with_stderr("\
 error: failed to update registry [..]
 
@@ -96,7 +97,7 @@ fn bad4() {
               name = false
         "#)
         .build();
-    assert_that(p.cargo("new").arg("-v").arg("foo"),
+    assert_that!(p.cargo("new").arg("-v").arg("foo"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Failed to create project `foo` at `[..]`
 
@@ -116,7 +117,7 @@ fn bad5() {
             foo = 2
         "#)
         .build();
-    assert_that(p.cargo("new")
+    assert_that!(p.cargo("new")
                    .arg("-v").arg("foo").cwd(&p.root().join("foo")),
                 execs().with_status(101).with_stderr("\
 [ERROR] Failed to create project `foo` at `[..]`
@@ -152,7 +153,7 @@ fn bad_cargo_config_jobs() {
             jobs = -1
         "#)
         .build();
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [ERROR] build.jobs must be positive, but found -1 in [..]
 "));
@@ -173,7 +174,7 @@ fn default_cargo_config_jobs() {
             jobs = 1
         "#)
         .build();
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -192,7 +193,7 @@ fn good_cargo_config_jobs() {
             jobs = 4
         "#)
         .build();
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -212,7 +213,7 @@ fn invalid_global_config() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Couldn't load Cargo configuration
 
@@ -240,7 +241,7 @@ fn bad_cargo_lock() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse lock file at: [..]Cargo.lock
 
@@ -284,7 +285,7 @@ fn duplicate_packages_in_cargo_lock() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").arg("--verbose"),
+    assert_that!(p.cargo("build").arg("--verbose"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse lock file at: [..]
 
@@ -323,7 +324,7 @@ fn bad_source_in_cargo_lock() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").arg("--verbose"),
+    assert_that!(p.cargo("build").arg("--verbose"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse lock file at: [..]
 
@@ -352,7 +353,7 @@ fn bad_dependency_in_lockfile() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").arg("--verbose"),
+    assert_that!(p.cargo("build").arg("--verbose"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse lock file at: [..]
 
@@ -377,7 +378,7 @@ fn bad_git_dependency() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] git repository `file:///`
 [ERROR] failed to load source for a dependency on `foo`
@@ -408,7 +409,7 @@ fn bad_crate_type() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr_contains("\
 error: failed to run `rustc` to learn about target-specific information
 "));
@@ -431,7 +432,7 @@ fn malformed_override() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -464,7 +465,7 @@ fn duplicate_binary_names() {
         .file("b.rs", r#"fn main() -> () {}"#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -494,7 +495,7 @@ fn duplicate_example_names() {
         .file("examples/ex2.rs", r#"fn main () -> () {}"#)
         .build();
 
-    assert_that(p.cargo("build").arg("--example").arg("ex"),
+    assert_that!(p.cargo("build").arg("--example").arg("ex"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -524,7 +525,7 @@ fn duplicate_bench_names() {
         .file("benches/ex2.rs", r#"fn main () {}"#)
         .build();
 
-    assert_that(p.cargo("bench"),
+    assert_that!(p.cargo("bench"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -569,7 +570,7 @@ fn duplicate_deps() {
         .file("src/main.rs", r#"fn main () {}"#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -615,7 +616,7 @@ fn duplicate_deps_diff_sources() {
         .file("src/main.rs", r#"fn main () {}"#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -640,7 +641,7 @@ fn unused_keys() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 warning: unused manifest key: target.foo.bar
 [COMPILING] foo v0.1.0 (file:///[..])
@@ -660,7 +661,7 @@ warning: unused manifest key: target.foo.bar
             pub fn foo() {}
         "#)
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                     .with_stderr("\
 warning: unused manifest key: project.bulid
@@ -683,7 +684,7 @@ warning: unused manifest key: project.bulid
             pub fn foo() {}
         "#)
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                     .with_stderr("\
 warning: unused manifest key: lib.build
@@ -710,7 +711,7 @@ fn empty_dependencies() {
 
     Package::new("foo", "0.0.1").publish();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr_contains("\
 warning: dependency (foo) specified without providing a local path, Git repository, or version \
 to use. This will be considered an error in future versions
@@ -732,7 +733,7 @@ fn invalid_toml_historically_allowed_is_warned() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 warning: TOML file found which contains invalid syntax and will soon not parse
 at `[..]config`.
@@ -763,7 +764,7 @@ fn ambiguous_git_reference() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_stderr_contains("\
 [WARNING] dependency (bar) specification is ambiguous. \
 Only one of `branch`, `tag` or `rev` is allowed. \
@@ -786,7 +787,7 @@ fn bad_source_config1() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: no source URL specified for `source.foo`, need [..]
 "));
@@ -812,7 +813,7 @@ fn bad_source_config2() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to load source for a dependency on `bar`
 
@@ -845,7 +846,7 @@ fn bad_source_config3() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to load source for a dependency on `bar`
 
@@ -881,7 +882,7 @@ fn bad_source_config4() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to load source for a dependency on `bar`
 
@@ -917,7 +918,7 @@ fn bad_source_config5() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: configuration key `source.bar.registry` specified an invalid URL (in [..])
 
@@ -942,7 +943,7 @@ fn both_git_and_path_specified() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(foo.cargo("build").arg("-v"),
+    assert_that!(foo.cargo("build").arg("-v"),
                 execs().with_stderr_contains("\
 [WARNING] dependency (bar) specification is ambiguous. \
 Only one of `git` or `path` is allowed. \
@@ -970,7 +971,7 @@ fn bad_source_config6() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: expected a string, but found a array for `source.crates-io.replace-with` in [..]
 "));
@@ -992,7 +993,7 @@ fn ignored_git_revision() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(foo.cargo("build").arg("-v"),
+    assert_that!(foo.cargo("build").arg("-v"),
                 execs().with_stderr_contains("\
 [WARNING] key `branch` is ignored for dependency (bar). \
 This will be considered an error in future versions"));
@@ -1020,7 +1021,7 @@ fn bad_source_config7() {
 
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: more than one source URL specified for `source.foo`
 "));
@@ -1041,7 +1042,7 @@ fn bad_dependency() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 
@@ -1065,7 +1066,7 @@ fn bad_debuginfo() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 
@@ -1087,7 +1088,7 @@ fn bad_opt_level() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 

@@ -1,5 +1,6 @@
 extern crate cargo;
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use std::str::FromStr;
@@ -9,7 +10,7 @@ use cargo::util::{Cfg, CfgExpr};
 use cargotest::rustc_host;
 use cargotest::support::registry::Package;
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 macro_rules! c {
     ($a:ident) => (
@@ -159,7 +160,7 @@ fn cfg_easy() {
         "#)
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -185,7 +186,7 @@ fn dont_include() {
         "#)
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -213,7 +214,7 @@ fn works_through_the_registry() {
         .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate bar;")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
@@ -248,7 +249,7 @@ fn ignore_version_from_other_platform() {
         .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate foo;")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
@@ -273,7 +274,7 @@ fn bad_target_spec() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -300,7 +301,7 @@ fn bad_target_spec2() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -344,7 +345,7 @@ fn multiple_match_ok() {
         "#)
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -369,6 +370,6 @@ fn any_ok() {
         "#)
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }

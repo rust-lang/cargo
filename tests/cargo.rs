@@ -1,5 +1,6 @@
 extern crate cargo;
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use std::env;
@@ -11,7 +12,7 @@ use std::str;
 use cargotest::cargo_process;
 use cargotest::support::paths::{self, CargoPathExt};
 use cargotest::support::{execs, project, Project, basic_bin_manifest};
-use hamcrest::{assert_that, existing_file};
+use hamcrest::prelude::*;
 
 #[cfg_attr(windows,allow(dead_code))]
 enum FakeKind<'a> {
@@ -103,7 +104,7 @@ fn find_closest_biuld_to_build() {
     let mut pr = cargo_process();
     pr.arg("biuld");
 
-    assert_that(pr,
+    assert_that!(pr,
                 execs().with_status(101)
                        .with_stderr("[ERROR] no such subcommand: `biuld`
 
@@ -119,7 +120,7 @@ fn find_closest_dont_correct_nonsense() {
     pr.arg("there-is-no-way-that-there-is-a-command-close-to-this")
       .cwd(&paths::root());
 
-    assert_that(pr,
+    assert_that!(pr,
                 execs().with_status(101)
                        .with_stderr("[ERROR] no such subcommand: \
                         `there-is-no-way-that-there-is-a-command-close-to-this`
@@ -131,7 +132,7 @@ fn displays_subcommand_on_error() {
     let mut pr = cargo_process();
     pr.arg("invalid-command");
 
-    assert_that(pr,
+    assert_that!(pr,
                 execs().with_status(101)
                        .with_stderr("[ERROR] no such subcommand: `invalid-command`
 "));
@@ -149,7 +150,7 @@ fn override_cargo_home() {
         git = false
     "#).unwrap();
 
-    assert_that(cargo_process()
+    assert_that!(cargo_process()
                     .arg("new").arg("foo")
                     .env("USER", "foo")
                     .env("CARGO_HOME", &my_home),
@@ -180,8 +181,8 @@ fn cargo_subcommand_env() {
 
     let target_dir = p.target_debug_dir();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("cargo-envtest"), existing_file());
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("cargo-envtest"), existing_file());
 
     let mut pr = cargo_process();
     let cargo = cargo_exe().canonicalize().unwrap();
@@ -189,30 +190,30 @@ fn cargo_subcommand_env() {
     path.push(target_dir);
     let path = env::join_paths(path.iter()).unwrap();
 
-    assert_that(pr.arg("envtest").env("PATH", &path),
+    assert_that!(pr.arg("envtest").env("PATH", &path),
                 execs().with_status(0).with_stdout(cargo.to_str().unwrap()));
 }
 
 #[test]
 fn cargo_help() {
-    assert_that(cargo_process(),
+    assert_that!(cargo_process(),
                 execs().with_status(0));
-    assert_that(cargo_process().arg("help"),
+    assert_that!(cargo_process().arg("help"),
                 execs().with_status(0));
-    assert_that(cargo_process().arg("-h"),
+    assert_that!(cargo_process().arg("-h"),
                 execs().with_status(0));
-    assert_that(cargo_process().arg("help").arg("build"),
+    assert_that!(cargo_process().arg("help").arg("build"),
                 execs().with_status(0));
-    assert_that(cargo_process().arg("build").arg("-h"),
+    assert_that!(cargo_process().arg("build").arg("-h"),
                 execs().with_status(0));
-    assert_that(cargo_process().arg("help").arg("-h"),
+    assert_that!(cargo_process().arg("help").arg("-h"),
                 execs().with_status(0));
-    assert_that(cargo_process().arg("help").arg("help"),
+    assert_that!(cargo_process().arg("help").arg("help"),
                 execs().with_status(0));
 }
 
 #[test]
 fn explain() {
-    assert_that(cargo_process().arg("--explain").arg("E0001"),
+    assert_that!(cargo_process().arg("--explain").arg("E0001"),
                 execs().with_status(0));
 }

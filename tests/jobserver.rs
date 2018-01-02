@@ -1,4 +1,5 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use std::net::TcpListener;
@@ -6,7 +7,7 @@ use std::thread;
 use std::process::Command;
 
 use cargotest::support::{project, execs, cargo_exe};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn jobserver_exists() {
@@ -56,7 +57,7 @@ fn jobserver_exists() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -142,7 +143,7 @@ all:
         drop((a2, a3));
     });
 
-    assert_that(p.process(make)
+    assert_that!(p.process(make)
                  .env("CARGO", cargo_exe())
                  .env("ADDR", addr.to_string())
                  .arg("-j2"),
@@ -171,7 +172,7 @@ all:
 ")
         .build();
 
-    assert_that(p.process(make)
+    assert_that!(p.process(make)
                  .env("CARGO", cargo_exe())
                  .arg("-j2"),
                 execs().with_status(0).with_stderr("\

@@ -1,11 +1,12 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use cargotest::support::git;
 use cargotest::support::paths;
 use cargotest::support::registry::Package;
 use cargotest::support::{execs, project};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn override_simple() {
@@ -42,7 +43,7 @@ fn override_simple() {
         ")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -70,7 +71,7 @@ fn missing_version() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 
@@ -97,7 +98,7 @@ fn invalid_semver_version() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
 error: failed to parse manifest at `[..]`
 
@@ -127,7 +128,7 @@ fn different_version() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 
@@ -170,7 +171,7 @@ fn transitive() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -181,7 +182,7 @@ fn transitive() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stdout(""));
 }
 
 #[test]
@@ -219,7 +220,7 @@ fn persists_across_rebuilds() {
         ")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `file://[..]`
@@ -228,7 +229,7 @@ fn persists_across_rebuilds() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stdout(""));
 }
 
@@ -267,7 +268,7 @@ fn replace_registry_with_path() {
         ")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [COMPILING] foo v0.1.0 (file://[..])
@@ -325,7 +326,7 @@ fn use_a_spec_to_select() {
         ")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -373,7 +374,7 @@ fn override_adds_some_deps() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 [UPDATING] git repository `[..]`
@@ -384,21 +385,21 @@ fn override_adds_some_deps() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stdout(""));
 
     Package::new("foo", "0.1.2").publish();
-    assert_that(p.cargo("update").arg("-p").arg(&format!("{}#bar", foo.url())),
+    assert_that!(p.cargo("update").arg("-p").arg(&format!("{}#bar", foo.url())),
                 execs().with_status(0).with_stderr("\
 [UPDATING] git repository `file://[..]`
 "));
-    assert_that(p.cargo("update")
+    assert_that!(p.cargo("update")
                  .arg("-p")
                  .arg("https://github.com/rust-lang/crates.io-index#bar"),
                 execs().with_status(0).with_stderr("\
 [UPDATING] registry `file://[..]`
 "));
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stdout(""));
 }
 
 #[test]
@@ -438,11 +439,11 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
-    assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stdout(""));
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stdout(""));
 }
 
 #[test]
@@ -475,7 +476,7 @@ fn override_wrong_name() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [UPDATING] git repository [..]
@@ -509,7 +510,7 @@ fn override_with_nothing() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [UPDATING] git repository [..]
@@ -538,7 +539,7 @@ fn override_wrong_version() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
 
@@ -580,7 +581,7 @@ fn multiple_specs() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
 [UPDATING] git repository [..]
@@ -623,7 +624,7 @@ fn test_override_dep() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("test").arg("-p").arg("foo"),
+    assert_that!(p.cargo("test").arg("-p").arg("foo"),
                 execs().with_status(101)
                        .with_stderr_contains("\
 error: There are multiple `foo` packages in your project, and the [..]
@@ -663,9 +664,9 @@ fn update() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("generate-lockfile"),
+    assert_that!(p.cargo("generate-lockfile"),
                 execs().with_status(0));
-    assert_that(p.cargo("update"),
+    assert_that!(p.cargo("update"),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`
@@ -721,7 +722,7 @@ fn no_override_self() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").arg("--verbose"),
+    assert_that!(p.cargo("build").arg("--verbose"),
                 execs().with_status(0));
 }
 
@@ -766,7 +767,7 @@ fn broken_path_override_warns() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] [..]
@@ -890,7 +891,7 @@ fn override_an_override() {
         ")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -937,9 +938,9 @@ fn overriding_nonexistent_no_spurious() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [WARNING] package replacement is not used: [..]bar:0.1.0
 [FINISHED] [..]
@@ -981,7 +982,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
         .file("local_foo/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("first_crate")),
+    assert_that!(p.cargo("build").cwd(p.root().join("first_crate")),
                 execs().with_status(0)
                     .with_stdout("")
                     .with_stderr("\
@@ -990,7 +991,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
 [COMPILING] first_crate v0.1.0 ([..])
 [FINISHED] [..]"));
 
-    assert_that(p.cargo("build").cwd(p.root().join("second_crate")),
+    assert_that!(p.cargo("build").cwd(p.root().join("second_crate")),
                 execs().with_status(0)
                     .with_stdout("")
                     .with_stderr("\
@@ -1037,7 +1038,7 @@ fn override_to_path_dep() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -1085,7 +1086,7 @@ fn replace_to_path_dep() {
         .file("foo/bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -1129,7 +1130,7 @@ fn paths_ok_with_optional() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.1.0 ([..]foo2)
 [COMPILING] local v0.0.1 ([..])
@@ -1174,7 +1175,7 @@ fn paths_add_optional_bad() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr_contains("\
 warning: path override for crate `foo` has altered the original list of
 dependencies; the dependency on `bar` was either added or\
@@ -1236,7 +1237,7 @@ fn override_with_default_feature() {
         .file("another2/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("run"),
+    assert_that!(p.cargo("run"),
                 execs().with_status(0));
 }
 
@@ -1270,7 +1271,7 @@ fn override_plus_dep() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
 error: cyclic package dependency: [..]
 "));

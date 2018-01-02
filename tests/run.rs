@@ -1,10 +1,11 @@
 extern crate cargo;
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use cargo::util::paths::dylib_path_envvar;
 use cargotest::support::{project, execs, path2url};
-use hamcrest::{assert_that, existing_file};
+use hamcrest::prelude::*;
 
 #[test]
 fn simple() {
@@ -20,7 +21,7 @@ fn simple() {
         "#)
         .build();
 
-    assert_that(p.cargo("run"),
+    assert_that!(p.cargo("run"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -29,7 +30,7 @@ fn simple() {
                        .with_stdout("\
 hello
 "));
-    assert_that(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
 }
 
 #[test]
@@ -47,7 +48,7 @@ fn simple_implicit_main() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--bins"),
+    assert_that!(p.cargo("run").arg("--bins"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -56,7 +57,7 @@ fn simple_implicit_main() {
                        .with_stdout("\
 hello
 "));
-    assert_that(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
 }
 
 #[test]
@@ -73,7 +74,7 @@ fn simple_quiet() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("-q"),
+    assert_that!(p.cargo("run").arg("-q"),
                 execs().with_status(0).with_stdout("\
 hello
 ")
@@ -94,7 +95,7 @@ fn simple_quiet_and_verbose() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("-q").arg("-v"),
+    assert_that!(p.cargo("run").arg("-q").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [ERROR] cannot set both --verbose and --quiet
 "));
@@ -118,7 +119,7 @@ fn quiet_and_verbose_config() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("-q"),
+    assert_that!(p.cargo("run").arg("-q"),
                 execs().with_status(0));
 }
 
@@ -139,7 +140,7 @@ fn simple_with_args() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("hello").arg("world"),
+    assert_that!(p.cargo("run").arg("hello").arg("world"),
                 execs().with_status(0));
 }
 
@@ -167,7 +168,7 @@ fn exit_code() {
 [ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
 ");
     }
-    assert_that(p.cargo("run"),
+    assert_that!(p.cargo("run"),
                 execs().with_status(2).with_stderr(output));
 }
 
@@ -197,7 +198,7 @@ fn exit_code_verbose() {
 ");
     }
 
-    assert_that(p.cargo("run").arg("-v"),
+    assert_that!(p.cargo("run").arg("-v"),
                 execs().with_status(2).with_stderr(output));
 }
 
@@ -213,7 +214,7 @@ fn no_main_file() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("run"),
+    assert_that!(p.cargo("run"),
                 execs().with_status(101)
                        .with_stderr("[ERROR] a bin target must be available \
                                      for `cargo run`\n"));
@@ -232,7 +233,7 @@ fn no_main_file_implicit() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("run").arg("--bins"),
+    assert_that!(p.cargo("run").arg("--bins"),
                 execs().with_status(101)
                        .with_stderr("[ERROR] a bin target must be available \
                                      for `cargo run`\n"));
@@ -252,7 +253,7 @@ fn too_many_bins() {
         .file("src/bin/b.rs", "")
         .build();
 
-    assert_that(p.cargo("run"),
+    assert_that!(p.cargo("run"),
                 execs().with_status(101)
                        .with_stderr("[ERROR] `cargo run` requires that a project only \
                                      have one executable; use the `--bin` option \
@@ -274,7 +275,7 @@ fn too_many_bins_implicit() {
         .file("src/bin/b.rs", "")
         .build();
 
-    assert_that(p.cargo("run").arg("--bins"),
+    assert_that!(p.cargo("run").arg("--bins"),
                 execs().with_status(101)
                        .with_stderr("[ERROR] `cargo run` requires that a project only \
                                      have one executable; use the `--bin` option \
@@ -303,7 +304,7 @@ fn specify_name() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--bin").arg("a").arg("-v"),
+    assert_that!(p.cargo("run").arg("--bin").arg("a").arg("-v"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -315,7 +316,7 @@ fn specify_name() {
 hello a.rs
 "));
 
-    assert_that(p.cargo("run").arg("--bin").arg("b").arg("-v"),
+    assert_that!(p.cargo("run").arg("--bin").arg("b").arg("-v"),
                 execs().with_status(0)
                        .with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
@@ -345,7 +346,7 @@ fn run_example() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--example").arg("a"),
+    assert_that!(p.cargo("run").arg("--example").arg("a"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -375,7 +376,7 @@ fn run_bin_implicit() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--bins"),
+    assert_that!(p.cargo("run").arg("--bins"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -405,7 +406,7 @@ fn run_example_implicit() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--examples"),
+    assert_that!(p.cargo("run").arg("--examples"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -435,21 +436,21 @@ fn run_with_filename() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--bin").arg("bin.rs"),
+    assert_that!(p.cargo("run").arg("--bin").arg("bin.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `bin.rs`"));
 
-    assert_that(p.cargo("run").arg("--bin").arg("a.rs"),
+    assert_that!(p.cargo("run").arg("--bin").arg("a.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `a.rs`
 
 Did you mean `a`?"));
 
-    assert_that(p.cargo("run").arg("--example").arg("example.rs"),
+    assert_that!(p.cargo("run").arg("--example").arg("example.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no example target named `example.rs`"));
 
-    assert_that(p.cargo("run").arg("--example").arg("a.rs"),
+    assert_that!(p.cargo("run").arg("--example").arg("a.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no example target named `a.rs`
 
@@ -473,7 +474,7 @@ fn either_name_or_example() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--bin").arg("a").arg("--example").arg("b"),
+    assert_that!(p.cargo("run").arg("--bin").arg("a").arg("--example").arg("b"),
                 execs().with_status(101)
                        .with_stderr("[ERROR] `cargo run` can run at most one \
                                      executable, but multiple were \
@@ -501,7 +502,7 @@ fn one_bin_multiple_examples() {
         "#)
         .build();
 
-    assert_that(p.cargo("run"),
+    assert_that!(p.cargo("run"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
@@ -557,7 +558,7 @@ fn example_with_release_flag() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("-v").arg("--release").arg("--example").arg("a"),
+    assert_that!(p.cargo("run").arg("-v").arg("--release").arg("--example").arg("a"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
@@ -585,7 +586,7 @@ fn example_with_release_flag() {
 fast1
 fast2"));
 
-    assert_that(p.cargo("run").arg("-v").arg("--example").arg("a"),
+    assert_that!(p.cargo("run").arg("-v").arg("--example").arg("a"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
@@ -643,7 +644,7 @@ fn run_dylib_dep() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    assert_that(p.cargo("run").arg("hello").arg("world"),
+    assert_that!(p.cargo("run").arg("hello").arg("world"),
                 execs().with_status(0));
 }
 
@@ -661,7 +662,7 @@ fn release_works() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--release"),
+    assert_that!(p.cargo("run").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] release [optimized] target(s) in [..]
@@ -669,7 +670,7 @@ fn release_works() {
 ",
         dir = path2url(p.root()),
         )));
-    assert_that(&p.release_bin("foo"), existing_file());
+    assert_that!(&p.release_bin("foo"), existing_file());
 }
 
 #[test]
@@ -689,7 +690,7 @@ fn run_bin_different_name() {
         "#)
         .build();
 
-    assert_that(p.cargo("run"), execs().with_status(0));
+    assert_that!(p.cargo("run"), execs().with_status(0));
 }
 
 #[test]
@@ -714,7 +715,7 @@ fn dashes_are_forwarded() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--").arg("a").arg("--").arg("b"),
+    assert_that!(p.cargo("run").arg("--").arg("a").arg("--").arg("b"),
                 execs().with_status(0));
 }
 
@@ -735,7 +736,7 @@ fn run_from_executable_folder() {
     let cwd = p.root().join("target").join("debug");
     p.cargo("build").exec_with_output().unwrap();
 
-    assert_that(p.cargo("run").cwd(cwd),
+    assert_that!(p.cargo("run").cwd(cwd),
                 execs().with_status(0)
                        .with_stderr("\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
@@ -781,7 +782,7 @@ fn run_with_library_paths() {
         "##, dylib_path_envvar(), dir1.display(), dir2.display()))
         .build();
 
-    assert_that(p.cargo("run"), execs().with_status(0));
+    assert_that!(p.cargo("run"), execs().with_status(0));
 }
 
 #[test]
@@ -800,7 +801,7 @@ fn fail_no_extra_verbose() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("-q"),
+    assert_that!(p.cargo("run").arg("-q"),
                 execs().with_status(1)
                        .with_stdout("")
                        .with_stderr(""));
@@ -862,21 +863,21 @@ fn run_multiple_packages() {
         process_builder
     };
 
-    assert_that(cargo().arg("-p").arg("d1"),
+    assert_that!(cargo().arg("-p").arg("d1"),
                 execs().with_status(0).with_stdout("d1"));
 
-    assert_that(cargo().arg("-p").arg("d2").arg("--bin").arg("d2"),
+    assert_that!(cargo().arg("-p").arg("d2").arg("--bin").arg("d2"),
                 execs().with_status(0).with_stdout("d2"));
 
-    assert_that(cargo(),
+    assert_that!(cargo(),
                 execs().with_status(0).with_stdout("foo"));
 
-    assert_that(cargo().arg("-p").arg("d1").arg("-p").arg("d2"),
+    assert_that!(cargo().arg("-p").arg("d1").arg("-p").arg("d2"),
                 execs()
                     .with_status(1)
                     .with_stderr_contains("[ERROR] Invalid arguments."));
 
-    assert_that(cargo().arg("-p").arg("d3"),
+    assert_that!(cargo().arg("-p").arg("d3"),
                 execs()
                     .with_status(101)
                     .with_stderr_contains("[ERROR] package `d3` is not a member of the workspace"));

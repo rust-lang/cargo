@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use std::io::{Read, Write};
@@ -8,7 +9,7 @@ use std::fs::File;
 use cargotest::sleep_ms;
 use cargotest::support::{project, execs, git};
 use cargotest::support::registry::Package;
-use hamcrest::{assert_that, existing_file, existing_dir, is_not};
+use hamcrest::prelude::*;
 
 #[test]
 fn simple_explicit() {
@@ -33,17 +34,17 @@ fn simple_explicit() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), is_not(existing_file()));
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), is_not(existing_file()));
 
-    assert_that(p.cargo("build").cwd(p.root().join("bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), existing_file());
 
-    assert_that(&p.root().join("Cargo.lock"), existing_file());
-    assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
 }
 
 #[test]
@@ -70,9 +71,9 @@ fn simple_explicit_default_members() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("bar"), existing_file());
-    assert_that(&p.bin("foo"), is_not(existing_file()));
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("bar"), existing_file());
+    assert_that!(&p.bin("foo"), is_not(existing_file()));
 }
 
 #[test]
@@ -97,17 +98,17 @@ fn inferred_root() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), is_not(existing_file()));
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), is_not(existing_file()));
 
-    assert_that(p.cargo("build").cwd(p.root().join("bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), existing_file());
 
-    assert_that(&p.root().join("Cargo.lock"), existing_file());
-    assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
 }
 
 #[test]
@@ -135,17 +136,17 @@ fn inferred_path_dep() {
         .file("bar/src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), is_not(existing_file()));
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), is_not(existing_file()));
 
-    assert_that(p.cargo("build").cwd(p.root().join("bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), existing_file());
 
-    assert_that(&p.root().join("Cargo.lock"), existing_file());
-    assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
 }
 
 #[test]
@@ -184,26 +185,26 @@ fn transitive_path_dep() {
         .file("baz/src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), is_not(existing_file()));
-    assert_that(&p.bin("baz"), is_not(existing_file()));
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), is_not(existing_file()));
+    assert_that!(&p.bin("baz"), is_not(existing_file()));
 
-    assert_that(p.cargo("build").cwd(p.root().join("bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), existing_file());
-    assert_that(&p.bin("baz"), is_not(existing_file()));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), existing_file());
+    assert_that!(&p.bin("baz"), is_not(existing_file()));
 
-    assert_that(p.cargo("build").cwd(p.root().join("baz")),
+    assert_that!(p.cargo("build").cwd(p.root().join("baz")),
                 execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), existing_file());
-    assert_that(&p.bin("baz"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), existing_file());
+    assert_that!(&p.bin("baz"), existing_file());
 
-    assert_that(&p.root().join("Cargo.lock"), existing_file());
-    assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("baz/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("baz/Cargo.lock"), is_not(existing_file()));
 }
 
 #[test]
@@ -232,12 +233,12 @@ fn parent_pointer_works() {
         .file("bar/src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("foo")),
+    assert_that!(p.cargo("build").cwd(p.root().join("foo")),
                 execs().with_status(0));
-    assert_that(p.cargo("build").cwd(p.root().join("bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(0));
-    assert_that(&p.root().join("foo/Cargo.lock"), existing_file());
-    assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("foo/Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
 }
 
 #[test]
@@ -263,7 +264,7 @@ fn same_names_in_workspace() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: two packages named `foo` in this workspace:
@@ -293,7 +294,7 @@ fn parent_doesnt_point_to_child() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(101)
                        .with_stderr("\
 error: current package believes it's in a workspace when it's not:
@@ -317,7 +318,7 @@ fn invalid_parent_pointer() {
         .file("src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to read `[..]Cargo.toml`
@@ -342,7 +343,7 @@ fn invalid_members() {
         .file("src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to read `[..]Cargo.toml`
@@ -366,7 +367,7 @@ fn bare_workspace_ok() {
         .file("src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
@@ -394,7 +395,7 @@ fn two_roots() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: multiple workspace roots found in the same workspace:
@@ -423,7 +424,7 @@ fn workspace_isnt_root() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: root of a workspace inferred but wasn't a root: [..]
@@ -461,7 +462,7 @@ fn dangling_member() {
         .file("baz/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: package `[..]` is a member of the wrong workspace
@@ -491,7 +492,7 @@ fn cycle() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101));
 }
 
@@ -526,7 +527,7 @@ fn share_dependencies() {
     Package::new("dep1", "0.1.3").publish();
     Package::new("dep1", "0.1.8").publish();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`
@@ -564,7 +565,7 @@ fn fetch_fetches_all() {
 
     Package::new("dep1", "0.1.3").publish();
 
-    assert_that(p.cargo("fetch"),
+    assert_that!(p.cargo("fetch"),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`
@@ -603,7 +604,7 @@ fn lock_works_for_everyone() {
     Package::new("dep1", "0.1.0").publish();
     Package::new("dep2", "0.1.0").publish();
 
-    assert_that(p.cargo("generate-lockfile"),
+    assert_that!(p.cargo("generate-lockfile"),
                 execs().with_status(0)
                        .with_stderr("\
 [UPDATING] registry `[..]`
@@ -612,7 +613,7 @@ fn lock_works_for_everyone() {
     Package::new("dep1", "0.1.1").publish();
     Package::new("dep2", "0.1.1").publish();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 [DOWNLOADING] dep2 v0.1.0 ([..])
@@ -621,7 +622,7 @@ fn lock_works_for_everyone() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 
-    assert_that(p.cargo("build").cwd(p.root().join("bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(0)
                        .with_stderr("\
 [DOWNLOADING] dep1 v0.1.0 ([..])
@@ -646,11 +647,11 @@ fn virtual_works() {
         "#)
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
-    assert_that(p.cargo("build").cwd(p.root().join("bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(0));
-    assert_that(&p.root().join("Cargo.lock"), existing_file());
-    assert_that(&p.bin("bar"), existing_file());
-    assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("Cargo.lock"), existing_file());
+    assert_that!(&p.bin("bar"), existing_file());
+    assert_that!(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
 }
 
 #[test]
@@ -668,11 +669,11 @@ fn explicit_package_argument_works_with_virtual_manifest() {
         "#)
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
-    assert_that(p.cargo("build").cwd(p.root()).args(&["--package", "bar"]),
+    assert_that!(p.cargo("build").cwd(p.root()).args(&["--package", "bar"]),
                 execs().with_status(0));
-    assert_that(&p.root().join("Cargo.lock"), existing_file());
-    assert_that(&p.bin("bar"), existing_file());
-    assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("Cargo.lock"), existing_file());
+    assert_that!(&p.bin("bar"), existing_file());
+    assert_that!(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
 }
 
 #[test]
@@ -689,7 +690,7 @@ fn virtual_misconfigure() {
         "#)
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
-    assert_that(p.cargo("build").cwd(p.root().join("bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(101)
                        .with_stderr("\
 error: current package believes it's in a workspace when it's not:
@@ -716,7 +717,7 @@ fn virtual_build_all_implied() {
         "#)
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -743,10 +744,10 @@ fn virtual_default_members() {
         .file("bar/src/main.rs", "fn main() {}")
         .file("baz/src/main.rs", "fn main() {}");
     let p = p.build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
-    assert_that(&p.bin("bar"), existing_file());
-    assert_that(&p.bin("baz"), is_not(existing_file()));
+    assert_that!(&p.bin("bar"), existing_file());
+    assert_that!(&p.bin("baz"), is_not(existing_file()));
 }
 
 #[test]
@@ -765,7 +766,7 @@ fn virtual_default_member_is_not_a_member() {
         "#)
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: package `[..]something-else` is listed in workspace’s default-members \
@@ -780,7 +781,7 @@ fn virtual_build_no_members() {
             [workspace]
         "#);
     let p = p.build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: manifest path `[..]` contains no package: The manifest is virtual, \
@@ -804,7 +805,7 @@ fn include_virtual() {
             [workspace]
         "#);
     let p = p.build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: multiple workspace roots found in the same workspace:
@@ -855,19 +856,19 @@ fn members_include_path_deps() {
         .file("p3/src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("p1")),
+    assert_that!(p.cargo("build").cwd(p.root().join("p1")),
                 execs().with_status(0));
-    assert_that(p.cargo("build").cwd(p.root().join("p2")),
+    assert_that!(p.cargo("build").cwd(p.root().join("p2")),
                 execs().with_status(0));
-    assert_that(p.cargo("build").cwd(p.root().join("p3")),
+    assert_that!(p.cargo("build").cwd(p.root().join("p3")),
                 execs().with_status(0));
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 
-    assert_that(&p.root().join("target"), existing_dir());
-    assert_that(&p.root().join("p1/target"), is_not(existing_dir()));
-    assert_that(&p.root().join("p2/target"), is_not(existing_dir()));
-    assert_that(&p.root().join("p3/target"), is_not(existing_dir()));
+    assert_that!(&p.root().join("target"), existing_dir());
+    assert_that!(&p.root().join("p1/target"), is_not(existing_dir()));
+    assert_that!(&p.root().join("p2/target"), is_not(existing_dir()));
+    assert_that!(&p.root().join("p3/target"), is_not(existing_dir()));
 }
 
 #[test]
@@ -884,7 +885,7 @@ fn new_warns_you_this_will_not_work() {
         .file("src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("new").arg("--lib").arg("bar").env("USER", "foo"),
+    assert_that!(p.cargo("new").arg("--lib").arg("bar").env("USER", "foo"),
                 execs().with_status(0)
                        .with_stderr("\
 warning: compiling this new crate may not work due to invalid workspace \
@@ -931,13 +932,13 @@ fn lock_doesnt_change_depending_on_crate() {
     Package::new("foo", "1.0.0").publish();
     Package::new("bar", "1.0.0").publish();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 
     let mut lockfile = String::new();
     t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lockfile));
 
-    assert_that(p.cargo("build").cwd(p.root().join("baz")),
+    assert_that!(p.cargo("build").cwd(p.root().join("baz")),
                 execs().with_status(0));
 
     let mut lockfile2 = String::new();
@@ -978,7 +979,7 @@ fn rebuild_please() {
         "#);
     let p = p.build();
 
-    assert_that(p.cargo("run").cwd(p.root().join("bin")),
+    assert_that!(p.cargo("run").cwd(p.root().join("bin")),
                 execs().with_status(0));
 
     sleep_ms(1000);
@@ -987,10 +988,10 @@ fn rebuild_please() {
         pub fn foo() -> u32 { 1 }
     "#));
 
-    assert_that(p.cargo("build").cwd(p.root().join("lib")),
+    assert_that!(p.cargo("build").cwd(p.root().join("lib")),
                 execs().with_status(0));
 
-    assert_that(p.cargo("run").cwd(p.root().join("bin")),
+    assert_that!(p.cargo("run").cwd(p.root().join("bin")),
                 execs().with_status(101));
 }
 
@@ -1023,7 +1024,7 @@ fn workspace_in_git() {
         "#);
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -1054,7 +1055,7 @@ fn lockfile_can_specify_nonexistant_members() {
 
     let p = p.build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("a")), execs().with_status(0));
+    assert_that!(p.cargo("build").cwd(p.root().join("a")), execs().with_status(0));
 }
 
 #[test]
@@ -1072,7 +1073,7 @@ fn you_cannot_generate_lockfile_for_empty_workspaces() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("update"),
+    assert_that!(p.cargo("update"),
                 execs().with_status(101)
                        .with_stderr("\
 error: you can't generate a lockfile for an empty workspace.
@@ -1123,7 +1124,7 @@ fn workspace_with_transitive_dev_deps() {
         .file("baz/src/lib.rs", r#"pub fn do_stuff() {}"#);
     let p = p.build();
 
-    assert_that(p.cargo("test").args(&["-p", "bar"]),
+    assert_that!(p.cargo("test").args(&["-p", "bar"]),
                 execs().with_status(0));
 }
 
@@ -1140,7 +1141,7 @@ fn error_if_parent_cargo_toml_is_invalid() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("bar")),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [ERROR] failed to parse manifest at `[..]`"));
@@ -1169,8 +1170,8 @@ fn relative_path_for_member_works() {
         .file("bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("foo")), execs().with_status(0));
-    assert_that(p.cargo("build").cwd(p.root().join("bar")), execs().with_status(0));
+    assert_that!(p.cargo("build").cwd(p.root().join("foo")), execs().with_status(0));
+    assert_that!(p.cargo("build").cwd(p.root().join("bar")), execs().with_status(0));
 }
 
 #[test]
@@ -1197,11 +1198,11 @@ fn relative_path_for_root_works() {
         .file("subproj/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build").cwd(p.root())
+    assert_that!(p.cargo("build").cwd(p.root())
                     .arg("--manifest-path").arg("./Cargo.toml"),
                 execs().with_status(0));
 
-    assert_that(p.cargo("build").cwd(p.root().join("subproj"))
+    assert_that!(p.cargo("build").cwd(p.root().join("subproj"))
                     .arg("--manifest-path").arg("../Cargo.toml"),
                 execs().with_status(0));
 }
@@ -1230,7 +1231,7 @@ fn path_dep_outside_workspace_is_not_member() {
         .file("foo/src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("ws")),
+    assert_that!(p.cargo("build").cwd(p.root().join("ws")),
                 execs().with_status(0));
 }
 
@@ -1270,22 +1271,22 @@ fn test_in_and_out_of_workspace() {
         .file("bar/src/lib.rs", "pub fn f() { }");
     let p = p.build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("ws")),
+    assert_that!(p.cargo("build").cwd(p.root().join("ws")),
                 execs().with_status(0));
 
-    assert_that(&p.root().join("ws/Cargo.lock"), existing_file());
-    assert_that(&p.root().join("ws/target"), existing_dir());
-    assert_that(&p.root().join("foo/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("foo/target"), is_not(existing_dir()));
-    assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("bar/target"), is_not(existing_dir()));
+    assert_that!(&p.root().join("ws/Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("ws/target"), existing_dir());
+    assert_that!(&p.root().join("foo/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("foo/target"), is_not(existing_dir()));
+    assert_that!(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("bar/target"), is_not(existing_dir()));
 
-    assert_that(p.cargo("build").cwd(p.root().join("foo")),
+    assert_that!(p.cargo("build").cwd(p.root().join("foo")),
                 execs().with_status(0));
-    assert_that(&p.root().join("foo/Cargo.lock"), existing_file());
-    assert_that(&p.root().join("foo/target"), existing_dir());
-    assert_that(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("bar/target"), is_not(existing_dir()));
+    assert_that!(&p.root().join("foo/Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("foo/target"), existing_dir());
+    assert_that!(&p.root().join("bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("bar/target"), is_not(existing_dir()));
 }
 
 #[test]
@@ -1323,17 +1324,17 @@ fn test_path_dependency_under_member() {
         .file("foo/bar/src/lib.rs", "pub fn f() { }");
     let p = p.build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("ws")),
+    assert_that!(p.cargo("build").cwd(p.root().join("ws")),
                 execs().with_status(0));
 
-    assert_that(&p.root().join("foo/bar/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("foo/bar/target"), is_not(existing_dir()));
+    assert_that!(&p.root().join("foo/bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("foo/bar/target"), is_not(existing_dir()));
 
-    assert_that(p.cargo("build").cwd(p.root().join("foo/bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("foo/bar")),
                 execs().with_status(0));
 
-    assert_that(&p.root().join("foo/bar/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("foo/bar/target"), is_not(existing_dir()));
+    assert_that!(&p.root().join("foo/bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("foo/bar/target"), is_not(existing_dir()));
 }
 
 #[test]
@@ -1358,12 +1359,12 @@ fn excluded_simple() {
         .file("foo/src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
-    assert_that(&p.root().join("target"), existing_dir());
-    assert_that(p.cargo("build").cwd(p.root().join("foo")),
+    assert_that!(&p.root().join("target"), existing_dir());
+    assert_that!(p.cargo("build").cwd(p.root().join("foo")),
                 execs().with_status(0));
-    assert_that(&p.root().join("foo/target"), existing_dir());
+    assert_that!(&p.root().join("foo/target"), existing_dir());
 }
 
 #[test]
@@ -1396,15 +1397,15 @@ fn exclude_members_preferred() {
         .file("foo/bar/src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
-    assert_that(&p.root().join("target"), existing_dir());
-    assert_that(p.cargo("build").cwd(p.root().join("foo")),
+    assert_that!(&p.root().join("target"), existing_dir());
+    assert_that!(p.cargo("build").cwd(p.root().join("foo")),
                 execs().with_status(0));
-    assert_that(&p.root().join("foo/target"), existing_dir());
-    assert_that(p.cargo("build").cwd(p.root().join("foo/bar")),
+    assert_that!(&p.root().join("foo/target"), existing_dir());
+    assert_that!(p.cargo("build").cwd(p.root().join("foo/bar")),
                 execs().with_status(0));
-    assert_that(&p.root().join("foo/bar/target"), is_not(existing_dir()));
+    assert_that!(&p.root().join("foo/bar/target"), is_not(existing_dir()));
 }
 
 #[test]
@@ -1439,15 +1440,15 @@ fn exclude_but_also_depend() {
         .file("foo/bar/src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
-    assert_that(&p.root().join("target"), existing_dir());
-    assert_that(p.cargo("build").cwd(p.root().join("foo")),
+    assert_that!(&p.root().join("target"), existing_dir());
+    assert_that!(p.cargo("build").cwd(p.root().join("foo")),
                 execs().with_status(0));
-    assert_that(&p.root().join("foo/target"), existing_dir());
-    assert_that(p.cargo("build").cwd(p.root().join("foo/bar")),
+    assert_that!(&p.root().join("foo/target"), existing_dir());
+    assert_that!(p.cargo("build").cwd(p.root().join("foo/bar")),
                 execs().with_status(0));
-    assert_that(&p.root().join("foo/bar/target"), existing_dir());
+    assert_that!(&p.root().join("foo/bar/target"), existing_dir());
 }
 
 #[test]
@@ -1489,29 +1490,29 @@ fn glob_syntax() {
         .file("crates/qux/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), is_not(existing_file()));
-    assert_that(&p.bin("baz"), is_not(existing_file()));
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), is_not(existing_file()));
+    assert_that!(&p.bin("baz"), is_not(existing_file()));
 
-    assert_that(p.cargo("build").cwd(p.root().join("crates/bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("crates/bar")),
                 execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), existing_file());
 
-    assert_that(p.cargo("build").cwd(p.root().join("crates/baz")),
+    assert_that!(p.cargo("build").cwd(p.root().join("crates/baz")),
                 execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("baz"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("baz"), existing_file());
 
-    assert_that(p.cargo("build").cwd(p.root().join("crates/qux")),
+    assert_that!(p.cargo("build").cwd(p.root().join("crates/qux")),
                 execs().with_status(0));
-    assert_that(&p.bin("qux"), is_not(existing_file()));
+    assert_that!(&p.bin("qux"), is_not(existing_file()));
 
-    assert_that(&p.root().join("Cargo.lock"), existing_file());
-    assert_that(&p.root().join("crates/bar/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("crates/baz/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("crates/qux/Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("crates/bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("crates/baz/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("crates/qux/Cargo.lock"), existing_file());
 }
 
 /*FIXME: This fails because of how workspace.exclude and workspace.members are working.
@@ -1554,29 +1555,29 @@ fn glob_syntax_2() {
         .file("crates/qux/src/main.rs", "fn main() {}");
     p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), is_not(existing_file()));
-    assert_that(&p.bin("baz"), is_not(existing_file()));
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), is_not(existing_file()));
+    assert_that!(&p.bin("baz"), is_not(existing_file()));
 
-    assert_that(p.cargo("build").cwd(p.root().join("crates/bar")),
+    assert_that!(p.cargo("build").cwd(p.root().join("crates/bar")),
                 execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), existing_file());
 
-    assert_that(p.cargo("build").cwd(p.root().join("crates/baz")),
+    assert_that!(p.cargo("build").cwd(p.root().join("crates/baz")),
                 execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("baz"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("baz"), existing_file());
 
-    assert_that(p.cargo("build").cwd(p.root().join("crates/qux")),
+    assert_that!(p.cargo("build").cwd(p.root().join("crates/qux")),
                 execs().with_status(0));
-    assert_that(&p.bin("qux"), is_not(existing_file()));
+    assert_that!(&p.bin("qux"), is_not(existing_file()));
 
-    assert_that(&p.root().join("Cargo.lock"), existing_file());
-    assert_that(&p.root().join("crates/bar/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("crates/baz/Cargo.lock"), is_not(existing_file()));
-    assert_that(&p.root().join("crates/qux/Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("crates/bar/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("crates/baz/Cargo.lock"), is_not(existing_file()));
+    assert_that!(&p.root().join("crates/qux/Cargo.lock"), existing_file());
 }
 */
 
@@ -1596,7 +1597,7 @@ fn glob_syntax_invalid_members() {
         .file("crates/bar/src/main.rs", "fn main() {}");
     let p = p.build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to read `[..]Cargo.toml`
@@ -1657,7 +1658,7 @@ fn dep_used_with_separate_features() {
     let p = p.build();
 
     // Build the entire workspace
-    assert_that(p.cargo("build").arg("--all"),
+    assert_that!(p.cargo("build").arg("--all"),
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling feat_lib v0.1.0 ([..])
@@ -1665,15 +1666,15 @@ fn dep_used_with_separate_features() {
 [..]Compiling caller2 v0.1.0 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
-    assert_that(&p.bin("caller1"), existing_file());
-    assert_that(&p.bin("caller2"), existing_file());
+    assert_that!(&p.bin("caller1"), existing_file());
+    assert_that!(&p.bin("caller2"), existing_file());
 
 
     // Build caller1. should build the dep library. Because the features
     // are different than the full workspace, it rebuilds.
     // Ideally once we solve https://github.com/rust-lang/cargo/issues/3620, then
     // a single cargo build at the top level will be enough.
-    assert_that(p.cargo("build").cwd(p.root().join("caller1")),
+    assert_that!(p.cargo("build").cwd(p.root().join("caller1")),
                 execs().with_status(0)
                        .with_stderr("\
 [..]Compiling feat_lib v0.1.0 ([..])
@@ -1683,17 +1684,17 @@ fn dep_used_with_separate_features() {
 
     // Alternate building caller2/caller1 a few times, just to make sure
     // features are being built separately.  Should not rebuild anything
-    assert_that(p.cargo("build").cwd(p.root().join("caller2")),
+    assert_that!(p.cargo("build").cwd(p.root().join("caller2")),
                 execs().with_status(0)
                        .with_stderr("\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
-    assert_that(p.cargo("build").cwd(p.root().join("caller1")),
+    assert_that!(p.cargo("build").cwd(p.root().join("caller1")),
                 execs().with_status(0)
                        .with_stderr("\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
-    assert_that(p.cargo("build").cwd(p.root().join("caller2")),
+    assert_that!(p.cargo("build").cwd(p.root().join("caller2")),
                 execs().with_status(0)
                        .with_stderr("\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -1744,7 +1745,7 @@ fn dont_recurse_out_of_cargo_home() {
         .file("src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build").env("CARGO_HOME", p.root().join(".cargo")),
+    assert_that!(p.cargo("build").env("CARGO_HOME", p.root().join(".cargo")),
                 execs().with_status(0));
 }
 
@@ -1773,13 +1774,13 @@ fn include_and_exclude() {
         .file("foo/bar/src/lib.rs", "");
     p.build();
 
-    assert_that(p.cargo("build").cwd(p.root().join("foo")),
+    assert_that!(p.cargo("build").cwd(p.root().join("foo")),
     execs().with_status(0));
-    assert_that(&p.root().join("target"), existing_dir());
-    assert_that(&p.root().join("foo/target"), is_not(existing_dir()));
-    assert_that(p.cargo("build").cwd(p.root().join("foo/bar")),
+    assert_that!(&p.root().join("target"), existing_dir());
+    assert_that!(&p.root().join("foo/target"), is_not(existing_dir()));
+    assert_that!(p.cargo("build").cwd(p.root().join("foo/bar")),
     execs().with_status(0));
-    assert_that(&p.root().join("foo/bar/target"), existing_dir());
+    assert_that!(&p.root().join("foo/bar/target"), existing_dir());
 }
 */
 
@@ -1803,7 +1804,7 @@ fn cargo_home_at_root_works() {
         .file("a/src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(p.cargo("build").arg("--frozen").env("CARGO_HOME", p.root()),
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build").arg("--frozen").env("CARGO_HOME", p.root()),
                 execs().with_status(0));
 }

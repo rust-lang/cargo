@@ -1,8 +1,9 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use cargotest::support::{execs, project};
-use hamcrest::{assert_that};
+use hamcrest::prelude::*;
 
 #[test]
 fn rustdoc_simple() {
@@ -16,7 +17,7 @@ fn rustdoc_simple() {
         .file("src/lib.rs", r#" "#)
         .build();
 
-    assert_that(p.cargo("rustdoc").arg("-v"),
+    assert_that!(p.cargo("rustdoc").arg("-v"),
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
@@ -40,7 +41,7 @@ fn rustdoc_args() {
         .file("src/lib.rs", r#" "#)
         .build();
 
-    assert_that(p.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
+    assert_that!(p.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
@@ -84,7 +85,7 @@ fn rustdoc_foo_with_bar_dependency() {
         "#)
         .build();
 
-    assert_that(foo.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
+    assert_that!(foo.cargo("rustdoc").arg("-v").arg("--").arg("--cfg=foo"),
                 execs()
                 .with_status(0)
                 .with_stderr(format!("\
@@ -131,7 +132,7 @@ fn rustdoc_only_bar_dependency() {
         "#)
         .build();
 
-    assert_that(foo.cargo("rustdoc").arg("-v").arg("-p").arg("bar")
+    assert_that!(foo.cargo("rustdoc").arg("-v").arg("-p").arg("bar")
                                             .arg("--").arg("--cfg=foo"),
                 execs()
                 .with_status(0)
@@ -161,7 +162,7 @@ fn rustdoc_same_name_documents_lib() {
         .file("src/lib.rs", r#" "#)
         .build();
 
-    assert_that(p.cargo("rustdoc").arg("-v")
+    assert_that!(p.cargo("rustdoc").arg("-v")
                  .arg("--").arg("--cfg=foo"),
                 execs()
                 .with_status(0)

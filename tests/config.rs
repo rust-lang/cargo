@@ -1,8 +1,9 @@
+#[macro_use]
 extern crate hamcrest;
 extern crate cargotest;
 
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn read_env_vars_for_config() {
@@ -23,6 +24,6 @@ fn read_env_vars_for_config() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").env("CARGO_BUILD_JOBS", "100"),
+    assert_that!(p.cargo("build").env("CARGO_BUILD_JOBS", "100"),
                 execs().with_status(0));
 }

@@ -1,5 +1,6 @@
 extern crate cargotest;
 extern crate flate2;
+#[macro_use]
 extern crate hamcrest;
 extern crate tar;
 
@@ -11,8 +12,8 @@ use cargotest::ChannelChanger;
 use cargotest::support::git::repo;
 use cargotest::support::paths;
 use cargotest::support::{project, execs, publish};
+use hamcrest::prelude::*;
 use flate2::read::GzDecoder;
-use hamcrest::assert_that;
 use tar::Archive;
 
 #[test]
@@ -31,7 +32,7 @@ fn simple() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish").arg("--no-verify")
+    assert_that!(p.cargo("publish").arg("--no-verify")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `{reg}`
@@ -88,7 +89,7 @@ fn simple_with_host() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish").arg("--no-verify")
+    assert_that!(p.cargo("publish").arg("--no-verify")
                  .arg("--host").arg(publish::registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [WARNING] The flag '--host' is no longer valid.
@@ -155,7 +156,7 @@ fn simple_with_index_and_host() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish").arg("--no-verify")
+    assert_that!(p.cargo("publish").arg("--no-verify")
                  .arg("--index").arg(publish::registry().to_string())
                  .arg("--host").arg(publish::registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
@@ -224,7 +225,7 @@ fn git_deps() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish").arg("-v").arg("--no-verify")
+    assert_that!(p.cargo("publish").arg("-v").arg("--no-verify")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
@@ -262,7 +263,7 @@ fn path_dependency_no_version() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("publish")
+    assert_that!(p.cargo("publish")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
@@ -288,7 +289,7 @@ fn unpublishable_crate() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish")
+    assert_that!(p.cargo("publish")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
@@ -318,7 +319,7 @@ fn dont_publish_dirty() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish")
+    assert_that!(p.cargo("publish")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry `[..]`
@@ -352,7 +353,7 @@ fn publish_clean() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish")
+    assert_that!(p.cargo("publish")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(0));
 }
@@ -380,7 +381,7 @@ fn publish_in_sub_repo() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish").cwd(p.root().join("bar"))
+    assert_that!(p.cargo("publish").cwd(p.root().join("bar"))
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(0));
 }
@@ -409,7 +410,7 @@ fn publish_when_ignored() {
         .file(".gitignore", "baz")
         .build();
 
-    assert_that(p.cargo("publish")
+    assert_that!(p.cargo("publish")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(0));
 }
@@ -436,7 +437,7 @@ fn ignore_when_crate_ignored() {
             repository = "foo"
         "#)
         .nocommit_file("bar/src/main.rs", "fn main() {}");
-    assert_that(p.cargo("publish").cwd(p.root().join("bar"))
+    assert_that!(p.cargo("publish").cwd(p.root().join("bar"))
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(0));
 }
@@ -462,7 +463,7 @@ fn new_crate_rejected() {
             repository = "foo"
         "#)
         .nocommit_file("src/main.rs", "fn main() {}");
-    assert_that(p.cargo("publish")
+    assert_that!(p.cargo("publish")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(101));
 }
@@ -483,7 +484,7 @@ fn dry_run() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish").arg("--dry-run")
+    assert_that!(p.cargo("publish").arg("--dry-run")
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
@@ -521,7 +522,7 @@ fn block_publish_feature_not_enabled() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(101).with_stderr("\
 error: failed to parse manifest at `[..]`
@@ -557,7 +558,7 @@ fn registry_not_in_publish_list() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
@@ -584,7 +585,7 @@ fn publish_empty_list() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
@@ -615,7 +616,7 @@ fn publish_allowed_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(0));
 }
@@ -639,7 +640,7 @@ fn block_publish_no_registry() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+    assert_that!(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--index").arg(publish::registry().to_string()),
                 execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
