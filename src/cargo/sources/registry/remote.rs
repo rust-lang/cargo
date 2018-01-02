@@ -16,7 +16,8 @@ use sources::registry::{RegistryData, RegistryConfig, INDEX_LOCK, CRATE_TEMPLATE
 use util::network;
 use util::{FileLock, Filesystem, LazyCell};
 use util::{Config, Sha256, ToUrl, Progress};
-use util::errors::{CargoResult, CargoResultExt, HttpNot200};
+use util::errors::{CargoResult, HttpNot200};
+use util::network::maybe_spurious;
 
 pub struct RemoteRegistry<'cfg> {
     index_path: Filesystem,
@@ -153,6 +154,12 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn update_index(&mut self) -> CargoResult<()> {
+        // Before checking the HTTP handle, check if we're in airplane mode
+        // If we are,  then return Ok early, since we know that we don't
+        // want to update the index, but it's not an error.
+        if !self.config.network_allowed(){
+            return Ok(());
+        }
         // Ensure that we'll actually be able to acquire an HTTP handle later on
         // once we start trying to download crates. This will weed out any
         // problems with `.cargo/config` configuration related to HTTP.
@@ -173,8 +180,15 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         let url = self.source_id.url();
         let refspec = "refs/heads/master:refs/remotes/origin/master";
         let repo = self.repo.borrow_mut().unwrap();
-        git::fetch(repo, url, refspec, self.config).chain_err(|| {
-            format!("failed to fetch `{}`", url)
+        git::fetch(repo, url, refspec, self.config).map_err(|e| {
+            if maybe_spurious(&e) {
+                e.context(
+                    format!("failed to fetch `{}` due to network issues. \
+                             Try using airplane mode by passing the \
+                             -Zaiplane flag", url))
+            } else {
+                e.context(format!("failed to fetch `{}`", url))
+            }
         })?;
         Ok(())
     }
@@ -257,6 +271,18 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         dst.write_all(&body)?;
         dst.seek(SeekFrom::Start(0))?;
         Ok(dst)
+    }
+
+    fn is_crate_downloaded(&self, pkg: &PackageId) -> bool {
+        let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
+        let path = Path::new(&filename);
+
+        if let Ok(dst) = self.cache_path.open_ro(path, self.config, &filename) {
+            if let Ok(metadata) = dst.file().metadata() {
+                return metadata.len() > 0;
+            }
+        }
+        false
     }
 }
 

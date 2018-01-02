@@ -242,11 +242,20 @@ error: unknown `-Z` flag specified: arg
 
     assert_that(p.cargo("build")
                  .masquerade_as_nightly_cargo()
+                 .arg("-Zairplane"),
+                execs().with_status(0)
+                       .with_stdout("")
+                       .with_stderr("\
+[COMPILING] a [..]
+[FINISHED] [..]
+"));
+
+    assert_that(p.cargo("build")
+                 .masquerade_as_nightly_cargo()
                  .arg("-Zprint-im-a-teapot"),
                 execs().with_status(0)
                        .with_stdout("im-a-teapot = true\n")
                        .with_stderr("\
-[COMPILING] a [..]
 [FINISHED] [..]
 "));
 }

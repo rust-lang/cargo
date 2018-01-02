@@ -504,7 +504,7 @@ impl Config {
     }
 
     pub fn network_allowed(&self) -> bool {
-        !self.frozen
+        !(self.frozen || self.cli_unstable().airplane)
     }
 
     pub fn lock_update_allowed(&self) -> bool {

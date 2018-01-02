@@ -20,6 +20,7 @@ use util::config::{self, Config};
 use util::paths;
 use util::ToUrl;
 use util::errors::{CargoResult, CargoResultExt};
+use util::network::maybe_spurious;
 use util::important_paths::find_root_manifest_for_wd;
 
 pub struct RegistryConfig {
@@ -252,8 +253,15 @@ pub fn registry(config: &Config,
     };
     let api_host = {
         let mut src = RegistrySource::remote(&sid, config);
-        src.update().chain_err(|| {
-            format!("failed to update {}", sid)
+        src.update().map_err(|e| {
+            if maybe_spurious(&e) {
+                    e.context(
+                        format!("failed to update {} due to network issues. \
+                             Try using airplane mode by passing the \
+                             -Zaiplane flag", sid))
+            } else {
+                e.context(format!("failed to update {}", sid))
+            }
         })?;
         (src.config()?).unwrap().api.unwrap()
     };

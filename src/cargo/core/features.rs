@@ -232,6 +232,7 @@ impl Features {
 pub struct CliUnstable {
     pub print_im_a_teapot: bool,
     pub unstable_options: bool,
+    pub airplane: bool,
 }
 
 impl CliUnstable {
@@ -262,6 +263,7 @@ impl CliUnstable {
         match k {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(v)?,
             "unstable-options" => self.unstable_options = true,
+            "airplane" => self.airplane = parse_bool(v)?,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
