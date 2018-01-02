@@ -7,7 +7,7 @@ use std::path::Path;
 use std::str;
 
 use git2;
-use hex::ToHex;
+use hex;
 use serde_json;
 
 use core::{PackageId, SourceId};
@@ -250,7 +250,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         })?;
 
         // Verify what we just downloaded
-        if state.finish().to_hex() != checksum {
+        if hex::encode(state.finish()) != checksum {
             bail!("failed to verify the checksum of `{}`", pkg)
         }
 
