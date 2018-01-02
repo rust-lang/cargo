@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use hex::ToHex;
+use hex;
 
 use serde_json;
 
@@ -184,7 +184,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                         file.display())
             })?;
 
-            let actual = h.finish().to_hex();
+            let actual = hex::encode(h.finish());
             if &*actual != cksum {
                 bail!("\
                     the listed checksum of `{}` has changed:\n\
