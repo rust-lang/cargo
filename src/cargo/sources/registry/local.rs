@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::path::Path;
 
 use core::PackageId;
-use hex::ToHex;
+use hex;
 use sources::registry::{RegistryData, RegistryConfig};
 use util::FileLock;
 use util::paths;
@@ -94,7 +94,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
             }
             state.update(&buf[..n]);
         }
-        if state.finish().to_hex() != checksum {
+        if hex::encode(state.finish()) != checksum {
             bail!("failed to verify the checksum of `{}`", pkg)
         }
 
