@@ -5,6 +5,8 @@ fn main() {
     use std::io::Write;
     use std::path::{Path, PathBuf};
 
+    println!("rerun-if-changed=test/fixtures/");
+
     fn get_fixture_files() -> Result<Vec<PathBuf>, Box<Error>> {
         Ok(fs::read_dir("./tests/fixtures")?
             .into_iter()
