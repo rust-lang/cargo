@@ -7,6 +7,16 @@ use std::collections::HashSet;
 pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
 
+pub fn get_suggestions_from_json(input: &str, only: &HashSet<String>) -> Vec<Suggestion> {
+    input.lines()
+        .filter(not_empty)
+        // Convert JSON string (and eat parsing errors)
+        .flat_map(|line| serde_json::from_str::<Diagnostic>(line))
+        // One diagnostic line might have multiple suggestions
+        .filter_map(|cargo_msg| collect_suggestions(&cargo_msg, only))
+        .collect()
+}
+
 #[derive(Debug, Copy, Clone, Hash, PartialEq)]
 pub struct LinePosition {
     pub line: usize,
@@ -152,4 +162,8 @@ pub fn collect_suggestions(diagnostic: &Diagnostic, only: &HashSet<String>) -> O
             solutions,
         })
     }
+}
+
+fn not_empty(s: &&str) -> bool {
+    !s.trim().is_empty()
 }

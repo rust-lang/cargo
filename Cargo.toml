@@ -26,3 +26,7 @@ serde_derive = "1.0"
 
 [dev-dependencies]
 duct = "0.8.2"
+env_logger = "0.5.0-rc.1"
+log = "0.4.1"
+pretty_assertions = "0.4.1"
+tempdir = "0.3.5"
