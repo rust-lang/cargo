@@ -317,16 +317,18 @@ mod imp {
 
 #[cfg(windows)]
 mod imp {
-    use std::mem;
-
     extern crate winapi;
-    extern crate kernel32;
+
+    use std::mem;
+    use self::winapi::um::processenv::*;
+    use self::winapi::um::winbase::*;
+    use self::winapi::um::wincon::*;
 
     pub fn stderr_width() -> Option<usize> {
         unsafe {
-            let stdout = kernel32::GetStdHandle(winapi::STD_ERROR_HANDLE);
-            let mut csbi: winapi::CONSOLE_SCREEN_BUFFER_INFO = mem::zeroed();
-            if kernel32::GetConsoleScreenBufferInfo(stdout, &mut csbi) == 0 {
+            let stdout = GetStdHandle(STD_ERROR_HANDLE);
+            let mut csbi: CONSOLE_SCREEN_BUFFER_INFO = mem::zeroed();
+            if GetConsoleScreenBufferInfo(stdout, &mut csbi) == 0 {
                 return None
             }
             Some((csbi.srWindow.Right - csbi.srWindow.Left) as usize)
