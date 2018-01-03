@@ -2,7 +2,8 @@ language: rust
 rust:
 - nightly
 - stable
-
+before_script:
+- if [ $TRAVIS_RUST_VERSION == nightly ]; then cargo install clippy --force ; fi
 script:
 - cargo build
 - if [ $TRAVIS_RUST_VERSION == nightly ]; then cargo test -- --nocapture ; fi
