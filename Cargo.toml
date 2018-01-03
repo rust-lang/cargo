@@ -58,8 +58,24 @@ core-foundation = { version = "0.4.4", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
 miow = "0.2"
-winapi = { version = "0.3", features = ["handleapi", "jobapi", "jobapi2", "minwindef", "ntdef", 
-    "processenv", "processthreadsapi", "psapi", "synchapi", "winerror", "winbase", "wincon", "winnt"] }
+
+[target.'cfg(windows)'.dependencies.winapi]
+version = "0.3"
+features = [
+  "handleapi",
+  "jobapi",
+  "jobapi2",
+  "minwindef",
+  "ntdef",
+  "processenv",
+  "processthreadsapi",
+  "psapi",
+  "synchapi",
+  "winerror",
+  "winbase",
+  "wincon",
+  "winnt",
+]
 
 [dev-dependencies]
 bufstream = "0.1"

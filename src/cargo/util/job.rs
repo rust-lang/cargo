@@ -48,15 +48,26 @@ mod imp {
     use std::io;
     use std::mem;
     use std::os::windows::prelude::*;
-    use self::winapi::shared::*;
-    use self::winapi::um::*;
+
+    use self::winapi::shared::basetsd::*;
+    use self::winapi::shared::minwindef::*;
+    use self::winapi::shared::minwindef::{FALSE, TRUE};
+    use self::winapi::um::handleapi::*;
+    use self::winapi::um::jobapi2::*;
+    use self::winapi::um::jobapi::*;
+    use self::winapi::um::processthreadsapi::*;
+    use self::winapi::um::psapi::*;
+    use self::winapi::um::synchapi::*;
+    use self::winapi::um::winbase::*;
+    use self::winapi::um::winnt::*;
+    use self::winapi::um::winnt::HANDLE;
 
     pub struct Setup {
         job: Handle,
     }
 
     pub struct Handle {
-        inner: ntdef::HANDLE,
+        inner: HANDLE,
     }
 
     fn last_err() -> io::Error {
@@ -73,7 +84,7 @@ mod imp {
         // use job objects, so we instead just ignore errors and assume that
         // we're otherwise part of someone else's job object in this case.
 
-        let job = jobapi2::CreateJobObjectW(0 as *mut _, 0 as *const _);
+        let job = CreateJobObjectW(0 as *mut _, 0 as *const _);
         if job.is_null() {
             return None
         }
@@ -83,22 +94,22 @@ mod imp {
         // process in the object should be killed. Note that this includes our
         // entire process tree by default because we've added ourselves and and
         // our children will reside in the job once we spawn a process.
-        let mut info: winnt::JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
+        let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
         info = mem::zeroed();
         info.BasicLimitInformation.LimitFlags =
-            winnt::JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-        let r = jobapi2::SetInformationJobObject(job.inner,
-                        winnt::JobObjectExtendedLimitInformation,
-                        &mut info as *mut _ as minwindef::LPVOID,
-                        mem::size_of_val(&info) as minwindef::DWORD);
+            JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        let r = SetInformationJobObject(job.inner,
+                        JobObjectExtendedLimitInformation,
+                        &mut info as *mut _ as LPVOID,
+                        mem::size_of_val(&info) as DWORD);
         if r == 0 {
             return None
         }
 
         // Assign our process to this job object, meaning that our children will
         // now live or die based on our existence.
-        let me = processthreadsapi::GetCurrentProcess();
-        let r = jobapi2::AssignProcessToJobObject(job.inner, me);
+        let me = GetCurrentProcess();
+        let r = AssignProcessToJobObject(job.inner, me);
         if r == 0 {
             return None
         }
@@ -126,13 +137,13 @@ mod imp {
                     info!("killed some, going for more");
                 }
 
-                let mut info: winnt::JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
+                let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
                 info = mem::zeroed();
-                let r = jobapi2::SetInformationJobObject(
+                let r = SetInformationJobObject(
                             self.job.inner,
-                            winnt::JobObjectExtendedLimitInformation,
-                            &mut info as *mut _ as minwindef::LPVOID,
-                            mem::size_of_val(&info) as minwindef::DWORD);
+                            JobObjectExtendedLimitInformation,
+                            &mut info as *mut _ as LPVOID,
+                            mem::size_of_val(&info) as DWORD);
                 if r == 0 {
                     info!("failed to configure job object to defaults: {}",
                           last_err());
@@ -145,16 +156,16 @@ mod imp {
         unsafe fn kill_remaining(&mut self) -> bool {
             #[repr(C)]
             struct Jobs {
-                header: winnt::JOBOBJECT_BASIC_PROCESS_ID_LIST,
-                list: [basetsd::ULONG_PTR; 1024],
+                header: JOBOBJECT_BASIC_PROCESS_ID_LIST,
+                list: [ULONG_PTR; 1024],
             }
 
             let mut jobs: Jobs = mem::zeroed();
-            let r = jobapi2::QueryInformationJobObject(
+            let r = QueryInformationJobObject(
                             self.job.inner,
-                            winnt::JobObjectBasicProcessIdList,
-                            &mut jobs as *mut _ as minwindef::LPVOID,
-                            mem::size_of_val(&jobs) as minwindef::DWORD,
+                            JobObjectBasicProcessIdList,
+                            &mut jobs as *mut _ as LPVOID,
+                            mem::size_of_val(&jobs) as DWORD,
                             0 as *mut _);
             if r == 0 {
                 info!("failed to query job object: {}", last_err());
@@ -168,17 +179,15 @@ mod imp {
 
             let list = list.iter().filter(|&&id| {
                 // let's not kill ourselves
-                id as minwindef::DWORD != processthreadsapi::GetCurrentProcessId()
+                id as DWORD != GetCurrentProcessId()
             }).filter_map(|&id| {
                 // Open the process with the necessary rights, and if this
                 // fails then we probably raced with the process exiting so we
                 // ignore the problem.
-                let flags = winnt::PROCESS_QUERY_INFORMATION |
-                            winnt::PROCESS_TERMINATE |
-                            winnt::SYNCHRONIZE;
-                let p = processthreadsapi::OpenProcess(flags,
-                                                       minwindef::FALSE,
-                                                       id as minwindef::DWORD);
+                let flags = PROCESS_QUERY_INFORMATION |
+                            PROCESS_TERMINATE |
+                            SYNCHRONIZE;
+                let p = OpenProcess(flags, FALSE, id as DWORD);
                 if p.is_null() {
                     None
                 } else {
@@ -189,12 +198,12 @@ mod imp {
                 // If it's not then we likely raced with something else
                 // recycling this PID, so we just skip this step.
                 let mut res = 0;
-                let r = jobapi::IsProcessInJob(p.inner, self.job.inner, &mut res);
+                let r = IsProcessInJob(p.inner, self.job.inner, &mut res);
                 if r == 0 {
                     info!("failed to test is process in job: {}", last_err());
                     return false
                 }
-                res == minwindef::TRUE
+                res == TRUE
             });
 
 
@@ -202,9 +211,9 @@ mod imp {
                 // Load the file which this process was spawned from. We then
                 // later use this for identification purposes.
                 let mut buf = [0; 1024];
-                let r = psapi::GetProcessImageFileNameW(p.inner,
-                                                        buf.as_mut_ptr(),
-                                                        buf.len() as minwindef::DWORD);
+                let r = GetProcessImageFileNameW(p.inner,
+                                                 buf.as_mut_ptr(),
+                                                 buf.len() as DWORD);
                 if r == 0 {
                     info!("failed to get image name: {}", last_err());
                     continue
@@ -233,14 +242,14 @@ mod imp {
                 // Ok, this isn't mspdbsrv, let's kill the process. After we
                 // kill it we wait on it to ensure that the next time around in
                 // this function we're not going to see it again.
-                let r = processthreadsapi::TerminateProcess(p.inner, 1);
+                let r = TerminateProcess(p.inner, 1);
                 if r == 0 {
                     info!("\tfailed to kill subprocess: {}", last_err());
                     info!("\tassuming subprocess is dead...");
                 } else {
                     info!("\tterminated subprocess");
                 }
-                let r = synchapi::WaitForSingleObject(p.inner, winbase::INFINITE);
+                let r = WaitForSingleObject(p.inner, INFINITE);
                 if r != 0 {
                     info!("failed to wait for process to die: {}", last_err());
                     return false
@@ -254,7 +263,7 @@ mod imp {
 
     impl Drop for Handle {
         fn drop(&mut self) {
-            unsafe { handleapi::CloseHandle(self.inner); }
+            unsafe { CloseHandle(self.inner); }
         }
     }
 }
