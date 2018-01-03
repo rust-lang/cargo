@@ -8,7 +8,7 @@ extern crate rustfix;
 
 use std::fs;
 use std::error::Error;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 use tempdir::TempDir;
 
@@ -94,13 +94,14 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     debug!("{:?}", file);
     let code = read_file(&file)?;
     let errors = compile_and_get_json_errors(file)?;
-    let expected_json = read_file(&file.with_extension("json"))?;
 
     if std::env::var("RUSTFIX_TEST_RECORD_JSON").is_ok() {
         use std::io::Write;
         let mut recorded_json = fs::File::create(&file.with_extension("recorded.json"))?;
         recorded_json.write_all(errors.as_bytes())?;
     }
+
+    let expected_json = read_file(&file.with_extension("json"))?;
 
     assert_eq!(
         errors.trim(),
@@ -128,4 +129,24 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     Ok(())
 }
 
-include!(concat!(env!("OUT_DIR"), "/fixture_tests.rs"));
+fn get_fixture_files() -> Result<Vec<PathBuf>, Box<Error>> {
+    Ok(fs::read_dir("./tests/fixtures")?
+        .into_iter()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.is_file())
+        .filter(|p| {
+            let x = p.to_string_lossy();
+            x.ends_with(".rs") && !x.ends_with(".fixed.rs")
+        })
+        .collect())
+}
+
+#[test]
+fn fixtures() {
+    let _ = env_logger::try_init();
+
+    for file in &get_fixture_files().unwrap() {
+        test_rustfix_with_file(file).unwrap();
+        info!("passed: {:?}", file);
+    }
+}
