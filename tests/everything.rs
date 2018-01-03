@@ -96,6 +96,12 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     let errors = compile_and_get_json_errors(file)?;
     let expected_json = read_file(&file.with_extension("json"))?;
 
+    if std::env::var("RUSTFIX_TEST_RECORD_JSON").is_ok() {
+        use std::io::Write;
+        let mut recorded_json = fs::File::create(&file.with_extension("recorded.json"))?;
+        recorded_json.write_all(errors.as_bytes())?;
+    }
+
     assert_eq!(
         serde_json::from_str::<serde_json::Value>(&errors)?,
         serde_json::from_str::<serde_json::Value>(&expected_json)?,
