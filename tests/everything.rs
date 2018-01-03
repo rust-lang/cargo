@@ -103,8 +103,8 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     }
 
     assert_eq!(
-        serde_json::from_str::<serde_json::Value>(&errors)?,
-        serde_json::from_str::<serde_json::Value>(&expected_json)?,
+        errors.trim(),
+        expected_json.trim(),
         "got unexpected json from clippy"
     );
 
