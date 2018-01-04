@@ -171,7 +171,7 @@ categories = ["...", "..."]
 # This is an SPDX 2.1 license expression for this package.  Currently
 # crates.io will validate the license provided against a whitelist of
 # known license and exception identifiers from the SPDX license list
-# 2.4.
+# 2.4.  Parentheses are not currently supported.
 #
 # Multiple licenses can be separated with a `/`, although that usage
 # is deprecated.  Instead, use a license expression with AND and OR
