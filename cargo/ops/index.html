@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `ops` mod in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, ops">
+
+    <title>cargo::ops - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Module ops</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#traits">Traits</a></li><li><a href="#functions">Functions</a></li></ul></div><p class='location'><a href='../index.html'>cargo</a></p><script>window.sidebarCurrent = {name: 'ops', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>cargo</a>::<wbr><a class="mod" href=''>ops</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/cargo/ops/mod.rs.html#1-44' title='goto source code'>[src]</a></span></h1>
+<h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.BuildConfig.html"
+                                  title='struct cargo::ops::BuildConfig'>BuildConfig</a></td>
+                           <td class='docblock-short'>
+                                <p>Configuration information for a rustc build.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.BuildOutput.html"
+                                  title='struct cargo::ops::BuildOutput'>BuildOutput</a></td>
+                           <td class='docblock-short'>
+                                <p>Contains the parsed output of a custom build script.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CleanOptions.html"
+                                  title='struct cargo::ops::CleanOptions'>CleanOptions</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Compilation.html"
+                                  title='struct cargo::ops::Compilation'>Compilation</a></td>
+                           <td class='docblock-short'>
+                                <p>A structure returning the result of a compilation.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CompileOptions.html"
+                                  title='struct cargo::ops::CompileOptions'>CompileOptions</a></td>
+                           <td class='docblock-short'>
+                                <p>Contains information about how a package should be compiled.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Context.html"
+                                  title='struct cargo::ops::Context'>Context</a></td>
+                           <td class='docblock-short'>
+                                <p>The build context, containing all information about a build task</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DefaultExecutor.html"
+                                  title='struct cargo::ops::DefaultExecutor'>DefaultExecutor</a></td>
+                           <td class='docblock-short'>
+                                <p>A <code>DefaultExecutor</code> calls rustc without doing anything else. It is Cargo&#39;s
+default behaviour.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DocOptions.html"
+                                  title='struct cargo::ops::DocOptions'>DocOptions</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ExportInfo.html"
+                                  title='struct cargo::ops::ExportInfo'>ExportInfo</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NewOptions.html"
+                                  title='struct cargo::ops::NewOptions'>NewOptions</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.OutputMetadataOptions.html"
+                                  title='struct cargo::ops::OutputMetadataOptions'>OutputMetadataOptions</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.OwnersOptions.html"
+                                  title='struct cargo::ops::OwnersOptions'>OwnersOptions</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.PackageOpts.html"
+                                  title='struct cargo::ops::PackageOpts'>PackageOpts</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.PublishOpts.html"
+                                  title='struct cargo::ops::PublishOpts'>PublishOpts</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.RegistryConfig.html"
+                                  title='struct cargo::ops::RegistryConfig'>RegistryConfig</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.TargetConfig.html"
+                                  title='struct cargo::ops::TargetConfig'>TargetConfig</a></td>
+                           <td class='docblock-short'>
+                                <p>Information required to build for a target</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.TestOptions.html"
+                                  title='struct cargo::ops::TestOptions'>TestOptions</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Unit.html"
+                                  title='struct cargo::ops::Unit'>Unit</a></td>
+                           <td class='docblock-short'>
+                                <p>All information needed to define a Unit.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UpdateOptions.html"
+                                  title='struct cargo::ops::UpdateOptions'>UpdateOptions</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.CompileFilter.html"
+                                  title='enum cargo::ops::CompileFilter'>CompileFilter</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.CompileMode.html"
+                                  title='enum cargo::ops::CompileMode'>CompileMode</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.FilterRule.html"
+                                  title='enum cargo::ops::FilterRule'>FilterRule</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.Kind.html"
+                                  title='enum cargo::ops::Kind'>Kind</a></td>
+                           <td class='docblock-short'>
+                                <p>Whether an object is for the host arch, or the target arch.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.MessageFormat.html"
+                                  title='enum cargo::ops::MessageFormat'>MessageFormat</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.Packages.html"
+                                  title='enum cargo::ops::Packages'>Packages</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.VersionControl.html"
+                                  title='enum cargo::ops::VersionControl'>VersionControl</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.Executor.html"
+                                  title='trait cargo::ops::Executor'>Executor</a></td>
+                           <td class='docblock-short'>
+                                <p>A glorified callback for executing calls to rustc. Rather than calling rustc
+directly, we&#39;ll use an Executor, giving clients an opportunity to intercept
+the build calls.</p>
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.clean.html"
+                                  title='fn cargo::ops::clean'>clean</a></td>
+                           <td class='docblock-short'>
+                                <p>Cleans the project from build artifacts.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.compile.html"
+                                  title='fn cargo::ops::compile'>compile</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.compile_targets.html"
+                                  title='fn cargo::ops::compile_targets'>compile_targets</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.compile_with_exec.html"
+                                  title='fn cargo::ops::compile_with_exec'>compile_with_exec</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.compile_ws.html"
+                                  title='fn cargo::ops::compile_ws'>compile_ws</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.configure_http_handle.html"
+                                  title='fn cargo::ops::configure_http_handle'>configure_http_handle</a></td>
+                           <td class='docblock-short'>
+                                <p>Configure a libcurl http handle with the defaults options for Cargo</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.doc.html"
+                                  title='fn cargo::ops::doc'>doc</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.fetch.html"
+                                  title='fn cargo::ops::fetch'>fetch</a></td>
+                           <td class='docblock-short'>
+                                <p>Executes <code>cargo fetch</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.generate_lockfile.html"
+                                  title='fn cargo::ops::generate_lockfile'>generate_lockfile</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.http_handle.html"
+                                  title='fn cargo::ops::http_handle'>http_handle</a></td>
+                           <td class='docblock-short'>
+                                <p>Create a new HTTP handle with appropriate global configuration for cargo.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.init.html"
+                                  title='fn cargo::ops::init'>init</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.install.html"
+                                  title='fn cargo::ops::install'>install</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.install_list.html"
+                                  title='fn cargo::ops::install_list'>install_list</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.is_bad_artifact_name.html"
+                                  title='fn cargo::ops::is_bad_artifact_name'>is_bad_artifact_name</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.load_pkg_lockfile.html"
+                                  title='fn cargo::ops::load_pkg_lockfile'>load_pkg_lockfile</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.modify_owners.html"
+                                  title='fn cargo::ops::modify_owners'>modify_owners</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.needs_custom_http_transport.html"
+                                  title='fn cargo::ops::needs_custom_http_transport'>needs_custom_http_transport</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.new.html"
+                                  title='fn cargo::ops::new'>new</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.output_metadata.html"
+                                  title='fn cargo::ops::output_metadata'>output_metadata</a></td>
+                           <td class='docblock-short'>
+                                <p>Loads the manifest, resolves the dependencies of the project to the concrete
+used versions - considering overrides - and writes all dependencies in a JSON
+format to stdout.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.package.html"
+                                  title='fn cargo::ops::package'>package</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.pkgid.html"
+                                  title='fn cargo::ops::pkgid'>pkgid</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.publish.html"
+                                  title='fn cargo::ops::publish'>publish</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.read_package.html"
+                                  title='fn cargo::ops::read_package'>read_package</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.read_packages.html"
+                                  title='fn cargo::ops::read_packages'>read_packages</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.registry_configuration.html"
+                                  title='fn cargo::ops::registry_configuration'>registry_configuration</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.registry_login.html"
+                                  title='fn cargo::ops::registry_login'>registry_login</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.resolve_with_previous.html"
+                                  title='fn cargo::ops::resolve_with_previous'>resolve_with_previous</a></td>
+                           <td class='docblock-short'>
+                                <p>Resolve all dependencies for a package using an optional previous instance
+of resolve to guide the resolution process.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.resolve_ws.html"
+                                  title='fn cargo::ops::resolve_ws'>resolve_ws</a></td>
+                           <td class='docblock-short'>
+                                <p>Resolve all dependencies for the workspace using the previous
+lockfile as a guide if present.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.resolve_ws_precisely.html"
+                                  title='fn cargo::ops::resolve_ws_precisely'>resolve_ws_precisely</a></td>
+                           <td class='docblock-short'>
+                                <p>Resolves dependencies for some packages of the workspace,
+taking into account <code>paths</code> overrides and activated features.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.run.html"
+                                  title='fn cargo::ops::run'>run</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.run_benches.html"
+                                  title='fn cargo::ops::run_benches'>run_benches</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.run_tests.html"
+                                  title='fn cargo::ops::run_tests'>run_tests</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.search.html"
+                                  title='fn cargo::ops::search'>search</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.uninstall.html"
+                                  title='fn cargo::ops::uninstall'>uninstall</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.update_lockfile.html"
+                                  title='fn cargo::ops::update_lockfile'>update_lockfile</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.write_pkg_lockfile.html"
+                                  title='fn cargo::ops::write_pkg_lockfile'>write_pkg_lockfile</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.yank.html"
+                                  title='fn cargo::ops::yank'>yank</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

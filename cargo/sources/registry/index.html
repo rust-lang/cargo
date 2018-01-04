@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `registry` mod in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, registry">
+
+    <title>cargo::sources::registry - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Module registry</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#constants">Constants</a></li><li><a href="#traits">Traits</a></li></ul></div><p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>sources</a></p><script>window.sidebarCurrent = {name: 'registry', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>sources</a>::<wbr><a class="mod" href=''>registry</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/cargo/sources/registry/mod.rs.html#1-535' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>A <code>Source</code> for registry-based packages.</p>
+
+<h1 id='whats-a-registry' class='section-header'><a href='#whats-a-registry'>What&#39;s a Registry?</a></h1>
+<p>Registries are central locations where packages can be uploaded to,
+discovered, and searched for. The purpose of a registry is to have a
+location that serves as permanent storage for versions of a crate over time.</p>
+
+<p>Compared to git sources, a registry provides many packages as well as many
+versions simultaneously. Git sources can also have commits deleted through
+rebasings where registries cannot have their versions deleted.</p>
+
+<h1 id='the-index-of-a-registry' class='section-header'><a href='#the-index-of-a-registry'>The Index of a Registry</a></h1>
+<p>One of the major difficulties with a registry is that hosting so many
+packages may quickly run into performance problems when dealing with
+dependency graphs. It&#39;s infeasible for cargo to download the entire contents
+of the registry just to resolve one package&#39;s dependencies, for example. As
+a result, cargo needs some efficient method of querying what packages are
+available on a registry, what versions are available, and what the
+dependencies for each version is.</p>
+
+<p>One method of doing so would be having the registry expose an HTTP endpoint
+which can be queried with a list of packages and a response of their
+dependencies and versions is returned. This is somewhat inefficient however
+as we may have to hit the endpoint many times and we may have already
+queried for much of the data locally already (for other packages, for
+example). This also involves inventing a transport format between the
+registry and Cargo itself, so this route was not taken.</p>
+
+<p>Instead, Cargo communicates with registries through a git repository
+referred to as the Index. The Index of a registry is essentially an easily
+query-able version of the registry&#39;s database for a list of versions of a
+package as well as a list of dependencies for each version.</p>
+
+<p>Using git to host this index provides a number of benefits:</p>
+
+<ul>
+<li><p>The entire index can be stored efficiently locally on disk. This means
+that all queries of a registry can happen locally and don&#39;t need to touch
+the network.</p></li>
+<li><p>Updates of the index are quite efficient. Using git buys incremental
+updates, compressed transmission, etc for free. The index must be updated
+each time we need fresh information from a registry, but this is one
+update of a git repository that probably hasn&#39;t changed a whole lot so
+it shouldn&#39;t be too expensive.</p>
+
+<p>Additionally, each modification to the index is just appending a line at
+the end of a file (the exact format is described later). This means that
+the commits for an index are quite small and easily applied/compressable.</p></li>
+</ul>
+
+<h2 id='the-format-of-the-index' class='section-header'><a href='#the-format-of-the-index'>The format of the Index</a></h2>
+<p>The index is a store for the list of versions for all packages known, so its
+format on disk is optimized slightly to ensure that <code>ls registry</code> doesn&#39;t
+produce a list of all packages ever known. The index also wants to ensure
+that there&#39;s not a million files which may actually end up hitting
+filesystem limits at some point. To this end, a few decisions were made
+about the format of the registry:</p>
+
+<ol>
+<li>Each crate will have one file corresponding to it. Each version for a
+crate will just be a line in this file.</li>
+<li>There will be two tiers of directories for crate names, under which
+crates corresponding to those tiers will be located.</li>
+</ol>
+
+<p>As an example, this is an example hierarchy of an index:</p>
+
+<pre><code class="language-notrust">.
+├── 3
+│   └── u
+│       └── url
+├── bz
+│   └── ip
+│       └── bzip2
+├── config.json
+├── en
+│   └── co
+│       └── encoding
+└── li
+    ├── bg
+    │   └── libgit2
+    └── nk
+        └── link-config
+</code></pre>
+
+<p>The root of the index contains a <code>config.json</code> file with a few entries
+corresponding to the registry (see <code>RegistryConfig</code> below).</p>
+
+<p>Otherwise, there are three numbered directories (1, 2, 3) for crates with
+names 1, 2, and 3 characters in length. The 1/2 directories simply have the
+crate files underneath them, while the 3 directory is sharded by the first
+letter of the crate name.</p>
+
+<p>Otherwise the top-level directory contains many two-letter directory names,
+each of which has many sub-folders with two letters. At the end of all these
+are the actual crate files themselves.</p>
+
+<p>The purpose of this layout is to hopefully cut down on <code>ls</code> sizes as well as
+efficient lookup based on the crate name itself.</p>
+
+<h2 id='crate-files' class='section-header'><a href='#crate-files'>Crate files</a></h2>
+<p>Each file in the index is the history of one crate over time. Each line in
+the file corresponds to one version of a crate, stored in JSON format (see
+the <code>RegistryPackage</code> structure below).</p>
+
+<p>As new versions are published, new lines are appended to this file. The only
+modifications to this file that should happen over time are yanks of a
+particular version.</p>
+
+<h1 id='downloading-packages' class='section-header'><a href='#downloading-packages'>Downloading Packages</a></h1>
+<p>The purpose of the Index was to provide an efficient method to resolve the
+dependency graph for a package. So far we only required one network
+interaction to update the registry&#39;s repository (yay!). After resolution has
+been performed, however we need to download the contents of packages so we
+can read the full manifest and build the source code.</p>
+
+<p>To accomplish this, this source&#39;s <code>download</code> method will make an HTTP
+request per-package requested to download tarballs into a local cache. These
+tarballs will then be unpacked into a destination folder.</p>
+
+<p>Note that because versions uploaded to the registry are frozen forever that
+the HTTP download and unpacking can all be skipped if the version has
+already been downloaded and unpacked. This caching allows us to only
+download a package when absolutely necessary.</p>
+
+<h1 id='filesystem-hierarchy' class='section-header'><a href='#filesystem-hierarchy'>Filesystem Hierarchy</a></h1>
+<p>Overall, the <code>$HOME/.cargo</code> looks like this when talking about the registry:</p>
+
+<pre><code class="language-notrust"># A folder under which all registry metadata is hosted (similar to
+# $HOME/.cargo/git)
+$HOME/.cargo/registry/
+
+    # For each registry that cargo knows about (keyed by hostname + hash)
+    # there is a folder which is the checked out version of the index for
+    # the registry in this location. Note that this is done so cargo can
+    # support multiple registries simultaneously
+    index/
+        registry1-&lt;hash&gt;/
+        registry2-&lt;hash&gt;/
+        ...
+
+    # This folder is a cache for all downloaded tarballs from a registry.
+    # Once downloaded and verified, a tarball never changes.
+    cache/
+        registry1-&lt;hash&gt;/&lt;pkg&gt;-&lt;version&gt;.crate
+        ...
+
+    # Location in which all tarballs are unpacked. Each tarball is known to
+    # be frozen after downloading, so transitively this folder is also
+    # frozen once its unpacked (it&#39;s never unpacked again)
+    src/
+        registry1-&lt;hash&gt;/&lt;pkg&gt;-&lt;version&gt;/...
+        ...
+</code></pre>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.RegistryConfig.html"
+                                  title='struct cargo::sources::registry::RegistryConfig'>RegistryConfig</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.RegistrySource.html"
+                                  title='struct cargo::sources::registry::RegistrySource'>RegistrySource</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table><h2 id='constants' class='section-header'><a href="#constants">Constants</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CRATES_IO.html"
+                                  title='constant cargo::sources::registry::CRATES_IO'>CRATES_IO</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.RegistryData.html"
+                                  title='trait cargo::sources::registry::RegistryData'>RegistryData</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

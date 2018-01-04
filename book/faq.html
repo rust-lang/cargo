@@ -1,0 +1,278 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>FAQ - The Cargo Book</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <base href="">
+
+        <link rel="stylesheet" href="book.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <link rel="shortcut icon" href="favicon.png">
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme -->
+        
+
+        
+
+        <!-- Fetch Clipboard.js from CDN but have a local fallback -->
+        <script src="https://cdn.jsdelivr.net/clipboard.js/1.6.1/clipboard.min.js"></script>
+        <script>
+            if (typeof Clipboard == 'undefined') {
+                document.write(unescape("%3Cscript src='clipboard.min.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch JQuery from CDN but have a local fallback -->
+        <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script>
+            if (typeof jQuery == 'undefined') {
+                document.write(unescape("%3Cscript src='jquery.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch store.js from local - TODO add CDN when 2.x.x is available on cdnjs -->
+        <script src="store.js"></script>
+
+    </head>
+    <body class="light">
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme = store.get('mdbook-theme');
+            if (theme === null || theme === undefined) { theme = 'light'; }
+            $('body').removeClass().addClass(theme);
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var sidebar = store.get('mdbook-sidebar');
+            if (sidebar === "hidden") { $("html").addClass("sidebar-hidden") }
+            else if (sidebar === "visible") { $("html").addClass("sidebar-visible") }
+        </script>
+
+        <div id="sidebar" class="sidebar">
+            <ul class="chapter"><li class="affix"><a href="index.html">Introduction</a></li><li><a href="getting-started/index.html"><strong>1.</strong> Getting Started</a></li><li><ul class="section"><li><a href="getting-started/installation.html"><strong>1.1.</strong> Installation</a></li><li><a href="getting-started/first-steps.html"><strong>1.2.</strong> First Steps with Cargo</a></li></ul></li><li><a href="guide/index.html"><strong>2.</strong> Cargo Guide</a></li><li><ul class="section"><li><a href="guide/why-cargo-exists.html"><strong>2.1.</strong> Why Cargo Exists</a></li><li><a href="guide/creating-a-new-project.html"><strong>2.2.</strong> Creating a New Project</a></li><li><a href="guide/working-on-an-existing-project.html"><strong>2.3.</strong> Working on an Existing Project</a></li><li><a href="guide/dependencies.html"><strong>2.4.</strong> Dependencies</a></li><li><a href="guide/project-layout.html"><strong>2.5.</strong> Project Layout</a></li><li><a href="guide/cargo-toml-vs-cargo-lock.html"><strong>2.6.</strong> Cargo.toml vs Cargo.lock</a></li><li><a href="guide/tests.html"><strong>2.7.</strong> Tests</a></li><li><a href="guide/continuous-integration.html"><strong>2.8.</strong> Continuous Integration</a></li></ul></li><li><a href="reference/index.html"><strong>3.</strong> Cargo Reference</a></li><li><ul class="section"><li><a href="reference/specifying-dependencies.html"><strong>3.1.</strong> Specifying Dependencies</a></li><li><a href="reference/manifest.html"><strong>3.2.</strong> The Manifest Format</a></li><li><a href="reference/config.html"><strong>3.3.</strong> Configuration</a></li><li><a href="reference/environment-variables.html"><strong>3.4.</strong> Environment Variables</a></li><li><a href="reference/build-scripts.html"><strong>3.5.</strong> Build Scripts</a></li><li><a href="reference/publishing.html"><strong>3.6.</strong> Publishing on crates.io</a></li><li><a href="reference/pkgid-spec.html"><strong>3.7.</strong> Package ID Specifications</a></li><li><a href="reference/source-replacement.html"><strong>3.8.</strong> Source Replacement</a></li><li><a href="reference/external-tools.html"><strong>3.9.</strong> External Tools</a></li></ul></li><li><a href="faq.html" class="active"><strong>4.</strong> FAQ</a></li></ul>
+        </div>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page" tabindex="-1">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div class="left-buttons">
+                        <i id="sidebar-toggle" class="fa fa-bars" title="Toggle sidebar"></i>
+                        <i id="theme-toggle" class="fa fa-paint-brush" title="Change theme"></i>
+                    </div>
+
+                    <h1 class="menu-title">The Cargo Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html">
+                            <i id="print-button" class="fa fa-print" title="Print this book"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="content" class="content">
+                    <a class="header" href="faq.html#frequently-asked-questions" id="frequently-asked-questions"><h2>Frequently Asked Questions</h2></a>
+<a class="header" href="faq.html#is-the-plan-to-use-github-as-a-package-repository" id="is-the-plan-to-use-github-as-a-package-repository"><h3>Is the plan to use GitHub as a package repository?</h3></a>
+<p>No. The plan for Cargo is to use <a href="https://crates.io/">crates.io</a>, like npm or Rubygems do with
+npmjs.org and rubygems.org.</p>
+<p>We plan to support git repositories as a source of packages forever,
+because they can be used for early development and temporary patches,
+even when people use the registry as the primary source of packages.</p>
+<a class="header" href="faq.html#why-build-cratesio-rather-than-use-github-as-a-registry" id="why-build-cratesio-rather-than-use-github-as-a-registry"><h3>Why build crates.io rather than use GitHub as a registry?</h3></a>
+<p>We think that it’s very important to support multiple ways to download
+packages, including downloading from GitHub and copying packages into
+your project itself.</p>
+<p>That said, we think that <a href="https://crates.io/">crates.io</a> offers a number of important benefits, and
+will likely become the primary way that people download packages in Cargo.</p>
+<p>For precedent, both Node.js’s <a href="https://www.npmjs.org">npm</a> and Ruby’s <a href="https://bundler.io">bundler</a> support both a
+central registry model as well as a Git-based model, and most packages
+are downloaded through the registry in those ecosystems, with an
+important minority of packages making use of git-based packages.</p>
+<p>Some of the advantages that make a central registry popular in other
+languages include:</p>
+<ul>
+<li><strong>Discoverability</strong>. A central registry provides an easy place to look
+for existing packages. Combined with tagging, this also makes it
+possible for a registry to provide ecosystem-wide information, such as a
+list of the most popular or most-depended-on packages.</li>
+<li><strong>Speed</strong>. A central registry makes it possible to easily fetch just
+the metadata for packages quickly and efficiently, and then to
+efficiently download just the published package, and not other bloat
+that happens to exist in the repository. This adds up to a significant
+improvement in the speed of dependency resolution and fetching. As
+dependency graphs scale up, downloading all of the git repositories bogs
+down fast. Also remember that not everybody has a high-speed,
+low-latency Internet connection.</li>
+</ul>
+<a class="header" href="faq.html#will-cargo-work-with-c-code-or-other-languages" id="will-cargo-work-with-c-code-or-other-languages"><h3>Will Cargo work with C code (or other languages)?</h3></a>
+<p>Yes!</p>
+<p>Cargo handles compiling Rust code, but we know that many Rust projects
+link against C code. We also know that there are decades of tooling
+built up around compiling languages other than Rust.</p>
+<p>Our solution: Cargo allows a package to <a href="reference/build-scripts.html">specify a script</a>
+(written in Rust) to run before invoking <code>rustc</code>. Rust is leveraged to
+implement platform-specific configuration and refactor out common build
+functionality among packages.</p>
+<a class="header" href="faq.html#can-cargo-be-used-inside-of-make-or-ninja-or-" id="can-cargo-be-used-inside-of-make-or-ninja-or-"><h3>Can Cargo be used inside of <code>make</code> (or <code>ninja</code>, or ...)</h3></a>
+<p>Indeed. While we intend Cargo to be useful as a standalone way to
+compile Rust projects at the top-level, we know that some people will
+want to invoke Cargo from other build tools.</p>
+<p>We have designed Cargo to work well in those contexts, paying attention
+to things like error codes and machine-readable output modes. We still
+have some work to do on those fronts, but using Cargo in the context of
+conventional scripts is something we designed for from the beginning and
+will continue to prioritize.</p>
+<a class="header" href="faq.html#does-cargo-handle-multi-platform-projects-or-cross-compilation" id="does-cargo-handle-multi-platform-projects-or-cross-compilation"><h3>Does Cargo handle multi-platform projects or cross-compilation?</h3></a>
+<p>Rust itself provides facilities for configuring sections of code based
+on the platform. Cargo also supports <a href="reference/specifying-dependencies.html#platform-specific-dependencies">platform-specific
+dependencies</a>, and we plan to support more per-platform
+configuration in <code>Cargo.toml</code> in the future.</p>
+<p>In the longer-term, we’re looking at ways to conveniently cross-compile
+projects using Cargo.</p>
+<a class="header" href="faq.html#does-cargo-support-environments-like-production-or-test" id="does-cargo-support-environments-like-production-or-test"><h3>Does Cargo support environments, like <code>production</code> or <code>test</code>?</h3></a>
+<p>We support environments through the use of <a href="reference/manifest.html#the-profile-sections">profiles</a> to support:</p>
+<ul>
+<li>environment-specific flags (like <code>-g --opt-level=0</code> for development
+and <code>--opt-level=3</code> for production).</li>
+<li>environment-specific dependencies (like <code>hamcrest</code> for test assertions).</li>
+<li>environment-specific <code>#[cfg]</code></li>
+<li>a <code>cargo test</code> command</li>
+</ul>
+<a class="header" href="faq.html#does-cargo-work-on-windows" id="does-cargo-work-on-windows"><h3>Does Cargo work on Windows?</h3></a>
+<p>Yes!</p>
+<p>All commits to Cargo are required to pass the local test suite on Windows.
+If, however, you find a Windows issue, we consider it a bug, so <a href="https://github.com/rust-lang/cargo/issues">please file an
+issue</a>.</p>
+<a class="header" href="faq.html#why-do-binaries-have-cargolock-in-version-control-but-not-libraries" id="why-do-binaries-have-cargolock-in-version-control-but-not-libraries"><h3>Why do binaries have <code>Cargo.lock</code> in version control, but not libraries?</h3></a>
+<p>The purpose of a <code>Cargo.lock</code> is to describe the state of the world at the time
+of a successful build. It is then used to provide deterministic builds across
+whatever machine is building the project by ensuring that the exact same
+dependencies are being compiled.</p>
+<p>This property is most desirable from applications and projects which are at the
+very end of the dependency chain (binaries). As a result, it is recommended that
+all binaries check in their <code>Cargo.lock</code>.</p>
+<p>For libraries the situation is somewhat different. A library is not only used by
+the library developers, but also any downstream consumers of the library. Users
+dependent on the library will not inspect the library’s <code>Cargo.lock</code> (even if it
+exists). This is precisely because a library should <strong>not</strong> be deterministically
+recompiled for all users of the library.</p>
+<p>If a library ends up being used transitively by several dependencies, it’s
+likely that just a single copy of the library is desired (based on semver
+compatibility). If all libraries were to check in their <code>Cargo.lock</code>, then
+multiple copies of the library would be used, and perhaps even a version
+conflict.</p>
+<p>In other words, libraries specify semver requirements for their dependencies but
+cannot see the full picture. Only end products like binaries have a full
+picture to decide what versions of dependencies should be used.</p>
+<a class="header" href="faq.html#can-libraries-use--as-a-version-for-their-dependencies" id="can-libraries-use--as-a-version-for-their-dependencies"><h3>Can libraries use <code>*</code> as a version for their dependencies?</h3></a>
+<p><strong>As of January 22nd, 2016, <a href="https://crates.io/">crates.io</a> rejects all packages (not just libraries)
+with wildcard dependency constraints.</strong></p>
+<p>While libraries <em>can</em>, strictly speaking, they should not. A version requirement
+of <code>*</code> says “This will work with every version ever,” which is never going
+to be true. Libraries should always specify the range that they do work with,
+even if it’s something as general as “every 1.x.y version.”</p>
+<a class="header" href="faq.html#why-cargotoml" id="why-cargotoml"><h3>Why <code>Cargo.toml</code>?</h3></a>
+<p>As one of the most frequent interactions with Cargo, the question of why the
+configuration file is named <code>Cargo.toml</code> arises from time to time. The leading
+capital-<code>C</code> was chosen to ensure that the manifest was grouped with other
+similar configuration files in directory listings. Sorting files often puts
+capital letters before lowercase letters, ensuring files like <code>Makefile</code> and
+<code>Cargo.toml</code> are placed together. The trailing <code>.toml</code> was chosen to emphasize
+the fact that the file is in the <a href="https://github.com/toml-lang/toml">TOML configuration
+format</a>.</p>
+<p>Cargo does not allow other names such as <code>cargo.toml</code> or <code>Cargofile</code> to
+emphasize the ease of how a Cargo repository can be identified. An option of
+many possible names has historically led to confusion where one case was handled
+but others were accidentally forgotten.</p>
+<a class="header" href="faq.html#how-can-cargo-work-offline" id="how-can-cargo-work-offline"><h3>How can Cargo work offline?</h3></a>
+<p>Cargo is often used in situations with limited or no network access such as
+airplanes, CI environments, or embedded in large production deployments. Users
+are often surprised when Cargo attempts to fetch resources from the network, and
+hence the request for Cargo to work offline comes up frequently.</p>
+<p>Cargo, at its heart, will not attempt to access the network unless told to do
+so. That is, if no crates comes from crates.io, a git repository, or some other
+network location, Cargo will never attempt to make a network connection. As a
+result, if Cargo attempts to touch the network, then it's because it needs to
+fetch a required resource.</p>
+<p>Cargo is also quite aggressive about caching information to minimize the amount
+of network activity. It will guarantee, for example, that if <code>cargo build</code> (or
+an equivalent) is run to completion then the next <code>cargo build</code> is guaranteed to
+not touch the network so long as <code>Cargo.toml</code> has not been modified in the
+meantime. This avoidance of the network boils down to a <code>Cargo.lock</code> existing
+and a populated cache of the crates reflected in the lock file. If either of
+these components are missing, then they're required for the build to succeed and
+must be fetched remotely.</p>
+<p>As of Rust 1.11.0 Cargo understands a new flag, <code>--frozen</code>, which is an
+assertion that it shouldn't touch the network. When passed, Cargo will
+immediately return an error if it would otherwise attempt a network request.
+The error should include contextual information about why the network request is
+being made in the first place to help debug as well. Note that this flag <em>does
+not change the behavior of Cargo</em>, it simply asserts that Cargo shouldn't touch
+the network as a previous command has been run to ensure that network activity
+shouldn't be necessary.</p>
+<p>For more information about vendoring, see documentation on <a href="reference/source-replacement.html">source
+replacement</a>.</p>
+
+                </div>
+
+                <!-- Mobile navigation buttons -->
+                
+                    <a rel="prev" href="reference/external-tools.html" class="mobile-nav-chapters previous" title="Previous chapter">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+
+            </div>
+
+            
+                <a href="reference/external-tools.html" class="nav-chapters previous" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+            
+
+            
+
+        </div>
+
+
+        <!-- Local fallback for Font Awesome -->
+        <script>
+            if ($(".fa").css("font-family") !== "FontAwesome") {
+                $('<link rel="stylesheet" type="text/css" href="_FontAwesome/css/font-awesome.css">').prependTo('head');
+            }
+        </script>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        
+
+        
+
+        
+
+        
+
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS script -->
+        
+
+    </body>
+</html>

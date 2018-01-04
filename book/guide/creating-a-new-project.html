@@ -1,0 +1,205 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Creating a New Project - The Cargo Book</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <base href="../">
+
+        <link rel="stylesheet" href="book.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <link rel="shortcut icon" href="favicon.png">
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme -->
+        
+
+        
+
+        <!-- Fetch Clipboard.js from CDN but have a local fallback -->
+        <script src="https://cdn.jsdelivr.net/clipboard.js/1.6.1/clipboard.min.js"></script>
+        <script>
+            if (typeof Clipboard == 'undefined') {
+                document.write(unescape("%3Cscript src='clipboard.min.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch JQuery from CDN but have a local fallback -->
+        <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script>
+            if (typeof jQuery == 'undefined') {
+                document.write(unescape("%3Cscript src='jquery.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch store.js from local - TODO add CDN when 2.x.x is available on cdnjs -->
+        <script src="store.js"></script>
+
+    </head>
+    <body class="light">
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme = store.get('mdbook-theme');
+            if (theme === null || theme === undefined) { theme = 'light'; }
+            $('body').removeClass().addClass(theme);
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var sidebar = store.get('mdbook-sidebar');
+            if (sidebar === "hidden") { $("html").addClass("sidebar-hidden") }
+            else if (sidebar === "visible") { $("html").addClass("sidebar-visible") }
+        </script>
+
+        <div id="sidebar" class="sidebar">
+            <ul class="chapter"><li class="affix"><a href="index.html">Introduction</a></li><li><a href="getting-started/index.html"><strong>1.</strong> Getting Started</a></li><li><ul class="section"><li><a href="getting-started/installation.html"><strong>1.1.</strong> Installation</a></li><li><a href="getting-started/first-steps.html"><strong>1.2.</strong> First Steps with Cargo</a></li></ul></li><li><a href="guide/index.html"><strong>2.</strong> Cargo Guide</a></li><li><ul class="section"><li><a href="guide/why-cargo-exists.html"><strong>2.1.</strong> Why Cargo Exists</a></li><li><a href="guide/creating-a-new-project.html" class="active"><strong>2.2.</strong> Creating a New Project</a></li><li><a href="guide/working-on-an-existing-project.html"><strong>2.3.</strong> Working on an Existing Project</a></li><li><a href="guide/dependencies.html"><strong>2.4.</strong> Dependencies</a></li><li><a href="guide/project-layout.html"><strong>2.5.</strong> Project Layout</a></li><li><a href="guide/cargo-toml-vs-cargo-lock.html"><strong>2.6.</strong> Cargo.toml vs Cargo.lock</a></li><li><a href="guide/tests.html"><strong>2.7.</strong> Tests</a></li><li><a href="guide/continuous-integration.html"><strong>2.8.</strong> Continuous Integration</a></li></ul></li><li><a href="reference/index.html"><strong>3.</strong> Cargo Reference</a></li><li><ul class="section"><li><a href="reference/specifying-dependencies.html"><strong>3.1.</strong> Specifying Dependencies</a></li><li><a href="reference/manifest.html"><strong>3.2.</strong> The Manifest Format</a></li><li><a href="reference/config.html"><strong>3.3.</strong> Configuration</a></li><li><a href="reference/environment-variables.html"><strong>3.4.</strong> Environment Variables</a></li><li><a href="reference/build-scripts.html"><strong>3.5.</strong> Build Scripts</a></li><li><a href="reference/publishing.html"><strong>3.6.</strong> Publishing on crates.io</a></li><li><a href="reference/pkgid-spec.html"><strong>3.7.</strong> Package ID Specifications</a></li><li><a href="reference/source-replacement.html"><strong>3.8.</strong> Source Replacement</a></li><li><a href="reference/external-tools.html"><strong>3.9.</strong> External Tools</a></li></ul></li><li><a href="faq.html"><strong>4.</strong> FAQ</a></li></ul>
+        </div>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page" tabindex="-1">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div class="left-buttons">
+                        <i id="sidebar-toggle" class="fa fa-bars" title="Toggle sidebar"></i>
+                        <i id="theme-toggle" class="fa fa-paint-brush" title="Change theme"></i>
+                    </div>
+
+                    <h1 class="menu-title">The Cargo Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html">
+                            <i id="print-button" class="fa fa-print" title="Print this book"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="content" class="content">
+                    <a class="header" href="guide/creating-a-new-project.html#creating-a-new-project" id="creating-a-new-project"><h2>Creating a New Project</h2></a>
+<p>To start a new project with Cargo, use <code>cargo new</code>:</p>
+<pre><code class="language-shell">$ cargo new hello_world --bin
+</code></pre>
+<p>We’re passing <code>--bin</code> because we’re making a binary program: if we
+were making a library, we’d leave it off. This also initializes a new <code>git</code>
+repository by default. If you don't want it to do that, pass <code>--vcs none</code>.</p>
+<p>Let’s check out what Cargo has generated for us:</p>
+<pre><code class="language-shell">$ cd hello_world
+$ tree .
+.
+├── Cargo.toml
+└── src
+    └── main.rs
+
+1 directory, 2 files
+</code></pre>
+<p>If we had just used <code>cargo new hello_world</code> without the <code>--bin</code> flag, then
+we would have a <code>lib.rs</code> instead of a <code>main.rs</code>. For now, however, this is all
+we need to get started. First, let’s check out <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[package]
+name = &quot;hello_world&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;Your Name &lt;you@example.com&gt;&quot;]
+</code></pre>
+<p>This is called a <strong>manifest</strong>, and it contains all of the metadata that Cargo
+needs to compile your project.</p>
+<p>Here’s what’s in <code>src/main.rs</code>:</p>
+<pre><pre class="playpen"><code class="language-rust">fn main() {
+    println!(&quot;Hello, world!&quot;);
+}
+</code></pre></pre>
+<p>Cargo generated a “hello world” for us. Let’s compile it:</p>
+<pre><code class="language-shell">$ cargo build
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+</code></pre>
+<p>And then run it:</p>
+<pre><code class="language-shell">$ ./target/debug/hello_world
+Hello, world!
+</code></pre>
+<p>We can also use <code>cargo run</code> to compile and then run it, all in one step (You
+won't see the <code>Compiling</code> line if you have not made any changes since you last
+compiled):</p>
+<pre><code class="language-shell">$ cargo run
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+     Running `target/debug/hello_world`
+Hello, world!
+</code></pre>
+<p>You’ll now notice a new file, <code>Cargo.lock</code>. It contains information about our
+dependencies. Since we don’t have any yet, it’s not very interesting.</p>
+<p>Once you’re ready for release, you can use <code>cargo build --release</code> to compile
+your files with optimizations turned on:</p>
+<pre><code class="language-shell">$ cargo build --release
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+</code></pre>
+<p><code>cargo build --release</code> puts the resulting binary in <code>target/release</code> instead of
+<code>target/debug</code>.</p>
+<p>Compiling in debug mode is the default for development-- compilation time is
+shorter since the compiler doesn't do optimizations, but the code will run
+slower. Release mode takes longer to compile, but the code will run faster.</p>
+
+                </div>
+
+                <!-- Mobile navigation buttons -->
+                
+                    <a rel="prev" href="guide/why-cargo-exists.html" class="mobile-nav-chapters previous" title="Previous chapter">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="guide/working-on-an-existing-project.html" class="mobile-nav-chapters next" title="Next chapter">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+
+            </div>
+
+            
+                <a href="guide/why-cargo-exists.html" class="nav-chapters previous" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+            
+
+            
+                <a href="guide/working-on-an-existing-project.html" class="nav-chapters next" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            
+
+        </div>
+
+
+        <!-- Local fallback for Font Awesome -->
+        <script>
+            if ($(".fa").css("font-family") !== "FontAwesome") {
+                $('<link rel="stylesheet" type="text/css" href="_FontAwesome/css/font-awesome.css">').prependTo('head');
+            }
+        </script>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        
+
+        
+
+        
+
+        
+
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS script -->
+        
+
+    </body>
+</html>

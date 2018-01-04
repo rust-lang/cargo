@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `DirectorySource` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, DirectorySource">
+
+    <title>cargo::sources::directory::DirectorySource - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct DirectorySource</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#methods">Methods</a><div class="sidebar-links"><a href="#method.new">new</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-Debug">Debug</a><a href="#impl-Registry">Registry</a><a href="#impl-Source">Source</a></div></div><p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>sources</a>::<wbr><a href='index.html'>directory</a></p><script>window.sidebarCurrent = {name: 'DirectorySource', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>sources</a>::<wbr><a href='index.html'>directory</a>::<wbr><a class="struct" href=''>DirectorySource</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#17-22' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct DirectorySource&lt;'cfg&gt; { /* fields omitted */ }</pre>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl&lt;'cfg&gt; <a class="struct" href="../../../cargo/sources/directory/struct.DirectorySource.html" title="struct cargo::sources::directory::DirectorySource">DirectorySource</a>&lt;'cfg&gt;</code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#30-40' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class="method"><span id='new.v' class='invisible'><code>pub fn <a href='#method.new' class='fnname'>new</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;path: &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/std/path/struct.Path.html" title="struct std::path::Path">Path</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;id: &amp;<a class="struct" href="../../../cargo/core/struct.SourceId.html" title="struct cargo::core::SourceId">SourceId</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;config: &amp;'cfg <a class="struct" href="../../../cargo/util/config/struct.Config.html" title="struct cargo::util::config::Config">Config</a><br>) -&gt; <a class="struct" href="../../../cargo/sources/directory/struct.DirectorySource.html" title="struct cargo::sources::directory::DirectorySource">DirectorySource</a>&lt;'cfg&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#31-39' title='goto source code'>[src]</a></span></h4>
+</div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl&lt;'cfg&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../../cargo/sources/directory/struct.DirectorySource.html" title="struct cargo::sources::directory::DirectorySource">DirectorySource</a>&lt;'cfg&gt;</code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#42-46' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#43-45' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt">Read more</a></p>
+</div></div><h3 id='impl-Registry' class='impl'><span class='in-band'><code>impl&lt;'cfg&gt; <a class="trait" href="../../../cargo/core/registry/trait.Registry.html" title="trait cargo::core::registry::Registry">Registry</a> for <a class="struct" href="../../../cargo/sources/directory/struct.DirectorySource.html" title="struct cargo::sources::directory::DirectorySource">DirectorySource</a>&lt;'cfg&gt;</code><a href='#impl-Registry' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#48-67' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.query' class="method"><span id='query.v' class='invisible'><code>fn <a href='../../../cargo/core/registry/trait.Registry.html#tymethod.query' class='fnname'>query</a>(&amp;mut self, dep: &amp;<a class="struct" href="../../../cargo/core/dependency/struct.Dependency.html" title="struct cargo::core::dependency::Dependency">Dependency</a>, f: &amp;mut <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/function/trait.FnMut.html" title="trait core::ops::function::FnMut">FnMut</a>(<a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a>)) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#49-58' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Attempt to find the packages that match a dependency request.</p>
+</div><h4 id='method.supports_checksums' class="method"><span id='supports_checksums.v' class='invisible'><code>fn <a href='../../../cargo/core/registry/trait.Registry.html#tymethod.supports_checksums' class='fnname'>supports_checksums</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#60-62' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns whether or not this registry will return summaries with checksums listed. <a href="../../../cargo/core/registry/trait.Registry.html#tymethod.supports_checksums">Read more</a></p>
+</div><h4 id='method.requires_precise' class="method"><span id='requires_precise.v' class='invisible'><code>fn <a href='../../../cargo/core/registry/trait.Registry.html#tymethod.requires_precise' class='fnname'>requires_precise</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#64-66' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns whether or not this registry will return summaries with the <code>precise</code> field in the source id listed. <a href="../../../cargo/core/registry/trait.Registry.html#tymethod.requires_precise">Read more</a></p>
+</div><h4 id='method.query_vec' class="method"><span id='query_vec.v' class='invisible'><code>fn <a href='../../../cargo/core/registry/trait.Registry.html#method.query_vec' class='fnname'>query_vec</a>(&amp;mut self, dep: &amp;<a class="struct" href="../../../cargo/core/dependency/struct.Dependency.html" title="struct cargo::core::dependency::Dependency">Dependency</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a>&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/registry.rs.html#21-25' title='goto source code'>[src]</a></span></h4>
+</div><h3 id='impl-Source' class='impl'><span class='in-band'><code>impl&lt;'cfg&gt; <a class="trait" href="../../../cargo/core/source/trait.Source.html" title="trait cargo::core::source::Source">Source</a> for <a class="struct" href="../../../cargo/sources/directory/struct.DirectorySource.html" title="struct cargo::sources::directory::DirectorySource">DirectorySource</a>&lt;'cfg&gt;</code><a href='#impl-Source' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#69-204' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.source_id' class="method"><span id='source_id.v' class='invisible'><code>fn <a href='../../../cargo/core/source/trait.Source.html#tymethod.source_id' class='fnname'>source_id</a>(&amp;self) -&gt; &amp;<a class="struct" href="../../../cargo/core/struct.SourceId.html" title="struct cargo::core::SourceId">SourceId</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#70-72' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the <code>SourceId</code> corresponding to this source</p>
+</div><h4 id='method.update' class="method"><span id='update.v' class='invisible'><code>fn <a href='../../../cargo/core/source/trait.Source.html#tymethod.update' class='fnname'>update</a>(&amp;mut self) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#74-150' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>The update method performs any network operations required to get the entire list of all names, versions and dependencies of packages managed by the Source. <a href="../../../cargo/core/source/trait.Source.html#tymethod.update">Read more</a></p>
+</div><h4 id='method.download' class="method"><span id='download.v' class='invisible'><code>fn <a href='../../../cargo/core/source/trait.Source.html#tymethod.download' class='fnname'>download</a>(&amp;mut self, id: &amp;<a class="struct" href="../../../cargo/core/package_id/struct.PackageId.html" title="struct cargo::core::package_id::PackageId">PackageId</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="../../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#152-156' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>The download method fetches the full package for each name and version specified. <a href="../../../cargo/core/source/trait.Source.html#tymethod.download">Read more</a></p>
+</div><h4 id='method.fingerprint' class="method"><span id='fingerprint.v' class='invisible'><code>fn <a href='../../../cargo/core/source/trait.Source.html#tymethod.fingerprint' class='fnname'>fingerprint</a>(&amp;self, pkg: &amp;<a class="struct" href="../../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#158-160' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Generates a unique string which represents the fingerprint of the current state of the source. <a href="../../../cargo/core/source/trait.Source.html#tymethod.fingerprint">Read more</a></p>
+</div><h4 id='method.verify' class="method"><span id='verify.v' class='invisible'><code>fn <a href='../../../cargo/core/source/trait.Source.html#method.verify' class='fnname'>verify</a>(&amp;self, id: &amp;<a class="struct" href="../../../cargo/core/package_id/struct.PackageId.html" title="struct cargo::core::package_id::PackageId">PackageId</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#162-203' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>If this source supports it, verifies the source of the package specified. <a href="../../../cargo/core/source/trait.Source.html#method.verify">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

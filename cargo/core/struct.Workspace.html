@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Workspace` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Workspace">
+
+    <title>cargo::core::Workspace - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct Workspace</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#methods">Methods</a><div class="sidebar-links"><a href="#method.new">new</a><a href="#method.current_manifest">current_manifest</a><a href="#method.ephemeral">ephemeral</a><a href="#method.current">current</a><a href="#method.current_opt">current_opt</a><a href="#method.is_virtual">is_virtual</a><a href="#method.config">config</a><a href="#method.profiles">profiles</a><a href="#method.root">root</a><a href="#method.target_dir">target_dir</a><a href="#method.root_replace">root_replace</a><a href="#method.root_patch">root_patch</a><a href="#method.members">members</a><a href="#method.default_members">default_members</a><a href="#method.is_ephemeral">is_ephemeral</a><a href="#method.require_optional_deps">require_optional_deps</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-Debug">Debug</a></div></div><p class='location'><a href='../index.html'>cargo</a>::<wbr><a href='index.html'>core</a></p><script>window.sidebarCurrent = {name: 'Workspace', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>cargo</a>::<wbr><a href='index.html'>core</a>::<wbr><a class="struct" href=''>Workspace</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/cargo/core/workspace.rs.html#22-69' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Workspace&lt;'cfg&gt; { /* fields omitted */ }</pre><div class='docblock'><p>The core abstraction in Cargo for working with a workspace of crates.</p>
+
+<p>A workspace is often created very early on and then threaded through all
+other functions. It&#39;s typically through this object that the current
+package is loaded and/or learned about.</p>
+</div>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl&lt;'cfg&gt; <a class="struct" href="../../cargo/core/struct.Workspace.html" title="struct cargo::core::Workspace">Workspace</a>&lt;'cfg&gt;</code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#116-631' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class="method"><span id='new.v' class='invisible'><code>pub fn <a href='#method.new' class='fnname'>new</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;manifest_path: &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/std/path/struct.Path.html" title="struct std::path::Path">Path</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;config: &amp;'cfg <a class="struct" href="../../cargo/util/config/struct.Config.html" title="struct cargo::util::config::Config">Config</a><br>) -&gt; <a class="type" href="../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="../../cargo/core/struct.Workspace.html" title="struct cargo::core::Workspace">Workspace</a>&lt;'cfg&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#123-145' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Creates a new workspace given the target manifest pointed to by
+<code>manifest_path</code>.</p>
+
+<p>This function will construct the entire workspace by determining the
+root and all member packages. It will then validate the workspace
+before returning it, so <code>Ok</code> is only returned for valid workspaces.</p>
+</div><h4 id='method.current_manifest' class="method"><span id='current_manifest.v' class='invisible'><code>pub fn <a href='#method.current_manifest' class='fnname'>current_manifest</a>(&amp;self) -&gt; &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/std/path/struct.Path.html" title="struct std::path::Path">Path</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#147-149' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.ephemeral' class="method"><span id='ephemeral.v' class='invisible'><code>pub fn <a href='#method.ephemeral' class='fnname'>ephemeral</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;package: <a class="struct" href="../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;config: &amp;'cfg <a class="struct" href="../../cargo/util/config/struct.Config.html" title="struct cargo::util::config::Config">Config</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;target_dir: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../../cargo/util/struct.Filesystem.html" title="struct cargo::util::Filesystem">Filesystem</a>&gt;, <br>&nbsp;&nbsp;&nbsp;&nbsp;require_optional_deps: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a><br>) -&gt; <a class="type" href="../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="../../cargo/core/struct.Workspace.html" title="struct cargo::core::Workspace">Workspace</a>&lt;'cfg&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#160-191' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Creates a &quot;temporary workspace&quot; from one package which only contains
+that package.</p>
+
+<p>This constructor will not touch the filesystem and only creates an
+in-memory workspace. That is, all configuration is ignored, it&#39;s just
+intended for that one package.</p>
+
+<p>This is currently only used in niche situations like <code>cargo install</code> or
+<code>cargo package</code>.</p>
+</div><h4 id='method.current' class="method"><span id='current.v' class='invisible'><code>pub fn <a href='#method.current' class='fnname'>current</a>(&amp;self) -&gt; <a class="type" href="../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;&amp;<a class="struct" href="../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#198-205' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the current package of this workspace.</p>
+
+<p>Note that this can return an error if it the current manifest is
+actually a &quot;virtual Cargo.toml&quot;, in which case an error is returned
+indicating that something else should be passed.</p>
+</div><h4 id='method.current_opt' class="method"><span id='current_opt.v' class='invisible'><code>pub fn <a href='#method.current_opt' class='fnname'>current_opt</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="struct" href="../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#207-212' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.is_virtual' class="method"><span id='is_virtual.v' class='invisible'><code>pub fn <a href='#method.is_virtual' class='fnname'>is_virtual</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#214-219' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.config' class="method"><span id='config.v' class='invisible'><code>pub fn <a href='#method.config' class='fnname'>config</a>(&amp;self) -&gt; &amp;'cfg <a class="struct" href="../../cargo/util/config/struct.Config.html" title="struct cargo::util::config::Config">Config</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#222-224' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the <code>Config</code> this workspace is associated with.</p>
+</div><h4 id='method.profiles' class="method"><span id='profiles.v' class='invisible'><code>pub fn <a href='#method.profiles' class='fnname'>profiles</a>(&amp;self) -&gt; &amp;<a class="struct" href="../../cargo/core/manifest/struct.Profiles.html" title="struct cargo::core::manifest::Profiles">Profiles</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#226-232' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.root' class="method"><span id='root.v' class='invisible'><code>pub fn <a href='#method.root' class='fnname'>root</a>(&amp;self) -&gt; &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/std/path/struct.Path.html" title="struct std::path::Path">Path</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#238-243' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the root path of this workspace.</p>
+
+<p>That is, this returns the path of the directory containing the
+<code>Cargo.toml</code> which is the root of this workspace.</p>
+</div><h4 id='method.target_dir' class="method"><span id='target_dir.v' class='invisible'><code>pub fn <a href='#method.target_dir' class='fnname'>target_dir</a>(&amp;self) -&gt; <a class="struct" href="../../cargo/util/struct.Filesystem.html" title="struct cargo::util::Filesystem">Filesystem</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#245-249' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.root_replace' class="method"><div class="important-traits"><div class='tooltip'>ⓘ<span class='tooltiptext'>Important traits for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></span></div><div class="content hidden"><h3 class="important">Important traits for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></h3><code class="content"><span class="where fmt-newline">impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Read.html" title="trait std::io::Read">Read</a> for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></span><span class="where fmt-newline">impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Write.html" title="trait std::io::Write">Write</a> for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a mut [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></span></code></div></div><span id='root_replace.v' class='invisible'><code>pub fn <a href='#method.root_replace' class='fnname'>root_replace</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">(</a><a class="struct" href="../../cargo/core/struct.PackageIdSpec.html" title="struct cargo::core::PackageIdSpec">PackageIdSpec</a>, <a class="struct" href="../../cargo/core/dependency/struct.Dependency.html" title="struct cargo::core::dependency::Dependency">Dependency</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">)</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#254-263' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the root [replace] section of this workspace.</p>
+
+<p>This may be from a virtual crate or an actual crate.</p>
+</div><h4 id='method.root_patch' class="method"><span id='root_patch.v' class='invisible'><code>pub fn <a href='#method.root_patch' class='fnname'>root_patch</a>(&amp;self) -&gt; &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/std/collections/hash/map/struct.HashMap.html" title="struct std::collections::hash::map::HashMap">HashMap</a>&lt;<a class="struct" href="https://docs.rs/url/1.6.0/url/struct.Url.html" title="struct url::Url">Url</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="../../cargo/core/dependency/struct.Dependency.html" title="struct cargo::core::dependency::Dependency">Dependency</a>&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#268-277' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the root [patch] section of this workspace.</p>
+
+<p>This may be from a virtual crate or an actual crate.</p>
+</div><h4 id='method.members' class="method"><div class="important-traits"><div class='tooltip'>ⓘ<span class='tooltiptext'>Important traits for <a class="struct" href="../../cargo/core/struct.Members.html" title="struct cargo::core::Members">Members</a>&lt;'a, 'cfg&gt;</span></div><div class="content hidden"><h3 class="important">Important traits for <a class="struct" href="../../cargo/core/struct.Members.html" title="struct cargo::core::Members">Members</a>&lt;'a, 'cfg&gt;</h3><code class="content"><span class="where fmt-newline">impl&lt;'a, 'cfg&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/iter/iterator/trait.Iterator.html" title="trait core::iter::iterator::Iterator">Iterator</a> for <a class="struct" href="../../cargo/core/struct.Members.html" title="struct cargo::core::Members">Members</a>&lt;'a, 'cfg&gt;</span><span class="where fmt-newline">    type <a href='https://doc.rust-lang.org/nightly/core/iter/iterator/trait.Iterator.html#associatedtype.Item' class="type">Item</a> = &amp;'a <a class="struct" href="../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>;</span></code></div></div><span id='members.v' class='invisible'><code>pub fn <a href='#method.members' class='fnname'>members</a>&lt;'a&gt;(&amp;'a self) -&gt; <a class="struct" href="../../cargo/core/struct.Members.html" title="struct cargo::core::Members">Members</a>&lt;'a, 'cfg&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#280-285' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns an iterator over all packages in this workspace</p>
+</div><h4 id='method.default_members' class="method"><div class="important-traits"><div class='tooltip'>ⓘ<span class='tooltiptext'>Important traits for <a class="struct" href="../../cargo/core/struct.Members.html" title="struct cargo::core::Members">Members</a>&lt;'a, 'cfg&gt;</span></div><div class="content hidden"><h3 class="important">Important traits for <a class="struct" href="../../cargo/core/struct.Members.html" title="struct cargo::core::Members">Members</a>&lt;'a, 'cfg&gt;</h3><code class="content"><span class="where fmt-newline">impl&lt;'a, 'cfg&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/iter/iterator/trait.Iterator.html" title="trait core::iter::iterator::Iterator">Iterator</a> for <a class="struct" href="../../cargo/core/struct.Members.html" title="struct cargo::core::Members">Members</a>&lt;'a, 'cfg&gt;</span><span class="where fmt-newline">    type <a href='https://doc.rust-lang.org/nightly/core/iter/iterator/trait.Iterator.html#associatedtype.Item' class="type">Item</a> = &amp;'a <a class="struct" href="../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>;</span></code></div></div><span id='default_members.v' class='invisible'><code>pub fn <a href='#method.default_members' class='fnname'>default_members</a>&lt;'a&gt;(&amp;'a self) -&gt; <a class="struct" href="../../cargo/core/struct.Members.html" title="struct cargo::core::Members">Members</a>&lt;'a, 'cfg&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#288-293' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns an iterator over default packages in this workspace</p>
+</div><h4 id='method.is_ephemeral' class="method"><span id='is_ephemeral.v' class='invisible'><code>pub fn <a href='#method.is_ephemeral' class='fnname'>is_ephemeral</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#295-297' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.require_optional_deps' class="method"><span id='require_optional_deps.v' class='invisible'><code>pub fn <a href='#method.require_optional_deps' class='fnname'>require_optional_deps</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#299-301' title='goto source code'>[src]</a></span></h4>
+</div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl&lt;'cfg&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../cargo/core/struct.Workspace.html" title="struct cargo::core::Workspace">Workspace</a>&lt;'cfg&gt;</code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#21' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/core/workspace.rs.html#21' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

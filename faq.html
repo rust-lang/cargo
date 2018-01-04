@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Frequently Asked Questions</title>
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css">
+<link rel="stylesheet" type="text/css" href="stylesheets/all.css">
+<link rel="stylesheet" type="text/css" href="stylesheets/prism.css">
+
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+
+
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <a href='https://github.com/rust-lang/cargo' class='fork-me'>
+  <img src='images/forkme.png'/>
+</a>
+
+<div id="header">
+    <a href='https://crates.io' class='logo'>
+        <img id="logo" height=100 width=100 src='images/Cargo-Logo-Small.png'/>
+    </a>
+    <a href="index.html">
+        <h1>CARGO</h1>
+    </a>
+
+    <div class="search">
+        <form action="https://crates.io/search"
+              method="GET">
+            <input name="q" class="search" placeholder="Search crates" type="text"/>
+        </form>
+    </div>
+
+    <div class="nav">
+        <a href='https://crates.io/crates'>Browse All Crates</a>
+
+        <span class='sep'>|</span>
+
+        <div class="dropdown-container">
+            <button class="dropdown">
+                Docs
+                <span class="arrow"></span>
+            </button>
+            <!-- Sync this list with
+                 https://github.com/rust-lang/crates.io/blob/master/app/templates/application.hbs
+                 and with Makefile.in in this repository -->
+            <ul id="current-user-links" class="dropdown" data-bindattr-503="503">
+                <li><a href='index.html'>Getting Started</a></li>
+                <li><a href='guide.html'>Guide</a></li>
+                <li><a href='specifying-dependencies.html'>Specifying Dependencies</a></li>
+                <li><a href='crates-io.html'>Publishing on crates.io</a></li>
+                <li><a href='faq.html'>FAQ</a></li>
+                <li><a href='manifest.html'>Cargo.toml Format</a></li>
+                <li><a href='build-script.html'>Build Scripts</a></li>
+                <li><a href='config.html'>Configuration</a></li>
+                <li><a href='pkgid-spec.html'>Package ID specs</a></li>
+                <li><a href='environment-variables.html'>Environment Variables</a></li>
+                <li><a href='source-replacement.html'>Source Replacement</a></li>
+                <li><a href='external-tools.html'>External Tools</a></li>
+                <li><a href='https://crates.io/policies'>Policies</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<main>
+
+
+    <h1 class="title">Frequently Asked Questions</h1>
+    
+<h1 id='is-the-plan-to-use-github-as-a-package-repository' class='section-header'><a href='#is-the-plan-to-use-github-as-a-package-repository'>Is the plan to use GitHub as a package repository?</a></h1>
+<p>No. The plan for Cargo is to use <a href="https://crates.io/">crates.io</a>, like npm or Rubygems do with
+npmjs.org and rubygems.org.</p>
+
+<p>We plan to support git repositories as a source of packages forever,
+because they can be used for early development and temporary patches,
+even when people use the registry as the primary source of packages.</p>
+
+<h1 id='why-build-cratesio-rather-than-use-github-as-a-registry' class='section-header'><a href='#why-build-cratesio-rather-than-use-github-as-a-registry'>Why build crates.io rather than use GitHub as a registry?</a></h1>
+<p>We think that it’s very important to support multiple ways to download
+packages, including downloading from GitHub and copying packages into
+your project itself.</p>
+
+<p>That said, we think that <a href="https://crates.io/">crates.io</a> offers a number of important benefits, and
+will likely become the primary way that people download packages in Cargo.</p>
+
+<p>For precedent, both Node.js’s <a href="https://www.npmjs.org">npm</a> and Ruby’s <a href="https://bundler.io">bundler</a> support both a
+central registry model as well as a Git-based model, and most packages
+are downloaded through the registry in those ecosystems, with an
+important minority of packages making use of git-based packages.</p>
+
+<p>Some of the advantages that make a central registry popular in other
+languages include:</p>
+
+<ul>
+<li><strong>Discoverability</strong>. A central registry provides an easy place to look
+for existing packages. Combined with tagging, this also makes it
+possible for a registry to provide ecosystem-wide information, such as a
+list of the most popular or most-depended-on packages.</li>
+<li><strong>Speed</strong>. A central registry makes it possible to easily fetch just
+the metadata for packages quickly and efficiently, and then to
+efficiently download just the published package, and not other bloat
+that happens to exist in the repository. This adds up to a significant
+improvement in the speed of dependency resolution and fetching. As
+dependency graphs scale up, downloading all of the git repositories bogs
+down fast. Also remember that not everybody has a high-speed,
+low-latency Internet connection.</li>
+</ul>
+
+<h1 id='will-cargo-work-with-c-code-or-other-languages' class='section-header'><a href='#will-cargo-work-with-c-code-or-other-languages'>Will Cargo work with C code (or other languages)?</a></h1>
+<p>Yes!</p>
+
+<p>Cargo handles compiling Rust code, but we know that many Rust projects
+link against C code. We also know that there are decades of tooling
+built up around compiling languages other than Rust.</p>
+
+<p>Our solution: Cargo allows a package to <a href="build-script.html">specify a script</a>
+(written in Rust) to run before invoking <code>rustc</code>. Rust is leveraged to
+implement platform-specific configuration and refactor out common build
+functionality among packages.</p>
+
+<h1 id='can-cargo-be-used-inside-of-make-or-ninja-or-' class='section-header'><a href='#can-cargo-be-used-inside-of-make-or-ninja-or-'>Can Cargo be used inside of <code>make</code> (or <code>ninja</code>, or ...)</a></h1>
+<p>Indeed. While we intend Cargo to be useful as a standalone way to
+compile Rust projects at the top-level, we know that some people will
+want to invoke Cargo from other build tools.</p>
+
+<p>We have designed Cargo to work well in those contexts, paying attention
+to things like error codes and machine-readable output modes. We still
+have some work to do on those fronts, but using Cargo in the context of
+conventional scripts is something we designed for from the beginning and
+will continue to prioritize.</p>
+
+<h1 id='does-cargo-handle-multi-platform-projects-or-cross-compilation' class='section-header'><a href='#does-cargo-handle-multi-platform-projects-or-cross-compilation'>Does Cargo handle multi-platform projects or cross-compilation?</a></h1>
+<p>Rust itself provides facilities for configuring sections of code based
+on the platform. Cargo also supports <a href="manifest.html#the-dependencies-section">platform-specific
+dependencies</a>, and we plan to support more per-platform
+configuration in <code>Cargo.toml</code> in the future.</p>
+
+<p>In the longer-term, we’re looking at ways to conveniently cross-compile
+projects using Cargo.</p>
+
+<h1 id='does-cargo-support-environments-like-production-or-test' class='section-header'><a href='#does-cargo-support-environments-like-production-or-test'>Does Cargo support environments, like <code>production</code> or <code>test</code>?</a></h1>
+<p>We support environments through the use of <a href="manifest.html#the-profile-sections">profiles</a> to support:</p>
+
+<ul>
+<li>environment-specific flags (like <code>-g --opt-level=0</code> for development
+and <code>--opt-level=3</code> for production).</li>
+<li>environment-specific dependencies (like <code>hamcrest</code> for test assertions).</li>
+<li>environment-specific <code>#[cfg]</code></li>
+<li>a <code>cargo test</code> command</li>
+</ul>
+
+<h1 id='does-cargo-work-on-windows' class='section-header'><a href='#does-cargo-work-on-windows'>Does Cargo work on Windows?</a></h1>
+<p>Yes!</p>
+
+<p>All commits to Cargo are required to pass the local test suite on Windows.
+If, however, you find a Windows issue, we consider it a bug, so <a href="https://github.com/rust-lang/cargo/issues">please file an
+issue</a>.</p>
+
+<h1 id='why-do-binaries-have-cargolock-in-version-control-but-not-libraries' class='section-header'><a href='#why-do-binaries-have-cargolock-in-version-control-but-not-libraries'>Why do binaries have <code>Cargo.lock</code> in version control, but not libraries?</a></h1>
+<p>The purpose of a <code>Cargo.lock</code> is to describe the state of the world at the time
+of a successful build. It is then used to provide deterministic builds across
+whatever machine is building the project by ensuring that the exact same
+dependencies are being compiled.</p>
+
+<p>This property is most desirable from applications and projects which are at the
+very end of the dependency chain (binaries). As a result, it is recommended that
+all binaries check in their <code>Cargo.lock</code>.</p>
+
+<p>For libraries the situation is somewhat different. A library is not only used by
+the library developers, but also any downstream consumers of the library. Users
+dependent on the library will not inspect the library’s <code>Cargo.lock</code> (even if it
+exists). This is precisely because a library should <strong>not</strong> be deterministically
+recompiled for all users of the library.</p>
+
+<p>If a library ends up being used transitively by several dependencies, it’s
+likely that just a single copy of the library is desired (based on semver
+compatibility). If all libraries were to check in their <code>Cargo.lock</code>, then
+multiple copies of the library would be used, and perhaps even a version
+conflict.</p>
+
+<p>In other words, libraries specify semver requirements for their dependencies but
+cannot see the full picture. Only end products like binaries have a full
+picture to decide what versions of dependencies should be used.</p>
+
+<h1 id='can-libraries-use--as-a-version-for-their-dependencies' class='section-header'><a href='#can-libraries-use--as-a-version-for-their-dependencies'>Can libraries use <code>*</code> as a version for their dependencies?</a></h1>
+<p><strong>As of January 22nd, 2016, <a href="https://crates.io/">crates.io</a> rejects all packages (not just libraries)
+with wildcard dependency constraints.</strong></p>
+
+<p>While libraries <em>can</em>, strictly speaking, they should not. A version requirement
+of <code>*</code> says “This will work with every version ever,” which is never going
+to be true. Libraries should always specify the range that they do work with,
+even if it’s something as general as “every 1.x.y version.”</p>
+
+<h1 id='why-cargotoml' class='section-header'><a href='#why-cargotoml'>Why <code>Cargo.toml</code>?</a></h1>
+<p>As one of the most frequent interactions with Cargo, the question of why the
+configuration file is named <code>Cargo.toml</code> arises from time to time. The leading
+capital-<code>C</code> was chosen to ensure that the manifest was grouped with other
+similar configuration files in directory listings. Sorting files often puts
+capital letters before lowercase letters, ensuring files like <code>Makefile</code> and
+<code>Cargo.toml</code> are placed together. The trailing <code>.toml</code> was chosen to emphasize
+the fact that the file is in the <a href="https://github.com/toml-lang/toml">TOML configuration
+format</a>.</p>
+
+<p>Cargo does not allow other names such as <code>cargo.toml</code> or <code>Cargofile</code> to
+emphasize the ease of how a Cargo repository can be identified. An option of
+many possible names has historically led to confusion where one case was handled
+but others were accidentally forgotten.</p>
+
+<h1 id='how-can-cargo-work-offline' class='section-header'><a href='#how-can-cargo-work-offline'>How can Cargo work offline?</a></h1>
+<p>Cargo is often used in situations with limited or no network access such as
+airplanes, CI environments, or embedded in large production deployments. Users
+are often surprised when Cargo attempts to fetch resources from the network, and
+hence the request for Cargo to work offline comes up frequently.</p>
+
+<p>Cargo, at its heart, will not attempt to access the network unless told to do
+so. That is, if no crates comes from crates.io, a git repository, or some other
+network location, Cargo will never attempt to make a network connection. As a
+result, if Cargo attempts to touch the network, then it&#39;s because it needs to
+fetch a required resource.</p>
+
+<p>Cargo is also quite aggressive about caching information to minimize the amount
+of network activity. It will guarantee, for example, that if <code>cargo build</code> (or
+an equivalent) is run to completion then the next <code>cargo build</code> is guaranteed to
+not touch the network so long as <code>Cargo.toml</code> has not been modified in the
+meantime. This avoidance of the network boils down to a <code>Cargo.lock</code> existing
+and a populated cache of the crates reflected in the lock file. If either of
+these components are missing, then they&#39;re required for the build to succeed and
+must be fetched remotely.</p>
+
+<p>As of Rust 1.11.0 Cargo understands a new flag, <code>--frozen</code>, which is an
+assertion that it shouldn&#39;t touch the network. When passed, Cargo will
+immediately return an error if it would otherwise attempt a network request.
+The error should include contextual information about why the network request is
+being made in the first place to help debug as well. Note that this flag <em>does
+not change the behavior of Cargo</em>, it simply asserts that Cargo shouldn&#39;t touch
+the network as a previous command has been run to ensure that network activity
+shouldn&#39;t be necessary.</p>
+
+<p>For more information about vendoring, see documentation on <a href="source-replacement.html">source
+replacement</a>.</p>
+
+    </main>
+<footer>
+<a href='index.html'>Install</a>
+<span class='sep'>|</span>
+<a href='index.html'>Getting Started</a>
+<span class='sep'>|</span>
+<a href='guide.html'>Guide</a>
+</footer>
+
+<script type='text/javascript' src='javascripts/prism.js'></script>
+<script type='text/javascript' src='javascripts/all.js'></script>
+
+
+</body>
+</html>

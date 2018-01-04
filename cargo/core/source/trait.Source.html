@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Source` trait in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Source">
+
+    <title>cargo::core::source::Source - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc trait">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Trait Source</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#required-methods">Required Methods</a><div class="sidebar-links"><a href="#tymethod.source_id">source_id</a><a href="#tymethod.update">update</a><a href="#tymethod.download">download</a><a href="#tymethod.fingerprint">fingerprint</a></div><a class="sidebar-title" href="#provided-methods">Provided Methods</a><div class="sidebar-links"><a href="#method.verify">verify</a></div><a class="sidebar-title" href="#foreign-impls">Implementations on Foreign Types</a><div class="sidebar-links"><a href="#impl-Source">Box&lt;T&gt;</a></div><a class="sidebar-title" href="#implementors">Implementors</a></div><p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>source</a></p><script>window.sidebarCurrent = {name: 'Source', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Trait <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>source</a>::<wbr><a class="trait" href=''>Source</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/cargo/core/source/mod.rs.html#12-46' title='goto source code'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait Source: <a class="trait" href="../../../cargo/core/registry/trait.Registry.html" title="trait cargo::core::registry::Registry">Registry</a> {
+    fn <a href='#tymethod.source_id' class='fnname'>source_id</a>(&amp;self) -&gt; &amp;<a class="struct" href="../../../cargo/core/struct.SourceId.html" title="struct cargo::core::SourceId">SourceId</a>;
+<div class='item-spacer'></div>    fn <a href='#tymethod.update' class='fnname'>update</a>(&amp;mut self) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;;
+<div class='item-spacer'></div>    fn <a href='#tymethod.download' class='fnname'>download</a>(&amp;mut self, package: &amp;<a class="struct" href="../../../cargo/core/package_id/struct.PackageId.html" title="struct cargo::core::package_id::PackageId">PackageId</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="../../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>&gt;;
+<div class='item-spacer'></div>    fn <a href='#tymethod.fingerprint' class='fnname'>fingerprint</a>(&amp;self, pkg: &amp;<a class="struct" href="../../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;;
+
+    fn <a href='#method.verify' class='fnname'>verify</a>(&amp;self, _pkg: &amp;<a class="struct" href="../../../cargo/core/package_id/struct.PackageId.html" title="struct cargo::core::package_id::PackageId">PackageId</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt; { ... }
+}</pre><div class='docblock'><p>A Source finds and downloads remote packages based on names and
+versions.</p>
+</div>
+            <h2 id='required-methods' class='small-section-header'>
+              Required Methods<a href='#required-methods' class='anchor'></a>
+            </h2>
+            <div class='methods'>
+        <h3 id='tymethod.source_id' class='method'><span id='source_id.v' class='invisible'><code>fn <a href='#tymethod.source_id' class='fnname'>source_id</a>(&amp;self) -&gt; &amp;<a class="struct" href="../../../cargo/core/struct.SourceId.html" title="struct cargo::core::SourceId">SourceId</a></code></span></h3><div class='docblock'><p>Returns the <code>SourceId</code> corresponding to this source</p>
+</div><h3 id='tymethod.update' class='method'><span id='update.v' class='invisible'><code>fn <a href='#tymethod.update' class='fnname'>update</a>(&amp;mut self) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span></h3><div class='docblock'><p>The update method performs any network operations required to
+get the entire list of all names, versions and dependencies of
+packages managed by the Source.</p>
+</div><h3 id='tymethod.download' class='method'><span id='download.v' class='invisible'><code>fn <a href='#tymethod.download' class='fnname'>download</a>(&amp;mut self, package: &amp;<a class="struct" href="../../../cargo/core/package_id/struct.PackageId.html" title="struct cargo::core::package_id::PackageId">PackageId</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="../../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>&gt;</code></span></h3><div class='docblock'><p>The download method fetches the full package for each name and
+version specified.</p>
+</div><h3 id='tymethod.fingerprint' class='method'><span id='fingerprint.v' class='invisible'><code>fn <a href='#tymethod.fingerprint' class='fnname'>fingerprint</a>(&amp;self, pkg: &amp;<a class="struct" href="../../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</code></span></h3><div class='docblock'><p>Generates a unique string which represents the fingerprint of the
+current state of the source.</p>
+
+<p>This fingerprint is used to determine the &quot;fresheness&quot; of the source
+later on. It must be guaranteed that the fingerprint of a source is
+constant if and only if the output product will remain constant.</p>
+
+<p>The <code>pkg</code> argument is the package which this fingerprint should only be
+interested in for when this source may contain multiple packages.</p>
+</div></div>
+            <h2 id='provided-methods' class='small-section-header'>
+              Provided Methods<a href='#provided-methods' class='anchor'></a>
+            </h2>
+            <div class='methods'>
+        <h3 id='method.verify' class='method'><span id='verify.v' class='invisible'><code>fn <a href='#method.verify' class='fnname'>verify</a>(&amp;self, _pkg: &amp;<a class="struct" href="../../../cargo/core/package_id/struct.PackageId.html" title="struct cargo::core::package_id::PackageId">PackageId</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span></h3><div class='docblock'><p>If this source supports it, verifies the source of the package
+specified.</p>
+
+<p>Note that the source may also have performed other checksum-based
+verification during the <code>download</code> step, but this is intended to be run
+just before a crate is compiled so it may perform more expensive checks
+which may not be cacheable.</p>
+</div></div>
+                <h2 id='foreign-impls' class='small-section-header'>
+                  Implementations on Foreign Types<a href='#foreign-impls' class='anchor'></a>
+                </h2>
+            <h3 id='impl-Source' class='impl'><span class='in-band'><code>impl&lt;'a, T:&nbsp;<a class="trait" href="../../../cargo/core/source/trait.Source.html" title="trait cargo::core::source::Source">Source</a> + ?<a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a> + 'a&gt; <a class="trait" href="../../../cargo/core/source/trait.Source.html" title="trait cargo::core::source::Source">Source</a> for <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;T&gt;</code><a href='#impl-Source' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/source/mod.rs.html#48-73' title='goto source code'>[src]</a></span></h3>
+<span class='docblock autohide'><div class='impl-items'><h4 id='method.source_id' class="method"><span id='source_id.v-1' class='invisible'><code>fn <a href='#method.source_id' class='fnname'>source_id</a>(&amp;self) -&gt; &amp;<a class="struct" href="../../../cargo/core/struct.SourceId.html" title="struct cargo::core::SourceId">SourceId</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/source/mod.rs.html#50-52' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Forwards to <code>Source::source_id</code></p>
+</div><h4 id='method.update' class="method"><span id='update.v-1' class='invisible'><code>fn <a href='#method.update' class='fnname'>update</a>(&amp;mut self) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/source/mod.rs.html#55-57' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Forwards to <code>Source::update</code></p>
+</div><h4 id='method.download' class="method"><span id='download.v-1' class='invisible'><code>fn <a href='#method.download' class='fnname'>download</a>(&amp;mut self, id: &amp;<a class="struct" href="../../../cargo/core/package_id/struct.PackageId.html" title="struct cargo::core::package_id::PackageId">PackageId</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="../../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/source/mod.rs.html#60-62' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Forwards to <code>Source::download</code></p>
+</div><h4 id='method.fingerprint' class="method"><span id='fingerprint.v-1' class='invisible'><code>fn <a href='#method.fingerprint' class='fnname'>fingerprint</a>(&amp;self, pkg: &amp;<a class="struct" href="../../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/source/mod.rs.html#65-67' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Forwards to <code>Source::fingerprint</code></p>
+</div><h4 id='method.verify-1' class="method"><span id='verify.v-1' class='invisible'><code>fn <a href='#method.verify' class='fnname'>verify</a>(&amp;self, pkg: &amp;<a class="struct" href="../../../cargo/core/package_id/struct.PackageId.html" title="struct cargo::core::package_id::PackageId">PackageId</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/source/mod.rs.html#70-72' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Forwards to <code>Source::verify</code></p>
+</div></div></span>
+        <h2 id='implementors' class='small-section-header'>
+          Implementors<a href='#implementors' class='anchor'></a>
+        </h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><div class='out-of-band'><a class='srclink' href='../../../src/cargo/sources/directory.rs.html#69-204' title='goto source code'>[src]</a></div><code>impl&lt;'cfg&gt; Source for <a class="struct" href="../../../cargo/sources/directory/struct.DirectorySource.html" title="struct cargo::sources::directory::DirectorySource">DirectorySource</a>&lt;'cfg&gt;</code></li>
+<li><div class='out-of-band'><a class='srclink' href='../../../src/cargo/sources/git/source.rs.html#143-211' title='goto source code'>[src]</a></div><code>impl&lt;'cfg&gt; Source for <a class="struct" href="../../../cargo/sources/struct.GitSource.html" title="struct cargo::sources::GitSource">GitSource</a>&lt;'cfg&gt;</code></li>
+<li><div class='out-of-band'><a class='srclink' href='../../../src/cargo/sources/path.rs.html#495-544' title='goto source code'>[src]</a></div><code>impl&lt;'cfg&gt; Source for <a class="struct" href="../../../cargo/sources/path/struct.PathSource.html" title="struct cargo::sources::path::PathSource">PathSource</a>&lt;'cfg&gt;</code></li>
+<li><div class='out-of-band'><a class='srclink' href='../../../src/cargo/sources/registry/mod.rs.html#401-446' title='goto source code'>[src]</a></div><code>impl&lt;'cfg&gt; Source for <a class="struct" href="../../../cargo/sources/registry/struct.RegistrySource.html" title="struct cargo::sources::registry::RegistrySource">RegistrySource</a>&lt;'cfg&gt;</code></li>
+<li><div class='out-of-band'><a class='srclink' href='../../../src/cargo/sources/replaced.rs.html#47-77' title='goto source code'>[src]</a></div><code>impl&lt;'cfg&gt; Source for <a class="struct" href="../../../cargo/sources/replaced/struct.ReplacedSource.html" title="struct cargo::sources::replaced::ReplacedSource">ReplacedSource</a>&lt;'cfg&gt;</code></li>
+</ul><script type="text/javascript" async
+                         src="../../../implementors/cargo/core/source/trait.Source.js">
+                 </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

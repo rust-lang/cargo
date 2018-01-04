@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Summary` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Summary">
+
+    <title>cargo::core::summary::Summary - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct Summary</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#methods">Methods</a><div class="sidebar-links"><a href="#method.new">new</a><a href="#method.package_id">package_id</a><a href="#method.name">name</a><a href="#method.version">version</a><a href="#method.source_id">source_id</a><a href="#method.dependencies">dependencies</a><a href="#method.features">features</a><a href="#method.checksum">checksum</a><a href="#method.override_id">override_id</a><a href="#method.set_checksum">set_checksum</a><a href="#method.map_dependencies">map_dependencies</a><a href="#method.map_source">map_source</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-Debug">Debug</a><a href="#impl-Clone">Clone</a><a href="#impl-PartialEq">PartialEq</a></div></div><p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>summary</a></p><script>window.sidebarCurrent = {name: 'Summary', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>summary</a>::<wbr><a class="struct" href=''>Summary</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/cargo/core/summary.rs.html#15-17' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Summary { /* fields omitted */ }</pre><div class='docblock'><p>Subset of a <code>Manifest</code>. Contains only the most important informations about
+a package.</p>
+
+<p>Summaries are cloned, and should not be mutated after creation</p>
+</div>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl <a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a></code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#27-118' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class="method"><span id='new.v' class='invisible'><code>pub fn <a href='#method.new' class='fnname'>new</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;pkg_id: <a class="struct" href="../../../cargo/core/package_id/struct.PackageId.html" title="struct cargo::core::package_id::PackageId">PackageId</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;dependencies: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="../../../cargo/core/dependency/struct.Dependency.html" title="struct cargo::core::dependency::Dependency">Dependency</a>&gt;, <br>&nbsp;&nbsp;&nbsp;&nbsp;features: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/btree/map/struct.BTreeMap.html" title="struct alloc::btree::map::BTreeMap">BTreeMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt;<br>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#28-74' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.package_id' class="method"><span id='package_id.v' class='invisible'><code>pub fn <a href='#method.package_id' class='fnname'>package_id</a>(&amp;self) -&gt; &amp;<a class="struct" href="../../../cargo/core/package_id/struct.PackageId.html" title="struct cargo::core::package_id::PackageId">PackageId</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#76' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.name' class="method"><span id='name.v' class='invisible'><code>pub fn <a href='#method.name' class='fnname'>name</a>(&amp;self) -&gt; &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#77' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.version' class="method"><span id='version.v' class='invisible'><code>pub fn <a href='#method.version' class='fnname'>version</a>(&amp;self) -&gt; &amp;Version</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#78' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.source_id' class="method"><span id='source_id.v' class='invisible'><code>pub fn <a href='#method.source_id' class='fnname'>source_id</a>(&amp;self) -&gt; &amp;<a class="struct" href="../../../cargo/core/struct.SourceId.html" title="struct cargo::core::SourceId">SourceId</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#79' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.dependencies' class="method"><div class="important-traits"><div class='tooltip'>ⓘ<span class='tooltiptext'>Important traits for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></span></div><div class="content hidden"><h3 class="important">Important traits for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></h3><code class="content"><span class="where fmt-newline">impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Read.html" title="trait std::io::Read">Read</a> for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></span><span class="where fmt-newline">impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Write.html" title="trait std::io::Write">Write</a> for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a mut [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></span></code></div></div><span id='dependencies.v' class='invisible'><code>pub fn <a href='#method.dependencies' class='fnname'>dependencies</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="struct" href="../../../cargo/core/dependency/struct.Dependency.html" title="struct cargo::core::dependency::Dependency">Dependency</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#80' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.features' class="method"><span id='features.v' class='invisible'><code>pub fn <a href='#method.features' class='fnname'>features</a>(&amp;self) -&gt; &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/btree/map/struct.BTreeMap.html" title="struct alloc::btree::map::BTreeMap">BTreeMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#81' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.checksum' class="method"><span id='checksum.v' class='invisible'><code>pub fn <a href='#method.checksum' class='fnname'>checksum</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#82-84' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.override_id' class="method"><span id='override_id.v' class='invisible'><code>pub fn <a href='#method.override_id' class='fnname'>override_id</a>(self, id: <a class="struct" href="../../../cargo/core/package_id/struct.PackageId.html" title="struct cargo::core::package_id::PackageId">PackageId</a>) -&gt; <a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#86-89' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.set_checksum' class="method"><span id='set_checksum.v' class='invisible'><code>pub fn <a href='#method.set_checksum' class='fnname'>set_checksum</a>(self, cksum: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>) -&gt; <a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#91-94' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.map_dependencies' class="method"><span id='map_dependencies.v' class='invisible'><code>pub fn <a href='#method.map_dependencies' class='fnname'>map_dependencies</a>&lt;F&gt;(self, f: F) -&gt; <a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a> <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/function/trait.FnMut.html" title="trait core::ops::function::FnMut">FnMut</a>(<a class="struct" href="../../../cargo/core/dependency/struct.Dependency.html" title="struct cargo::core::dependency::Dependency">Dependency</a>) -&gt; <a class="struct" href="../../../cargo/core/dependency/struct.Dependency.html" title="struct cargo::core::dependency::Dependency">Dependency</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#96-104' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.map_source' class="method"><span id='map_source.v' class='invisible'><code>pub fn <a href='#method.map_source' class='fnname'>map_source</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;self, <br>&nbsp;&nbsp;&nbsp;&nbsp;to_replace: &amp;<a class="struct" href="../../../cargo/core/struct.SourceId.html" title="struct cargo::core::SourceId">SourceId</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;replace_with: &amp;<a class="struct" href="../../../cargo/core/struct.SourceId.html" title="struct cargo::core::SourceId">SourceId</a><br>) -&gt; <a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#106-117' title='goto source code'>[src]</a></span></h4>
+</div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a></code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#14' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#14' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt">Read more</a></p>
+</div></div><h3 id='impl-Clone' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a></code><a href='#impl-Clone' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#14' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class="method"><span id='clone.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#14' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class="method"><span id='clone_from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Self)</code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/clone.rs.html#112-114' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div><h3 id='impl-PartialEq' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html" title="trait core::cmp::PartialEq">PartialEq</a> for <a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a></code><a href='#impl-PartialEq' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#120-124' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.eq' class="method"><span id='eq.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, other: &amp;<a class="struct" href="../../../cargo/core/summary/struct.Summary.html" title="struct cargo::core::summary::Summary">Summary</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/summary.rs.html#121-123' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
+</div><h4 id='method.ne' class="method"><span id='ne.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, other: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Rhs) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/cmp.rs.html#121' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests for <code>!=</code>.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

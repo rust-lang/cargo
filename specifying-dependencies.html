@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Specifying Dependencies</title>
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css">
+<link rel="stylesheet" type="text/css" href="stylesheets/all.css">
+<link rel="stylesheet" type="text/css" href="stylesheets/prism.css">
+
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+
+
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <a href='https://github.com/rust-lang/cargo' class='fork-me'>
+  <img src='images/forkme.png'/>
+</a>
+
+<div id="header">
+    <a href='https://crates.io' class='logo'>
+        <img id="logo" height=100 width=100 src='images/Cargo-Logo-Small.png'/>
+    </a>
+    <a href="index.html">
+        <h1>CARGO</h1>
+    </a>
+
+    <div class="search">
+        <form action="https://crates.io/search"
+              method="GET">
+            <input name="q" class="search" placeholder="Search crates" type="text"/>
+        </form>
+    </div>
+
+    <div class="nav">
+        <a href='https://crates.io/crates'>Browse All Crates</a>
+
+        <span class='sep'>|</span>
+
+        <div class="dropdown-container">
+            <button class="dropdown">
+                Docs
+                <span class="arrow"></span>
+            </button>
+            <!-- Sync this list with
+                 https://github.com/rust-lang/crates.io/blob/master/app/templates/application.hbs
+                 and with Makefile.in in this repository -->
+            <ul id="current-user-links" class="dropdown" data-bindattr-503="503">
+                <li><a href='index.html'>Getting Started</a></li>
+                <li><a href='guide.html'>Guide</a></li>
+                <li><a href='specifying-dependencies.html'>Specifying Dependencies</a></li>
+                <li><a href='crates-io.html'>Publishing on crates.io</a></li>
+                <li><a href='faq.html'>FAQ</a></li>
+                <li><a href='manifest.html'>Cargo.toml Format</a></li>
+                <li><a href='build-script.html'>Build Scripts</a></li>
+                <li><a href='config.html'>Configuration</a></li>
+                <li><a href='pkgid-spec.html'>Package ID specs</a></li>
+                <li><a href='environment-variables.html'>Environment Variables</a></li>
+                <li><a href='source-replacement.html'>Source Replacement</a></li>
+                <li><a href='external-tools.html'>External Tools</a></li>
+                <li><a href='https://crates.io/policies'>Policies</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<main>
+
+
+    <h1 class="title">Specifying Dependencies</h1>
+    <p>Your crates can depend on other libraries from <a href="https://crates.io/">crates.io</a>, <code>git</code> repositories, or
+subdirectories on your local file system. You can also temporarily override the
+location of a dependency— for example, to be able to test out a bug fix in the
+dependency that you are working on locally. You can have different
+dependencies for different platforms, and dependencies that are only used during
+development. Let&#39;s take a look at how to do each of these.</p>
+
+<h1 id='specifying-dependencies-from-cratesio' class='section-header'><a href='#specifying-dependencies-from-cratesio'>Specifying dependencies from crates.io</a></h1>
+<p>Cargo is configured to look for dependencies on <a href="https://crates.io/">crates.io</a> by default. Only
+the name and a version string are required in this case. In <a href="guide.html">the cargo
+guide</a>, we specified a dependency on the <code>time</code> crate:</p>
+
+<pre><code class="language-toml">[dependencies]
+time = &quot;0.1.12&quot;
+</code></pre>
+
+<p>The string <code>&quot;0.1.12&quot;</code> is a <a href="https://github.com/steveklabnik/semver#requirements">semver</a> version requirement. Since this
+string does not have any operators in it, it is interpreted the same way as
+if we had specified <code>&quot;^0.1.12&quot;</code>, which is called a caret requirement.</p>
+
+<h2 id='caret-requirements' class='section-header'><a href='#caret-requirements'>Caret requirements</a></h2>
+<p><strong>Caret requirements</strong> allow SemVer compatible updates to a specified version.
+An update is allowed if the new version number does not modify the left-most
+non-zero digit in the major, minor, patch grouping. In this case, if we ran
+<code>cargo update -p time</code>, cargo would update us to version <code>0.1.13</code> if it was
+available, but would not update us to <code>0.2.0</code>. If instead we had specified the
+version string as <code>^1.0</code>, cargo would update to <code>1.1</code> but not <code>2.0</code>. <code>0.0.x</code> is
+not considered compatible with any other version.</p>
+
+<p>Here are some more examples of caret requirements and the versions that would
+be allowed with them:</p>
+
+<pre><code class="language-notrust">^1.2.3 := &gt;=1.2.3 &lt;2.0.0
+^1.2 := &gt;=1.2.0 &lt;2.0.0
+^1 := &gt;=1.0.0 &lt;2.0.0
+^0.2.3 := &gt;=0.2.3 &lt;0.3.0
+^0.0.3 := &gt;=0.0.3 &lt;0.0.4
+^0.0 := &gt;=0.0.0 &lt;0.1.0
+^0 := &gt;=0.0.0 &lt;1.0.0
+</code></pre>
+
+<p>This compatibility convention is different from SemVer in the way it treats
+versions before 1.0.0. While SemVer says there is no compatibility before
+1.0.0, Cargo considers <code>0.x.y</code> to be compatible with <code>0.x.z</code>, where <code>y ≥ z</code>
+and <code>x &gt; 0</code>.</p>
+
+<h2 id='tilde-requirements' class='section-header'><a href='#tilde-requirements'>Tilde requirements</a></h2>
+<p><strong>Tilde requirements</strong> specify a minimal version with some ability to update.
+If you specify a major, minor, and patch version or only a major and minor
+version, only patch-level changes are allowed. If you only specify a major
+version, then minor- and patch-level changes are allowed.</p>
+
+<p><code>~1.2.3</code> is an example of a tilde requirement.</p>
+
+<pre><code class="language-notrust">~1.2.3 := &gt;=1.2.3 &lt;1.3.0
+~1.2 := &gt;=1.2.0 &lt;1.3.0
+~1 := &gt;=1.0.0 &lt;2.0.0
+</code></pre>
+
+<h2 id='wildcard-requirements' class='section-header'><a href='#wildcard-requirements'>Wildcard requirements</a></h2>
+<p><strong>Wildcard requirements</strong> allow for any version where the wildcard is
+positioned.</p>
+
+<p><code>*</code>, <code>1.*</code> and <code>1.2.*</code> are examples of wildcard requirements.</p>
+
+<pre><code class="language-notrust">* := &gt;=0.0.0
+1.* := &gt;=1.0.0 &lt;2.0.0
+1.2.* := &gt;=1.2.0 &lt;1.3.0
+</code></pre>
+
+<h2 id='inequality-requirements' class='section-header'><a href='#inequality-requirements'>Inequality requirements</a></h2>
+<p><strong>Inequality requirements</strong> allow manually specifying a version range or an
+exact version to depend on.</p>
+
+<p>Here are some examples of inequality requirements:</p>
+
+<pre><code class="language-notrust">&gt;= 1.2.0
+&gt; 1
+&lt; 2
+= 1.2.3
+</code></pre>
+
+<h2 id='multiple-requirements' class='section-header'><a href='#multiple-requirements'>Multiple requirements</a></h2>
+<p>Multiple version requirements can also be separated with a comma, e.g. <code>&gt;= 1.2, &lt; 1.5</code>.</p>
+
+<h1 id='specifying-dependencies-from-git-repositories' class='section-header'><a href='#specifying-dependencies-from-git-repositories'>Specifying dependencies from <code>git</code> repositories</a></h1>
+<p>To depend on a library located in a <code>git</code> repository, the minimum information
+you need to specify is the location of the repository with the <code>git</code> key:</p>
+
+<pre><code class="language-toml">[dependencies]
+rand = { git = &quot;https://github.com/rust-lang-nursery/rand&quot; }
+</code></pre>
+
+<p>Cargo will fetch the <code>git</code> repository at this location then look for a
+<code>Cargo.toml</code> for the requested crate anywhere inside the <code>git</code> repository
+(not necessarily at the root).</p>
+
+<p>Since we haven’t specified any other information, Cargo assumes that
+we intend to use the latest commit on the <code>master</code> branch to build our project.
+You can combine the <code>git</code> key with the <code>rev</code>, <code>tag</code>, or <code>branch</code> keys to
+specify something else. Here&#39;s an example of specifying that you want to use
+the latest commit on a branch named <code>next</code>:</p>
+
+<pre><code class="language-toml">[dependencies]
+rand = { git = &quot;https://github.com/rust-lang-nursery/rand&quot;, branch = &quot;next&quot; }
+</code></pre>
+
+<h1 id='specifying-path-dependencies' class='section-header'><a href='#specifying-path-dependencies'>Specifying path dependencies</a></h1>
+<p>Over time, our <code>hello_world</code> project from <a href="guide.html">the guide</a> has grown
+significantly in size! It’s gotten to the point that we probably want to
+split out a separate crate for others to use. To do this Cargo supports
+<strong>path dependencies</strong> which are typically sub-crates that live within one
+repository. Let’s start off by making a new crate inside of our <code>hello_world</code>
+project:</p>
+
+<pre><code class="language-shell"># inside of hello_world/
+$ cargo new hello_utils
+</code></pre>
+
+<p>This will create a new folder <code>hello_utils</code> inside of which a <code>Cargo.toml</code> and
+<code>src</code> folder are ready to be configured. In order to tell Cargo about this, open
+up <code>hello_world/Cargo.toml</code> and add <code>hello_utils</code> to your dependencies:</p>
+
+<pre><code class="language-toml">[dependencies]
+hello_utils = { path = &quot;hello_utils&quot; }
+</code></pre>
+
+<p>This tells Cargo that we depend on a crate called <code>hello_utils</code> which is found
+in the <code>hello_utils</code> folder (relative to the <code>Cargo.toml</code> it’s written in).</p>
+
+<p>And that’s it! The next <code>cargo build</code> will automatically build <code>hello_utils</code> and
+all of its own dependencies, and others can also start using the crate as well.
+However, crates that use dependencies specified with only a path are not
+permitted on <a href="https://crates.io/">crates.io</a>. If we wanted to publish our <code>hello_world</code> crate, we
+would need to publish a version of <code>hello_utils</code> to <a href="https://crates.io">crates.io</a>
+and specify its version in the dependencies line as well:</p>
+
+<pre><code class="language-toml">[dependencies]
+hello_utils = { path = &quot;hello_utils&quot;, version = &quot;0.1.0&quot; }
+</code></pre>
+
+<h1 id='overriding-dependencies' class='section-header'><a href='#overriding-dependencies'>Overriding dependencies</a></h1>
+<p>There are a number of methods in Cargo to support overriding dependencies and
+otherwise controlling the dependency graph. These options are typically, though,
+only available at the workspace level and aren&#39;t propagated through
+dependencies. In other words, &quot;applications&quot; have the ability to override
+dependencies but &quot;libraries&quot; do not.</p>
+
+<p>The desire to override a dependency or otherwise alter some dependencies can
+arise through a number of scenarios. Most of them, however, boil down to the
+ability to work with a crate before it&#39;s been published to crates.io. For
+example:</p>
+
+<ul>
+<li>A crate you&#39;re working on is also used in a much larger application you&#39;re
+working on, and you&#39;d like to test a bug fix to the library inside of the
+larger application.</li>
+<li>An upstream crate you don&#39;t work on has a new feature or a bug fix on the
+master branch of its git repository which you&#39;d like to test out.</li>
+<li>You&#39;re about to publish a new major version of your crate, but you&#39;d like to
+do integration testing across an entire project to ensure the new major
+version works.</li>
+<li>You&#39;ve submitted a fix to an upstream crate for a bug you found, but you&#39;d
+like to immediately have your application start depending on the fixed version
+of the crate to avoid blocking on the bug fix getting merged.</li>
+</ul>
+
+<p>These scenarios are currently all solved with the <a href="manifest.html#the-patch-section"><code>[patch]</code> manifest
+section</a>. (Note that the <code>[patch]</code> feature will first become
+available in Rust 1.21, set to be released on 2017-10-12.) Historically some of
+these scenarios have been solved with <a href="manifest.html#the-replace-section">the <code>[replace]</code> section</a>,
+but we&#39;ll document the <code>[patch]</code> section here.</p>
+
+<h3 id='testing-a-bugfix' class='section-header'><a href='#testing-a-bugfix'>Testing a bugfix</a></h3>
+<p>Let&#39;s say you&#39;re working with the [<code>uuid</code>] crate but while you&#39;re working on it
+you discover a bug. You are, however, quite enterprising so you decide to also
+try out to fix the bug! Originally your manifest will look like:</p>
+
+<p><a href="https://crates.io/crates/uuid"><code>uuid</code></a></p>
+
+<pre><code class="language-toml">[package]
+name = &quot;my-library&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;...&quot;]
+
+[dependencies]
+uuid = &quot;1.0&quot;
+</code></pre>
+
+<p>First thing we&#39;ll do is to clone the <a href="https://github.com/rust-lang-nursery/uuid"><code>uuid</code> repository</a>
+locally via:</p>
+
+<pre><code class="language-shell">$ git clone https://github.com/rust-lang-nursery/uuid
+</code></pre>
+
+<p>Next we&#39;ll edit the manifest of <code>my-library</code> to contain:</p>
+
+<pre><code class="language-toml">[patch.crates-io]
+uuid = { path = &quot;../path/to/uuid&quot; }
+</code></pre>
+
+<p>Here we declare that we&#39;re <em>patching</em> the source <code>crates-io</code> with a new
+dependency. This will effectively add the local checked out version of <code>uuid</code> to
+the crates.io registry for our local project.</p>
+
+<p>Next up we need to ensure that our lock file is updated to use this new version
+of <code>uuid</code> so our project uses the locally checked out copy instead of one from
+crates.io. The way <code>[patch]</code> works is that it&#39;ll load the dependency at
+<code>../path/to/uuid</code> and then whenever crates.io is queried for versions of <code>uuid</code>
+it&#39;ll <em>also</em> return the local version.</p>
+
+<p>This means that the version number of the local checkout is significant and will
+affect whether the patch is used. Our manifest declared <code>uuid = &quot;1.0&quot;</code> which
+means we&#39;ll only resolve to <code>&gt;= 1.0.0, &lt; 2.0.0</code>, and Cargo&#39;s greedy resolution
+algorithm also means that we&#39;ll resolve to the maximum version within that
+range. Typically this doesn&#39;t matter as the version of the git repository will
+already be greater or match the maximum version published on crates.io, but it&#39;s
+important to keep this in mind!</p>
+
+<p>In any case, typically all you need to do now is:</p>
+
+<pre><code class="language-shell">$ cargo build
+   Compiling uuid v1.0.0 (file://.../uuid)
+   Compiling my-library v0.1.0 (file://.../my-library)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.32 secs
+</code></pre>
+
+<p>And that&#39;s it! You&#39;re now building with the local version of <code>uuid</code> (note the
+<code>file://</code> in the build output). If you don&#39;t see the <code>file://</code> version getting
+built then you may need to run <code>cargo update -p uuid --precise $version</code> where
+<code>$version</code> is the version of the locally checked out copy of <code>uuid</code>.</p>
+
+<p>Once you&#39;ve fixed the bug you originally found the next thing you&#39;ll want to do
+is to likely submit that as a pull request to the <code>uuid</code> crate itself. Once
+you&#39;ve done this then you can also update the <code>[patch]</code> section. The listing
+inside of <code>[patch]</code> is just like the <code>[dependencies]</code> section, so once your pull
+request is merged you could change your <code>path</code> dependency to:</p>
+
+<pre><code class="language-toml">[patch.crates-io]
+uuid = { git = &#39;https://github.com/rust-lang-nursery/uuid&#39; }
+</code></pre>
+
+<h3 id='working-with-an-unpublished-minor-version' class='section-header'><a href='#working-with-an-unpublished-minor-version'>Working with an unpublished minor version</a></h3>
+<p>Let&#39;s now shift gears a bit from bug fixes to adding features. While working on
+<code>my-library</code> you discover that a whole new feature is needed in the <code>uuid</code>
+crate. You&#39;ve implemented this feature, tested it locally above with <code>[patch]</code>,
+and submitted a pull request. Let&#39;s go over how you continue to use and test it
+before it&#39;s actually published.</p>
+
+<p>Let&#39;s also say that the current version of <code>uuid</code> on crates.io is <code>1.0.0</code>, but
+since then the master branch of the git repository has updated to <code>1.0.1</code>. This
+branch includes your new feature you submitted previously. To use this
+repository we&#39;ll edit our <code>Cargo.toml</code> to look like</p>
+
+<pre><code class="language-toml">[package]
+name = &quot;my-library&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;...&quot;]
+
+[dependencies]
+uuid = &quot;1.0.1&quot;
+
+[patch.crates-io]
+uuid = { git = &#39;https://github.com/rust-lang-nursery/uuid&#39; }
+</code></pre>
+
+<p>Note that our local dependency on <code>uuid</code> has been updated to <code>1.0.1</code> as it&#39;s
+what we&#39;ll actually require once the crate is published. This version doesn&#39;t
+exist on crates.io, though, so we provide it with the <code>[patch]</code> section of the
+manifest.</p>
+
+<p>Now when our library is built it&#39;ll fetch <code>uuid</code> from the git repository and
+resolve to 1.0.1 inside the repository instead of trying to download a version
+from crates.io. Once 1.0.1 is published on crates.io the <code>[patch]</code> section can
+be deleted.</p>
+
+<p>It&#39;s also worth nothing that <code>[patch]</code> applies <em>transitively</em>. Let&#39;s say you use
+<code>my-library</code> in a larger project, such as:</p>
+
+<pre><code class="language-toml">[package]
+name = &quot;my-binary&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;...&quot;]
+
+[dependencies]
+my-library = { git = &#39;https://example.com/git/my-library&#39; }
+uuid = &quot;1.0&quot;
+
+[patch.crates-io]
+uuid = { git = &#39;https://github.com/rust-lang-nursery/uuid&#39; }
+</code></pre>
+
+<p>Remember that <code>[patch]</code> is only applicable at the <em>top level</em> so we consumers of
+<code>my-library</code> have to repeat the <code>[patch]</code> section if necessary. Here, though,
+the new <code>uuid</code> crate applies to <em>both</em> our dependency on <code>uuid</code> and the
+<code>my-library -&gt; uuid</code> dependency. The <code>uuid</code> crate will be resolved to one
+version for this entire crate graph, 1.0.1, and it&#39;ll be pulled from the git
+repository.</p>
+
+<h3 id='prepublishing-a-breaking-change' class='section-header'><a href='#prepublishing-a-breaking-change'>Prepublishing a breaking change</a></h3>
+<p>As a final scenario, let&#39;s take a look at working with a new major version of a
+crate, typically accompanied with breaking changes. Sticking with our previous
+crates, this means that we&#39;re going to be creating version 2.0.0 of the <code>uuid</code>
+crate. After we&#39;ve submitted all changes upstream we can update our manifest for
+<code>my-library</code> to look like:</p>
+
+<pre><code class="language-toml">[dependencies]
+uuid = &quot;2.0&quot;
+
+[patch.crates-io]
+uuid = { git = &quot;https://github.com/rust-lang-nursery/uuid&quot;, branch = &quot;2.0.0&quot; }
+</code></pre>
+
+<p>And that&#39;s it! Like with the previous example the 2.0.0 version doesn&#39;t actually
+exist on crates.io but we can still put it in through a git dependency through
+the usage of the <code>[patch]</code> section. As a thought exercise let&#39;s take another
+look at the <code>my-binary</code> manifest from above again as well:</p>
+
+<pre><code class="language-toml">[package]
+name = &quot;my-binary&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;...&quot;]
+
+[dependencies]
+my-library = { git = &#39;https://example.com/git/my-library&#39; }
+uuid = &quot;1.0&quot;
+
+[patch.crates-io]
+uuid = { git = &#39;https://github.com/rust-lang-nursery/uuid&#39;, version = &#39;2.0.0&#39; }
+</code></pre>
+
+<p>Note that this will actually resolve to two versions of the <code>uuid</code> crate. The
+<code>my-binary</code> crate will continue to use the 1.x.y series of the <code>uuid</code> crate but
+the <code>my-library</code> crate will use the 2.0.0 version of <code>uuid</code>. This will allow you
+to gradually roll out breaking changes to a crate through a dependency graph
+without being force to update everything all at once.</p>
+
+<h3 id='overriding-with-local-dependencies' class='section-header'><a href='#overriding-with-local-dependencies'>Overriding with local dependencies</a></h3>
+<p>Sometimes you&#39;re only temporarily working on a crate and you don&#39;t want to have
+to modify <code>Cargo.toml</code> like with the <code>[patch]</code> section above. For this use
+case Cargo offers a much more limited version of overrides called <strong>path
+overrides</strong>.</p>
+
+<p>Path overrides are specified through <code>.cargo/config</code> instead of <code>Cargo.toml</code>,
+and you can find <a href="config.html">more documentation about this configuration</a>.
+Inside of <code>.cargo/config</code> you&#39;ll specify a key called <code>paths</code>:</p>
+
+<pre><code class="language-toml">paths = [&quot;/path/to/uuid&quot;]
+</code></pre>
+
+<p>This array should be filled with directories that contain a <code>Cargo.toml</code>. In
+this instance, we’re just adding <code>uuid</code>, so it will be the only one that’s
+overridden. This path can be either absolute or relative to the directory that
+contains the <code>.cargo</code> folder.</p>
+
+<p>Path overrides are more restricted than the <code>[patch]</code> section, however, in
+that they cannot change the structure of the dependency graph. When a
+path replacement is used then the previous set of dependencies
+must all match exactly to the new <code>Cargo.toml</code> specification. For example this
+means that path overrides cannot be used to test out adding a dependency to a
+crate, instead <code>[patch]</code> must be used in that situation. As a result usage of a
+path override is typically isolated to quick bug fixes rather than larger
+changes.</p>
+
+<p>Note: using a local configuration to override paths will only work for crates
+that have been published to <a href="https://crates.io/">crates.io</a>. You cannot use this feature to tell
+Cargo how to find local unpublished crates.</p>
+
+<h1 id='platform-specific-dependencies' class='section-header'><a href='#platform-specific-dependencies'>Platform specific dependencies</a></h1>
+<p>Platform-specific dependencies take the same format, but are listed under a
+<code>target</code> section. Normally Rust-like <code>#[cfg]</code> syntax will be used to define
+these sections:</p>
+
+<pre><code class="language-toml">[target.&#39;cfg(windows)&#39;.dependencies]
+winhttp = &quot;0.4.0&quot;
+
+[target.&#39;cfg(unix)&#39;.dependencies]
+openssl = &quot;1.0.1&quot;
+
+[target.&#39;cfg(target_arch = &quot;x86&quot;)&#39;.dependencies]
+native = { path = &quot;native/i686&quot; }
+
+[target.&#39;cfg(target_arch = &quot;x86_64&quot;)&#39;.dependencies]
+native = { path = &quot;native/x86_64&quot; }
+</code></pre>
+
+<p>Like with Rust, the syntax here supports the <code>not</code>, <code>any</code>, and <code>all</code> operators
+to combine various cfg name/value pairs. Note that the <code>cfg</code> syntax has only
+been available since Cargo 0.9.0 (Rust 1.8.0).</p>
+
+<p>In addition to <code>#[cfg]</code> syntax, Cargo also supports listing out the full target
+the dependencies would apply to:</p>
+
+<pre><code class="language-toml">[target.x86_64-pc-windows-gnu.dependencies]
+winhttp = &quot;0.4.0&quot;
+
+[target.i686-unknown-linux-gnu.dependencies]
+openssl = &quot;1.0.1&quot;
+</code></pre>
+
+<p>If you’re using a custom target specification, quote the full path and file
+name:</p>
+
+<pre><code class="language-toml">[target.&quot;x86_64/windows.json&quot;.dependencies]
+winhttp = &quot;0.4.0&quot;
+
+[target.&quot;i686/linux.json&quot;.dependencies]
+openssl = &quot;1.0.1&quot;
+native = { path = &quot;native/i686&quot; }
+
+[target.&quot;x86_64/linux.json&quot;.dependencies]
+openssl = &quot;1.0.1&quot;
+native = { path = &quot;native/x86_64&quot; }
+</code></pre>
+
+<h1 id='development-dependencies' class='section-header'><a href='#development-dependencies'>Development dependencies</a></h1>
+<p>You can add a <code>[dev-dependencies]</code> section to your <code>Cargo.toml</code> whose format
+is equivalent to <code>[dependencies]</code>:</p>
+
+<pre><code class="language-toml">[dev-dependencies]
+tempdir = &quot;0.3&quot;
+</code></pre>
+
+<p>Dev-dependencies are not used when compiling
+a package for building, but are used for compiling tests, examples, and
+benchmarks.</p>
+
+<p>These dependencies are <em>not</em> propagated to other packages which depend on this
+package.</p>
+
+<p>You can also have target-specific development dependencies by using
+<code>dev-dependencies</code> in the target section header instead of <code>dependencies</code>. For
+example:</p>
+
+<pre><code class="language-toml">[target.&#39;cfg(unix)&#39;.dev-dependencies]
+mio = &quot;0.0.1&quot;
+</code></pre>
+
+<h1 id='build-dependencies' class='section-header'><a href='#build-dependencies'>Build dependencies</a></h1>
+<p>You can depend on other Cargo-based crates for use in your build scripts.
+Dependencies are declared through the <code>build-dependencies</code> section of the
+manifest:</p>
+
+<pre><code class="language-toml">[build-dependencies]
+gcc = &quot;0.3&quot;
+</code></pre>
+
+<p>The build script <strong>does not</strong> have access to the dependencies listed
+in the <code>dependencies</code> or <code>dev-dependencies</code> section. Build
+dependencies will likewise not be available to the package itself
+unless listed under the <code>dependencies</code> section as well. A package
+itself and its build script are built separately, so their
+dependencies need not coincide. Cargo is kept simpler and cleaner by
+using independent dependencies for independent purposes.</p>
+
+<h1 id='choosing-features' class='section-header'><a href='#choosing-features'>Choosing features</a></h1>
+<p>If a package you depend on offers conditional features, you can
+specify which to use:</p>
+
+<pre><code class="language-toml">[dependencies.awesome]
+version = &quot;1.3.5&quot;
+default-features = false # do not include the default features, and optionally
+                         # cherry-pick individual features
+features = [&quot;secure-password&quot;, &quot;civet&quot;]
+</code></pre>
+
+<p>More information about features can be found in the
+<a href="manifest.html#the-features-section">manifest documentation</a>.</p>
+
+    </main>
+<footer>
+<a href='index.html'>Install</a>
+<span class='sep'>|</span>
+<a href='index.html'>Getting Started</a>
+<span class='sep'>|</span>
+<a href='guide.html'>Guide</a>
+</footer>
+
+<script type='text/javascript' src='javascripts/prism.js'></script>
+<script type='text/javascript' src='javascripts/all.js'></script>
+
+
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Message` trait in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Message">
+
+    <title>cargo::util::machine_message::Message - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc trait">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Trait Message</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#required-methods">Required Methods</a><div class="sidebar-links"><a href="#tymethod.reason">reason</a></div><a class="sidebar-title" href="#implementors">Implementors</a></div><p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>util</a>::<wbr><a href='index.html'>machine_message</a></p><script>window.sidebarCurrent = {name: 'Message', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Trait <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>util</a>::<wbr><a href='index.html'>machine_message</a>::<wbr><a class="trait" href=''>Message</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/cargo/util/machine_message.rs.html#6-8' title='goto source code'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait Message: <a class="trait" href="https://docs.rs/serde/1.0.27/serde/ser/trait.Serialize.html" title="trait serde::ser::Serialize">Serialize</a> {
+    fn <a href='#tymethod.reason' class='fnname'>reason</a>(&amp;self) -&gt; &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>;
+}</pre>
+            <h2 id='required-methods' class='small-section-header'>
+              Required Methods<a href='#required-methods' class='anchor'></a>
+            </h2>
+            <div class='methods'>
+        <h3 id='tymethod.reason' class='method'><span id='reason.v' class='invisible'><code>fn <a href='#tymethod.reason' class='fnname'>reason</a>(&amp;self) -&gt; &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a></code></span></h3></div>
+        <h2 id='implementors' class='small-section-header'>
+          Implementors<a href='#implementors' class='anchor'></a>
+        </h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><div class='out-of-band'><a class='srclink' href='../../../src/cargo/util/machine_message.rs.html#23-27' title='goto source code'>[src]</a></div><code>impl&lt;'a&gt; Message for <a class="struct" href="../../../cargo/util/machine_message/struct.FromCompiler.html" title="struct cargo::util::machine_message::FromCompiler">FromCompiler</a>&lt;'a&gt;</code></li>
+<li><div class='out-of-band'><a class='srclink' href='../../../src/cargo/util/machine_message.rs.html#39-43' title='goto source code'>[src]</a></div><code>impl&lt;'a&gt; Message for <a class="struct" href="../../../cargo/util/machine_message/struct.Artifact.html" title="struct cargo::util::machine_message::Artifact">Artifact</a>&lt;'a&gt;</code></li>
+<li><div class='out-of-band'><a class='srclink' href='../../../src/cargo/util/machine_message.rs.html#54-58' title='goto source code'>[src]</a></div><code>impl&lt;'a&gt; Message for <a class="struct" href="../../../cargo/util/machine_message/struct.BuildScript.html" title="struct cargo::util::machine_message::BuildScript">BuildScript</a>&lt;'a&gt;</code></li>
+</ul><script type="text/javascript" async
+                         src="../../../implementors/cargo/util/machine_message/trait.Message.js">
+                 </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

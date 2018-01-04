@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Profile` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Profile">
+
+    <title>cargo::core::manifest::Profile - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct Profile</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#fields">Fields</a><div class="sidebar-links"><a href="#structfield.opt_level">opt_level</a><a href="#structfield.lto">lto</a><a href="#structfield.codegen_units">codegen_units</a><a href="#structfield.rustc_args">rustc_args</a><a href="#structfield.rustdoc_args">rustdoc_args</a><a href="#structfield.debuginfo">debuginfo</a><a href="#structfield.debug_assertions">debug_assertions</a><a href="#structfield.overflow_checks">overflow_checks</a><a href="#structfield.rpath">rpath</a><a href="#structfield.test">test</a><a href="#structfield.doc">doc</a><a href="#structfield.run_custom_build">run_custom_build</a><a href="#structfield.check">check</a><a href="#structfield.panic">panic</a><a href="#structfield.incremental">incremental</a></div><a class="sidebar-title" href="#methods">Methods</a><div class="sidebar-links"><a href="#method.default_dev">default_dev</a><a href="#method.default_release">default_release</a><a href="#method.default_test">default_test</a><a href="#method.default_bench">default_bench</a><a href="#method.default_doc">default_doc</a><a href="#method.default_custom_build">default_custom_build</a><a href="#method.default_check">default_check</a><a href="#method.default_check_test">default_check_test</a><a href="#method.default_doctest">default_doctest</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-Clone">Clone</a><a href="#impl-PartialEq">PartialEq</a><a href="#impl-Eq">Eq</a><a href="#impl-Debug">Debug</a><a href="#impl-Hash">Hash</a><a href="#impl-Default">Default</a><a href="#impl-Display">Display</a></div></div><p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>manifest</a></p><script>window.sidebarCurrent = {name: 'Profile', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>manifest</a>::<wbr><a class="struct" href=''>Profile</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#156-182' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Profile {
+    pub opt_level: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>,
+    pub lto: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>,
+    pub codegen_units: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>&gt;,
+    pub rustc_args: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt;,
+    pub rustdoc_args: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt;,
+    pub debuginfo: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>&gt;,
+    pub debug_assertions: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>,
+    pub overflow_checks: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>,
+    pub rpath: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>,
+    pub test: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>,
+    pub doc: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>,
+    pub run_custom_build: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>,
+    pub check: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>,
+    pub panic: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;,
+    pub incremental: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>,
+}</pre><h2 id='fields' class='fields small-section-header'>
+                       Fields<a href='#fields' class='anchor'></a></h2><span id="structfield.opt_level" class="structfield small-section-header">
+                           <a href="#structfield.opt_level" class="anchor field"></a>
+                           <span id="opt_level.v" class='invisible'>
+                           <code>opt_level: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a></code>
+                           </span></span><span id="structfield.lto" class="structfield small-section-header">
+                           <a href="#structfield.lto" class="anchor field"></a>
+                           <span id="lto.v" class='invisible'>
+                           <code>lto: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code>
+                           </span></span><span id="structfield.codegen_units" class="structfield small-section-header">
+                           <a href="#structfield.codegen_units" class="anchor field"></a>
+                           <span id="codegen_units.v" class='invisible'>
+                           <code>codegen_units: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>&gt;</code>
+                           </span></span><span id="structfield.rustc_args" class="structfield small-section-header">
+                           <a href="#structfield.rustc_args" class="anchor field"></a>
+                           <span id="rustc_args.v" class='invisible'>
+                           <code>rustc_args: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt;</code>
+                           </span></span><span id="structfield.rustdoc_args" class="structfield small-section-header">
+                           <a href="#structfield.rustdoc_args" class="anchor field"></a>
+                           <span id="rustdoc_args.v" class='invisible'>
+                           <code>rustdoc_args: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt;</code>
+                           </span></span><span id="structfield.debuginfo" class="structfield small-section-header">
+                           <a href="#structfield.debuginfo" class="anchor field"></a>
+                           <span id="debuginfo.v" class='invisible'>
+                           <code>debuginfo: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>&gt;</code>
+                           </span></span><span id="structfield.debug_assertions" class="structfield small-section-header">
+                           <a href="#structfield.debug_assertions" class="anchor field"></a>
+                           <span id="debug_assertions.v" class='invisible'>
+                           <code>debug_assertions: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code>
+                           </span></span><span id="structfield.overflow_checks" class="structfield small-section-header">
+                           <a href="#structfield.overflow_checks" class="anchor field"></a>
+                           <span id="overflow_checks.v" class='invisible'>
+                           <code>overflow_checks: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code>
+                           </span></span><span id="structfield.rpath" class="structfield small-section-header">
+                           <a href="#structfield.rpath" class="anchor field"></a>
+                           <span id="rpath.v" class='invisible'>
+                           <code>rpath: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code>
+                           </span></span><span id="structfield.test" class="structfield small-section-header">
+                           <a href="#structfield.test" class="anchor field"></a>
+                           <span id="test.v" class='invisible'>
+                           <code>test: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code>
+                           </span></span><span id="structfield.doc" class="structfield small-section-header">
+                           <a href="#structfield.doc" class="anchor field"></a>
+                           <span id="doc.v" class='invisible'>
+                           <code>doc: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code>
+                           </span></span><span id="structfield.run_custom_build" class="structfield small-section-header">
+                           <a href="#structfield.run_custom_build" class="anchor field"></a>
+                           <span id="run_custom_build.v" class='invisible'>
+                           <code>run_custom_build: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code>
+                           </span></span><span id="structfield.check" class="structfield small-section-header">
+                           <a href="#structfield.check" class="anchor field"></a>
+                           <span id="check.v" class='invisible'>
+                           <code>check: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code>
+                           </span></span><span id="structfield.panic" class="structfield small-section-header">
+                           <a href="#structfield.panic" class="anchor field"></a>
+                           <span id="panic.v" class='invisible'>
+                           <code>panic: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</code>
+                           </span></span><span id="structfield.incremental" class="structfield small-section-header">
+                           <a href="#structfield.incremental" class="anchor field"></a>
+                           <span id="incremental.v" class='invisible'>
+                           <code>incremental: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code>
+                           </span></span>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#630-699' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.default_dev' class="method"><span id='default_dev.v' class='invisible'><code>pub fn <a href='#method.default_dev' class='fnname'>default_dev</a>() -&gt; <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#631-639' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.default_release' class="method"><span id='default_release.v' class='invisible'><code>pub fn <a href='#method.default_release' class='fnname'>default_release</a>() -&gt; <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#641-647' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.default_test' class="method"><span id='default_test.v' class='invisible'><code>pub fn <a href='#method.default_test' class='fnname'>default_test</a>() -&gt; <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#649-654' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.default_bench' class="method"><span id='default_bench.v' class='invisible'><code>pub fn <a href='#method.default_bench' class='fnname'>default_bench</a>() -&gt; <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#656-661' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.default_doc' class="method"><span id='default_doc.v' class='invisible'><code>pub fn <a href='#method.default_doc' class='fnname'>default_doc</a>() -&gt; <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#663-668' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.default_custom_build' class="method"><span id='default_custom_build.v' class='invisible'><code>pub fn <a href='#method.default_custom_build' class='fnname'>default_custom_build</a>() -&gt; <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#670-675' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.default_check' class="method"><span id='default_check.v' class='invisible'><code>pub fn <a href='#method.default_check' class='fnname'>default_check</a>() -&gt; <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#677-682' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.default_check_test' class="method"><span id='default_check_test.v' class='invisible'><code>pub fn <a href='#method.default_check_test' class='fnname'>default_check_test</a>() -&gt; <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#684-690' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.default_doctest' class="method"><span id='default_doctest.v' class='invisible'><code>pub fn <a href='#method.default_doctest' class='fnname'>default_doctest</a>() -&gt; <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#692-698' title='goto source code'>[src]</a></span></h4>
+</div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Clone' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code><a href='#impl-Clone' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#155' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class="method"><span id='clone.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#155' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class="method"><span id='clone_from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Self)</code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/clone.rs.html#112-114' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div><h3 id='impl-PartialEq' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html" title="trait core::cmp::PartialEq">PartialEq</a> for <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code><a href='#impl-PartialEq' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#155' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.eq' class="method"><span id='eq.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#155' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
+</div><h4 id='method.ne' class="method"><span id='ne.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, __arg_0: &amp;<a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#155' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests for <code>!=</code>.</p>
+</div></div><h3 id='impl-Eq' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html" title="trait core::cmp::Eq">Eq</a> for <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code><a href='#impl-Eq' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#155' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'></div><h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#155' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#155' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt">Read more</a></p>
+</div></div><h3 id='impl-Hash' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html" title="trait core::hash::Hash">Hash</a> for <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code><a href='#impl-Hash' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#155' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.hash' class="method"><span id='hash.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#tymethod.hash' class='fnname'>hash</a>&lt;__H:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html" title="trait core::hash::Hasher">Hasher</a>&gt;(&amp;self, __arg_0: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>__H)</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#155' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Feeds this value into the given [<code>Hasher</code>]. <a href="https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#tymethod.hash">Read more</a></p>
+</div><h4 id='method.hash_slice' class="method"><span id='hash_slice.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#method.hash_slice' class='fnname'>hash_slice</a>&lt;H&gt;(data: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[Self]</a>, state: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>H) <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;H: <a class="trait" href="https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html" title="trait core::hash::Hasher">Hasher</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.3.0'>1.3.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/hash/mod.rs.html#202-208' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Feeds a slice of this type into the given [<code>Hasher</code>]. <a href="https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#method.hash_slice">Read more</a></p>
+</div></div><h3 id='impl-Default' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/default/trait.Default.html" title="trait core::default::Default">Default</a> for <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code><a href='#impl-Default' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#701-721' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.default' class="method"><span id='default.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/default/trait.Default.html#tymethod.default' class='fnname'>default</a>() -&gt; <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#702-720' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the &quot;default value&quot; for a type. <a href="https://doc.rust-lang.org/nightly/core/default/trait.Default.html#tymethod.default">Read more</a></p>
+</div></div><h3 id='impl-Display' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a> for <a class="struct" href="../../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code><a href='#impl-Display' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#723-738' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt-1' class="method"><span id='fmt.v-1' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/manifest.rs.html#724-737' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html#tymethod.fmt">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

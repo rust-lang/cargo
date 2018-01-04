@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Shell` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Shell">
+
+    <title>cargo::core::shell::Shell - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct Shell</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#methods">Methods</a><div class="sidebar-links"><a href="#method.new">new</a><a href="#method.from_write">from_write</a><a href="#method.err_width">err_width</a><a href="#method.is_err_tty">is_err_tty</a><a href="#method.err">err</a><a href="#method.status">status</a><a href="#method.status_header">status_header</a><a href="#method.status_with_color">status_with_color</a><a href="#method.verbose">verbose</a><a href="#method.concise">concise</a><a href="#method.error">error</a><a href="#method.warn">warn</a><a href="#method.set_verbosity">set_verbosity</a><a href="#method.verbosity">verbosity</a><a href="#method.set_color_choice">set_color_choice</a><a href="#method.color_choice">color_choice</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-Debug">Debug</a></div></div><p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>shell</a></p><script>window.sidebarCurrent = {name: 'Shell', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>core</a>::<wbr><a href='index.html'>shell</a>::<wbr><a class="struct" href=''>Shell</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/cargo/core/shell.rs.html#20-26' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Shell { /* fields omitted */ }</pre><div class='docblock'><p>An abstraction around a <code>Write</code>able object that remembers preferences for output verbosity and
+color.</p>
+</div>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl <a class="struct" href="../../../cargo/core/shell/struct.Shell.html" title="struct cargo::core::shell::Shell">Shell</a></code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#69-222' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class="method"><span id='new.v' class='invisible'><code>pub fn <a href='#method.new' class='fnname'>new</a>() -&gt; <a class="struct" href="../../../cargo/core/shell/struct.Shell.html" title="struct cargo::core::shell::Shell">Shell</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#72-81' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Create a new shell (color choice and verbosity), defaulting to &#39;auto&#39; color and verbose
+output.</p>
+</div><h4 id='method.from_write' class="method"><span id='from_write.v' class='invisible'><code>pub fn <a href='#method.from_write' class='fnname'>from_write</a>(out: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Write.html" title="trait std::io::Write">Write</a>&gt;) -&gt; <a class="struct" href="../../../cargo/core/shell/struct.Shell.html" title="struct cargo::core::shell::Shell">Shell</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#84-89' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Create a shell from a plain writable object, with no color, and max verbosity.</p>
+</div><h4 id='method.err_width' class="method"><span id='err_width.v' class='invisible'><code>pub fn <a href='#method.err_width' class='fnname'>err_width</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#107-112' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the width of the terminal in spaces, if any</p>
+</div><h4 id='method.is_err_tty' class="method"><span id='is_err_tty.v' class='invisible'><code>pub fn <a href='#method.is_err_tty' class='fnname'>is_err_tty</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#115-120' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns whether stderr is a tty</p>
+</div><h4 id='method.err' class="method"><span id='err.v' class='invisible'><code>pub fn <a href='#method.err' class='fnname'>err</a>(&amp;mut self) -&gt; &amp;mut <a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Write.html" title="trait std::io::Write">Write</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#123-125' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Get a reference to the underlying writer</p>
+</div><h4 id='method.status' class="method"><span id='status.v' class='invisible'><code>pub fn <a href='#method.status' class='fnname'>status</a>&lt;T, U&gt;(&amp;mut self, status: T, message: U) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;U: <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#128-132' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Shortcut to right-align and color green a status message.</p>
+</div><h4 id='method.status_header' class="method"><span id='status_header.v' class='invisible'><code>pub fn <a href='#method.status_header' class='fnname'>status_header</a>&lt;T&gt;(&amp;mut self, status: T) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#134-138' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.status_with_color' class="method"><span id='status_with_color.v' class='invisible'><code>pub fn <a href='#method.status_with_color' class='fnname'>status_with_color</a>&lt;T, U&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;mut self, <br>&nbsp;&nbsp;&nbsp;&nbsp;status: T, <br>&nbsp;&nbsp;&nbsp;&nbsp;message: U, <br>&nbsp;&nbsp;&nbsp;&nbsp;color: Color<br>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a>,<br>&nbsp;&nbsp;&nbsp;&nbsp;U: <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#141-148' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Shortcut to right-align a status message.</p>
+</div><h4 id='method.verbose' class="method"><span id='verbose.v' class='invisible'><code>pub fn <a href='#method.verbose' class='fnname'>verbose</a>&lt;F&gt;(&amp;mut self, callback: F) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/function/trait.FnMut.html" title="trait core::ops::function::FnMut">FnMut</a>(&amp;mut <a class="struct" href="../../../cargo/core/shell/struct.Shell.html" title="struct cargo::core::shell::Shell">Shell</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#151-158' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Run the callback only if we are in verbose mode</p>
+</div><h4 id='method.concise' class="method"><span id='concise.v' class='invisible'><code>pub fn <a href='#method.concise' class='fnname'>concise</a>&lt;F&gt;(&amp;mut self, callback: F) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;F: <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/function/trait.FnMut.html" title="trait core::ops::function::FnMut">FnMut</a>(&amp;mut <a class="struct" href="../../../cargo/core/shell/struct.Shell.html" title="struct cargo::core::shell::Shell">Shell</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#161-168' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Run the callback if we are not in verbose mode.</p>
+</div><h4 id='method.error' class="method"><span id='error.v' class='invisible'><code>pub fn <a href='#method.error' class='fnname'>error</a>&lt;T:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a>&gt;(&amp;mut self, message: T) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#171-173' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Print a red &#39;error&#39; message</p>
+</div><h4 id='method.warn' class="method"><span id='warn.v' class='invisible'><code>pub fn <a href='#method.warn' class='fnname'>warn</a>&lt;T:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a>&gt;(&amp;mut self, message: T) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#176-181' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Print an amber &#39;warning&#39; message</p>
+</div><h4 id='method.set_verbosity' class="method"><span id='set_verbosity.v' class='invisible'><code>pub fn <a href='#method.set_verbosity' class='fnname'>set_verbosity</a>(&amp;mut self, verbosity: <a class="enum" href="../../../cargo/core/shell/enum.Verbosity.html" title="enum cargo::core::shell::Verbosity">Verbosity</a>)</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#184-186' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Update the verbosity of the shell</p>
+</div><h4 id='method.verbosity' class="method"><span id='verbosity.v' class='invisible'><code>pub fn <a href='#method.verbosity' class='fnname'>verbosity</a>(&amp;self) -&gt; <a class="enum" href="../../../cargo/core/shell/enum.Verbosity.html" title="enum cargo::core::shell::Verbosity">Verbosity</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#189-191' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Get the verbosity of the shell</p>
+</div><h4 id='method.set_color_choice' class="method"><span id='set_color_choice.v' class='invisible'><code>pub fn <a href='#method.set_color_choice' class='fnname'>set_color_choice</a>(&amp;mut self, color: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>&gt;) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#194-210' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Update the color choice (always, never, or auto) from a string.</p>
+</div><h4 id='method.color_choice' class="method"><span id='color_choice.v' class='invisible'><code>pub fn <a href='#method.color_choice' class='fnname'>color_choice</a>(&amp;self) -&gt; <a class="enum" href="../../../cargo/core/shell/enum.ColorChoice.html" title="enum cargo::core::shell::ColorChoice">ColorChoice</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#216-221' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Get the current color choice</p>
+
+<p>If we are not using a color stream, this will always return Never, even if the color choice
+has been set to something else.</p>
+</div></div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../../cargo/core/shell/struct.Shell.html" title="struct cargo::core::shell::Shell">Shell</a></code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#28-44' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/core/shell.rs.html#29-43' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

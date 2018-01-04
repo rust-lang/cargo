@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Cargo, Rust’s Package Manager</title>
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css">
+<link rel="stylesheet" type="text/css" href="stylesheets/all.css">
+<link rel="stylesheet" type="text/css" href="stylesheets/prism.css">
+
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+
+
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <a href='https://github.com/rust-lang/cargo' class='fork-me'>
+  <img src='images/forkme.png'/>
+</a>
+
+<div id="header">
+    <a href='https://crates.io' class='logo'>
+        <img id="logo" height=100 width=100 src='images/Cargo-Logo-Small.png'/>
+    </a>
+    <a href="index.html">
+        <h1>CARGO</h1>
+    </a>
+
+    <div class="search">
+        <form action="https://crates.io/search"
+              method="GET">
+            <input name="q" class="search" placeholder="Search crates" type="text"/>
+        </form>
+    </div>
+
+    <div class="nav">
+        <a href='https://crates.io/crates'>Browse All Crates</a>
+
+        <span class='sep'>|</span>
+
+        <div class="dropdown-container">
+            <button class="dropdown">
+                Docs
+                <span class="arrow"></span>
+            </button>
+            <!-- Sync this list with
+                 https://github.com/rust-lang/crates.io/blob/master/app/templates/application.hbs
+                 and with Makefile.in in this repository -->
+            <ul id="current-user-links" class="dropdown" data-bindattr-503="503">
+                <li><a href='index.html'>Getting Started</a></li>
+                <li><a href='guide.html'>Guide</a></li>
+                <li><a href='specifying-dependencies.html'>Specifying Dependencies</a></li>
+                <li><a href='crates-io.html'>Publishing on crates.io</a></li>
+                <li><a href='faq.html'>FAQ</a></li>
+                <li><a href='manifest.html'>Cargo.toml Format</a></li>
+                <li><a href='build-script.html'>Build Scripts</a></li>
+                <li><a href='config.html'>Configuration</a></li>
+                <li><a href='pkgid-spec.html'>Package ID specs</a></li>
+                <li><a href='environment-variables.html'>Environment Variables</a></li>
+                <li><a href='source-replacement.html'>Source Replacement</a></li>
+                <li><a href='external-tools.html'>External Tools</a></li>
+                <li><a href='https://crates.io/policies'>Policies</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<main>
+
+
+    <h1 class="title">Cargo, Rust’s Package Manager</h1>
+    
+<h1 id='installing' class='section-header'><a href='#installing'>Installing</a></h1>
+<h3 id='install-stable-rust-and-cargo' class='section-header'><a href='#install-stable-rust-and-cargo'>Install Stable Rust and Cargo</a></h3>
+<p>The easiest way to get Cargo is to get the current stable release of <a href="https://www.rust-lang.org/">Rust</a> by
+using the <code>rustup</code> script:</p>
+
+<pre><code class="language-shell">$ curl -sSf https://static.rust-lang.org/rustup.sh | sh
+</code></pre>
+
+<p>After this, you can use the <code>rustup</code> command to also install <code>beta</code> or <code>nightly</code>
+channels for Rust and Cargo.</p>
+
+<h3 id='install-nightly-cargo' class='section-header'><a href='#install-nightly-cargo'>Install Nightly Cargo</a></h3>
+<p>To install just Cargo, the current recommended installation method is through
+the official nightly builds. Note that Cargo will also require that <a href="https://www.rust-lang.org/">Rust</a> is
+already installed on the system.</p>
+
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>64-bit</th>
+<th>32-bit</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>Linux binaries</td>
+<td><a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-unknown-linux-gnu.tar.gz">tar.gz</a></td>
+<td><a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-unknown-linux-gnu.tar.gz">tar.gz</a></td>
+</tr>
+<tr>
+<td>MacOS binaries</td>
+<td><a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-apple-darwin.tar.gz">tar.gz</a></td>
+<td><a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-apple-darwin.tar.gz">tar.gz</a></td>
+</tr>
+<tr>
+<td>Windows binaries</td>
+<td><a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-pc-windows-gnu.tar.gz">tar.gz</a></td>
+<td><a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-windows-gnu.tar.gz">tar.gz</a></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id='build-and-install-cargo-from-source' class='section-header'><a href='#build-and-install-cargo-from-source'>Build and Install Cargo from Source</a></h3>
+<p>Alternatively, you can <a href="https://github.com/rust-lang/cargo#compiling-from-source">build Cargo from source</a>.</p>
+
+<h1 id='lets-get-started' class='section-header'><a href='#lets-get-started'>Let’s get started</a></h1>
+<p>To start a new project with Cargo, use <code>cargo new</code>:</p>
+
+<pre><code class="language-shell">$ cargo new hello_world --bin
+</code></pre>
+
+<p>We’re passing <code>--bin</code> because we’re making a binary program: if we
+were making a library, we’d leave it off.</p>
+
+<p>Let’s check out what Cargo has generated for us:</p>
+
+<pre><code class="language-shell">$ cd hello_world
+$ tree .
+.
+├── Cargo.toml
+└── src
+    └── main.rs
+
+1 directory, 2 files
+</code></pre>
+
+<p>This is all we need to get started. First, let’s check out <code>Cargo.toml</code>:</p>
+
+<pre><code class="language-toml">[package]
+name = &quot;hello_world&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;Your Name &lt;you@example.com&gt;&quot;]
+</code></pre>
+
+<p>This is called a <strong>manifest</strong>, and it contains all of the metadata that Cargo
+needs to compile your project.</p>
+
+<p>Here’s what’s in <code>src/main.rs</code>:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="kw">fn</span> <span class="ident">main</span>() {
+    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Hello, world!&quot;</span>);
+}</pre>
+
+<p>Cargo generated a “hello world” for us. Let’s compile it:</p>
+
+<pre><code class="language-shell">$ cargo build
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+</code></pre>
+
+<p>And then run it:</p>
+
+<pre><code class="language-shell">$ ./target/debug/hello_world
+Hello, world!
+</code></pre>
+
+<p>We can also use <code>cargo run</code> to compile and then run it, all in one step:</p>
+
+<pre><code class="language-shell">$ cargo run
+     Fresh hello_world v0.1.0 (file:///path/to/project/hello_world)
+   Running `target/hello_world`
+Hello, world!
+</code></pre>
+
+<h1 id='going-further' class='section-header'><a href='#going-further'>Going further</a></h1>
+<p>For more details on using Cargo, check out the <a href="guide.html">Cargo Guide</a></p>
+
+    </main>
+<footer>
+<a href='index.html'>Install</a>
+<span class='sep'>|</span>
+<a href='index.html'>Getting Started</a>
+<span class='sep'>|</span>
+<a href='guide.html'>Guide</a>
+</footer>
+
+<script type='text/javascript' src='javascripts/prism.js'></script>
+<script type='text/javascript' src='javascripts/all.js'></script>
+
+
+</body>
+</html>

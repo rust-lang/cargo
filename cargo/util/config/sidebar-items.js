@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ConfigValue",""],["Definition",""],["Location",""]],"fn":[["homedir",""],["save_credentials",""]],"struct":[["Config","Configuration information for cargo. This is not specific to a build, it is information relating to cargo itself."],["Value",""]]});

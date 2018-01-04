@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Test",""]],"fn":[["internal",""],["process_error",""]],"struct":[["CargoError","The `Error` type, which can contain any failure."],["CargoTestError","Error when testcases fail"],["CliError",""],["HttpNot200",""],["Internal",""],["ProcessError",""]],"trait":[["CargoResultExt",""]],"type":[["CargoResult",""],["CliResult",""]]});

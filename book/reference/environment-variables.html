@@ -1,0 +1,262 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Environment Variables - The Cargo Book</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <base href="../">
+
+        <link rel="stylesheet" href="book.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <link rel="shortcut icon" href="favicon.png">
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme -->
+        
+
+        
+
+        <!-- Fetch Clipboard.js from CDN but have a local fallback -->
+        <script src="https://cdn.jsdelivr.net/clipboard.js/1.6.1/clipboard.min.js"></script>
+        <script>
+            if (typeof Clipboard == 'undefined') {
+                document.write(unescape("%3Cscript src='clipboard.min.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch JQuery from CDN but have a local fallback -->
+        <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script>
+            if (typeof jQuery == 'undefined') {
+                document.write(unescape("%3Cscript src='jquery.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch store.js from local - TODO add CDN when 2.x.x is available on cdnjs -->
+        <script src="store.js"></script>
+
+    </head>
+    <body class="light">
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme = store.get('mdbook-theme');
+            if (theme === null || theme === undefined) { theme = 'light'; }
+            $('body').removeClass().addClass(theme);
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var sidebar = store.get('mdbook-sidebar');
+            if (sidebar === "hidden") { $("html").addClass("sidebar-hidden") }
+            else if (sidebar === "visible") { $("html").addClass("sidebar-visible") }
+        </script>
+
+        <div id="sidebar" class="sidebar">
+            <ul class="chapter"><li class="affix"><a href="index.html">Introduction</a></li><li><a href="getting-started/index.html"><strong>1.</strong> Getting Started</a></li><li><ul class="section"><li><a href="getting-started/installation.html"><strong>1.1.</strong> Installation</a></li><li><a href="getting-started/first-steps.html"><strong>1.2.</strong> First Steps with Cargo</a></li></ul></li><li><a href="guide/index.html"><strong>2.</strong> Cargo Guide</a></li><li><ul class="section"><li><a href="guide/why-cargo-exists.html"><strong>2.1.</strong> Why Cargo Exists</a></li><li><a href="guide/creating-a-new-project.html"><strong>2.2.</strong> Creating a New Project</a></li><li><a href="guide/working-on-an-existing-project.html"><strong>2.3.</strong> Working on an Existing Project</a></li><li><a href="guide/dependencies.html"><strong>2.4.</strong> Dependencies</a></li><li><a href="guide/project-layout.html"><strong>2.5.</strong> Project Layout</a></li><li><a href="guide/cargo-toml-vs-cargo-lock.html"><strong>2.6.</strong> Cargo.toml vs Cargo.lock</a></li><li><a href="guide/tests.html"><strong>2.7.</strong> Tests</a></li><li><a href="guide/continuous-integration.html"><strong>2.8.</strong> Continuous Integration</a></li></ul></li><li><a href="reference/index.html"><strong>3.</strong> Cargo Reference</a></li><li><ul class="section"><li><a href="reference/specifying-dependencies.html"><strong>3.1.</strong> Specifying Dependencies</a></li><li><a href="reference/manifest.html"><strong>3.2.</strong> The Manifest Format</a></li><li><a href="reference/config.html"><strong>3.3.</strong> Configuration</a></li><li><a href="reference/environment-variables.html" class="active"><strong>3.4.</strong> Environment Variables</a></li><li><a href="reference/build-scripts.html"><strong>3.5.</strong> Build Scripts</a></li><li><a href="reference/publishing.html"><strong>3.6.</strong> Publishing on crates.io</a></li><li><a href="reference/pkgid-spec.html"><strong>3.7.</strong> Package ID Specifications</a></li><li><a href="reference/source-replacement.html"><strong>3.8.</strong> Source Replacement</a></li><li><a href="reference/external-tools.html"><strong>3.9.</strong> External Tools</a></li></ul></li><li><a href="faq.html"><strong>4.</strong> FAQ</a></li></ul>
+        </div>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page" tabindex="-1">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div class="left-buttons">
+                        <i id="sidebar-toggle" class="fa fa-bars" title="Toggle sidebar"></i>
+                        <i id="theme-toggle" class="fa fa-paint-brush" title="Change theme"></i>
+                    </div>
+
+                    <h1 class="menu-title">The Cargo Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html">
+                            <i id="print-button" class="fa fa-print" title="Print this book"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="content" class="content">
+                    <a class="header" href="reference/environment-variables.html#environment-variables" id="environment-variables"><h2>Environment Variables</h2></a>
+<p>Cargo sets and reads a number of environment variables which your code can detect
+or override. Here is a list of the variables Cargo sets, organized by when it interacts
+with them:</p>
+<a class="header" href="reference/environment-variables.html#environment-variables-cargo-reads" id="environment-variables-cargo-reads"><h3>Environment variables Cargo reads</h3></a>
+<p>You can override these environment variables to change Cargo's behavior on your
+system:</p>
+<ul>
+<li><code>CARGO_HOME</code> - Cargo maintains a local cache of the registry index and of git
+checkouts of crates.  By default these are stored under <code>$HOME/.cargo</code>, but
+this variable overrides the location of this directory. Once a crate is cached
+it is not removed by the clean command.</li>
+<li><code>CARGO_TARGET_DIR</code> - Location of where to place all generated artifacts,
+relative to the current working directory.</li>
+<li><code>RUSTC</code> - Instead of running <code>rustc</code>, Cargo will execute this specified
+compiler instead.</li>
+<li><code>RUSTC_WRAPPER</code> - Instead of simply running <code>rustc</code>, Cargo will execute this
+specified wrapper instead, passing as its commandline arguments the rustc
+invocation, with the first argument being rustc.</li>
+<li><code>RUSTDOC</code> - Instead of running <code>rustdoc</code>, Cargo will execute this specified
+<code>rustdoc</code> instance instead.</li>
+<li><code>RUSTDOCFLAGS</code> - A space-separated list of custom flags to pass to all <code>rustdoc</code>
+invocations that Cargo performs. In contrast with <code>cargo rustdoc</code>, this is
+useful for passing a flag to <em>all</em> <code>rustdoc</code> instances.</li>
+<li><code>RUSTFLAGS</code> - A space-separated list of custom flags to pass to all compiler
+invocations that Cargo performs. In contrast with <code>cargo rustc</code>, this is
+useful for passing a flag to <em>all</em> compiler instances.</li>
+</ul>
+<p>Note that Cargo will also read environment variables for <code>.cargo/config</code>
+configuration values, as described in <a href="reference/config.html#environment-variables">that documentation</a></p>
+<a class="header" href="reference/environment-variables.html#environment-variables-cargo-sets-for-crates" id="environment-variables-cargo-sets-for-crates"><h3>Environment variables Cargo sets for crates</h3></a>
+<p>Cargo exposes these environment variables to your crate when it is compiled.
+Note that this applies for test binaries as well.
+To get the value of any of these variables in a Rust program, do this:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+let version = env!(&quot;CARGO_PKG_VERSION&quot;);
+#}</code></pre></pre>
+<p><code>version</code> will now contain the value of <code>CARGO_PKG_VERSION</code>.</p>
+<ul>
+<li><code>CARGO</code> - Path to the <code>cargo</code> binary performing the build.</li>
+<li><code>CARGO_MANIFEST_DIR</code> - The directory containing the manifest of your package.</li>
+<li><code>CARGO_PKG_VERSION</code> - The full version of your package.</li>
+<li><code>CARGO_PKG_VERSION_MAJOR</code> - The major version of your package.</li>
+<li><code>CARGO_PKG_VERSION_MINOR</code> - The minor version of your package.</li>
+<li><code>CARGO_PKG_VERSION_PATCH</code> - The patch version of your package.</li>
+<li><code>CARGO_PKG_VERSION_PRE</code> - The pre-release version of your package.</li>
+<li><code>CARGO_PKG_AUTHORS</code> - Colon separated list of authors from the manifest of your package.</li>
+<li><code>CARGO_PKG_NAME</code> - The name of your package.</li>
+<li><code>CARGO_PKG_DESCRIPTION</code> - The description of your package.</li>
+<li><code>CARGO_PKG_HOMEPAGE</code> - The home page of your package.</li>
+<li><code>OUT_DIR</code> - If the package has a build script, this is set to the folder where the build
+script should place its output.  See below for more information.</li>
+</ul>
+<a class="header" href="reference/environment-variables.html#environment-variables-cargo-sets-for-build-scripts" id="environment-variables-cargo-sets-for-build-scripts"><h3>Environment variables Cargo sets for build scripts</h3></a>
+<p>Cargo sets several environment variables when build scripts are run. Because these variables
+are not yet set when the build script is compiled, the above example using <code>env!</code> won't work
+and instead you'll need to retrieve the values when the build script is run:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+use std::env;
+let out_dir = env::var(&quot;OUT_DIR&quot;).unwrap();
+#}</code></pre></pre>
+<p><code>out_dir</code> will now contain the value of <code>OUT_DIR</code>.</p>
+<ul>
+<li><code>CARGO</code> - Path to the <code>cargo</code> binary performing the build.</li>
+<li><code>CARGO_MANIFEST_DIR</code> - The directory containing the manifest for the package
+being built (the package containing the build
+script). Also note that this is the value of the
+current working directory of the build script when it
+starts.</li>
+<li><code>CARGO_MANIFEST_LINKS</code> - the manifest <code>links</code> value.</li>
+<li><code>CARGO_FEATURE_&lt;name&gt;</code> - For each activated feature of the package being
+built, this environment variable will be present
+where <code>&lt;name&gt;</code> is the name of the feature uppercased
+and having <code>-</code> translated to <code>_</code>.</li>
+<li><code>CARGO_CFG_&lt;cfg&gt;</code> - For each <a href="https://doc.rust-lang.org/reference/attributes.html#conditional-compilation">configuration option</a> of the
+package being built, this environment variable will
+contain the value of the configuration, where <code>&lt;cfg&gt;</code> is
+the name of the configuration uppercased and having <code>-</code>
+translated to <code>_</code>.
+Boolean configurations are present if they are set, and
+not present otherwise.
+Configurations with multiple values are joined to a
+single variable with the values delimited by <code>,</code>.</li>
+<li><code>OUT_DIR</code> - the folder in which all output should be placed. This folder is
+inside the build directory for the package being built, and it is
+unique for the package in question.</li>
+<li><code>TARGET</code> - the target triple that is being compiled for. Native code should be
+compiled for this triple. Some more information about target
+triples can be found in <a href="http://clang.llvm.org/docs/CrossCompilation.html#target-triple">clang’s own documentation</a>.</li>
+<li><code>HOST</code> - the host triple of the rust compiler.</li>
+<li><code>NUM_JOBS</code> - the parallelism specified as the top-level parallelism. This can
+be useful to pass a <code>-j</code> parameter to a system like <code>make</code>. Note
+that care should be taken when interpreting this environment
+variable. For historical purposes this is still provided but
+recent versions of Cargo, for example, do not need to run <code>make -j</code> as it'll automatically happen. Cargo implements its own
+[jobserver] and will allow build scripts to inherit this
+information, so programs compatible with GNU make jobservers will
+already have appropriately configured parallelism.</li>
+<li><code>OPT_LEVEL</code>, <code>DEBUG</code> - values of the corresponding variables for the
+profile currently being built.</li>
+<li><code>PROFILE</code> - <code>release</code> for release builds, <code>debug</code> for other builds.</li>
+<li><code>DEP_&lt;name&gt;_&lt;key&gt;</code> - For more information about this set of environment
+variables, see build script documentation about <a href="reference/build-scripts.html#the-links-manifest-key"><code>links</code></a>.</li>
+<li><code>RUSTC</code>, <code>RUSTDOC</code> - the compiler and documentation generator that Cargo has
+resolved to use, passed to the build script so it might
+use it as well.</li>
+</ul>
+<a class="header" href="reference/environment-variables.html#environment-variables-cargo-sets-for-3rd-party-subcommands" id="environment-variables-cargo-sets-for-3rd-party-subcommands"><h3>Environment variables Cargo sets for 3rd party subcommands</h3></a>
+<p>Cargo exposes this environment variable to 3rd party subcommands
+(ie. programs named <code>cargo-foobar</code> placed in <code>$PATH</code>):</p>
+<ul>
+<li><code>CARGO</code> - Path to the <code>cargo</code> binary performing the build.</li>
+</ul>
+
+                </div>
+
+                <!-- Mobile navigation buttons -->
+                
+                    <a rel="prev" href="reference/config.html" class="mobile-nav-chapters previous" title="Previous chapter">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="reference/build-scripts.html" class="mobile-nav-chapters next" title="Next chapter">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+
+            </div>
+
+            
+                <a href="reference/config.html" class="nav-chapters previous" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+            
+
+            
+                <a href="reference/build-scripts.html" class="nav-chapters next" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            
+
+        </div>
+
+
+        <!-- Local fallback for Font Awesome -->
+        <script>
+            if ($(".fa").css("font-family") !== "FontAwesome") {
+                $('<link rel="stylesheet" type="text/css" href="_FontAwesome/css/font-awesome.css">').prependTo('head');
+            }
+        </script>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        
+
+        
+
+        
+
+        
+
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS script -->
+        
+
+    </body>
+</html>

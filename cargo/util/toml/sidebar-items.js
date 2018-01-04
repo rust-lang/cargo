@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["StringOrBool",""],["TomlDependency",""],["U32OrBool",""],["VecStringOrBool",""]],"fn":[["parse",""],["read_manifest",""]],"struct":[["DetailedTomlDependency",""],["TomlManifest",""],["TomlOptLevel",""],["TomlProfile",""],["TomlProfiles",""],["TomlProject",""],["TomlWorkspace",""]]});

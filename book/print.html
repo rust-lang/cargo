@@ -1,0 +1,2812 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>The Cargo Book</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <base href="">
+
+        <link rel="stylesheet" href="book.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <link rel="shortcut icon" href="favicon.png">
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme -->
+        
+
+        
+
+        <!-- Fetch Clipboard.js from CDN but have a local fallback -->
+        <script src="https://cdn.jsdelivr.net/clipboard.js/1.6.1/clipboard.min.js"></script>
+        <script>
+            if (typeof Clipboard == 'undefined') {
+                document.write(unescape("%3Cscript src='clipboard.min.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch JQuery from CDN but have a local fallback -->
+        <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script>
+            if (typeof jQuery == 'undefined') {
+                document.write(unescape("%3Cscript src='jquery.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch store.js from local - TODO add CDN when 2.x.x is available on cdnjs -->
+        <script src="store.js"></script>
+
+    </head>
+    <body class="light">
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme = store.get('mdbook-theme');
+            if (theme === null || theme === undefined) { theme = 'light'; }
+            $('body').removeClass().addClass(theme);
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var sidebar = store.get('mdbook-sidebar');
+            if (sidebar === "hidden") { $("html").addClass("sidebar-hidden") }
+            else if (sidebar === "visible") { $("html").addClass("sidebar-visible") }
+        </script>
+
+        <div id="sidebar" class="sidebar">
+            <ul class="chapter"><li class="affix"><a href="index.html">Introduction</a></li><li><a href="getting-started/index.html"><strong>1.</strong> Getting Started</a></li><li><ul class="section"><li><a href="getting-started/installation.html"><strong>1.1.</strong> Installation</a></li><li><a href="getting-started/first-steps.html"><strong>1.2.</strong> First Steps with Cargo</a></li></ul></li><li><a href="guide/index.html"><strong>2.</strong> Cargo Guide</a></li><li><ul class="section"><li><a href="guide/why-cargo-exists.html"><strong>2.1.</strong> Why Cargo Exists</a></li><li><a href="guide/creating-a-new-project.html"><strong>2.2.</strong> Creating a New Project</a></li><li><a href="guide/working-on-an-existing-project.html"><strong>2.3.</strong> Working on an Existing Project</a></li><li><a href="guide/dependencies.html"><strong>2.4.</strong> Dependencies</a></li><li><a href="guide/project-layout.html"><strong>2.5.</strong> Project Layout</a></li><li><a href="guide/cargo-toml-vs-cargo-lock.html"><strong>2.6.</strong> Cargo.toml vs Cargo.lock</a></li><li><a href="guide/tests.html"><strong>2.7.</strong> Tests</a></li><li><a href="guide/continuous-integration.html"><strong>2.8.</strong> Continuous Integration</a></li></ul></li><li><a href="reference/index.html"><strong>3.</strong> Cargo Reference</a></li><li><ul class="section"><li><a href="reference/specifying-dependencies.html"><strong>3.1.</strong> Specifying Dependencies</a></li><li><a href="reference/manifest.html"><strong>3.2.</strong> The Manifest Format</a></li><li><a href="reference/config.html"><strong>3.3.</strong> Configuration</a></li><li><a href="reference/environment-variables.html"><strong>3.4.</strong> Environment Variables</a></li><li><a href="reference/build-scripts.html"><strong>3.5.</strong> Build Scripts</a></li><li><a href="reference/publishing.html"><strong>3.6.</strong> Publishing on crates.io</a></li><li><a href="reference/pkgid-spec.html"><strong>3.7.</strong> Package ID Specifications</a></li><li><a href="reference/source-replacement.html"><strong>3.8.</strong> Source Replacement</a></li><li><a href="reference/external-tools.html"><strong>3.9.</strong> External Tools</a></li></ul></li><li><a href="faq.html"><strong>4.</strong> FAQ</a></li></ul>
+        </div>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page" tabindex="-1">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div class="left-buttons">
+                        <i id="sidebar-toggle" class="fa fa-bars" title="Toggle sidebar"></i>
+                        <i id="theme-toggle" class="fa fa-paint-brush" title="Change theme"></i>
+                    </div>
+
+                    <h1 class="menu-title">The Cargo Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html">
+                            <i id="print-button" class="fa fa-print" title="Print this book"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="content" class="content">
+                    <a class="header" href="print.html#the-cargo-book" id="the-cargo-book"><h1>The Cargo Book</h1></a>
+<p><img src="images/Cargo-Logo-Small.png" alt="Cargo Logo" /></p>
+<p>Cargo is the <a href="https://www.rust-lang.org/">Rust</a> <em>package manager</em>. Cargo downloads your Rust project’s
+dependencies, compiles your project, makes packages, and upload them to
+<a href="https://crates.io/">crates.io</a>, the Rust community’s <em>package registry</em>.</p>
+<a class="header" href="print.html#sections" id="sections"><h3>Sections</h3></a>
+<p><strong><a href="getting-started/index.html">Getting Started</a></strong></p>
+<p>To get started with Cargo, install Cargo (and Rust) and set up your first crate.</p>
+<p><strong><a href="guide/index.html">Cargo Guide</a></strong></p>
+<p>The guide will give you all you need to know about how to use Cargo to develop
+Rust projects.</p>
+<p><strong><a href="reference/index.html">Cargo Reference</a></strong></p>
+<p>The reference covers the details of various areas of Cargo.</p>
+<p><strong><a href="faq.html">Frequently Asked Questions</a></strong></p>
+<a class="header" href="print.html#getting-started" id="getting-started"><h2>Getting Started</h2></a>
+<p>To get started with Cargo, install Cargo (and Rust) and set up your first crate.</p>
+<ul>
+<li><a href="getting-started/installation.html">Installation</a></li>
+<li><a href="getting-started/first-steps.html">First steps with Cargo</a></li>
+</ul>
+<a class="header" href="print.html#installation" id="installation"><h2>Installation</h2></a>
+<a class="header" href="print.html#install-stable-rust-and-cargo" id="install-stable-rust-and-cargo"><h3>Install Stable Rust and Cargo</h3></a>
+<p>The easiest way to get Cargo is to get the current stable release of <a href="https://www.rust-lang.org/">Rust</a> by
+using the <code>rustup</code> script:</p>
+<pre><code class="language-shell">$ curl -sSf https://static.rust-lang.org/rustup.sh | sh
+</code></pre>
+<p>After this, you can use the <code>rustup</code> command to also install <code>beta</code> or <code>nightly</code>
+channels for Rust and Cargo.</p>
+<a class="header" href="print.html#install-nightly-cargo" id="install-nightly-cargo"><h3>Install Nightly Cargo</h3></a>
+<p>To install just Cargo, the current recommended installation method is through
+the official nightly builds. Note that Cargo will also require that <a href="https://www.rust-lang.org/">Rust</a> is
+already installed on the system.</p>
+<table><thead><tr><th> Platform         </th><th> 64-bit            </th><th> 32-bit            </th></tr></thead><tbody>
+<tr><td> Linux binaries   </td><td> <a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-unknown-linux-gnu.tar.gz">tar.gz</a> </td><td> <a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-unknown-linux-gnu.tar.gz">tar.gz</a> </td></tr>
+<tr><td> MacOS binaries   </td><td> <a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-apple-darwin.tar.gz">tar.gz</a>   </td><td> <a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-apple-darwin.tar.gz">tar.gz</a>   </td></tr>
+<tr><td> Windows binaries </td><td> <a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-x86_64-pc-windows-gnu.tar.gz">tar.gz</a>   </td><td> <a href="https://static.rust-lang.org/cargo-dist/cargo-nightly-i686-pc-windows-gnu.tar.gz">tar.gz</a>   </td></tr>
+</tbody></table>
+<a class="header" href="print.html#build-and-install-cargo-from-source" id="build-and-install-cargo-from-source"><h3>Build and Install Cargo from Source</h3></a>
+<p>Alternatively, you can <a href="https://github.com/rust-lang/cargo#compiling-from-source">build Cargo from source</a>.</p>
+<a class="header" href="print.html#first-steps-with-cargo" id="first-steps-with-cargo"><h2>First Steps with Cargo</h2></a>
+<p>To start a new project with Cargo, use <code>cargo new</code>:</p>
+<pre><code class="language-shell">$ cargo new hello_world --bin
+</code></pre>
+<p>We’re passing <code>--bin</code> because we’re making a binary program: if we
+were making a library, we’d leave it off.</p>
+<p>Let’s check out what Cargo has generated for us:</p>
+<pre><code class="language-shell">$ cd hello_world
+$ tree .
+.
+├── Cargo.toml
+└── src
+    └── main.rs
+
+1 directory, 2 files
+</code></pre>
+<p>This is all we need to get started. First, let’s check out <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[package]
+name = &quot;hello_world&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;Your Name &lt;you@example.com&gt;&quot;]
+</code></pre>
+<p>This is called a <strong>manifest</strong>, and it contains all of the metadata that Cargo
+needs to compile your project.</p>
+<p>Here’s what’s in <code>src/main.rs</code>:</p>
+<pre><pre class="playpen"><code class="language-rust">fn main() {
+    println!(&quot;Hello, world!&quot;);
+}
+</code></pre></pre>
+<p>Cargo generated a “hello world” for us. Let’s compile it:</p>
+<pre><code class="language-shell">$ cargo build
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+</code></pre>
+<p>And then run it:</p>
+<pre><code class="language-shell">$ ./target/debug/hello_world
+Hello, world!
+</code></pre>
+<p>We can also use <code>cargo run</code> to compile and then run it, all in one step:</p>
+<pre><code class="language-shell">$ cargo run
+     Fresh hello_world v0.1.0 (file:///path/to/project/hello_world)
+   Running `target/hello_world`
+Hello, world!
+</code></pre>
+<a class="header" href="print.html#going-further" id="going-further"><h3>Going further</h3></a>
+<p>For more details on using Cargo, check out the <a href="guide/index.html">Cargo Guide</a></p>
+<a class="header" href="print.html#cargo-guide" id="cargo-guide"><h2>Cargo Guide</h2></a>
+<p>This guide will give you all that you need to know about how to use Cargo to
+develop Rust projects.</p>
+<ul>
+<li><a href="guide/why-cargo-exists.html">Why Cargo Exists</a></li>
+<li><a href="guide/creating-a-new-project.html">Creating a New Project</a></li>
+<li><a href="guide/working-on-an-existing-project.html">Working on an Existing Cargo Project</a></li>
+<li><a href="guide/dependencies.html">Dependencies</a></li>
+<li><a href="guide/project-layout.html">Project Layout</a></li>
+<li><a href="guide/cargo-toml-vs-cargo-lock.html">Cargo.toml vs Cargo.lock</a></li>
+<li><a href="guide/tests.html">Tests</a></li>
+<li><a href="guide/continuous-integration.html">Continuous Integration</a></li>
+</ul>
+<a class="header" href="print.html#why-cargo-exists" id="why-cargo-exists"><h2>Why Cargo Exists</h2></a>
+<p>Cargo is a tool that allows Rust projects to declare their various
+dependencies and ensure that you’ll always get a repeatable build.</p>
+<p>To accomplish this goal, Cargo does four things:</p>
+<ul>
+<li>Introduces two metadata files with various bits of project information.</li>
+<li>Fetches and builds your project’s dependencies.</li>
+<li>Invokes <code>rustc</code> or another build tool with the correct parameters to build
+your project.</li>
+<li>Introduces conventions to make working with Rust projects easier.</li>
+</ul>
+<a class="header" href="print.html#creating-a-new-project" id="creating-a-new-project"><h2>Creating a New Project</h2></a>
+<p>To start a new project with Cargo, use <code>cargo new</code>:</p>
+<pre><code class="language-shell">$ cargo new hello_world --bin
+</code></pre>
+<p>We’re passing <code>--bin</code> because we’re making a binary program: if we
+were making a library, we’d leave it off. This also initializes a new <code>git</code>
+repository by default. If you don't want it to do that, pass <code>--vcs none</code>.</p>
+<p>Let’s check out what Cargo has generated for us:</p>
+<pre><code class="language-shell">$ cd hello_world
+$ tree .
+.
+├── Cargo.toml
+└── src
+    └── main.rs
+
+1 directory, 2 files
+</code></pre>
+<p>If we had just used <code>cargo new hello_world</code> without the <code>--bin</code> flag, then
+we would have a <code>lib.rs</code> instead of a <code>main.rs</code>. For now, however, this is all
+we need to get started. First, let’s check out <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[package]
+name = &quot;hello_world&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;Your Name &lt;you@example.com&gt;&quot;]
+</code></pre>
+<p>This is called a <strong>manifest</strong>, and it contains all of the metadata that Cargo
+needs to compile your project.</p>
+<p>Here’s what’s in <code>src/main.rs</code>:</p>
+<pre><pre class="playpen"><code class="language-rust">fn main() {
+    println!(&quot;Hello, world!&quot;);
+}
+</code></pre></pre>
+<p>Cargo generated a “hello world” for us. Let’s compile it:</p>
+<pre><code class="language-shell">$ cargo build
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+</code></pre>
+<p>And then run it:</p>
+<pre><code class="language-shell">$ ./target/debug/hello_world
+Hello, world!
+</code></pre>
+<p>We can also use <code>cargo run</code> to compile and then run it, all in one step (You
+won't see the <code>Compiling</code> line if you have not made any changes since you last
+compiled):</p>
+<pre><code class="language-shell">$ cargo run
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+     Running `target/debug/hello_world`
+Hello, world!
+</code></pre>
+<p>You’ll now notice a new file, <code>Cargo.lock</code>. It contains information about our
+dependencies. Since we don’t have any yet, it’s not very interesting.</p>
+<p>Once you’re ready for release, you can use <code>cargo build --release</code> to compile
+your files with optimizations turned on:</p>
+<pre><code class="language-shell">$ cargo build --release
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+</code></pre>
+<p><code>cargo build --release</code> puts the resulting binary in <code>target/release</code> instead of
+<code>target/debug</code>.</p>
+<p>Compiling in debug mode is the default for development-- compilation time is
+shorter since the compiler doesn't do optimizations, but the code will run
+slower. Release mode takes longer to compile, but the code will run faster.</p>
+<a class="header" href="print.html#working-on-an-existing-cargo-project" id="working-on-an-existing-cargo-project"><h2>Working on an Existing Cargo Project</h2></a>
+<p>If you download an existing project that uses Cargo, it’s really easy
+to get going.</p>
+<p>First, get the project from somewhere. In this example, we’ll use <code>rand</code>
+cloned from its repository on GitHub:</p>
+<pre><code class="language-shell">$ git clone https://github.com/rust-lang-nursery/rand.git
+$ cd rand
+</code></pre>
+<p>To build, use <code>cargo build</code>:</p>
+<pre><code class="language-shell">$ cargo build
+   Compiling rand v0.1.0 (file:///path/to/project/rand)
+</code></pre>
+<p>This will fetch all of the dependencies and then build them, along with the
+project.</p>
+<a class="header" href="print.html#dependencies" id="dependencies"><h2>Dependencies</h2></a>
+<p><a href="https://crates.io/">crates.io</a> is the Rust community's central package registry that serves as a
+location to discover and download packages. <code>cargo</code> is configured to use it by
+default to find requested packages.</p>
+<p>To depend on a library hosted on <a href="https://crates.io/">crates.io</a>, add it to your <code>Cargo.toml</code>.</p>
+<a class="header" href="print.html#adding-a-dependency" id="adding-a-dependency"><h3>Adding a dependency</h3></a>
+<p>If your <code>Cargo.toml</code> doesn't already have a <code>[dependencies]</code> section, add that,
+then list the crate name and version that you would like to use. This example
+adds a dependency of the <code>time</code> crate:</p>
+<pre><code class="language-toml">[dependencies]
+time = &quot;0.1.12&quot;
+</code></pre>
+<p>The version string is a <a href="https://github.com/steveklabnik/semver#requirements">semver</a> version requirement. The <a href="reference/specifying-dependencies.html">specifying
+dependencies</a> docs have more information about
+the options you have here.</p>
+<p>If we also wanted to add a dependency on the <code>regex</code> crate, we would not need
+to add <code>[dependencies]</code> for each crate listed. Here's what your whole
+<code>Cargo.toml</code> file would look like with dependencies on the <code>time</code> and <code>regex</code>
+crates:</p>
+<pre><code class="language-toml">[package]
+name = &quot;hello_world&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;Your Name &lt;you@example.com&gt;&quot;]
+
+[dependencies]
+time = &quot;0.1.12&quot;
+regex = &quot;0.1.41&quot;
+</code></pre>
+<p>Re-run <code>cargo build</code>, and Cargo will fetch the new dependencies and all of
+their dependencies, compile them all, and update the <code>Cargo.lock</code>:</p>
+<pre><code class="language-shell">$ cargo build
+      Updating registry `https://github.com/rust-lang/crates.io-index`
+   Downloading memchr v0.1.5
+   Downloading libc v0.1.10
+   Downloading regex-syntax v0.2.1
+   Downloading memchr v0.1.5
+   Downloading aho-corasick v0.3.0
+   Downloading regex v0.1.41
+     Compiling memchr v0.1.5
+     Compiling libc v0.1.10
+     Compiling regex-syntax v0.2.1
+     Compiling memchr v0.1.5
+     Compiling aho-corasick v0.3.0
+     Compiling regex v0.1.41
+     Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+</code></pre>
+<p>Our <code>Cargo.lock</code> contains the exact information about which revision of all of
+these dependencies we used.</p>
+<p>Now, if <code>regex</code> gets updated, we will still build with the same revision until
+we choose to <code>cargo update</code>.</p>
+<p>You can now use the <code>regex</code> library using <code>extern crate</code> in <code>main.rs</code>.</p>
+<pre><code>extern crate regex;
+
+use regex::Regex;
+
+fn main() {
+    let re = Regex::new(r&quot;^\d{4}-\d{2}-\d{2}$&quot;).unwrap();
+    println!(&quot;Did our date match? {}&quot;, re.is_match(&quot;2014-01-01&quot;));
+}
+</code></pre>
+<p>Running it will show:</p>
+<pre><code class="language-shell">$ cargo run
+   Running `target/hello_world`
+Did our date match? true
+</code></pre>
+<a class="header" href="print.html#project-layout" id="project-layout"><h2>Project Layout</h2></a>
+<p>Cargo uses conventions for file placement to make it easy to dive into a new
+Cargo project:</p>
+<pre><code class="language-shell">.
+├── Cargo.lock
+├── Cargo.toml
+├── benches
+│   └── large-input.rs
+├── examples
+│   └── simple.rs
+├── src
+│   ├── bin
+│   │   └── another_executable.rs
+│   ├── lib.rs
+│   └── main.rs
+└── tests
+    └── some-integration-tests.rs
+</code></pre>
+<ul>
+<li><code>Cargo.toml</code> and <code>Cargo.lock</code> are stored in the root of your project (<em>package
+root</em>).</li>
+<li>Source code goes in the <code>src</code> directory.</li>
+<li>The default library file is <code>src/lib.rs</code>.</li>
+<li>The default executable file is <code>src/main.rs</code>.</li>
+<li>Other executables can be placed in <code>src/bin/*.rs</code>.</li>
+<li>Integration tests go in the <code>tests</code> directory (unit tests go in each file
+they're testing).</li>
+<li>Examples go in the <code>examples</code> directory.</li>
+<li>Benchmarks go in the <code>benches</code> directory.</li>
+</ul>
+<p>These are explained in more detail in the <a href="reference/manifest.html#the-project-layout">manifest
+description</a>.</p>
+<a class="header" href="print.html#cargotoml-vs-cargolock" id="cargotoml-vs-cargolock"><h2>Cargo.toml vs Cargo.lock</h2></a>
+<p><code>Cargo.toml</code> and <code>Cargo.lock</code> serve two different purposes. Before we talk
+about them, here’s a summary:</p>
+<ul>
+<li><code>Cargo.toml</code> is about describing your dependencies in a broad sense, and is
+written by you.</li>
+<li><code>Cargo.lock</code> contains exact information about your dependencies. It is
+maintained by Cargo and should not be manually edited.</li>
+</ul>
+<p>If you’re building a library that other projects will depend on, put
+<code>Cargo.lock</code> in your <code>.gitignore</code>. If you’re building an executable like a
+command-line tool or an application, check <code>Cargo.lock</code> into <code>git</code>. If you're
+curious about why that is, see <a href="faq.html#why-do-binaries-have-cargolock-in-version-control-but-not-libraries">&quot;Why do binaries have <code>Cargo.lock</code> in version
+control, but not libraries?&quot; in the
+FAQ</a>.</p>
+<p>Let’s dig in a little bit more.</p>
+<p><code>Cargo.toml</code> is a <strong>manifest</strong> file in which we can specify a bunch of
+different metadata about our project. For example, we can say that we depend
+on another project:</p>
+<pre><code class="language-toml">[package]
+name = &quot;hello_world&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;Your Name &lt;you@example.com&gt;&quot;]
+
+[dependencies]
+rand = { git = &quot;https://github.com/rust-lang-nursery/rand.git&quot; }
+</code></pre>
+<p>This project has a single dependency, on the <code>rand</code> library. We’ve stated in
+this case that we’re relying on a particular Git repository that lives on
+GitHub. Since we haven’t specified any other information, Cargo assumes that
+we intend to use the latest commit on the <code>master</code> branch to build our project.</p>
+<p>Sound good? Well, there’s one problem: If you build this project today, and
+then you send a copy to me, and I build this project tomorrow, something bad
+could happen. There could be more commits to <code>rand</code> in the meantime, and my
+build would include new commits while yours would not. Therefore, we would
+get different builds. This would be bad because we want reproducible builds.</p>
+<p>We could fix this problem by putting a <code>rev</code> line in our <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[dependencies]
+rand = { git = &quot;https://github.com/rust-lang-nursery/rand.git&quot;, rev = &quot;9f35b8e&quot; }
+</code></pre>
+<p>Now our builds will be the same. But there’s a big drawback: now we have to
+manually think about SHA-1s every time we want to update our library. This is
+both tedious and error prone.</p>
+<p>Enter the <code>Cargo.lock</code>. Because of its existence, we don’t need to manually
+keep track of the exact revisions: Cargo will do it for us. When we have a
+manifest like this:</p>
+<pre><code class="language-toml">[package]
+name = &quot;hello_world&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;Your Name &lt;you@example.com&gt;&quot;]
+
+[dependencies]
+rand = { git = &quot;https://github.com/rust-lang-nursery/rand.git&quot; }
+</code></pre>
+<p>Cargo will take the latest commit and write that information out into our
+<code>Cargo.lock</code> when we build for the first time. That file will look like this:</p>
+<pre><code class="language-toml">[[package]]
+name = &quot;hello_world&quot;
+version = &quot;0.1.0&quot;
+dependencies = [
+ &quot;rand 0.1.0 (git+https://github.com/rust-lang-nursery/rand.git#9f35b8e439eeedd60b9414c58f389bdc6a3284f9)&quot;,
+]
+
+[[package]]
+name = &quot;rand&quot;
+version = &quot;0.1.0&quot;
+source = &quot;git+https://github.com/rust-lang-nursery/rand.git#9f35b8e439eeedd60b9414c58f389bdc6a3284f9&quot;
+</code></pre>
+<p>You can see that there’s a lot more information here, including the exact
+revision we used to build. Now when you give your project to someone else,
+they’ll use the exact same SHA, even though we didn’t specify it in our
+<code>Cargo.toml</code>.</p>
+<p>When we’re ready to opt in to a new version of the library, Cargo can
+re-calculate the dependencies and update things for us:</p>
+<pre><code class="language-shell">$ cargo update           # updates all dependencies
+$ cargo update -p rand   # updates just “rand”
+</code></pre>
+<p>This will write out a new <code>Cargo.lock</code> with the new version information. Note
+that the argument to <code>cargo update</code> is actually a
+<a href="reference/pkgid-spec.html">Package ID Specification</a> and <code>rand</code> is just a short
+specification.</p>
+<a class="header" href="print.html#tests" id="tests"><h2>Tests</h2></a>
+<p>Cargo can run your tests with the <code>cargo test</code> command. Cargo looks for tests
+to run in two places: in each of your <code>src</code> files and any tests in <code>tests/</code>.
+Tests in your <code>src</code> files should be unit tests, and tests in <code>tests/</code> should be
+integration-style tests. As such, you’ll need to import your crates into
+the files in <code>tests</code>.</p>
+<p>Here's an example of running <code>cargo test</code> in our project, which currently has
+no tests:</p>
+<pre><code class="language-shell">$ cargo test
+   Compiling rand v0.1.0 (https://github.com/rust-lang-nursery/rand.git#9f35b8e)
+   Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
+     Running target/test/hello_world-9c2b65bbb79eabce
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+</code></pre>
+<p>If our project had tests, we would see more output with the correct number of
+tests.</p>
+<p>You can also run a specific test by passing a filter:</p>
+<pre><code class="language-shell">$ cargo test foo
+</code></pre>
+<p>This will run any test with <code>foo</code> in its name.</p>
+<p><code>cargo test</code> runs additional checks as well. For example, it will compile any
+examples you’ve included and will also test the examples in your
+documentation. Please see the <a href="https://doc.rust-lang.org/book/testing.html">testing guide</a> in the Rust
+documentation for more details.</p>
+<a class="header" href="print.html#continuous-integration" id="continuous-integration"><h2>Continuous Integration</h2></a>
+<a class="header" href="print.html#travis-ci" id="travis-ci"><h3>Travis CI</h3></a>
+<p>To test your project on Travis CI, here is a sample <code>.travis.yml</code> file:</p>
+<pre><code class="language-yaml">language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+matrix:
+  allow_failures:
+    - rust: nightly
+</code></pre>
+<p>This will test all three release channels, but any breakage in nightly
+will not fail your overall build. Please see the <a href="https://docs.travis-ci.com/user/languages/rust/">Travis CI Rust
+documentation</a> for more
+information.</p>
+<a class="header" href="print.html#cargo-reference" id="cargo-reference"><h2>Cargo Reference</h2></a>
+<p>Now that you have an overview of how to use Cargo and have created your first
+crate, you may be interested in more details in the following areas.</p>
+<p>The reference covers the details of various areas of Cargo.</p>
+<ul>
+<li><a href="reference/specifying-dependencies.html">Specifying Dependencies</a></li>
+<li><a href="reference/manifest.html">The Manifest Format</a></li>
+<li><a href="reference/config.html">Configuration</a></li>
+<li><a href="reference/environment-variables.html">Environment Variables</a></li>
+<li><a href="reference/build-scripts.html">Build Scripts</a></li>
+<li><a href="reference/publishing.html">Publishing on crates.io</a></li>
+<li><a href="reference/pkgid-spec.html">Package ID Specifications</a></li>
+<li><a href="reference/source-replacement.html">Source Replacement</a></li>
+<li><a href="reference/external-tools.html">External Tools</a></li>
+</ul>
+<a class="header" href="print.html#specifying-dependencies" id="specifying-dependencies"><h2>Specifying Dependencies</h2></a>
+<p>Your crates can depend on other libraries from <a href="https://crates.io/">crates.io</a>, <code>git</code> repositories, or
+subdirectories on your local file system. You can also temporarily override the
+location of a dependency— for example, to be able to test out a bug fix in the
+dependency that you are working on locally. You can have different
+dependencies for different platforms, and dependencies that are only used during
+development. Let's take a look at how to do each of these.</p>
+<a class="header" href="print.html#specifying-dependencies-from-cratesio" id="specifying-dependencies-from-cratesio"><h3>Specifying dependencies from crates.io</h3></a>
+<p>Cargo is configured to look for dependencies on <a href="https://crates.io/">crates.io</a> by default. Only
+the name and a version string are required in this case. In <a href="guide/index.html">the cargo
+guide</a>, we specified a dependency on the <code>time</code> crate:</p>
+<pre><code class="language-toml">[dependencies]
+time = &quot;0.1.12&quot;
+</code></pre>
+<p>The string <code>&quot;0.1.12&quot;</code> is a <a href="https://github.com/steveklabnik/semver#requirements">semver</a> version requirement. Since this
+string does not have any operators in it, it is interpreted the same way as
+if we had specified <code>&quot;^0.1.12&quot;</code>, which is called a caret requirement.</p>
+<a class="header" href="print.html#caret-requirements" id="caret-requirements"><h3>Caret requirements</h3></a>
+<p><strong>Caret requirements</strong> allow SemVer compatible updates to a specified version.
+An update is allowed if the new version number does not modify the left-most
+non-zero digit in the major, minor, patch grouping. In this case, if we ran
+<code>cargo update -p time</code>, cargo would update us to version <code>0.1.13</code> if it was
+available, but would not update us to <code>0.2.0</code>. If instead we had specified the
+version string as <code>^1.0</code>, cargo would update to <code>1.1</code> but not <code>2.0</code>. The version
+<code>0.0.x</code> is not considered compatible with any other version.</p>
+<p>Here are some more examples of caret requirements and the versions that would
+be allowed with them:</p>
+<pre><code class="language-notrust">^1.2.3 := &gt;=1.2.3 &lt;2.0.0
+^1.2 := &gt;=1.2.0 &lt;2.0.0
+^1 := &gt;=1.0.0 &lt;2.0.0
+^0.2.3 := &gt;=0.2.3 &lt;0.3.0
+^0.0.3 := &gt;=0.0.3 &lt;0.0.4
+^0.0 := &gt;=0.0.0 &lt;0.1.0
+^0 := &gt;=0.0.0 &lt;1.0.0
+</code></pre>
+<p>This compatibility convention is different from SemVer in the way it treats
+versions before 1.0.0. While SemVer says there is no compatibility before
+1.0.0, Cargo considers <code>0.x.y</code> to be compatible with <code>0.x.z</code>, where <code>y ≥ z</code>
+and <code>x &gt; 0</code>.</p>
+<a class="header" href="print.html#tilde-requirements" id="tilde-requirements"><h3>Tilde requirements</h3></a>
+<p><strong>Tilde requirements</strong> specify a minimal version with some ability to update.
+If you specify a major, minor, and patch version or only a major and minor
+version, only patch-level changes are allowed. If you only specify a major
+version, then minor- and patch-level changes are allowed.</p>
+<p><code>~1.2.3</code> is an example of a tilde requirement.</p>
+<pre><code class="language-notrust">~1.2.3 := &gt;=1.2.3 &lt;1.3.0
+~1.2 := &gt;=1.2.0 &lt;1.3.0
+~1 := &gt;=1.0.0 &lt;2.0.0
+</code></pre>
+<a class="header" href="print.html#wildcard-requirements" id="wildcard-requirements"><h3>Wildcard requirements</h3></a>
+<p><strong>Wildcard requirements</strong> allow for any version where the wildcard is
+positioned.</p>
+<p><code>*</code>, <code>1.*</code> and <code>1.2.*</code> are examples of wildcard requirements.</p>
+<pre><code class="language-notrust">* := &gt;=0.0.0
+1.* := &gt;=1.0.0 &lt;2.0.0
+1.2.* := &gt;=1.2.0 &lt;1.3.0
+</code></pre>
+<a class="header" href="print.html#inequality-requirements" id="inequality-requirements"><h3>Inequality requirements</h3></a>
+<p><strong>Inequality requirements</strong> allow manually specifying a version range or an
+exact version to depend on.</p>
+<p>Here are some examples of inequality requirements:</p>
+<pre><code class="language-notrust">&gt;= 1.2.0
+&gt; 1
+&lt; 2
+= 1.2.3
+</code></pre>
+<a class="header" href="print.html#multiple-requirements" id="multiple-requirements"><h3>Multiple requirements</h3></a>
+<p>Multiple version requirements can also be separated with a comma, e.g. <code>&gt;= 1.2, &lt; 1.5</code>.</p>
+<a class="header" href="print.html#specifying-dependencies-from-git-repositories" id="specifying-dependencies-from-git-repositories"><h3>Specifying dependencies from <code>git</code> repositories</h3></a>
+<p>To depend on a library located in a <code>git</code> repository, the minimum information
+you need to specify is the location of the repository with the <code>git</code> key:</p>
+<pre><code class="language-toml">[dependencies]
+rand = { git = &quot;https://github.com/rust-lang-nursery/rand&quot; }
+</code></pre>
+<p>Cargo will fetch the <code>git</code> repository at this location then look for a
+<code>Cargo.toml</code> for the requested crate anywhere inside the <code>git</code> repository
+(not necessarily at the root).</p>
+<p>Since we haven’t specified any other information, Cargo assumes that
+we intend to use the latest commit on the <code>master</code> branch to build our project.
+You can combine the <code>git</code> key with the <code>rev</code>, <code>tag</code>, or <code>branch</code> keys to
+specify something else. Here's an example of specifying that you want to use
+the latest commit on a branch named <code>next</code>:</p>
+<pre><code class="language-toml">[dependencies]
+rand = { git = &quot;https://github.com/rust-lang-nursery/rand&quot;, branch = &quot;next&quot; }
+</code></pre>
+<a class="header" href="print.html#specifying-path-dependencies" id="specifying-path-dependencies"><h3>Specifying path dependencies</h3></a>
+<p>Over time, our <code>hello_world</code> project from <a href="guide/index.html">the guide</a> has
+grown significantly in size! It’s gotten to the point that we probably want to
+split out a separate crate for others to use. To do this Cargo supports <strong>path
+dependencies</strong> which are typically sub-crates that live within one repository.
+Let’s start off by making a new crate inside of our <code>hello_world</code> project:</p>
+<pre><code class="language-shell"># inside of hello_world/
+$ cargo new hello_utils
+</code></pre>
+<p>This will create a new folder <code>hello_utils</code> inside of which a <code>Cargo.toml</code> and
+<code>src</code> folder are ready to be configured. In order to tell Cargo about this, open
+up <code>hello_world/Cargo.toml</code> and add <code>hello_utils</code> to your dependencies:</p>
+<pre><code class="language-toml">[dependencies]
+hello_utils = { path = &quot;hello_utils&quot; }
+</code></pre>
+<p>This tells Cargo that we depend on a crate called <code>hello_utils</code> which is found
+in the <code>hello_utils</code> folder (relative to the <code>Cargo.toml</code> it’s written in).</p>
+<p>And that’s it! The next <code>cargo build</code> will automatically build <code>hello_utils</code> and
+all of its own dependencies, and others can also start using the crate as well.
+However, crates that use dependencies specified with only a path are not
+permitted on <a href="https://crates.io/">crates.io</a>. If we wanted to publish our <code>hello_world</code> crate, we
+would need to publish a version of <code>hello_utils</code> to <a href="https://crates.io">crates.io</a>
+and specify its version in the dependencies line as well:</p>
+<pre><code class="language-toml">[dependencies]
+hello_utils = { path = &quot;hello_utils&quot;, version = &quot;0.1.0&quot; }
+</code></pre>
+<a class="header" href="print.html#overriding-dependencies" id="overriding-dependencies"><h3>Overriding dependencies</h3></a>
+<p>There are a number of methods in Cargo to support overriding dependencies and
+otherwise controlling the dependency graph. These options are typically, though,
+only available at the workspace level and aren't propagated through
+dependencies. In other words, &quot;applications&quot; have the ability to override
+dependencies but &quot;libraries&quot; do not.</p>
+<p>The desire to override a dependency or otherwise alter some dependencies can
+arise through a number of scenarios. Most of them, however, boil down to the
+ability to work with a crate before it's been published to crates.io. For
+example:</p>
+<ul>
+<li>A crate you're working on is also used in a much larger application you're
+working on, and you'd like to test a bug fix to the library inside of the
+larger application.</li>
+<li>An upstream crate you don't work on has a new feature or a bug fix on the
+master branch of its git repository which you'd like to test out.</li>
+<li>You're about to publish a new major version of your crate, but you'd like to
+do integration testing across an entire project to ensure the new major
+version works.</li>
+<li>You've submitted a fix to an upstream crate for a bug you found, but you'd
+like to immediately have your application start depending on the fixed version
+of the crate to avoid blocking on the bug fix getting merged.</li>
+</ul>
+<p>These scenarios are currently all solved with the <a href="reference/manifest.html#the-patch-section"><code>[patch]</code> manifest
+section</a>. Note that the <code>[patch]</code> feature is not yet currently
+stable and will be released on 2017-08-31. Historically some of these scenarios
+have been solved with <a href="reference/manifest.html#the-replace-section">the <code>[replace]</code> section</a>, but we'll
+document the <code>[patch]</code> section here.</p>
+<a class="header" href="print.html#testing-a-bugfix" id="testing-a-bugfix"><h3>Testing a bugfix</h3></a>
+<p>Let's say you're working with the [<code>uuid</code>] crate but while you're working on it
+you discover a bug. You are, however, quite enterprising so you decide to also
+try out to fix the bug! Originally your manifest will look like:</p>
+<p><a href="https://crates.io/crates/uuid"><code>uuid</code></a></p>
+<pre><code class="language-toml">[package]
+name = &quot;my-library&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;...&quot;]
+
+[dependencies]
+uuid = &quot;1.0&quot;
+</code></pre>
+<p>First thing we'll do is to clone the <a href="https://github.com/rust-lang-nursery/uuid"><code>uuid</code> repository</a>
+locally via:</p>
+<pre><code class="language-shell">$ git clone https://github.com/rust-lang-nursery/uuid
+</code></pre>
+<p>Next we'll edit the manifest of <code>my-library</code> to contain:</p>
+<pre><code class="language-toml">[patch.crates-io]
+uuid = { path = &quot;../path/to/uuid&quot; }
+</code></pre>
+<p>Here we declare that we're <em>patching</em> the source <code>crates-io</code> with a new
+dependency. This will effectively add the local checked out version of <code>uuid</code> to
+the crates.io registry for our local project.</p>
+<p>Next up we need to ensure that our lock file is updated to use this new version
+of <code>uuid</code> so our project uses the locally checked out copy instead of one from
+crates.io. The way <code>[patch]</code> works is that it'll load the dependency at
+<code>../path/to/uuid</code> and then whenever crates.io is queried for versions of <code>uuid</code>
+it'll <em>also</em> return the local version.</p>
+<p>This means that the version number of the local checkout is significant and will
+affect whether the patch is used. Our manifest declared <code>uuid = &quot;1.0&quot;</code> which
+means we'll only resolve to <code>&gt;= 1.0.0, &lt; 2.0.0</code>, and Cargo's greedy resolution
+algorithm also means that we'll resolve to the maximum version within that
+range. Typically this doesn't matter as the version of the git repository will
+already be greater or match the maximum version published on crates.io, but it's
+important to keep this in mind!</p>
+<p>In any case, typically all you need to do now is:</p>
+<pre><code class="language-shell">$ cargo build
+   Compiling uuid v1.0.0 (file://.../uuid)
+   Compiling my-library v0.1.0 (file://.../my-library)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.32 secs
+</code></pre>
+<p>And that's it! You're now building with the local version of <code>uuid</code> (note the
+<code>file://</code> in the build output). If you don't see the <code>file://</code> version getting
+built then you may need to run <code>cargo update -p uuid --precise $version</code> where
+<code>$version</code> is the version of the locally checked out copy of <code>uuid</code>.</p>
+<p>Once you've fixed the bug you originally found the next thing you'll want to do
+is to likely submit that as a pull request to the <code>uuid</code> crate itself. Once
+you've done this then you can also update the <code>[patch]</code> section. The listing
+inside of <code>[patch]</code> is just like the <code>[dependencies]</code> section, so once your pull
+request is merged you could change your <code>path</code> dependency to:</p>
+<pre><code class="language-toml">[patch.crates-io]
+uuid = { git = 'https://github.com/rust-lang-nursery/uuid' }
+</code></pre>
+<a class="header" href="print.html#working-with-an-unpublished-minor-version" id="working-with-an-unpublished-minor-version"><h3>Working with an unpublished minor version</h3></a>
+<p>Let's now shift gears a bit from bug fixes to adding features. While working on
+<code>my-library</code> you discover that a whole new feature is needed in the <code>uuid</code>
+crate. You've implemented this feature, tested it locally above with <code>[patch]</code>,
+and submitted a pull request. Let's go over how you continue to use and test it
+before it's actually published.</p>
+<p>Let's also say that the current version of <code>uuid</code> on crates.io is <code>1.0.0</code>, but
+since then the master branch of the git repository has updated to <code>1.0.1</code>. This
+branch includes your new feature you submitted previously. To use this
+repository we'll edit our <code>Cargo.toml</code> to look like</p>
+<pre><code class="language-toml">[package]
+name = &quot;my-library&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;...&quot;]
+
+[dependencies]
+uuid = &quot;1.0.1&quot;
+
+[patch.crates-io]
+uuid = { git = 'https://github.com/rust-lang-nursery/uuid' }
+</code></pre>
+<p>Note that our local dependency on <code>uuid</code> has been updated to <code>1.0.1</code> as it's
+what we'll actually require once the crate is published. This version doesn't
+exist on crates.io, though, so we provide it with the <code>[patch]</code> section of the
+manifest.</p>
+<p>Now when our library is built it'll fetch <code>uuid</code> from the git repository and
+resolve to 1.0.1 inside the repository instead of trying to download a version
+from crates.io. Once 1.0.1 is published on crates.io the <code>[patch]</code> section can
+be deleted.</p>
+<p>It's also worth nothing that <code>[patch]</code> applies <em>transitively</em>. Let's say you use
+<code>my-library</code> in a larger project, such as:</p>
+<pre><code class="language-toml">[package]
+name = &quot;my-binary&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;...&quot;]
+
+[dependencies]
+my-library = { git = 'https://example.com/git/my-library' }
+uuid = &quot;1.0&quot;
+
+[patch.crates-io]
+uuid = { git = 'https://github.com/rust-lang-nursery/uuid' }
+</code></pre>
+<p>Remember that <code>[patch]</code> is only applicable at the <em>top level</em> so we consumers of
+<code>my-library</code> have to repeat the <code>[patch]</code> section if necessary. Here, though,
+the new <code>uuid</code> crate applies to <em>both</em> our dependency on <code>uuid</code> and the
+<code>my-library -&gt; uuid</code> dependency. The <code>uuid</code> crate will be resolved to one
+version for this entire crate graph, 1.0.1, and it'll be pulled from the git
+repository.</p>
+<a class="header" href="print.html#prepublishing-a-breaking-change" id="prepublishing-a-breaking-change"><h3>Prepublishing a breaking change</h3></a>
+<p>As a final scenario, let's take a look at working with a new major version of a
+crate, typically accompanied with breaking changes. Sticking with our previous
+crates, this means that we're going to be creating version 2.0.0 of the <code>uuid</code>
+crate. After we've submitted all changes upstream we can update our manifest for
+<code>my-library</code> to look like:</p>
+<pre><code class="language-toml">[dependencies]
+uuid = &quot;2.0&quot;
+
+[patch.crates-io]
+uuid = { git = &quot;https://github.com/rust-lang-nursery/uuid&quot;, branch = &quot;2.0.0&quot; }
+</code></pre>
+<p>And that's it! Like with the previous example the 2.0.0 version doesn't actually
+exist on crates.io but we can still put it in through a git dependency through
+the usage of the <code>[patch]</code> section. As a thought exercise let's take another
+look at the <code>my-binary</code> manifest from above again as well:</p>
+<pre><code class="language-toml">[package]
+name = &quot;my-binary&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;...&quot;]
+
+[dependencies]
+my-library = { git = 'https://example.com/git/my-library' }
+uuid = &quot;1.0&quot;
+
+[patch.crates-io]
+uuid = { git = 'https://github.com/rust-lang-nursery/uuid', version = '2.0.0' }
+</code></pre>
+<p>Note that this will actually resolve to two versions of the <code>uuid</code> crate. The
+<code>my-binary</code> crate will continue to use the 1.x.y series of the <code>uuid</code> crate but
+the <code>my-library</code> crate will use the 2.0.0 version of <code>uuid</code>. This will allow you
+to gradually roll out breaking changes to a crate through a dependency graph
+without being force to update everything all at once.</p>
+<a class="header" href="print.html#overriding-with-local-dependencies" id="overriding-with-local-dependencies"><h3>Overriding with local dependencies</h3></a>
+<p>Sometimes you're only temporarily working on a crate and you don't want to have
+to modify <code>Cargo.toml</code> like with the <code>[patch]</code> section above. For this use
+case Cargo offers a much more limited version of overrides called <strong>path
+overrides</strong>.</p>
+<p>Path overrides are specified through <code>.cargo/config</code> instead of <code>Cargo.toml</code>,
+and you can find <a href="reference/config.html">more documentation about this configuration</a>.
+Inside of <code>.cargo/config</code> you'll specify a key called <code>paths</code>:</p>
+<pre><code class="language-toml">paths = [&quot;/path/to/uuid&quot;]
+</code></pre>
+<p>This array should be filled with directories that contain a <code>Cargo.toml</code>. In
+this instance, we’re just adding <code>uuid</code>, so it will be the only one that’s
+overridden. This path can be either absolute or relative to the directory that
+contains the <code>.cargo</code> folder.</p>
+<p>Path overrides are more restricted than the <code>[patch]</code> section, however, in
+that they cannot change the structure of the dependency graph. When a
+path replacement is used then the previous set of dependencies
+must all match exactly to the new <code>Cargo.toml</code> specification. For example this
+means that path overrides cannot be used to test out adding a dependency to a
+crate, instead <code>[patch]</code> must be used in that situation. As a result usage of a
+path override is typically isolated to quick bug fixes rather than larger
+changes.</p>
+<p>Note: using a local configuration to override paths will only work for crates
+that have been published to <a href="https://crates.io/">crates.io</a>. You cannot use this feature to tell
+Cargo how to find local unpublished crates.</p>
+<a class="header" href="print.html#platform-specific-dependencies" id="platform-specific-dependencies"><h3>Platform specific dependencies</h3></a>
+<p>Platform-specific dependencies take the same format, but are listed under a
+<code>target</code> section. Normally Rust-like <code>#[cfg]</code> syntax will be used to define
+these sections:</p>
+<pre><code class="language-toml">[target.'cfg(windows)'.dependencies]
+winhttp = &quot;0.4.0&quot;
+
+[target.'cfg(unix)'.dependencies]
+openssl = &quot;1.0.1&quot;
+
+[target.'cfg(target_arch = &quot;x86&quot;)'.dependencies]
+native = { path = &quot;native/i686&quot; }
+
+[target.'cfg(target_arch = &quot;x86_64&quot;)'.dependencies]
+native = { path = &quot;native/x86_64&quot; }
+</code></pre>
+<p>Like with Rust, the syntax here supports the <code>not</code>, <code>any</code>, and <code>all</code> operators
+to combine various cfg name/value pairs. Note that the <code>cfg</code> syntax has only
+been available since Cargo 0.9.0 (Rust 1.8.0).</p>
+<p>In addition to <code>#[cfg]</code> syntax, Cargo also supports listing out the full target
+the dependencies would apply to:</p>
+<pre><code class="language-toml">[target.x86_64-pc-windows-gnu.dependencies]
+winhttp = &quot;0.4.0&quot;
+
+[target.i686-unknown-linux-gnu.dependencies]
+openssl = &quot;1.0.1&quot;
+</code></pre>
+<p>If you’re using a custom target specification, quote the full path and file
+name:</p>
+<pre><code class="language-toml">[target.&quot;x86_64/windows.json&quot;.dependencies]
+winhttp = &quot;0.4.0&quot;
+
+[target.&quot;i686/linux.json&quot;.dependencies]
+openssl = &quot;1.0.1&quot;
+native = { path = &quot;native/i686&quot; }
+
+[target.&quot;x86_64/linux.json&quot;.dependencies]
+openssl = &quot;1.0.1&quot;
+native = { path = &quot;native/x86_64&quot; }
+</code></pre>
+<a class="header" href="print.html#development-dependencies" id="development-dependencies"><h3>Development dependencies</h3></a>
+<p>You can add a <code>[dev-dependencies]</code> section to your <code>Cargo.toml</code> whose format
+is equivalent to <code>[dependencies]</code>:</p>
+<pre><code class="language-toml">[dev-dependencies]
+tempdir = &quot;0.3&quot;
+</code></pre>
+<p>Dev-dependencies are not used when compiling
+a package for building, but are used for compiling tests, examples, and
+benchmarks.</p>
+<p>These dependencies are <em>not</em> propagated to other packages which depend on this
+package.</p>
+<p>You can also have target-specific development dependencies by using
+<code>dev-dependencies</code> in the target section header instead of <code>dependencies</code>. For
+example:</p>
+<pre><code class="language-toml">[target.'cfg(unix)'.dev-dependencies]
+mio = &quot;0.0.1&quot;
+</code></pre>
+<a class="header" href="print.html#build-dependencies" id="build-dependencies"><h3>Build dependencies</h3></a>
+<p>You can depend on other Cargo-based crates for use in your build scripts.
+Dependencies are declared through the <code>build-dependencies</code> section of the
+manifest:</p>
+<pre><code class="language-toml">[build-dependencies]
+gcc = &quot;0.3&quot;
+</code></pre>
+<p>The build script <strong>does not</strong> have access to the dependencies listed
+in the <code>dependencies</code> or <code>dev-dependencies</code> section. Build
+dependencies will likewise not be available to the package itself
+unless listed under the <code>dependencies</code> section as well. A package
+itself and its build script are built separately, so their
+dependencies need not coincide. Cargo is kept simpler and cleaner by
+using independent dependencies for independent purposes.</p>
+<a class="header" href="print.html#choosing-features" id="choosing-features"><h3>Choosing features</h3></a>
+<p>If a package you depend on offers conditional features, you can
+specify which to use:</p>
+<pre><code class="language-toml">[dependencies.awesome]
+version = &quot;1.3.5&quot;
+default-features = false # do not include the default features, and optionally
+                         # cherry-pick individual features
+features = [&quot;secure-password&quot;, &quot;civet&quot;]
+</code></pre>
+<p>More information about features can be found in the
+<a href="reference/manifest.html#the-features-section">manifest documentation</a>.</p>
+<a class="header" href="print.html#the-manifest-format" id="the-manifest-format"><h2>The Manifest Format</h2></a>
+<p>The <code>Cargo.toml</code> file for each package is called its <em>manifest</em>. Every manifest
+file consists of one or more sections.</p>
+<a class="header" href="print.html#the-package-section" id="the-package-section"><h3>The <code>[package]</code> section</h3></a>
+<p>The first section in a <code>Cargo.toml</code> is <code>[package]</code>.</p>
+<pre><code class="language-toml">[package]
+name = &quot;hello_world&quot; # the name of the package
+version = &quot;0.1.0&quot;    # the current version, obeying semver
+authors = [&quot;you@example.com&quot;]
+</code></pre>
+<p>All three of these fields are mandatory.</p>
+<a class="header" href="print.html#the-version-field" id="the-version-field"><h4>The <code>version</code> field</h4></a>
+<p>Cargo bakes in the concept of <a href="http://semver.org/">Semantic
+Versioning</a>, so make sure you follow some basic rules:</p>
+<ul>
+<li>Before you reach 1.0.0, anything goes, but if you make breaking changes,
+increment the minor version. In Rust, breaking changes include adding fields to
+structs or variants to enums.</li>
+<li>After 1.0.0, only make breaking changes when you increment the major version.
+Don’t break the build.</li>
+<li>After 1.0.0, don’t add any new public API (no new <code>pub</code> anything) in tiny
+versions. Always increment the minor version if you add any new <code>pub</code> structs,
+traits, fields, types, functions, methods or anything else.</li>
+<li>Use version numbers with three numeric parts such as 1.0.0 rather than 1.0.</li>
+</ul>
+<a class="header" href="print.html#the-build-field-optional" id="the-build-field-optional"><h4>The <code>build</code> field (optional)</h4></a>
+<p>This field specifies a file in the project root which is a <a href="reference/build-scripts.html">build script</a> for
+building native code. More information can be found in the build script
+<a href="reference/build-scripts.html">guide</a>.</p>
+<pre><code class="language-toml">[package]
+# ...
+build = &quot;build.rs&quot;
+</code></pre>
+<a class="header" href="print.html#the-documentation-field-optional" id="the-documentation-field-optional"><h4>The <code>documentation</code> field (optional)</h4></a>
+<p>This field specifies a URL to a website hosting the crate's documentation.
+If no URL is specified in the manifest file, <a href="https://crates.io/">crates.io</a> will
+automatically link your crate to the corresponding <a href="https://docs.rs/">docs.rs</a> page.</p>
+<p>Documentation links from specific hosts are blacklisted. Hosts are added
+to the blacklist if they are known to not be hosting documentation and are
+possibly of malicious intent e.g. ad tracking networks. URLs from the
+following hosts are blacklisted:</p>
+<ul>
+<li>rust-ci.org</li>
+</ul>
+<p>Documentation URLs from blacklisted hosts will not appear on crates.io, and
+may be replaced by docs.rs links.</p>
+<a class="header" href="print.html#the-exclude-and-include-fields-optional" id="the-exclude-and-include-fields-optional"><h4>The <code>exclude</code> and <code>include</code> fields (optional)</h4></a>
+<p>You can explicitly specify to Cargo that a set of <a href="http://doc.rust-lang.org/glob/glob/struct.Pattern.html">globs</a> should be
+ignored or included for the purposes of packaging and rebuilding a package. The
+globs specified in the <code>exclude</code> field identify a set of files that are not
+included when a package is published as well as ignored for the purposes of
+detecting when to rebuild a package, and the globs in <code>include</code> specify files
+that are explicitly included.</p>
+<p>If a VCS is being used for a package, the <code>exclude</code> field will be seeded with
+the VCS’ ignore settings (<code>.gitignore</code> for git for example).</p>
+<pre><code class="language-toml">[package]
+# ...
+exclude = [&quot;build/**/*.o&quot;, &quot;doc/**/*.html&quot;]
+</code></pre>
+<pre><code class="language-toml">[package]
+# ...
+include = [&quot;src/**/*&quot;, &quot;Cargo.toml&quot;]
+</code></pre>
+<p>The options are mutually exclusive: setting <code>include</code> will override an
+<code>exclude</code>. Note that <code>include</code> must be an exhaustive list of files as otherwise
+necessary source files may not be included.</p>
+<a class="header" href="print.html#migrating-to-gitignore-like-pattern-matching" id="migrating-to-gitignore-like-pattern-matching"><h4>Migrating to <code>gitignore</code>-like pattern matching</h4></a>
+<p>The current interpretation of these configs is based on UNIX Globs, as
+implemented in the <a href="https://crates.io/crates/glob"><code>glob</code> crate</a>. We want
+Cargo's <code>include</code> and <code>exclude</code> configs to work as similar to <code>gitignore</code> as
+possible. <a href="https://git-scm.com/docs/gitignore">The <code>gitignore</code> specification</a> is
+also based on Globs, but has a bunch of additional features that enable easier
+pattern writing and more control. Therefore, we are migrating the interpretation
+for the rules of these configs to use the <a href="https://crates.io/crates/ignore"><code>ignore</code>
+crate</a>, and treat them each rule as a single
+line in a <code>gitignore</code> file. See <a href="https://github.com/rust-lang/cargo/issues/4268">the tracking
+issue</a> for more details on the
+migration.</p>
+<a class="header" href="print.html#the-publish--field-optional" id="the-publish--field-optional"><h4>The <code>publish</code>  field (optional)</h4></a>
+<p>The <code>publish</code> field can be used to prevent a package from being published to a
+package registry (like <em>crates.io</em>) by mistake.</p>
+<pre><code class="language-toml">[package]
+# ...
+publish = false
+</code></pre>
+<a class="header" href="print.html#the-workspace--field-optional" id="the-workspace--field-optional"><h4>The <code>workspace</code>  field (optional)</h4></a>
+<p>The <code>workspace</code> field can be used to configure the workspace that this package
+will be a member of. If not specified this will be inferred as the first
+Cargo.toml with <code>[workspace]</code> upwards in the filesystem.</p>
+<pre><code class="language-toml">[package]
+# ...
+workspace = &quot;path/to/workspace/root&quot;
+</code></pre>
+<p>For more information, see the documentation for the workspace table below.</p>
+<a class="header" href="print.html#package-metadata" id="package-metadata"><h4>Package metadata</h4></a>
+<p>There are a number of optional metadata fields also accepted under the
+<code>[package]</code> section:</p>
+<pre><code class="language-toml">[package]
+# ...
+
+# A short blurb about the package. This is not rendered in any format when
+# uploaded to crates.io (aka this is not markdown).
+description = &quot;...&quot;
+
+# These URLs point to more information about the package. These are
+# intended to be webviews of the relevant data, not necessarily compatible
+# with VCS tools and the like.
+documentation = &quot;...&quot;
+homepage = &quot;...&quot;
+repository = &quot;...&quot;
+
+# This points to a file under the package root (relative to this `Cargo.toml`).
+# The contents of this file are stored and indexed in the registry.
+# crates.io will render this file and place the result on the crate's page.
+readme = &quot;...&quot;
+
+# This is a list of up to five keywords that describe this crate. Keywords
+# are searchable on crates.io, and you may choose any words that would
+# help someone find this crate.
+keywords = [&quot;...&quot;, &quot;...&quot;]
+
+# This is a list of up to five categories where this crate would fit.
+# Categories are a fixed list available at crates.io/category_slugs, and
+# they must match exactly.
+categories = [&quot;...&quot;, &quot;...&quot;]
+
+# This is an SPDX 2.1 license expression for this package.  Currently
+# crates.io will validate the license provided against a whitelist of
+# known license and exception identifiers from the SPDX license list
+# 2.4.  Parentheses are not currently supported.
+#
+# Multiple licenses can be separated with a `/`, although that usage
+# is deprecated.  Instead, use a license expression with AND and OR
+# operators to get more explicit semantics.
+license = &quot;...&quot;
+
+# If a project is using a nonstandard license, then this key may be specified in
+# lieu of the above key and must point to a file relative to this manifest
+# (similar to the readme key).
+license-file = &quot;...&quot;
+
+# Optional specification of badges to be displayed on crates.io.
+#
+# - The badges pertaining to build status that are currently available are
+#   Appveyor, CircleCI, GitLab, and TravisCI.
+# - Available badges pertaining to code test coverage are Codecov and
+#   Coveralls.
+# - There are also maintenance-related badges basesed on isitmaintained.com
+#   which state the issue resolution time, percent of open issues, and future
+#   maintenance intentions.
+#
+# If a `repository` key is required, this refers to a repository in
+# `user/repo` format.
+[badges]
+
+# Appveyor: `repository` is required. `branch` is optional; default is `master`
+# `service` is optional; valid values are `github` (default), `bitbucket`, and
+# `gitlab`.
+appveyor = { repository = &quot;...&quot;, branch = &quot;master&quot;, service = &quot;github&quot; }
+
+# Circle CI: `repository` is required. `branch` is optional; default is `master`
+circle-ci = { repository = &quot;...&quot;, branch = &quot;master&quot; }
+
+# GitLab: `repository` is required. `branch` is optional; default is `master`
+gitlab = { repository = &quot;...&quot;, branch = &quot;master&quot; }
+
+# Travis CI: `repository` in format &quot;&lt;user&gt;/&lt;project&gt;&quot; is required.
+# `branch` is optional; default is `master`
+travis-ci = { repository = &quot;...&quot;, branch = &quot;master&quot; }
+
+# Codecov: `repository` is required. `branch` is optional; default is `master`
+# `service` is optional; valid values are `github` (default), `bitbucket`, and
+# `gitlab`.
+codecov = { repository = &quot;...&quot;, branch = &quot;master&quot;, service = &quot;github&quot; }
+
+# Coveralls: `repository` is required. `branch` is optional; default is `master`
+# `service` is optional; valid values are `github` (default) and `bitbucket`.
+coveralls = { repository = &quot;...&quot;, branch = &quot;master&quot;, service = &quot;github&quot; }
+
+# Is it maintained resolution time: `repository` is required.
+is-it-maintained-issue-resolution = { repository = &quot;...&quot; }
+
+# Is it maintained percentage of open issues: `repository` is required.
+is-it-maintained-open-issues = { repository = &quot;...&quot; }
+
+# Maintenance: `status` is required Available options are `actively-developed`,
+# `passively-maintained`, `as-is`, `none`, `experimental`, `looking-for-maintainer`
+# and `deprecated`.
+maintenance = { status = &quot;...&quot; }
+</code></pre>
+<p>The <a href="https://crates.io">crates.io</a> registry will render the description, display
+the license, link to the three URLs and categorize by the keywords. These keys
+provide useful information to users of the registry and also influence the
+search ranking of a crate. It is highly discouraged to omit everything in a
+published crate.</p>
+<p>SPDX 2.1 license expressions are documented
+<a href="https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60">here</a>.  The current version of the
+license list is available <a href="https://spdx.org/licenses/">here</a>, and version 2.4
+is available <a href="https://github.com/spdx/license-list-data/tree/v2.4">here</a>.</p>
+<a class="header" href="print.html#the-metadata-table-optional" id="the-metadata-table-optional"><h4>The <code>metadata</code> table (optional)</h4></a>
+<p>Cargo by default will warn about unused keys in <code>Cargo.toml</code> to assist in
+detecting typos and such. The <code>package.metadata</code> table, however, is completely
+ignored by Cargo and will not be warned about. This section can be used for
+tools which would like to store project configuration in <code>Cargo.toml</code>. For
+example:</p>
+<pre><code class="language-toml">[package]
+name = &quot;...&quot;
+# ...
+
+# Metadata used when generating an Android APK, for example.
+[package.metadata.android]
+package-name = &quot;my-awesome-android-app&quot;
+assets = &quot;path/to/static&quot;
+</code></pre>
+<a class="header" href="print.html#dependency-sections" id="dependency-sections"><h3>Dependency sections</h3></a>
+<p>See the <a href="reference/specifying-dependencies.html">specifying dependencies page</a> for
+information on the <code>[dependencies]</code>, <code>[dev-dependencies]</code>,
+<code>[build-dependencies]</code>, and target-specific <code>[target.*.dependencies]</code> sections.</p>
+<a class="header" href="print.html#the-profile-sections" id="the-profile-sections"><h3>The <code>[profile.*]</code> sections</h3></a>
+<p>Cargo supports custom configuration of how rustc is invoked through profiles at
+the top level. Any manifest may declare a profile, but only the top level
+project’s profiles are actually read. All dependencies’ profiles will be
+overridden. This is done so the top-level project has control over how its
+dependencies are compiled.</p>
+<p>There are five currently supported profile names, all of which have the same
+configuration available to them. Listed below is the configuration available,
+along with the defaults for each profile.</p>
+<pre><code class="language-toml"># The development profile, used for `cargo build`.
+[profile.dev]
+opt-level = 0      # controls the `--opt-level` the compiler builds with.
+                   # 0-1 is good for debugging. 2 is well-optimized. Max is 3.
+debug = true       # include debug information (debug symbols). Equivalent to
+                   # `-C debuginfo=2` compiler flag.
+rpath = false      # controls whether compiler should set loader paths.
+                   # If true, passes `-C rpath` flag to the compiler.
+lto = false        # Link Time Optimization usually reduces size of binaries
+                   # and static libraries. Increases compilation time.
+                   # If true, passes `-C lto` flag to the compiler.
+debug-assertions = true # controls whether debug assertions are enabled
+                   # (e.g. debug_assert!() and arithmetic overflow checks)
+codegen-units = 1  # if &gt; 1 enables parallel code generation which improves
+                   # compile times, but prevents some optimizations.
+                   # Passes `-C codegen-units`. Ignored when `lto = true`.
+panic = 'unwind'   # panic strategy (`-C panic=...`), can also be 'abort'
+
+# The release profile, used for `cargo build --release`.
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 1
+panic = 'unwind'
+
+# The testing profile, used for `cargo test`.
+[profile.test]
+opt-level = 0
+debug = 2
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 1
+panic = 'unwind'
+
+# The benchmarking profile, used for `cargo bench` and `cargo test --release`.
+[profile.bench]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 1
+panic = 'unwind'
+
+# The documentation profile, used for `cargo doc`.
+[profile.doc]
+opt-level = 0
+debug = 2
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 1
+panic = 'unwind'
+</code></pre>
+<a class="header" href="print.html#the-features-section" id="the-features-section"><h3>The <code>[features]</code> section</h3></a>
+<p>Cargo supports features to allow expression of:</p>
+<ul>
+<li>conditional compilation options (usable through <code>cfg</code> attributes);</li>
+<li>optional dependencies, which enhance a package, but are not required; and</li>
+<li>clusters of optional dependencies, such as <code>postgres</code>, that would include the
+<code>postgres</code> package, the <code>postgres-macros</code> package, and possibly other packages
+(such as development-time mocking libraries, debugging tools, etc.).</li>
+</ul>
+<p>A feature of a package is either an optional dependency, or a set of other
+features. The format for specifying features is:</p>
+<pre><code class="language-toml">[package]
+name = &quot;awesome&quot;
+
+[features]
+# The default set of optional packages. Most people will want to use these
+# packages, but they are strictly optional. Note that `session` is not a package
+# but rather another feature listed in this manifest.
+default = [&quot;jquery&quot;, &quot;uglifier&quot;, &quot;session&quot;]
+
+# A feature with no dependencies is used mainly for conditional compilation,
+# like `#[cfg(feature = &quot;go-faster&quot;)]`.
+go-faster = []
+
+# The `secure-password` feature depends on the bcrypt package. This aliasing
+# will allow people to talk about the feature in a higher-level way and allow
+# this package to add more requirements to the feature in the future.
+secure-password = [&quot;bcrypt&quot;]
+
+# Features can be used to reexport features of other packages. The `session`
+# feature of package `awesome` will ensure that the `session` feature of the
+# package `cookie` is also enabled.
+session = [&quot;cookie/session&quot;]
+
+[dependencies]
+# These packages are mandatory and form the core of this package’s distribution.
+cookie = &quot;1.2.0&quot;
+oauth = &quot;1.1.0&quot;
+route-recognizer = &quot;=2.1.0&quot;
+
+# A list of all of the optional dependencies, some of which are included in the
+# above `features`. They can be opted into by apps.
+jquery = { version = &quot;1.0.2&quot;, optional = true }
+uglifier = { version = &quot;1.5.3&quot;, optional = true }
+bcrypt = { version = &quot;*&quot;, optional = true }
+civet = { version = &quot;*&quot;, optional = true }
+</code></pre>
+<p>To use the package <code>awesome</code>:</p>
+<pre><code class="language-toml">[dependencies.awesome]
+version = &quot;1.3.5&quot;
+default-features = false # do not include the default features, and optionally
+                         # cherry-pick individual features
+features = [&quot;secure-password&quot;, &quot;civet&quot;]
+</code></pre>
+<a class="header" href="print.html#rules" id="rules"><h4>Rules</h4></a>
+<p>The usage of features is subject to a few rules:</p>
+<ul>
+<li>Feature names must not conflict with other package names in the manifest. This
+is because they are opted into via <code>features = [...]</code>, which only has a single
+namespace.</li>
+<li>With the exception of the <code>default</code> feature, all features are opt-in. To opt
+out of the default feature, use <code>default-features = false</code> and cherry-pick
+individual features.</li>
+<li>Feature groups are not allowed to cyclically depend on one another.</li>
+<li>Dev-dependencies cannot be optional.</li>
+<li>Features groups can only reference optional dependencies.</li>
+<li>When a feature is selected, Cargo will call <code>rustc</code> with <code>--cfg feature=&quot;${feature_name}&quot;</code>. If a feature group is included, it and all of its
+individual features will be included. This can be tested in code via
+<code>#[cfg(feature = &quot;foo&quot;)]</code>.</li>
+</ul>
+<p>Note that it is explicitly allowed for features to not actually activate any
+optional dependencies. This allows packages to internally enable/disable
+features without requiring a new dependency.</p>
+<a class="header" href="print.html#usage-in-end-products" id="usage-in-end-products"><h4>Usage in end products</h4></a>
+<p>One major use-case for this feature is specifying optional features in
+end-products. For example, the Servo project may want to include optional
+features that people can enable or disable when they build it.</p>
+<p>In that case, Servo will describe features in its <code>Cargo.toml</code> and they can be
+enabled using command-line flags:</p>
+<pre><code class="language-shell">$ cargo build --release --features &quot;shumway pdf&quot;
+</code></pre>
+<p>Default features could be excluded using <code>--no-default-features</code>.</p>
+<a class="header" href="print.html#usage-in-packages" id="usage-in-packages"><h4>Usage in packages</h4></a>
+<p>In most cases, the concept of <em>optional dependency</em> in a library is best
+expressed as a separate package that the top-level application depends on.</p>
+<p>However, high-level packages, like Iron or Piston, may want the ability to
+curate a number of packages for easy installation. The current Cargo system
+allows them to curate a number of mandatory dependencies into a single package
+for easy installation.</p>
+<p>In some cases, packages may want to provide additional curation for optional
+dependencies:</p>
+<ul>
+<li>grouping a number of low-level optional dependencies together into a single
+high-level feature;</li>
+<li>specifying packages that are recommended (or suggested) to be included by
+users of the package; and</li>
+<li>including a feature (like <code>secure-password</code> in the motivating example) that
+will only work if an optional dependency is available, and would be difficult
+to implement as a separate package (for example, it may be overly difficult to
+design an IO package to be completely decoupled from OpenSSL, with opt-in via
+the inclusion of a separate package).</li>
+</ul>
+<p>In almost all cases, it is an antipattern to use these features outside of
+high-level packages that are designed for curation. If a feature is optional, it
+can almost certainly be expressed as a separate package.</p>
+<a class="header" href="print.html#the-workspace-section" id="the-workspace-section"><h3>The <code>[workspace]</code> section</h3></a>
+<p>Projects can define a workspace which is a set of crates that will all share the
+same <code>Cargo.lock</code> and output directory. The <code>[workspace]</code> table can be defined
+as:</p>
+<pre><code class="language-toml">[workspace]
+
+# Optional key, inferred if not present
+members = [&quot;path/to/member1&quot;, &quot;path/to/member2&quot;, &quot;path/to/member3/*&quot;]
+
+# Optional key, empty if not present
+exclude = [&quot;path1&quot;, &quot;path/to/dir2&quot;]
+</code></pre>
+<p>Workspaces were added to Cargo as part of <a href="https://github.com/rust-lang/rfcs/blob/master/text/1525-cargo-workspace.md">RFC 1525</a> and have a number of
+properties:</p>
+<ul>
+<li>A workspace can contain multiple crates where one of them is the <em>root crate</em>.</li>
+<li>The <em>root crate</em>'s <code>Cargo.toml</code> contains the <code>[workspace]</code> table, but is not
+required to have other configuration.</li>
+<li>Whenever any crate in the workspace is compiled, output is placed in the
+<em>workspace root</em>. i.e. next to the <em>root crate</em>'s <code>Cargo.toml</code>.</li>
+<li>The lock file for all crates in the workspace resides in the <em>workspace root</em>.</li>
+<li>The <code>[patch]</code> and <code>[replace]</code> sections in <code>Cargo.toml</code> are only recognized
+in the <em>root crate</em>'s manifest, and ignored in member crates' manifests.</li>
+</ul>
+<p>The <em>root crate</em> of a workspace, indicated by the presence of <code>[workspace]</code> in
+its manifest, is responsible for defining the entire workspace. All <code>path</code>
+dependencies residing in the workspace directory become members. You can add
+additional packages to the workspace by listing them in the <code>members</code> key. Note
+that members of the workspaces listed explicitly will also have their path
+dependencies included in the workspace. Sometimes a project may have a lot of
+workspace members and it can be onerous to keep up to date. The path dependency
+can also use <a href="http://doc.rust-lang.org/glob/glob/struct.Pattern.html">globs</a> to match multiple paths. Finally, the <code>exclude</code>
+key can be used to blacklist paths from being included in a workspace. This can
+be useful if some path dependencies aren't desired to be in the workspace at
+all.</p>
+<p>The <code>package.workspace</code> manifest key (described above) is used in member crates
+to point at a workspace's root crate. If this key is omitted then it is inferred
+to be the first crate whose manifest contains <code>[workspace]</code> upwards in the
+filesystem.</p>
+<p>A crate may either specify <code>package.workspace</code> or specify <code>[workspace]</code>. That
+is, a crate cannot both be a root crate in a workspace (contain <code>[workspace]</code>)
+and also be a member crate of another workspace (contain <code>package.workspace</code>).</p>
+<p>Most of the time workspaces will not need to be dealt with as <code>cargo new</code> and
+<code>cargo init</code> will handle workspace configuration automatically.</p>
+<a class="header" href="print.html#virtual-manifest" id="virtual-manifest"><h4>Virtual Manifest</h4></a>
+<p>In workspace manifests, if the <code>package</code> table is present, the workspace root
+crate will be treated as a normal package, as well as a worksapce. If the
+<code>package</code> table is not present in a worksapce manifest, it is called a <em>virtual
+manifest</em>.</p>
+<p>When working with <em>virtual manifests</em>, package-related cargo commands, like
+<code>cargo build</code>, won't be available anymore. But, most of such commands support
+the <code>--all</code> option, will execute the command for all the non-virtual manifest in
+the workspace.</p>
+<p>#TODO: move this to a more appropriate place</p>
+<a class="header" href="print.html#the-project-layout" id="the-project-layout"><h3>The project layout</h3></a>
+<p>If your project is an executable, name the main source file <code>src/main.rs</code>. If it
+is a library, name the main source file <code>src/lib.rs</code>.</p>
+<p>Cargo will also treat any files located in <code>src/bin/*.rs</code> as executables. If your
+executable consists of more than just one source file, you might also use a directory
+inside <code>src/bin</code> containing a <code>main.rs</code> file which will be treated as an executable
+with a name of the parent directory.
+Do note, however, once you add a <code>[[bin]]</code> section (<a href="print.html#configuring-a-target">see
+below</a>), Cargo will no longer automatically build files
+located in <code>src/bin/*.rs</code>.  Instead you must create a <code>[[bin]]</code> section for
+each file you want to build.</p>
+<p>Your project can optionally contain folders named <code>examples</code>, <code>tests</code>, and
+<code>benches</code>, which Cargo will treat as containing examples,
+integration tests, and benchmarks respectively.</p>
+<pre><code class="language-shell">▾ src/           # directory containing source files
+  lib.rs         # the main entry point for libraries and packages
+  main.rs        # the main entry point for projects producing executables
+  ▾ bin/         # (optional) directory containing additional executables
+    *.rs
+  ▾ */           # (optional) directories containing multi-file executables
+    main.rs
+▾ examples/      # (optional) examples
+  *.rs
+▾ tests/         # (optional) integration tests
+  *.rs
+▾ benches/       # (optional) benchmarks
+  *.rs
+</code></pre>
+<p>To structure your code after you've created the files and folders for your
+project, you should remember to use Rust's module system, which you can read
+about in <a href="https://doc.rust-lang.org/book/crates-and-modules.html">the book</a>.</p>
+<a class="header" href="print.html#examples" id="examples"><h3>Examples</h3></a>
+<p>Files located under <code>examples</code> are example uses of the functionality provided by
+the library. When compiled, they are placed in the <code>target/examples</code> directory.</p>
+<p>They can compile either as executables (with a <code>main()</code> function) or libraries
+and pull in the library by using <code>extern crate &lt;library-name&gt;</code>. They are
+compiled when you run your tests to protect them from bitrotting.</p>
+<p>You can run individual executable examples with the command <code>cargo run --example &lt;example-name&gt;</code>.</p>
+<p>Specify <code>crate-type</code> to make an example be compiled as a library:</p>
+<pre><code class="language-toml">[[example]]
+name = &quot;foo&quot;
+crate-type = [&quot;staticlib&quot;]
+</code></pre>
+<p>You can build individual library examples with the command <code>cargo build --example &lt;example-name&gt;</code>.</p>
+<a class="header" href="print.html#tests-1" id="tests-1"><h3>Tests</h3></a>
+<p>When you run <code>cargo test</code>, Cargo will:</p>
+<ul>
+<li>compile and run your library’s unit tests, which are in the files reachable
+from <code>lib.rs</code> (naturally, any sections marked with <code>#[cfg(test)]</code> will be
+considered at this stage);</li>
+<li>compile and run your library’s documentation tests, which are embedded inside
+of documentation blocks;</li>
+<li>compile and run your library’s <a href="print.html#integration-tests">integration tests</a>; and</li>
+<li>compile your library’s examples.</li>
+</ul>
+<a class="header" href="print.html#integration-tests" id="integration-tests"><h4>Integration tests</h4></a>
+<p>Each file in <code>tests/*.rs</code> is an integration test. When you run <code>cargo test</code>,
+Cargo will compile each of these files as a separate crate. The crate can link
+to your library by using <code>extern crate &lt;library-name&gt;</code>, like any other code that
+depends on it.</p>
+<p>Cargo will not automatically compile files inside subdirectories of <code>tests</code>, but
+an integration test can import modules from these directories as usual. For
+example, if you want several integration tests to share some code, you can put
+the shared code in <code>tests/common/mod.rs</code> and then put <code>mod common;</code> in each of
+the test files.</p>
+<a class="header" href="print.html#configuring-a-target" id="configuring-a-target"><h3>Configuring a target</h3></a>
+<p>All of the  <code>[[bin]]</code>, <code>[lib]</code>, <code>[[bench]]</code>, <code>[[test]]</code>, and <code>[[example]]</code>
+sections support similar configuration for specifying how a target should be
+built. The double-bracket sections like <code>[[bin]]</code> are array-of-table of
+<a href="https://github.com/toml-lang/toml#array-of-tables">TOML</a>, which means you can
+write more than one <code>[[bin]]</code> section to make several executables in your crate.</p>
+<p>The example below uses <code>[lib]</code>, but it also applies to all other sections
+as well. All values listed are the defaults for that option unless otherwise
+specified.</p>
+<pre><code class="language-toml">[package]
+# ...
+
+[lib]
+# The name of a target is the name of the library that will be generated. This
+# is defaulted to the name of the package or project, with any dashes replaced
+# with underscores. (Rust `extern crate` declarations reference this name;
+# therefore the value must be a valid Rust identifier to be usable.)
+name = &quot;foo&quot;
+
+# This field points at where the crate is located, relative to the `Cargo.toml`.
+path = &quot;src/lib.rs&quot;
+
+# A flag for enabling unit tests for this target. This is used by `cargo test`.
+test = true
+
+# A flag for enabling documentation tests for this target. This is only relevant
+# for libraries, it has no effect on other sections. This is used by
+# `cargo test`.
+doctest = true
+
+# A flag for enabling benchmarks for this target. This is used by `cargo bench`.
+bench = true
+
+# A flag for enabling documentation of this target. This is used by `cargo doc`.
+doc = true
+
+# If the target is meant to be a compiler plugin, this field must be set to true
+# for Cargo to correctly compile it and make it available for all dependencies.
+plugin = false
+
+# If the target is meant to be a &quot;macros 1.1&quot; procedural macro, this field must
+# be set to true.
+proc-macro = false
+
+# If set to false, `cargo test` will omit the `--test` flag to rustc, which
+# stops it from generating a test harness. This is useful when the binary being
+# built manages the test runner itself.
+harness = true
+</code></pre>
+<a class="header" href="print.html#the-required-features-field-optional" id="the-required-features-field-optional"><h4>The <code>required-features</code> field (optional)</h4></a>
+<p>The <code>required-features</code> field specifies which features the target needs in order
+to be built. If any of the required features are not selected, the target will
+be skipped. This is only relevant for the <code>[[bin]]</code>, <code>[[bench]]</code>, <code>[[test]]</code>,
+and <code>[[example]]</code> sections, it has no effect on <code>[lib]</code>.</p>
+<pre><code class="language-toml">[features]
+# ...
+postgres = []
+sqlite = []
+tools = []
+
+[[bin]]
+# ...
+required-features = [&quot;postgres&quot;, &quot;tools&quot;]
+</code></pre>
+<a class="header" href="print.html#building-dynamic-or-static-libraries" id="building-dynamic-or-static-libraries"><h4>Building dynamic or static libraries</h4></a>
+<p>If your project produces a library, you can specify which kind of library to
+build by explicitly listing the library in your <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml"># ...
+
+[lib]
+name = &quot;...&quot;
+crate-type = [&quot;dylib&quot;] # could be `staticlib` as well
+</code></pre>
+<p>The available options are <code>dylib</code>, <code>rlib</code>, <code>staticlib</code>, <code>cdylib</code>, and
+<code>proc-macro</code>. You should only use this option in a project. Cargo will always
+compile packages (dependencies) based on the requirements of the project that
+includes them.</p>
+<p>You can read more about the different crate types in the
+<a href="https://doc.rust-lang.org/reference/linkage.html">Rust Reference Manual</a></p>
+<a class="header" href="print.html#the-patch-section" id="the-patch-section"><h3>The <code>[patch]</code> Section</h3></a>
+<p>This section of Cargo.toml can be used to <a href="reference/specifying-dependencies.html#overriding-dependencies">override dependencies</a> with
+other copies. The syntax is similar to the <code>[dependencies]</code> section:</p>
+<pre><code class="language-toml">[patch.crates-io]
+foo = { git = 'https://github.com/example/foo' }
+bar = { path = 'my/local/bar' }
+</code></pre>
+<p>The <code>[patch]</code> table is made of dependency-like sub-tables. Each key after
+<code>[patch]</code> is a URL of the source that's being patched, or <code>crates-io</code> if
+you're modifying the https://crates.io registry. In the example above
+<code>crates-io</code> could be replaced with a git URL such as
+<code>https://github.com/rust-lang-nursery/log</code>.</p>
+<p>Each entry in these tables is a normal dependency specification, the same as
+found in the <code>[dependencies]</code> section of the manifest. The dependencies listed
+in the <code>[patch]</code> section are resolved and used to patch the source at the
+URL specified. The above manifest snippet patches the <code>crates-io</code> source (e.g.
+crates.io itself) with the <code>foo</code> crate and <code>bar</code> crate.</p>
+<p>Sources can be patched with versions of crates that do not exist, and they can
+also be patched with versions of crates that already exist. If a source is
+patched with a crate version that already exists in the source, then the
+source's original crate is replaced.</p>
+<p>More information about overriding dependencies can be found in the <a href="reference/specifying-dependencies.html#overriding-dependencies">overriding
+dependencies</a> section of the documentation and <a href="https://github.com/rust-lang/rfcs/pull/1969">RFC 1969</a> for the
+technical specification of this feature. (Note that the <code>[patch]</code> feature will
+first become available in Rust 1.21, set to be released on 2017-10-12.)</p>
+<a class="header" href="print.html#the-replace-section" id="the-replace-section"><h3>The <code>[replace]</code> Section</h3></a>
+<p>This section of Cargo.toml can be used to <a href="reference/specifying-dependencies.html#overriding-dependencies">override dependencies</a> with
+other copies. The syntax is similar to the <code>[dependencies]</code> section:</p>
+<pre><code class="language-toml">[replace]
+&quot;foo:0.1.0&quot; = { git = 'https://github.com/example/foo' }
+&quot;bar:1.0.2&quot; = { path = 'my/local/bar' }
+</code></pre>
+<p>Each key in the <code>[replace]</code> table is a <a href="reference/pkgid-spec.html">package id
+specification</a> which allows arbitrarily choosing a node in the
+dependency graph to override. The value of each key is the same as the
+<code>[dependencies]</code> syntax for specifying dependencies, except that you can't
+specify features. Note that when a crate is overridden the copy it's overridden
+with must have both the same name and version, but it can come from a different
+source (e.g. git or a local path).</p>
+<p>More information about overriding dependencies can be found in the <a href="reference/specifying-dependencies.html#overriding-dependencies">overriding
+dependencies</a> section of the documentation.</p>
+<a class="header" href="print.html#configuration" id="configuration"><h2>Configuration</h2></a>
+<p>This document will explain how Cargo’s configuration system works, as well as
+available keys or configuration.  For configuration of a project through its
+manifest, see the <a href="reference/manifest.html">manifest format</a>.</p>
+<a class="header" href="print.html#hierarchical-structure" id="hierarchical-structure"><h3>Hierarchical structure</h3></a>
+<p>Cargo allows local configuration for a particular project as well as global
+configuration, like git. Cargo extends this to a hierarchical strategy.
+If, for example, Cargo were invoked in <code>/projects/foo/bar/baz</code>, then the
+following configuration files would be probed for and unified in this order:</p>
+<ul>
+<li><code>/projects/foo/bar/baz/.cargo/config</code></li>
+<li><code>/projects/foo/bar/.cargo/config</code></li>
+<li><code>/projects/foo/.cargo/config</code></li>
+<li><code>/projects/.cargo/config</code></li>
+<li><code>/.cargo/config</code></li>
+<li><code>$HOME/.cargo/config</code></li>
+</ul>
+<p>With this structure, you can specify configuration per-project, and even
+possibly check it into version control. You can also specify personal defaults
+with a configuration file in your home directory.</p>
+<a class="header" href="print.html#configuration-format" id="configuration-format"><h3>Configuration format</h3></a>
+<p>All configuration is currently in the <a href="https://github.com/toml-lang/toml">TOML format</a> (like the manifest),
+with simple key-value pairs inside of sections (tables) which all get merged
+together.</p>
+<a class="header" href="print.html#configuration-keys" id="configuration-keys"><h3>Configuration keys</h3></a>
+<p>All of the following keys are optional, and their defaults are listed as their
+value unless otherwise noted.</p>
+<p>Key values that specify a tool may be given as an absolute path, a relative path
+or as a pathless tool name. Absolute paths and pathless tool names are used as
+given. Relative paths are resolved relative to the parent directory of the
+<code>.cargo</code> directory of the config file that the value resides within.</p>
+<pre><code class="language-toml"># An array of paths to local repositories which are to be used as overrides for
+# dependencies. For more information see the Specifying Dependencies guide.
+paths = [&quot;/path/to/override&quot;]
+
+[cargo-new]
+# This is your name/email to place in the `authors` section of a new Cargo.toml
+# that is generated. If not present, then `git` will be probed, and if that is
+# not present then `$USER` and `$EMAIL` will be used.
+name = &quot;...&quot;
+email = &quot;...&quot;
+
+# By default `cargo new` will initialize a new Git repository. This key can be
+# set to `hg` to create a Mercurial repository, or `none` to disable this
+# behavior.
+vcs = &quot;none&quot;
+
+# For the following sections, $triple refers to any valid target triple, not the
+# literal string &quot;$triple&quot;, and it will apply whenever that target triple is
+# being compiled to. 'cfg(...)' refers to the Rust-like `#[cfg]` syntax for
+# conditional compilation.
+[target.$triple]
+# This is the linker which is passed to rustc (via `-C linker=`) when the `$triple`
+# is being compiled for. By default this flag is not passed to the compiler.
+linker = &quot;..&quot;
+# Same but for the library archiver which is passed to rustc via `-C ar=`.
+ar = &quot;..&quot;
+# If a runner is provided, compiled targets for the `$triple` will be executed
+# by invoking the specified runner executable with actual target as first argument.
+# This applies to `cargo run`, `cargo test` and `cargo bench` commands.
+# By default compiled targets are executed directly.
+runner = &quot;..&quot;
+# custom flags to pass to all compiler invocations that target $triple
+# this value overrides build.rustflags when both are present
+rustflags = [&quot;..&quot;, &quot;..&quot;]
+
+[target.'cfg(...)']
+# Similar for the $triple configuration, but using the `cfg` syntax.
+# If several `cfg` and $triple targets are candidates, then the rustflags
+# are concatenated. The `cfg` syntax only applies to rustflags, and not to
+# linker.
+rustflags = [&quot;..&quot;, &quot;..&quot;]
+
+# Configuration keys related to the registry
+[registry]
+index = &quot;...&quot;   # URL of the registry index (defaults to the central repository)
+token = &quot;...&quot;   # Access token (found on the central repo’s website)
+
+[http]
+proxy = &quot;host:port&quot; # HTTP proxy to use for HTTP requests (defaults to none)
+                    # in libcurl format, e.g. &quot;socks5h://host:port&quot;
+timeout = 60000     # Timeout for each HTTP request, in milliseconds
+cainfo = &quot;cert.pem&quot; # Path to Certificate Authority (CA) bundle (optional)
+check-revoke = true # Indicates whether SSL certs are checked for revocation
+
+[build]
+jobs = 1                  # number of parallel jobs, defaults to # of CPUs
+rustc = &quot;rustc&quot;           # the rust compiler tool
+rustdoc = &quot;rustdoc&quot;       # the doc generator tool
+target = &quot;triple&quot;         # build for the target triple
+target-dir = &quot;target&quot;     # path of where to place all generated artifacts
+rustflags = [&quot;..&quot;, &quot;..&quot;]  # custom flags to pass to all compiler invocations
+
+[term]
+verbose = false        # whether cargo provides verbose output
+color = 'auto'         # whether cargo colorizes output
+
+# Network configuration
+[net]
+retry = 2 # number of times a network call will automatically retried
+
+# Alias cargo commands. The first 3 aliases are built in. If your
+# command requires grouped whitespace use the list format.
+[alias]
+b = &quot;build&quot;
+t = &quot;test&quot;
+r = &quot;run&quot;
+rr = &quot;run --release&quot;
+space_example = [&quot;run&quot;, &quot;--release&quot;, &quot;--&quot;, &quot;\&quot;command list\&quot;&quot;]
+</code></pre>
+<a class="header" href="print.html#environment-variables" id="environment-variables"><h3>Environment variables</h3></a>
+<p>Cargo can also be configured through environment variables in addition to the
+TOML syntax above. For each configuration key above of the form <code>foo.bar</code> the
+environment variable <code>CARGO_FOO_BAR</code> can also be used to define the value. For
+example the <code>build.jobs</code> key can also be defined by <code>CARGO_BUILD_JOBS</code>.</p>
+<p>Environment variables will take precedent over TOML configuration, and currently
+only integer, boolean, and string keys are supported to be defined by
+environment variables.</p>
+<p>In addition to the system above, Cargo recognizes a few other specific
+<a href="reference/environment-variables.html">environment variables</a>.</p>
+<a class="header" href="print.html#environment-variables-1" id="environment-variables-1"><h2>Environment Variables</h2></a>
+<p>Cargo sets and reads a number of environment variables which your code can detect
+or override. Here is a list of the variables Cargo sets, organized by when it interacts
+with them:</p>
+<a class="header" href="print.html#environment-variables-cargo-reads" id="environment-variables-cargo-reads"><h3>Environment variables Cargo reads</h3></a>
+<p>You can override these environment variables to change Cargo's behavior on your
+system:</p>
+<ul>
+<li><code>CARGO_HOME</code> - Cargo maintains a local cache of the registry index and of git
+checkouts of crates.  By default these are stored under <code>$HOME/.cargo</code>, but
+this variable overrides the location of this directory. Once a crate is cached
+it is not removed by the clean command.</li>
+<li><code>CARGO_TARGET_DIR</code> - Location of where to place all generated artifacts,
+relative to the current working directory.</li>
+<li><code>RUSTC</code> - Instead of running <code>rustc</code>, Cargo will execute this specified
+compiler instead.</li>
+<li><code>RUSTC_WRAPPER</code> - Instead of simply running <code>rustc</code>, Cargo will execute this
+specified wrapper instead, passing as its commandline arguments the rustc
+invocation, with the first argument being rustc.</li>
+<li><code>RUSTDOC</code> - Instead of running <code>rustdoc</code>, Cargo will execute this specified
+<code>rustdoc</code> instance instead.</li>
+<li><code>RUSTDOCFLAGS</code> - A space-separated list of custom flags to pass to all <code>rustdoc</code>
+invocations that Cargo performs. In contrast with <code>cargo rustdoc</code>, this is
+useful for passing a flag to <em>all</em> <code>rustdoc</code> instances.</li>
+<li><code>RUSTFLAGS</code> - A space-separated list of custom flags to pass to all compiler
+invocations that Cargo performs. In contrast with <code>cargo rustc</code>, this is
+useful for passing a flag to <em>all</em> compiler instances.</li>
+</ul>
+<p>Note that Cargo will also read environment variables for <code>.cargo/config</code>
+configuration values, as described in <a href="reference/config.html#environment-variables">that documentation</a></p>
+<a class="header" href="print.html#environment-variables-cargo-sets-for-crates" id="environment-variables-cargo-sets-for-crates"><h3>Environment variables Cargo sets for crates</h3></a>
+<p>Cargo exposes these environment variables to your crate when it is compiled.
+Note that this applies for test binaries as well.
+To get the value of any of these variables in a Rust program, do this:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+let version = env!(&quot;CARGO_PKG_VERSION&quot;);
+#}</code></pre></pre>
+<p><code>version</code> will now contain the value of <code>CARGO_PKG_VERSION</code>.</p>
+<ul>
+<li><code>CARGO</code> - Path to the <code>cargo</code> binary performing the build.</li>
+<li><code>CARGO_MANIFEST_DIR</code> - The directory containing the manifest of your package.</li>
+<li><code>CARGO_PKG_VERSION</code> - The full version of your package.</li>
+<li><code>CARGO_PKG_VERSION_MAJOR</code> - The major version of your package.</li>
+<li><code>CARGO_PKG_VERSION_MINOR</code> - The minor version of your package.</li>
+<li><code>CARGO_PKG_VERSION_PATCH</code> - The patch version of your package.</li>
+<li><code>CARGO_PKG_VERSION_PRE</code> - The pre-release version of your package.</li>
+<li><code>CARGO_PKG_AUTHORS</code> - Colon separated list of authors from the manifest of your package.</li>
+<li><code>CARGO_PKG_NAME</code> - The name of your package.</li>
+<li><code>CARGO_PKG_DESCRIPTION</code> - The description of your package.</li>
+<li><code>CARGO_PKG_HOMEPAGE</code> - The home page of your package.</li>
+<li><code>OUT_DIR</code> - If the package has a build script, this is set to the folder where the build
+script should place its output.  See below for more information.</li>
+</ul>
+<a class="header" href="print.html#environment-variables-cargo-sets-for-build-scripts" id="environment-variables-cargo-sets-for-build-scripts"><h3>Environment variables Cargo sets for build scripts</h3></a>
+<p>Cargo sets several environment variables when build scripts are run. Because these variables
+are not yet set when the build script is compiled, the above example using <code>env!</code> won't work
+and instead you'll need to retrieve the values when the build script is run:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+use std::env;
+let out_dir = env::var(&quot;OUT_DIR&quot;).unwrap();
+#}</code></pre></pre>
+<p><code>out_dir</code> will now contain the value of <code>OUT_DIR</code>.</p>
+<ul>
+<li><code>CARGO</code> - Path to the <code>cargo</code> binary performing the build.</li>
+<li><code>CARGO_MANIFEST_DIR</code> - The directory containing the manifest for the package
+being built (the package containing the build
+script). Also note that this is the value of the
+current working directory of the build script when it
+starts.</li>
+<li><code>CARGO_MANIFEST_LINKS</code> - the manifest <code>links</code> value.</li>
+<li><code>CARGO_FEATURE_&lt;name&gt;</code> - For each activated feature of the package being
+built, this environment variable will be present
+where <code>&lt;name&gt;</code> is the name of the feature uppercased
+and having <code>-</code> translated to <code>_</code>.</li>
+<li><code>CARGO_CFG_&lt;cfg&gt;</code> - For each <a href="https://doc.rust-lang.org/reference/attributes.html#conditional-compilation">configuration option</a> of the
+package being built, this environment variable will
+contain the value of the configuration, where <code>&lt;cfg&gt;</code> is
+the name of the configuration uppercased and having <code>-</code>
+translated to <code>_</code>.
+Boolean configurations are present if they are set, and
+not present otherwise.
+Configurations with multiple values are joined to a
+single variable with the values delimited by <code>,</code>.</li>
+<li><code>OUT_DIR</code> - the folder in which all output should be placed. This folder is
+inside the build directory for the package being built, and it is
+unique for the package in question.</li>
+<li><code>TARGET</code> - the target triple that is being compiled for. Native code should be
+compiled for this triple. Some more information about target
+triples can be found in <a href="http://clang.llvm.org/docs/CrossCompilation.html#target-triple">clang’s own documentation</a>.</li>
+<li><code>HOST</code> - the host triple of the rust compiler.</li>
+<li><code>NUM_JOBS</code> - the parallelism specified as the top-level parallelism. This can
+be useful to pass a <code>-j</code> parameter to a system like <code>make</code>. Note
+that care should be taken when interpreting this environment
+variable. For historical purposes this is still provided but
+recent versions of Cargo, for example, do not need to run <code>make -j</code> as it'll automatically happen. Cargo implements its own
+[jobserver] and will allow build scripts to inherit this
+information, so programs compatible with GNU make jobservers will
+already have appropriately configured parallelism.</li>
+<li><code>OPT_LEVEL</code>, <code>DEBUG</code> - values of the corresponding variables for the
+profile currently being built.</li>
+<li><code>PROFILE</code> - <code>release</code> for release builds, <code>debug</code> for other builds.</li>
+<li><code>DEP_&lt;name&gt;_&lt;key&gt;</code> - For more information about this set of environment
+variables, see build script documentation about <a href="reference/build-scripts.html#the-links-manifest-key"><code>links</code></a>.</li>
+<li><code>RUSTC</code>, <code>RUSTDOC</code> - the compiler and documentation generator that Cargo has
+resolved to use, passed to the build script so it might
+use it as well.</li>
+</ul>
+<a class="header" href="print.html#environment-variables-cargo-sets-for-3rd-party-subcommands" id="environment-variables-cargo-sets-for-3rd-party-subcommands"><h3>Environment variables Cargo sets for 3rd party subcommands</h3></a>
+<p>Cargo exposes this environment variable to 3rd party subcommands
+(ie. programs named <code>cargo-foobar</code> placed in <code>$PATH</code>):</p>
+<ul>
+<li><code>CARGO</code> - Path to the <code>cargo</code> binary performing the build.</li>
+</ul>
+<a class="header" href="print.html#build-scripts" id="build-scripts"><h2>Build Scripts</h2></a>
+<p>Some packages need to compile third-party non-Rust code, for example C
+libraries. Other packages need to link to C libraries which can either be
+located on the system or possibly need to be built from source. Others still
+need facilities for functionality such as code generation before building (think
+parser generators).</p>
+<p>Cargo does not aim to replace other tools that are well-optimized for
+these tasks, but it does integrate with them with the <code>build</code> configuration
+option.</p>
+<pre><code class="language-toml">[package]
+# ...
+build = &quot;build.rs&quot;
+</code></pre>
+<p>The Rust file designated by the <code>build</code> command (relative to the package root)
+will be compiled and invoked before anything else is compiled in the package,
+allowing your Rust code to depend on the built or generated artifacts.
+By default Cargo looks up for <code>&quot;build.rs&quot;</code> file in a package root (even if you
+do not specify a value for <code>build</code>). Use <code>build = &quot;custom_build_name.rs&quot;</code> to specify
+a custom build name or <code>build = false</code> to disable automatic detection of the build script.</p>
+<p>Some example use cases of the build command are:</p>
+<ul>
+<li>Building a bundled C library.</li>
+<li>Finding a C library on the host system.</li>
+<li>Generating a Rust module from a specification.</li>
+<li>Performing any platform-specific configuration needed for the crate.</li>
+</ul>
+<p>Each of these use cases will be detailed in full below to give examples of how
+the build command works.</p>
+<a class="header" href="print.html#inputs-to-the-build-script" id="inputs-to-the-build-script"><h3>Inputs to the Build Script</h3></a>
+<p>When the build script is run, there are a number of inputs to the build script,
+all passed in the form of <a href="reference/environment-variables.html">environment variables</a>.</p>
+<p>In addition to environment variables, the build script’s current directory is
+the source directory of the build script’s package.</p>
+<a class="header" href="print.html#outputs-of-the-build-script" id="outputs-of-the-build-script"><h3>Outputs of the Build Script</h3></a>
+<p>All the lines printed to stdout by a build script are written to a file like
+<code>target/debug/build/&lt;pkg&gt;/output</code> (the precise location may depend on your
+configuration). Any line that starts with <code>cargo:</code> is interpreted directly by
+Cargo. This line must be of the form <code>cargo:key=value</code>, like the examples below:</p>
+<pre><code class="language-shell"># specially recognized by Cargo
+cargo:rustc-link-lib=static=foo
+cargo:rustc-link-search=native=/path/to/foo
+cargo:rustc-cfg=foo
+cargo:rustc-env=FOO=bar
+# arbitrary user-defined metadata
+cargo:root=/path/to/foo
+cargo:libdir=/path/to/foo/lib
+cargo:include=/path/to/foo/include
+</code></pre>
+<p>On the other hand, lines printed to stderr are written to a file like
+<code>target/debug/build/&lt;pkg&gt;/stderr</code> but are not interpreted by cargo.</p>
+<p>There are a few special keys that Cargo recognizes, some affecting how the
+crate is built:</p>
+<ul>
+<li>
+<p><code>rustc-link-lib=[KIND=]NAME</code> indicates that the specified value is a library
+name and should be passed to the compiler as a <code>-l</code> flag. The optional <code>KIND</code>
+can be one of <code>static</code>, <code>dylib</code> (the default), or <code>framework</code>, see
+<code>rustc --help</code> for more details.</p>
+</li>
+<li>
+<p><code>rustc-link-search=[KIND=]PATH</code> indicates the specified value is a library
+search path and should be passed to the compiler as a <code>-L</code> flag. The optional
+<code>KIND</code> can be one of <code>dependency</code>, <code>crate</code>, <code>native</code>, <code>framework</code> or <code>all</code>
+(the default), see <code>rustc --help</code> for more details.</p>
+</li>
+<li>
+<p><code>rustc-flags=FLAGS</code> is a set of flags passed to the compiler, only <code>-l</code> and
+<code>-L</code> flags are supported.</p>
+</li>
+<li>
+<p><code>rustc-cfg=FEATURE</code> indicates that the specified feature will be passed as a
+<code>--cfg</code> flag to the compiler. This is often useful for performing compile-time
+detection of various features.</p>
+</li>
+<li>
+<p><code>rustc-env=VAR=VALUE</code> indicates that the specified environment variable
+will be added to the environment which the compiler is run within.
+The value can be then retrieved by the <code>env!</code> macro in the compiled crate.
+This is useful for embedding additional metadata in crate's code,
+such as the hash of Git HEAD or the unique identifier of a continuous
+integration server.</p>
+</li>
+<li>
+<p><code>rerun-if-changed=PATH</code> is a path to a file or directory which indicates that
+the build script should be re-run if it changes (detected by a more-recent
+last-modified timestamp on the file). Normally build scripts are re-run if
+any file inside the crate root changes, but this can be used to scope changes
+to just a small set of files. (If this path points to a directory the entire
+directory will not be traversed for changes -- only changes to the timestamp
+of the directory itself (which corresponds to some types of changes within the
+directory, depending on platform) will trigger a rebuild. To request a re-run
+on any changes within an entire directory, print a line for the directory and
+another line for everything inside it, recursively.)
+Note that if the build script itself (or one of its dependencies) changes,
+then it's rebuilt and rerun unconditionally, so
+<code>cargo:rerun-if-changed=build.rs</code> is almost always redundant (unless you
+want to ignore changes in all other files except for <code>build.rs</code>).</p>
+</li>
+<li>
+<p><code>rerun-if-env-changed=VAR</code> is the name of an environment variable which
+indicates that if the environment variable's value changes the build script
+should be rerun. This basically behaves the same as <code>rerun-if-changed</code> except
+that it works with environment variables instead. Note that the environment
+variables here are intended for global environment variables like <code>CC</code> and
+such, it's not necessary to use this for env vars like <code>TARGET</code> that Cargo
+sets. Also note that if <code>rerun-if-env-changed</code> is printed out then Cargo will
+<em>only</em> rerun the build script if those environment variables change or if
+files printed out by <code>rerun-if-changed</code> change.</p>
+</li>
+<li>
+<p><code>warning=MESSAGE</code> is a message that will be printed to the main console after
+a build script has finished running. Warnings are only shown for path
+dependencies (that is, those you're working on locally), so for example
+warnings printed out in crates.io crates are not emitted by default.</p>
+</li>
+</ul>
+<p>Any other element is a user-defined metadata that will be passed to
+dependents. More information about this can be found in the <a href="print.html#the-links-manifest-key"><code>links</code></a>
+section.</p>
+<a class="header" href="print.html#build-dependencies-1" id="build-dependencies-1"><h3>Build Dependencies</h3></a>
+<p>Build scripts are also allowed to have dependencies on other Cargo-based crates.
+Dependencies are declared through the <code>build-dependencies</code> section of the
+manifest.</p>
+<pre><code class="language-toml">[build-dependencies]
+foo = { git = &quot;https://github.com/your-packages/foo&quot; }
+</code></pre>
+<p>The build script <strong>does not</strong> have access to the dependencies listed in the
+<code>dependencies</code> or <code>dev-dependencies</code> section (they’re not built yet!). All build
+dependencies will also not be available to the package itself unless explicitly
+stated as so.</p>
+<a class="header" href="print.html#the-links-manifest-key" id="the-links-manifest-key"><h3>The <code>links</code> Manifest Key</h3></a>
+<p>In addition to the manifest key <code>build</code>, Cargo also supports a <code>links</code> manifest
+key to declare the name of a native library that is being linked to:</p>
+<pre><code class="language-toml">[package]
+# ...
+links = &quot;foo&quot;
+build = &quot;build.rs&quot;
+</code></pre>
+<p>This manifest states that the package links to the <code>libfoo</code> native library, and
+it also has a build script for locating and/or building the library. Cargo
+requires that a <code>build</code> command is specified if a <code>links</code> entry is also
+specified.</p>
+<p>The purpose of this manifest key is to give Cargo an understanding about the set
+of native dependencies that a package has, as well as providing a principled
+system of passing metadata between package build scripts.</p>
+<p>Primarily, Cargo requires that there is at most one package per <code>links</code> value.
+In other words, it’s forbidden to have two packages link to the same native
+library. Note, however, that there are <a href="print.html#-sys-packages">conventions in place</a> to
+alleviate this.</p>
+<p>As mentioned above in the output format, each build script can generate an
+arbitrary set of metadata in the form of key-value pairs. This metadata is
+passed to the build scripts of <strong>dependent</strong> packages. For example, if <code>libbar</code>
+depends on <code>libfoo</code>, then if <code>libfoo</code> generates <code>key=value</code> as part of its
+metadata, then the build script of <code>libbar</code> will have the environment variables
+<code>DEP_FOO_KEY=value</code>.</p>
+<p>Note that metadata is only passed to immediate dependents, not transitive
+dependents. The motivation for this metadata passing is outlined in the linking
+to system libraries case study below.</p>
+<a class="header" href="print.html#overriding-build-scripts" id="overriding-build-scripts"><h3>Overriding Build Scripts</h3></a>
+<p>If a manifest contains a <code>links</code> key, then Cargo supports overriding the build
+script specified with a custom library. The purpose of this functionality is to
+prevent running the build script in question altogether and instead supply the
+metadata ahead of time.</p>
+<p>To override a build script, place the following configuration in any acceptable
+Cargo <a href="reference/config.html">configuration location</a>.</p>
+<pre><code class="language-toml">[target.x86_64-unknown-linux-gnu.foo]
+rustc-link-search = [&quot;/path/to/foo&quot;]
+rustc-link-lib = [&quot;foo&quot;]
+root = &quot;/path/to/foo&quot;
+key = &quot;value&quot;
+</code></pre>
+<p>This section states that for the target <code>x86_64-unknown-linux-gnu</code> the library
+named <code>foo</code> has the metadata specified. This metadata is the same as the
+metadata generated as if the build script had run, providing a number of
+key/value pairs where the <code>rustc-flags</code>, <code>rustc-link-search</code>, and
+<code>rustc-link-lib</code> keys are slightly special.</p>
+<p>With this configuration, if a package declares that it links to <code>foo</code> then the
+build script will <strong>not</strong> be compiled or run, and the metadata specified will
+instead be used.</p>
+<a class="header" href="print.html#case-study-code-generation" id="case-study-code-generation"><h3>Case study: Code generation</h3></a>
+<p>Some Cargo packages need to have code generated just before they are compiled
+for various reasons. Here we’ll walk through a simple example which generates a
+library call as part of the build script.</p>
+<p>First, let’s take a look at the directory structure of this package:</p>
+<pre><code class="language-shell">.
+├── Cargo.toml
+├── build.rs
+└── src
+    └── main.rs
+
+1 directory, 3 files
+</code></pre>
+<p>Here we can see that we have a <code>build.rs</code> build script and our binary in
+<code>main.rs</code>. Next, let’s take a look at the manifest:</p>
+<pre><code class="language-toml"># Cargo.toml
+
+[package]
+name = &quot;hello-from-generated-code&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;you@example.com&quot;]
+build = &quot;build.rs&quot;
+</code></pre>
+<p>Here we can see we’ve got a build script specified which we’ll use to generate
+some code. Let’s see what’s inside the build script:</p>
+<pre><pre class="playpen"><code class="language-rust no_run">// build.rs
+
+use std::env;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
+
+fn main() {
+    let out_dir = env::var(&quot;OUT_DIR&quot;).unwrap();
+    let dest_path = Path::new(&amp;out_dir).join(&quot;hello.rs&quot;);
+    let mut f = File::create(&amp;dest_path).unwrap();
+
+    f.write_all(b&quot;
+        pub fn message() -&gt; &amp;'static str {
+            \&quot;Hello, World!\&quot;
+        }
+    &quot;).unwrap();
+}
+</code></pre></pre>
+<p>There’s a couple of points of note here:</p>
+<ul>
+<li>The script uses the <code>OUT_DIR</code> environment variable to discover where the
+output files should be located. It can use the process’ current working
+directory to find where the input files should be located, but in this case we
+don’t have any input files.</li>
+<li>This script is relatively simple as it just writes out a small generated file.
+One could imagine that other more fanciful operations could take place such as
+generating a Rust module from a C header file or another language definition,
+for example.</li>
+</ul>
+<p>Next, let’s peek at the library itself:</p>
+<pre><code class="language-rust ignore">// src/main.rs
+
+include!(concat!(env!(&quot;OUT_DIR&quot;), &quot;/hello.rs&quot;));
+
+fn main() {
+    println!(&quot;{}&quot;, message());
+}
+</code></pre>
+<p>This is where the real magic happens. The library is using the rustc-defined
+<code>include!</code> macro in combination with the <code>concat!</code> and <code>env!</code> macros to include
+the generated file (<code>hello.rs</code>) into the crate’s compilation.</p>
+<p>Using the structure shown here, crates can include any number of generated files
+from the build script itself.</p>
+<a class="header" href="print.html#case-study-building-some-native-code" id="case-study-building-some-native-code"><h3>Case study: Building some native code</h3></a>
+<p>Sometimes it’s necessary to build some native C or C++ code as part of a
+package. This is another excellent use case of leveraging the build script to
+build a native library before the Rust crate itself. As an example, we’ll create
+a Rust library which calls into C to print “Hello, World!”.</p>
+<p>Like above, let’s first take a look at the project layout:</p>
+<pre><code class="language-shell">.
+├── Cargo.toml
+├── build.rs
+└── src
+    ├── hello.c
+    └── main.rs
+
+1 directory, 4 files
+</code></pre>
+<p>Pretty similar to before! Next, the manifest:</p>
+<pre><code class="language-toml"># Cargo.toml
+
+[package]
+name = &quot;hello-world-from-c&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;you@example.com&quot;]
+build = &quot;build.rs&quot;
+</code></pre>
+<p>For now we’re not going to use any build dependencies, so let’s take a look at
+the build script now:</p>
+<pre><pre class="playpen"><code class="language-rust no_run">// build.rs
+
+use std::process::Command;
+use std::env;
+use std::path::Path;
+
+fn main() {
+    let out_dir = env::var(&quot;OUT_DIR&quot;).unwrap();
+
+    // note that there are a number of downsides to this approach, the comments
+    // below detail how to improve the portability of these commands.
+    Command::new(&quot;gcc&quot;).args(&amp;[&quot;src/hello.c&quot;, &quot;-c&quot;, &quot;-fPIC&quot;, &quot;-o&quot;])
+                       .arg(&amp;format!(&quot;{}/hello.o&quot;, out_dir))
+                       .status().unwrap();
+    Command::new(&quot;ar&quot;).args(&amp;[&quot;crus&quot;, &quot;libhello.a&quot;, &quot;hello.o&quot;])
+                      .current_dir(&amp;Path::new(&amp;out_dir))
+                      .status().unwrap();
+
+    println!(&quot;cargo:rustc-link-search=native={}&quot;, out_dir);
+    println!(&quot;cargo:rustc-link-lib=static=hello&quot;);
+}
+</code></pre></pre>
+<p>This build script starts out by compiling our C file into an object file (by
+invoking <code>gcc</code>) and then converting this object file into a static library (by
+invoking <code>ar</code>). The final step is feedback to Cargo itself to say that our
+output was in <code>out_dir</code> and the compiler should link the crate to <code>libhello.a</code>
+statically via the <code>-l static=hello</code> flag.</p>
+<p>Note that there are a number of drawbacks to this hardcoded approach:</p>
+<ul>
+<li>The <code>gcc</code> command itself is not portable across platforms. For example it’s
+unlikely that Windows platforms have <code>gcc</code>, and not even all Unix platforms
+may have <code>gcc</code>. The <code>ar</code> command is also in a similar situation.</li>
+<li>These commands do not take cross-compilation into account. If we’re cross
+compiling for a platform such as Android it’s unlikely that <code>gcc</code> will produce
+an ARM executable.</li>
+</ul>
+<p>Not to fear, though, this is where a <code>build-dependencies</code> entry would help! The
+Cargo ecosystem has a number of packages to make this sort of task much easier,
+portable, and standardized. For example, the build script could be written as:</p>
+<pre><code class="language-rust ignore">// build.rs
+
+// Bring in a dependency on an externally maintained `gcc` package which manages
+// invoking the C compiler.
+extern crate gcc;
+
+fn main() {
+    gcc::compile_library(&quot;libhello.a&quot;, &amp;[&quot;src/hello.c&quot;]);
+}
+</code></pre>
+<p>Add a build time dependency on the <code>gcc</code> crate with the following addition to
+your <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[build-dependencies]
+gcc = &quot;0.3&quot;
+</code></pre>
+<p>The <a href="https://crates.io/crates/gcc"><code>gcc</code> crate</a> abstracts a range of build
+script requirements for C code:</p>
+<ul>
+<li>It invokes the appropriate compiler (MSVC for windows, <code>gcc</code> for MinGW, <code>cc</code>
+for Unix platforms, etc.).</li>
+<li>It takes the <code>TARGET</code> variable into account by passing appropriate flags to
+the compiler being used.</li>
+<li>Other environment variables, such as <code>OPT_LEVEL</code>, <code>DEBUG</code>, etc., are all
+handled automatically.</li>
+<li>The stdout output and <code>OUT_DIR</code> locations are also handled by the <code>gcc</code>
+library.</li>
+</ul>
+<p>Here we can start to see some of the major benefits of farming as much
+functionality as possible out to common build dependencies rather than
+duplicating logic across all build scripts!</p>
+<p>Back to the case study though, let’s take a quick look at the contents of the
+<code>src</code> directory:</p>
+<pre><code class="language-c">// src/hello.c
+
+#include &lt;stdio.h&gt;
+
+void hello() {
+    printf(&quot;Hello, World!\n&quot;);
+}
+</code></pre>
+<pre><code class="language-rust ignore">// src/main.rs
+
+// Note the lack of the `#[link]` attribute. We’re delegating the responsibility
+// of selecting what to link to over to the build script rather than hardcoding
+// it in the source file.
+extern { fn hello(); }
+
+fn main() {
+    unsafe { hello(); }
+}
+</code></pre>
+<p>And there we go! This should complete our example of building some C code from a
+Cargo package using the build script itself. This also shows why using a build
+dependency can be crucial in many situations and even much more concise!</p>
+<p>We’ve also seen a brief example of how a build script can use a crate as a
+dependency purely for the build process and not for the crate itself at runtime.</p>
+<a class="header" href="print.html#case-study-linking-to-system-libraries" id="case-study-linking-to-system-libraries"><h3>Case study: Linking to system libraries</h3></a>
+<p>The final case study here will be investigating how a Cargo library links to a
+system library and how the build script is leveraged to support this use case.</p>
+<p>Quite frequently a Rust crate wants to link to a native library often provided
+on the system to bind its functionality or just use it as part of an
+implementation detail. This is quite a nuanced problem when it comes to
+performing this in a platform-agnostic fashion, and the purpose of a build
+script is again to farm out as much of this as possible to make this as easy as
+possible for consumers.</p>
+<p>As an example to follow, let’s take a look at one of <a href="https://github.com/alexcrichton/git2-rs/tree/master/libgit2-sys">Cargo’s own
+dependencies</a>, <a href="https://github.com/libgit2/libgit2">libgit2</a>. The C library has a number of
+constraints:</p>
+<ul>
+<li>It has an optional dependency on OpenSSL on Unix to implement the https
+transport.</li>
+<li>It has an optional dependency on libssh2 on all platforms to implement the ssh
+transport.</li>
+<li>It is often not installed on all systems by default.</li>
+<li>It can be built from source using <code>cmake</code>.</li>
+</ul>
+<p>To visualize what’s going on here, let’s take a look at the manifest for the
+relevant Cargo package that links to the native C library.</p>
+<pre><code class="language-toml">[package]
+name = &quot;libgit2-sys&quot;
+version = &quot;0.1.0&quot;
+authors = [&quot;...&quot;]
+links = &quot;git2&quot;
+build = &quot;build.rs&quot;
+
+[dependencies]
+libssh2-sys = { git = &quot;https://github.com/alexcrichton/ssh2-rs&quot; }
+
+[target.'cfg(unix)'.dependencies]
+openssl-sys = { git = &quot;https://github.com/alexcrichton/openssl-sys&quot; }
+
+# ...
+</code></pre>
+<p>As the above manifests show, we’ve got a <code>build</code> script specified, but it’s
+worth noting that this example has a <code>links</code> entry which indicates that the
+crate (<code>libgit2-sys</code>) links to the <code>git2</code> native library.</p>
+<p>Here we also see that we chose to have the Rust crate have an unconditional
+dependency on <code>libssh2</code> via the <code>libssh2-sys</code> crate, as well as a
+platform-specific dependency on <code>openssl-sys</code> for *nix (other variants elided
+for now). It may seem a little counterintuitive to express <em>C dependencies</em> in
+the <em>Cargo manifest</em>, but this is actually using one of Cargo’s conventions in
+this space.</p>
+<a class="header" href="print.html#-sys-packages" id="-sys-packages"><h3><code>*-sys</code> Packages</h3></a>
+<p>To alleviate linking to system libraries, Cargo has a <em>convention</em> of package
+naming and functionality. Any package named <code>foo-sys</code> will provide two major
+pieces of functionality:</p>
+<ul>
+<li>The library crate will link to the native library <code>libfoo</code>. This will often
+probe the current system for <code>libfoo</code> before resorting to building from
+source.</li>
+<li>The library crate will provide <strong>declarations</strong> for functions in <code>libfoo</code>,
+but it does <strong>not</strong> provide bindings or higher-level abstractions.</li>
+</ul>
+<p>The set of <code>*-sys</code> packages provides a common set of dependencies for linking
+to native libraries. There are a number of benefits earned from having this
+convention of native-library-related packages:</p>
+<ul>
+<li>Common dependencies on <code>foo-sys</code> alleviates the above rule about one package
+per value of <code>links</code>.</li>
+<li>A common dependency allows centralizing logic on discovering <code>libfoo</code> itself
+(or building it from source).</li>
+<li>These dependencies are easily overridable.</li>
+</ul>
+<a class="header" href="print.html#building-libgit2" id="building-libgit2"><h3>Building libgit2</h3></a>
+<p>Now that we’ve got libgit2’s dependencies sorted out, we need to actually write
+the build script. We’re not going to look at specific snippets of code here and
+instead only take a look at the high-level details of the build script of
+<code>libgit2-sys</code>. This is not recommending all packages follow this strategy, but
+rather just outlining one specific strategy.</p>
+<p>The first step of the build script should do is to query whether libgit2 is
+already installed on the host system. To do this we’ll leverage the preexisting
+tool <code>pkg-config</code> (when its available). We’ll also use a <code>build-dependencies</code>
+section to refactor out all the <code>pkg-config</code> related code (or someone’s already
+done that!).</p>
+<p>If <code>pkg-config</code> failed to find libgit2, or if <code>pkg-config</code> just wasn’t
+installed, the next step is to build libgit2 from bundled source code
+(distributed as part of <code>libgit2-sys</code> itself). There are a few nuances when
+doing so that we need to take into account, however:</p>
+<ul>
+<li>
+<p>The build system of libgit2, <code>cmake</code>, needs to be able to find libgit2’s
+optional dependency of libssh2. We’re sure we’ve already built it (it’s a
+Cargo dependency), we just need to communicate this information. To do this
+we leverage the metadata format to communicate information between build
+scripts. In this example the libssh2 package printed out <code>cargo:root=...</code> to
+tell us where libssh2 is installed at, and we can then pass this along to
+cmake with the <code>CMAKE_PREFIX_PATH</code> environment variable.</p>
+</li>
+<li>
+<p>We’ll need to handle some <code>CFLAGS</code> values when compiling C code (and tell
+<code>cmake</code> about this). Some flags we may want to pass are <code>-m64</code> for 64-bit
+code, <code>-m32</code> for 32-bit code, or <code>-fPIC</code> for 64-bit code as well.</p>
+</li>
+<li>
+<p>Finally, we’ll invoke <code>cmake</code> to place all output into the <code>OUT_DIR</code>
+environment variable, and then we’ll print the necessary metadata to instruct
+rustc how to link to libgit2.</p>
+</li>
+</ul>
+<p>Most of the functionality of this build script is easily refactorable into
+common dependencies, so our build script isn’t quite as intimidating as this
+descriptions! In reality it’s expected that build scripts are quite succinct by
+farming logic such as above to build dependencies.</p>
+<a class="header" href="print.html#publishing-on-cratesio" id="publishing-on-cratesio"><h2>Publishing on crates.io</h2></a>
+<p>Once you've got a library that you'd like to share with the world, it's time to
+publish it on <a href="https://crates.io/">crates.io</a>! Publishing a crate is when a specific
+version is uploaded to be hosted on <a href="https://crates.io/">crates.io</a>.</p>
+<p>Take care when publishing a crate, because a publish is <strong>permanent</strong>. The
+version can never be overwritten, and the code cannot be deleted. There is no
+limit to the number of versions which can be published, however.</p>
+<a class="header" href="print.html#before-your-first-publish" id="before-your-first-publish"><h3>Before your first publish</h3></a>
+<p>First thing’s first, you’ll need an account on <a href="https://crates.io/">crates.io</a> to acquire
+an API token. To do so, <a href="https://crates.io/">visit the home page</a> and log in via a GitHub
+account (required for now). After this, visit your <a href="https://crates.io/me">Account
+Settings</a> page and run the <code>cargo login</code> command
+specified.</p>
+<pre><code class="language-shell">$ cargo login abcdefghijklmnopqrstuvwxyz012345
+</code></pre>
+<p>This command will inform Cargo of your API token and store it locally in your
+<code>~/.cargo/credentials</code> (previously it was <code>~/.cargo/config</code>).  Note that this
+token is a <strong>secret</strong> and should not be shared with anyone else. If it leaks for
+any reason, you should regenerate it immediately.</p>
+<a class="header" href="print.html#before-publishing-a-new-crate" id="before-publishing-a-new-crate"><h3>Before publishing a new crate</h3></a>
+<p>Keep in mind that crate names on <a href="https://crates.io/">crates.io</a> are allocated on a first-come-first-
+serve basis. Once a crate name is taken, it cannot be used for another crate.</p>
+<a class="header" href="print.html#packaging-a-crate" id="packaging-a-crate"><h4>Packaging a crate</h4></a>
+<p>The next step is to package up your crate into a format that can be uploaded to
+<a href="https://crates.io/">crates.io</a>. For this we’ll use the <code>cargo package</code> subcommand. This will take
+our entire crate and package it all up into a <code>*.crate</code> file in the
+<code>target/package</code> directory.</p>
+<pre><code class="language-shell">$ cargo package
+</code></pre>
+<p>As an added bonus, the <code>*.crate</code> will be verified independently of the current
+source tree. After the <code>*.crate</code> is created, it’s unpacked into
+<code>target/package</code> and then built from scratch to ensure that all necessary files
+are there for the build to succeed. This behavior can be disabled with the
+<code>--no-verify</code> flag.</p>
+<p>Now’s a good time to take a look at the <code>*.crate</code> file to make sure you didn’t
+accidentally package up that 2GB video asset, or large data files used for code
+generation, integration tests, or benchmarking.  There is currently a 10MB
+upload size limit on <code>*.crate</code> files. So, if the size of <code>tests</code> and <code>benches</code>
+directories and their dependencies are up to a couple of MBs, you can keep them
+in your package; otherwsie, better to exclude them.</p>
+<p>Cargo will automatically ignore files ignored by your version control system
+when packaging, but if you want to specify an extra set of files to ignore you
+can use the <code>exclude</code> key in the manifest:</p>
+<pre><code class="language-toml">[package]
+# ...
+exclude = [
+    &quot;public/assets/*&quot;,
+    &quot;videos/*&quot;,
+]
+</code></pre>
+<p>The syntax of each element in this array is what
+<a href="https://github.com/rust-lang/glob">rust-lang/glob</a> accepts. If you’d rather
+roll with a whitelist instead of a blacklist, Cargo also supports an <code>include</code>
+key, which if set, overrides the <code>exclude</code> key:</p>
+<pre><code class="language-toml">[package]
+# ...
+include = [
+    &quot;**/*.rs&quot;,
+    &quot;Cargo.toml&quot;,
+]
+</code></pre>
+<a class="header" href="print.html#uploading-the-crate" id="uploading-the-crate"><h3>Uploading the crate</h3></a>
+<p>Now that we’ve got a <code>*.crate</code> file ready to go, it can be uploaded to
+<a href="https://crates.io/">crates.io</a> with the <code>cargo publish</code> command. And that’s it, you’ve now published
+your first crate!</p>
+<pre><code class="language-shell">$ cargo publish
+</code></pre>
+<p>If you’d like to skip the <code>cargo package</code> step, the <code>cargo publish</code> subcommand
+will automatically package up the local crate if a copy isn’t found already.</p>
+<p>Be sure to check out the <a href="reference/manifest.html#package-metadata">metadata you can
+specify</a> to ensure your crate can be
+discovered more easily!</p>
+<a class="header" href="print.html#publishing-a-new-version-of-an-existing-crate" id="publishing-a-new-version-of-an-existing-crate"><h3>Publishing a new version of an existing crate</h3></a>
+<p>In order to release a new version, change the <code>version</code> value specified in your
+<code>Cargo.toml</code> manifest. Keep in mind <a href="reference/manifest.html#the-version-field">the semver
+rules</a>. Then optionally run <code>cargo package</code> if
+you want to inspect the <code>*.crate</code> file for the new version before publishing,
+and run <code>cargo publish</code> to upload the new version.</p>
+<a class="header" href="print.html#managing-a-cratesio-based-crate" id="managing-a-cratesio-based-crate"><h3>Managing a crates.io-based crate</h3></a>
+<p>Management of crates is primarily done through the command line <code>cargo</code> tool
+rather than the <a href="https://crates.io/">crates.io</a> web interface. For this, there are a few subcommands
+to manage a crate.</p>
+<a class="header" href="print.html#cargo-yank" id="cargo-yank"><h4><code>cargo yank</code></h4></a>
+<p>Occasions may arise where you publish a version of a crate that actually ends up
+being broken for one reason or another (syntax error, forgot to include a file,
+etc.). For situations such as this, Cargo supports a “yank” of a version of a
+crate.</p>
+<pre><code class="language-shell">$ cargo yank --vers 1.0.1
+$ cargo yank --vers 1.0.1 --undo
+</code></pre>
+<p>A yank <strong>does not</strong> delete any code. This feature is not intended for deleting
+accidentally uploaded secrets, for example. If that happens, you must reset
+those secrets immediately.</p>
+<p>The semantics of a yanked version are that no new dependencies can be created
+against that version, but all existing dependencies continue to work. One of the
+major goals of <a href="https://crates.io/">crates.io</a> is to act as a permanent archive of crates that does
+not change over time, and allowing deletion of a version would go against this
+goal. Essentially a yank means that all projects with a <code>Cargo.lock</code> will not
+break, while any future <code>Cargo.lock</code> files generated will not list the yanked
+version.</p>
+<a class="header" href="print.html#cargo-owner" id="cargo-owner"><h4><code>cargo owner</code></h4></a>
+<p>A crate is often developed by more than one person, or the primary maintainer
+may change over time! The owner of a crate is the only person allowed to publish
+new versions of the crate, but an owner may designate additional owners.</p>
+<pre><code class="language-shell">$ cargo owner --add my-buddy
+$ cargo owner --remove my-buddy
+$ cargo owner --add github:rust-lang:owners
+$ cargo owner --remove github:rust-lang:owners
+</code></pre>
+<p>The owner IDs given to these commands must be GitHub user names or GitHub teams.</p>
+<p>If a user name is given to <code>--add</code>, that user becomes a “named” owner, with
+full rights to the crate. In addition to being able to publish or yank versions
+of the crate, they have the ability to add or remove owners, <em>including</em> the
+owner that made <em>them</em> an owner. Needless to say, you shouldn’t make people you
+don’t fully trust into a named owner. In order to become a named owner, a user
+must have logged into <a href="https://crates.io/">crates.io</a> previously.</p>
+<p>If a team name is given to <code>--add</code>, that team becomes a “team” owner, with
+restricted right to the crate. While they have permission to publish or yank
+versions of the crate, they <em>do not</em> have the ability to add or remove owners.
+In addition to being more convenient for managing groups of owners, teams are
+just a bit more secure against owners becoming malicious.</p>
+<p>The syntax for teams is currently <code>github:org:team</code> (see examples above).
+In order to add a team as an owner one must be a member of that team. No
+such restriction applies to removing a team as an owner.</p>
+<a class="header" href="print.html#github-permissions" id="github-permissions"><h3>GitHub permissions</h3></a>
+<p>Team membership is not something GitHub provides simple public access to, and it
+is likely for you to encounter the following message when working with them:</p>
+<blockquote>
+<p>It looks like you don’t have permission to query a necessary property from
+GitHub to complete this request. You may need to re-authenticate on <a href="https://crates.io/">crates.io</a>
+to grant permission to read GitHub org memberships. Just go to
+https://crates.io/login</p>
+</blockquote>
+<p>This is basically a catch-all for “you tried to query a team, and one of the
+five levels of membership access control denied this”. That is not an
+exaggeration. GitHub’s support for team access control is Enterprise Grade.</p>
+<p>The most likely cause of this is simply that you last logged in before this
+feature was added. We originally requested <em>no</em> permissions from GitHub when
+authenticating users, because we didn’t actually ever use the user’s token for
+anything other than logging them in. However to query team membership on your
+behalf, we now require
+<a href="https://developer.github.com/v3/oauth/#scopes">the <code>read:org</code> scope</a>.</p>
+<p>You are free to deny us this scope, and everything that worked before teams
+were introduced will keep working. However you will never be able to add a team
+as an owner, or publish a crate as a team owner. If you ever attempt to do this,
+you will get the error above. You may also see this error if you ever try to
+publish a crate that you don’t own at all, but otherwise happens to have a team.</p>
+<p>If you ever change your mind, or just aren’t sure if <a href="https://crates.io/">crates.io</a> has sufficient
+permission, you can always go to https://crates.io/login, which will prompt you
+for permission if <a href="https://crates.io/">crates.io</a> doesn’t have all the scopes it would like to.</p>
+<p>An additional barrier to querying GitHub is that the organization may be
+actively denying third party access. To check this, you can go to:</p>
+<pre><code>https://github.com/organizations/:org/settings/oauth_application_policy
+</code></pre>
+<p>where <code>:org</code> is the name of the organization (e.g. rust-lang). You may see
+something like:</p>
+<p><img src="images/org-level-acl.png" alt="Organization Access Control" /></p>
+<p>Where you may choose to explicitly remove <a href="https://crates.io/">crates.io</a> from your organization’s
+blacklist, or simply press the “Remove Restrictions” button to allow all third
+party applications to access this data.</p>
+<p>Alternatively, when <a href="https://crates.io/">crates.io</a> requested the <code>read:org</code> scope, you could have
+explicitly whitelisted <a href="https://crates.io/">crates.io</a> querying the org in question by pressing
+the “Grant Access” button next to its name:</p>
+<p><img src="images/auth-level-acl.png" alt="Authentication Access Control" /></p>
+<a class="header" href="print.html#package-id-specifications" id="package-id-specifications"><h2>Package ID Specifications</h2></a>
+<a class="header" href="print.html#package-id-specifications-1" id="package-id-specifications-1"><h3>Package ID specifications</h3></a>
+<p>Subcommands of Cargo frequently need to refer to a particular package within a
+dependency graph for various operations like updating, cleaning, building, etc.
+To solve this problem, Cargo supports Package ID Specifications. A specification
+is a string which is used to uniquely refer to one package within a graph of
+packages.</p>
+<a class="header" href="print.html#specification-grammar" id="specification-grammar"><h4>Specification grammar</h4></a>
+<p>The formal grammar for a Package Id Specification is:</p>
+<pre><code class="language-notrust">pkgid := pkgname
+       | [ proto &quot;://&quot; ] hostname-and-path [ &quot;#&quot; ( pkgname | semver ) ]
+pkgname := name [ &quot;:&quot; semver ]
+
+proto := &quot;http&quot; | &quot;git&quot; | ...
+</code></pre>
+<p>Here, brackets indicate that the contents are optional.</p>
+<a class="header" href="print.html#example-specifications" id="example-specifications"><h4>Example specifications</h4></a>
+<p>These could all be references to a package <code>foo</code> version <code>1.2.3</code> from the
+registry at <code>crates.io</code></p>
+<table><thead><tr><th align="left"> pkgid                        </th><th align="center"> name  </th><th align="center"> version </th><th align="center"> url                    </th></tr></thead><tbody>
+<tr><td align="left"> <code>foo</code>                        </td><td align="center"> <code>foo</code> </td><td align="center"> <code>*</code>     </td><td align="center"> <code>*</code>                    </td></tr>
+<tr><td align="left"> <code>foo:1.2.3</code>                  </td><td align="center"> <code>foo</code> </td><td align="center"> <code>1.2.3</code> </td><td align="center"> <code>*</code>                    </td></tr>
+<tr><td align="left"> <code>crates.io/foo</code>              </td><td align="center"> <code>foo</code> </td><td align="center"> <code>*</code>     </td><td align="center"> <code>*://crates.io/foo</code>    </td></tr>
+<tr><td align="left"> <code>crates.io/foo#1.2.3</code>        </td><td align="center"> <code>foo</code> </td><td align="center"> <code>1.2.3</code> </td><td align="center"> <code>*://crates.io/foo</code>    </td></tr>
+<tr><td align="left"> <code>crates.io/bar#foo:1.2.3</code>    </td><td align="center"> <code>foo</code> </td><td align="center"> <code>1.2.3</code> </td><td align="center"> <code>*://crates.io/bar</code>    </td></tr>
+<tr><td align="left"> <code>http://crates.io/foo#1.2.3</code> </td><td align="center"> <code>foo</code> </td><td align="center"> <code>1.2.3</code> </td><td align="center"> <code>http://crates.io/foo</code> </td></tr>
+</tbody></table>
+<a class="header" href="print.html#brevity-of-specifications" id="brevity-of-specifications"><h4>Brevity of specifications</h4></a>
+<p>The goal of this is to enable both succinct and exhaustive syntaxes for
+referring to packages in a dependency graph. Ambiguous references may refer to
+one or more packages. Most commands generate an error if more than one package
+could be referred to with the same specification.</p>
+<a class="header" href="print.html#source-replacement" id="source-replacement"><h2>Source Replacement</h2></a>
+<p>Cargo supports the ability to <strong>replace one source with another</strong> to express
+strategies along the lines of mirrors or vendoring dependencies. Configuration
+is currently done through the <a href="reference/config.html"><code>.cargo/config</code> configuration</a> mechanism,
+like so:</p>
+<pre><code class="language-toml"># The `source` table is where all keys related to source-replacement
+# are stored.
+[source]
+
+# Under the `source` table are a number of other tables whose keys are a
+# name for the relevant source. For example this section defines a new
+# source, called `my-awesome-source`, which comes from a directory
+# located at `vendor` relative to the directory containing this `.cargo/config`
+# file
+[source.my-awesome-source]
+directory = &quot;vendor&quot;
+
+# The crates.io default source for crates is available under the name
+# &quot;crates-io&quot;, and here we use the `replace-with` key to indicate that it's
+# replaced with our source above.
+[source.crates-io]
+replace-with = &quot;my-awesome-source&quot;
+</code></pre>
+<p>With this configuration Cargo attempts to look up all crates in the directory
+&quot;vendor&quot; rather than querying the online registry at crates.io. Using source
+replacement Cargo can express:</p>
+<ul>
+<li>
+<p>Vendoring - custom sources can be defined which represent crates on the local
+filesystem. These sources are subsets of the source that they're replacing and
+can be checked into projects if necessary.</p>
+</li>
+<li>
+<p>Mirroring - sources can be replaced with an equivalent version which acts as a
+cache for crates.io itself.</p>
+</li>
+</ul>
+<p>Cargo has a core assumption about source replacement that the source code is
+exactly the same from both sources. In our above example Cargo assumes that all
+of the crates coming from <code>my-awesome-source</code> are the exact same as the copies
+from <code>crates-io</code>. Note that this also means that <code>my-awesome-source</code> is not
+allowed to have crates which are not present in the <code>crates-io</code> source.</p>
+<p>As a consequence, source replacement is not appropriate for situations such as
+patching a dependency or a private registry. Cargo supports patching
+dependencies through the usage of <a href="reference/manifest.html#the-replace-section">the <code>[replace]</code> key</a>, and
+private registry support is planned for a future version of Cargo.</p>
+<a class="header" href="print.html#configuration-1" id="configuration-1"><h3>Configuration</h3></a>
+<p>Configuration of replacement sources is done through <a href="reference/config.html"><code>.cargo/config</code></a>
+and the full set of available keys are:</p>
+<pre><code class="language-toml"># Each source has its own table where the key is the name of the source
+[source.the-source-name]
+
+# Indicate that `the-source-name` will be replaced with `another-source`,
+# defined elsewhere
+replace-with = &quot;another-source&quot;
+
+# Available kinds of sources that can be specified (described below)
+registry = &quot;https://example.com/path/to/index&quot;
+local-registry = &quot;path/to/registry&quot;
+directory = &quot;path/to/vendor&quot;
+</code></pre>
+<p>The <code>crates-io</code> represents the crates.io online registry (default source of
+crates) and can be replaced with:</p>
+<pre><code class="language-toml">[source.crates-io]
+replace-with = 'another-source'
+</code></pre>
+<a class="header" href="print.html#registry-sources" id="registry-sources"><h3>Registry Sources</h3></a>
+<p>A &quot;registry source&quot; is one that is the same as crates.io itself. That is, it has
+an index served in a git repository which matches the format of the
+<a href="https://github.com/rust-lang/crates.io-index">crates.io index</a>. That repository
+then has configuration indicating where to download crates from.</p>
+<p>Currently there is not an already-available project for setting up a mirror of
+crates.io. Stay tuned though!</p>
+<a class="header" href="print.html#local-registry-sources" id="local-registry-sources"><h3>Local Registry Sources</h3></a>
+<p>A &quot;local registry source&quot; is intended to be a subset of another registry
+source, but available on the local filesystem (aka vendoring). Local registries
+are downloaded ahead of time, typically sync'd with a <code>Cargo.lock</code>, and are
+made up of a set of <code>*.crate</code> files and an index like the normal registry is.</p>
+<p>The primary way to manage and crate local registry sources is through the
+<a href="https://crates.io/crates/cargo-local-registry"><code>cargo-local-registry</code></a> subcommand, available on
+crates.io and can be installed with <code>cargo install cargo-local-registry</code>.</p>
+<p>Local registries are contained within one directory and contain a number of
+<code>*.crate</code> files downloaded from crates.io as well as an <code>index</code> directory with
+the same format as the crates.io-index project (populated with just entries for
+the crates that are present).</p>
+<a class="header" href="print.html#directory-sources" id="directory-sources"><h3>Directory Sources</h3></a>
+<p>A &quot;directory source&quot; is similar to a local registry source where it contains a
+number of crates available on the local filesystem, suitable for vendoring
+dependencies. Also like local registries, directory sources can primarily be
+managed by an external subcommand, <a href="https://crates.io/crates/cargo-vendor"><code>cargo-vendor</code></a>, which can be
+installed with <code>cargo install cargo-vendor</code>.</p>
+<p>Directory sources are distinct from local registries though in that they contain
+the unpacked version of <code>*.crate</code> files, making it more suitable in some
+situations to check everything into source control. A directory source is just a
+directory containing a number of other directories which contain the source code
+for crates (the unpacked version of <code>*.crate</code> files). Currently no restriction
+is placed on the name of each directory.</p>
+<p>Each crate in a directory source also has an associated metadata file indicating
+the checksum of each file in the crate to protect against accidental
+modifications.</p>
+<a class="header" href="print.html#external-tools" id="external-tools"><h2>External tools</h2></a>
+<p>One of the goals of Cargo is simple integration with third-party tools, like
+IDEs and other build systems. To make integration easier, Cargo has several
+facilities:</p>
+<ul>
+<li>
+<p>a <code>cargo metadata</code> command, which outputs project structure and dependencies
+information in JSON,</p>
+</li>
+<li>
+<p>a <code>--message-format</code> flag, which outputs information about a particular build,
+and</p>
+</li>
+<li>
+<p>support for custom subcommands.</p>
+</li>
+</ul>
+<a class="header" href="print.html#information-about-project-structure" id="information-about-project-structure"><h3>Information about project structure</h3></a>
+<p>You can use <code>cargo metadata</code> command to get information about project structure
+and dependencies. The output of the command looks like this:</p>
+<pre><code class="language-text">{
+  // Integer version number of the format.
+  &quot;version&quot;: integer,
+
+  // List of packages for this workspace, including dependencies.
+  &quot;packages&quot;: [
+    {
+      // Opaque package identifier.
+      &quot;id&quot;: PackageId,
+
+      &quot;name&quot;: string,
+
+      &quot;version&quot;: string,
+
+      &quot;source&quot;: SourceId,
+
+      // A list of declared dependencies, see `resolve` field for actual dependencies.
+      &quot;dependencies&quot;: [ Dependency ],
+
+      &quot;targets: [ Target ],
+
+      // Path to Cargo.toml
+      &quot;manifest_path&quot;: string,
+    }
+  ],
+
+  &quot;workspace_members&quot;: [ PackageId ],
+
+  // Dependencies graph.
+  &quot;resolve&quot;: {
+     &quot;nodes&quot;: [
+       {
+         &quot;id&quot;: PackageId,
+         &quot;dependencies&quot;: [ PackageId ]
+       }
+     ]
+  }
+}
+</code></pre>
+<p>The format is stable and versioned. When calling <code>cargo metadata</code>, you should
+pass <code>--format-version</code> flag explicitly to avoid forward incompatibility
+hazard.</p>
+<p>If you are using Rust, there is <a href="https://crates.io/crates/cargo_metadata">cargo_metadata</a> crate.</p>
+<a class="header" href="print.html#information-about-build" id="information-about-build"><h3>Information about build</h3></a>
+<p>When passing <code>--message-format=json</code>, Cargo will output the following
+information during the build:</p>
+<ul>
+<li>
+<p>compiler errors and warnings,</p>
+</li>
+<li>
+<p>produced artifacts,</p>
+</li>
+<li>
+<p>results of the build scripts (for example, native dependencies).</p>
+</li>
+</ul>
+<p>The output goes to stdout in the JSON object per line format. The <code>reason</code> field
+distinguishes different kinds of messages.</p>
+<p>Information about dependencies in the Makefile-compatible format is stored in
+the <code>.d</code> files alongside the artifacts.</p>
+<a class="header" href="print.html#custom-subcommands" id="custom-subcommands"><h3>Custom subcommands</h3></a>
+<p>Cargo is designed to be extensible with new subcommands without having to modify
+Cargo itself. This is achieved by translating a cargo invocation of the form
+cargo <code>(?&lt;command&gt;[^ ]+)</code> into an invocation of an external tool
+<code>cargo-${command}</code> that then needs to be present in one of the user's <code>$PATH</code>
+directories.</p>
+<p>Custom subcommand may use <code>CARGO</code> environment variable to call back to
+Cargo. Alternatively, it can link to <code>cargo</code> crate as a library, but this
+approach has drawbacks:</p>
+<ul>
+<li>
+<p>Cargo as a library is unstable, API changes without deprecation,</p>
+</li>
+<li>
+<p>versions of Cargo library and Cargo binary may be different.</p>
+</li>
+</ul>
+<a class="header" href="print.html#frequently-asked-questions" id="frequently-asked-questions"><h2>Frequently Asked Questions</h2></a>
+<a class="header" href="print.html#is-the-plan-to-use-github-as-a-package-repository" id="is-the-plan-to-use-github-as-a-package-repository"><h3>Is the plan to use GitHub as a package repository?</h3></a>
+<p>No. The plan for Cargo is to use <a href="https://crates.io/">crates.io</a>, like npm or Rubygems do with
+npmjs.org and rubygems.org.</p>
+<p>We plan to support git repositories as a source of packages forever,
+because they can be used for early development and temporary patches,
+even when people use the registry as the primary source of packages.</p>
+<a class="header" href="print.html#why-build-cratesio-rather-than-use-github-as-a-registry" id="why-build-cratesio-rather-than-use-github-as-a-registry"><h3>Why build crates.io rather than use GitHub as a registry?</h3></a>
+<p>We think that it’s very important to support multiple ways to download
+packages, including downloading from GitHub and copying packages into
+your project itself.</p>
+<p>That said, we think that <a href="https://crates.io/">crates.io</a> offers a number of important benefits, and
+will likely become the primary way that people download packages in Cargo.</p>
+<p>For precedent, both Node.js’s <a href="https://www.npmjs.org">npm</a> and Ruby’s <a href="https://bundler.io">bundler</a> support both a
+central registry model as well as a Git-based model, and most packages
+are downloaded through the registry in those ecosystems, with an
+important minority of packages making use of git-based packages.</p>
+<p>Some of the advantages that make a central registry popular in other
+languages include:</p>
+<ul>
+<li><strong>Discoverability</strong>. A central registry provides an easy place to look
+for existing packages. Combined with tagging, this also makes it
+possible for a registry to provide ecosystem-wide information, such as a
+list of the most popular or most-depended-on packages.</li>
+<li><strong>Speed</strong>. A central registry makes it possible to easily fetch just
+the metadata for packages quickly and efficiently, and then to
+efficiently download just the published package, and not other bloat
+that happens to exist in the repository. This adds up to a significant
+improvement in the speed of dependency resolution and fetching. As
+dependency graphs scale up, downloading all of the git repositories bogs
+down fast. Also remember that not everybody has a high-speed,
+low-latency Internet connection.</li>
+</ul>
+<a class="header" href="print.html#will-cargo-work-with-c-code-or-other-languages" id="will-cargo-work-with-c-code-or-other-languages"><h3>Will Cargo work with C code (or other languages)?</h3></a>
+<p>Yes!</p>
+<p>Cargo handles compiling Rust code, but we know that many Rust projects
+link against C code. We also know that there are decades of tooling
+built up around compiling languages other than Rust.</p>
+<p>Our solution: Cargo allows a package to <a href="reference/build-scripts.html">specify a script</a>
+(written in Rust) to run before invoking <code>rustc</code>. Rust is leveraged to
+implement platform-specific configuration and refactor out common build
+functionality among packages.</p>
+<a class="header" href="print.html#can-cargo-be-used-inside-of-make-or-ninja-or-" id="can-cargo-be-used-inside-of-make-or-ninja-or-"><h3>Can Cargo be used inside of <code>make</code> (or <code>ninja</code>, or ...)</h3></a>
+<p>Indeed. While we intend Cargo to be useful as a standalone way to
+compile Rust projects at the top-level, we know that some people will
+want to invoke Cargo from other build tools.</p>
+<p>We have designed Cargo to work well in those contexts, paying attention
+to things like error codes and machine-readable output modes. We still
+have some work to do on those fronts, but using Cargo in the context of
+conventional scripts is something we designed for from the beginning and
+will continue to prioritize.</p>
+<a class="header" href="print.html#does-cargo-handle-multi-platform-projects-or-cross-compilation" id="does-cargo-handle-multi-platform-projects-or-cross-compilation"><h3>Does Cargo handle multi-platform projects or cross-compilation?</h3></a>
+<p>Rust itself provides facilities for configuring sections of code based
+on the platform. Cargo also supports <a href="reference/specifying-dependencies.html#platform-specific-dependencies">platform-specific
+dependencies</a>, and we plan to support more per-platform
+configuration in <code>Cargo.toml</code> in the future.</p>
+<p>In the longer-term, we’re looking at ways to conveniently cross-compile
+projects using Cargo.</p>
+<a class="header" href="print.html#does-cargo-support-environments-like-production-or-test" id="does-cargo-support-environments-like-production-or-test"><h3>Does Cargo support environments, like <code>production</code> or <code>test</code>?</h3></a>
+<p>We support environments through the use of <a href="reference/manifest.html#the-profile-sections">profiles</a> to support:</p>
+<ul>
+<li>environment-specific flags (like <code>-g --opt-level=0</code> for development
+and <code>--opt-level=3</code> for production).</li>
+<li>environment-specific dependencies (like <code>hamcrest</code> for test assertions).</li>
+<li>environment-specific <code>#[cfg]</code></li>
+<li>a <code>cargo test</code> command</li>
+</ul>
+<a class="header" href="print.html#does-cargo-work-on-windows" id="does-cargo-work-on-windows"><h3>Does Cargo work on Windows?</h3></a>
+<p>Yes!</p>
+<p>All commits to Cargo are required to pass the local test suite on Windows.
+If, however, you find a Windows issue, we consider it a bug, so <a href="https://github.com/rust-lang/cargo/issues">please file an
+issue</a>.</p>
+<a class="header" href="print.html#why-do-binaries-have-cargolock-in-version-control-but-not-libraries" id="why-do-binaries-have-cargolock-in-version-control-but-not-libraries"><h3>Why do binaries have <code>Cargo.lock</code> in version control, but not libraries?</h3></a>
+<p>The purpose of a <code>Cargo.lock</code> is to describe the state of the world at the time
+of a successful build. It is then used to provide deterministic builds across
+whatever machine is building the project by ensuring that the exact same
+dependencies are being compiled.</p>
+<p>This property is most desirable from applications and projects which are at the
+very end of the dependency chain (binaries). As a result, it is recommended that
+all binaries check in their <code>Cargo.lock</code>.</p>
+<p>For libraries the situation is somewhat different. A library is not only used by
+the library developers, but also any downstream consumers of the library. Users
+dependent on the library will not inspect the library’s <code>Cargo.lock</code> (even if it
+exists). This is precisely because a library should <strong>not</strong> be deterministically
+recompiled for all users of the library.</p>
+<p>If a library ends up being used transitively by several dependencies, it’s
+likely that just a single copy of the library is desired (based on semver
+compatibility). If all libraries were to check in their <code>Cargo.lock</code>, then
+multiple copies of the library would be used, and perhaps even a version
+conflict.</p>
+<p>In other words, libraries specify semver requirements for their dependencies but
+cannot see the full picture. Only end products like binaries have a full
+picture to decide what versions of dependencies should be used.</p>
+<a class="header" href="print.html#can-libraries-use--as-a-version-for-their-dependencies" id="can-libraries-use--as-a-version-for-their-dependencies"><h3>Can libraries use <code>*</code> as a version for their dependencies?</h3></a>
+<p><strong>As of January 22nd, 2016, <a href="https://crates.io/">crates.io</a> rejects all packages (not just libraries)
+with wildcard dependency constraints.</strong></p>
+<p>While libraries <em>can</em>, strictly speaking, they should not. A version requirement
+of <code>*</code> says “This will work with every version ever,” which is never going
+to be true. Libraries should always specify the range that they do work with,
+even if it’s something as general as “every 1.x.y version.”</p>
+<a class="header" href="print.html#why-cargotoml" id="why-cargotoml"><h3>Why <code>Cargo.toml</code>?</h3></a>
+<p>As one of the most frequent interactions with Cargo, the question of why the
+configuration file is named <code>Cargo.toml</code> arises from time to time. The leading
+capital-<code>C</code> was chosen to ensure that the manifest was grouped with other
+similar configuration files in directory listings. Sorting files often puts
+capital letters before lowercase letters, ensuring files like <code>Makefile</code> and
+<code>Cargo.toml</code> are placed together. The trailing <code>.toml</code> was chosen to emphasize
+the fact that the file is in the <a href="https://github.com/toml-lang/toml">TOML configuration
+format</a>.</p>
+<p>Cargo does not allow other names such as <code>cargo.toml</code> or <code>Cargofile</code> to
+emphasize the ease of how a Cargo repository can be identified. An option of
+many possible names has historically led to confusion where one case was handled
+but others were accidentally forgotten.</p>
+<a class="header" href="print.html#how-can-cargo-work-offline" id="how-can-cargo-work-offline"><h3>How can Cargo work offline?</h3></a>
+<p>Cargo is often used in situations with limited or no network access such as
+airplanes, CI environments, or embedded in large production deployments. Users
+are often surprised when Cargo attempts to fetch resources from the network, and
+hence the request for Cargo to work offline comes up frequently.</p>
+<p>Cargo, at its heart, will not attempt to access the network unless told to do
+so. That is, if no crates comes from crates.io, a git repository, or some other
+network location, Cargo will never attempt to make a network connection. As a
+result, if Cargo attempts to touch the network, then it's because it needs to
+fetch a required resource.</p>
+<p>Cargo is also quite aggressive about caching information to minimize the amount
+of network activity. It will guarantee, for example, that if <code>cargo build</code> (or
+an equivalent) is run to completion then the next <code>cargo build</code> is guaranteed to
+not touch the network so long as <code>Cargo.toml</code> has not been modified in the
+meantime. This avoidance of the network boils down to a <code>Cargo.lock</code> existing
+and a populated cache of the crates reflected in the lock file. If either of
+these components are missing, then they're required for the build to succeed and
+must be fetched remotely.</p>
+<p>As of Rust 1.11.0 Cargo understands a new flag, <code>--frozen</code>, which is an
+assertion that it shouldn't touch the network. When passed, Cargo will
+immediately return an error if it would otherwise attempt a network request.
+The error should include contextual information about why the network request is
+being made in the first place to help debug as well. Note that this flag <em>does
+not change the behavior of Cargo</em>, it simply asserts that Cargo shouldn't touch
+the network as a previous command has been run to ensure that network activity
+shouldn't be necessary.</p>
+<p>For more information about vendoring, see documentation on <a href="reference/source-replacement.html">source
+replacement</a>.</p>
+
+                </div>
+
+                <!-- Mobile navigation buttons -->
+                
+
+                
+
+            </div>
+
+            
+
+            
+
+        </div>
+
+
+        <!-- Local fallback for Font Awesome -->
+        <script>
+            if ($(".fa").css("font-family") !== "FontAwesome") {
+                $('<link rel="stylesheet" type="text/css" href="_FontAwesome/css/font-awesome.css">').prependTo('head');
+            }
+        </script>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        
+
+        
+
+        
+
+        
+        <script>
+            $(document).ready(function() {
+                window.print();
+            })
+        </script>
+        
+
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS script -->
+        
+
+    </body>
+</html>

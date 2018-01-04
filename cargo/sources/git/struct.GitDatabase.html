@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `GitDatabase` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, GitDatabase">
+
+    <title>cargo::sources::git::GitDatabase - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct GitDatabase</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#methods">Methods</a><div class="sidebar-links"><a href="#method.copy_to">copy_to</a><a href="#method.rev_for">rev_for</a><a href="#method.to_short_id">to_short_id</a><a href="#method.has_ref">has_ref</a></div></div><p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>sources</a>::<wbr><a href='index.html'>git</a></p><script>window.sidebarCurrent = {name: 'GitDatabase', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>sources</a>::<wbr><a href='index.html'>git</a>::<wbr><a class="struct" href=''>GitDatabase</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/cargo/sources/git/utils.rs.html#58-63' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct GitDatabase { /* fields omitted */ }</pre><div class='docblock'><p><code>GitDatabase</code> is a local clone of a remote repository&#39;s database. Multiple
+<code>GitCheckouts</code> can be cloned from this <code>GitDatabase</code>.</p>
+</div>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl <a class="struct" href="../../../cargo/sources/git/struct.GitDatabase.html" title="struct cargo::sources::git::GitDatabase">GitDatabase</a></code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/git/utils.rs.html#142-204' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.copy_to' class="method"><span id='copy_to.v' class='invisible'><code>pub fn <a href='#method.copy_to' class='fnname'>copy_to</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;self, <br>&nbsp;&nbsp;&nbsp;&nbsp;rev: <a class="struct" href="../../../cargo/sources/git/struct.GitRevision.html" title="struct cargo::sources::git::GitRevision">GitRevision</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;dest: &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/std/path/struct.Path.html" title="struct std::path::Path">Path</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;cargo_config: &amp;<a class="struct" href="../../../cargo/util/config/struct.Config.html" title="struct cargo::util::config::Config">Config</a><br>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="../../../cargo/sources/git/struct.GitCheckout.html" title="struct cargo::sources::git::GitCheckout">GitCheckout</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/git/utils.rs.html#143-159' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.rev_for' class="method"><span id='rev_for.v' class='invisible'><code>pub fn <a href='#method.rev_for' class='fnname'>rev_for</a>(&amp;self, reference: &amp;<a class="enum" href="../../../cargo/core/enum.GitReference.html" title="enum cargo::core::GitReference">GitReference</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="../../../cargo/sources/git/struct.GitRevision.html" title="struct cargo::sources::git::GitRevision">GitRevision</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/git/utils.rs.html#161-193' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.to_short_id' class="method"><span id='to_short_id.v' class='invisible'><code>pub fn <a href='#method.to_short_id' class='fnname'>to_short_id</a>(&amp;self, revision: <a class="struct" href="../../../cargo/sources/git/struct.GitRevision.html" title="struct cargo::sources::git::GitRevision">GitRevision</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;GitShortID&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/git/utils.rs.html#195-198' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.has_ref' class="method"><span id='has_ref.v' class='invisible'><code>pub fn <a href='#method.has_ref' class='fnname'>has_ref</a>(&amp;self, reference: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/sources/git/utils.rs.html#200-203' title='goto source code'>[src]</a></span></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

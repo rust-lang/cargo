@@ -1,0 +1,245 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Source Replacement - The Cargo Book</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <base href="../">
+
+        <link rel="stylesheet" href="book.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <link rel="shortcut icon" href="favicon.png">
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme -->
+        
+
+        
+
+        <!-- Fetch Clipboard.js from CDN but have a local fallback -->
+        <script src="https://cdn.jsdelivr.net/clipboard.js/1.6.1/clipboard.min.js"></script>
+        <script>
+            if (typeof Clipboard == 'undefined') {
+                document.write(unescape("%3Cscript src='clipboard.min.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch JQuery from CDN but have a local fallback -->
+        <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script>
+            if (typeof jQuery == 'undefined') {
+                document.write(unescape("%3Cscript src='jquery.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch store.js from local - TODO add CDN when 2.x.x is available on cdnjs -->
+        <script src="store.js"></script>
+
+    </head>
+    <body class="light">
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme = store.get('mdbook-theme');
+            if (theme === null || theme === undefined) { theme = 'light'; }
+            $('body').removeClass().addClass(theme);
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var sidebar = store.get('mdbook-sidebar');
+            if (sidebar === "hidden") { $("html").addClass("sidebar-hidden") }
+            else if (sidebar === "visible") { $("html").addClass("sidebar-visible") }
+        </script>
+
+        <div id="sidebar" class="sidebar">
+            <ul class="chapter"><li class="affix"><a href="index.html">Introduction</a></li><li><a href="getting-started/index.html"><strong>1.</strong> Getting Started</a></li><li><ul class="section"><li><a href="getting-started/installation.html"><strong>1.1.</strong> Installation</a></li><li><a href="getting-started/first-steps.html"><strong>1.2.</strong> First Steps with Cargo</a></li></ul></li><li><a href="guide/index.html"><strong>2.</strong> Cargo Guide</a></li><li><ul class="section"><li><a href="guide/why-cargo-exists.html"><strong>2.1.</strong> Why Cargo Exists</a></li><li><a href="guide/creating-a-new-project.html"><strong>2.2.</strong> Creating a New Project</a></li><li><a href="guide/working-on-an-existing-project.html"><strong>2.3.</strong> Working on an Existing Project</a></li><li><a href="guide/dependencies.html"><strong>2.4.</strong> Dependencies</a></li><li><a href="guide/project-layout.html"><strong>2.5.</strong> Project Layout</a></li><li><a href="guide/cargo-toml-vs-cargo-lock.html"><strong>2.6.</strong> Cargo.toml vs Cargo.lock</a></li><li><a href="guide/tests.html"><strong>2.7.</strong> Tests</a></li><li><a href="guide/continuous-integration.html"><strong>2.8.</strong> Continuous Integration</a></li></ul></li><li><a href="reference/index.html"><strong>3.</strong> Cargo Reference</a></li><li><ul class="section"><li><a href="reference/specifying-dependencies.html"><strong>3.1.</strong> Specifying Dependencies</a></li><li><a href="reference/manifest.html"><strong>3.2.</strong> The Manifest Format</a></li><li><a href="reference/config.html"><strong>3.3.</strong> Configuration</a></li><li><a href="reference/environment-variables.html"><strong>3.4.</strong> Environment Variables</a></li><li><a href="reference/build-scripts.html"><strong>3.5.</strong> Build Scripts</a></li><li><a href="reference/publishing.html"><strong>3.6.</strong> Publishing on crates.io</a></li><li><a href="reference/pkgid-spec.html"><strong>3.7.</strong> Package ID Specifications</a></li><li><a href="reference/source-replacement.html" class="active"><strong>3.8.</strong> Source Replacement</a></li><li><a href="reference/external-tools.html"><strong>3.9.</strong> External Tools</a></li></ul></li><li><a href="faq.html"><strong>4.</strong> FAQ</a></li></ul>
+        </div>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page" tabindex="-1">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div class="left-buttons">
+                        <i id="sidebar-toggle" class="fa fa-bars" title="Toggle sidebar"></i>
+                        <i id="theme-toggle" class="fa fa-paint-brush" title="Change theme"></i>
+                    </div>
+
+                    <h1 class="menu-title">The Cargo Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html">
+                            <i id="print-button" class="fa fa-print" title="Print this book"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="content" class="content">
+                    <a class="header" href="reference/source-replacement.html#source-replacement" id="source-replacement"><h2>Source Replacement</h2></a>
+<p>Cargo supports the ability to <strong>replace one source with another</strong> to express
+strategies along the lines of mirrors or vendoring dependencies. Configuration
+is currently done through the <a href="reference/config.html"><code>.cargo/config</code> configuration</a> mechanism,
+like so:</p>
+<pre><code class="language-toml"># The `source` table is where all keys related to source-replacement
+# are stored.
+[source]
+
+# Under the `source` table are a number of other tables whose keys are a
+# name for the relevant source. For example this section defines a new
+# source, called `my-awesome-source`, which comes from a directory
+# located at `vendor` relative to the directory containing this `.cargo/config`
+# file
+[source.my-awesome-source]
+directory = &quot;vendor&quot;
+
+# The crates.io default source for crates is available under the name
+# &quot;crates-io&quot;, and here we use the `replace-with` key to indicate that it's
+# replaced with our source above.
+[source.crates-io]
+replace-with = &quot;my-awesome-source&quot;
+</code></pre>
+<p>With this configuration Cargo attempts to look up all crates in the directory
+&quot;vendor&quot; rather than querying the online registry at crates.io. Using source
+replacement Cargo can express:</p>
+<ul>
+<li>
+<p>Vendoring - custom sources can be defined which represent crates on the local
+filesystem. These sources are subsets of the source that they're replacing and
+can be checked into projects if necessary.</p>
+</li>
+<li>
+<p>Mirroring - sources can be replaced with an equivalent version which acts as a
+cache for crates.io itself.</p>
+</li>
+</ul>
+<p>Cargo has a core assumption about source replacement that the source code is
+exactly the same from both sources. In our above example Cargo assumes that all
+of the crates coming from <code>my-awesome-source</code> are the exact same as the copies
+from <code>crates-io</code>. Note that this also means that <code>my-awesome-source</code> is not
+allowed to have crates which are not present in the <code>crates-io</code> source.</p>
+<p>As a consequence, source replacement is not appropriate for situations such as
+patching a dependency or a private registry. Cargo supports patching
+dependencies through the usage of <a href="reference/manifest.html#the-replace-section">the <code>[replace]</code> key</a>, and
+private registry support is planned for a future version of Cargo.</p>
+<a class="header" href="reference/source-replacement.html#configuration" id="configuration"><h3>Configuration</h3></a>
+<p>Configuration of replacement sources is done through <a href="reference/config.html"><code>.cargo/config</code></a>
+and the full set of available keys are:</p>
+<pre><code class="language-toml"># Each source has its own table where the key is the name of the source
+[source.the-source-name]
+
+# Indicate that `the-source-name` will be replaced with `another-source`,
+# defined elsewhere
+replace-with = &quot;another-source&quot;
+
+# Available kinds of sources that can be specified (described below)
+registry = &quot;https://example.com/path/to/index&quot;
+local-registry = &quot;path/to/registry&quot;
+directory = &quot;path/to/vendor&quot;
+</code></pre>
+<p>The <code>crates-io</code> represents the crates.io online registry (default source of
+crates) and can be replaced with:</p>
+<pre><code class="language-toml">[source.crates-io]
+replace-with = 'another-source'
+</code></pre>
+<a class="header" href="reference/source-replacement.html#registry-sources" id="registry-sources"><h3>Registry Sources</h3></a>
+<p>A &quot;registry source&quot; is one that is the same as crates.io itself. That is, it has
+an index served in a git repository which matches the format of the
+<a href="https://github.com/rust-lang/crates.io-index">crates.io index</a>. That repository
+then has configuration indicating where to download crates from.</p>
+<p>Currently there is not an already-available project for setting up a mirror of
+crates.io. Stay tuned though!</p>
+<a class="header" href="reference/source-replacement.html#local-registry-sources" id="local-registry-sources"><h3>Local Registry Sources</h3></a>
+<p>A &quot;local registry source&quot; is intended to be a subset of another registry
+source, but available on the local filesystem (aka vendoring). Local registries
+are downloaded ahead of time, typically sync'd with a <code>Cargo.lock</code>, and are
+made up of a set of <code>*.crate</code> files and an index like the normal registry is.</p>
+<p>The primary way to manage and crate local registry sources is through the
+<a href="https://crates.io/crates/cargo-local-registry"><code>cargo-local-registry</code></a> subcommand, available on
+crates.io and can be installed with <code>cargo install cargo-local-registry</code>.</p>
+<p>Local registries are contained within one directory and contain a number of
+<code>*.crate</code> files downloaded from crates.io as well as an <code>index</code> directory with
+the same format as the crates.io-index project (populated with just entries for
+the crates that are present).</p>
+<a class="header" href="reference/source-replacement.html#directory-sources" id="directory-sources"><h3>Directory Sources</h3></a>
+<p>A &quot;directory source&quot; is similar to a local registry source where it contains a
+number of crates available on the local filesystem, suitable for vendoring
+dependencies. Also like local registries, directory sources can primarily be
+managed by an external subcommand, <a href="https://crates.io/crates/cargo-vendor"><code>cargo-vendor</code></a>, which can be
+installed with <code>cargo install cargo-vendor</code>.</p>
+<p>Directory sources are distinct from local registries though in that they contain
+the unpacked version of <code>*.crate</code> files, making it more suitable in some
+situations to check everything into source control. A directory source is just a
+directory containing a number of other directories which contain the source code
+for crates (the unpacked version of <code>*.crate</code> files). Currently no restriction
+is placed on the name of each directory.</p>
+<p>Each crate in a directory source also has an associated metadata file indicating
+the checksum of each file in the crate to protect against accidental
+modifications.</p>
+
+                </div>
+
+                <!-- Mobile navigation buttons -->
+                
+                    <a rel="prev" href="reference/pkgid-spec.html" class="mobile-nav-chapters previous" title="Previous chapter">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="reference/external-tools.html" class="mobile-nav-chapters next" title="Next chapter">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+
+            </div>
+
+            
+                <a href="reference/pkgid-spec.html" class="nav-chapters previous" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+            
+
+            
+                <a href="reference/external-tools.html" class="nav-chapters next" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            
+
+        </div>
+
+
+        <!-- Local fallback for Font Awesome -->
+        <script>
+            if ($(".fa").css("font-family") !== "FontAwesome") {
+                $('<link rel="stylesheet" type="text/css" href="_FontAwesome/css/font-awesome.css">').prependTo('head');
+            }
+        </script>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        
+
+        
+
+        
+
+        
+
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS script -->
+        
+
+    </body>
+</html>

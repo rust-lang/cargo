@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `ProcessBuilder` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, ProcessBuilder">
+
+    <title>cargo::util::process_builder::ProcessBuilder - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct ProcessBuilder</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#methods">Methods</a><div class="sidebar-links"><a href="#method.program">program</a><a href="#method.arg">arg</a><a href="#method.args">args</a><a href="#method.args_replace">args_replace</a><a href="#method.cwd">cwd</a><a href="#method.env">env</a><a href="#method.env_remove">env_remove</a><a href="#method.get_program">get_program</a><a href="#method.get_args">get_args</a><a href="#method.get_cwd">get_cwd</a><a href="#method.get_env">get_env</a><a href="#method.get_envs">get_envs</a><a href="#method.inherit_jobserver">inherit_jobserver</a><a href="#method.exec">exec</a><a href="#method.exec_replace">exec_replace</a><a href="#method.exec_with_output">exec_with_output</a><a href="#method.exec_with_streaming">exec_with_streaming</a><a href="#method.build_command">build_command</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-Clone">Clone</a><a href="#impl-Debug">Debug</a><a href="#impl-Display">Display</a></div></div><p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>util</a>::<wbr><a href='index.html'>process_builder</a></p><script>window.sidebarCurrent = {name: 'ProcessBuilder', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>util</a>::<wbr><a href='index.html'>process_builder</a>::<wbr><a class="struct" href=''>ProcessBuilder</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#15-29' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct ProcessBuilder { /* fields omitted */ }</pre><div class='docblock'><p>A builder object for an external process, similar to <code>std::process::Command</code>.</p>
+</div>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#43-306' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.program' class="method"><span id='program.v' class='invisible'><code>pub fn <a href='#method.program' class='fnname'>program</a>&lt;T:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html" title="trait core::convert::AsRef">AsRef</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/ffi/os_str/struct.OsStr.html" title="struct std::ffi::os_str::OsStr">OsStr</a>&gt;&gt;(&amp;mut self, program: T) -&gt; &amp;mut <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#45-48' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>(chainable) Set the executable for the process.</p>
+</div><h4 id='method.arg' class="method"><span id='arg.v' class='invisible'><code>pub fn <a href='#method.arg' class='fnname'>arg</a>&lt;T:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html" title="trait core::convert::AsRef">AsRef</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/ffi/os_str/struct.OsStr.html" title="struct std::ffi::os_str::OsStr">OsStr</a>&gt;&gt;(&amp;mut self, arg: T) -&gt; &amp;mut <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#51-54' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>(chainable) Add an arg to the args list.</p>
+</div><h4 id='method.args' class="method"><span id='args.v' class='invisible'><code>pub fn <a href='#method.args' class='fnname'>args</a>&lt;T:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html" title="trait core::convert::AsRef">AsRef</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/ffi/os_str/struct.OsStr.html" title="struct std::ffi::os_str::OsStr">OsStr</a>&gt;&gt;(&amp;mut self, arguments: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[T]</a>) -&gt; &amp;mut <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#57-62' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>(chainable) Add many args to the args list.</p>
+</div><h4 id='method.args_replace' class="method"><span id='args_replace.v' class='invisible'><code>pub fn <a href='#method.args_replace' class='fnname'>args_replace</a>&lt;T:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html" title="trait core::convert::AsRef">AsRef</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/ffi/os_str/struct.OsStr.html" title="struct std::ffi::os_str::OsStr">OsStr</a>&gt;&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;mut self, <br>&nbsp;&nbsp;&nbsp;&nbsp;arguments: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[T]</a><br>) -&gt; &amp;mut <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#65-70' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>(chainable) Replace args with new args list</p>
+</div><h4 id='method.cwd' class="method"><span id='cwd.v' class='invisible'><code>pub fn <a href='#method.cwd' class='fnname'>cwd</a>&lt;T:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html" title="trait core::convert::AsRef">AsRef</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/ffi/os_str/struct.OsStr.html" title="struct std::ffi::os_str::OsStr">OsStr</a>&gt;&gt;(&amp;mut self, path: T) -&gt; &amp;mut <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#73-76' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>(chainable) Set the current working directory of the process</p>
+</div><h4 id='method.env' class="method"><span id='env.v' class='invisible'><code>pub fn <a href='#method.env' class='fnname'>env</a>&lt;T:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.AsRef.html" title="trait core::convert::AsRef">AsRef</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/ffi/os_str/struct.OsStr.html" title="struct std::ffi::os_str::OsStr">OsStr</a>&gt;&gt;(&amp;mut self, key: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, val: T) -&gt; &amp;mut <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#79-83' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>(chainable) Set an environment variable for the process.</p>
+</div><h4 id='method.env_remove' class="method"><span id='env_remove.v' class='invisible'><code>pub fn <a href='#method.env_remove' class='fnname'>env_remove</a>(&amp;mut self, key: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; &amp;mut <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#86-89' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>(chainable) Unset an environment variable for the process.</p>
+</div><h4 id='method.get_program' class="method"><span id='get_program.v' class='invisible'><code>pub fn <a href='#method.get_program' class='fnname'>get_program</a>(&amp;self) -&gt; &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/std/ffi/os_str/struct.OsString.html" title="struct std::ffi::os_str::OsString">OsString</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#92-94' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Get the executable name.</p>
+</div><h4 id='method.get_args' class="method"><div class="important-traits"><div class='tooltip'>ⓘ<span class='tooltiptext'>Important traits for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></span></div><div class="content hidden"><h3 class="important">Important traits for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></h3><code class="content"><span class="where fmt-newline">impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Read.html" title="trait std::io::Read">Read</a> for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></span><span class="where fmt-newline">impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Write.html" title="trait std::io::Write">Write</a> for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a mut [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></span></code></div></div><span id='get_args.v' class='invisible'><code>pub fn <a href='#method.get_args' class='fnname'>get_args</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="struct" href="https://doc.rust-lang.org/nightly/std/ffi/os_str/struct.OsString.html" title="struct std::ffi::os_str::OsString">OsString</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#97-99' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Get the program arguments</p>
+</div><h4 id='method.get_cwd' class="method"><span id='get_cwd.v' class='invisible'><code>pub fn <a href='#method.get_cwd' class='fnname'>get_cwd</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="struct" href="https://doc.rust-lang.org/nightly/std/path/struct.Path.html" title="struct std::path::Path">Path</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#102-104' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Get the current working directory for the process</p>
+</div><h4 id='method.get_env' class="method"><span id='get_env.v' class='invisible'><code>pub fn <a href='#method.get_env' class='fnname'>get_env</a>(&amp;self, var: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/ffi/os_str/struct.OsString.html" title="struct std::ffi::os_str::OsString">OsString</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#108-111' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Get an environment variable as the process will see it (will inherit from environment
+unless explicitally unset).</p>
+</div><h4 id='method.get_envs' class="method"><span id='get_envs.v' class='invisible'><code>pub fn <a href='#method.get_envs' class='fnname'>get_envs</a>(&amp;self) -&gt; &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/std/collections/hash/map/struct.HashMap.html" title="struct std::collections::hash::map::HashMap">HashMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>, <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/ffi/os_str/struct.OsString.html" title="struct std::ffi::os_str::OsString">OsString</a>&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#115' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Get all environment variables explicitally set or unset for the process (not inherited
+vars).</p>
+</div><h4 id='method.inherit_jobserver' class="method"><div class="important-traits"><div class='tooltip'>ⓘ<span class='tooltiptext'>Important traits for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;'a mut </a>R</span></div><div class="content hidden"><h3 class="important">Important traits for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;'a mut </a>R</h3><code class="content"><span class="where fmt-newline">impl&lt;'a, R&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Read.html" title="trait std::io::Read">Read</a> for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;'a mut </a>R <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;R: <a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Read.html" title="trait std::io::Read">Read</a> + ?<a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>,&nbsp;</span></span><span class="where fmt-newline">impl&lt;'a, W&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Write.html" title="trait std::io::Write">Write</a> for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;'a mut </a>W <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;W: <a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Write.html" title="trait std::io::Write">Write</a> + ?<a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>,&nbsp;</span></span><span class="where fmt-newline">impl&lt;'a, I&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/iter/iterator/trait.Iterator.html" title="trait core::iter::iterator::Iterator">Iterator</a> for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;'a mut </a>I <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;I: <a class="trait" href="https://doc.rust-lang.org/nightly/core/iter/iterator/trait.Iterator.html" title="trait core::iter::iterator::Iterator">Iterator</a> + ?<a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>,&nbsp;</span></span><span class="where fmt-newline">    type <a href='https://doc.rust-lang.org/nightly/core/iter/iterator/trait.Iterator.html#associatedtype.Item' class="type">Item</a> = &lt;I as <a class="trait" href="https://doc.rust-lang.org/nightly/core/iter/iterator/trait.Iterator.html" title="trait core::iter::iterator::Iterator">Iterator</a>&gt;::<a class="type" href="https://doc.rust-lang.org/nightly/core/iter/iterator/trait.Iterator.html#associatedtype.Item" title="type core::iter::iterator::Iterator::Item">Item</a>;</span></code></div></div><span id='inherit_jobserver.v' class='invisible'><code>pub fn <a href='#method.inherit_jobserver' class='fnname'>inherit_jobserver</a>(&amp;mut self, jobserver: &amp;<a class="struct" href="https://docs.rs/jobserver/0.1/jobserver/struct.Client.html" title="struct jobserver::Client">Client</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>Self</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#121-124' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Set the <code>make</code> jobserver. See the <a href="https://docs.rs/jobserver/0.1.6/jobserver/">jobserver crate</a> for
+more information.</p>
+</div><h4 id='method.exec' class="method"><span id='exec.v' class='invisible'><code>pub fn <a href='#method.exec' class='fnname'>exec</a>(&amp;self) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#127-141' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Run the process, waiting for completion, and mapping non-success exit codes to an error.</p>
+</div><h4 id='method.exec_replace' class="method"><span id='exec_replace.v' class='invisible'><code>pub fn <a href='#method.exec_replace' class='fnname'>exec_replace</a>(&amp;self) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#147-159' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>On unix, executes the process using the unix syscall <code>execvp</code>, which will block this
+process, and will only return if there is an error. On windows this is a synonym for
+<code>exec</code>.</p>
+</div><h4 id='method.exec_with_output' class="method"><span id='exec_with_output.v' class='invisible'><code>pub fn <a href='#method.exec_with_output' class='fnname'>exec_with_output</a>(&amp;self) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/process/struct.Output.html" title="struct std::process::Output">Output</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#170-187' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Execute the process, returning the stdio output, or an error if non-zero exit status.</p>
+</div><h4 id='method.exec_with_streaming' class="method"><span id='exec_with_streaming.v' class='invisible'><code>pub fn <a href='#method.exec_with_streaming' class='fnname'>exec_with_streaming</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;self, <br>&nbsp;&nbsp;&nbsp;&nbsp;on_stdout_line: &amp;mut <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/function/trait.FnMut.html" title="trait core::ops::function::FnMut">FnMut</a>(&amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;, <br>&nbsp;&nbsp;&nbsp;&nbsp;on_stderr_line: &amp;mut <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/function/trait.FnMut.html" title="trait core::ops::function::FnMut">FnMut</a>(&amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;, <br>&nbsp;&nbsp;&nbsp;&nbsp;print_output: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a><br>) -&gt; <a class="type" href="../../../cargo/util/errors/type.CargoResult.html" title="type cargo::util::errors::CargoResult">CargoResult</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/process/struct.Output.html" title="struct std::process::Output">Output</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#195-273' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Execute a command, passing each line of stdout and stderr to the supplied callbacks, which
+can mutate the string data.</p>
+
+<p>If any invocations of these function return an error, it will be propagated.</p>
+
+<p>Optionally, output can be passed to errors using <code>print_output</code></p>
+</div><h4 id='method.build_command' class="method"><span id='build_command.v' class='invisible'><code>pub fn <a href='#method.build_command' class='fnname'>build_command</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/std/process/struct.Command.html" title="struct std::process::Command">Command</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#277-295' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Converts ProcessBuilder into a <code>std::process::Command</code>, and handles the jobserver if
+present.</p>
+</div></div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Clone' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code><a href='#impl-Clone' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#14' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class="method"><span id='clone.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#14' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class="method"><span id='clone_from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Self)</code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/clone.rs.html#112-114' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div><h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#14' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#14' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt">Read more</a></p>
+</div></div><h3 id='impl-Display' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a> for <a class="struct" href="../../../cargo/util/process_builder/struct.ProcessBuilder.html" title="struct cargo::util::process_builder::ProcessBuilder">ProcessBuilder</a></code><a href='#impl-Display' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#31-41' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt-1' class="method"><span id='fmt.v-1' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/process_builder.rs.html#32-40' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html#tymethod.fmt">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

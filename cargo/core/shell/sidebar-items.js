@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ColorChoice","Whether messages should use color output"],["Verbosity","The requested verbosity of output"]],"struct":[["Shell","An abstraction around a `Write`able object that remembers preferences for output verbosity and color."]]});

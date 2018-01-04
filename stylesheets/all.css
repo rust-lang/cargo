@@ -1,0 +1,291 @@
+html {
+  background: url("../images/noise.png");
+  background-color: #3b6837;
+}
+
+main, #header { width: 900px; }
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  display: -webkit-flex;
+  display:         flex;
+  -webkit-flex-direction: column;
+          flex-direction: column;
+  -webkit-align-items: center;
+          align-items: center;
+  font-family: sans-serif;
+  font-size: 16px;
+}
+
+a { color: #00ac5b; text-decoration: none; }
+a:hover { color: #00793f; }
+
+h1 {
+  font-size: 24px;
+  margin: 20px 0 10px 0;
+  font-weight: bold;
+  color: #b64790;
+}
+
+h1 code:not(.highlight) {
+  color: #d9a700;
+  vertical-align: bottom;
+}
+h1 a, h2 a { color: #b64790; text-decoration: none; }
+h1:hover a, h2:hover a { color: #A03D7E; }
+h1:hover a:after,
+h2:hover a:after { content: '\2002\00a7\2002'; }
+:target { background: rgba(239, 242, 178, 1); padding: 5px; }
+
+h1.title { /* style rustdoc-generated title */
+    width: 100%;
+    padding: 40px 20px 40px 60px;
+    background-color: #edebdd;
+    margin-bottom: 20px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    -ms-border-radius: 5px;
+    border-radius: 5px;
+    margin: 0;
+    color: #383838;
+    font-size: 2em;
+    background-image: url(../images/circle-with-i.png);
+    background-repeat: no-repeat;
+    background-position: 20px center;
+}
+
+h2 {
+  font-size: 18px;
+  margin: 15px 0 5px 0;
+  color: #b64790;
+  font-weight: bold;
+}
+
+h2 code:not(.highlight) { color: #d9a700; }
+
+code:not(.highlight) {
+  font-family: monospace;
+  color: #b64790;
+}
+
+main {
+  display: -webkit-flex;
+  display:         flex;
+  -webkit-flex-direction: column;
+          flex-direction: column;
+
+  width: 100%;
+  max-width: 900px;
+  margin-bottom: 10px;
+
+  background-color: #f9f7ec;
+  padding: 15px;
+
+  -webkit-border-radius: 10px;
+  -moz-border-radius: 10px;
+  -ms-border-radius: 10px;
+  border-radius: 10px;
+  box-shadow: 0px 0px 5px 2px #3b6837;
+  border: 5px solid #62865f;
+  color: #383838;
+}
+
+main > p:first-child {
+  font-weight: 500;
+  margin-top: 3px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #62865f;
+  text-align: center;
+}
+
+main p:first-child a { color: #3b6837; }
+main p:first-child a:hover { color: #62865f; }
+
+main p, main ul {
+  /* color: #3b6837; */
+  margin: 10px 0;
+  line-height: 150%;
+}
+
+main ul { margin-left: 20px; }
+main li { list-style-type: disc; }
+main strong { font-weight: bold; }
+
+img.logo {
+  align-self: center;
+  margin-bottom: 10px;
+}
+
+pre {
+  padding: 10px;
+  margin: 10px 0;
+  /* border: 1px solid #cad0d0; */
+  border-radius: 4px;
+  max-width: calc(100vw - 45px);
+  overflow-x: auto;
+
+  background: #383838 !important;
+  color: white;
+  padding: 20px;
+
+  /* override prism.js styles */
+  font-size: 1em !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+pre code {
+  text-shadow: none !important;
+}
+
+footer {
+    padding: 40px;
+    width: 900px;
+}
+footer a {
+    color: white;
+}
+footer a:hover {
+    color: #e6e6e6;
+}
+footer .sep, #header .sep { color: #284725; }
+footer .sep { margin: 0 10px; }
+#header .sep { margin-left: 10px; }
+
+.headerlink {
+  display: none;
+  text-decoration: none;
+}
+.fork-me {
+  position:absolute;
+  top:0;
+  right:0;
+}
+
+.token.toml-section { color: #CB4B16; }
+.token.toml-key { color: #268BD2; }
+
+/* Rust code highlighting */
+pre.rust .kw { color: #8959A8; }
+pre.rust .kw-2, pre.rust .prelude-ty { color: #4271AE; }
+pre.rust .number, pre.rust .string { color: #718C00; }
+pre.rust .self, pre.rust .boolval, pre.rust .prelude-val,
+pre.rust .attribute, pre.rust .attribute .ident { color: #C82829; }
+pre.rust .comment { color: #8E908C; }
+pre.rust .doccomment { color: #4D4D4C; }
+pre.rust .macro, pre.rust .macro-nonterminal { color: #3E999F; }
+pre.rust .lifetime { color: #B76514; }
+code span.s1 { color: #2AA198; }
+
+table th { border-bottom: 1px solid black; }
+table td, table th { padding: 5px 10px; }
+
+#header {
+  color: white;
+  position: relative;
+  height: 100px;
+  display: -webkit-flex;
+  display:         flex;
+  -webkit-align-items: center;
+          align-items: center;
+}
+#header h1 { font-size: 2em; }
+#header a, #header h1 { color: white; text-decoration: none; }
+#header a:hover { color: #d9d9d9; }
+
+#header input.search {
+    border: none;
+    color: black;
+    outline: 0;
+    margin-left: 30px;
+    padding: 5px 5px 5px 25px;
+    background-image: url(../images/search.png);
+    background-repeat: no-repeat;
+    background-position: 6px 6px;
+    -webkit-border-radius: 15px;
+    -moz-border-radius: 15px;
+    -ms-border-radius: 15px;
+    border-radius: 15px;
+}
+
+#header .nav {
+    -webkit-flex-grow: 2;
+    flex-grow: 2;
+    text-align: right;
+}
+
+button.dropdown, a.dropdown { cursor: pointer; }
+button.dropdown .arrow, a.dropdown .arrow {
+    font-size: 50%; display: inline-block; vertical-align: middle;
+}
+button.dropdown .arrow::after, a.dropdown .arrow::after { content: "▼"; }
+button.active.dropdown .arrow::after, a.active.dropdown .arrow::after {
+    content: "▲";
+}
+
+button {
+    background: none;
+    outline: 0;
+    border: 0;
+    padding: 10px;
+    color: white;
+}
+
+button.active {
+  background:#2a4f27;
+  box-shadow:inset -2px 2px 4px 0 #243d26
+}
+
+ul.dropdown {
+    display: none;
+    visibility: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 100%;
+    min-width: 150px;
+    opacity: 0;
+    margin: 0;
+    text-align: left;
+    padding: 0;
+    background: white;
+    border: 1px solid #d5d3cb;
+    list-style: none;
+    z-index: 10;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    -ms-border-radius: 5px;
+    border-radius: 5px;
+}
+
+ul.dropdown li a {
+    font-size: 90%;
+    width: 100%;
+    display: inline-block;
+    padding: 8px 10px;
+    text-decoration: none;
+    color: #383838 !important;
+}
+
+ul.dropdown li a:hover {
+    background: #5e5e5e;
+    color: white !important;
+}
+ul.dropdown li.last { border-top: 1px solid #d5d3cb; }
+ul.dropdown.open {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+}
+.dropdown-container {
+    display: inline-block;
+    position: relative;
+}
+
+p > img {
+    max-width: 100%;
+}

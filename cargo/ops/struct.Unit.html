@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Unit` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Unit">
+
+    <title>cargo::ops::Unit - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct Unit</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#fields">Fields</a><div class="sidebar-links"><a href="#structfield.pkg">pkg</a><a href="#structfield.target">target</a><a href="#structfield.profile">profile</a><a href="#structfield.kind">kind</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-Clone">Clone</a><a href="#impl-Copy">Copy</a><a href="#impl-Eq">Eq</a><a href="#impl-PartialEq">PartialEq</a><a href="#impl-Hash">Hash</a></div></div><p class='location'><a href='../index.html'>cargo</a>::<wbr><a href='index.html'>ops</a></p><script>window.sidebarCurrent = {name: 'Unit', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>cargo</a>::<wbr><a href='index.html'>ops</a>::<wbr><a class="struct" href=''>Unit</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/cargo/ops/cargo_rustc/context.rs.html#43-61' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Unit&lt;'a&gt; {
+    pub pkg: &amp;'a <a class="struct" href="../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a>,
+    pub target: &amp;'a <a class="struct" href="../../cargo/core/manifest/struct.Target.html" title="struct cargo::core::manifest::Target">Target</a>,
+    pub profile: &amp;'a <a class="struct" href="../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a>,
+    pub kind: <a class="enum" href="../../cargo/ops/enum.Kind.html" title="enum cargo::ops::Kind">Kind</a>,
+}</pre><div class='docblock'><p>All information needed to define a Unit.</p>
+
+<p>A unit is an object that has enough information so that cargo knows how to build it.
+For example, if your project has dependencies, then every dependency will be built as a library
+unit. If your project is a library, then it will be built as a library unit as well, or if it
+is a binary with <code>main.rs</code>, then a binary will be output. There are also separate unit types
+for <code>test</code>ing and <code>check</code>ing, amongst others.</p>
+
+<p>The unit also holds information about all possible metadata about the package in <code>pkg</code>.</p>
+
+<p>A unit needs to know extra information in addition to the type and root source file. For
+example, it needs to know the target architecture (OS, chip arch etc.) and it needs to know
+whether you want a debug or release build. There is enough information in this struct to figure
+all that out.</p>
+</div><h2 id='fields' class='fields small-section-header'>
+                       Fields<a href='#fields' class='anchor'></a></h2><span id="structfield.pkg" class="structfield small-section-header">
+                           <a href="#structfield.pkg" class="anchor field"></a>
+                           <span id="pkg.v" class='invisible'>
+                           <code>pkg: &amp;'a <a class="struct" href="../../cargo/core/package/struct.Package.html" title="struct cargo::core::package::Package">Package</a></code>
+                           </span></span><div class='docblock'><p>Information about avaiable targets, which files to include/exclude, etc. Basically stuff in
+<code>Cargo.toml</code>.</p>
+</div><span id="structfield.target" class="structfield small-section-header">
+                           <a href="#structfield.target" class="anchor field"></a>
+                           <span id="target.v" class='invisible'>
+                           <code>target: &amp;'a <a class="struct" href="../../cargo/core/manifest/struct.Target.html" title="struct cargo::core::manifest::Target">Target</a></code>
+                           </span></span><div class='docblock'><p>Information about the specific target to build, out of the possible targets in <code>pkg</code>. Not
+to be confused with <em>target-triple</em> (or <em>target architecture</em> ...), the target arch for a
+build.</p>
+</div><span id="structfield.profile" class="structfield small-section-header">
+                           <a href="#structfield.profile" class="anchor field"></a>
+                           <span id="profile.v" class='invisible'>
+                           <code>profile: &amp;'a <a class="struct" href="../../cargo/core/manifest/struct.Profile.html" title="struct cargo::core::manifest::Profile">Profile</a></code>
+                           </span></span><div class='docblock'><p>The profile contains information about <em>how</em> the build should be run, including debug
+level, extra args to pass to rustc, etc.</p>
+</div><span id="structfield.kind" class="structfield small-section-header">
+                           <a href="#structfield.kind" class="anchor field"></a>
+                           <span id="kind.v" class='invisible'>
+                           <code>kind: <a class="enum" href="../../cargo/ops/enum.Kind.html" title="enum cargo::ops::Kind">Kind</a></code>
+                           </span></span><div class='docblock'><p>Whether this compilation unit is for the host or target architecture.</p>
+
+<p>For example, when
+cross compiling and using a custom build script, the build script needs to be compiled for
+the host architecture so the host rustc can use it (when compiling to the target
+architecture).</p>
+</div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Clone' class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="struct" href="../../cargo/ops/struct.Unit.html" title="struct cargo::ops::Unit">Unit</a>&lt;'a&gt;</code><a href='#impl-Clone' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/ops/cargo_rustc/context.rs.html#42' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class="method"><span id='clone.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class="struct" href="../../cargo/ops/struct.Unit.html" title="struct cargo::ops::Unit">Unit</a>&lt;'a&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/ops/cargo_rustc/context.rs.html#42' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class="method"><span id='clone_from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Self)</code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/clone.rs.html#112-114' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div><h3 id='impl-Copy' class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html" title="trait core::marker::Copy">Copy</a> for <a class="struct" href="../../cargo/ops/struct.Unit.html" title="struct cargo::ops::Unit">Unit</a>&lt;'a&gt;</code><a href='#impl-Copy' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/ops/cargo_rustc/context.rs.html#42' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'></div><h3 id='impl-Eq' class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html" title="trait core::cmp::Eq">Eq</a> for <a class="struct" href="../../cargo/ops/struct.Unit.html" title="struct cargo::ops::Unit">Unit</a>&lt;'a&gt;</code><a href='#impl-Eq' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/ops/cargo_rustc/context.rs.html#42' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'></div><h3 id='impl-PartialEq' class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html" title="trait core::cmp::PartialEq">PartialEq</a> for <a class="struct" href="../../cargo/ops/struct.Unit.html" title="struct cargo::ops::Unit">Unit</a>&lt;'a&gt;</code><a href='#impl-PartialEq' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/ops/cargo_rustc/context.rs.html#42' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.eq' class="method"><span id='eq.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class="struct" href="../../cargo/ops/struct.Unit.html" title="struct cargo::ops::Unit">Unit</a>&lt;'a&gt;) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/ops/cargo_rustc/context.rs.html#42' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
+</div><h4 id='method.ne' class="method"><span id='ne.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, __arg_0: &amp;<a class="struct" href="../../cargo/ops/struct.Unit.html" title="struct cargo::ops::Unit">Unit</a>&lt;'a&gt;) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/ops/cargo_rustc/context.rs.html#42' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests for <code>!=</code>.</p>
+</div></div><h3 id='impl-Hash' class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html" title="trait core::hash::Hash">Hash</a> for <a class="struct" href="../../cargo/ops/struct.Unit.html" title="struct cargo::ops::Unit">Unit</a>&lt;'a&gt;</code><a href='#impl-Hash' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/ops/cargo_rustc/context.rs.html#42' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.hash' class="method"><span id='hash.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#tymethod.hash' class='fnname'>hash</a>&lt;__H:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html" title="trait core::hash::Hasher">Hasher</a>&gt;(&amp;self, __arg_0: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>__H)</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/cargo/ops/cargo_rustc/context.rs.html#42' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Feeds this value into the given [<code>Hasher</code>]. <a href="https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#tymethod.hash">Read more</a></p>
+</div><h4 id='method.hash_slice' class="method"><span id='hash_slice.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#method.hash_slice' class='fnname'>hash_slice</a>&lt;H&gt;(data: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[Self]</a>, state: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>H) <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;H: <a class="trait" href="https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html" title="trait core::hash::Hasher">Hasher</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.3.0'>1.3.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/hash/mod.rs.html#202-208' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Feeds a slice of this type into the given [<code>Hasher</code>]. <a href="https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#method.hash_slice">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

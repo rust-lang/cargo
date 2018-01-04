@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `ProcessError` struct in crate `cargo`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, ProcessError">
+
+    <title>cargo::util::errors::ProcessError - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        <div class="sidebar-menu">&#9776;</div>
+        
+        <p class='location'>Struct ProcessError</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#fields">Fields</a><div class="sidebar-links"><a href="#structfield.desc">desc</a><a href="#structfield.exit">exit</a><a href="#structfield.output">output</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-Debug">Debug</a><a href="#impl-Fail">Fail</a><a href="#impl-Display">Display</a></div></div><p class='location'><a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>util</a>::<wbr><a href='index.html'>errors</a></p><script>window.sidebarCurrent = {name: 'ProcessError', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cargo</a>::<wbr><a href='../index.html'>util</a>::<wbr><a href='index.html'>errors</a>::<wbr><a class="struct" href=''>ProcessError</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/cargo/util/errors.rs.html#72-76' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct ProcessError {
+    pub desc: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>,
+    pub exit: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/process/struct.ExitStatus.html" title="struct std::process::ExitStatus">ExitStatus</a>&gt;,
+    pub output: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/process/struct.Output.html" title="struct std::process::Output">Output</a>&gt;,
+}</pre><h2 id='fields' class='fields small-section-header'>
+                       Fields<a href='#fields' class='anchor'></a></h2><span id="structfield.desc" class="structfield small-section-header">
+                           <a href="#structfield.desc" class="anchor field"></a>
+                           <span id="desc.v" class='invisible'>
+                           <code>desc: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a></code>
+                           </span></span><span id="structfield.exit" class="structfield small-section-header">
+                           <a href="#structfield.exit" class="anchor field"></a>
+                           <span id="exit.v" class='invisible'>
+                           <code>exit: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/process/struct.ExitStatus.html" title="struct std::process::ExitStatus">ExitStatus</a>&gt;</code>
+                           </span></span><span id="structfield.output" class="structfield small-section-header">
+                           <a href="#structfield.output" class="anchor field"></a>
+                           <span id="output.v" class='invisible'>
+                           <code>output: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/std/process/struct.Output.html" title="struct std::process::Output">Output</a>&gt;</code>
+                           </span></span>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../../cargo/util/errors/struct.ProcessError.html" title="struct cargo::util::errors::ProcessError">ProcessError</a></code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/errors.rs.html#70' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/errors.rs.html#70' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt">Read more</a></p>
+</div></div><h3 id='impl-Fail' class='impl'><span class='in-band'><code>impl Fail for <a class="struct" href="../../../cargo/util/errors/struct.ProcessError.html" title="struct cargo::util::errors::ProcessError">ProcessError</a></code><a href='#impl-Fail' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/errors.rs.html#70-1' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.cause' class="method"><span id='cause.v' class='invisible'><code>fn <a href='#method.cause' class='fnname'>cause</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;Fail&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/errors.rs.html#70' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a reference to the underlying cause of this failure, if it is an error that wraps other errors. <a href="#method.cause">Read more</a></p>
+</div><h4 id='method.backtrace' class="method"><span id='backtrace.v' class='invisible'><code>fn <a href='#method.backtrace' class='fnname'>backtrace</a>(&amp;self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;Backtrace&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/errors.rs.html#70' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a reference to the <code>Backtrace</code> carried by this failure, if it carries one. <a href="#method.backtrace">Read more</a></p>
+</div><h4 id='method.context' class="method"><span id='context.v' class='invisible'><code>fn <a href='#method.context' class='fnname'>context</a>&lt;D&gt;(self, context: D) -&gt; Context&lt;D&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;D: <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + 'static,&nbsp;</span></code></span></h4>
+<div class='docblock'><p>Provides context for this failure. <a href="#method.context">Read more</a></p>
+</div><h4 id='method.compat' class="method"><span id='compat.v' class='invisible'><code>fn <a href='#method.compat' class='fnname'>compat</a>(self) -&gt; Compat&lt;Self&gt;</code></span></h4>
+<div class='docblock'><p>Wraps this failure in a compatibility wrapper that implements <code>std::error::Error</code>. <a href="#method.compat">Read more</a></p>
+</div><h4 id='method.causes' class="method"><div class="important-traits"><div class='tooltip'>ⓘ<span class='tooltiptext'>Important traits for Causes&lt;'f&gt;</span></div><div class="content hidden"><h3 class="important">Important traits for Causes&lt;'f&gt;</h3><code class="content"><span class="where fmt-newline">impl&lt;'f&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/iter/iterator/trait.Iterator.html" title="trait core::iter::iterator::Iterator">Iterator</a> for Causes&lt;'f&gt;</span><span class="where fmt-newline">    type <a href='https://doc.rust-lang.org/nightly/core/iter/iterator/trait.Iterator.html#associatedtype.Item' class="type">Item</a> = &amp;'f (Fail + 'static);</span></code></div></div><span id='causes.v' class='invisible'><code>fn <a href='#method.causes' class='fnname'>causes</a>(&amp;self) -&gt; Causes</code></span></h4>
+<div class='docblock'><p>Returns a iterator over the causes of this <code>Fail</code> with itself as the first item and the <code>root_cause</code> as the final item. <a href="#method.causes">Read more</a></p>
+</div><h4 id='method.root_cause' class="method"><span id='root_cause.v' class='invisible'><code>fn <a href='#method.root_cause' class='fnname'>root_cause</a>(&amp;self) -&gt; &amp;(Fail + 'static)</code></span></h4>
+<div class='docblock'><p>Returns the &quot;root cause&quot; of this <code>Fail</code> - the last value in the cause chain which does not return an underlying <code>cause</code>. <a href="#method.root_cause">Read more</a></p>
+</div></div><h3 id='impl-Display' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a> for <a class="struct" href="../../../cargo/util/errors/struct.ProcessError.html" title="struct cargo::util::errors::ProcessError">ProcessError</a></code><a href='#impl-Display' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/errors.rs.html#70' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt-1' class="method"><span id='fmt.v-1' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/cargo/util/errors.rs.html#70' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter. <a href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html#tymethod.fmt">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>↑</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>↓</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>↹</dt>
+                    <dd>Switch tab</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt style="width:31px;">+ / -</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cargo";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

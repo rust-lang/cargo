@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["ancestors",""],["append",""],["bytes2path",""],["dylib_path",""],["dylib_path_envvar",""],["join_paths",""],["normalize_path",""],["path2bytes",""],["read",""],["read_bytes",""],["without_prefix",""],["write",""]],"struct":[["PathAncestors",""]]});

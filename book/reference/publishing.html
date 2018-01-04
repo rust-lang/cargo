@@ -1,0 +1,309 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Publishing on crates.io - The Cargo Book</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <base href="../">
+
+        <link rel="stylesheet" href="book.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <link rel="shortcut icon" href="favicon.png">
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme -->
+        
+
+        
+
+        <!-- Fetch Clipboard.js from CDN but have a local fallback -->
+        <script src="https://cdn.jsdelivr.net/clipboard.js/1.6.1/clipboard.min.js"></script>
+        <script>
+            if (typeof Clipboard == 'undefined') {
+                document.write(unescape("%3Cscript src='clipboard.min.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch JQuery from CDN but have a local fallback -->
+        <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script>
+            if (typeof jQuery == 'undefined') {
+                document.write(unescape("%3Cscript src='jquery.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+        <!-- Fetch store.js from local - TODO add CDN when 2.x.x is available on cdnjs -->
+        <script src="store.js"></script>
+
+    </head>
+    <body class="light">
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme = store.get('mdbook-theme');
+            if (theme === null || theme === undefined) { theme = 'light'; }
+            $('body').removeClass().addClass(theme);
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var sidebar = store.get('mdbook-sidebar');
+            if (sidebar === "hidden") { $("html").addClass("sidebar-hidden") }
+            else if (sidebar === "visible") { $("html").addClass("sidebar-visible") }
+        </script>
+
+        <div id="sidebar" class="sidebar">
+            <ul class="chapter"><li class="affix"><a href="index.html">Introduction</a></li><li><a href="getting-started/index.html"><strong>1.</strong> Getting Started</a></li><li><ul class="section"><li><a href="getting-started/installation.html"><strong>1.1.</strong> Installation</a></li><li><a href="getting-started/first-steps.html"><strong>1.2.</strong> First Steps with Cargo</a></li></ul></li><li><a href="guide/index.html"><strong>2.</strong> Cargo Guide</a></li><li><ul class="section"><li><a href="guide/why-cargo-exists.html"><strong>2.1.</strong> Why Cargo Exists</a></li><li><a href="guide/creating-a-new-project.html"><strong>2.2.</strong> Creating a New Project</a></li><li><a href="guide/working-on-an-existing-project.html"><strong>2.3.</strong> Working on an Existing Project</a></li><li><a href="guide/dependencies.html"><strong>2.4.</strong> Dependencies</a></li><li><a href="guide/project-layout.html"><strong>2.5.</strong> Project Layout</a></li><li><a href="guide/cargo-toml-vs-cargo-lock.html"><strong>2.6.</strong> Cargo.toml vs Cargo.lock</a></li><li><a href="guide/tests.html"><strong>2.7.</strong> Tests</a></li><li><a href="guide/continuous-integration.html"><strong>2.8.</strong> Continuous Integration</a></li></ul></li><li><a href="reference/index.html"><strong>3.</strong> Cargo Reference</a></li><li><ul class="section"><li><a href="reference/specifying-dependencies.html"><strong>3.1.</strong> Specifying Dependencies</a></li><li><a href="reference/manifest.html"><strong>3.2.</strong> The Manifest Format</a></li><li><a href="reference/config.html"><strong>3.3.</strong> Configuration</a></li><li><a href="reference/environment-variables.html"><strong>3.4.</strong> Environment Variables</a></li><li><a href="reference/build-scripts.html"><strong>3.5.</strong> Build Scripts</a></li><li><a href="reference/publishing.html" class="active"><strong>3.6.</strong> Publishing on crates.io</a></li><li><a href="reference/pkgid-spec.html"><strong>3.7.</strong> Package ID Specifications</a></li><li><a href="reference/source-replacement.html"><strong>3.8.</strong> Source Replacement</a></li><li><a href="reference/external-tools.html"><strong>3.9.</strong> External Tools</a></li></ul></li><li><a href="faq.html"><strong>4.</strong> FAQ</a></li></ul>
+        </div>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page" tabindex="-1">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div class="left-buttons">
+                        <i id="sidebar-toggle" class="fa fa-bars" title="Toggle sidebar"></i>
+                        <i id="theme-toggle" class="fa fa-paint-brush" title="Change theme"></i>
+                    </div>
+
+                    <h1 class="menu-title">The Cargo Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html">
+                            <i id="print-button" class="fa fa-print" title="Print this book"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="content" class="content">
+                    <a class="header" href="reference/publishing.html#publishing-on-cratesio" id="publishing-on-cratesio"><h2>Publishing on crates.io</h2></a>
+<p>Once you've got a library that you'd like to share with the world, it's time to
+publish it on <a href="https://crates.io/">crates.io</a>! Publishing a crate is when a specific
+version is uploaded to be hosted on <a href="https://crates.io/">crates.io</a>.</p>
+<p>Take care when publishing a crate, because a publish is <strong>permanent</strong>. The
+version can never be overwritten, and the code cannot be deleted. There is no
+limit to the number of versions which can be published, however.</p>
+<a class="header" href="reference/publishing.html#before-your-first-publish" id="before-your-first-publish"><h3>Before your first publish</h3></a>
+<p>First thing’s first, you’ll need an account on <a href="https://crates.io/">crates.io</a> to acquire
+an API token. To do so, <a href="https://crates.io/">visit the home page</a> and log in via a GitHub
+account (required for now). After this, visit your <a href="https://crates.io/me">Account
+Settings</a> page and run the <code>cargo login</code> command
+specified.</p>
+<pre><code class="language-shell">$ cargo login abcdefghijklmnopqrstuvwxyz012345
+</code></pre>
+<p>This command will inform Cargo of your API token and store it locally in your
+<code>~/.cargo/credentials</code> (previously it was <code>~/.cargo/config</code>).  Note that this
+token is a <strong>secret</strong> and should not be shared with anyone else. If it leaks for
+any reason, you should regenerate it immediately.</p>
+<a class="header" href="reference/publishing.html#before-publishing-a-new-crate" id="before-publishing-a-new-crate"><h3>Before publishing a new crate</h3></a>
+<p>Keep in mind that crate names on <a href="https://crates.io/">crates.io</a> are allocated on a first-come-first-
+serve basis. Once a crate name is taken, it cannot be used for another crate.</p>
+<a class="header" href="reference/publishing.html#packaging-a-crate" id="packaging-a-crate"><h4>Packaging a crate</h4></a>
+<p>The next step is to package up your crate into a format that can be uploaded to
+<a href="https://crates.io/">crates.io</a>. For this we’ll use the <code>cargo package</code> subcommand. This will take
+our entire crate and package it all up into a <code>*.crate</code> file in the
+<code>target/package</code> directory.</p>
+<pre><code class="language-shell">$ cargo package
+</code></pre>
+<p>As an added bonus, the <code>*.crate</code> will be verified independently of the current
+source tree. After the <code>*.crate</code> is created, it’s unpacked into
+<code>target/package</code> and then built from scratch to ensure that all necessary files
+are there for the build to succeed. This behavior can be disabled with the
+<code>--no-verify</code> flag.</p>
+<p>Now’s a good time to take a look at the <code>*.crate</code> file to make sure you didn’t
+accidentally package up that 2GB video asset, or large data files used for code
+generation, integration tests, or benchmarking.  There is currently a 10MB
+upload size limit on <code>*.crate</code> files. So, if the size of <code>tests</code> and <code>benches</code>
+directories and their dependencies are up to a couple of MBs, you can keep them
+in your package; otherwsie, better to exclude them.</p>
+<p>Cargo will automatically ignore files ignored by your version control system
+when packaging, but if you want to specify an extra set of files to ignore you
+can use the <code>exclude</code> key in the manifest:</p>
+<pre><code class="language-toml">[package]
+# ...
+exclude = [
+    &quot;public/assets/*&quot;,
+    &quot;videos/*&quot;,
+]
+</code></pre>
+<p>The syntax of each element in this array is what
+<a href="https://github.com/rust-lang/glob">rust-lang/glob</a> accepts. If you’d rather
+roll with a whitelist instead of a blacklist, Cargo also supports an <code>include</code>
+key, which if set, overrides the <code>exclude</code> key:</p>
+<pre><code class="language-toml">[package]
+# ...
+include = [
+    &quot;**/*.rs&quot;,
+    &quot;Cargo.toml&quot;,
+]
+</code></pre>
+<a class="header" href="reference/publishing.html#uploading-the-crate" id="uploading-the-crate"><h3>Uploading the crate</h3></a>
+<p>Now that we’ve got a <code>*.crate</code> file ready to go, it can be uploaded to
+<a href="https://crates.io/">crates.io</a> with the <code>cargo publish</code> command. And that’s it, you’ve now published
+your first crate!</p>
+<pre><code class="language-shell">$ cargo publish
+</code></pre>
+<p>If you’d like to skip the <code>cargo package</code> step, the <code>cargo publish</code> subcommand
+will automatically package up the local crate if a copy isn’t found already.</p>
+<p>Be sure to check out the <a href="reference/manifest.html#package-metadata">metadata you can
+specify</a> to ensure your crate can be
+discovered more easily!</p>
+<a class="header" href="reference/publishing.html#publishing-a-new-version-of-an-existing-crate" id="publishing-a-new-version-of-an-existing-crate"><h3>Publishing a new version of an existing crate</h3></a>
+<p>In order to release a new version, change the <code>version</code> value specified in your
+<code>Cargo.toml</code> manifest. Keep in mind <a href="reference/manifest.html#the-version-field">the semver
+rules</a>. Then optionally run <code>cargo package</code> if
+you want to inspect the <code>*.crate</code> file for the new version before publishing,
+and run <code>cargo publish</code> to upload the new version.</p>
+<a class="header" href="reference/publishing.html#managing-a-cratesio-based-crate" id="managing-a-cratesio-based-crate"><h3>Managing a crates.io-based crate</h3></a>
+<p>Management of crates is primarily done through the command line <code>cargo</code> tool
+rather than the <a href="https://crates.io/">crates.io</a> web interface. For this, there are a few subcommands
+to manage a crate.</p>
+<a class="header" href="reference/publishing.html#cargo-yank" id="cargo-yank"><h4><code>cargo yank</code></h4></a>
+<p>Occasions may arise where you publish a version of a crate that actually ends up
+being broken for one reason or another (syntax error, forgot to include a file,
+etc.). For situations such as this, Cargo supports a “yank” of a version of a
+crate.</p>
+<pre><code class="language-shell">$ cargo yank --vers 1.0.1
+$ cargo yank --vers 1.0.1 --undo
+</code></pre>
+<p>A yank <strong>does not</strong> delete any code. This feature is not intended for deleting
+accidentally uploaded secrets, for example. If that happens, you must reset
+those secrets immediately.</p>
+<p>The semantics of a yanked version are that no new dependencies can be created
+against that version, but all existing dependencies continue to work. One of the
+major goals of <a href="https://crates.io/">crates.io</a> is to act as a permanent archive of crates that does
+not change over time, and allowing deletion of a version would go against this
+goal. Essentially a yank means that all projects with a <code>Cargo.lock</code> will not
+break, while any future <code>Cargo.lock</code> files generated will not list the yanked
+version.</p>
+<a class="header" href="reference/publishing.html#cargo-owner" id="cargo-owner"><h4><code>cargo owner</code></h4></a>
+<p>A crate is often developed by more than one person, or the primary maintainer
+may change over time! The owner of a crate is the only person allowed to publish
+new versions of the crate, but an owner may designate additional owners.</p>
+<pre><code class="language-shell">$ cargo owner --add my-buddy
+$ cargo owner --remove my-buddy
+$ cargo owner --add github:rust-lang:owners
+$ cargo owner --remove github:rust-lang:owners
+</code></pre>
+<p>The owner IDs given to these commands must be GitHub user names or GitHub teams.</p>
+<p>If a user name is given to <code>--add</code>, that user becomes a “named” owner, with
+full rights to the crate. In addition to being able to publish or yank versions
+of the crate, they have the ability to add or remove owners, <em>including</em> the
+owner that made <em>them</em> an owner. Needless to say, you shouldn’t make people you
+don’t fully trust into a named owner. In order to become a named owner, a user
+must have logged into <a href="https://crates.io/">crates.io</a> previously.</p>
+<p>If a team name is given to <code>--add</code>, that team becomes a “team” owner, with
+restricted right to the crate. While they have permission to publish or yank
+versions of the crate, they <em>do not</em> have the ability to add or remove owners.
+In addition to being more convenient for managing groups of owners, teams are
+just a bit more secure against owners becoming malicious.</p>
+<p>The syntax for teams is currently <code>github:org:team</code> (see examples above).
+In order to add a team as an owner one must be a member of that team. No
+such restriction applies to removing a team as an owner.</p>
+<a class="header" href="reference/publishing.html#github-permissions" id="github-permissions"><h3>GitHub permissions</h3></a>
+<p>Team membership is not something GitHub provides simple public access to, and it
+is likely for you to encounter the following message when working with them:</p>
+<blockquote>
+<p>It looks like you don’t have permission to query a necessary property from
+GitHub to complete this request. You may need to re-authenticate on <a href="https://crates.io/">crates.io</a>
+to grant permission to read GitHub org memberships. Just go to
+https://crates.io/login</p>
+</blockquote>
+<p>This is basically a catch-all for “you tried to query a team, and one of the
+five levels of membership access control denied this”. That is not an
+exaggeration. GitHub’s support for team access control is Enterprise Grade.</p>
+<p>The most likely cause of this is simply that you last logged in before this
+feature was added. We originally requested <em>no</em> permissions from GitHub when
+authenticating users, because we didn’t actually ever use the user’s token for
+anything other than logging them in. However to query team membership on your
+behalf, we now require
+<a href="https://developer.github.com/v3/oauth/#scopes">the <code>read:org</code> scope</a>.</p>
+<p>You are free to deny us this scope, and everything that worked before teams
+were introduced will keep working. However you will never be able to add a team
+as an owner, or publish a crate as a team owner. If you ever attempt to do this,
+you will get the error above. You may also see this error if you ever try to
+publish a crate that you don’t own at all, but otherwise happens to have a team.</p>
+<p>If you ever change your mind, or just aren’t sure if <a href="https://crates.io/">crates.io</a> has sufficient
+permission, you can always go to https://crates.io/login, which will prompt you
+for permission if <a href="https://crates.io/">crates.io</a> doesn’t have all the scopes it would like to.</p>
+<p>An additional barrier to querying GitHub is that the organization may be
+actively denying third party access. To check this, you can go to:</p>
+<pre><code>https://github.com/organizations/:org/settings/oauth_application_policy
+</code></pre>
+<p>where <code>:org</code> is the name of the organization (e.g. rust-lang). You may see
+something like:</p>
+<p><img src="images/org-level-acl.png" alt="Organization Access Control" /></p>
+<p>Where you may choose to explicitly remove <a href="https://crates.io/">crates.io</a> from your organization’s
+blacklist, or simply press the “Remove Restrictions” button to allow all third
+party applications to access this data.</p>
+<p>Alternatively, when <a href="https://crates.io/">crates.io</a> requested the <code>read:org</code> scope, you could have
+explicitly whitelisted <a href="https://crates.io/">crates.io</a> querying the org in question by pressing
+the “Grant Access” button next to its name:</p>
+<p><img src="images/auth-level-acl.png" alt="Authentication Access Control" /></p>
+
+                </div>
+
+                <!-- Mobile navigation buttons -->
+                
+                    <a rel="prev" href="reference/build-scripts.html" class="mobile-nav-chapters previous" title="Previous chapter">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="reference/pkgid-spec.html" class="mobile-nav-chapters next" title="Next chapter">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+
+            </div>
+
+            
+                <a href="reference/build-scripts.html" class="nav-chapters previous" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+            
+
+            
+                <a href="reference/pkgid-spec.html" class="nav-chapters next" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            
+
+        </div>
+
+
+        <!-- Local fallback for Font Awesome -->
+        <script>
+            if ($(".fa").css("font-family") !== "FontAwesome") {
+                $('<link rel="stylesheet" type="text/css" href="_FontAwesome/css/font-awesome.css">').prependTo('head');
+            }
+        </script>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        
+
+        
+
+        
+
+        
+
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS script -->
+        
+
+    </body>
+</html>
