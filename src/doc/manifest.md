@@ -165,10 +165,14 @@ keywords = ["...", "..."]
 # they must match exactly.
 categories = ["...", "..."]
 
-# This is a string description of the license for this package. Currently
-# crates.io will validate the license provided against a whitelist of known
-# license identifiers from http://spdx.org/licenses/. Multiple licenses can be
-# separated with a `/`.
+# This is an SPDX 2.1 license expression for this package.  Currently
+# crates.io will validate the license provided against a whitelist of
+# known license and exception identifiers from the SPDX license list
+# 2.4.
+#
+# Multiple licenses can be separated with a `/`, although that usage
+# is deprecated.  Instead, use a license expression with AND and OR
+# operators to get more explicit semantics.
 license = "..."
 
 # If a project is using a nonstandard license, then this key may be specified in
@@ -233,6 +237,11 @@ the license, link to the three URLs and categorize by the keywords. These keys
 provide useful information to users of the registry and also influence the
 search ranking of a crate. It is highly discouraged to omit everything in a
 published crate.
+
+SPDX 2.1 license expressions are documented
+[here][spdx-2.1-license-expressions].  The current version of the
+license list is available [here][spdx-license-list], and version 2.4
+is available [here][spdx-license-list-2.4].
 
 ## The `metadata` table (optional)
 
@@ -795,3 +804,7 @@ source (e.g. git or a local path).
 
 More information about overriding dependencies can be found in the [overriding
 dependencies][replace] section of the documentation.
+
+[spdx-2.1-license-expressions]: https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60
+[spdx-license-list]: https://spdx.org/licenses/
+[spdx-license-list-2.4]: https://github.com/spdx/license-list-data/tree/v2.4
