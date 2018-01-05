@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["emit",""]],"struct":[["Artifact",""],["BuildScript",""],["FromCompiler",""]],"trait":[["Message",""]]});
