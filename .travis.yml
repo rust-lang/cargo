@@ -34,14 +34,7 @@ matrix:
       script:
         - cargo test
         - cargo doc --no-deps
-        - sh src/ci/dox.sh
-      after_success: |
-        [ $TRAVIS_BRANCH = master ] &&
-        [ $TRAVIS_PULL_REQUEST = false ] &&
-        [ $(uname -s) = Linux ] &&
-        pip install ghp-import --user &&
-        $HOME/.local/bin/ghp-import -n target/doc &&
-        git push -qf https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages 2>&1 >/dev/null
+        - (cd src/doc && mdbook build --no-create --dest-dir ../../target/doc)
 
   exclude:
     - rust: stable
@@ -51,13 +44,10 @@ before_script:
 script:
   - cargo test
 
-env:
-  global:
-    - secure: "hWheSLilMM4DXChfSy2XsDlLw338X2o+fw8bE590xxU2TzngFW8GUfq7lGfZEp/l4SNNIS6ROU/igyttCZtxZMANZ4aMQZR5E8Fp4yPOyE1pZLDH/LdQVXnROsfburQJeq+GIYIbZ01Abzh5ClpgLg5KX0H627uj063zZ7Ljo/w="
-
 notifications:
   email:
     on_success: never
+
 addons:
   apt:
     packages:
