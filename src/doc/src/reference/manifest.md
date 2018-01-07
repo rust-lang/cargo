@@ -491,7 +491,8 @@ properties:
 * Whenever any crate in the workspace is compiled, output is placed in the
   *workspace root*. i.e. next to the *root crate*'s `Cargo.toml`.
 * The lock file for all crates in the workspace resides in the *workspace root*.
-* The `[patch]` and `[replace]` sections in `Cargo.toml` are only recognized
+* The `[patch]`, `[replace]` and `[profile.*]` sections in `Cargo.toml`
+  are only recognized
   in the *root crate*'s manifest, and ignored in member crates' manifests.
 
 [RFC 1525]: https://github.com/rust-lang/rfcs/blob/master/text/1525-cargo-workspace.md
