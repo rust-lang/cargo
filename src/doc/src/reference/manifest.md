@@ -743,7 +743,7 @@ bar = { path = 'my/local/bar' }
 git = 'https://github.com/example/baz'
 
 [patch.'https://github.com/example/baz']
-baz = { git = 'https://github.com/example/patched-baz', branch='my-branch' }
+baz = { git = 'https://github.com/example/patched-baz', branch = 'my-branch' }
 ```
 
 The `[patch]` table is made of dependency-like sub-tables. Each key after
