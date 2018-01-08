@@ -299,6 +299,7 @@ codegen-units = 1  # if > 1 enables parallel code generation which improves
                    # compile times, but prevents some optimizations.
                    # Passes `-C codegen-units`. Ignored when `lto = true`.
 panic = 'unwind'   # panic strategy (`-C panic=...`), can also be 'abort'
+incremental = true # whether or not incremental compilation is enabled
 
 # The release profile, used for `cargo build --release`.
 [profile.release]
@@ -309,6 +310,7 @@ lto = false
 debug-assertions = false
 codegen-units = 1
 panic = 'unwind'
+incremental = false
 
 # The testing profile, used for `cargo test`.
 [profile.test]
@@ -319,6 +321,7 @@ lto = false
 debug-assertions = true
 codegen-units = 1
 panic = 'unwind'
+incremental = true
 
 # The benchmarking profile, used for `cargo bench` and `cargo test --release`.
 [profile.bench]
@@ -329,6 +332,7 @@ lto = false
 debug-assertions = false
 codegen-units = 1
 panic = 'unwind'
+incremental = false
 
 # The documentation profile, used for `cargo doc`.
 [profile.doc]
@@ -339,6 +343,7 @@ lto = false
 debug-assertions = true
 codegen-units = 1
 panic = 'unwind'
+incremental = true
 ```
 
 ### The `[features]` section

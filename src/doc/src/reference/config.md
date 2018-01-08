@@ -76,6 +76,8 @@ runner = ".."
 # custom flags to pass to all compiler invocations that target $triple
 # this value overrides build.rustflags when both are present
 rustflags = ["..", ".."]
+# Whether or not to enable incremental compilation
+incremental = true
 
 [target.'cfg(...)']
 # Similar for the $triple configuration, but using the `cfg` syntax.
