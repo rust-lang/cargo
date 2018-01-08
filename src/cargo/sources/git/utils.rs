@@ -12,7 +12,7 @@ use url::Url;
 
 use core::GitReference;
 use util::{ToUrl, internal, Config, network, Progress};
-use util::errors::{CargoResult, CargoResultExt, CargoError, Internal};
+use util::errors::{CargoResult, CargoResultExt, Internal};
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRevision(git2::Oid);
@@ -226,14 +226,43 @@ impl<'a> GitCheckout<'a> {
         fs::create_dir_all(&dirname).chain_err(|| {
             format!("Couldn't mkdir {}", dirname.display())
         })?;
-        if fs::metadata(&into).is_ok() {
+        if into.exists() {
             fs::remove_dir_all(into).chain_err(|| {
                 format!("Couldn't rmdir {}", into.display())
             })?;
         }
-        let repo = git2::Repository::init(into)?;
-        let mut checkout = GitCheckout::new(into, database, revision, repo);
-        checkout.fetch(config)?;
+
+        // we're doing a local filesystem-to-filesystem clone so there should
+        // be no need to respect global configuration options, so pass in
+        // an empty instance of `git2::Config` below.
+        let git_config = git2::Config::new()?;
+
+        // Clone the repository, but make sure we use the "local" option in
+        // libgit2 which will attempt to use hardlinks to set up the database.
+        // This should speed up the clone operation quite a bit if it works.
+        //
+        // Note that we still use the same fetch options because while we don't
+        // need authentication information we may want progress bars and such.
+        let url = database.path.to_url()?;
+        let mut repo = None;
+        with_fetch_options(&git_config, &url, config, &mut |fopts| {
+            let mut checkout = git2::build::CheckoutBuilder::new();
+            checkout.dry_run(); // we'll do this below during a `reset`
+
+            let r = git2::build::RepoBuilder::new()
+                // use hard links and/or copy the database, we're doing a
+                // filesystem clone so this'll speed things up quite a bit.
+                .clone_local(git2::build::CloneLocal::Local)
+                .with_checkout(checkout)
+                .fetch_options(fopts)
+                // .remote_create(|repo, _name, url| repo.remote_anonymous(url))
+                .clone(url.as_str(), into)?;
+            repo = Some(r);
+            Ok(())
+        })?;
+        let repo = repo.unwrap();
+
+        let checkout = GitCheckout::new(into, database, revision, repo);
         checkout.reset(config)?;
         Ok(checkout)
     }
@@ -242,7 +271,7 @@ impl<'a> GitCheckout<'a> {
         match self.repo.revparse_single("HEAD") {
             Ok(ref head) if head.id() == self.revision.0 => {
                 // See comments in reset() for why we check this
-                fs::metadata(self.location.join(".cargo-ok")).is_ok()
+                self.location.join(".cargo-ok").exists()
             }
             _ => false,
         }
@@ -555,6 +584,33 @@ fn reset(repo: &git2::Repository,
     Ok(())
 }
 
+pub fn with_fetch_options(git_config: &git2::Config,
+                          url: &Url,
+                          config: &Config,
+                          cb: &mut FnMut(git2::FetchOptions) -> CargoResult<()>)
+    -> CargoResult<()>
+{
+    let mut progress = Progress::new("Fetch", config);
+    network::with_retry(config, || {
+        with_authentication(url.as_str(), git_config, |f| {
+            let mut rcb = git2::RemoteCallbacks::new();
+            rcb.credentials(f);
+
+            rcb.transfer_progress(|stats| {
+                progress.tick(stats.indexed_objects(), stats.total_objects()).is_ok()
+            });
+
+            // Create a local anonymous remote in the repository to fetch the
+            // url
+            let mut opts = git2::FetchOptions::new();
+            opts.remote_callbacks(rcb)
+                .download_tags(git2::AutotagOption::All);
+            cb(opts)
+        })?;
+        Ok(())
+    })
+}
+
 pub fn fetch(repo: &mut git2::Repository,
              url: &Url,
              refspec: &str,
@@ -585,26 +641,10 @@ pub fn fetch(repo: &mut git2::Repository,
     maybe_gc_repo(repo)?;
 
     debug!("doing a fetch for {}", url);
-    let mut progress = Progress::new("Fetch", config);
-    with_authentication(url.as_str(), &repo.config()?, |f| {
-        let mut cb = git2::RemoteCallbacks::new();
-        cb.credentials(f);
-
-        cb.transfer_progress(|stats| {
-            progress.tick(stats.indexed_objects(), stats.total_objects()).is_ok()
-        });
-
-        // Create a local anonymous remote in the repository to fetch the url
+    with_fetch_options(&repo.config()?, url, config, &mut |mut opts| {
+        debug!("initiating fetch of {} from {}", refspec, url);
         let mut remote = repo.remote_anonymous(url.as_str())?;
-        let mut opts = git2::FetchOptions::new();
-        opts.remote_callbacks(cb)
-            .download_tags(git2::AutotagOption::All);
-
-        network::with_retry(config, || {
-            debug!("initiating fetch of {} from {}", refspec, url);
-            remote.fetch(&[refspec], Some(&mut opts), None)
-                .map_err(CargoError::from)
-        })?;
+        remote.fetch(&[refspec], Some(&mut opts), None)?;
         Ok(())
     })
 }
