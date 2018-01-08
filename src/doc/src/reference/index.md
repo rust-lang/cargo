@@ -1,8 +1,5 @@
 ## Cargo Reference
 
-Now that you have an overview of how to use Cargo and have created your first
-crate, you may be interested in more details in the following areas.
-
 The reference covers the details of various areas of Cargo.
 
 * [Specifying Dependencies](reference/specifying-dependencies.html)
