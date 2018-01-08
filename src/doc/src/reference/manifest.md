@@ -537,9 +537,8 @@ crate will be treated as a normal package, as well as a workspace. If the
 manifest*.
 
 When working with *virtual manifests*, package-related cargo commands, like
-`cargo build`, won't be available anymore. But, most of such commands support
-the `--all` option, will execute the command for all the non-virtual manifest in
-the workspace.
+`cargo build`, default to all packages in the workspace as if `--all` was used.
+This can be changed by passing a `--package` or `-p` command-line parameters.
 
 #TODO: move this to a more appropriate place
 ### The project layout
