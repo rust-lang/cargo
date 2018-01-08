@@ -52,7 +52,7 @@ accidentally package up that 2GB video asset, or large data files used for code
 generation, integration tests, or benchmarking.  There is currently a 10MB
 upload size limit on `*.crate` files. So, if the size of `tests` and `benches`
 directories and their dependencies are up to a couple of MBs, you can keep them
-in your package; otherwsie, better to exclude them.
+in your package; otherwise, better to exclude them.
 
 Cargo will automatically ignore files ignored by your version control system
 when packaging, but if you want to specify an extra set of files to ignore you

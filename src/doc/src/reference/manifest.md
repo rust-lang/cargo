@@ -199,7 +199,9 @@ license-file = "..."
 
 # Appveyor: `repository` is required. `branch` is optional; default is `master`
 # `service` is optional; valid values are `github` (default), `bitbucket`, and
-# `gitlab`.
+# `gitlab`; `id` is optional; you can specify the appveyor project id if you
+# want to use that instead. `project_name` is optional; use when the repository
+# name differs from the appveyor project name.
 appveyor = { repository = "...", branch = "master", service = "github" }
 
 # Circle CI: `repository` is required. `branch` is optional; default is `master`
@@ -299,6 +301,7 @@ codegen-units = 1  # if > 1 enables parallel code generation which improves
                    # compile times, but prevents some optimizations.
                    # Passes `-C codegen-units`. Ignored when `lto = true`.
 panic = 'unwind'   # panic strategy (`-C panic=...`), can also be 'abort'
+incremental = true # whether or not incremental compilation is enabled
 
 # The release profile, used for `cargo build --release`.
 [profile.release]
@@ -309,6 +312,7 @@ lto = false
 debug-assertions = false
 codegen-units = 1
 panic = 'unwind'
+incremental = false
 
 # The testing profile, used for `cargo test`.
 [profile.test]
@@ -319,6 +323,7 @@ lto = false
 debug-assertions = true
 codegen-units = 1
 panic = 'unwind'
+incremental = true
 
 # The benchmarking profile, used for `cargo bench` and `cargo test --release`.
 [profile.bench]
@@ -329,6 +334,7 @@ lto = false
 debug-assertions = false
 codegen-units = 1
 panic = 'unwind'
+incremental = false
 
 # The documentation profile, used for `cargo doc`.
 [profile.doc]
@@ -339,6 +345,7 @@ lto = false
 debug-assertions = true
 codegen-units = 1
 panic = 'unwind'
+incremental = true
 ```
 
 ### The `[features]` section
@@ -475,10 +482,12 @@ as:
 ```toml
 [workspace]
 
-# Optional key, inferred if not present
+# Optional key, inferred from path dependencies if not present.
+# Additional non-path dependencies that should be included must be given here.
+# In particular, for a virtual manifest, all members have to be listed.
 members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 
-# Optional key, empty if not present
+# Optional key, empty if not present.
 exclude = ["path1", "path/to/dir2"]
 ```
 
@@ -528,10 +537,23 @@ crate will be treated as a normal package, as well as a workspace. If the
 `package` table is not present in a workspace manifest, it is called a *virtual
 manifest*.
 
-When working with *virtual manifests*, package-related cargo commands, like
-`cargo build`, won't be available anymore. But, most of such commands support
-the `--all` option, will execute the command for all the non-virtual manifest in
-the workspace.
+#### Package selection
+
+In a workspace, package-related cargo commands like `cargo build` apply to
+packages selected by `-p` / `--package` or `--all` command-line parameters.
+When neither is specified, the optional `default-members` configuration is used:
+
+```toml
+[workspace]
+members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
+default-members = ["path/to/member2", "path/to/member3/foo"]
+```
+
+When specified, `default-members` must expand to a subset of `members`.
+
+When `default-members` is not specified, the default is the root manifest
+if it is a package, or every member manifest (as if `--all` were specified
+on the command-line) for virtual workspaces.
 
 #TODO: move this to a more appropriate place
 ### The project layout
@@ -550,7 +572,8 @@ each file you want to build.
 
 Your project can optionally contain folders named `examples`, `tests`, and
 `benches`, which Cargo will treat as containing examples,
-integration tests, and benchmarks respectively.
+integration tests, and benchmarks respectively. Analogous to `bin` targets, they
+may be composed of single files or directories with a `main.rs` file.
 
 ```shell
 ▾ src/           # directory containing source files
@@ -562,10 +585,16 @@ integration tests, and benchmarks respectively.
     main.rs
 ▾ examples/      # (optional) examples
   *.rs
+▾ */             # (optional) directories containing multi-file examples
+  main.rs
 ▾ tests/         # (optional) integration tests
   *.rs
+▾ */             # (optional) directories containing multi-file tests
+  main.rs
 ▾ benches/       # (optional) benchmarks
   *.rs
+▾ */             # (optional) directories containing multi-file benchmarks
+  main.rs
 ```
 
 To structure your code after you've created the files and folders for your
@@ -723,19 +752,28 @@ other copies. The syntax is similar to the `[dependencies]` section:
 [patch.crates-io]
 foo = { git = 'https://github.com/example/foo' }
 bar = { path = 'my/local/bar' }
+
+[dependencies.baz]
+git = 'https://github.com/example/baz'
+
+[patch.'https://github.com/example/baz']
+baz = { git = 'https://github.com/example/patched-baz', branch = 'my-branch' }
 ```
 
 The `[patch]` table is made of dependency-like sub-tables. Each key after
 `[patch]` is a URL of the source that's being patched, or `crates-io` if
 you're modifying the https://crates.io registry. In the example above
 `crates-io` could be replaced with a git URL such as
-`https://github.com/rust-lang-nursery/log`.
+`https://github.com/rust-lang-nursery/log`; the second `[patch]`
+section in the example uses this to specify a source called `baz`.
 
 Each entry in these tables is a normal dependency specification, the same as
 found in the `[dependencies]` section of the manifest. The dependencies listed
 in the `[patch]` section are resolved and used to patch the source at the
 URL specified. The above manifest snippet patches the `crates-io` source (e.g.
-crates.io itself) with the `foo` crate and `bar` crate.
+crates.io itself) with the `foo` crate and `bar` crate. It also
+patches the `https://github.com/example/baz` source with a `my-branch` that
+comes from elsewhere.
 
 Sources can be patched with versions of crates that do not exist, and they can
 also be patched with versions of crates that already exist. If a source is

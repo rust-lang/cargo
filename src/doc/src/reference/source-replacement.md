@@ -20,6 +20,12 @@ like so:
 [source.my-awesome-source]
 directory = "vendor"
 
+# Git sources can optionally specify a branch/tag/rev as well
+git = "https://example.com/path/to/repo"
+# branch = "master"
+# tag = "v1.0.1"
+# rev = "313f44e8"
+
 # The crates.io default source for crates is available under the name
 # "crates-io", and here we use the `replace-with` key to indicate that it's
 # replaced with our source above.
