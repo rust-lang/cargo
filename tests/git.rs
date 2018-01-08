@@ -97,7 +97,6 @@ fn cargo_compile_forbird_git_httpsrepo_offline() {
 
     assert_that(p.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
                 execs().with_status(101).
-                    with_stderr_does_not_contain("[UPDATING] git repository [..]").
                     with_stderr("\
 error: failed to load source for a dependency on `dep1`
 
@@ -105,7 +104,7 @@ Caused by:
   Unable to update https://github.com/some_user/dep1.git
 
 Caused by:
-  can't checkout from 'https://github.com/some_user/dep1.git': you are in the offline mode"));
+  can't checkout from 'https://github.com/some_user/dep1.git': you are in the offline mode (-Z offline)"));
 }
 
 
