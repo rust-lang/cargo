@@ -3,7 +3,7 @@
 Cargo uses conventions for file placement to make it easy to dive into a new
 Cargo project:
 
-```shell
+```
 .
 ├── Cargo.lock
 ├── Cargo.toml

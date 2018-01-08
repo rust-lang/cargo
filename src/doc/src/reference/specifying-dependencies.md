@@ -132,7 +132,7 @@ split out a separate crate for others to use. To do this Cargo supports **path
 dependencies** which are typically sub-crates that live within one repository.
 Let’s start off by making a new crate inside of our `hello_world` project:
 
-```shell
+```console
 # inside of hello_world/
 $ cargo new hello_utils
 ```
@@ -216,7 +216,7 @@ uuid = "1.0"
 First thing we'll do is to clone the [`uuid` repository][uuid-repository]
 locally via:
 
-```shell
+```console
 $ git clone https://github.com/rust-lang-nursery/uuid
 ```
 
@@ -247,7 +247,7 @@ important to keep this in mind!
 
 In any case, typically all you need to do now is:
 
-```shell
+```console
 $ cargo build
    Compiling uuid v1.0.0 (file://.../uuid)
    Compiling my-library v0.1.0 (file://.../my-library)

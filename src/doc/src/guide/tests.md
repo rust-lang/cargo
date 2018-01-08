@@ -9,7 +9,7 @@ the files in `tests`.
 Here's an example of running `cargo test` in our project, which currently has
 no tests:
 
-```shell
+```console
 $ cargo test
    Compiling rand v0.1.0 (https://github.com/rust-lang-nursery/rand.git#9f35b8e)
    Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
@@ -25,7 +25,7 @@ tests.
 
 You can also run a specific test by passing a filter:
 
-```shell
+```console
 $ cargo test foo
 ```
 

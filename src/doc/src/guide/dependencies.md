@@ -44,7 +44,7 @@ regex = "0.1.41"
 Re-run `cargo build`, and Cargo will fetch the new dependencies and all of
 their dependencies, compile them all, and update the `Cargo.lock`:
 
-```shell
+```console
 $ cargo build
       Updating registry `https://github.com/rust-lang/crates.io-index`
    Downloading memchr v0.1.5
@@ -83,7 +83,7 @@ fn main() {
 
 Running it will show:
 
-```shell
+```console
 $ cargo run
    Running `target/hello_world`
 Did our date match? true

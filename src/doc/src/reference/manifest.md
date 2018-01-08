@@ -440,7 +440,7 @@ features that people can enable or disable when they build it.
 In that case, Servo will describe features in its `Cargo.toml` and they can be
 enabled using command-line flags:
 
-```shell
+```console
 $ cargo build --release --features "shumway pdf"
 ```
 
@@ -575,7 +575,7 @@ Your project can optionally contain folders named `examples`, `tests`, and
 integration tests, and benchmarks respectively. Analogous to `bin` targets, they
 may be composed of single files or directories with a `main.rs` file.
 
-```shell
+```
 ▾ src/           # directory containing source files
   lib.rs         # the main entry point for libraries and packages
   main.rs        # the main entry point for projects producing executables
