@@ -889,8 +889,10 @@ fn activation_error(cx: &Context,
 
     if let Some(config) = config {
         if config.cli_unstable().offline {
-            msg.push_str("\nperhaps an error occurred because you are using \
-                              the offline mode");
+            msg.push_str("\nAs a reminder, you're using offline mode (-Z offline) \
+            which can sometimes cause surprising resolution failures, \
+            if this error is too confusing you may with to retry \
+            without the offline flag.");
         }
     }
 

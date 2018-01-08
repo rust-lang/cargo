@@ -897,13 +897,10 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
 
     assert_that(p2.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
                 execs().with_status(0)
-                    .with_stderr_does_not_contain("Updating registry")
-                    .with_stderr_does_not_contain("Downloading")
                     .with_stderr(format!("\
 [COMPILING] present_dep v1.2.3
-[COMPILING] bar v0.1.0 ({url})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-                                         url = p2.url())));
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")));
 
 }
 
@@ -923,13 +920,14 @@ fn cargo_compile_offline_not_try_update() {
 
     assert_that(p.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
                 execs().with_status(101)
-                    .with_stderr_does_not_contain("Updating registry")
-                    .with_stderr_does_not_contain("Downloading")
                     .with_stderr("\
 error: no matching package named `not_cached_dep` found (required by `bar`)
 location searched: registry `[..]`
 version required: ^1.2.5
-perhaps an error occurred because you are using the offline mode"));
+As a reminder, you're using offline mode (-Z offline) \
+which can sometimes cause surprising resolution failures, \
+if this error is too confusing you may with to retry \
+without the offline flag."));
 }
 
 #[test]
@@ -987,16 +985,15 @@ fn main(){
 }")
         .build();
 
-    assert_that(p2.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
+    assert_that(p2.cargo("run").masquerade_as_nightly_cargo().arg("-Zoffline"),
                 execs().with_status(0)
                     .with_stderr(format!("\
 [COMPILING] present_dep v1.2.3
 [COMPILING] foo v0.1.0 ({url})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
-                                         url = p2.url())));
-
-    assert_that(process(&p2.bin("foo")),
-                execs().with_status(0).with_stdout("1.2.3"));
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+     Running `[..]`", url = p2.url()))
+                    .with_stdout("1.2.3")
+    );
 }
 
 #[test]
@@ -1033,13 +1030,14 @@ fn compile_offline_while_transitive_dep_not_cached() {
 
     assert_that(p.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
         execs().with_status(101)
-            .with_stderr_does_not_contain("Updating registry")
-            .with_stderr_does_not_contain("Downloading")
             .with_stderr("\
 error: no matching package named `bar` found (required by `foo`)
 location searched: registry `[..]`
 version required: = 1.0.0
-perhaps an error occurred because you are using the offline mode"));
+As a reminder, you're using offline mode (-Z offline) \
+which can sometimes cause surprising resolution failures, \
+if this error is too confusing you may with to retry \
+without the offline flag."));
 }
 
 #[test]

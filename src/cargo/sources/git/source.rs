@@ -152,7 +152,8 @@ impl<'cfg> Source for GitSource<'cfg> {
         let db_path = lock.parent().join("db").join(&self.ident);
 
         if self.config.cli_unstable().offline && !db_path.exists() {
-            bail!("can't checkout from '{}': you are in the offline mode", self.remote.url());
+            bail!("can't checkout from '{}': you are in the offline mode (-Z offline)",
+                self.remote.url());
         }
 
         // Resolve our reference to an actual revision, and check if the
