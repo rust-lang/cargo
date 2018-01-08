@@ -92,7 +92,7 @@ they’ll use the exact same SHA, even though we didn’t specify it in our
 When we’re ready to opt in to a new version of the library, Cargo can
 re-calculate the dependencies and update things for us:
 
-```shell
+```console
 $ cargo update           # updates all dependencies
 $ cargo update -p rand   # updates just “rand”
 ```
