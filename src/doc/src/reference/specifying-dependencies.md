@@ -325,12 +325,23 @@ uuid = "1.0"
 uuid = { git = 'https://github.com/rust-lang-nursery/uuid' }
 ```
 
-Remember that `[patch]` is only applicable at the *top level* so we consumers of
-`my-library` have to repeat the `[patch]` section if necessary. Here, though,
-the new `uuid` crate applies to *both* our dependency on `uuid` and the
-`my-library -> uuid` dependency. The `uuid` crate will be resolved to one
-version for this entire crate graph, 1.0.1, and it'll be pulled from the git
+Remember that `[patch]` is applicable *transitively* but can only be defined at
+the *top level* so we consumers of `my-library` have to repeat the `[patch]` section
+if necessary. Here, though, the new `uuid` crate applies to *both* our dependency on
+`uuid` and the `my-library -> uuid` dependency. The `uuid` crate will be resolved to
+one version for this entire crate graph, 1.0.1, and it'll be pulled from the git
 repository.
+
+#### Overriding repository URL
+
+In case the dependency you want to override isn't loaded from `crates.io`, you'll have to change a bit how you use `[patch]`:
+
+```toml
+[patch."https://github.com/your/repository"]
+my-library = { path = "../my-library/path" }
+```
+
+And that's it!
 
 ### Prepublishing a breaking change
 
