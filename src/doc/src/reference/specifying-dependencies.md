@@ -114,7 +114,9 @@ Cargo will fetch the `git` repository at this location then look for a
 (not necessarily at the root).
 
 Since we haven’t specified any other information, Cargo assumes that
-we intend to use the latest commit on the `master` branch to build our project.
+we intend to use the latest commit on the default branch (which is usually
+`master`, but may be configured to be any branch in the remote repository)
+to build our project.
 You can combine the `git` key with the `rev`, `tag`, or `branch` keys to
 specify something else. Here's an example of specifying that you want to use
 the latest commit on a branch named `next`:
