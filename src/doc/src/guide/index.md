@@ -11,3 +11,4 @@ develop Rust projects.
 * [Cargo.toml vs Cargo.lock](guide/cargo-toml-vs-cargo-lock.html)
 * [Tests](guide/tests.html)
 * [Continuous Integration](guide/continuous-integration.html)
+* [Build Cache](guide/build-cache.html)
