@@ -2,7 +2,7 @@
 
 To start a new project with Cargo, use `cargo new`:
 
-```shell
+```console
 $ cargo new hello_world --bin
 ```
 
@@ -12,7 +12,7 @@ repository by default. If you don't want it to do that, pass `--vcs none`.
 
 Let’s check out what Cargo has generated for us:
 
-```shell
+```console
 $ cd hello_world
 $ tree .
 .
@@ -47,14 +47,14 @@ fn main() {
 
 Cargo generated a “hello world” for us. Let’s compile it:
 
-```shell
+```console
 $ cargo build
    Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
 ```
 
 And then run it:
 
-```shell
+```console
 $ ./target/debug/hello_world
 Hello, world!
 ```
@@ -63,7 +63,7 @@ We can also use `cargo run` to compile and then run it, all in one step (You
 won't see the `Compiling` line if you have not made any changes since you last
 compiled):
 
-```shell
+```console
 $ cargo run
    Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
      Running `target/debug/hello_world`
@@ -76,7 +76,7 @@ dependencies. Since we don’t have any yet, it’s not very interesting.
 Once you’re ready for release, you can use `cargo build --release` to compile
 your files with optimizations turned on:
 
-```shell
+```console
 $ cargo build --release
    Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
 ```
