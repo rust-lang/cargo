@@ -220,7 +220,7 @@ pub fn registry_configuration(config: &Config,
     let (index, token) = match registry {
         Some(registry) => {
             (Some(config.get_registry_index(&registry)?.to_string()),
-             config.get_string(&format!("registry.{}.token", registry))?.map(|p| p.val))
+             config.get_string(&format!("registries.{}.token", registry))?.map(|p| p.val))
         }
         None => {
             // Checking out for default index and token
