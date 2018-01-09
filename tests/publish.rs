@@ -4,7 +4,7 @@ extern crate hamcrest;
 extern crate tar;
 
 use std::io::prelude::*;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::SeekFrom;
 
 use cargotest::ChannelChanger;
@@ -18,6 +18,72 @@ use tar::Archive;
 #[test]
 fn simple() {
     publish::setup();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("publish").arg("--no-verify")
+                 .arg("--index").arg(publish::registry().to_string()),
+                execs().with_status(0).with_stderr(&format!("\
+[UPDATING] registry `{reg}`
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] foo v0.0.1 ({dir})
+[UPLOADING] foo v0.0.1 ({dir})
+",
+        dir = p.url(),
+        reg = publish::registry())));
+
+    let mut f = File::open(&publish::upload_path().join("api/v1/crates/new")).unwrap();
+    // Skip the metadata payload and the size of the tarball
+    let mut sz = [0; 4];
+    assert_eq!(f.read(&mut sz).unwrap(), 4);
+    let sz = ((sz[0] as u32) <<  0) |
+             ((sz[1] as u32) <<  8) |
+             ((sz[2] as u32) << 16) |
+             ((sz[3] as u32) << 24);
+    f.seek(SeekFrom::Current(sz as i64 + 4)).unwrap();
+
+    // Verify the tarball
+    let mut rdr = GzDecoder::new(f);
+    assert_eq!(rdr.header().unwrap().filename().unwrap(), b"foo-0.0.1.crate");
+    let mut contents = Vec::new();
+    rdr.read_to_end(&mut contents).unwrap();
+    let mut ar = Archive::new(&contents[..]);
+    for file in ar.entries().unwrap() {
+        let file = file.unwrap();
+        let fname = file.header().path_bytes();
+        let fname = &*fname;
+        assert!(fname == b"foo-0.0.1/Cargo.toml" ||
+                fname == b"foo-0.0.1/Cargo.toml.orig" ||
+                fname == b"foo-0.0.1/src/main.rs",
+                "unexpected filename: {:?}", file.header().path());
+    }
+}
+
+#[test]
+fn old_token_location() {
+    publish::setup();
+
+    // publish::setup puts a token in this file.
+    fs::remove_file(paths::root().join(".cargo/config")).unwrap();
+
+    let credentials = paths::root().join("home/.cargo/credentials");
+    File::create(credentials)
+        .unwrap()
+        .write_all(br#"
+            token = "api-token"
+        "#)
+        .unwrap();
 
     let p = project("foo")
         .file("Cargo.toml", r#"

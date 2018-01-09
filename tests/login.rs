@@ -53,7 +53,9 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
         // A registry has been provided, so check that the token exists in a
         // table for the registry.
         (Some(registry), toml::Value::Table(table)) => {
-            table.get(registry).and_then(|registry_table| {
+            table.get("registries")
+                    .and_then(|registries_table| registries_table.get(registry))
+                    .and_then(|registry_table| {
                 match registry_table.get("token") {
                     Some(&toml::Value::String(ref token)) => Some(token.as_str().to_string()),
                     _ => None,
@@ -62,7 +64,9 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
         },
         // There is no registry provided, so check the global token instead.
         (None, toml::Value::Table(table)) => {
-            table.get("token").and_then(|v| {
+            table.get("registry")
+                    .and_then(|registry_table| registry_table.get("token"))
+                    .and_then(|v| {
                 match v {
                     &toml::Value::String(ref token) => Some(token.as_str().to_string()),
                     _ => None,

@@ -12,7 +12,7 @@ pub fn setup() -> Repository {
     t!(fs::create_dir_all(config.parent().unwrap()));
     t!(t!(File::create(&config)).write_all(format!(r#"
         [registry]
-            token = "api-token"
+        token = "api-token"
 
         [registries.alternative]
         index = "{registry}"
@@ -21,7 +21,7 @@ pub fn setup() -> Repository {
     let credentials = paths::root().join("home/.cargo/credentials");
     t!(fs::create_dir_all(credentials.parent().unwrap()));
     t!(t!(File::create(&credentials)).write_all(br#"
-        [alternative]
+        [registries.alternative]
         token = "api-token"
     "#));
 

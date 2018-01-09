@@ -573,29 +573,30 @@ impl Config {
             format!("could not parse TOML configuration in `{}`", credentials.display())
         })?;
 
-        let value = CV::from_toml(&credentials, toml).chain_err(|| {
+        let mut value = CV::from_toml(&credentials, toml).chain_err(|| {
             format!("failed to load TOML configuration from `{}`", credentials.display())
         })?;
 
-        let cfg = match *cfg {
-            CV::Table(ref mut map, _) => map,
-            _ => unreachable!(),
-        };
+        // backwards compatibility for old .cargo/credentials layout
+        {
+            let value = match value {
+                CV::Table(ref mut value, _) => value,
+                _ => unreachable!(),
+            };
 
-        let registry = cfg.entry("registry".into())
-                          .or_insert_with(|| CV::Table(HashMap::new(), PathBuf::from(".")));
-
-        match (registry, value) {
-            (&mut CV::Table(ref mut old, _), CV::Table(ref mut new, _)) => {
-                // Take ownership of `new` by swapping it with an empty hashmap, so we can move
-                // into an iterator.
-                let new = mem::replace(new, HashMap::new());
-                for (key, value) in new {
-                    old.insert(key, value);
+            if let Some(token) = value.remove("token") {
+                if let Vacant(entry) = value.entry("registry".into()) {
+                    let mut map = HashMap::new();
+                    map.insert("token".into(), token);
+                    let table = CV::Table(map, PathBuf::from("."));
+                    entry.insert(table);
                 }
             }
-            _ => unreachable!(),
         }
+
+        // we want value to override cfg, so swap these
+        mem::swap(cfg, &mut value);
+        cfg.merge(value)?;
 
         Ok(())
     }
@@ -910,13 +911,16 @@ pub fn save_credentials(cfg: &Config,
     let (key, value) = {
         let key = "token".to_string();
         let value = ConfigValue::String(token, file.path().to_path_buf());
+        let mut map = HashMap::new();
+        map.insert(key, value);
+        let table = CV::Table(map, file.path().to_path_buf());
 
         if let Some(registry) = registry {
             let mut map = HashMap::new();
-            map.insert(key, value);
-            (registry, CV::Table(map, file.path().to_path_buf()))
+            map.insert(registry, table);
+            ("registries".into(), CV::Table(map, file.path().to_path_buf()))
         } else {
-            (key, value)
+            ("registry".into(), table)
         }
     };
 
@@ -926,6 +930,14 @@ pub fn save_credentials(cfg: &Config,
     })?;
 
     let mut toml = cargo_toml::parse(&contents, file.path(), cfg)?;
+
+    // move the old token location to the new one
+    if let Some(token) = toml.as_table_mut().unwrap().remove("token") {
+        let mut map = HashMap::new();
+        map.insert("token".to_string(), token);
+        toml.as_table_mut().unwrap().insert("registry".into(), map.into());
+    }
+
     toml.as_table_mut()
         .unwrap()
         .insert(key, value.into_toml());
