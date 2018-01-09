@@ -416,3 +416,11 @@ Usage:
     cargo new [..]
 "));
 }
+
+#[test]
+fn explicit_invalid_name_not_suggested() {
+    assert_that(cargo_process("new").arg("--name").arg("10-invalid").arg("a"),
+                execs().with_status(101)
+                       .with_stderr("\
+[ERROR] Package names starting with a digit cannot be used as a crate name"));
+}
