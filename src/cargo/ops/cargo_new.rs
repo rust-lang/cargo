@@ -20,6 +20,7 @@ use toml;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum VersionControl { Git, Hg, Pijul, Fossil, NoVcs }
 
+#[derive(Debug)]
 pub struct NewOptions<'a> {
     pub version_control: Option<VersionControl>,
     pub bin: bool,
@@ -118,7 +119,14 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoR
     }
 }
 
-fn check_name(name: &str, is_bin: bool) -> CargoResult<()> {
+fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
+
+    // If --name is already used to override, no point in suggesting it
+    // again as a fix.
+    let name_help = match opts.name {
+        Some(_) => "",
+        None => "\nuse --name to override crate name",
+    };
 
     // Ban keywords + test list found at
     // https://doc.rust-lang.org/grammar.html#keywords
@@ -133,25 +141,26 @@ fn check_name(name: &str, is_bin: bool) -> CargoResult<()> {
         "super", "test", "trait", "true", "type", "typeof",
         "unsafe", "unsized", "use", "virtual", "where",
         "while", "yield"];
-    if blacklist.contains(&name) || (is_bin && is_bad_artifact_name(name)) {
-        bail!("The name `{}` cannot be used as a crate name\n\
-               use --name to override crate name",
-               name)
+    if blacklist.contains(&name) || (opts.bin && is_bad_artifact_name(name)) {
+        bail!("The name `{}` cannot be used as a crate name{}",
+            name,
+            name_help)
     }
 
     if let Some(ref c) = name.chars().nth(0) {
         if c.is_digit(10) {
-            bail!("Package names starting with a digit cannot be used as a crate name\n\
-               use --name to override crate name")
+            bail!("Package names starting with a digit cannot be used as a crate name{}",
+                name_help)
         }
     }
 
     for c in name.chars() {
         if c.is_alphanumeric() { continue }
         if c == '_' || c == '-' { continue }
-        bail!("Invalid character `{}` in crate name: `{}`\n\
-               use --name to override crate name",
-              c, name)
+        bail!("Invalid character `{}` in crate name: `{}`{}",
+            c,
+            name,
+            name_help)
     }
     Ok(())
 }
@@ -279,7 +288,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     }
 
     let name = get_name(&path, opts, config)?;
-    check_name(name, opts.bin)?;
+    check_name(name, opts)?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
@@ -309,7 +318,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     }
 
     let name = get_name(&path, opts, config)?;
-    check_name(name, opts.bin)?;
+    check_name(name, opts)?;
 
     let mut src_paths_types = vec![];
 
