@@ -6,14 +6,14 @@ to get going.
 First, get the project from somewhere. In this example, we’ll use `rand`
 cloned from its repository on GitHub:
 
-```shell
+```console
 $ git clone https://github.com/rust-lang-nursery/rand.git
 $ cd rand
 ```
 
 To build, use `cargo build`:
 
-```shell
+```console
 $ cargo build
    Compiling rand v0.1.0 (file:///path/to/project/rand)
 ```

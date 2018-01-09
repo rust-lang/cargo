@@ -5,7 +5,7 @@
 The easiest way to get Cargo is to get the current stable release of [Rust] by
 using the `rustup` script:
 
-```shell
+```console
 $ curl -sSf https://static.rust-lang.org/rustup.sh | sh
 ```
 

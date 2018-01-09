@@ -2,7 +2,7 @@
 
 To start a new project with Cargo, use `cargo new`:
 
-```shell
+```console
 $ cargo new hello_world --bin
 ```
 
@@ -11,7 +11,7 @@ were making a library, we’d leave it off.
 
 Let’s check out what Cargo has generated for us:
 
-```shell
+```console
 $ cd hello_world
 $ tree .
 .
@@ -44,21 +44,21 @@ fn main() {
 
 Cargo generated a “hello world” for us. Let’s compile it:
 
-```shell
+```console
 $ cargo build
    Compiling hello_world v0.1.0 (file:///path/to/project/hello_world)
 ```
 
 And then run it:
 
-```shell
+```console
 $ ./target/debug/hello_world
 Hello, world!
 ```
 
 We can also use `cargo run` to compile and then run it, all in one step:
 
-```shell
+```console
 $ cargo run
      Fresh hello_world v0.1.0 (file:///path/to/project/hello_world)
    Running `target/hello_world`
