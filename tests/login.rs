@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate cargotest;
 extern crate cargo;
+#[macro_use]
 extern crate hamcrest;
 extern crate toml;
 
@@ -13,7 +14,7 @@ use cargotest::support::registry::registry;
 use cargotest::install::cargo_home;
 use cargo::util::config::Config;
 use cargo::core::Shell;
-use hamcrest::{assert_that, existing_file, is_not};
+use hamcrest::prelude::*;
 
 const TOKEN: &str = "test-token";
 const ORIGINAL_TOKEN: &str = "api-token";
@@ -43,7 +44,7 @@ fn setup_new_credentials() {
 fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
 
     let credentials = cargo_home().join("credentials");
-    assert_that(&credentials, existing_file());
+    assert_that!(&credentials, existing_file());
 
     let mut contents = String::new();
     File::open(&credentials).unwrap().read_to_string(&mut contents).unwrap();
@@ -87,12 +88,12 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
 fn login_with_old_credentials() {
     setup_old_credentials();
 
-    assert_that(cargo_process().arg("login")
+    assert_that!(cargo_process().arg("login")
                 .arg("--host").arg(registry().to_string()).arg(TOKEN),
                 execs().with_status(0));
 
     let config = cargo_home().join("config");
-    assert_that(&config, existing_file());
+    assert_that!(&config, existing_file());
 
     let mut contents = String::new();
     File::open(&config).unwrap().read_to_string(&mut contents).unwrap();
@@ -106,12 +107,12 @@ fn login_with_old_credentials() {
 fn login_with_new_credentials() {
     setup_new_credentials();
 
-    assert_that(cargo_process().arg("login")
+    assert_that!(cargo_process().arg("login")
                 .arg("--host").arg(registry().to_string()).arg(TOKEN),
                 execs().with_status(0));
 
     let config = cargo_home().join("config");
-    assert_that(&config, is_not(existing_file()));
+    assert_that!(&config, is_not(existing_file()));
 
     // Ensure that we get the new token for the registry
     assert!(check_token(TOKEN, None));
@@ -125,12 +126,12 @@ fn login_with_old_and_new_credentials() {
 
 #[test]
 fn login_without_credentials() {
-    assert_that(cargo_process().arg("login")
+    assert_that!(cargo_process().arg("login")
                 .arg("--host").arg(registry().to_string()).arg(TOKEN),
                 execs().with_status(0));
 
     let config = cargo_home().join("config");
-    assert_that(&config, is_not(existing_file()));
+    assert_that!(&config, is_not(existing_file()));
 
     // Ensure that we get the new token for the registry
     assert!(check_token(TOKEN, None));
@@ -141,7 +142,7 @@ fn new_credentials_is_used_instead_old() {
     setup_old_credentials();
     setup_new_credentials();
 
-    assert_that(cargo_process().arg("login")
+    assert_that!(cargo_process().arg("login")
                 .arg("--host").arg(registry().to_string()).arg(TOKEN),
                 execs().with_status(0));
 
@@ -158,7 +159,7 @@ fn registry_credentials() {
 
     let reg = "test-reg";
 
-    assert_that(cargo_process().arg("login").masquerade_as_nightly_cargo()
+    assert_that!(cargo_process().arg("login").masquerade_as_nightly_cargo()
                 .arg("--registry").arg(reg).arg(TOKEN).arg("-Zunstable-options"),
                 execs().with_status(0));
 

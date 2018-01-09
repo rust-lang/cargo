@@ -1,8 +1,9 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn parses_env() {
@@ -16,7 +17,7 @@ fn parses_env() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo").arg("-v"),
+    assert_that!(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo").arg("-v"),
                 execs().with_status(0)
                        .with_stderr_contains("\
 [RUNNING] `rustdoc [..] --cfg=foo[..]`
@@ -39,7 +40,7 @@ fn parses_config() {
         "#)
         .build();
 
-    assert_that(p.cargo("doc").arg("-v"),
+    assert_that!(p.cargo("doc").arg("-v"),
                 execs().with_status(0)
                        .with_stderr_contains("\
 [RUNNING] `rustdoc [..] --cfg foo[..]`
@@ -58,7 +59,7 @@ fn bad_flags() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--bogus"),
+    assert_that!(p.cargo("doc").env("RUSTDOCFLAGS", "--bogus"),
                 execs().with_status(101));
 }
 
@@ -74,13 +75,13 @@ fn rerun() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo"),
+    assert_that!(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo"),
                 execs().with_status(0));
-    assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo"),
+    assert_that!(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo"),
                 execs().with_status(0).with_stderr("\
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
-    assert_that(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=bar"),
+    assert_that!(p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=bar"),
                 execs().with_status(0).with_stderr("\
 [DOCUMENTING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
@@ -102,7 +103,7 @@ fn rustdocflags_passed_to_rustdoc_through_cargo_test() {
         "#)
         .build();
 
-    assert_that(p.cargo("test").arg("--doc").env("RUSTDOCFLAGS", "--cfg do_not_choke"),
+    assert_that!(p.cargo("test").arg("--doc").env("RUSTDOCFLAGS", "--cfg do_not_choke"),
                 execs().with_status(0));
 }
 
@@ -117,6 +118,6 @@ fn rustdocflags_passed_to_rustdoc_through_cargo_test_only_once() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("test").arg("--doc").env("RUSTDOCFLAGS", "--markdown-no-toc"),
+    assert_that!(p.cargo("test").arg("--doc").env("RUSTDOCFLAGS", "--markdown-no-toc"),
                 execs().with_status(0));
 }

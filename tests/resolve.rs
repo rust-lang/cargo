@@ -1,11 +1,12 @@
 #![deny(warnings)]
 
+#[macro_use]
 extern crate hamcrest;
 extern crate cargo;
 
 use std::collections::BTreeMap;
 
-use hamcrest::{assert_that, equal_to, contains, not};
+use hamcrest::prelude::*;
 
 use cargo::core::source::{SourceId, GitReference};
 use cargo::core::dependency::Kind::{self, Development};
@@ -146,7 +147,8 @@ fn test_resolving_empty_dependency_list() {
     let res = resolve(&pkg_id("root"), Vec::new(),
                       &registry(vec![])).unwrap();
 
-    assert_that(&res, equal_to(&names(&["root"])));
+    let names = names(&["root"]);
+    assert_that!(&res, equal_to(&names));
 }
 
 #[test]
@@ -154,7 +156,7 @@ fn test_resolving_only_package() {
     let reg = registry(vec![pkg("foo")]);
     let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg);
 
-    assert_that(&res.unwrap(), contains(names(&["root", "foo"])).exactly());
+    assert_that!(&res.unwrap(), contains(names(&["root", "foo"])).exactly());
 }
 
 #[test]
@@ -162,7 +164,7 @@ fn test_resolving_one_dep() {
     let reg = registry(vec![pkg("foo"), pkg("bar")]);
     let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg);
 
-    assert_that(&res.unwrap(), contains(names(&["root", "foo"])).exactly());
+    assert_that!(&res.unwrap(), contains(names(&["root", "foo"])).exactly());
 }
 
 #[test]
@@ -171,7 +173,7 @@ fn test_resolving_multiple_deps() {
     let res = resolve(&pkg_id("root"), vec![dep("foo"), dep("baz")],
                       &reg).unwrap();
 
-    assert_that(&res, contains(names(&["root", "foo", "baz"])).exactly());
+    assert_that!(&res, contains(names(&["root", "foo", "baz"])).exactly());
 }
 
 #[test]
@@ -179,7 +181,7 @@ fn test_resolving_transitive_deps() {
     let reg = registry(vec![pkg!("foo"), pkg!("bar" => ["foo"])]);
     let res = resolve(&pkg_id("root"), vec![dep("bar")], &reg).unwrap();
 
-    assert_that(&res, contains(names(&["root", "foo", "bar"])));
+    assert_that!(&res, contains(names(&["root", "foo", "bar"])));
 }
 
 #[test]
@@ -188,7 +190,7 @@ fn test_resolving_common_transitive_deps() {
     let res = resolve(&pkg_id("root"), vec![dep("foo"), dep("bar")],
                       &reg).unwrap();
 
-    assert_that(&res, contains(names(&["root", "foo", "bar"])));
+    assert_that!(&res, contains(names(&["root", "foo", "bar"])));
 }
 
 #[test]
@@ -207,7 +209,7 @@ fn test_resolving_with_same_name() {
 
     names.push(pkg_id("root"));
 
-    assert_that(&res.unwrap(), contains(names).exactly());
+    assert_that!(&res.unwrap(), contains(names).exactly());
 }
 
 #[test]
@@ -223,7 +225,7 @@ fn test_resolving_with_dev_deps() {
                       vec![dep("foo"), dep_kind("baz", Development)],
                       &reg).unwrap();
 
-    assert_that(&res, contains(names(&["root", "foo", "bar", "baz"])));
+    assert_that!(&res, contains(names(&["root", "foo", "bar", "baz"])));
 }
 
 #[test]
@@ -235,7 +237,7 @@ fn resolving_with_many_versions() {
 
     let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg).unwrap();
 
-    assert_that(&res, contains(names(&[("root", "1.0.0"),
+    assert_that!(&res, contains(names(&[("root", "1.0.0"),
                                        ("foo", "1.0.2")])));
 }
 
@@ -249,7 +251,7 @@ fn resolving_with_specific_version() {
     let res = resolve(&pkg_id("root"), vec![dep_req("foo", "=1.0.1")],
                       &reg).unwrap();
 
-    assert_that(&res, contains(names(&[("root", "1.0.0"),
+    assert_that!(&res, contains(names(&[("root", "1.0.0"),
                                        ("foo", "1.0.1")])));
 }
 
@@ -266,12 +268,12 @@ fn test_resolving_maximum_version_with_transitive_deps() {
     let res = resolve(&pkg_id("root"), vec![dep_req("foo", "1.0.0"), dep_req("bar", "1.0.0")],
                       &reg).unwrap();
 
-    assert_that(&res, contains(names(&[("root", "1.0.0"),
+    assert_that!(&res, contains(names(&[("root", "1.0.0"),
                                        ("foo", "1.0.0"),
                                        ("bar", "1.0.0"),
                                        ("util", "1.2.2")])));
-    assert_that(&res, not(contains(names(&[("util", "1.0.1")]))));
-    assert_that(&res, not(contains(names(&[("util", "1.1.1")]))));
+    assert_that!(&res, not(contains(names(&[("util", "1.0.1")]))));
+    assert_that!(&res, not(contains(names(&[("util", "1.1.1")]))));
 }
 
 #[test]
@@ -301,7 +303,7 @@ fn resolving_backtrack() {
         dep_req("foo", "^1"),
     ], &reg).unwrap();
 
-    assert_that(&res, contains(names(&[("root", "1.0.0"),
+    assert_that!(&res, contains(names(&[("root", "1.0.0"),
                                        ("foo", "1.0.1"),
                                        ("baz", "1.0.0")])));
 }
@@ -325,7 +327,7 @@ fn resolving_allows_multiple_compatible_versions() {
         dep("bar"),
     ], &reg).unwrap();
 
-    assert_that(&res, contains(names(&[("root", "1.0.0"),
+    assert_that!(&res, contains(names(&[("root", "1.0.0"),
                                        ("foo", "1.0.0"),
                                        ("foo", "2.0.0"),
                                        ("foo", "0.1.0"),
@@ -358,7 +360,7 @@ fn resolving_with_deep_backtracking() {
         dep_req("foo", "1"),
     ], &reg).unwrap();
 
-    assert_that(&res, contains(names(&[("root", "1.0.0"),
+    assert_that!(&res, contains(names(&[("root", "1.0.0"),
                                        ("foo", "1.0.0"),
                                        ("bar", "2.0.0"),
                                        ("baz", "1.0.1")])));
@@ -406,7 +408,7 @@ fn hard_equality() {
         dep_req("foo", "=1.0.0"),
     ], &reg).unwrap();
 
-    assert_that(&res, contains(names(&[("root", "1.0.0"),
+    assert_that!(&res, contains(names(&[("root", "1.0.0"),
                                        ("foo", "1.0.0"),
                                        ("bar", "1.0.0")])));
 }

@@ -1,8 +1,9 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use cargotest::support::{basic_bin_manifest, execs, project, Project};
-use hamcrest::{assert_that};
+use hamcrest::prelude::*;
 
 fn verbose_output_for_lib(p: &Project) -> String {
     format!("\
@@ -34,7 +35,7 @@ fn build_lib_only() {
         .file("src/lib.rs", r#" "#)
         .build();
 
-    assert_that(p.cargo("build").arg("--lib").arg("-v"),
+    assert_that!(p.cargo("build").arg("--lib").arg("-v"),
                 execs()
                 .with_status(0)
                 .with_stderr(verbose_output_for_lib(&p)));
@@ -50,7 +51,7 @@ fn build_with_no_lib() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").arg("--lib"),
+    assert_that!(p.cargo("build").arg("--lib"),
                 execs().with_status(101)
                        .with_stderr("[ERROR] no library targets found"));
 }
@@ -82,7 +83,7 @@ fn build_with_relative_cargo_home_path() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").env("CARGO_HOME", "./cargo_home/"),
+    assert_that!(p.cargo("build").env("CARGO_HOME", "./cargo_home/"),
                 execs()
                 .with_status(0));
 }

@@ -2,6 +2,7 @@
 extern crate cargotest;
 extern crate flate2;
 extern crate git2;
+#[macro_use]
 extern crate hamcrest;
 extern crate tar;
 
@@ -13,7 +14,7 @@ use cargotest::{cargo_process, process};
 use cargotest::support::{project, execs, paths, git, path2url, cargo_exe};
 use cargotest::support::registry::Package;
 use flate2::read::GzDecoder;
-use hamcrest::{assert_that, existing_file, contains, equal_to};
+use hamcrest::prelude::*;
 use tar::Archive;
 
 #[test]
@@ -34,7 +35,7 @@ fn simple() {
         .file("src/bar.txt", "") // should be ignored when packaging
         .build();
 
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 [WARNING] manifest has no documentation[..]
 See [..]
@@ -44,13 +45,13 @@ See [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
-    assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
-    assert_that(p.cargo("package").arg("-l"),
+    assert_that!(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
+    assert_that!(p.cargo("package").arg("-l"),
                 execs().with_status(0).with_stdout("\
 Cargo.toml
 src[/]main.rs
 "));
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(0).with_stdout(""));
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -82,7 +83,7 @@ fn metadata_warning() {
             fn main() {}
         "#)
         .build();
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 warning: manifest has no description, license, license-file, documentation, \
 homepage or repository.
@@ -106,7 +107,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
             fn main() {}
         "#)
         .build();
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 warning: manifest has no description, documentation, homepage or repository.
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -131,7 +132,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
             fn main() {}
         "#)
         .build();
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 [PACKAGING] foo v0.0.1 ({dir})
 [VERIFYING] foo v0.0.1 ({dir})
@@ -164,10 +165,10 @@ fn package_verbose() {
         .build();
     let mut cargo = cargo_process();
     cargo.cwd(p.root());
-    assert_that(cargo.clone().arg("build"), execs().with_status(0));
+    assert_that!(cargo.clone().arg("build"), execs().with_status(0));
 
     println!("package main repo");
-    assert_that(cargo.clone().arg("package").arg("-v").arg("--no-verify"),
+    assert_that!(cargo.clone().arg("package").arg("-v").arg("--no-verify"),
                 execs().with_status(0).with_stderr("\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -177,7 +178,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 "));
 
     println!("package sub-repo");
-    assert_that(cargo.arg("package").arg("-v").arg("--no-verify")
+    assert_that!(cargo.arg("package").arg("-v").arg("--no-verify")
                      .cwd(p.root().join("a")),
                 execs().with_status(0).with_stderr("\
 [WARNING] manifest has no description[..]
@@ -201,9 +202,9 @@ fn package_verification() {
             fn main() {}
         "#)
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -239,7 +240,7 @@ fn path_dependency_no_version() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(101).with_stderr("\
 [WARNING] manifest has no documentation, homepage or repository.
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -315,7 +316,7 @@ fn exclude() {
         .file("some_dir/dir_deep_5/some_dir/file", "")
         .build();
 
-    assert_that(p.cargo("package").arg("--no-verify").arg("-v"),
+    assert_that!(p.cargo("package").arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stdout("").with_stderr("\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -356,9 +357,9 @@ See [..]
 [ARCHIVING] [..]
 "));
 
-    assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
+    assert_that!(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
 
-    assert_that(p.cargo("package").arg("-l"),
+    assert_that!(p.cargo("package").arg("-l"),
                 execs().with_status(0).with_stdout("\
 Cargo.toml
 dir_root_1[/]some_dir[/]file
@@ -399,7 +400,7 @@ fn include() {
         .file("src/bar.txt", "") // should be ignored when packaging
         .build();
 
-    assert_that(p.cargo("package").arg("--no-verify").arg("-v"),
+    assert_that!(p.cargo("package").arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -426,7 +427,7 @@ fn package_lib_with_bin() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("package").arg("-v"),
+    assert_that!(p.cargo("package").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -457,7 +458,7 @@ fn package_git_submodule() {
     repository.reset(&repository.revparse_single("HEAD").unwrap(),
                      git2::ResetType::Hard, None).unwrap();
 
-    assert_that(cargo_process().arg("package").cwd(project.root())
+    assert_that!(cargo_process().arg("package").cwd(project.root())
                  .arg("--no-verify").arg("-v"),
                 execs().with_status(0).with_stderr_contains("[ARCHIVING] bar/Makefile"));
 }
@@ -481,8 +482,8 @@ fn no_duplicates_from_modified_tracked_files() {
         "#).unwrap();
     let mut cargo = cargo_process();
     cargo.cwd(p.root());
-    assert_that(cargo.clone().arg("build"), execs().with_status(0));
-    assert_that(cargo.arg("package").arg("--list"),
+    assert_that!(cargo.clone().arg("build"), execs().with_status(0));
+    assert_that!(cargo.arg("package").arg("--list"),
                 execs().with_status(0).with_stdout("\
 Cargo.toml
 src/main.rs
@@ -511,7 +512,7 @@ fn ignore_nested() {
         .file("a_dir/nested/src/main.rs", main_rs)
         .build();
 
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(0).with_stderr(&format!("\
 [WARNING] manifest has no documentation[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
@@ -521,13 +522,13 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         dir = p.url())));
-    assert_that(&p.root().join("target/package/nested-0.0.1.crate"), existing_file());
-    assert_that(p.cargo("package").arg("-l"),
+    assert_that!(&p.root().join("target/package/nested-0.0.1.crate"), existing_file());
+    assert_that!(p.cargo("package").arg("-l"),
                 execs().with_status(0).with_stdout("\
 Cargo.toml
 src[..]main.rs
 "));
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(0).with_stdout(""));
 
     let f = File::open(&p.root().join("target/package/nested-0.0.1.crate")).unwrap();
@@ -562,7 +563,7 @@ fn package_weird_characters() {
         .file("src/:foo", "")
         .build();
 
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(101).with_stderr("\
 warning: [..]
 See [..]
@@ -588,7 +589,7 @@ fn repackage_on_source_change() {
         "#)
         .build();
 
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(0));
 
     // Add another source file
@@ -605,7 +606,7 @@ fn repackage_on_source_change() {
     pro.arg("package").cwd(p.root());
 
     // Check that cargo rebuilds the tarball
-    assert_that(pro, execs().with_status(0).with_stderr(&format!("\
+    assert_that!(pro, execs().with_status(0).with_stderr(&format!("\
 [WARNING] [..]
 See [..]
 [PACKAGING] foo v0.0.1 ({dir})
@@ -625,7 +626,7 @@ See [..]
     let entry_paths = entries.map(|entry| {
         entry.unwrap().path().unwrap().into_owned()
     }).collect::<Vec<PathBuf>>();
-    assert_that(&entry_paths, contains(vec![PathBuf::from("foo-0.0.1/src/foo.rs")]));
+    assert_that!(&entry_paths, contains(vec![PathBuf::from("foo-0.0.1/src/foo.rs")]));
 }
 
 #[test]
@@ -651,7 +652,7 @@ fn broken_symlink() {
         .build();
     t!(fs::symlink("nowhere", &p.root().join("src/foo.rs")));
 
-    assert_that(p.cargo("package").arg("-v"),
+    assert_that!(p.cargo("package").arg("-v"),
                 execs().with_status(101)
                        .with_stderr_contains("\
 error: failed to prepare local package for uploading
@@ -696,7 +697,7 @@ fn do_not_package_if_repository_is_dirty() {
             # change
     "#);
 
-    assert_that(p.cargo("package"),
+    assert_that!(p.cargo("package"),
                 execs().with_status(101)
                        .with_stderr("\
 error: 1 files in the working directory contain changes that were not yet \
@@ -744,7 +745,7 @@ fn generated_manifest() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("package").arg("--no-verify"),
+    assert_that!(p.cargo("package").arg("--no-verify"),
                 execs().with_status(0));
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -760,7 +761,7 @@ fn generated_manifest() {
     entry.read_to_string(&mut contents).unwrap();
     // BTreeMap makes the order of dependencies in the generated file deterministic
     // by sorting alphabetically
-    assert_that(&contents[..], equal_to(
+    assert_that!(&contents[..], equal_to(
 r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
 #
 # When uploading crates to the registry Cargo will automatically
@@ -823,7 +824,7 @@ fn ignore_workspace_specifier() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("package").arg("--no-verify").cwd(p.root().join("bar")),
+    assert_that!(p.cargo("package").arg("--no-verify").cwd(p.root().join("bar")),
                 execs().with_status(0));
 
     let f = File::open(&p.root().join("target/package/bar-0.1.0.crate")).unwrap();
@@ -837,7 +838,7 @@ fn ignore_workspace_specifier() {
                         .unwrap();
     let mut contents = String::new();
     entry.read_to_string(&mut contents).unwrap();
-    assert_that(&contents[..], equal_to(
+    assert_that!(&contents[..], equal_to(
 r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
 #
 # When uploading crates to the registry Cargo will automatically
@@ -875,6 +876,6 @@ fn package_two_kinds_of_deps() {
         .file("src/main.rs", "")
         .build();
 
-    assert_that(p.cargo("package").arg("--no-verify"),
+    assert_that!(p.cargo("package").arg("--no-verify"),
                 execs().with_status(0));
 }

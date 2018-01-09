@@ -1,6 +1,7 @@
 extern crate cargo;
 #[macro_use]
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 extern crate tempdir;
 
@@ -15,7 +16,7 @@ use cargotest::support::paths::{CargoPathExt,root};
 use cargotest::support::{ProjectBuilder};
 use cargotest::support::{project, execs, main_file, basic_bin_manifest};
 use cargotest::support::registry::Package;
-use hamcrest::{assert_that, existing_file, existing_dir, is_not};
+use hamcrest::prelude::*;
 use tempdir::TempDir;
 
 #[test]
@@ -25,10 +26,10 @@ fn cargo_compile_simple() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")),
+    assert_that!(process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("i am foo\n"));
 }
 
@@ -38,7 +39,7 @@ fn cargo_fail_with_no_stderr() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &String::from("refusal"))
         .build();
-    assert_that(p.cargo("build").arg("--message-format=json"), execs().with_status(101)
+    assert_that!(p.cargo("build").arg("--message-format=json"), execs().with_status(101)
         .with_stderr_does_not_contain("--- stderr"));
 }
 
@@ -55,13 +56,13 @@ fn cargo_compile_incremental() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(
+    assert_that!(
         p.cargo("build").arg("-v").env("CARGO_INCREMENTAL", "1"),
         execs().with_stderr_contains(
             "[RUNNING] `rustc [..] -C incremental=[..][/]target[/]debug[/]incremental[..]`\n")
             .with_status(0));
 
-    assert_that(
+    assert_that!(
         p.cargo("test").arg("-v").env("CARGO_INCREMENTAL", "1"),
         execs().with_stderr_contains(
             "[RUNNING] `rustc [..] -C incremental=[..][/]target[/]debug[/]incremental[..]`\n")
@@ -90,22 +91,22 @@ fn incremental_profile() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
+    assert_that!(
         p.cargo("build").arg("-v").env_remove("CARGO_INCREMENTAL"),
         execs().with_stderr_does_not_contain("[..]C incremental=[..]")
             .with_status(0));
 
-    assert_that(
+    assert_that!(
         p.cargo("build").arg("-v").env("CARGO_INCREMENTAL", "1"),
         execs().with_stderr_contains("[..]C incremental=[..]")
             .with_status(0));
 
-    assert_that(
+    assert_that!(
         p.cargo("build").arg("--release").arg("-v").env_remove("CARGO_INCREMENTAL"),
         execs().with_stderr_contains("[..]C incremental=[..]")
             .with_status(0));
 
-    assert_that(
+    assert_that!(
         p.cargo("build").arg("--release").arg("-v").env("CARGO_INCREMENTAL", "0"),
         execs().with_stderr_does_not_contain("[..]C incremental=[..]")
             .with_status(0));
@@ -131,12 +132,12 @@ fn incremental_config() {
         "#)
         .build();
 
-    assert_that(
+    assert_that!(
         p.cargo("build").arg("-v").env_remove("CARGO_INCREMENTAL"),
         execs().with_stderr_does_not_contain("[..]C incremental=[..]")
             .with_status(0));
 
-    assert_that(
+    assert_that!(
         p.cargo("build").arg("-v").env("CARGO_INCREMENTAL", "1"),
         execs().with_stderr_contains("[..]C incremental=[..]")
             .with_status(0));
@@ -149,11 +150,11 @@ fn cargo_compile_manifest_path() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .arg("--manifest-path").arg("foo/Cargo.toml")
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
 }
 
 #[test]
@@ -162,7 +163,7 @@ fn cargo_compile_with_invalid_manifest() {
         .file("Cargo.toml", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
         execs()
         .with_status(101)
         .with_stderr("\
@@ -182,7 +183,7 @@ fn cargo_compile_with_invalid_manifest2() {
         ")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
         execs()
         .with_status(101)
         .with_stderr("\
@@ -208,7 +209,7 @@ fn cargo_compile_with_invalid_manifest3() {
         .file("src/Cargo.toml", "a = bar")
         .build();
 
-    assert_that(p.cargo("build").arg("--manifest-path")
+    assert_that!(p.cargo("build").arg("--manifest-path")
                  .arg("src/Cargo.toml"),
         execs()
         .with_status(101)
@@ -245,7 +246,7 @@ fn cargo_compile_duplicate_build_targets() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs()
                 .with_status(0)
                 .with_stderr("\
@@ -266,7 +267,7 @@ fn cargo_compile_with_invalid_version() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs()
                 .with_status(101)
                 .with_stderr("\
@@ -289,7 +290,7 @@ fn cargo_compile_with_invalid_package_name() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs()
                 .with_status(101)
                 .with_stderr("\
@@ -314,7 +315,7 @@ fn cargo_compile_with_invalid_bin_target_name() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs()
                 .with_status(101)
                 .with_stderr("\
@@ -339,7 +340,7 @@ fn cargo_compile_with_forbidden_bin_target_name() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs()
                 .with_status(101)
                 .with_stderr("\
@@ -364,7 +365,7 @@ fn cargo_compile_with_invalid_lib_target_name() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs()
                 .with_status(101)
                 .with_stderr("\
@@ -380,7 +381,7 @@ fn cargo_compile_without_manifest() {
     let tmpdir = TempDir::new("cargo").unwrap();
     let p = ProjectBuilder::new("foo", tmpdir.path().to_path_buf()).build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] could not find `Cargo.toml` in `[..]` or any parent directory
@@ -394,14 +395,14 @@ fn cargo_compile_with_invalid_code() {
         .file("src/foo.rs", "invalid rust code!")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
         execs()
         .with_status(101)
         .with_stderr_contains("\
 [ERROR] Could not compile `foo`.
 
 To learn more, run the command again with --verbose.\n"));
-    assert_that(&p.root().join("Cargo.lock"), existing_file());
+    assert_that!(&p.root().join("Cargo.lock"), existing_file());
 }
 
 #[test]
@@ -428,7 +429,7 @@ fn cargo_compile_with_invalid_code_in_deps() {
         .file("Cargo.toml", &basic_bin_manifest("baz"))
         .file("src/lib.rs", "invalid rust code!")
         .build();
-    assert_that(p.cargo("build"), execs().with_status(101));
+    assert_that!(p.cargo("build"), execs().with_status(101));
 }
 
 #[test]
@@ -438,7 +439,7 @@ fn cargo_compile_with_warnings_in_the_root_package() {
         .file("src/foo.rs", "fn main() {} fn dead() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0).with_stderr_contains("\
 [..]function is never used: `dead`[..]
 "));
@@ -483,14 +484,14 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
         execs().with_status(0).with_stderr_contains("\
 [..]function is never used: `dead`[..]
 "));
 
-    assert_that(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("foo"), existing_file());
 
-    assert_that(
+    assert_that!(
       process(&p.bin("foo")),
       execs().with_status(0).with_stdout("test passed\n"));
 }
@@ -548,11 +549,11 @@ fn cargo_compile_with_nested_deps_inferred() {
         .exec_with_output()
         .unwrap();
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
-    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("libbar.rlib"), is_not(existing_file()));
+    assert_that!(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
-    assert_that(
+    assert_that!(
       process(&p.bin("foo")),
       execs().with_status(0).with_stdout("test passed\n"));
 }
@@ -610,11 +611,11 @@ fn cargo_compile_with_nested_deps_correct_bin() {
         .exec_with_output()
         .unwrap();
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
-    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("libbar.rlib"), is_not(existing_file()));
+    assert_that!(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
-    assert_that(
+    assert_that!(
       process(&p.bin("foo")),
       execs().with_status(0).with_stdout("test passed\n"));
 }
@@ -677,11 +678,11 @@ fn cargo_compile_with_nested_deps_shorthand() {
         .exec_with_output()
         .unwrap();
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
-    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("libbar.rlib"), is_not(existing_file()));
+    assert_that!(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
-    assert_that(
+    assert_that!(
       process(&p.bin("foo")),
       execs().with_status(0).with_stdout("test passed\n"));
 }
@@ -746,13 +747,13 @@ fn cargo_compile_with_nested_deps_longhand() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"), execs());
+    assert_that!(p.cargo("build"), execs());
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("libbar.rlib"), is_not(existing_file()));
-    assert_that(&p.bin("libbaz.rlib"), is_not(existing_file()));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("libbar.rlib"), is_not(existing_file()));
+    assert_that!(&p.bin("libbaz.rlib"), is_not(existing_file()));
 
-    assert_that(process(&p.bin("foo")),
+    assert_that!(process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("test passed\n"));
 }
 
@@ -781,7 +782,7 @@ fn cargo_compile_with_dep_name_mismatch() {
         .file("bar/src/bar.rs", &main_file(r#""i am bar""#, &[]))
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr(&format!(
 r#"[ERROR] no matching package named `notquitebar` found (required by `foo`)
 location searched: {proj_dir}/bar
@@ -808,21 +809,21 @@ fn cargo_compile_with_filename() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").arg("--bin").arg("bin.rs"),
+    assert_that!(p.cargo("build").arg("--bin").arg("bin.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `bin.rs`"));
 
-    assert_that(p.cargo("build").arg("--bin").arg("a.rs"),
+    assert_that!(p.cargo("build").arg("--bin").arg("a.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no bin target named `a.rs`
 
 Did you mean `a`?"));
 
-    assert_that(p.cargo("build").arg("--example").arg("example.rs"),
+    assert_that!(p.cargo("build").arg("--example").arg("example.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no example target named `example.rs`"));
 
-    assert_that(p.cargo("build").arg("--example").arg("a.rs"),
+    assert_that!(p.cargo("build").arg("--example").arg("a.rs"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no example target named `a.rs`
 
@@ -851,7 +852,7 @@ fn compile_path_dep_then_change_version() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
 
     File::create(&p.root().join("bar/Cargo.toml")).unwrap().write_all(br#"
         [package]
@@ -860,7 +861,7 @@ fn compile_path_dep_then_change_version() {
         authors = []
     "#).unwrap();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [ERROR] no matching version `= 0.0.1` found for package `bar` (required by `foo`)
 location searched: [..]
@@ -884,7 +885,7 @@ fn ignores_carriage_return_in_lockfile() {
         .file("src/a.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 
     let lockfile = p.root().join("Cargo.lock");
@@ -892,7 +893,7 @@ fn ignores_carriage_return_in_lockfile() {
     File::open(&lockfile).unwrap().read_to_string(&mut lock).unwrap();
     let lock = lock.replace("\n", "\r\n");
     File::create(&lockfile).unwrap().write_all(lock.as_bytes()).unwrap();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -925,7 +926,7 @@ fn cargo_default_env_metadata_env_var() {
         .build();
 
     // No metadata on libbar since it's a dylib path dependency
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type dylib \
@@ -949,10 +950,10 @@ prefix = env::consts::DLL_PREFIX,
 suffix = env::consts::DLL_SUFFIX,
 )));
 
-    assert_that(p.cargo("clean"), execs().with_status(0));
+    assert_that!(p.cargo("clean"), execs().with_status(0));
 
     // If you set the env-var, then we expect metadata on libbar
-    assert_that(p.cargo("build").arg("-v").env("__CARGO_DEFAULT_LIB_METADATA", "stable"),
+    assert_that!(p.cargo("build").arg("-v").env("__CARGO_DEFAULT_LIB_METADATA", "stable"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] bar v0.0.1 ({url}/bar)
 [RUNNING] `rustc --crate-name bar bar[/]src[/]lib.rs --crate-type dylib \
@@ -1030,15 +1031,15 @@ fn crate_env_vars() {
         .build();
 
     println!("build");
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that!(p.cargo("build").arg("-v"), execs().with_status(0));
 
     println!("bin");
-    assert_that(process(&p.bin("foo")),
+    assert_that!(process(&p.bin("foo")),
                 execs().with_status(0).with_stdout(&format!("0-5-1 @ alpha.1 in {}\n",
                                                    p.root().display())));
 
     println!("test");
-    assert_that(p.cargo("test").arg("-v"),
+    assert_that!(p.cargo("test").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -1071,14 +1072,14 @@ fn crate_authors_env_vars() {
         .build();
 
     println!("build");
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that!(p.cargo("build").arg("-v"), execs().with_status(0));
 
     println!("bin");
-    assert_that(process(&p.bin("foo")),
+    assert_that!(process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("wycats@example.com:neikos@example.com"));
 
     println!("test");
-    assert_that(p.cargo("test").arg("-v"),
+    assert_that!(p.cargo("test").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -1113,7 +1114,7 @@ fn crate_library_path_env_var() {
         "##, dylib_path_envvar()))
         .build();
 
-    assert_that(setenv_for_removing_empty_component(p.cargo("run")),
+    assert_that!(setenv_for_removing_empty_component(p.cargo("run")),
                 execs().with_status(0));
 }
 
@@ -1134,7 +1135,7 @@ fn build_with_fake_libc_not_loading() {
         .file("libc.so.6", r#""#)
         .build();
 
-    assert_that(setenv_for_removing_empty_component(p.cargo("build")),
+    assert_that!(setenv_for_removing_empty_component(p.cargo("build")),
                 execs().with_status(0));
 }
 
@@ -1158,14 +1159,14 @@ fn many_crate_types_old_style_lib_location() {
             pub fn foo() {}
         "#)
         .build();
-    assert_that(p.cargo("build"), execs().with_status(0).with_stderr_contains("\
+    assert_that!(p.cargo("build"), execs().with_status(0).with_stderr_contains("\
 [WARNING] path `[..]src[/]foo.rs` was erroneously implicitly accepted for library `foo`,
 please rename the file to `src/lib.rs` or set lib.path in Cargo.toml"));
 
-    assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
+    assert_that!(&p.root().join("target/debug/libfoo.rlib"), existing_file());
     let fname = format!("{}foo{}", env::consts::DLL_PREFIX,
                         env::consts::DLL_SUFFIX);
-    assert_that(&p.root().join("target/debug").join(&fname), existing_file());
+    assert_that!(&p.root().join("target/debug").join(&fname), existing_file());
 }
 
 #[test]
@@ -1187,13 +1188,13 @@ fn many_crate_types_correct() {
             pub fn foo() {}
         "#)
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 
-    assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
+    assert_that!(&p.root().join("target/debug/libfoo.rlib"), existing_file());
     let fname = format!("{}foo{}", env::consts::DLL_PREFIX,
                         env::consts::DLL_SUFFIX);
-    assert_that(&p.root().join("target/debug").join(&fname), existing_file());
+    assert_that!(&p.root().join("target/debug").join(&fname), existing_file());
 }
 
 #[test]
@@ -1216,7 +1217,7 @@ fn self_dependency() {
         "#)
         .file("src/test.rs", "fn main() {}")
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] cyclic package dependency: package `test v0.0.0 ([..])` depends on itself
@@ -1234,10 +1235,10 @@ fn ignore_broken_symlinks() {
         .symlink("Notafile", "bar")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("foo"), existing_file());
 
-    assert_that(process(&p.bin("foo")),
+    assert_that!(process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("i am foo\n"));
 }
 
@@ -1252,7 +1253,7 @@ fn missing_lib_and_bin() {
             authors = []
         "#)
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] failed to parse manifest at `[..]Cargo.toml`
@@ -1282,7 +1283,7 @@ fn lto_build() {
         "#)
         .file("src/main.rs", "fn main() {}")
         .build();
-    assert_that(p.cargo("build").arg("-v").arg("--release"),
+    assert_that!(p.cargo("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src[/]main.rs --crate-type bin \
@@ -1311,7 +1312,7 @@ fn verbose_build() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
@@ -1338,7 +1339,7 @@ fn verbose_release_build() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v").arg("--release"),
+    assert_that!(p.cargo("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] test v0.0.0 ({url})
 [RUNNING] `rustc --crate-name test src[/]lib.rs --crate-type lib \
@@ -1381,7 +1382,7 @@ fn verbose_release_build_deps() {
         "#)
         .file("foo/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v").arg("--release"),
+    assert_that!(p.cargo("build").arg("-v").arg("--release"),
                 execs().with_status(0).with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url}/foo)
 [RUNNING] `rustc --crate-name foo foo[/]src[/]lib.rs \
@@ -1445,10 +1446,10 @@ fn explicit_examples() {
         "#)
         .build();
 
-    assert_that(p.cargo("test").arg("-v"), execs().with_status(0));
-    assert_that(process(&p.bin("examples/hello")),
+    assert_that!(p.cargo("test").arg("-v"), execs().with_status(0));
+    assert_that!(process(&p.bin("examples/hello")),
                         execs().with_status(0).with_stdout("Hello, World!\n"));
-    assert_that(process(&p.bin("examples/goodbye")),
+    assert_that!(process(&p.bin("examples/goodbye")),
                         execs().with_status(0).with_stdout("Goodbye, World!\n"));
 }
 
@@ -1472,7 +1473,7 @@ fn non_existing_example() {
         .file("examples/ehlo.rs", "")
         .build();
 
-    assert_that(p.cargo("test").arg("-v"), execs().with_status(101).with_stderr("\
+    assert_that!(p.cargo("test").arg("-v"), execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
@@ -1495,7 +1496,7 @@ fn non_existing_binary() {
         .file("src/bin/ehlo.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(101).with_stderr("\
+    assert_that!(p.cargo("build").arg("-v"), execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
@@ -1518,7 +1519,7 @@ fn legacy_binary_paths_warinigs() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
+    assert_that!(p.cargo("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
 [WARNING] path `[..]src[/]main.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml"));
 
@@ -1536,7 +1537,7 @@ please set bin.path in Cargo.toml"));
         .file("src/bin/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
+    assert_that!(p.cargo("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
 [WARNING] path `[..]src[/]bin[/]main.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml"));
 
@@ -1553,7 +1554,7 @@ please set bin.path in Cargo.toml"));
         .file("src/bar.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
+    assert_that!(p.cargo("build").arg("-v"), execs().with_status(0).with_stderr_contains("\
 [WARNING] path `[..]src[/]bar.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml"));
 }
@@ -1586,10 +1587,10 @@ fn implicit_examples() {
         "#)
         .build();
 
-    assert_that(p.cargo("test"), execs().with_status(0));
-    assert_that(process(&p.bin("examples/hello")),
+    assert_that!(p.cargo("test"), execs().with_status(0));
+    assert_that!(process(&p.bin("examples/hello")),
                 execs().with_status(0).with_stdout("Hello, World!\n"));
-    assert_that(process(&p.bin("examples/goodbye")),
+    assert_that!(process(&p.bin("examples/goodbye")),
                 execs().with_status(0).with_stdout("Goodbye, World!\n"));
 }
 
@@ -1608,8 +1609,8 @@ fn standard_build_no_ndebug() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(process(&p.bin("foo")),
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("slow\n"));
 }
 
@@ -1628,9 +1629,9 @@ fn release_build_ndebug() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").arg("--release"),
+    assert_that!(p.cargo("build").arg("--release"),
                 execs().with_status(0));
-    assert_that(process(&p.release_bin("foo")),
+    assert_that!(process(&p.release_bin("foo")),
                 execs().with_status(0).with_stdout("fast\n"));
 }
 
@@ -1648,8 +1649,8 @@ fn inferred_main_bin() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(process(&p.bin("foo")), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(process(&p.bin("foo")), execs().with_status(0));
 }
 
 #[test]
@@ -1677,14 +1678,14 @@ fn deletion_causes_failure() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
     p.change_file("Cargo.toml", r#"
         [package]
         name = "foo"
         version = "0.0.1"
         authors = []
     "#);
-    assert_that(p.cargo("build"), execs().with_status(101));
+    assert_that!(p.cargo("build"), execs().with_status(101));
 }
 
 #[test]
@@ -1702,8 +1703,8 @@ fn bad_cargo_toml_in_target_dir() {
         .file("target/Cargo.toml", "bad-toml")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(process(&p.bin("foo")), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(process(&p.bin("foo")), execs().with_status(0));
 }
 
 #[test]
@@ -1724,7 +1725,7 @@ fn lib_with_standard_name() {
         ")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] syntax v0.0.1 ({dir})
@@ -1750,7 +1751,7 @@ fn simple_staticlib() {
         .build();
 
     // env var is a test for #1381
-    assert_that(p.cargo("build").env("RUST_LOG", "nekoneko=trace"),
+    assert_that!(p.cargo("build").env("RUST_LOG", "nekoneko=trace"),
                 execs().with_status(0));
 }
 
@@ -1776,7 +1777,7 @@ fn staticlib_rlib_and_bin() {
               }"#)
         .build();
 
-    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
+    assert_that!(p.cargo("build").arg("-v"), execs().with_status(0));
 }
 
 #[test]
@@ -1793,7 +1794,7 @@ fn opt_out_of_bin() {
         .file("src/lib.rs", "")
         .file("src/main.rs", "bad syntax")
         .build();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
@@ -1811,7 +1812,7 @@ fn single_lib() {
         "#)
         .file("src/bar.rs", "")
         .build();
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
@@ -1830,7 +1831,7 @@ fn freshness_ignores_excluded() {
         .build();
     foo.root().move_into_the_past();
 
-    assert_that(foo.cargo("build"),
+    assert_that!(foo.cargo("build"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
@@ -1839,14 +1840,14 @@ fn freshness_ignores_excluded() {
 
     // Smoke test to make sure it doesn't compile again
     println!("first pass");
-    assert_that(foo.cargo("build"),
+    assert_that!(foo.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(""));
 
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
     File::create(&foo.root().join("src/bar.rs")).unwrap();
-    assert_that(foo.cargo("build"),
+    assert_that!(foo.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(""));
 }
@@ -1879,7 +1880,7 @@ fn rebuild_preserves_out_dir() {
         .build();
     foo.root().move_into_the_past();
 
-    assert_that(foo.cargo("build").env("FIRST", "1"),
+    assert_that!(foo.cargo("build").env("FIRST", "1"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
@@ -1887,7 +1888,7 @@ fn rebuild_preserves_out_dir() {
 ", url = foo.url())));
 
     File::create(&foo.root().join("src/bar.rs")).unwrap();
-    assert_that(foo.cargo("build"),
+    assert_that!(foo.cargo("build"),
                 execs().with_status(0)
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.0 ({url})
@@ -1916,7 +1917,7 @@ fn dep_no_libs() {
         "#)
         .file("bar/src/main.rs", "")
         .build();
-    assert_that(foo.cargo("build"),
+    assert_that!(foo.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -1935,9 +1936,9 @@ fn recompile_space_in_name() {
         "#)
         .file("src/my lib.rs", "")
         .build();
-    assert_that(foo.cargo("build"), execs().with_status(0));
+    assert_that!(foo.cargo("build"), execs().with_status(0));
     foo.root().move_into_the_past();
-    assert_that(foo.cargo("build"),
+    assert_that!(foo.cargo("build"),
                 execs().with_status(0).with_stdout(""));
 }
 
@@ -1960,7 +1961,7 @@ fn ignore_bad_directories() {
     let mut perms = stat.permissions();
     perms.set_mode(0o644);
     fs::set_permissions(&dir, perms.clone()).unwrap();
-    assert_that(foo.cargo("build"),
+    assert_that!(foo.cargo("build"),
                 execs().with_status(0));
     perms.set_mode(0o755);
     fs::set_permissions(&dir, perms).unwrap();
@@ -1980,7 +1981,7 @@ fn bad_cargo_config() {
               this is not valid toml
         "#)
         .build();
-    assert_that(foo.cargo("build").arg("-v"),
+    assert_that!(foo.cargo("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
 [ERROR] Couldn't load Cargo configuration
 
@@ -2049,11 +2050,11 @@ fn cargo_platform_specific_dependency() {
         .file("dev/src/lib.rs", "pub fn dev() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(p.cargo("test"),
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(p.cargo("test"),
                 execs().with_status(0));
 }
 
@@ -2088,7 +2089,7 @@ fn bad_platform_specific_dependency() {
         "#)
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101));
 }
 
@@ -2122,8 +2123,8 @@ fn cargo_platform_specific_dependency_wrong_platform() {
 
     p.cargo("build").exec_with_output().unwrap();
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(process(&p.bin("foo")),
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(process(&p.bin("foo")),
                 execs().with_status(0));
 
     let loc = p.root().join("Cargo.lock");
@@ -2149,8 +2150,8 @@ fn example_as_lib() {
         .file("examples/ex.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--example=ex"), execs().with_status(0));
-    assert_that(&p.example_lib("ex", "lib"), existing_file());
+    assert_that!(p.cargo("build").arg("--example=ex"), execs().with_status(0));
+    assert_that!(&p.example_lib("ex", "lib"), existing_file());
 }
 
 #[test]
@@ -2170,8 +2171,8 @@ fn example_as_rlib() {
         .file("examples/ex.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--example=ex"), execs().with_status(0));
-    assert_that(&p.example_lib("ex", "rlib"), existing_file());
+    assert_that!(p.cargo("build").arg("--example=ex"), execs().with_status(0));
+    assert_that!(&p.example_lib("ex", "rlib"), existing_file());
 }
 
 #[test]
@@ -2191,8 +2192,8 @@ fn example_as_dylib() {
         .file("examples/ex.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("--example=ex"), execs().with_status(0));
-    assert_that(&p.example_lib("ex", "dylib"), existing_file());
+    assert_that!(p.cargo("build").arg("--example=ex"), execs().with_status(0));
+    assert_that!(&p.example_lib("ex", "dylib"), existing_file());
 }
 
 #[test]
@@ -2216,8 +2217,8 @@ fn example_as_proc_macro() {
         .file("examples/ex.rs", "#![feature(proc_macro)]")
         .build();
 
-    assert_that(p.cargo("build").arg("--example=ex"), execs().with_status(0));
-    assert_that(&p.example_lib("ex", "proc-macro"), existing_file());
+    assert_that!(p.cargo("build").arg("--example=ex"), execs().with_status(0));
+    assert_that!(&p.example_lib("ex", "proc-macro"), existing_file());
 }
 
 #[test]
@@ -2237,17 +2238,17 @@ fn example_bin_same_name() {
         .exec_with_output()
         .unwrap();
 
-    assert_that(&p.bin("foo"), is_not(existing_file()));
+    assert_that!(&p.bin("foo"), is_not(existing_file()));
     // We expect a file of the form bin/foo-{metadata_hash}
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert_that!(&p.bin("examples/foo"), existing_file());
 
     p.cargo("test").arg("--no-run").arg("-v")
                    .exec_with_output()
                    .unwrap();
 
-    assert_that(&p.bin("foo"), is_not(existing_file()));
+    assert_that!(&p.bin("foo"), is_not(existing_file()));
     // We expect a file of the form bin/foo-{metadata_hash}
-    assert_that(&p.bin("examples/foo"), existing_file());
+    assert_that!(&p.bin("examples/foo"), existing_file());
 }
 
 #[test]
@@ -2262,14 +2263,14 @@ fn compile_then_delete() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("run").arg("-v"), execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
+    assert_that!(p.cargo("run").arg("-v"), execs().with_status(0));
+    assert_that!(&p.bin("foo"), existing_file());
     if cfg!(windows) {
         // On windows unlinking immediately after running often fails, so sleep
         sleep_ms(100);
     }
     fs::remove_file(&p.bin("foo")).unwrap();
-    assert_that(p.cargo("run").arg("-v"),
+    assert_that!(p.cargo("run").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -2305,7 +2306,7 @@ fn transitive_dependencies_not_available() {
         .file("b/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [..] can't find crate for `bbbbb`[..]
@@ -2337,7 +2338,7 @@ fn cyclic_deps_rejected() {
         .file("a/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(101)
                        .with_stderr("\
 [ERROR] cyclic package dependency: package `a v0.0.1 ([..])` depends on itself
@@ -2360,12 +2361,12 @@ fn predictable_filenames() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0));
-    assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
+    assert_that!(&p.root().join("target/debug/libfoo.rlib"), existing_file());
     let dylib_name = format!("{}foo{}", env::consts::DLL_PREFIX,
                              env::consts::DLL_SUFFIX);
-    assert_that(&p.root().join("target/debug").join(dylib_name),
+    assert_that!(&p.root().join("target/debug").join(dylib_name),
                 existing_file());
 }
 
@@ -2382,9 +2383,9 @@ fn dashes_to_underscores() {
         .file("src/main.rs", "extern crate foo_bar; fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0));
-    assert_that(&p.bin("foo-bar"), existing_file());
+    assert_that!(&p.bin("foo-bar"), existing_file());
 }
 
 #[test]
@@ -2403,7 +2404,7 @@ fn dashes_in_crate_name_bad() {
         .file("src/main.rs", "extern crate foo_bar; fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(101));
 }
 
@@ -2419,7 +2420,7 @@ fn rustc_env_var() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .env("RUSTC", "rustc-that-does-not-exist").arg("-v"),
                 execs().with_status(101)
                        .with_stderr("\
@@ -2428,7 +2429,7 @@ fn rustc_env_var() {
 Caused by:
 [..]
 "));
-    assert_that(&p.bin("a"), is_not(existing_file()));
+    assert_that!(&p.bin("a"), is_not(existing_file()));
 }
 
 #[test]
@@ -2447,16 +2448,16 @@ fn filtering() {
         .file("examples/b.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("--lib"),
+    assert_that!(p.cargo("build").arg("--lib"),
                 execs().with_status(0));
-    assert_that(&p.bin("a"), is_not(existing_file()));
+    assert_that!(&p.bin("a"), is_not(existing_file()));
 
-    assert_that(p.cargo("build").arg("--bin=a").arg("--example=a"),
+    assert_that!(p.cargo("build").arg("--bin=a").arg("--example=a"),
                 execs().with_status(0));
-    assert_that(&p.bin("a"), existing_file());
-    assert_that(&p.bin("b"), is_not(existing_file()));
-    assert_that(&p.bin("examples/a"), existing_file());
-    assert_that(&p.bin("examples/b"), is_not(existing_file()));
+    assert_that!(&p.bin("a"), existing_file());
+    assert_that!(&p.bin("b"), is_not(existing_file()));
+    assert_that!(&p.bin("examples/a"), existing_file());
+    assert_that!(&p.bin("examples/b"), is_not(existing_file()));
 }
 
 #[test]
@@ -2475,12 +2476,12 @@ fn filtering_implicit_bins() {
         .file("examples/b.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("--bins"),
+    assert_that!(p.cargo("build").arg("--bins"),
                 execs().with_status(0));
-    assert_that(&p.bin("a"), existing_file());
-    assert_that(&p.bin("b"), existing_file());
-    assert_that(&p.bin("examples/a"), is_not(existing_file()));
-    assert_that(&p.bin("examples/b"), is_not(existing_file()));
+    assert_that!(&p.bin("a"), existing_file());
+    assert_that!(&p.bin("b"), existing_file());
+    assert_that!(&p.bin("examples/a"), is_not(existing_file()));
+    assert_that!(&p.bin("examples/b"), is_not(existing_file()));
 }
 
 #[test]
@@ -2499,12 +2500,12 @@ fn filtering_implicit_examples() {
         .file("examples/b.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("--examples"),
+    assert_that!(p.cargo("build").arg("--examples"),
                 execs().with_status(0));
-    assert_that(&p.bin("a"), is_not(existing_file()));
-    assert_that(&p.bin("b"), is_not(existing_file()));
-    assert_that(&p.bin("examples/a"), existing_file());
-    assert_that(&p.bin("examples/b"), existing_file());
+    assert_that!(&p.bin("a"), is_not(existing_file()));
+    assert_that!(&p.bin("b"), is_not(existing_file()));
+    assert_that!(&p.bin("examples/a"), existing_file());
+    assert_that!(&p.bin("examples/b"), existing_file());
 }
 
 #[test]
@@ -2520,7 +2521,7 @@ fn ignore_dotfile() {
         .file("src/bin/a.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -2538,7 +2539,7 @@ fn ignore_dotdirs() {
         .file(".pc/dummy-fix.patch/Cargo.toml", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -2553,7 +2554,7 @@ fn dotdir_root() {
         "#)
         .file("src/bin/a.rs", "fn main() {}")
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
 }
 
@@ -2572,18 +2573,18 @@ fn custom_target_dir() {
 
     let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
 
-    assert_that(p.cargo("build").env("CARGO_TARGET_DIR", "foo/target"),
+    assert_that!(p.cargo("build").env("CARGO_TARGET_DIR", "foo/target"),
                 execs().with_status(0));
-    assert_that(&p.root().join("foo/target/debug").join(&exe_name),
+    assert_that!(&p.root().join("foo/target/debug").join(&exe_name),
                 existing_file());
-    assert_that(&p.root().join("target/debug").join(&exe_name),
+    assert_that!(&p.root().join("target/debug").join(&exe_name),
                 is_not(existing_file()));
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0));
-    assert_that(&p.root().join("foo/target/debug").join(&exe_name),
+    assert_that!(&p.root().join("foo/target/debug").join(&exe_name),
                 existing_file());
-    assert_that(&p.root().join("target/debug").join(&exe_name),
+    assert_that!(&p.root().join("target/debug").join(&exe_name),
                 existing_file());
 
     fs::create_dir(p.root().join(".cargo")).unwrap();
@@ -2591,13 +2592,13 @@ fn custom_target_dir() {
         [build]
         target-dir = "foo/target"
     "#).unwrap();
-    assert_that(p.cargo("build").env("CARGO_TARGET_DIR", "bar/target"),
+    assert_that!(p.cargo("build").env("CARGO_TARGET_DIR", "bar/target"),
                 execs().with_status(0));
-    assert_that(&p.root().join("bar/target/debug").join(&exe_name),
+    assert_that!(&p.root().join("bar/target/debug").join(&exe_name),
                 existing_file());
-    assert_that(&p.root().join("foo/target/debug").join(&exe_name),
+    assert_that!(&p.root().join("foo/target/debug").join(&exe_name),
                 existing_file());
-    assert_that(&p.root().join("target/debug").join(&exe_name),
+    assert_that!(&p.root().join("target/debug").join(&exe_name),
                 existing_file());
 }
 
@@ -2615,7 +2616,7 @@ fn rustc_no_trans() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("rustc").arg("-v").arg("--").arg("-Zno-trans"),
+    assert_that!(p.cargo("rustc").arg("-v").arg("--").arg("-Zno-trans"),
                 execs().with_status(0));
 }
 
@@ -2661,12 +2662,12 @@ fn build_multiple_packages() {
         .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }")
         .build();
 
-    assert_that(p.cargo("build").arg("-p").arg("d1").arg("-p").arg("d2")
+    assert_that!(p.cargo("build").arg("-p").arg("d1").arg("-p").arg("d2")
                                         .arg("-p").arg("foo"),
                 execs().with_status(0));
 
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(process(&p.bin("foo")),
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("i am foo\n"));
 
     let d1_path = &p.build_dir().join("debug")
@@ -2674,11 +2675,11 @@ fn build_multiple_packages() {
     let d2_path = &p.build_dir().join("debug")
                                 .join(format!("d2{}", env::consts::EXE_SUFFIX));
 
-    assert_that(d1_path, existing_file());
-    assert_that(process(d1_path), execs().with_status(0).with_stdout("d1"));
+    assert_that!(d1_path, existing_file());
+    assert_that!(process(d1_path), execs().with_status(0).with_stdout("d1"));
 
-    assert_that(d2_path, existing_file());
-    assert_that(process(d2_path),
+    assert_that!(d2_path, existing_file());
+    assert_that!(process(d2_path),
                 execs().with_status(0).with_stdout("d2"));
 }
 
@@ -2711,12 +2712,12 @@ fn invalid_spec() {
         .file("d1/src/main.rs", "fn main() { println!(\"d1\"); }")
         .build();
 
-    assert_that(p.cargo("build").arg("-p").arg("notAValidDep"),
+    assert_that!(p.cargo("build").arg("-p").arg("notAValidDep"),
                 execs().with_status(101).with_stderr("\
 [ERROR] package id specification `notAValidDep` matched no packages
 "));
 
-    assert_that(p.cargo("build").arg("-p").arg("d1").arg("-p").arg("notAValidDep"),
+    assert_that!(p.cargo("build").arg("-p").arg("d1").arg("-p").arg("notAValidDep"),
                 execs().with_status(101).with_stderr("\
 [ERROR] package id specification `notAValidDep` matched no packages
 "));
@@ -2733,7 +2734,7 @@ fn manifest_with_bom_is_ok() {
         ")
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0));
 }
 
@@ -2751,7 +2752,7 @@ fn panic_abort_compiles_with_panic_abort() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                        .with_stderr_contains("[..] -C panic=abort [..]"));
 }
@@ -2768,13 +2769,13 @@ fn explicit_color_config_is_propagated_to_rustc() {
             "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v").arg("--color").arg("always"),
+    assert_that!(p.cargo("build").arg("-v").arg("--color").arg("always"),
                 execs().with_status(0).with_stderr_contains(
                     "[..]rustc [..] src[/]lib.rs --color always[..]"));
 
-    assert_that(p.cargo("clean"), execs().with_status(0));
+    assert_that!(p.cargo("clean"), execs().with_status(0));
 
-    assert_that(p.cargo("build").arg("-v").arg("--color").arg("never"),
+    assert_that!(p.cargo("build").arg("-v").arg("--color").arg("never"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] test v0.0.0 ([..])
 [RUNNING] `rustc [..] --color never [..]`
@@ -2809,7 +2810,7 @@ fn compiler_json_error_format() {
         .file("bar/src/lib.rs", r#"fn dead() {}"#)
         .build();
 
-    assert_that(p.cargo("build").arg("-v")
+    assert_that!(p.cargo("build").arg("-v")
                     .arg("--message-format").arg("json"),
                 execs().with_status(0).with_json(r#"
     {
@@ -2881,7 +2882,7 @@ fn compiler_json_error_format() {
 
     // With fresh build, we should repeat the artifacts,
     // but omit compiler warnings.
-    assert_that(p.cargo("build").arg("-v")
+    assert_that!(p.cargo("build").arg("-v")
                     .arg("--message-format").arg("json"),
                 execs().with_status(0).with_json(r#"
     {
@@ -2935,7 +2936,7 @@ fn wrong_message_format_option() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("--message-format").arg("XML"),
+    assert_that!(p.cargo("build").arg("--message-format").arg("XML"),
                 execs().with_status(1)
                        .with_stderr_contains(
 r#"[ERROR] Could not match 'xml' with any of the allowed variants: ["Human", "Json"]"#));
@@ -2948,7 +2949,7 @@ fn message_format_json_forward_stderr() {
         .file("src/main.rs", "fn main() { let unused = 0; }")
         .build();
 
-    assert_that(p.cargo("rustc").arg("--release").arg("--bin").arg("foo")
+    assert_that!(p.cargo("rustc").arg("--release").arg("--bin").arg("foo")
                 .arg("--message-format").arg("JSON"),
                 execs().with_status(0)
                 .with_json(r#"
@@ -3006,7 +3007,7 @@ fn no_warn_about_package_metadata() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("[..] foo v0.0.1 ([..])\n\
                        [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n"));
@@ -3019,7 +3020,7 @@ fn cargo_build_empty_target() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("--target").arg(""),
+    assert_that!(p.cargo("build").arg("--target").arg(""),
                 execs().with_status(101)
                 .with_stderr_contains("[..] target was empty"));
 }
@@ -3050,7 +3051,7 @@ fn build_all_workspace() {
         "#)
         .build();
 
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .arg("--all"),
                 execs().with_status(0)
                        .with_stderr("[..] Compiling bar v0.1.0 ([..])\n\
@@ -3092,7 +3093,7 @@ fn build_all_exclude() {
         "#)
         .build();
 
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .arg("--all")
                  .arg("--exclude")
                  .arg("baz"),
@@ -3132,20 +3133,20 @@ fn build_all_workspace_implicit_examples() {
         .file("bar/examples/h.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .arg("--all").arg("--examples"),
                 execs().with_status(0)
                        .with_stderr("[..] Compiling bar v0.1.0 ([..])\n\
                        [..] Compiling foo v0.1.0 ([..])\n\
                        [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
-    assert_that(&p.bin("a"), is_not(existing_file()));
-    assert_that(&p.bin("b"), is_not(existing_file()));
-    assert_that(&p.bin("examples/c"), existing_file());
-    assert_that(&p.bin("examples/d"), existing_file());
-    assert_that(&p.bin("e"), is_not(existing_file()));
-    assert_that(&p.bin("f"), is_not(existing_file()));
-    assert_that(&p.bin("examples/g"), existing_file());
-    assert_that(&p.bin("examples/h"), existing_file());
+    assert_that!(&p.bin("a"), is_not(existing_file()));
+    assert_that!(&p.bin("b"), is_not(existing_file()));
+    assert_that!(&p.bin("examples/c"), existing_file());
+    assert_that!(&p.bin("examples/d"), existing_file());
+    assert_that!(&p.bin("e"), is_not(existing_file()));
+    assert_that!(&p.bin("f"), is_not(existing_file()));
+    assert_that!(&p.bin("examples/g"), existing_file());
+    assert_that!(&p.bin("examples/h"), existing_file());
 }
 
 #[test]
@@ -3174,7 +3175,7 @@ fn build_all_virtual_manifest() {
         .build();
 
     // The order in which foo and bar are built is not guaranteed
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .arg("--all"),
                 execs().with_status(0)
                        .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
@@ -3210,7 +3211,7 @@ fn build_virtual_manifest_all_implied() {
         .build();
 
     // The order in which foo and bar are built is not guaranteed
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
                        .with_stderr_contains("[..] Compiling foo v0.1.0 ([..])")
@@ -3244,7 +3245,7 @@ fn build_virtual_manifest_one_project() {
         "#)
         .build();
 
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .arg("-p").arg("foo"),
                 execs().with_status(0)
                        .with_stderr_does_not_contain("bar")
@@ -3283,7 +3284,7 @@ fn build_all_virtual_manifest_implicit_examples() {
         .build();
 
     // The order in which foo and bar are built is not guaranteed
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .arg("--all").arg("--examples"),
                 execs().with_status(0)
                        .with_stderr_contains("[..] Compiling bar v0.1.0 ([..])")
@@ -3291,14 +3292,14 @@ fn build_all_virtual_manifest_implicit_examples() {
                        .with_stderr("[..] Compiling [..] v0.1.0 ([..])\n\
                        [..] Compiling [..] v0.1.0 ([..])\n\
                        [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n"));
-    assert_that(&p.bin("a"), is_not(existing_file()));
-    assert_that(&p.bin("b"), is_not(existing_file()));
-    assert_that(&p.bin("examples/c"), existing_file());
-    assert_that(&p.bin("examples/d"), existing_file());
-    assert_that(&p.bin("e"), is_not(existing_file()));
-    assert_that(&p.bin("f"), is_not(existing_file()));
-    assert_that(&p.bin("examples/g"), existing_file());
-    assert_that(&p.bin("examples/h"), existing_file());
+    assert_that!(&p.bin("a"), is_not(existing_file()));
+    assert_that!(&p.bin("b"), is_not(existing_file()));
+    assert_that!(&p.bin("examples/c"), existing_file());
+    assert_that!(&p.bin("examples/d"), existing_file());
+    assert_that!(&p.bin("e"), is_not(existing_file()));
+    assert_that!(&p.bin("f"), is_not(existing_file()));
+    assert_that!(&p.bin("examples/g"), existing_file());
+    assert_that!(&p.bin("examples/h"), existing_file());
 }
 
 #[test]
@@ -3323,7 +3324,7 @@ fn build_all_member_dependency_same_name() {
 
     Package::new("a", "0.1.0").publish();
 
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .arg("--all"),
                 execs().with_status(0)
                        .with_stderr("[..] Updating registry `[..]`\n\
@@ -3358,7 +3359,7 @@ fn run_proper_binary() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--bin").arg("other"),
+    assert_that!(p.cargo("run").arg("--bin").arg("other"),
                 execs().with_status(0));
 }
 
@@ -3380,7 +3381,7 @@ fn run_proper_binary_main_rs() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--bin").arg("foo"),
+    assert_that!(p.cargo("run").arg("--bin").arg("foo"),
                 execs().with_status(0));
 }
 
@@ -3408,13 +3409,13 @@ fn run_proper_alias_binary_from_src() {
         "#)
         .build();
 
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .arg("--all"),
                 execs().with_status(0)
                 );
-    assert_that(process(&p.bin("foo")),
+    assert_that!(process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("foo\n"));
-    assert_that(process(&p.bin("bar")),
+    assert_that!(process(&p.bin("bar")),
                 execs().with_status(0).with_stdout("bar\n"));
 }
 
@@ -3438,13 +3439,13 @@ fn run_proper_alias_binary_main_rs() {
         "#)
         .build();
 
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .arg("--all"),
                 execs().with_status(0)
                 );
-    assert_that(process(&p.bin("foo")),
+    assert_that!(process(&p.bin("foo")),
                 execs().with_status(0).with_stdout("main\n"));
-    assert_that(process(&p.bin("bar")),
+    assert_that!(process(&p.bin("bar")),
                 execs().with_status(0).with_stdout("main\n"));
 }
 
@@ -3470,7 +3471,7 @@ fn run_proper_binary_main_rs_as_foo() {
         "#)
         .build();
 
-    assert_that(p.cargo("run").arg("--bin").arg("foo"),
+    assert_that!(p.cargo("run").arg("--bin").arg("foo"),
                 execs().with_status(0));
 }
 
@@ -3484,7 +3485,7 @@ fn rustc_wrapper() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("build").arg("-v").env("RUSTC_WRAPPER", "/usr/bin/env"),
+    assert_that!(p.cargo("build").arg("-v").env("RUSTC_WRAPPER", "/usr/bin/env"),
                 execs().with_stderr_contains(
                     "[RUNNING] `/usr/bin/env rustc --crate-name foo [..]")
                 .with_status(0));
@@ -3505,7 +3506,7 @@ fn cdylib_not_lifted() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
 
     let files = if cfg!(windows) {
         vec!["foo.dll.lib", "foo.dll.exp", "foo.dll"]
@@ -3517,7 +3518,7 @@ fn cdylib_not_lifted() {
 
     for file in files {
         println!("checking: {}", file);
-        assert_that(&p.root().join("target/debug/deps").join(&file),
+        assert_that!(&p.root().join("target/debug/deps").join(&file),
                     existing_file());
     }
 }
@@ -3537,7 +3538,7 @@ fn cdylib_final_outputs() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
 
     let files = if cfg!(windows) {
         vec!["foo_bar.dll.lib", "foo_bar.dll"]
@@ -3549,7 +3550,7 @@ fn cdylib_final_outputs() {
 
     for file in files {
         println!("checking: {}", file);
-        assert_that(&p.root().join("target/debug").join(&file), existing_file());
+        assert_that!(&p.root().join("target/debug").join(&file), existing_file());
     }
 }
 
@@ -3687,7 +3688,7 @@ fn deterministic_cfg_flags() {
         "#)
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
                 execs().with_status(0)
                     .with_stderr("\
 [COMPILING] foo v0.1.0 [..]
@@ -3720,7 +3721,7 @@ fn explicit_bins_without_paths() {
         .file("src/bin/bar.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that!(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
@@ -3739,7 +3740,7 @@ fn no_bin_in_src_with_lib() {
         .file("src/foo.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [ERROR] failed to parse manifest at `[..]`
@@ -3763,10 +3764,10 @@ fn inferred_bins() {
         .file("src/bin/baz/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("foo"), existing_file());
-    assert_that(&p.bin("bar"), existing_file());
-    assert_that(&p.bin("baz"), existing_file());
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("foo"), existing_file());
+    assert_that!(&p.bin("bar"), existing_file());
+    assert_that!(&p.bin("baz"), existing_file());
 }
 
 #[test]
@@ -3784,7 +3785,7 @@ fn inferred_bins_duplicate_name() {
         .file("src/bin/foo/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr_contains("\
 [..]found duplicate binary name foo, but all binary targets must have a unique name[..]
@@ -3807,8 +3808,8 @@ fn inferred_bin_path() {
         .file("src/bin/bar/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(0));
-    assert_that(&p.bin("bar"), existing_file());
+    assert_that!(p.cargo("build"), execs().with_status(0));
+    assert_that!(&p.bin("bar"), existing_file());
 }
 
 #[test]
@@ -3825,9 +3826,9 @@ fn inferred_examples() {
         .file("examples/baz/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("test"), execs().with_status(0));
-    assert_that(&p.bin("examples/bar"), existing_file());
-    assert_that(&p.bin("examples/baz"), existing_file());
+    assert_that!(p.cargo("test"), execs().with_status(0));
+    assert_that!(&p.bin("examples/bar"), existing_file());
+    assert_that!(&p.bin("examples/baz"), existing_file());
 }
 
 #[test]
@@ -3844,7 +3845,7 @@ fn inferred_tests() {
         .file("tests/baz/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
+    assert_that!(
         p.cargo("test").arg("--test=bar").arg("--test=baz"),
         execs().with_status(0));
 }
@@ -3863,7 +3864,7 @@ fn inferred_benchmarks() {
         .file("benches/baz/main.rs", "fn main() {}")
         .build();
 
-    assert_that(
+    assert_that!(
         p.cargo("bench").arg("--bench=bar").arg("--bench=baz"),
         execs().with_status(0));
 }
@@ -3890,11 +3891,11 @@ fn same_metadata_different_directory() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(
+    assert_that!(
         p.cargo("build").arg("-v"),
         execs().with_status(0).with_stderr_contains(
             format!("[..]{}[..]", metadata),
-        ),
+        )
     );
 }
 
@@ -3924,7 +3925,7 @@ fn building_a_dependent_crate_witout_bin_should_fail() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains(
                     "[..]can't find `a_bin` bin, specify bin.path"
                 ));
@@ -3947,12 +3948,12 @@ fn uplift_dsym_of_bin_on_mac() {
         .file("tests/d.rs", "fn main() { panic!(); }")
         .build();
 
-    assert_that(
+    assert_that!(
         p.cargo("build").arg("--bins").arg("--examples").arg("--tests"),
         execs().with_status(0)
     );
-    assert_that(&p.bin("foo.dSYM"), existing_dir());
-    assert_that(&p.bin("b.dSYM"), existing_dir());
+    assert_that!(&p.bin("foo.dSYM"), existing_dir());
+    assert_that!(&p.bin("b.dSYM"), existing_dir());
     assert!(
         p.bin("b.dSYM")
             .symlink_metadata()
@@ -3960,8 +3961,8 @@ fn uplift_dsym_of_bin_on_mac() {
             .file_type()
             .is_symlink()
     );
-    assert_that(&p.bin("c.dSYM"), is_not(existing_dir()));
-    assert_that(&p.bin("d.dSYM"), is_not(existing_dir()));
+    assert_that!(&p.bin("c.dSYM"), is_not(existing_dir()));
+    assert_that!(&p.bin("d.dSYM"), is_not(existing_dir()));
 }
 
 // Make sure that `cargo build` chooses the correct profile for building
@@ -3982,7 +3983,7 @@ fn build_filter_infer_profile() {
         .file("examples/ex1.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build").arg("-v"),
+    assert_that!(p.cargo("build").arg("-v"),
         execs().with_status(0)
         .with_stderr_contains("\
             [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
@@ -3993,7 +3994,7 @@ fn build_filter_infer_profile() {
         );
 
     p.root().join("target").rm_rf();
-    assert_that(p.cargo("build").arg("-v").arg("--test=t1"),
+    assert_that!(p.cargo("build").arg("-v").arg("--test=t1"),
         execs().with_status(0)
         .with_stderr_contains("\
             [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
@@ -4006,7 +4007,7 @@ fn build_filter_infer_profile() {
         );
 
     p.root().join("target").rm_rf();
-    assert_that(p.cargo("build").arg("-v").arg("--bench=b1"),
+    assert_that!(p.cargo("build").arg("-v").arg("--bench=b1"),
         execs().with_status(0)
         .with_stderr_contains("\
             [RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
@@ -4031,7 +4032,7 @@ fn all_targets_no_lib() {
         "#)
         .file("src/main.rs", "fn main() {}")
         .build();
-    assert_that(p.cargo("build").arg("-v").arg("--all-targets"),
+    assert_that!(p.cargo("build").arg("-v").arg("--all-targets"),
         execs().with_status(0)
         // bin
         .with_stderr_contains("\
@@ -4071,7 +4072,7 @@ fn no_linkable_target() {
         "#)
         .file("the_lib/src/lib.rs", "pub fn foo() {}")
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs()
                 .with_status(0)
                 .with_stderr_contains("\

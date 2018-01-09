@@ -1,9 +1,10 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
-use hamcrest::assert_that;
 use cargotest::support::registry::Package;
 use cargotest::support::{project, execs, basic_bin_manifest, basic_lib_manifest, main_file};
+use hamcrest::prelude::*;
 
 #[test]
 fn cargo_metadata_simple() {
@@ -12,7 +13,7 @@ fn cargo_metadata_simple() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .build();
 
-    assert_that(p.cargo("metadata"), execs().with_json(r#"
+    assert_that!(p.cargo("metadata"), execs().with_json(r#"
     {
         "packages": [
             {
@@ -62,11 +63,11 @@ fn cargo_metadata_warns_on_implicit_version() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .build();
 
-    assert_that(p.cargo("metadata"),
+    assert_that!(p.cargo("metadata"),
                 execs().with_stderr("\
 [WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems"));
 
-    assert_that(p.cargo("metadata").arg("--format-version").arg("1"),
+    assert_that!(p.cargo("metadata").arg("--format-version").arg("1"),
                 execs().with_stderr(""));
 }
 
@@ -84,7 +85,7 @@ crate-type = ["lib", "staticlib"]
             "#)
         .build();
 
-    assert_that(p.cargo("metadata"), execs().with_json(r#"
+    assert_that!(p.cargo("metadata"), execs().with_json(r#"
     {
         "packages": [
             {
@@ -151,7 +152,7 @@ fn cargo_metadata_with_deps_and_version() {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "0.0.1").publish();
 
-    assert_that(p.cargo("metadata")
+    assert_that!(p.cargo("metadata")
                  .arg("-q")
                  .arg("--format-version").arg("1"),
                 execs().with_json(r#"
@@ -294,7 +295,7 @@ name = "ex"
             "#)
         .build();
 
-    assert_that(p.cargo("metadata"), execs().with_json(r#"
+    assert_that!(p.cargo("metadata"), execs().with_json(r#"
     {
         "packages": [
             {
@@ -357,7 +358,7 @@ crate-type = ["rlib", "dylib"]
             "#)
         .build();
 
-    assert_that(p.cargo("metadata"), execs().with_json(r#"
+    assert_that!(p.cargo("metadata"), execs().with_json(r#"
     {
         "packages": [
             {
@@ -417,7 +418,7 @@ fn workspace_metadata() {
         .file("baz/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("metadata"), execs().with_status(0).with_json(r#"
+    assert_that!(p.cargo("metadata"), execs().with_status(0).with_json(r#"
     {
         "packages": [
             {
@@ -493,7 +494,7 @@ fn workspace_metadata_no_deps() {
         .file("baz/src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("metadata").arg("--no-deps"), execs().with_status(0).with_json(r#"
+    assert_that!(p.cargo("metadata").arg("--no-deps"), execs().with_status(0).with_json(r#"
     {
         "packages": [
             {
@@ -550,7 +551,7 @@ fn cargo_metadata_with_invalid_manifest() {
         .file("Cargo.toml", "")
         .build();
 
-    assert_that(p.cargo("metadata").arg("--format-version").arg("1"),
+    assert_that!(p.cargo("metadata").arg("--format-version").arg("1"),
                 execs().with_status(101).with_stderr("\
 [ERROR] failed to parse manifest at `[..]`
 
@@ -592,7 +593,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-        assert_that(p.cargo("metadata").arg("--no-deps")
+        assert_that!(p.cargo("metadata").arg("--no-deps")
                      .arg("--manifest-path").arg("foo/Cargo.toml")
                      .cwd(p.root().parent().unwrap()),
                     execs().with_status(0)
@@ -606,7 +607,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("metadata").arg("--no-deps")
+    assert_that!(p.cargo("metadata").arg("--no-deps")
                  .arg("--manifest-path").arg(p.root().join("Cargo.toml"))
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(0)
@@ -620,7 +621,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_relative() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("metadata").arg("--no-deps")
+    assert_that!(p.cargo("metadata").arg("--no-deps")
                  .arg("--manifest-path").arg("foo")
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
@@ -635,7 +636,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_parent_absolute() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("metadata").arg("--no-deps")
+    assert_that!(p.cargo("metadata").arg("--no-deps")
                  .arg("--manifest-path").arg(p.root())
                  .cwd(p.root().parent().unwrap()),
                 execs().with_status(101)
@@ -650,7 +651,7 @@ fn cargo_metadata_no_deps_cwd() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("metadata").arg("--no-deps")
+    assert_that!(p.cargo("metadata").arg("--no-deps")
                  .cwd(p.root()),
                 execs().with_status(0)
                        .with_json(MANIFEST_OUTPUT));
@@ -663,7 +664,7 @@ fn cargo_metadata_bad_version() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("metadata").arg("--no-deps")
+    assert_that!(p.cargo("metadata").arg("--no-deps")
                  .arg("--format-version").arg("2")
                  .cwd(p.root()),
                 execs().with_status(101)
@@ -686,7 +687,7 @@ fn multiple_features() {
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("metadata")
+    assert_that!(p.cargo("metadata")
                  .arg("--features").arg("a b"),
                 execs().with_status(0));
 }

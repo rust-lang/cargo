@@ -1,5 +1,6 @@
 extern crate cargo;
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 extern crate url;
 
@@ -11,7 +12,7 @@ use cargo::util::ProcessBuilder;
 use cargotest::support::execs;
 use cargotest::support::git::repo;
 use cargotest::support::paths;
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 use url::Url;
 
 fn registry_path() -> PathBuf { paths::root().join("registry") }
@@ -81,7 +82,7 @@ fn simple() {
              .write_all(contents.as_bytes()).unwrap();
     }
 
-    assert_that(cargo_process("search").arg("postgres")
+    assert_that!(cargo_process("search").arg("postgres")
                     .arg("--index").arg(registry().to_string()),
                 execs().with_status(0)
                        .with_stdout_contains("\
@@ -133,7 +134,7 @@ fn simple_with_host() {
              .write_all(contents.as_bytes()).unwrap();
     }
 
-    assert_that(cargo_process("search").arg("postgres")
+    assert_that!(cargo_process("search").arg("postgres")
                     .arg("--host").arg(registry().to_string()),
                 execs().with_status(0)
                        .with_stderr(&format!("\
@@ -199,7 +200,7 @@ fn simple_with_index_and_host() {
              .write_all(contents.as_bytes()).unwrap();
     }
 
-    assert_that(cargo_process("search").arg("postgres")
+    assert_that!(cargo_process("search").arg("postgres")
                     .arg("--index").arg(registry().to_string())
                     .arg("--host").arg(registry().to_string()),
                 execs().with_status(0)
@@ -264,7 +265,7 @@ fn multiple_query_params() {
              .write_all(contents.as_bytes()).unwrap();
     }
 
-    assert_that(cargo_process("search").arg("postgres").arg("sql")
+    assert_that!(cargo_process("search").arg("postgres").arg("sql")
                     .arg("--index").arg(registry().to_string()),
                 execs().with_status(0)
                        .with_stdout_contains("\
@@ -273,9 +274,9 @@ hoare = \"0.1.1\"    # Design by contract style assertions for Rust"));
 
 #[test]
 fn help() {
-    assert_that(cargo_process("search").arg("-h"),
+    assert_that!(cargo_process("search").arg("-h"),
                 execs().with_status(0));
-    assert_that(cargo_process("help").arg("search"),
+    assert_that!(cargo_process("help").arg("search"),
                 execs().with_status(0));
     // Ensure that help output goes to stdout, not stderr.
     assert_that(cargo_process("search").arg("--help"),

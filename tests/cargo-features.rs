@@ -1,9 +1,10 @@
 extern crate cargotest;
+#[macro_use]
 extern crate hamcrest;
 
 use cargotest::ChannelChanger;
 use cargotest::support::{project, execs};
-use hamcrest::assert_that;
+use hamcrest::prelude::*;
 
 #[test]
 fn feature_required() {
@@ -17,7 +18,7 @@ fn feature_required() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .masquerade_as_nightly_cargo(),
                 execs().with_status(101)
                        .with_stderr("\
@@ -32,7 +33,7 @@ Caused by:
 consider adding `cargo-features = [\"test-dummy-unstable\"]` to the manifest
 "));
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to parse manifest at `[..]`
@@ -62,7 +63,7 @@ fn unknown_feature() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to parse manifest at `[..]`
@@ -85,7 +86,7 @@ fn stable_feature_warns() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(0)
                        .with_stderr("\
 warning: the cargo feature `test-dummy-stable` is now stable and is no longer \
@@ -109,7 +110,7 @@ fn nightly_feature_requires_nightly() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .masquerade_as_nightly_cargo(),
                 execs().with_status(0)
                        .with_stderr("\
@@ -117,7 +118,7 @@ fn nightly_feature_requires_nightly() {
 [FINISHED] [..]
 "));
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to parse manifest at `[..]`
@@ -152,7 +153,7 @@ fn nightly_feature_requires_nightly_in_dep() {
         "#)
         .file("a/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .masquerade_as_nightly_cargo(),
                 execs().with_status(0)
                        .with_stderr("\
@@ -161,7 +162,7 @@ fn nightly_feature_requires_nightly_in_dep() {
 [FINISHED] [..]
 "));
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to load source for a dependency on `a`
@@ -192,7 +193,7 @@ fn cant_publish() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .masquerade_as_nightly_cargo(),
                 execs().with_status(0)
                        .with_stderr("\
@@ -200,7 +201,7 @@ fn cant_publish() {
 [FINISHED] [..]
 "));
 
-    assert_that(p.cargo("build"),
+    assert_that!(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to parse manifest at `[..]`
@@ -225,14 +226,14 @@ fn z_flags_rejected() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .arg("-Zprint-im-a-teapot"),
                 execs().with_status(101)
                        .with_stderr("\
 error: the `-Z` flag is only accepted on the nightly channel of Cargo
 "));
 
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .masquerade_as_nightly_cargo()
                  .arg("-Zarg"),
                 execs().with_status(101)
@@ -240,7 +241,7 @@ error: the `-Z` flag is only accepted on the nightly channel of Cargo
 error: unknown `-Z` flag specified: arg
 "));
 
-    assert_that(p.cargo("build")
+    assert_that!(p.cargo("build")
                  .masquerade_as_nightly_cargo()
                  .arg("-Zprint-im-a-teapot"),
                 execs().with_status(0)
@@ -264,7 +265,7 @@ fn publish_rejected() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("package")
+    assert_that!(p.cargo("package")
                  .masquerade_as_nightly_cargo(),
                 execs().with_status(101)
                        .with_stderr("\

@@ -81,7 +81,7 @@ features = [
 bufstream = "0.1"
 cargotest = { path = "tests/cargotest", version = "0.1" }
 filetime = "0.1"
-hamcrest = "=0.1.1"
+hamcrest = "=0.1.5"
 
 [[bin]]
 name = "cargo"
