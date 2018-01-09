@@ -553,6 +553,26 @@ fn update_lockfile() {
 }
 
 #[test]
+fn update_offline(){
+    use cargotest::ChannelChanger;
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            bar = "*"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    assert_that(p.cargo("update").masquerade_as_nightly_cargo().arg("-Zoffline"),
+    execs().with_status(101).
+        with_stderr("error: you can't update in the offline mode[..]"));
+}
+
+#[test]
 fn dev_dependency_not_used() {
     let p = project("foo")
         .file("Cargo.toml", r#"

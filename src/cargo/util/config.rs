@@ -504,7 +504,11 @@ impl Config {
     }
 
     pub fn network_allowed(&self) -> bool {
-        !self.frozen
+        !self.frozen() && !self.cli_unstable().offline
+    }
+
+    pub fn frozen(&self) -> bool {
+        self.frozen
     }
 
     pub fn lock_update_allowed(&self) -> bool {

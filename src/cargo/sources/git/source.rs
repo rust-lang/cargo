@@ -151,6 +151,11 @@ impl<'cfg> Source for GitSource<'cfg> {
 
         let db_path = lock.parent().join("db").join(&self.ident);
 
+        if self.config.cli_unstable().offline && !db_path.exists() {
+            bail!("can't checkout from '{}': you are in the offline mode (-Z offline)",
+                self.remote.url());
+        }
+
         // Resolve our reference to an actual revision, and check if the
         // database already has that revision. If it does, we just load a
         // database pinned at that revision, and if we don't we issue an update
@@ -159,7 +164,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         let should_update = actual_rev.is_err() ||
                             self.source_id.precise().is_none();
 
-        let (db, actual_rev) = if should_update {
+        let (db, actual_rev) = if should_update && !self.config.cli_unstable().offline {
             self.config.shell().status("Updating",
                 format!("git repository `{}`", self.remote.url()))?;
 

@@ -249,6 +249,8 @@ pub trait RegistryData {
     fn download(&mut self,
                 pkg: &PackageId,
                 checksum: &str) -> CargoResult<FileLock>;
+
+    fn is_crate_downloaded(&self, _pkg: &PackageId) -> bool { true }
 }
 
 mod index;
