@@ -722,7 +722,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                     None => return Err(activation_error(&cx, registry, &parent,
                                                         &dep,
                                                         cx.prev_active(&dep),
-                                                        &candidates)),
+                                                        &candidates, config)),
                     Some(candidate) => candidate,
                 }
             }
@@ -788,7 +788,8 @@ fn activation_error(cx: &Context,
                     parent: &Summary,
                     dep: &Dependency,
                     prev_active: &[Summary],
-                    candidates: &[Candidate]) -> CargoError {
+                    candidates: &[Candidate],
+                    config: Option<&Config>) -> CargoError {
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}` \
                                (required by `{}`):\n\
@@ -843,7 +844,7 @@ fn activation_error(cx: &Context,
         b.version().cmp(a.version())
     });
 
-    let msg = if !candidates.is_empty() {
+    let mut msg = if !candidates.is_empty() {
         let versions = {
             let mut versions = candidates.iter().take(3).map(|cand| {
                 cand.version().to_string()
@@ -885,6 +886,15 @@ fn activation_error(cx: &Context,
                 dep.source_id(),
                 dep.version_req())
     };
+
+    if let Some(config) = config {
+        if config.cli_unstable().offline {
+            msg.push_str("\nAs a reminder, you're using offline mode (-Z offline) \
+            which can sometimes cause surprising resolution failures, \
+            if this error is too confusing you may with to retry \
+            without the offline flag.");
+        }
+    }
 
     format_err!("{}", msg)
 }

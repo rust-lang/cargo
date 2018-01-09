@@ -15,6 +15,7 @@ use cargotest::support::paths::{CargoPathExt,root};
 use cargotest::support::{ProjectBuilder};
 use cargotest::support::{project, execs, main_file, basic_bin_manifest};
 use cargotest::support::registry::Package;
+use cargotest::ChannelChanger;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 use tempdir::TempDir;
 
@@ -827,6 +828,216 @@ Did you mean `a`?"));
 [ERROR] no example target named `a.rs`
 
 Did you mean `a`?"));
+}
+
+#[test]
+fn cargo_compile_path_with_offline() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar"
+        "#)
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
+                execs().with_status(0));
+}
+
+#[test]
+fn cargo_compile_with_downloaded_dependency_with_offline() {
+    Package::new("present_dep", "1.2.3")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "present_dep"
+            version = "1.2.3"
+        "#)
+        .file("src/lib.rs", "")
+        .publish();
+
+    {
+        // make package downloaded
+        let p = project("foo")
+            .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            present_dep = "1.2.3"
+        "#)
+            .file("src/lib.rs", "")
+            .build();
+        assert_that(p.cargo("build"),execs().with_status(0));
+    }
+
+    let p2 = project("bar")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+
+            [dependencies]
+            present_dep = "1.2.3"
+        "#)
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(p2.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
+                execs().with_status(0)
+                    .with_stderr(format!("\
+[COMPILING] present_dep v1.2.3
+[COMPILING] bar v0.1.0 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")));
+
+}
+
+#[test]
+fn cargo_compile_offline_not_try_update() {
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "bar"
+            version = "0.1.0"
+
+            [dependencies]
+            not_cached_dep = "1.2.5"
+        "#)
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
+                execs().with_status(101)
+                    .with_stderr("\
+error: no matching package named `not_cached_dep` found (required by `bar`)
+location searched: registry `[..]`
+version required: ^1.2.5
+As a reminder, you're using offline mode (-Z offline) \
+which can sometimes cause surprising resolution failures, \
+if this error is too confusing you may with to retry \
+without the offline flag."));
+}
+
+#[test]
+fn compile_offline_without_maxvers_cached(){
+    Package::new("present_dep", "1.2.1").publish();
+    Package::new("present_dep", "1.2.2").publish();
+
+    Package::new("present_dep", "1.2.3")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "present_dep"
+            version = "1.2.3"
+        "#)
+        .file("src/lib.rs", r#"pub fn get_version()->&'static str {"1.2.3"}"#)
+        .publish();
+
+    Package::new("present_dep", "1.2.5")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "present_dep"
+            version = "1.2.5"
+        "#)
+        .file("src/lib.rs", r#"pub fn get_version(){"1.2.5"}"#)
+        .publish();
+
+    {
+        // make package cached
+        let p = project("foo")
+            .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            present_dep = "=1.2.3"
+        "#)
+            .file("src/lib.rs", "")
+            .build();
+        assert_that(p.cargo("build"),execs().with_status(0));
+    }
+
+    let p2 = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            present_dep = "1.2"
+        "#)
+        .file("src/main.rs", "\
+extern crate present_dep;
+fn main(){
+    println!(\"{}\", present_dep::get_version());
+}")
+        .build();
+
+    assert_that(p2.cargo("run").masquerade_as_nightly_cargo().arg("-Zoffline"),
+                execs().with_status(0)
+                    .with_stderr(format!("\
+[COMPILING] present_dep v1.2.3
+[COMPILING] foo v0.1.0 ({url})
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+     Running `[..]`", url = p2.url()))
+                    .with_stdout("1.2.3")
+    );
+}
+
+#[test]
+fn compile_offline_while_transitive_dep_not_cached() {
+    let bar = Package::new("bar", "1.0.0");
+    let bar_path = bar.archive_dst();
+    bar.publish();
+
+    let mut content = Vec::new();
+
+    let mut file = File::open(bar_path.clone()).ok().unwrap();
+    let _ok = file.read_to_end(&mut content).ok().unwrap();
+    drop(file);
+    drop(File::create(bar_path.clone()).ok().unwrap() );
+
+    Package::new("foo", "0.1.0").dep("bar", "1.0.0").publish();
+
+    let p = project("transitive_load_test")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "transitive_load_test"
+            version = "0.0.1"
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    // simulate download foo, but fail to download bar
+    let _out = p.cargo("build").exec_with_output();
+
+    drop( File::create(bar_path).ok().unwrap().write_all(&content) );
+
+    assert_that(p.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
+        execs().with_status(101)
+            .with_stderr("\
+error: no matching package named `bar` found (required by `foo`)
+location searched: registry `[..]`
+version required: = 1.0.0
+As a reminder, you're using offline mode (-Z offline) \
+which can sometimes cause surprising resolution failures, \
+if this error is too confusing you may with to retry \
+without the offline flag."));
 }
 
 #[test]
