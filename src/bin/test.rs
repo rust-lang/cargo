@@ -39,15 +39,18 @@ pub struct Options {
     flag_exclude: Vec<String>,
     #[serde(rename = "flag_Z")]
     flag_z: Vec<String>,
+    #[serde(rename = "arg_TESTNAME")]
+    arg_testname: Option<String>,
 }
 
 pub const USAGE: &'static str = "
 Execute all unit and integration tests of a local package
 
 Usage:
-    cargo test [options] [--] [<args>...]
+    cargo test [options] [TESTNAME] [--] [<args>...]
 
 Options:
+    TESTNAME                     If specified, only run tests containing this string in their names
     -h, --help                   Print this message
     --lib                        Test only this package's library
     --doc                        Test only this library's documentation
@@ -116,7 +119,7 @@ To get the list of all options available for the test binaries use this:
     cargo test -- --help
 ";
 
-pub fn execute(options: Options, config: &mut Config) -> CliResult {
+pub fn execute(mut options: Options, config: &mut Config) -> CliResult {
     debug!("executing; cmd=cargo-test; args={:?}",
            env::args().collect::<Vec<_>>());
 
@@ -171,6 +174,12 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
             target_rustc_args: None,
         },
     };
+
+    // TESTNAME is actually an argument of the test binary, but it's
+    // important so we explicitly mention it and reconfigure
+    if let Some(test) = options.arg_testname.take() {
+         options.arg_args.insert(0, test);
+     }
 
     let err = ops::run_tests(&ws, &ops, &options.arg_args)?;
     match err {
