@@ -37,15 +37,18 @@ pub struct Options {
     flag_exclude: Vec<String>,
     #[serde(rename = "flag_Z")]
     flag_z: Vec<String>,
+    #[serde(rename = "arg_BENCHNAME")]
+    arg_benchname: Option<String>,
 }
 
 pub const USAGE: &'static str = "
 Execute all benchmarks of a local package
 
 Usage:
-    cargo bench [options] [--] [<args>...]
+    cargo bench [options] [BENCHNAME] [--] [<args>...]
 
 Options:
+    BENCHNAME                    If specified, only run benches containing this string in their names
     -h, --help                   Print this message
     --lib                        Benchmark only this package's library
     --bin NAME ...               Benchmark only the specified binary
@@ -95,7 +98,7 @@ not affect how many jobs are used when running the benchmarks.
 Compilation can be customized with the `bench` profile in the manifest.
 ";
 
-pub fn execute(options: Options, config: &mut Config) -> CliResult {
+pub fn execute(mut options: Options, config: &mut Config) -> CliResult {
     debug!("executing; cmd=cargo-bench; args={:?}",
            env::args().collect::<Vec<_>>());
 
@@ -138,6 +141,10 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
             target_rustc_args: None,
         },
     };
+
+    if let Some(test) = options.arg_benchname.take() {
+         options.arg_args.insert(0, test);
+     }
 
     let err = ops::run_benches(&ws, &ops, &options.arg_args)?;
     match err {
