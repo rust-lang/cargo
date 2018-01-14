@@ -39,6 +39,7 @@ fn metadata_no_deps(ws: &Workspace,
         resolve: None,
         target_directory: ws.target_dir().display().to_string(),
         version: VERSION,
+        workspace_root: ws.root().display().to_string(),
     })
 }
 
@@ -66,6 +67,7 @@ fn metadata_full(ws: &Workspace,
         }),
         target_directory: ws.target_dir().display().to_string(),
         version: VERSION,
+        workspace_root: ws.root().display().to_string(),
     })
 }
 
@@ -76,6 +78,7 @@ pub struct ExportInfo {
     resolve: Option<MetadataResolve>,
     target_directory: String,
     version: u32,
+    workspace_root: String,
 }
 
 /// Newtype wrapper to provide a custom `Serialize` implementation.

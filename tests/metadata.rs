@@ -51,7 +51,8 @@ fn cargo_metadata_simple() {
             "root": "foo 0.5.0 (path+file:[..]foo)"
         },
         "target_directory": "[..]foo[/]target",
-        "version": 1
+        "version": 1,
+        "workspace_root": "[..][/]foo"
     }"#));
 }
 
@@ -125,7 +126,8 @@ crate-type = ["lib", "staticlib"]
             "root": "foo 0.5.0 (path+file:[..]foo)"
         },
         "target_directory": "[..]foo[/]target",
-        "version": 1
+        "version": 1,
+        "workspace_root": "[..][/]foo"
     }"#));
 }
 
@@ -275,7 +277,8 @@ fn cargo_metadata_with_deps_and_version() {
             "root": "foo 0.5.0 (path+file:[..]foo)"
         },
         "target_directory": "[..]foo[/]target",
-        "version": 1
+        "version": 1,
+        "workspace_root": "[..][/]foo"
     }"#));
 }
 
@@ -337,7 +340,8 @@ name = "ex"
             ]
         },
         "target_directory": "[..]foo[/]target",
-        "version": 1
+        "version": 1,
+        "workspace_root": "[..][/]foo"
     }"#));
 }
 
@@ -400,7 +404,8 @@ crate-type = ["rlib", "dylib"]
             ]
         },
         "target_directory": "[..]foo[/]target",
-        "version": 1
+        "version": 1,
+        "workspace_root": "[..][/]foo"
     }"#));
 }
 
@@ -476,7 +481,8 @@ fn workspace_metadata() {
             "root": null
         },
         "target_directory": "[..]foo[/]target",
-        "version": 1
+        "version": 1,
+        "workspace_root": "[..][/]foo"
     }"#))
 }
 
@@ -540,7 +546,8 @@ fn workspace_metadata_no_deps() {
         "workspace_members": ["baz 0.5.0 (path+file:[..]baz)", "bar 0.5.0 (path+file:[..]bar)"],
         "resolve": null,
         "target_directory": "[..]foo[/]target",
-        "version": 1
+        "version": 1,
+        "workspace_root": "[..][/]foo"
     }"#))
 }
 
@@ -582,7 +589,8 @@ const MANIFEST_OUTPUT: &'static str=
     "workspace_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
     "resolve": null,
     "target_directory": "[..]foo[/]target",
-    "version": 1
+    "version": 1,
+    "workspace_root": "[..][/]foo"
 }"#;
 
 #[test]
