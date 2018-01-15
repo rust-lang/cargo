@@ -136,7 +136,7 @@ case $state in
             git-checkout)
                 _arguments \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    'q(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
+                    '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
                     '--reference=[REF]' \
                     '--url=[URL]' \
                     '(-v, --verbose)'{-v,--verbose}'[use verbose output]' \
