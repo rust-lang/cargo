@@ -17,7 +17,6 @@ use cargotest::support::paths::{self, CargoPathExt};
 use cargotest::support::{git, project, execs, main_file, path2url};
 use cargotest::ChannelChanger;
 use hamcrest::{assert_that,existing_file};
-use hamcrest::matchers::regex::matches_regex;
 
 #[test]
 fn cargo_compile_simple_git_dep() {
