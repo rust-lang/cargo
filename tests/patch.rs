@@ -796,3 +796,59 @@ fn patch_in_virtual() {
 [FINISHED] [..]
 "));
 }
+
+#[test]
+fn patch_depends_on_another_patch() {
+    Package::new("foo", "0.1.0")
+        .file("src/lib.rs", "broken code")
+        .publish();
+
+    Package::new("bar", "0.1.0")
+        .dep("foo", "0.1")
+        .file("src/lib.rs", "broken code")
+        .publish();
+
+    let p = project("p")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "p"
+            authors = []
+            version = "0.1.0"
+
+            [dependencies]
+            foo = "0.1"
+            bar = "0.1"
+
+            [patch.crates-io]
+            foo = { path = "foo" }
+            bar = { path = "bar" }
+        "#)
+        .file("src/lib.rs", "")
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.1"
+            authors = []
+        "#)
+        .file("foo/src/lib.rs", r#""#)
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.1"
+            authors = []
+
+            [dependencies]
+            foo = "0.1"
+        "#)
+        .file("bar/src/lib.rs", r#""#)
+        .build();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+
+    // Nothing should be rebuilt, no registry should be updated.
+    assert_that(p.cargo("build"),
+                execs().with_status(0).with_stderr("\
+[FINISHED] [..]
+"));
+}
