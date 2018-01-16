@@ -23,7 +23,7 @@ use std::str::FromStr;
 use rustfix::{Suggestion, Replacement};
 use rustfix::diagnostics::Diagnostic;
 
-const USER_OPTIONS: &'static str = "What do you want to do? \
+const USER_OPTIONS: &str = "What do you want to do? \
     [0-9] | [r]eplace | [s]kip | save and [q]uit | [a]bort (without saving)";
 
 fn main() {
@@ -127,7 +127,7 @@ fn get_json(extra_args: &[&str]) -> Result<String, ProgramError> {
     Ok(String::from_utf8(output.stdout)?)
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 enum AutofixMode {
     /// Do not apply any fixes automatically
     None,
@@ -194,7 +194,7 @@ fn handle_suggestions(
         }
 
         let mut i = 0;
-        for solution in suggestion.solutions.iter() {
+        for solution in &suggestion.solutions {
             println!("\n{}", solution.message);
 
             // check whether we can squash all suggestions into a list
@@ -207,7 +207,7 @@ fn handle_suggestions(
                          && first.snippet.line_range == s.snippet.line_range);
                 if all_suggestions_replace_the_same_span {
                     prelude(&first);
-                    for suggestion in solution.replacements.iter() {
+                    for suggestion in &solution.replacements {
                         println!("[{}]: {}", i, suggestion.replacement.trim());
                         i += 1;
                     }
@@ -216,7 +216,7 @@ fn handle_suggestions(
             }
             for suggestion in &solution.replacements {
                 print!("[{}]: ", i);
-                prelude(&suggestion);
+                prelude(suggestion);
                 println!("{}", indent(4, &suggestion.replacement));
                 i += 1;
             }
@@ -425,7 +425,7 @@ fn apply_suggestion(suggestion: &Replacement) -> Result<(), ProgramError> {
     let new_content = new_content.as_bytes();
 
     try!(file.set_len(new_content.len() as u64));
-    try!(file.write_all(&new_content));
+    try!(file.write_all(new_content));
 
     Ok(())
 }

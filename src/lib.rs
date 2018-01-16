@@ -7,7 +7,7 @@ use std::collections::HashSet;
 pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
 
-pub fn get_suggestions_from_json(input: &str, only: &HashSet<String>) -> Vec<Suggestion> {
+pub fn get_suggestions_from_json<S: ::std::hash::BuildHasher>(input: &str, only: &HashSet<String, S>) -> Vec<Suggestion> {
     input.lines()
         .filter(not_empty)
         // Convert JSON string (and eat parsing errors)
@@ -118,7 +118,7 @@ fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
     })
 }
 
-pub fn collect_suggestions(diagnostic: &Diagnostic, only: &HashSet<String>) -> Option<Suggestion> {
+pub fn collect_suggestions<S: ::std::hash::BuildHasher>(diagnostic: &Diagnostic, only: &HashSet<String, S>) -> Option<Suggestion> {
     if !only.is_empty() {
         if let Some(ref code) = diagnostic.code {
             if !only.contains(&code.code) {
