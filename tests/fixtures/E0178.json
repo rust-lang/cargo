@@ -8,16 +8,16 @@
   "spans": [
     {
       "file_name": "./tests/fixtures/E0178.rs",
-      "byte_start": 38,
-      "byte_end": 52,
-      "line_start": 4,
-      "line_end": 4,
+      "byte_start": 60,
+      "byte_end": 74,
+      "line_start": 6,
+      "line_end": 6,
       "column_start": 8,
       "column_end": 22,
       "is_primary": true,
       "text": [
         {
-          "text": "    w: &'a Foo + Copy,",
+          "text": "    w: &'a Foo + Send,",
           "highlight_start": 8,
           "highlight_end": 22
         }
@@ -35,22 +35,22 @@
       "spans": [
         {
           "file_name": "./tests/fixtures/E0178.rs",
-          "byte_start": 38,
-          "byte_end": 52,
-          "line_start": 4,
-          "line_end": 4,
+          "byte_start": 60,
+          "byte_end": 74,
+          "line_start": 6,
+          "line_end": 6,
           "column_start": 8,
           "column_end": 22,
           "is_primary": true,
           "text": [
             {
-              "text": "    w: &'a Foo + Copy,",
+              "text": "    w: &'a Foo + Send,",
               "highlight_start": 8,
               "highlight_end": 22
             }
           ],
           "label": null,
-          "suggested_replacement": "&'a (Foo + Copy)",
+          "suggested_replacement": "&'a (Foo + Send)",
           "expansion": null
         }
       ],
@@ -58,5 +58,5 @@
       "rendered": null
     }
   ],
-  "rendered": "error[E0178]: expected a path on the left-hand side of `+`, not `&'a Foo`\n --> ./tests/fixtures/E0178.rs:4:8\n  |\n4 |     w: &'a Foo + Copy,\n  |        ^^^^^^^^^^^^^^ help: try adding parentheses: `&'a (Foo + Copy)`\n\n"
+  "rendered": "error[E0178]: expected a path on the left-hand side of `+`, not `&'a Foo`\n --> ./tests/fixtures/E0178.rs:6:8\n  |\n6 |     w: &'a Foo + Send,\n  |        ^^^^^^^^^^^^^^ help: try adding parentheses: `&'a (Foo + Send)`\n\n"
 }
