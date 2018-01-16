@@ -10,15 +10,17 @@ use std::fs;
 use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
+use std::process::Output;
 use tempdir::TempDir;
 
 use rustfix::Replacement;
 
-fn compile_and_get_json_errors(file: &Path) -> Result<String, Box<Error>> {
+fn compile(file: &Path) -> Result<Output, Box<Error>> {
     let tmp = TempDir::new("rustfix-tests")?;
     let better_call_clippy = cmd!(
         "clippy-driver", "rustc", file,
         "--error-format=pretty-json", "-Zunstable-options", "--emit=metadata",
+        "--crate-name=rustfix_test",
         "--out-dir", tmp.path()
     );
     let res = better_call_clippy
@@ -27,6 +29,12 @@ fn compile_and_get_json_errors(file: &Path) -> Result<String, Box<Error>> {
         .stderr_capture()
         .unchecked()
         .run()?;
+
+    Ok(res)
+}
+
+fn compile_and_get_json_errors(file: &Path) -> Result<String, Box<Error>> {
+    let res = compile(file)?;
     let stderr = String::from_utf8(res.stderr)?;
 
     use std::io::{Error, ErrorKind};
@@ -36,6 +44,25 @@ fn compile_and_get_json_errors(file: &Path) -> Result<String, Box<Error>> {
             ErrorKind::Other,
             format!("failed with status {:?}: {}", res.status.code(), stderr),
         )))
+    }
+}
+
+fn compiles_without_errors(file: &Path) -> Result<(), Box<Error>> {
+    let res = compile(file)?;
+
+    use std::io::{Error, ErrorKind};
+    match res.status.code() {
+        Some(0) => Ok(()),
+        _ => {
+            info!("file {:?} failed to compile:\n{}", file, String::from_utf8(res.stderr)?);
+            Err(Box::new(Error::new(
+                ErrorKind::Other,
+                format!(
+                    "failed with status {:?} (`env RUST_LOG=everything=info` for more info)",
+                    res.status.code(),
+                ),
+            )))
+        }
     }
 }
 
@@ -92,6 +119,9 @@ fn apply_suggestion(file_content: &mut String, suggestion: &Replacement) -> Resu
 
 fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     let file: &Path = file.as_ref();
+    let json_file = file.with_extension("json");
+    let fixed_file = file.with_extension("fixed.rs");
+
     debug!("{:?}", file);
     let code = read_file(file)?;
     let errors = compile_and_get_json_errors(file)?;
@@ -103,7 +133,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
         recorded_json.write_all(errors.as_bytes())?;
     }
 
-    let expected_json = read_file(&file.with_extension("json"))?;
+    let expected_json = read_file(&json_file)?;
     let expected_suggestions = rustfix::get_suggestions_from_json(&expected_json, &HashSet::new());
     assert_eq!(
         expected_suggestions,
@@ -125,8 +155,11 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
         }
     }
 
-    let expected_fixed = read_file(&file.with_extension("fixed.rs"))?;
+    let expected_fixed = read_file(&fixed_file)?;
     assert_eq!(fixed.trim(), expected_fixed.trim(), "file doesn't look fixed");
+
+    compiles_without_errors(&fixed_file)?;
+
     Ok(())
 }
 
