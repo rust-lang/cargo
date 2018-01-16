@@ -75,7 +75,7 @@ See 'cargo help <command>' for more information on a specific command.
 ";
 
 fn main() {
-    env_logger::init().unwrap();
+    env_logger::init();
 
     let mut config = match Config::default() {
         Ok(cfg) => cfg,
