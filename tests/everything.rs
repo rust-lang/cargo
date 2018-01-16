@@ -92,7 +92,7 @@ fn apply_suggestion(file_content: &mut String, suggestion: &Replacement) -> Resu
 fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     let file: &Path = file.as_ref();
     debug!("{:?}", file);
-    let code = read_file(&file)?;
+    let code = read_file(file)?;
     let errors = compile_and_get_json_errors(file)?;
 
     if std::env::var("RUSTFIX_TEST_RECORD_JSON").is_ok() {
