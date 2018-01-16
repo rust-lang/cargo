@@ -1,3 +1,0 @@
-[submodule "tests/fixtures/libui-rs"]
-	path = tests/crates/libui-rs
-	url = https://github.com/pcwalton/libui-rs.git
