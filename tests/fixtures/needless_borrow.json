@@ -68,3 +68,65 @@
   ],
   "rendered": "warning: this expression borrows a reference that is immediately dereferenced by the compiler\n --> ./tests/fixtures/needless_borrow.rs:2:20\n  |\n2 |     let _x: &i32 = &&&&&&5;\n  |                    ^^^^^^^ help: change this to: `&&&&&5`\n  |\n  = note: #[warn(needless_borrow)] on by default\n\n"
 }
+{
+  "message": "this expression borrows a reference that is immediately dereferenced by the compiler",
+  "code": {
+    "code": "needless_borrow",
+    "explanation": null
+  },
+  "level": "warning",
+  "spans": [
+    {
+      "file_name": "./tests/fixtures/needless_borrow.rs",
+      "byte_start": 109,
+      "byte_end": 111,
+      "line_start": 8,
+      "line_end": 8,
+      "column_start": 9,
+      "column_end": 11,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    foo(&x);",
+          "highlight_start": 9,
+          "highlight_end": 11
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "change this to",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/fixtures/needless_borrow.rs",
+          "byte_start": 109,
+          "byte_end": 111,
+          "line_start": 8,
+          "line_end": 8,
+          "column_start": 9,
+          "column_end": 11,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    foo(&x);",
+              "highlight_start": 9,
+              "highlight_end": 11
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "x",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "warning: this expression borrows a reference that is immediately dereferenced by the compiler\n --> ./tests/fixtures/needless_borrow.rs:8:9\n  |\n8 |     foo(&x);\n  |         ^^ help: change this to: `x`\n\n"
+}

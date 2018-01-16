@@ -118,7 +118,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
         for sol in sug.solutions {
             trace!("{:?}", sol);
             for r in sol.replacements {
-                info!("replaced.");
+                debug!("replaced.");
                 trace!("{:?}", r);
                 fixed = apply_suggestion(&mut fixed, &r)?;
             }
