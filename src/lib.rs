@@ -8,10 +8,10 @@ pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
 
 pub fn get_suggestions_from_json<S: ::std::hash::BuildHasher>(input: &str, only: &HashSet<String, S>) -> Vec<Suggestion> {
-    input.lines()
-        .filter(not_empty)
-        // Convert JSON string (and eat parsing errors)
-        .flat_map(|line| serde_json::from_str::<Diagnostic>(line))
+    serde_json::Deserializer::from_str(input)
+        .into_iter::<Diagnostic>()
+        // eat parsing errors
+        .flat_map(|line| line.ok())
         // One diagnostic line might have multiple suggestions
         .filter_map(|cargo_msg| collect_suggestions(&cargo_msg, only))
         .collect()
@@ -162,8 +162,4 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(diagnostic: &Diagnostic,
             solutions,
         })
     }
-}
-
-fn not_empty(s: &&str) -> bool {
-    !s.trim().is_empty()
 }

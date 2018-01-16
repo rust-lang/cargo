@@ -18,7 +18,7 @@ fn compile_and_get_json_errors(file: &Path) -> Result<String, Box<Error>> {
     let tmp = TempDir::new("rustfix-tests")?;
     let better_call_clippy = cmd!(
         "clippy-driver", "rustc", file,
-        "--error-format=json", "--emit=metadata",
+        "--error-format=pretty-json", "-Zunstable-options", "--emit=metadata",
         "--out-dir", tmp.path()
     );
     let res = better_call_clippy
