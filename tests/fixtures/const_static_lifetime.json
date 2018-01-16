@@ -1,0 +1,111 @@
+{
+  "message": "Constants have by default a `'static` lifetime",
+  "code": {
+    "code": "const_static_lifetime",
+    "explanation": null
+  },
+  "level": "warning",
+  "spans": [
+    {
+      "file_name": "./tests/fixtures/const_static_lifetime.rs",
+      "byte_start": 14,
+      "byte_end": 21,
+      "line_start": 1,
+      "line_end": 1,
+      "column_start": 15,
+      "column_end": 22,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "const LOREM: &'static str = \"ipsum\";",
+          "highlight_start": 15,
+          "highlight_end": 22
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "#[warn(const_static_lifetime)] on by default",
+      "code": null,
+      "level": "note",
+      "spans": [],
+      "children": [],
+      "rendered": null
+    },
+    {
+      "message": "consider removing `'static`",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/fixtures/const_static_lifetime.rs",
+          "byte_start": 14,
+          "byte_end": 21,
+          "line_start": 1,
+          "line_end": 1,
+          "column_start": 15,
+          "column_end": 22,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "const LOREM: &'static str = \"ipsum\";",
+              "highlight_start": 15,
+              "highlight_end": 22
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "warning: Constants have by default a `'static` lifetime\n --> ./tests/fixtures/const_static_lifetime.rs:1:15\n  |\n1 | const LOREM: &'static str = \"ipsum\";\n  |               ^^^^^^^ help: consider removing `'static`\n  |\n  = note: #[warn(const_static_lifetime)] on by default\n\n"
+}
+{
+  "message": "constant item is never used: `LOREM`",
+  "code": {
+    "code": "dead_code",
+    "explanation": null
+  },
+  "level": "warning",
+  "spans": [
+    {
+      "file_name": "./tests/fixtures/const_static_lifetime.rs",
+      "byte_start": 0,
+      "byte_end": 36,
+      "line_start": 1,
+      "line_end": 1,
+      "column_start": 1,
+      "column_end": 37,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "const LOREM: &'static str = \"ipsum\";",
+          "highlight_start": 1,
+          "highlight_end": 37
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "#[warn(dead_code)] on by default",
+      "code": null,
+      "level": "note",
+      "spans": [],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "warning: constant item is never used: `LOREM`\n --> ./tests/fixtures/const_static_lifetime.rs:1:1\n  |\n1 | const LOREM: &'static str = \"ipsum\";\n  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  |\n  = note: #[warn(dead_code)] on by default\n\n"
+}
