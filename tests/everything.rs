@@ -22,6 +22,7 @@ fn compile_and_get_json_errors(file: &Path) -> Result<String, Box<Error>> {
         "--out-dir", tmp.path()
     );
     let res = better_call_clippy
+        .env("CLIPPY_DISABLE_DOCS_LINKS", "true")
         .stdout_capture()
         .stderr_capture()
         .unchecked()
