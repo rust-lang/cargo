@@ -254,6 +254,11 @@ impl Dependency {
     pub fn lock_to(&mut self, id: &PackageId) -> &mut Dependency {
         assert_eq!(self.inner.source_id, *id.source_id());
         assert!(self.inner.req.matches(id.version()));
+        trace!("locking dep from `{}` with `{}` at {} to {}",
+               self.name(),
+               self.version_req(),
+               self.source_id(),
+               id);
         self.set_version_req(VersionReq::exact(id.version()))
             .set_source_id(id.source_id().clone())
     }

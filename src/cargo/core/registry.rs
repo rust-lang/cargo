@@ -88,7 +88,10 @@ pub struct PackageRegistry<'cfg> {
 
     locked: LockedMap,
     source_config: SourceConfigMap<'cfg>,
+
     patches: HashMap<Url, Vec<Summary>>,
+    patches_locked: bool,
+    patches_available: HashMap<Url, Vec<PackageId>>,
 }
 
 type LockedMap = HashMap<SourceId, HashMap<String, Vec<(PackageId, Vec<PackageId>)>>>;
@@ -110,6 +113,8 @@ impl<'cfg> PackageRegistry<'cfg> {
             source_config: source_config,
             locked: HashMap::new(),
             patches: HashMap::new(),
+            patches_locked: false,
+            patches_available: HashMap::new(),
         })
     }
 
@@ -188,9 +193,50 @@ impl<'cfg> PackageRegistry<'cfg> {
         sub_vec.push((id, deps));
     }
 
+    /// Insert a `[patch]` section into this registry.
+    ///
+    /// This method will insert a `[patch]` section for the `url` specified,
+    /// with the given list of dependencies. The `url` specified is the URL of
+    /// the source to patch (for example this is `crates-io` in the manifest).
+    /// The `deps` is an array of all the entries in the `[patch]` section of
+    /// the manifest.
+    ///
+    /// Here the `deps` will be resolved to a precise version and stored
+    /// internally for future calls to `query` below. It's expected that `deps`
+    /// have had `lock_to` call already, if applicable. (e.g. if a lock file was
+    /// already present).
+    ///
+    /// Note that the patch list specified here *will not* be available to
+    /// `query` until `lock_patches` is called below, which should be called
+    /// once all patches have been added.
     pub fn patch(&mut self, url: &Url, deps: &[Dependency]) -> CargoResult<()> {
-        let deps = deps.iter().map(|dep| {
-            let mut summaries = self.query_vec(dep)?.into_iter();
+        // First up we need to actually resolve each `deps` specification to
+        // precisely one summary. We're not using the `query` method below as it
+        // internally uses maps we're building up as part of this method
+        // (`patches_available` and `patches). Instead we're going straight to
+        // the source to load information from it.
+        //
+        // Remember that each dependency listed in `[patch]` has to resolve to
+        // precisely one package, so that's why we're just creating a flat list
+        // of summaries which should be the same length as `deps` above.
+        let unlocked_summaries = deps.iter().map(|dep| {
+            debug!("registring a patch for `{}` with `{}`",
+                   url,
+                   dep.name());
+
+            // Go straight to the source for resolving `dep`. Load it as we
+            // normally would and then ask it directly for the list of summaries
+            // corresponding to this `dep`.
+            self.ensure_loaded(dep.source_id(), Kind::Normal).chain_err(|| {
+                format_err!("failed to load source for a dependency \
+                             on `{}`", dep.name())
+            })?;
+
+            let mut summaries = self.sources.get_mut(dep.source_id())
+                .expect("loaded source not present")
+                .query_vec(dep)?
+                .into_iter();
+
             let summary = match summaries.next() {
                 Some(summary) => summary,
                 None => {
@@ -214,9 +260,36 @@ impl<'cfg> PackageRegistry<'cfg> {
             format_err!("failed to resolve patches for `{}`", url)
         })?;
 
-        self.patches.insert(url.clone(), deps);
+        // Note that we do not use `lock` here to lock summaries! That step
+        // happens later once `lock_patches` is invoked. In the meantime though
+        // we want to fill in the `patches_available` map (later used in the
+        // `lock` method) and otherwise store the unlocked summaries in
+        // `patches` to get locked in a future call to `lock_patches`.
+        let ids = unlocked_summaries.iter()
+            .map(|s| s.package_id())
+            .cloned()
+            .collect();
+        self.patches_available.insert(url.clone(), ids);
+        self.patches.insert(url.clone(), unlocked_summaries);
 
         Ok(())
+    }
+
+    /// Lock all patch summaries added via `patch`, making them available to
+    /// resolution via `query`.
+    ///
+    /// This function will internally `lock` each summary added via `patch`
+    /// above now that the full set of `patch` packages are known. This'll allow
+    /// us to correctly resolve overridden dependencies between patches
+    /// hopefully!
+    pub fn lock_patches(&mut self) {
+        assert!(!self.patches_locked);
+        for summaries in self.patches.values_mut() {
+            for summary in summaries {
+                *summary = lock(&self.locked, &self.patches_available, summary.clone());
+            }
+        }
+        self.patches_locked = true;
     }
 
     pub fn patches(&self) -> &HashMap<Url, Vec<Summary>> {
@@ -271,7 +344,8 @@ impl<'cfg> PackageRegistry<'cfg> {
     /// possible. If we're unable to map a dependency though, we just pass it on
     /// through.
     pub fn lock(&self, summary: Summary) -> Summary {
-        lock(&self.locked, &self.patches, summary)
+        assert!(self.patches_locked);
+        lock(&self.locked, &self.patches_available, summary)
     }
 
     fn warn_bad_override(&self,
@@ -323,6 +397,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
     fn query(&mut self,
              dep: &Dependency,
              f: &mut FnMut(Summary)) -> CargoResult<()> {
+        assert!(self.patches_locked);
         let (override_summary, n, to_warn) = {
             // Look for an override and get ready to query the real source.
             let override_summary = self.query_overrides(dep)?;
@@ -357,8 +432,12 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                 }
             } else {
                 if !patches.is_empty() {
-                    debug!("found {} patches with an unlocked dep, \
-                            looking at sources", patches.len());
+                    debug!("found {} patches with an unlocked dep on `{}` at {} \
+                            with `{}`, \
+                            looking at sources", patches.len(),
+                            dep.name(),
+                            dep.source_id(),
+                            dep.version_req());
                 }
 
                 // Ensure the requested source_id is loaded
@@ -387,7 +466,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                         // version as something in `patches` that we've
                         // already selected, then we skip this `summary`.
                         let locked = &self.locked;
-                        let all_patches = &self.patches;
+                        let all_patches = &self.patches_available;
                         return source.query(dep, &mut |summary| {
                             for patch in patches.iter() {
                                 let patch = patch.package_id().version();
@@ -437,7 +516,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
 }
 
 fn lock(locked: &LockedMap,
-        patches: &HashMap<Url, Vec<Summary>>,
+        patches: &HashMap<Url, Vec<PackageId>>,
         summary: Summary) -> Summary {
     let pair = locked.get(summary.source_id()).and_then(|map| {
         map.get(summary.name())
@@ -504,24 +583,24 @@ fn lock(locked: &LockedMap,
         // this dependency.
         let v = patches.get(dep.source_id().url()).map(|vec| {
             let dep2 = dep.clone();
-            let mut iter = vec.iter().filter(move |s| {
-                dep2.name() == s.package_id().name() &&
-                    dep2.version_req().matches(s.package_id().version())
+            let mut iter = vec.iter().filter(move |p| {
+                dep2.name() == p.name() &&
+                    dep2.version_req().matches(p.version())
             });
             (iter.next(), iter)
         });
-        if let Some((Some(summary), mut remaining)) = v {
+        if let Some((Some(patch_id), mut remaining)) = v {
             assert!(remaining.next().is_none());
-            let patch_source = summary.package_id().source_id();
+            let patch_source = patch_id.source_id();
             let patch_locked = locked.get(patch_source).and_then(|m| {
-                m.get(summary.package_id().name())
+                m.get(patch_id.name())
             }).map(|list| {
-                list.iter().any(|&(ref id, _)| id == summary.package_id())
+                list.iter().any(|&(ref id, _)| id == patch_id)
             }).unwrap_or(false);
 
             if patch_locked {
-                trace!("\tthird hit on {}", summary.package_id());
-                let req = VersionReq::exact(summary.package_id().version());
+                trace!("\tthird hit on {}", patch_id);
+                let req = VersionReq::exact(patch_id.version());
                 let mut dep = dep.clone();
                 dep.set_version_req(req);
                 return dep
