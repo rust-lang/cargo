@@ -143,7 +143,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
 
     let mut fixed = code.clone();
 
-    for sug in suggestions {
+    for sug in suggestions.into_iter().rev() {
         trace!("{:?}", sug);
         for sol in sug.solutions {
             trace!("{:?}", sol);
