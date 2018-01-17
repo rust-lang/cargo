@@ -142,7 +142,7 @@ type TomlBenchTarget = TomlTarget;
 #[serde(untagged)]
 pub enum TomlDependency {
     Simple(String),
-    Detailed(DetailedTomlDependency)
+    Detailed(DetailedTomlDependency),
 }
 
 impl<'de> de::Deserialize<'de> for TomlDependency {
@@ -193,6 +193,7 @@ pub struct DetailedTomlDependency {
     default_features: Option<bool>,
     #[serde(rename = "default_features")]
     default_features2: Option<bool>,
+    package: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -917,16 +918,28 @@ impl TomlDependency {
                      cx: &mut Context,
                      kind: Option<Kind>)
                      -> CargoResult<Dependency> {
-        let details = match *self {
-            TomlDependency::Simple(ref version) => DetailedTomlDependency {
-                version: Some(version.clone()),
-                .. Default::default()
-            },
-            TomlDependency::Detailed(ref details) => details.clone(),
-        };
+        match *self {
+            TomlDependency::Simple(ref version) => {
+                DetailedTomlDependency {
+                    version: Some(version.clone()),
+                    ..Default::default()
+                }.to_dependency(name, cx, kind)
+            }
+            TomlDependency::Detailed(ref details) => {
+                details.to_dependency(name, cx, kind)
+            }
+        }
+    }
+}
 
-        if details.version.is_none() && details.path.is_none() &&
-           details.git.is_none() {
+impl DetailedTomlDependency {
+    fn to_dependency(&self,
+                     name: &str,
+                     cx: &mut Context,
+                     kind: Option<Kind>)
+                     -> CargoResult<Dependency> {
+        if self.version.is_none() && self.path.is_none() &&
+           self.git.is_none() {
             let msg = format!("dependency ({}) specified without \
                                providing a local path, Git repository, or \
                                version to use. This will be considered an \
@@ -934,11 +947,11 @@ impl TomlDependency {
             cx.warnings.push(msg);
         }
 
-        if details.git.is_none() {
+        if self.git.is_none() {
             let git_only_keys = [
-                (&details.branch, "branch"),
-                (&details.tag, "tag"),
-                (&details.rev, "rev")
+                (&self.branch, "branch"),
+                (&self.tag, "tag"),
+                (&self.rev, "rev")
             ];
 
             for &(key, key_name) in &git_only_keys {
@@ -951,7 +964,7 @@ impl TomlDependency {
             }
         }
 
-        let registry_id = match details.registry {
+        let registry_id = match self.registry {
             Some(ref registry) => {
                 cx.features.require(Feature::alternative_registries())?;
                 SourceId::alt_registry(cx.config, registry)?
@@ -960,10 +973,10 @@ impl TomlDependency {
         };
 
         let new_source_id = match (
-            details.git.as_ref(),
-            details.path.as_ref(),
-            details.registry.as_ref(),
-            details.registry_index.as_ref(),
+            self.git.as_ref(),
+            self.path.as_ref(),
+            self.registry.as_ref(),
+            self.registry_index.as_ref(),
         ) {
             (Some(_), _, Some(_), _) |
             (Some(_), _, _, Some(_))=> bail!("dependency ({}) specification is ambiguous. \
@@ -978,7 +991,7 @@ impl TomlDependency {
                     cx.warnings.push(msg)
                 }
 
-                let n_details = [&details.branch, &details.tag, &details.rev]
+                let n_details = [&self.branch, &self.tag, &self.rev]
                     .iter()
                     .filter(|d| d.is_some())
                     .count();
@@ -990,9 +1003,9 @@ impl TomlDependency {
                     cx.warnings.push(msg)
                 }
 
-                let reference = details.branch.clone().map(GitReference::Branch)
-                    .or_else(|| details.tag.clone().map(GitReference::Tag))
-                    .or_else(|| details.rev.clone().map(GitReference::Rev))
+                let reference = self.branch.clone().map(GitReference::Branch)
+                    .or_else(|| self.tag.clone().map(GitReference::Tag))
+                    .or_else(|| self.rev.clone().map(GitReference::Rev))
                     .unwrap_or_else(|| GitReference::Branch("master".to_string()));
                 let loc = git.to_url()?;
                 SourceId::for_git(&loc, reference)?
@@ -1023,23 +1036,32 @@ impl TomlDependency {
             (None, None, None, None) => SourceId::crates_io(cx.config)?,
         };
 
-        let version = details.version.as_ref().map(|v| &v[..]);
+        let (pkg_name, rename) = match self.package {
+            Some(ref s) => (&s[..], Some(name)),
+            None => (name, None),
+        };
+
+        let version = self.version.as_ref().map(|v| &v[..]);
         let mut dep = match cx.pkgid {
             Some(id) => {
-                Dependency::parse(name, version, &new_source_id,
+                Dependency::parse(pkg_name, version, &new_source_id,
                                   id, cx.config)?
             }
             None => Dependency::parse_no_deprecated(name, version, &new_source_id)?,
         };
-        dep.set_features(details.features.unwrap_or_default())
-           .set_default_features(details.default_features
-                                        .or(details.default_features2)
+        dep.set_features(self.features.clone().unwrap_or_default())
+           .set_default_features(self.default_features
+                                        .or(self.default_features2)
                                         .unwrap_or(true))
-           .set_optional(details.optional.unwrap_or(false))
+           .set_optional(self.optional.unwrap_or(false))
            .set_platform(cx.platform.clone())
            .set_registry_id(&registry_id);
         if let Some(kind) = kind {
             dep.set_kind(kind);
+        }
+        if let Some(rename) = rename {
+            cx.features.require(Feature::rename_dependency())?;
+            dep.set_rename(rename);
         }
         Ok(dep)
     }
