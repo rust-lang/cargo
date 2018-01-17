@@ -39,7 +39,7 @@ fn compile_and_get_json_errors(file: &Path) -> Result<String, Box<Error>> {
 
     use std::io::{Error, ErrorKind};
     match res.status.code() {
-        Some(0) | Some(1) => Ok(stderr),
+        Some(0) | Some(1) | Some(101) => Ok(stderr),
         _ => Err(Box::new(Error::new(
             ErrorKind::Other,
             format!("failed with status {:?}: {}", res.status.code(), stderr),
