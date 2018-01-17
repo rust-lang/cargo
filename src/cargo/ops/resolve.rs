@@ -40,11 +40,13 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     if let Some(source) = source {
         registry.add_preloaded(source);
     }
+    let mut add_patches = true;
 
     let resolve = if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
         let resolve = resolve_with_registry(ws, &mut registry, false)?;
+        add_patches = false;
 
         // Second, resolve with precisely what we're doing. Filter out
         // transitive dependencies if necessary, specify features, handle
@@ -77,9 +79,14 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     };
 
     let resolved_with_overrides =
-    ops::resolve_with_previous(&mut registry, ws,
-                               method, resolve.as_ref(), None,
-                               specs, true)?;
+    ops::resolve_with_previous(&mut registry,
+                               ws,
+                               method,
+                               resolve.as_ref(),
+                               None,
+                               specs,
+                               add_patches,
+                               true)?;
 
     let packages = get_resolved_packages(&resolved_with_overrides, registry);
 
@@ -89,9 +96,14 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
 fn resolve_with_registry(ws: &Workspace, registry: &mut PackageRegistry, warn: bool)
                          -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
-    let resolve = resolve_with_previous(registry, ws,
+    let resolve = resolve_with_previous(registry,
+                                        ws,
                                         Method::Everything,
-                                        prev.as_ref(), None, &[], warn)?;
+                                        prev.as_ref(),
+                                        None,
+                                        &[],
+                                        true,
+                                        warn)?;
 
     if !ws.is_ephemeral() {
         ops::write_pkg_lockfile(ws, &resolve)?;
@@ -115,6 +127,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                                  previous: Option<&'a Resolve>,
                                  to_avoid: Option<&HashSet<&'a PackageId>>,
                                  specs: &[PackageIdSpec],
+                                 register_patches: bool,
                                  warn: bool)
                                  -> CargoResult<Resolve> {
     // Here we place an artificial limitation that all non-registry sources
@@ -169,27 +182,31 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
         }
     }
 
-    for (url, patches) in ws.root_patch() {
-        let previous = match previous {
-            Some(r) => r,
-            None => {
-                registry.patch(url, patches)?;
-                continue
-            }
-        };
-        let patches = patches.iter().map(|dep| {
-            let unused = previous.unused_patches();
-            let candidates = previous.iter().chain(unused);
-            match candidates.filter(keep).find(|id| dep.matches_id(id)) {
-                Some(id) => {
-                    let mut dep = dep.clone();
-                    dep.lock_to(id);
-                    dep
+    if register_patches {
+        for (url, patches) in ws.root_patch() {
+            let previous = match previous {
+                Some(r) => r,
+                None => {
+                    registry.patch(url, patches)?;
+                    continue
                 }
-                None => dep.clone(),
-            }
-        }).collect::<Vec<_>>();
-        registry.patch(url, &patches)?;
+            };
+            let patches = patches.iter().map(|dep| {
+                let unused = previous.unused_patches();
+                let candidates = previous.iter().chain(unused);
+                match candidates.filter(keep).find(|id| dep.matches_id(id)) {
+                    Some(id) => {
+                        let mut dep = dep.clone();
+                        dep.lock_to(id);
+                        dep
+                    }
+                    None => dep.clone(),
+                }
+            }).collect::<Vec<_>>();
+            registry.patch(url, &patches)?;
+        }
+
+        registry.lock_patches();
     }
 
     let mut summaries = Vec::new();
