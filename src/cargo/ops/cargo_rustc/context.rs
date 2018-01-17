@@ -1221,6 +1221,16 @@ fn env_args(config: &Config,
                     None
                 }
             });
+
+            // Note that we may have multiple matching `[target]` sections and
+            // because we're passing flags to the compiler this can affect
+            // cargo's caching and whether it rebuilds. Ensure a deterministic
+            // ordering through sorting for now. We may perhaps one day wish to
+            // ensure a deterministic ordering via the order keys were defined
+            // in files perhaps.
+            let mut cfgs = cfgs.collect::<Vec<_>>();
+            cfgs.sort();
+
             for n in cfgs {
                 let key = format!("target.{}.{}", n, name);
                 if let Some(args) = config.get_list_or_split_string(&key)? {

@@ -974,21 +974,21 @@ fn cfg_rustflags_normal_source() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
-    
+
     assert_that(p.cargo("build").arg("--bin=a").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
-    
+
     assert_that(p.cargo("build").arg("--example=b").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
-    
+
     assert_that(p.cargo("test").arg("--no-run").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
@@ -997,7 +997,7 @@ fn cfg_rustflags_normal_source() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
-    
+
     assert_that(p.cargo("bench").arg("--no-run").arg("-v"),
                 execs().with_status(0).with_stderr("\
 [COMPILING] foo v0.0.1 ([..])
@@ -1006,7 +1006,7 @@ fn cfg_rustflags_normal_source() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [FINISHED] release [optimized] target(s) in [..]
 "));
-                
+
 }
 
 // target.'cfg(...)'.rustflags takes precedence over build.rustflags
@@ -1069,7 +1069,7 @@ fn cfg_rustflags_precedence() {
 [RUNNING] `rustc [..] --cfg bar[..]`
 [FINISHED] release [optimized] target(s) in [..]
 "));
-                
+
 }
 
 #[test]
@@ -1157,5 +1157,42 @@ fn target_rustflags_string_and_array_form2() {
 [RUNNING] `rustc [..] --cfg foo[..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
+}
 
+#[test]
+fn two_matching_in_config() {
+    let p1 = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+        "#)
+        .file(".cargo/config", r#"
+            [target.'cfg(unix)']
+            rustflags = ["--cfg", 'foo="a"']
+            [target.'cfg(windows)']
+            rustflags = ["--cfg", 'foo="a"']
+            [target.'cfg(target_pointer_width = "32")']
+            rustflags = ["--cfg", 'foo="b"']
+            [target.'cfg(target_pointer_width = "64")']
+            rustflags = ["--cfg", 'foo="b"']
+        "#)
+        .file("src/main.rs", r#"
+            fn main() {
+                if cfg!(foo = "a") {
+                    println!("a");
+                } else if cfg!(foo = "b") {
+                    println!("b");
+                } else {
+                    panic!()
+                }
+            }
+        "#)
+        .build();
+
+    assert_that(p1.cargo("run"), execs().with_status(0));
+    assert_that(p1.cargo("build"),
+                execs().with_status(0).with_stderr("\
+[FINISHED] [..]
+"));
 }
