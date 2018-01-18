@@ -39,7 +39,7 @@ fn compile_and_get_json_errors(file: &Path) -> Result<String, Box<Error>> {
 
     use std::io::{Error, ErrorKind};
     match res.status.code() {
-        Some(0) | Some(1) => Ok(stderr),
+        Some(0) | Some(1) | Some(101) => Ok(stderr),
         _ => Err(Box::new(Error::new(
             ErrorKind::Other,
             format!("failed with status {:?}: {}", res.status.code(), stderr),
@@ -122,7 +122,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     let json_file = file.with_extension("json");
     let fixed_file = file.with_extension("fixed.rs");
 
-    debug!("{:?}", file);
+    debug!("next up: {:?}", file);
     let code = read_file(file)?;
     let errors = compile_and_get_json_errors(file)?;
     let suggestions = rustfix::get_suggestions_from_json(&errors, &HashSet::new());
@@ -143,7 +143,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
 
     let mut fixed = code.clone();
 
-    for sug in suggestions {
+    for sug in suggestions.into_iter().rev() {
         trace!("{:?}", sug);
         for sol in sug.solutions {
             trace!("{:?}", sol);
@@ -153,6 +153,12 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
                 fixed = apply_suggestion(&mut fixed, &r)?;
             }
         }
+    }
+
+    if std::env::var("RUSTFIX_TEST_RECORD_FIXED_RUST").is_ok() {
+        use std::io::Write;
+        let mut recorded_rust = fs::File::create(&file.with_extension("recorded.rs"))?;
+        recorded_rust.write_all(fixed.as_bytes())?;
     }
 
     let expected_fixed = read_file(&fixed_file)?;
@@ -170,7 +176,7 @@ fn get_fixture_files() -> Result<Vec<PathBuf>, Box<Error>> {
         .filter(|p| p.is_file())
         .filter(|p| {
             let x = p.to_string_lossy();
-            x.ends_with(".rs") && !x.ends_with(".fixed.rs")
+            x.ends_with(".rs") && !x.ends_with(".fixed.rs") && !x.ends_with(".recorded.rs")
         })
         .collect())
 }
