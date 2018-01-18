@@ -178,6 +178,7 @@ impl<'de> de::Deserialize<'de> for TomlDependency {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
+#[serde(rename_all = "kebab-case")]
 pub struct DetailedTomlDependency {
     version: Option<String>,
     registry: Option<String>,
@@ -189,15 +190,14 @@ pub struct DetailedTomlDependency {
     rev: Option<String>,
     features: Option<Vec<String>>,
     optional: Option<bool>,
-    #[serde(rename = "default-features")]
     default_features: Option<bool>,
     #[serde(rename = "default_features")]
     default_features2: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct TomlManifest {
-    #[serde(rename = "cargo-features")]
     cargo_features: Option<Vec<String>>,
     package: Option<Box<TomlProject>>,
     project: Option<Box<TomlProject>>,
@@ -208,11 +208,9 @@ pub struct TomlManifest {
     test: Option<Vec<TomlTestTarget>>,
     bench: Option<Vec<TomlTestTarget>>,
     dependencies: Option<BTreeMap<String, TomlDependency>>,
-    #[serde(rename = "dev-dependencies")]
     dev_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "dev_dependencies")]
     dev_dependencies2: Option<BTreeMap<String, TomlDependency>>,
-    #[serde(rename = "build-dependencies")]
     build_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "build_dependencies")]
     build_dependencies2: Option<BTreeMap<String, TomlDependency>>,

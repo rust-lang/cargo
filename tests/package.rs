@@ -798,7 +798,7 @@ version = "0.1"
 
 [dependencies.def]
 version = "1.0"
-registry_index = "{}"
+registry-index = "{}"
 
 [dependencies.ghi]
 version = "1.0"
