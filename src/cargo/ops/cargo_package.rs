@@ -249,7 +249,7 @@ fn tar(ws: &Workspace,
             })?;
 
             let mut header = Header::new_ustar();
-            let toml = pkg.to_registry_toml()?;
+            let toml = pkg.to_registry_toml(ws.config())?;
             header.set_path(&path)?;
             header.set_entry_type(EntryType::file());
             header.set_mode(0o644);
