@@ -264,10 +264,10 @@ fn publish_rejected() {
         "#)
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("package")
+    assert_that(p.cargo("publish")
                  .masquerade_as_nightly_cargo(),
                 execs().with_status(101)
                        .with_stderr("\
-error: cannot package or publish crates which activate nightly-only cargo features
+error: cannot publish crates which activate nightly-only cargo features to crates.io
 "));
 }
