@@ -706,7 +706,8 @@ fn block_publish_no_registry() {
         .build();
 
     assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
-                 .arg("--index").arg(publish::registry().to_string()),
+                 .arg("--registry").arg("alternative")
+                 .arg("-Zunstable-options"),
                 execs().with_status(101).with_stderr("\
 [ERROR] some crates cannot be published.
 `foo` is marked as unpublishable
