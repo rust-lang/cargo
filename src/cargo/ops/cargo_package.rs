@@ -31,12 +31,6 @@ pub fn package(ws: &Workspace,
     let pkg = ws.current()?;
     let config = ws.config();
 
-    // Allow packaging if a registry has been provided, or if there are no nightly
-    // features enabled.
-    if opts.registry.is_none() && !pkg.manifest().features().activated().is_empty() {
-        bail!("cannot package or publish crates which activate nightly-only \
-               cargo features")
-    }
     let mut src = PathSource::new(pkg.root(),
                                   pkg.package_id().source_id(),
                                   config);
