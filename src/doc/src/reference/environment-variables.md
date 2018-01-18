@@ -125,7 +125,8 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [links]: reference/build-scripts.html#the-links-manifest-key
 [profile]: reference/manifest.html#the-profile-sections
 [configuration]: https://doc.rust-lang.org/reference/attributes.html#conditional-compilation
-[clang]:http://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[clang]: http://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[jobserver]: https://www.gnu.org/software/make/manual/html_node/Job-Slots.html
 
 ### Environment variables Cargo sets for 3rd party subcommands
 
