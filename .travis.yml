@@ -3,7 +3,7 @@ rust:
 - nightly
 - stable
 before_script:
-- if [ $TRAVIS_RUST_VERSION == nightly ]; then cargo install clippy --force ; fi
+- if [ $TRAVIS_RUST_VERSION == nightly ]; then cargo install clippy --git https://github.com/rust-lang-nursery/rust-clippy.git --force; fi
 script:
 - cargo build
 - if [ $TRAVIS_RUST_VERSION == nightly ]; then cargo test -- --nocapture ; fi

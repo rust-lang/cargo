@@ -1,0 +1,204 @@
+{
+  "message": "this `.fold` can be written more succinctly using another method",
+  "code": {
+    "code": "unnecessary_fold",
+    "explanation": null
+  },
+  "level": "warning",
+  "spans": [
+    {
+      "file_name": "./tests/fixtures/fold-any.rs",
+      "byte_start": 30,
+      "byte_end": 65,
+      "line_start": 2,
+      "line_end": 2,
+      "column_start": 19,
+      "column_end": 54,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    let _ = (0..3).fold(false, |acc, x| acc || x > 2);",
+          "highlight_start": 19,
+          "highlight_end": 54
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "#[warn(unnecessary_fold)] on by default",
+      "code": null,
+      "level": "note",
+      "spans": [],
+      "children": [],
+      "rendered": null
+    },
+    {
+      "message": "try",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/fixtures/fold-any.rs",
+          "byte_start": 30,
+          "byte_end": 65,
+          "line_start": 2,
+          "line_end": 2,
+          "column_start": 19,
+          "column_end": 54,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    let _ = (0..3).fold(false, |acc, x| acc || x > 2);",
+              "highlight_start": 19,
+              "highlight_end": 54
+            }
+          ],
+          "label": null,
+          "suggested_replacement": ".any(|x| x > 2)",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "warning: this `.fold` can be written more succinctly using another method\n --> ./tests/fixtures/fold-any.rs:2:19\n  |\n2 |     let _ = (0..3).fold(false, |acc, x| acc || x > 2);\n  |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `.any(|x| x > 2)`\n  |\n  = note: #[warn(unnecessary_fold)] on by default\n\n"
+}
+{
+  "message": "this `.fold` can be written more succinctly using another method",
+  "code": {
+    "code": "unnecessary_fold",
+    "explanation": null
+  },
+  "level": "warning",
+  "spans": [
+    {
+      "file_name": "./tests/fixtures/fold-any.rs",
+      "byte_start": 86,
+      "byte_end": 134,
+      "line_start": 4,
+      "line_end": 5,
+      "column_start": 19,
+      "column_end": 48,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    let _ = (0..3)",
+          "highlight_start": 19,
+          "highlight_end": 19
+        },
+        {
+          "text": "        .fold(false, |acc, x| { acc || x > 2 });",
+          "highlight_start": 1,
+          "highlight_end": 48
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "try",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/fixtures/fold-any.rs",
+          "byte_start": 86,
+          "byte_end": 134,
+          "line_start": 4,
+          "line_end": 5,
+          "column_start": 19,
+          "column_end": 48,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    let _ = (0..3)",
+              "highlight_start": 19,
+              "highlight_end": 19
+            },
+            {
+              "text": "        .fold(false, |acc, x| { acc || x > 2 });",
+              "highlight_start": 1,
+              "highlight_end": 48
+            }
+          ],
+          "label": null,
+          "suggested_replacement": ".any(|x| x > 2)",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "warning: this `.fold` can be written more succinctly using another method\n --> ./tests/fixtures/fold-any.rs:4:19\n  |\n4 |       let _ = (0..3)\n  |  ___________________^\n5 | |         .fold(false, |acc, x| { acc || x > 2 });\n  | |_______________________________________________^ help: try: `.any(|x| x > 2)`\n\n"
+}
+{
+  "message": "this `.fold` can be written more succinctly using another method",
+  "code": {
+    "code": "unnecessary_fold",
+    "explanation": null
+  },
+  "level": "warning",
+  "spans": [
+    {
+      "file_name": "./tests/fixtures/fold-any.rs",
+      "byte_start": 155,
+      "byte_end": 189,
+      "line_start": 7,
+      "line_end": 7,
+      "column_start": 19,
+      "column_end": 53,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    let _ = (0..3).fold(true, |acc, x| acc && x > 2);",
+          "highlight_start": 19,
+          "highlight_end": 53
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "try",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/fixtures/fold-any.rs",
+          "byte_start": 155,
+          "byte_end": 189,
+          "line_start": 7,
+          "line_end": 7,
+          "column_start": 19,
+          "column_end": 53,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    let _ = (0..3).fold(true, |acc, x| acc && x > 2);",
+              "highlight_start": 19,
+              "highlight_end": 53
+            }
+          ],
+          "label": null,
+          "suggested_replacement": ".all(|x| x > 2)",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "warning: this `.fold` can be written more succinctly using another method\n --> ./tests/fixtures/fold-any.rs:7:19\n  |\n7 |     let _ = (0..3).fold(true, |acc, x| acc && x > 2);\n  |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `.all(|x| x > 2)`\n\n"
+}
