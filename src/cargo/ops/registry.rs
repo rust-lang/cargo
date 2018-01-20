@@ -130,13 +130,17 @@ fn transmit(config: &Config,
 
         // If the dependency is from a different registry, then include the
         // registry in the dependency.
-        let dep_registry = if dep.source_id() != registry_id {
-            Some(dep.source_id().url().to_string())
+        let dep_registry_id = match dep.registry_id() {
+            Some(id) => id,
+            None => bail!("dependency missing registry ID"),
+        };
+        let dep_registry = if dep_registry_id != registry_id {
+            Some(dep_registry_id.url().to_string())
         } else {
             None
         };
 
-        NewCrateDependency {
+        Ok(NewCrateDependency {
             optional: dep.is_optional(),
             default_features: dep.uses_default_features(),
             name: dep.name().to_string(),
@@ -149,8 +153,8 @@ fn transmit(config: &Config,
                 Kind::Development => "dev",
             }.to_string(),
             registry: dep_registry,
-        }
-    }).collect::<Vec<NewCrateDependency>>();
+        })
+    }).collect::<CargoResult<Vec<NewCrateDependency>>>()?;
     let manifest = pkg.manifest();
     let ManifestMetadata {
         ref authors, ref description, ref homepage, ref documentation,

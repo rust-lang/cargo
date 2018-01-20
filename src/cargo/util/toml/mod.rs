@@ -925,11 +925,17 @@ impl TomlDependency {
             }
         }
 
+        let registry_id = match details.registry {
+            Some(ref registry) => {
+                cx.features.require(Feature::alternative_registries())?;
+                SourceId::alt_registry(cx.config, registry)?
+            }
+            None => SourceId::crates_io(cx.config)?
+        };
+
         let new_source_id = match (details.git.as_ref(), details.path.as_ref(), details.registry.as_ref()) {
             (Some(_), _, Some(_)) => bail!("dependency ({}) specification is ambiguous. \
                                             Only one of `git` or `registry` is allowed.", name),
-            (_, Some(_), Some(_)) => bail!("dependency ({}) specification is ambiguous. \
-                                            Only one of `path` or `registry` is allowed.", name),
             (Some(git), maybe_path, _) => {
                 if maybe_path.is_some() {
                     let msg = format!("dependency ({}) specification is ambiguous. \
@@ -975,10 +981,7 @@ impl TomlDependency {
                     cx.source_id.clone()
                 }
             },
-            (None, None, Some(registry)) => {
-                cx.features.require(Feature::alternative_registries())?;
-                SourceId::alt_registry(cx.config, registry)?
-            }
+            (None, None, Some(registry)) => SourceId::alt_registry(cx.config, registry)?,
             (None, None, None) => SourceId::crates_io(cx.config)?,
         };
 
@@ -995,7 +998,8 @@ impl TomlDependency {
                                         .or(details.default_features2)
                                         .unwrap_or(true))
            .set_optional(details.optional.unwrap_or(false))
-           .set_platform(cx.platform.clone());
+           .set_platform(cx.platform.clone())
+           .set_registry_id(&registry_id);
         if let Some(kind) = kind {
             dep.set_kind(kind);
         }
