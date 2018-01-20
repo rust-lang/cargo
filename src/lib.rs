@@ -10,10 +10,8 @@ use diagnostics::{Diagnostic, DiagnosticSpan};
 pub fn get_suggestions_from_json<S: ::std::hash::BuildHasher>(input: &str, only: &HashSet<String, S>) -> Vec<Suggestion> {
     serde_json::Deserializer::from_str(input)
         .into_iter::<Diagnostic>()
-        // eat parsing errors
-        .flat_map(|line| line.ok())
         // One diagnostic line might have multiple suggestions
-        .filter_map(|cargo_msg| collect_suggestions(&cargo_msg, only))
+        .filter_map(|cargo_msg| collect_suggestions(&cargo_msg.unwrap(), only))
         .collect()
 }
 
