@@ -125,7 +125,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     debug!("next up: {:?}", file);
     let code = read_file(file)?;
     let errors = compile_and_get_json_errors(file)?;
-    let suggestions = rustfix::get_suggestions_from_json(&errors, &HashSet::new());
+    let suggestions = rustfix::get_suggestions_from_json(&errors, &HashSet::new()).expect("could not load suggestions");
 
     if std::env::var("RUSTFIX_TEST_RECORD_JSON").is_ok() {
         use std::io::Write;
@@ -134,7 +134,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P) -> Result<(), Box<Error>> {
     }
 
     let expected_json = read_file(&json_file)?;
-    let expected_suggestions = rustfix::get_suggestions_from_json(&expected_json, &HashSet::new());
+    let expected_suggestions = rustfix::get_suggestions_from_json(&expected_json, &HashSet::new()).expect("could not load expected suggesitons");
     assert_eq!(
         expected_suggestions,
         suggestions,

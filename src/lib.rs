@@ -7,12 +7,16 @@ use std::collections::HashSet;
 pub mod diagnostics;
 use diagnostics::{Diagnostic, DiagnosticSpan};
 
-pub fn get_suggestions_from_json<S: ::std::hash::BuildHasher>(input: &str, only: &HashSet<String, S>) -> Vec<Suggestion> {
-    serde_json::Deserializer::from_str(input)
-        .into_iter::<Diagnostic>()
+pub fn get_suggestions_from_json<S: ::std::hash::BuildHasher>(
+    input: &str,
+    only: &HashSet<String, S>,
+) -> serde_json::error::Result<Vec<Suggestion>> {
+    let mut result = Vec::new();
+    for cargo_msg in serde_json::Deserializer::from_str(input).into_iter::<Diagnostic>() {
         // One diagnostic line might have multiple suggestions
-        .filter_map(|cargo_msg| collect_suggestions(&cargo_msg.unwrap(), only))
-        .collect()
+        result.extend(collect_suggestions(&cargo_msg?, only));
+    }
+    Ok(result)
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq)]
