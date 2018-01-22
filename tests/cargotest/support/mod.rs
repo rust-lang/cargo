@@ -348,9 +348,11 @@ pub struct Execs {
     expect_exit_code: Option<i32>,
     expect_stdout_contains: Vec<String>,
     expect_stderr_contains: Vec<String>,
+    expect_either_contains: Vec<String>,
     expect_stdout_contains_n: Vec<(String, usize)>,
     expect_stdout_not_contains: Vec<String>,
     expect_stderr_not_contains: Vec<String>,
+    expect_neither_contains: Vec<String>,
     expect_json: Option<Vec<Value>>,
 }
 
@@ -384,6 +386,11 @@ impl Execs {
         self
     }
 
+    pub fn with_either_contains<S: ToString>(mut self, expected: S) -> Execs {
+        self.expect_either_contains.push(expected.to_string());
+        self
+    }
+
     pub fn with_stdout_contains_n<S: ToString>(mut self, expected: S, number: usize) -> Execs {
         self.expect_stdout_contains_n.push((expected.to_string(), number));
         self
@@ -396,6 +403,11 @@ impl Execs {
 
     pub fn with_stderr_does_not_contain<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stderr_not_contains.push(expected.to_string());
+        self
+    }
+
+    pub fn with_neither_contains<S: ToString>(mut self, expected: S) -> Execs {
+        self.expect_neither_contains.push(expected.to_string());
         self
     }
 
@@ -448,6 +460,26 @@ impl Execs {
         for expect in self.expect_stderr_not_contains.iter() {
             self.match_std(Some(expect), &actual.stderr, "stderr",
                            &actual.stdout, MatchKind::NotPresent)?;
+        }
+        for expect in self.expect_neither_contains.iter() {
+            self.match_std(Some(expect), &actual.stdout, "stdout",
+                           &actual.stdout, MatchKind::NotPresent)?;
+
+            self.match_std(Some(expect), &actual.stderr, "stderr",
+                           &actual.stderr, MatchKind::NotPresent)?;
+        }
+
+        for expect in self.expect_either_contains.iter() {
+            let match_std = self.match_std(Some(expect), &actual.stdout, "stdout",
+                                           &actual.stdout, MatchKind::Partial);
+            let match_err = self.match_std(Some(expect), &actual.stderr, "stderr",
+                                           &actual.stderr, MatchKind::Partial);
+
+            if let (Err(_), Err(_)) = (match_std, match_err) {
+                Err(format!("expected to find:\n\
+                            {}\n\n\
+                            did not find in either output.", expect))?;
+            }
         }
 
         if let Some(ref objects) = self.expect_json {
@@ -762,9 +794,11 @@ pub fn execs() -> Execs {
         expect_exit_code: None,
         expect_stdout_contains: Vec::new(),
         expect_stderr_contains: Vec::new(),
+        expect_either_contains: Vec::new(),
         expect_stdout_contains_n: Vec::new(),
         expect_stdout_not_contains: Vec::new(),
         expect_stderr_not_contains: Vec::new(),
+        expect_neither_contains: Vec::new(),
         expect_json: None,
     }
 }
