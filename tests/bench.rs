@@ -286,17 +286,18 @@ fn cargo_bench_failing_test() {
     assert_that(process(&p.bin("foo")),
                 execs().with_stdout("hello\n"));
 
-    assert_that(p.cargo("bench"),
+    // Force libtest into serial execution so that the test header will be printed.
+    assert_that(p.cargo("bench").arg("--").arg("--test-threads=1"),
                 execs().with_stdout_contains("test bench_hello ... ")
-                       .with_stderr_contains(format!("\
+                       .with_either_contains(format!("\
 [COMPILING] foo v0.5.0 ({})
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
 thread '[..]' panicked at 'assertion failed: \
     `(left == right)`[..]", p.url()))
-                       .with_stderr_contains("[..]left: `\"hello\"`[..]")
-                       .with_stderr_contains("[..]right: `\"nope\"`[..]")
-                       .with_stderr_contains("[..]src[/]main.rs:15[..]")
+                       .with_either_contains("[..]left: `\"hello\"`[..]")
+                       .with_either_contains("[..]right: `\"nope\"`[..]")
+                       .with_either_contains("[..]src[/]main.rs:15[..]")
                        .with_status(101));
 }
 
@@ -993,7 +994,7 @@ fn test_bench_no_fail_fast() {
             }"#)
         .build();
 
-    assert_that(p.cargo("bench").arg("--no-fail-fast"),
+    assert_that(p.cargo("bench").arg("--no-fail-fast").arg("--").arg("--test-threads=1"),
                 execs().with_status(101)
                     .with_stderr_contains("\
 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
