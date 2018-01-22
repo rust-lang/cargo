@@ -613,7 +613,9 @@ compiled when you run your tests to protect them from bitrotting.
 You can run individual executable examples with the command `cargo run --example
 <example-name>`.
 
-Specify `crate-type` to make an example be compiled as a library:
+Specify `crate-type` to make an example be compiled as a library (additional 
+information about crate types is available in 
+[the Cargo reference](https://doc.rust-lang.org/reference/linkage.html)):
 
 ```toml
 [[example]]
