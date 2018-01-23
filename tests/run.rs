@@ -785,6 +785,49 @@ fn run_with_library_paths() {
 }
 
 #[test]
+fn library_paths_sorted_alphabetically() {
+    let p = project("foo");
+
+    let mut dir1 = p.target_debug_dir();
+    dir1.push("zzzzzzz");
+
+    let mut dir2 = p.target_debug_dir();
+    dir2.push("BBBBBBB");
+
+    let mut dir3 = p.target_debug_dir();
+    dir3.push("aaaaaaa");
+
+    let p = p
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            build = "build.rs"
+        "#)
+        .file("build.rs", &format!(r##"
+            fn main() {{
+                println!(r#"cargo:rustc-link-search=native={}"#);
+                println!(r#"cargo:rustc-link-search=native={}"#);
+                println!(r#"cargo:rustc-link-search=native={}"#);
+            }}
+        "##, dir1.display(), dir2.display(), dir3.display()))
+        .file("src/main.rs", &format!(r##"
+            fn main() {{
+                let search_path = std::env::var_os("{}").unwrap();
+                let paths = std::env::split_paths(&search_path).collect::<Vec<_>>();
+                // ASCII case-sensitive sort
+                assert_eq!("BBBBBBB", paths[0].file_name().unwrap().to_string_lossy());
+                assert_eq!("aaaaaaa", paths[1].file_name().unwrap().to_string_lossy());
+                assert_eq!("zzzzzzz", paths[2].file_name().unwrap().to_string_lossy());
+            }}
+        "##, dylib_path_envvar()))
+        .build();
+
+    assert_that(p.cargo("run"), execs().with_status(0));
+}
+
+#[test]
 fn fail_no_extra_verbose() {
     let p = project("foo")
         .file("Cargo.toml", r#"
