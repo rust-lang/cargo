@@ -512,6 +512,40 @@ fn only_dot_files_ok() {
 }
 
 #[test]
+fn random_files_ok() {
+    setup();
+
+    VendorPackage::new("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/lib.rs", "")
+        .build();
+    VendorPackage::new("bar")
+        .file("foo", "")
+        .file("../test", "")
+        .build();
+
+    let p = project("bar")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [dependencies]
+            foo = "0.1.0"
+        "#)
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+}
+
+#[test]
 fn git_lock_file_doesnt_change() {
 
     let git = git::new("git", |p| {

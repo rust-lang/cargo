@@ -97,23 +97,16 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             // when a dir is removed from a different checkout. Sometimes a
             // mostly-empty dir is left behind.
             //
-            // To help Cargo work by default in more cases we try to handle this
-            // case by default. If the directory looks like it only has dotfiles
-            // in it (or no files at all) then we skip it.
+            // Additionally vendor directories are sometimes accompanied with
+            // readme files and other auxiliary information not too interesting
+            // to Cargo.
             //
-            // In general we don't want to skip completely malformed directories
-            // to help with debugging, so we don't just ignore errors in
-            // `update` below.
-            let mut only_dotfile = true;
-            for entry in path.read_dir()?.filter_map(|e| e.ok()) {
-                if let Some(s) = entry.file_name().to_str() {
-                    if s.starts_with('.') {
-                        continue
-                    }
-                }
-                only_dotfile = false;
-            }
-            if only_dotfile {
+            // To help handle all this we only try processing folders with a
+            // `Cargo.toml` in them. This has the upside of being pretty
+            // flexible with the contents of vendor directories but has the
+            // downside of accidentally misconfigured vendor directories
+            // silently returning less crates.
+            if !path.join("Cargo.toml").exists() {
                 continue
             }
 
