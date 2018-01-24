@@ -410,6 +410,10 @@ impl<'a> Key<'a> {
             // them, so we don't include this dependency edge in the job graph.
             if self.target.is_test() && unit.target.is_bin() {
                 None
+            } else if unit.profile.doc {
+                // Docs don't need to be built in any specific order, so we
+                // also exclude these edges from the job graph.
+                None
             } else {
                 Some(Key::new(unit))
             }
