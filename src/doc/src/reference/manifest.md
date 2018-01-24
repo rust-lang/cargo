@@ -302,6 +302,8 @@ codegen-units = 1  # if > 1 enables parallel code generation which improves
                    # Passes `-C codegen-units`. Ignored when `lto = true`.
 panic = 'unwind'   # panic strategy (`-C panic=...`), can also be 'abort'
 incremental = true # whether or not incremental compilation is enabled
+overflow-checks = true # use overflow checks for integer arithmetic.
+                   # Passes the `-C overflow-checks=...` flag to the compiler.
 
 # The release profile, used for `cargo build --release`.
 [profile.release]
@@ -313,6 +315,7 @@ debug-assertions = false
 codegen-units = 1
 panic = 'unwind'
 incremental = false
+overflow-checks = false
 
 # The testing profile, used for `cargo test`.
 [profile.test]
@@ -324,6 +327,7 @@ debug-assertions = true
 codegen-units = 1
 panic = 'unwind'
 incremental = true
+overflow-checks = true
 
 # The benchmarking profile, used for `cargo bench` and `cargo test --release`.
 [profile.bench]
@@ -335,6 +339,7 @@ debug-assertions = false
 codegen-units = 1
 panic = 'unwind'
 incremental = false
+overflow-checks = false
 
 # The documentation profile, used for `cargo doc`.
 [profile.doc]
@@ -346,6 +351,7 @@ debug-assertions = true
 codegen-units = 1
 panic = 'unwind'
 incremental = true
+overflow-checks = true
 ```
 
 ### The `[features]` section
@@ -613,8 +619,8 @@ compiled when you run your tests to protect them from bitrotting.
 You can run individual executable examples with the command `cargo run --example
 <example-name>`.
 
-Specify `crate-type` to make an example be compiled as a library (additional 
-information about crate types is available in 
+Specify `crate-type` to make an example be compiled as a library (additional
+information about crate types is available in
 [the Cargo reference](https://doc.rust-lang.org/reference/linkage.html)):
 
 ```toml
