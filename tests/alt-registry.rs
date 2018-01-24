@@ -3,8 +3,10 @@ extern crate hamcrest;
 
 use cargotest::ChannelChanger;
 use cargotest::support::registry::{self, Package, alt_api_path};
-use cargotest::support::{project, execs};
+use cargotest::support::{paths, project, execs};
 use hamcrest::assert_that;
+use std::fs::File;
+use std::io::Write;
 
 #[test]
 fn is_feature_gated() {
@@ -422,4 +424,36 @@ fn publish_with_crates_io_dep() {
     assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
                  .arg("--registry").arg("alternative").arg("-Zunstable-options"),
                 execs().with_status(0));
+}
+
+#[test]
+fn credentials_in_url_forbidden() {
+    registry::init();
+
+    let config = paths::home().join(".cargo/config");
+
+    File::create(config)
+        .unwrap()
+        .write_all(br#"
+        [registries.alternative]
+        index = "ssh://git:secret@foobar.com"
+        "#)
+        .unwrap();
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["alternative-registries"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("publish").masquerade_as_nightly_cargo()
+                 .arg("--registry").arg("alternative").arg("-Zunstable-options"),
+                execs().with_status(101)
+                    .with_stderr_contains("error: Registry URLs may not contain credentials"));
 }
