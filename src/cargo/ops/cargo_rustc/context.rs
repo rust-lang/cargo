@@ -940,7 +940,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             ret.push(Unit {
                 pkg: dep,
                 target: lib,
-                profile: self.lib_profile(),
+                profile: self.lib_or_check_profile(unit, lib),
                 kind: unit.kind.for_target(lib),
             });
             if self.build_config.doc_all {
@@ -1056,6 +1056,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     pub fn lib_or_check_profile(&self, unit: &Unit, target: &Target) -> &'a Profile {
         if unit.profile.check && !target.is_custom_build() && !target.for_host() {
+            &self.profiles.check
+        } else if unit.profile.doc && !unit.profile.test &&
+                !target.is_custom_build() && !target.for_host() {
             &self.profiles.check
         } else {
             self.lib_profile()
