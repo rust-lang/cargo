@@ -55,6 +55,7 @@ impl<T> LazyCell<T> {
     }
 
     /// Consumes this `LazyCell`, returning the underlying value.
+    #[allow(unused_unsafe)]
     pub fn into_inner(self) -> Option<T> {
         unsafe {
             self.inner.into_inner()
