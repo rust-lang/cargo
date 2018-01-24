@@ -672,7 +672,7 @@ impl TomlManifest {
         let include = project.include.clone().unwrap_or_default();
 
         let summary = Summary::new(pkgid, deps, me.features.clone()
-            .unwrap_or_else(BTreeMap::new))?;
+            .unwrap_or_else(BTreeMap::new), project.links.clone())?;
         let metadata = ManifestMetadata {
             description: project.description.clone(),
             homepage: project.homepage.clone(),
