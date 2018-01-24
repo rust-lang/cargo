@@ -22,12 +22,14 @@ struct Inner {
     dependencies: Vec<Dependency>,
     features: BTreeMap<String, Vec<String>>,
     checksum: Option<String>,
+    links: Option<String>,
 }
 
 impl Summary {
     pub fn new(pkg_id: PackageId,
                dependencies: Vec<Dependency>,
-               features: BTreeMap<String, Vec<String>>) -> CargoResult<Summary> {
+               features: BTreeMap<String, Vec<String>>,
+               links: Option<String>) -> CargoResult<Summary> {
         for dep in dependencies.iter() {
             if features.get(dep.name()).is_some() {
                 bail!("Features and dependencies cannot have the \
@@ -66,9 +68,10 @@ impl Summary {
         Ok(Summary {
             inner: Rc::new(Inner {
                 package_id: pkg_id,
-                dependencies: dependencies,
-                features: features,
+                dependencies,
+                features,
                 checksum: None,
+                links,
             }),
         })
     }
@@ -82,6 +85,9 @@ impl Summary {
     pub fn checksum(&self) -> Option<&str> {
         self.inner.checksum.as_ref().map(|s| &s[..])
     }
+    pub fn links(&self) -> Option<&str> {
+        self.inner.links.as_ref().map(|s| &s[..])
+    }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
         Rc::make_mut(&mut self.inner).package_id = id;
@@ -94,7 +100,7 @@ impl Summary {
     }
 
     pub fn map_dependencies<F>(mut self, f: F) -> Summary
-                               where F: FnMut(Dependency) -> Dependency {
+        where F: FnMut(Dependency) -> Dependency {
         {
             let slot = &mut Rc::make_mut(&mut self.inner).dependencies;
             let deps = mem::replace(slot, Vec::new());
