@@ -552,7 +552,13 @@ impl Config {
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         Ok(match self.get_string(&format!("registries.{}.index", registry))? {
-            Some(index) => index.val.to_url()?,
+            Some(index) => {
+                let url = index.val.to_url()?;
+                if url.username() != "" || url.password().is_some() {
+                    bail!("Registry URLs may not contain credentials");
+                }
+                url
+            }
             None => bail!("No index found for registry: `{}`", registry),
         })
     }
