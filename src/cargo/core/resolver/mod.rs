@@ -23,7 +23,9 @@
 //! * Never try to activate a crate version which is incompatible. This means we
 //!   only try crates which will actually satisfy a dependency and we won't ever
 //!   try to activate a crate that's semver compatible with something else
-//!   activated (as we're only allowed to have one).
+//!   activated (as we're only allowed to have one) nor try to activate a crate
+//!   that has the same links attribute as something else
+//!   activated.
 //! * Always try to activate the highest version crate first. The default
 //!   dependency in Cargo (e.g. when you write `foo = "0.1.2"`) is
 //!   semver-compatible, so selecting the highest version possible will allow us
@@ -376,7 +378,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
         resolve_features: HashMap::new(),
         resolve_replacements: RcList::new(),
         activations: HashMap::new(),
-        replacements: replacements,
+        replacements,
         warnings: RcList::new(),
     };
     let _p = profile::start("resolving");
@@ -476,7 +478,7 @@ impl<T> RcVecIter<T> {
     fn new(vec: Rc<Vec<T>>) -> RcVecIter<T> {
         RcVecIter {
             rest: 0..vec.len(),
-            vec: vec,
+            vec,
         }
     }
 }
@@ -564,19 +566,21 @@ struct RemainingCandidates {
 }
 
 impl RemainingCandidates {
-    fn next(&mut self, prev_active: &[Summary]) -> Option<Candidate> {
+    fn next(&mut self, prev_active: &[Summary], links: &HashSet<&str>) -> Option<Candidate> {
         // Filter the set of candidates based on the previously activated
         // versions for this dependency. We can actually use a version if it
         // precisely matches an activated version or if it is otherwise
         // incompatible with all other activated versions. Note that we
         // define "compatible" here in terms of the semver sense where if
         // the left-most nonzero digit is the same they're considered
-        // compatible.
+        // compatible unless we have a `*-sys` crate (defined by having a
+        // linked attribute) then we can only have one version.
         self.remaining.by_ref().map(|p| p.1).find(|b| {
-            prev_active.iter().any(|a| *a == b.summary) ||
-                prev_active.iter().all(|a| {
-                    !compatible(a.version(), b.summary.version())
-                })
+            prev_active.iter().any(|a| *a == b.summary)
+                || (b.summary.links().map(|l| !links.contains(l)).unwrap_or(true)
+                    && prev_active
+                        .iter()
+                        .all(|a| !compatible(a.version(), b.summary.version())))
         })
     }
 }
@@ -664,6 +668,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
 
         let (next, has_another, remaining_candidates) = {
             let prev_active = cx.prev_active(&dep);
+            let prev_links = cx.prev_links();
             trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
                    candidates.len());
             trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
@@ -671,8 +676,8 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
             let mut candidates = RemainingCandidates {
                 remaining: RcVecIter::new(Rc::clone(&candidates)),
             };
-            (candidates.next(prev_active),
-             candidates.clone().next(prev_active).is_some(),
+            (candidates.next(prev_active, &prev_links),
+             candidates.clone().next(prev_active, &prev_links).is_some(),
              candidates)
         };
 
@@ -682,7 +687,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         // 1. The version matches the dependency requirement listed for this
         //    package
         // 2. There are no activated versions for this package which are
-        //    semver-compatible, or there's an activated version which is
+        //    semver/links-compatible, or there's an activated version which is
         //    precisely equal to `candidate`.
         //
         // This means that we're going to attempt to activate each candidate in
@@ -697,7 +702,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                         cur,
                         context_backup: Context::clone(&cx),
                         deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
-                        remaining_candidates: remaining_candidates,
+                        remaining_candidates,
                         parent: Summary::clone(&parent),
                         dep: Dependency::clone(&dep),
                         features: Rc::clone(&features),
@@ -758,8 +763,9 @@ fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
     while let Some(mut frame) = backtrack_stack.pop() {
         let (next, has_another) = {
             let prev_active = frame.context_backup.prev_active(&frame.dep);
-            (frame.remaining_candidates.next(prev_active),
-             frame.remaining_candidates.clone().next(prev_active).is_some())
+            let prev_links = frame.context_backup.prev_links();
+            (frame.remaining_candidates.next(prev_active, &prev_links),
+             frame.remaining_candidates.clone().next(prev_active, &prev_links).is_some())
         };
         if let Some(candidate) = next {
             *cur = frame.cur;
@@ -1033,9 +1039,9 @@ fn build_requirements<'a, 'b: 'a>(s: &'a Summary, method: &'b Method)
 }
 
 impl<'a> Context<'a> {
-    // Activate this summary by inserting it into our list of known activations.
-    //
-    // Returns if this summary with the given method is already activated.
+    /// Activate this summary by inserting it into our list of known activations.
+    ///
+    /// Returns true if this summary with the given method is already activated.
     fn flag_activated(&mut self,
                       summary: &Summary,
                       method: &Method) -> bool {
@@ -1176,6 +1182,14 @@ impl<'a> Context<'a> {
             .and_then(|v| v.get(dep.source_id()))
             .map(|v| &v[..])
             .unwrap_or(&[])
+    }
+
+    fn prev_links(&self) -> HashSet<&str> {
+        self.activations.iter()
+            .flat_map(|(_, v)| v.iter())
+            .flat_map(|(_, v)| v.iter())
+            .filter_map(|s| s.links())
+            .collect()
     }
 
     /// Return all dependencies and the features we want from them.
