@@ -82,6 +82,10 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             let entry = entry?;
             let path = entry.path();
 
+            if !path.is_dir() {
+                continue
+            }
+
             // Ignore hidden/dot directories as they typically don't contain
             // crates and otherwise may conflict with a VCS
             // (rust-lang/cargo#3414).
