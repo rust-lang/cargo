@@ -288,13 +288,12 @@ fn cargo_bench_failing_test() {
 
     // Force libtest into serial execution so that the test header will be printed.
     assert_that(p.cargo("bench").arg("--").arg("--test-threads=1"),
-                execs().with_stdout_contains("test bench_hello ... ")
-                       .with_either_contains(format!("\
-[COMPILING] foo v0.5.0 ({})
+                execs().with_stdout_contains("test bench_hello ...[..]")
+                       .with_stderr_contains(format!("\
+[COMPILING] foo v0.5.0 ({})[..]
 [FINISHED] release [optimized] target(s) in [..]
-[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]
-thread '[..]' panicked at 'assertion failed: \
-    `(left == right)`[..]", p.url()))
+[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]", p.url()))
+                       .with_either_contains("[..]thread '[..]' panicked at 'assertion failed: `(left == right)`[..]")
                        .with_either_contains("[..]left: `\"hello\"`[..]")
                        .with_either_contains("[..]right: `\"nope\"`[..]")
                        .with_either_contains("[..]src[/]main.rs:15[..]")
