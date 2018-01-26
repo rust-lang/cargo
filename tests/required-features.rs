@@ -552,6 +552,7 @@ fn install_default_features() {
 
     assert_that(p.cargo("install").arg("--no-default-features"),
                 execs().with_status(101).with_stderr(format!("\
+[CHECKING] foo v0.0.1 ([..])
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [ERROR] no binaries are available for install using the selected features
@@ -566,6 +567,7 @@ fn install_default_features() {
 
     assert_that(p.cargo("install").arg("--bin=foo").arg("--no-default-features"),
                 execs().with_status(101).with_stderr(format!("\
+[CHECKING] foo v0.0.1 ([..])
 [INSTALLING] foo v0.0.1 ([..])
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
     `[..]target`
@@ -584,6 +586,7 @@ Consider enabling them by passing e.g. `--features=\"a\"`
 
     assert_that(p.cargo("install").arg("--example=foo").arg("--no-default-features"),
                 execs().with_status(101).with_stderr(format!("\
+[CHECKING] foo v0.0.1 ([..])
 [INSTALLING] foo v0.0.1 ([..])
 [ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
     `[..]target`
@@ -666,6 +669,7 @@ fn install_multiple_required_features() {
 
     assert_that(p.cargo("install").arg("--no-default-features"),
                 execs().with_status(101).with_stderr("\
+[CHECKING] foo v0.0.1 ([..])
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [ERROR] no binaries are available for install using the selected features
@@ -871,6 +875,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
     // install
     assert_that(p.cargo("install"),
                 execs().with_status(101).with_stderr(format!("\
+[CHECKING] foo v0.0.1 ([..])
 [INSTALLING] foo v0.0.1 ([..])
 [FINISHED] release [optimized] target(s) in [..]
 [ERROR] no binaries are available for install using the selected features
