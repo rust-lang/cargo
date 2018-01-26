@@ -16,7 +16,7 @@ use core::{SourceId, Profiles, PackageIdSpec, GitReference, WorkspaceConfig, Wor
 use core::{Summary, Manifest, Target, Dependency, PackageId};
 use core::{EitherManifest, VirtualManifest, Features, Feature};
 use core::dependency::{Kind, Platform};
-use core::manifest::{LibKind, Profile, ManifestMetadata};
+use core::manifest::{LibKind, Profile, ManifestMetadata, Lto};
 use sources::CRATES_IO;
 use util::paths;
 use util::{self, ToUrl, Config};
@@ -327,7 +327,7 @@ impl<'de> de::Deserialize<'de> for U32OrBool {
 pub struct TomlProfile {
     #[serde(rename = "opt-level")]
     opt_level: Option<TomlOptLevel>,
-    lto: Option<bool>,
+    lto: Option<StringOrBool>,
     #[serde(rename = "codegen-units")]
     codegen_units: Option<u32>,
     debug: Option<U32OrBool>,
@@ -1150,7 +1150,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
 
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
         let &TomlProfile {
-            ref opt_level, lto, codegen_units, ref debug, debug_assertions, rpath,
+            ref opt_level, ref lto, codegen_units, ref debug, debug_assertions, rpath,
             ref panic, ref overflow_checks, ref incremental,
         } = match toml {
             Some(toml) => toml,
@@ -1164,7 +1164,11 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
         };
         Profile {
             opt_level: opt_level.clone().unwrap_or(TomlOptLevel(profile.opt_level)).0,
-            lto: lto.unwrap_or(profile.lto),
+            lto: match *lto {
+                Some(StringOrBool::Bool(b)) => Lto::Bool(b),
+                Some(StringOrBool::String(ref n)) => Lto::Named(n.clone()),
+                None => profile.lto,
+            },
             codegen_units: codegen_units,
             rustc_args: None,
             rustdoc_args: None,
