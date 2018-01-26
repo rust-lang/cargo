@@ -156,7 +156,7 @@ impl ser::Serialize for TargetKind {
 pub struct Profile {
     pub opt_level: String,
     #[serde(skip_serializing)]
-    pub lto: bool,
+    pub lto: Lto,
     #[serde(skip_serializing)]
     pub codegen_units: Option<u32>,    // None = use rustc default
     #[serde(skip_serializing)]
@@ -179,6 +179,12 @@ pub struct Profile {
     pub panic: Option<String>,
     #[serde(skip_serializing)]
     pub incremental: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+pub enum Lto {
+    Bool(bool),
+    Named(String),
 }
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
@@ -702,7 +708,7 @@ impl Default for Profile {
     fn default() -> Profile {
         Profile {
             opt_level: "0".to_string(),
-            lto: false,
+            lto: Lto::Bool(false),
             codegen_units: None,
             rustc_args: None,
             rustdoc_args: None,

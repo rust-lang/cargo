@@ -986,3 +986,29 @@ fn workspace_produces_rlib() {
     assert_that(&p.root().join("target/debug/libfoo.rlib"), existing_file());
 
 }
+
+#[test]
+fn thin_lto_works() {
+    if !cargotest::is_nightly() {
+        return
+    }
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "top"
+            version = "0.5.0"
+            authors = []
+
+            [profile.release]
+            lto = 'thin'
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("build").arg("--release").arg("-v"),
+                execs().with_stderr("\
+[COMPILING] top [..]
+[RUNNING] `rustc [..] -C lto=thin [..]`
+[FINISHED] [..]
+"));
+}
