@@ -37,6 +37,7 @@ fn simple() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.1 (registry [..])
+[CHECKING] foo v0.0.1
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
@@ -63,11 +64,13 @@ fn multiple_pkgs() {
                 execs().with_status(101).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.1 (registry `file://[..]`)
+[CHECKING] foo v0.0.1
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] {home}[..]bin[..]foo[..]
 [DOWNLOADING] bar v0.0.2 (registry `file://[..]`)
+[CHECKING] bar v0.0.2
 [INSTALLING] bar v0.0.2
 [COMPILING] bar v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
@@ -102,6 +105,7 @@ fn pick_max_version() {
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] registry `[..]`
 [DOWNLOADING] foo v0.0.2 (registry [..])
+[CHECKING] foo v0.0.2
 [INSTALLING] foo v0.0.2
 [COMPILING] foo v0.0.2
 [FINISHED] release [optimized] target(s) in [..]
@@ -212,7 +216,7 @@ fn install_path() {
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(cargo_process("install").arg("--path").arg(".").cwd(p.root()),
                 execs().with_status(101).with_stderr("\
-[INSTALLING] foo v0.1.0 [..]
+[CHECKING] foo v0.1.0 [..]
 [ERROR] binary `foo[..]` already exists in destination as part of `foo v0.1.0 [..]`
 Add --force to overwrite
 "));
@@ -378,7 +382,7 @@ fn no_binaries() {
 
     assert_that(cargo_process("install").arg("--path").arg(p.root()).arg("foo"),
                 execs().with_status(101).with_stderr("\
-[INSTALLING] foo [..]
+[CHECKING] foo [..]
 [ERROR] specified package has no binaries
 "));
 }
@@ -419,10 +423,57 @@ fn install_twice() {
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
                 execs().with_status(101).with_stderr("\
-[INSTALLING] foo v0.1.0 [..]
+[CHECKING] foo v0.1.0 ([..])
 [ERROR] binary `foo-bin1[..]` already exists in destination as part of `foo v0.1.0 ([..])`
 binary `foo-bin2[..]` already exists in destination as part of `foo v0.1.0 ([..])`
 Add --force to overwrite
+"));
+}
+
+#[test]
+fn install_reinstall() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(cargo_process("install").arg("--path").arg("--reinstall").arg(p.root()),
+                execs().with_status(101));
+
+    assert_that(cargo_process("install").arg("--path").arg(p.root()),
+                execs().with_status(0));
+
+    let p = project("foo2")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.2.0"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(cargo_process("install").arg("--reinstall").arg("--path").arg(p.root()),
+                execs().with_status(0).with_stderr(&format!("\
+[REMOVING] [..]
+[CHECKING] foo v0.2.0 ([..])
+[INSTALLING] foo v0.2.0 ([..])
+[COMPILING] foo v0.2.0 ([..])
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] {home}[..]bin[..]foo[..]
+warning: be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        home = cargo_home().display())));
+
+    assert_that(cargo_process("install").arg("--list"),
+                execs().with_status(0).with_stdout("\
+foo v0.2.0 ([..]):
+    foo[..]
 "));
 }
 
@@ -453,6 +504,7 @@ fn install_force() {
 
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stderr(&format!("\
+[CHECKING] foo v0.2.0 ([..])
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
@@ -497,6 +549,7 @@ fn install_force_partial_overlap() {
 
     assert_that(cargo_process("install").arg("--force").arg("--path").arg(p.root()),
                 execs().with_status(0).with_stderr(&format!("\
+[CHECKING] foo v0.2.0 ([..])
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
@@ -549,6 +602,7 @@ fn install_force_bin() {
                     .arg("--path")
                     .arg(p.root()),
                 execs().with_status(0).with_stderr(&format!("\
+[CHECKING] foo v0.2.0 ([..])
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
@@ -606,6 +660,7 @@ fn git_repo() {
     assert_that(cargo_process("install").arg("--locked").arg("--git").arg(p.url().to_string()),
                 execs().with_status(0).with_stderr(&format!("\
 [UPDATING] git repository `[..]`
+[CHECKING] foo v0.1.0 ([..])
 [INSTALLING] foo v0.1.0 ([..])
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] release [optimized] target(s) in [..]
@@ -776,7 +831,9 @@ fn do_not_rebuilds_on_local_install() {
     assert_that(p.cargo("build").arg("--release"),
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--path").arg(p.root()),
-                execs().with_status(0).with_stderr("[INSTALLING] [..]
+                execs().with_status(0).with_stderr("\
+[CHECKING] [..]
+[INSTALLING] [..]
 [FINISHED] release [optimized] target(s) in [..]
 [INSTALLING] [..]
 warning: be sure to add `[..]` to your PATH to be able to run the installed binaries

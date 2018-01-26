@@ -19,6 +19,7 @@ pub struct Options {
     flag_root: Option<String>,
     flag_list: bool,
     flag_force: bool,
+    flag_reinstall: bool,
     flag_frozen: bool,
     flag_locked: bool,
 
@@ -55,6 +56,7 @@ Specifying what crate to install:
 Build and install options:
     -h, --help                Print this message
     -j N, --jobs N            Number of parallel jobs, defaults to # of CPUs
+    -r, --reinstall           Reinstall the package
     -f, --force               Force overwriting existing crates or binaries
     --features FEATURES       Space-separated list of features to activate
     --all-features            Build all available features
@@ -93,8 +95,9 @@ one of them, and if you'd rather install examples the `--example` argument can
 be used as well.
 
 By default cargo will refuse to overwrite existing binaries. The `--force` flag
-enables overwriting existing binaries. Thus you can reinstall a crate with
-`cargo install --force <crate>`.
+enables overwriting existing binaries. Thus you can install new crate with
+overwriting old one with `cargo install --force <crate>`. However, if you want
+just to reinstall the crate, you `cargo install --reinstall <crate>`.
 
 As a special convenience, omitting the <crate> specification entirely will
 install the crate in the current directory. That is, `install` is equivalent to
@@ -169,7 +172,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     if options.flag_list {
         ops::install_list(root, config)?;
     } else {
-        ops::install(root, krates, &source, vers, &compile_opts, options.flag_force)?;
+        ops::install(root, krates, &source, vers, &compile_opts, options.flag_force, options.flag_reinstall)?;
     }
     Ok(())
 }

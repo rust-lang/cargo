@@ -18,6 +18,8 @@ use util::{Config, internal};
 use util::{Filesystem, FileLock};
 use util::errors::{CargoResult, CargoResultExt};
 
+type Duplicates = BTreeMap<String, Option<PackageId>>;
+
 #[derive(Deserialize, Serialize)]
 #[serde(untagged)]
 enum CrateListing {
@@ -57,13 +59,14 @@ pub fn install(root: Option<&str>,
                source_id: &SourceId,
                vers: Option<&str>,
                opts: &ops::CompileOptions,
-               force: bool) -> CargoResult<()> {
+               force: bool,
+               reinstall: bool) -> CargoResult<()> {
     let root = resolve_root(root, opts.config)?;
     let map = SourceConfigMap::new(opts.config)?;
 
     let (installed_anything, scheduled_error) = if krates.len() <= 1 {
         install_one(&root, &map, krates.into_iter().next(), source_id, vers, opts,
-                    force, true)?;
+                    force, reinstall, true)?;
         (true, false)
     } else {
         let mut succeeded = vec![];
@@ -73,7 +76,7 @@ pub fn install(root: Option<&str>,
             let root = root.clone();
             let map = map.clone();
             match install_one(&root, &map, Some(krate), source_id, vers,
-                              opts, force, first) {
+                              opts, force, reinstall, first) {
                 Ok(()) => succeeded.push(krate),
                 Err(e) => {
                     ::handle_error(e, &mut opts.config.shell());
@@ -127,6 +130,7 @@ fn install_one(root: &Filesystem,
                vers: Option<&str>,
                opts: &ops::CompileOptions,
                force: bool,
+               reinstall: bool,
                is_first_install: bool) -> CargoResult<()> {
 
     let config = opts.config;
@@ -179,7 +183,11 @@ fn install_one(root: &Filesystem,
     };
     let pkg = ws.current()?;
 
-    config.shell().status("Installing", pkg)?;
+    if reinstall {
+        uninstall_one(root.to_owned(), pkg.name(), &Vec::default(), config)?;
+    }
+
+    config.shell().status("Checking", pkg)?;
 
     // Preflight checks to check up front whether we'll overwrite something.
     // We have to check this again afterwards, but may as well avoid building
@@ -190,6 +198,8 @@ fn install_one(root: &Filesystem,
         let dst = metadata.parent().join("bin");
         check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
     }
+
+    config.shell().status("Installing", pkg)?;
 
     let compile = ops::compile_ws(&ws,
                                   Some(source),
@@ -452,7 +462,7 @@ fn check_overwrites(dst: &Path,
                     pkg: &Package,
                     filter: &ops::CompileFilter,
                     prev: &CrateListingV1,
-                    force: bool) -> CargoResult<BTreeMap<String, Option<PackageId>>> {
+                    force: bool) -> CargoResult<Duplicates> {
     // If explicit --bin or --example flags were passed then those'll
     // get checked during cargo_compile, we only care about the "build
     // everything" case here
@@ -480,7 +490,7 @@ fn check_overwrites(dst: &Path,
 fn find_duplicates(dst: &Path,
                    pkg: &Package,
                    filter: &ops::CompileFilter,
-                   prev: &CrateListingV1) -> BTreeMap<String, Option<PackageId>> {
+                   prev: &CrateListingV1) -> Duplicates {
     let check = |name: String| {
         // Need to provide type, works around Rust Issue #93349
         let name = format!("{}{}", name, env::consts::EXE_SUFFIX);
@@ -513,7 +523,7 @@ fn find_duplicates(dst: &Path,
 
             all_bins.iter().chain(all_examples.iter())
                            .filter_map(|t| check(t.clone()))
-                           .collect::<BTreeMap<String, Option<PackageId>>>()
+                           .collect::<Duplicates>()
         }
     }
 }

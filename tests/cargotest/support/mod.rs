@@ -890,6 +890,7 @@ fn substitute_macros(input: &str) -> String {
         ("[UPLOADING]",   "   Uploading"),
         ("[VERIFYING]",   "   Verifying"),
         ("[ARCHIVING]",   "   Archiving"),
+        ("[CHECKING]",    "    Checking"),
         ("[INSTALLING]",  "  Installing"),
         ("[REPLACING]",   "   Replacing"),
         ("[UNPACKING]",   "   Unpacking"),
