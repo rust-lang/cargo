@@ -347,11 +347,12 @@ enum GraphNode {
 // possible.
 #[derive(Clone)]
 struct Context<'a> {
-    // TODO: Both this and the map below are super expensive to clone. We should
+    // TODO: Both this and the map two below are super expensive to clone. We should
     //       switch to persistent hash maps if we can at some point or otherwise
     //       make these much cheaper to clone in general.
     activations: Activations,
     resolve_features: HashMap<PackageId, HashSet<String>>,
+    links: HashSet<String>,
 
     // These are two cheaply-cloneable lists (O(1) clone) which are effectively
     // hash maps but are built up as "construction lists". We'll iterate these
@@ -376,6 +377,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
     let cx = Context {
         resolve_graph: RcList::new(),
         resolve_features: HashMap::new(),
+        links: HashSet::new(),
         resolve_replacements: RcList::new(),
         activations: HashMap::new(),
         replacements,
@@ -566,7 +568,7 @@ struct RemainingCandidates {
 }
 
 impl RemainingCandidates {
-    fn next(&mut self, prev_active: &[Summary], links: &HashSet<&str>) -> Option<Candidate> {
+    fn next(&mut self, prev_active: &[Summary], links: &HashSet<String>) -> Option<Candidate> {
         // Filter the set of candidates based on the previously activated
         // versions for this dependency. We can actually use a version if it
         // precisely matches an activated version or if it is otherwise
@@ -668,7 +670,6 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
 
         let (next, has_another, remaining_candidates) = {
             let prev_active = cx.prev_active(&dep);
-            let prev_links = cx.prev_links();
             trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
                    candidates.len());
             trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
@@ -676,8 +677,8 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
             let mut candidates = RemainingCandidates {
                 remaining: RcVecIter::new(Rc::clone(&candidates)),
             };
-            (candidates.next(prev_active, &prev_links),
-             candidates.clone().next(prev_active, &prev_links).is_some(),
+            (candidates.next(prev_active, &cx.links),
+             candidates.clone().next(prev_active, &cx.links).is_some(),
              candidates)
         };
 
@@ -763,9 +764,8 @@ fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
     while let Some(mut frame) = backtrack_stack.pop() {
         let (next, has_another) = {
             let prev_active = frame.context_backup.prev_active(&frame.dep);
-            let prev_links = frame.context_backup.prev_links();
-            (frame.remaining_candidates.next(prev_active, &prev_links),
-             frame.remaining_candidates.clone().next(prev_active, &prev_links).is_some())
+            (frame.remaining_candidates.next(prev_active, &frame.context_backup.links),
+             frame.remaining_candidates.clone().next(prev_active, &frame.context_backup.links).is_some())
         };
         if let Some(candidate) = next {
             *cur = frame.cur;
@@ -1053,6 +1053,9 @@ impl<'a> Context<'a> {
                        .or_insert(Vec::new());
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.push(GraphNode::Add(id.clone()));
+            if let Some(link) = summary.links() {
+                self.links.insert(link.to_owned());
+            }
             prev.push(summary.clone());
             return false
         }
@@ -1182,14 +1185,6 @@ impl<'a> Context<'a> {
             .and_then(|v| v.get(dep.source_id()))
             .map(|v| &v[..])
             .unwrap_or(&[])
-    }
-
-    fn prev_links(&self) -> HashSet<&str> {
-        self.activations.iter()
-            .flat_map(|(_, v)| v.iter())
-            .flat_map(|(_, v)| v.iter())
-            .filter_map(|s| s.links())
-            .collect()
     }
 
     /// Return all dependencies and the features we want from them.
