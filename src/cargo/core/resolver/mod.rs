@@ -440,13 +440,13 @@ fn activate(cx: &mut Context,
                                            candidate.summary.package_id().clone()));
     }
 
-    let activated = cx.flag_activated(&candidate.summary, method);
+    let activated = cx.flag_activated(&candidate.summary, method)?;
 
     let candidate = match candidate.replace {
         Some(replace) => {
             cx.resolve_replacements.push((candidate.summary.package_id().clone(),
                                           replace.package_id().clone()));
-            if cx.flag_activated(&replace, method) && activated {
+            if cx.flag_activated(&replace, method)? && activated {
                 return Ok(None);
             }
             trace!("activating {} (replacing {})", replace.package_id(),
@@ -1044,7 +1044,7 @@ impl<'a> Context<'a> {
     /// Returns true if this summary with the given method is already activated.
     fn flag_activated(&mut self,
                       summary: &Summary,
-                      method: &Method) -> bool {
+                      method: &Method) -> CargoResult<bool> {
         let id = summary.package_id();
         let prev = self.activations
                        .entry(id.name().to_string())
@@ -1054,28 +1054,30 @@ impl<'a> Context<'a> {
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.push(GraphNode::Add(id.clone()));
             if let Some(link) = summary.links() {
-                self.links.insert(link.to_owned());
+                ensure!(self.links.insert(link.to_owned()),
+                "Attempting to resolve a with more then one crate with the links={}. \n\
+                 This will not build as is. Consider rebuilding the .lock file.", link);
             }
             prev.push(summary.clone());
-            return false
+            return Ok(false)
         }
         debug!("checking if {} is already activated", summary.package_id());
         let (features, use_default) = match *method {
             Method::Required { features, uses_default_features, .. } => {
                 (features, uses_default_features)
             }
-            Method::Everything => return false,
+            Method::Everything => return Ok(false),
         };
 
         let has_default_feature = summary.features().contains_key("default");
-        match self.resolve_features.get(id) {
+        Ok(match self.resolve_features.get(id) {
             Some(prev) => {
                 features.iter().all(|f| prev.contains(f)) &&
                     (!use_default || prev.contains("default") ||
                      !has_default_feature)
             }
             None => features.is_empty() && (!use_default || !has_default_feature)
-        }
+        })
     }
 
     fn build_deps(&mut self,
