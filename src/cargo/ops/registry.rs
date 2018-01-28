@@ -159,7 +159,7 @@ fn transmit(config: &Config,
     let ManifestMetadata {
         ref authors, ref description, ref homepage, ref documentation,
         ref keywords, ref readme, ref repository, ref license, ref license_file,
-        ref categories, ref badges,
+        ref categories, ref badges, ref links,
     } = *manifest.metadata();
     let readme_content = match *readme {
         Some(ref readme) => Some(paths::read(&pkg.root().join(readme))?),
@@ -194,6 +194,7 @@ fn transmit(config: &Config,
         license: license.clone(),
         license_file: license_file.clone(),
         badges: badges.clone(),
+        links: links.clone(),
     }, tarball);
 
     match publish {

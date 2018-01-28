@@ -77,6 +77,7 @@ pub struct ManifestMetadata {
     pub repository: Option<String>,     // url
     pub documentation: Option<String>,  // url
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
+    pub links: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

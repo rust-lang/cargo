@@ -685,6 +685,7 @@ impl TomlManifest {
             keywords: project.keywords.clone().unwrap_or_default(),
             categories: project.categories.clone().unwrap_or_default(),
             badges: me.badges.clone().unwrap_or_default(),
+            links: project.links.clone(),
         };
 
         let workspace_config = match (me.workspace.as_ref(),
