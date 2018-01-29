@@ -22,7 +22,7 @@ pub use self::registry::{modify_owners, yank, OwnersOptions, PublishOpts};
 pub use self::registry::configure_http_handle;
 pub use self::cargo_fetch::fetch;
 pub use self::cargo_pkgid::pkgid;
-pub use self::resolve::{resolve_ws, resolve_ws_precisely, resolve_with_previous};
+pub use self::resolve::{resolve_ws, resolve_ws_precisely, resolve_ws_with_method, resolve_with_previous};
 pub use self::cargo_output_metadata::{output_metadata, OutputMetadataOptions, ExportInfo};
 
 mod cargo_clean;
