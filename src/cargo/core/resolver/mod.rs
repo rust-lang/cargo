@@ -96,12 +96,24 @@ pub struct DepsNotReplaced<'a> {
 
 #[derive(Clone, Copy)]
 pub enum Method<'a> {
-    Everything,
+    Everything, // equivalent to Required { dev_deps: true, all_features: true, .. }
     Required {
         dev_deps: bool,
         features: &'a [String],
+        all_features: bool,
         uses_default_features: bool,
     },
+}
+
+impl<'r> Method<'r> {
+    pub fn split_features(features: &[String]) -> Vec<String> {
+        features.iter()
+            .flat_map(|s| s.split_whitespace())
+            .flat_map(|s| s.split(','))
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+    }
 }
 
 // Information about the dependencies for a crate, a tuple of:
@@ -731,6 +743,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         let method = Method::Required {
             dev_deps: false,
             features: &features,
+            all_features: false,
             uses_default_features: dep.uses_default_features(),
         };
         trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
@@ -1006,7 +1019,8 @@ fn build_requirements<'a, 'b: 'a>(s: &'a Summary, method: &'b Method)
                                   -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
     match *method {
-        Method::Everything => {
+        Method::Everything |
+        Method::Required { all_features: true, .. } => {
             for key in s.features().keys() {
                 reqs.require_feature(key)?;
             }
@@ -1052,10 +1066,11 @@ impl<'a> Context<'a> {
         }
         debug!("checking if {} is already activated", summary.package_id());
         let (features, use_default) = match *method {
+            Method::Everything |
+            Method::Required { all_features: true, .. } => return false,
             Method::Required { features, uses_default_features, .. } => {
                 (features, uses_default_features)
             }
-            Method::Everything => return false,
         };
 
         let has_default_feature = summary.features().contains_key("default");
