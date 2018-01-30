@@ -77,13 +77,17 @@ impl ToPkgId for (&'static str, &'static str) {
 macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),+]) => ({
         let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
+        let pkgid = $pkgid.to_pkgid();
+        let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().to_string())} else {None};
 
-        Summary::new($pkgid.to_pkgid(), d, BTreeMap::new(), None).unwrap()
+        Summary::new(pkgid, d, BTreeMap::new(), link).unwrap()
     });
 
-    ($pkgid:expr) => (
-        Summary::new($pkgid.to_pkgid(), Vec::new(), BTreeMap::new(), None).unwrap()
-    )
+    ($pkgid:expr) => ({
+        let pkgid = $pkgid.to_pkgid();
+        let link = if pkgid.name().ends_with("-sys") {Some(pkgid.name().to_string())} else {None};
+        Summary::new(pkgid, Vec::new(), BTreeMap::new(), link).unwrap()
+    })
 }
 
 fn registry_loc() -> SourceId {
@@ -92,7 +96,8 @@ fn registry_loc() -> SourceId {
 }
 
 fn pkg(name: &str) -> Summary {
-    Summary::new(pkg_id(name), Vec::new(), BTreeMap::new(), None).unwrap()
+    let link = if name.ends_with("-sys") {Some(name.to_string())} else {None};
+    Summary::new(pkg_id(name), Vec::new(), BTreeMap::new(), link).unwrap()
 }
 
 fn pkg_id(name: &str) -> PackageId {
@@ -108,7 +113,8 @@ fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
 }
 
 fn pkg_loc(name: &str, loc: &str) -> Summary {
-    Summary::new(pkg_id_loc(name, loc), Vec::new(), BTreeMap::new(), None).unwrap()
+    let link = if name.ends_with("-sys") {Some(name.to_string())} else {None};
+    Summary::new(pkg_id_loc(name, loc), Vec::new(), BTreeMap::new(), link).unwrap()
 }
 
 fn dep(name: &str) -> Dependency { dep_req(name, "1.0.0") }
@@ -362,6 +368,33 @@ fn resolving_with_deep_backtracking() {
                                        ("foo", "1.0.0"),
                                        ("bar", "2.0.0"),
                                        ("baz", "1.0.1")])));
+}
+
+#[test]
+fn resolving_with_sys_crates() {
+    // This is based on issues/4902
+    // With `l` a normal library we get 2copies so everyone gets the newest compatible.
+    // But `l-sys` a library with a links attribute we make sure there is only one.
+    let reg = registry(vec![
+        pkg!(("l-sys", "0.9.1")),
+        pkg!(("l-sys", "0.10.0")),
+        pkg!(("l", "0.9.1")),
+        pkg!(("l", "0.10.0")),
+        pkg!(("d", "1.0.0") => [dep_req("l-sys", ">=0.8.0, <=0.10.0"), dep_req("l", ">=0.8.0, <=0.10.0")]),
+        pkg!(("r", "1.0.0") => [dep_req("l-sys", "0.9"), dep_req("l", "0.9")]),
+    ]);
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("d", "1"),
+        dep_req("r", "1"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("d", "1.0.0"),
+                                       ("r", "1.0.0"),
+                                       ("l-sys", "0.9.1"),
+                                       ("l", "0.9.1"),
+                                       ("l", "0.10.0")])));
 }
 
 #[test]
