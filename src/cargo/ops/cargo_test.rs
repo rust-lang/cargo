@@ -120,7 +120,7 @@ fn run_unit_tests(options: &TestOptions,
         let (kind, test, e) = errors.pop().unwrap();
         Ok((Test::UnitTest(kind, test), vec![e]))
     } else {
-        Ok((Test::Multiple, errors.into_iter().map((|(_, _, e)| e)).collect()))
+        Ok((Test::Multiple, errors.into_iter().map(|(_, _, e)| e).collect()))
     }
 }
 
