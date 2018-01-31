@@ -294,7 +294,9 @@ rpath = false      # controls whether compiler should set loader paths.
                    # If true, passes `-C rpath` flag to the compiler.
 lto = false        # Link Time Optimization usually reduces size of binaries
                    # and static libraries. Increases compilation time.
-                   # If true, passes `-C lto` flag to the compiler.
+                   # If true, passes `-C lto` flag to the compiler, and if a
+                   # string is specified like 'thin' then `-C lto=thin` will
+                   # be passed
 debug-assertions = true # controls whether debug assertions are enabled
                    # (e.g. debug_assert!() and arithmetic overflow checks)
 codegen-units = 1  # if > 1 enables parallel code generation which improves
