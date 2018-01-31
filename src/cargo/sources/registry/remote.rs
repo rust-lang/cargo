@@ -156,6 +156,9 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         if self.config.cli_unstable().offline {
             return Ok(());
         }
+        if self.config.cli_unstable().no_index_update {
+            return Ok(());
+        }
 
         // Ensure that we'll actually be able to acquire an HTTP handle later on
         // once we start trying to download crates. This will weed out any
