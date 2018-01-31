@@ -233,6 +233,7 @@ pub struct CliUnstable {
     pub print_im_a_teapot: bool,
     pub unstable_options: bool,
     pub offline: bool,
+    pub no_index_update: bool,
 }
 
 impl CliUnstable {
@@ -264,6 +265,7 @@ impl CliUnstable {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(v)?,
             "unstable-options" => self.unstable_options = true,
             "offline" => self.offline = true,
+            "no-index-update" => self.no_index_update = true,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
