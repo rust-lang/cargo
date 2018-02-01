@@ -257,6 +257,7 @@ fn many_similar_names() {
 }
 
 #[test]
+#[ignore] // unignored on the master branch of cargo
 fn cargo_bench_failing_test() {
     if !is_nightly() { return }
 

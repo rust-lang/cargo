@@ -2,8 +2,9 @@
 extern crate cargotest;
 extern crate hamcrest;
 
+use std::env;
+use std::fs::{self, File};
 use std::io::{Read, Write};
-use std::fs::File;
 
 use cargotest::sleep_ms;
 use cargotest::support::{project, execs, git};
@@ -1805,5 +1806,53 @@ fn cargo_home_at_root_works() {
 
     assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(p.cargo("build").arg("--frozen").env("CARGO_HOME", p.root()),
+                execs().with_status(0));
+}
+
+#[test]
+fn relative_rustc() {
+    let p = project("the_exe")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("src/main.rs", r#"
+            use std::process::Command;
+            use std::env;
+
+            fn main() {
+                let mut cmd = Command::new("rustc");
+                for arg in env::args_os().skip(1) {
+                    cmd.arg(arg);
+                }
+                std::process::exit(cmd.status().unwrap().code().unwrap());
+            }
+        "#)
+        .build();
+    assert_that(p.cargo("build"), execs().with_status(0));
+
+    let src = p.root()
+        .join("target/debug/foo")
+        .with_extension(env::consts::EXE_EXTENSION);
+
+    Package::new("a", "0.1.0").publish();
+
+    let p = project("lib")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "lib"
+            version = "0.1.0"
+
+            [dependencies]
+            a = "0.1"
+        "#)
+        .file("src/lib.rs", "")
+        .build();
+
+    fs::copy(&src, p.root().join(src.file_name().unwrap())).unwrap();
+
+    let file = format!("./foo{}", env::consts::EXE_SUFFIX);
+    assert_that(p.cargo("build").env("RUSTC", &file),
                 execs().with_status(0));
 }
