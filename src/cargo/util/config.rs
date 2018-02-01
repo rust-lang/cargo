@@ -616,7 +616,16 @@ impl Config {
     fn maybe_get_tool(&self, tool: &str) -> CargoResult<Option<PathBuf>> {
         let var = tool.chars().flat_map(|c| c.to_uppercase()).collect::<String>();
         if let Some(tool_path) = env::var_os(&var) {
-            return Ok(Some(PathBuf::from(tool_path)));
+            let maybe_relative = match tool_path.to_str() {
+                Some(s) => s.contains("/") || s.contains("\\"),
+                None => false,
+            };
+            let path = if maybe_relative {
+                self.cwd.join(tool_path)
+            } else {
+                PathBuf::from(tool_path)
+            };
+            return Ok(Some(path))
         }
 
         let var = format!("build.{}", tool);
