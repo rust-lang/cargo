@@ -2,7 +2,7 @@
 
 Cargo downloads your Rust project’s dependencies and compiles your project.
 
-Learn more at http://doc.crates.io/
+Learn more at https://doc.rust-lang.org/cargo/
 
 ## Code Status
 
