@@ -767,8 +767,11 @@ fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
             (frame.remaining_candidates.next(prev_active),
              frame.remaining_candidates.clone().next(prev_active).is_some())
         };
+        let cur_num_dep_prev_active = frame.context_backup.prev_active(dep).len();
+        // Activations should monotonically decrease during backtracking
+        assert!(cur_num_dep_prev_active <= num_dep_prev_active);
         let maychange = !frame.context_backup.is_active(parent) ||
-            frame.context_backup.prev_active(dep).len() != num_dep_prev_active;
+            cur_num_dep_prev_active != num_dep_prev_active;
         if !maychange {
             continue
         }
