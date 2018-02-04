@@ -620,7 +620,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     // You'll note that a few stacks are maintained on the side, which might
     // seem odd when this algorithm looks like it could be implemented
     // recursively. While correct, this is implemented iteratively to avoid
-    // blowing the stack (the recusion depth is proportional to the size of the
+    // blowing the stack (the recursion depth is proportional to the size of the
     // input).
     //
     // The general sketch of this loop is to run until there are no dependencies
@@ -1073,7 +1073,7 @@ impl<'a> Context<'a> {
                   registry: &mut Registry,
                   candidate: &Summary,
                   method: &Method) -> CargoResult<Vec<DepInfo>> {
-        // First, figure out our set of dependencies based on the requsted set
+        // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
         let deps = self.resolve_features(candidate, method)?;

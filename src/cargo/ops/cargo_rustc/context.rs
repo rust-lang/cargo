@@ -41,7 +41,7 @@ use super::{Kind, Compilation, BuildConfig};
 /// all that out.
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Unit<'a> {
-    /// Information about avaiable targets, which files to include/exclude, etc. Basically stuff in
+    /// Information about available targets, which files to include/exclude, etc. Basically stuff in
     /// `Cargo.toml`.
     pub pkg: &'a Package,
     /// Information about the specific target to build, out of the possible targets in `pkg`. Not
