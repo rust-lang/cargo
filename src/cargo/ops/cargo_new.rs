@@ -590,6 +590,7 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
     let vcs = match vcs.as_ref().map(|p| (&p.val[..], &p.definition)) {
         Some(("git", _)) => Some(VersionControl::Git),
         Some(("hg", _)) => Some(VersionControl::Hg),
+        Some(("pijul", _)) => Some(VersionControl::Pijul),
         Some(("none", _)) => Some(VersionControl::NoVcs),
         Some((s, p)) => {
             return Err(internal(format!("invalid configuration for key \
