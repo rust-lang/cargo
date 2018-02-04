@@ -1236,3 +1236,212 @@ fn many_cli_features_comma_and_space_delimited() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
 }
+
+#[should_panic] // FIXME: https://github.com/rust-lang/cargo/issues/4866
+#[test]
+fn features_not_unified() {
+    // We need three crates for this:
+    // * foo: a library with a feature enabled by default
+    // * bar: a library with a dependency on foo with foo
+    //   features enabled implicitly by default
+    // * baz:
+    //   * a library with a dependency on foo without features
+    //   * that has a dev-dependency on bar
+    //
+    // When building baz (not its test, just baz) the default
+    // feature of foo should not be enabled.
+
+    let p = project("root")
+        .file("foo/Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            default = [ "meow" ]
+            meow = []
+        "#)
+        .file("foo/src/lib.rs", r#"
+            pub fn foo() {}
+        "#);
+
+    // First, we test that default features are not enabled if
+    // baz does not add a dependency on bar:
+    {
+        let mut p = p.clone();
+        let p = p.file("Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            default = []
+            meow = [ "foo/meow" ]
+
+            # Dependency on foo without features
+            [dependencies.foo]
+            path = "foo"
+            default-features = false
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate foo;
+            pub use foo::foo;
+        "#)
+        .build();
+
+        assert_that(p.cargo("build").arg("--verbose"),
+                    execs().with_status(0).with_stderr(format!("\
+[COMPILING] foo v0.0.1 ({dir}/foo)
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`
+[COMPILING] baz v0.0.1 ({dir})
+[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+", dir = p.url())));
+    }
+
+    // Then we add bar, the crate with a dependency on foo that implicitly
+    // enables all features:
+    let p = p.clone()
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies.foo]
+            path = "../foo"
+        "#)
+        .file("bar/src/lib.rs", r#"
+            extern crate foo;
+            pub use foo::foo;
+        "#);
+
+    // Now we add a dev-dependency to bar which shouldn't influence how baz is
+    // built:
+    {
+        let mut p = p.clone();
+        let p = p.file("Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            default = []
+            meow = [ "foo/meow" ]
+
+            # Dependency on foo without features
+            [dependencies.foo]
+            path = "foo"
+            default-features = false
+
+            # Dev dependency on bar, this shouldn't
+            # influence how baz is built:
+            [dev-dependencies]
+            bar = { path = "bar" }
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate foo;
+            pub use foo::foo;
+        "#)
+        .build();
+
+        assert_that(p.cargo("build").arg("--verbose"),
+                    execs().with_status(0).with_stderr(format!("\
+                        [COMPILING] foo v0.0.1 ({dir}/foo)
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`
+[COMPILING] baz v0.0.1 ({dir})
+[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+", dir = p.url())));
+    }
+
+    // Now we add an impossible target target-specific dependency that shouldn't
+    // influence how baz is built:
+    {
+        let mut p = p.clone();
+        let p = p.file("Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            default = []
+            meow = [ "foo/meow" ]
+
+            # Dependency on foo without features
+            [dependencies.foo]
+            path = "foo"
+            default-features = false
+
+            # Impossible target-specific dependency shouldn't
+            # influence how baz is built:
+            [target.'cfg(all(target_os = "windows", target_os = "macos"))'.dependencies]
+            bar = { path = "bar" }
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate foo;
+            pub use foo::foo;
+        "#)
+        .build();
+
+        assert_that(p.cargo("build").arg("--verbose"),
+                    execs().with_status(0).with_stderr(format!("\
+                        [COMPILING] foo v0.0.1 ({dir}/foo)
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`
+[COMPILING] baz v0.0.1 ({dir})
+[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+", dir = p.url())));
+    }
+
+    // Now we add both an impossible target target-specific dependency and a
+    // dev-dependency that shouldn't
+    // influence how baz is built:
+    {
+        let mut p = p.clone();
+        let p = p.file("Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            default = []
+            meow = [ "foo/meow" ]
+
+            # Dependency on foo without features
+            [dependencies.foo]
+            path = "foo"
+            default-features = false
+
+            # Impossible target-specific dependency shouldn't
+            # influence how baz is built:
+            [target.'cfg(all(target_os = "windows", target_os = "macos"))'.dependencies]
+            bar = { path = "bar" }
+
+            # Dev dependency on bar, this shouldn't
+            # influence how baz is built:
+            [dev-dependencies]
+            bar = { path = "bar" }
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate foo;
+            pub use foo::foo;
+        "#)
+        .build();
+
+        assert_that(p.cargo("build").arg("--verbose"),
+                    execs().with_status(0).with_stderr(format!("\
+                        [COMPILING] foo v0.0.1 ({dir}/foo)
+[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`
+[COMPILING] baz v0.0.1 ({dir})
+[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+", dir = p.url())));
+    }
+
+}
