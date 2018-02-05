@@ -718,6 +718,9 @@ impl TomlManifest {
         };
 
         let epoch = if let Some(ref epoch) = project.epoch {
+            features.require(Feature::epoch()).chain_err(|| {
+                "epoches are unstable"
+            })?;
             if let Ok(epoch) = epoch.parse() {
                 epoch
             } else {
