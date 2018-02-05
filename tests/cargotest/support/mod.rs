@@ -563,7 +563,7 @@ impl Execs {
                 } {}
 
                 ham::expect(matches == number,
-                            format!("expected to find {} occurences:\n\
+                            format!("expected to find {} occurrences:\n\
                                      {}\n\n\
                                      did not find in output:\n\
                                      {}", number, out,

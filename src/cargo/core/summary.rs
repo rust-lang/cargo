@@ -7,7 +7,7 @@ use core::{Dependency, PackageId, SourceId};
 
 use util::CargoResult;
 
-/// Subset of a `Manifest`. Contains only the most important informations about
+/// Subset of a `Manifest`. Contains only the most important information about
 /// a package.
 ///
 /// Summaries are cloned, and should not be mutated after creation
