@@ -727,7 +727,7 @@ impl TomlManifest {
                 bail!("the `epoch` key must be one of: `2015`, `2018`")
             }
         } else {
-            Epoch::Epoch2015
+                Epoch::Epoch2015
         };
         let mut manifest = Manifest::new(summary,
                                          targets,

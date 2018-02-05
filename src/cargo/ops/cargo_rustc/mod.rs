@@ -9,7 +9,7 @@ use std::sync::Arc;
 use same_file::is_same_file;
 use serde_json;
 
-use core::{Package, PackageId, PackageSet, Target, Resolve};
+use core::{Feature, Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::manifest::Lto;
 use core::shell::ColorChoice;
@@ -803,6 +803,11 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         if !cx.used_in_plugin.contains(unit) {
             cmd.arg("-C").arg(format!("panic={}", panic));
         }
+    }
+    let manifest = unit.pkg.manifest();
+
+    if manifest.features().is_enabled(Feature::epoch()) {
+        cmd.arg(format!("-Zepoch={}", manifest.epoch()));
     }
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually
