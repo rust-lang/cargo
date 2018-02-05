@@ -14,7 +14,7 @@ use url::Url;
 
 use core::{SourceId, Profiles, PackageIdSpec, GitReference, WorkspaceConfig, WorkspaceRootConfig};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
-use core::{EitherManifest, VirtualManifest, Features, Feature};
+use core::{EitherManifest, Epoch, VirtualManifest, Features, Feature};
 use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Profile, ManifestMetadata, Lto};
 use sources::CRATES_IO;
@@ -441,6 +441,7 @@ pub struct TomlProject {
     license_file: Option<String>,
     repository: Option<String>,
     metadata: Option<toml::Value>,
+    epoch: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -715,6 +716,16 @@ impl TomlManifest {
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
             None | Some(VecStringOrBool::Bool(true)) => None,
         };
+
+        let epoch = if let Some(ref epoch) = project.epoch {
+            if let Ok(epoch) = epoch.parse() {
+                epoch
+            } else {
+                bail!("the `epoch` key must be one of: `2015`, `2018`")
+            }
+        } else {
+            Epoch::Epoch2015
+        };
         let mut manifest = Manifest::new(summary,
                                          targets,
                                          exclude,
@@ -727,6 +738,7 @@ impl TomlManifest {
                                          patch,
                                          workspace_config,
                                          features,
+                                         epoch,
                                          project.im_a_teapot,
                                          Rc::clone(me));
         if project.license_file.is_some() && project.license.is_some() {

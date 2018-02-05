@@ -40,8 +40,29 @@
 //! we'll be sure to update this documentation!
 
 use std::env;
+use std::str::FromStr;
 
 use util::errors::CargoResult;
+
+/// The epoch of the compiler (RFC 2052)
+#[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq)]
+pub enum Epoch {
+    /// The 2015 epoch
+    Epoch2015,
+    /// The 2018 epoch
+    Epoch2018,
+}
+
+impl FromStr for Epoch {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, ()> {
+        match s {
+            "2015" => Ok(Epoch::Epoch2015),
+            "2018" => Ok(Epoch::Epoch2018),
+            _ => Err(())
+        }
+    }
+}
 
 enum Status {
     Stable,
