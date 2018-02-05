@@ -40,6 +40,7 @@
 //! we'll be sure to update this documentation!
 
 use std::env;
+use std::fmt;
 use std::str::FromStr;
 
 use util::errors::CargoResult;
@@ -53,6 +54,14 @@ pub enum Epoch {
     Epoch2018,
 }
 
+impl fmt::Display for Epoch {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Epoch::Epoch2015 => f.write_str("2015"),
+            Epoch::Epoch2018 => f.write_str("2018"),
+        }
+    }
+}
 impl FromStr for Epoch {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, ()> {
@@ -224,6 +233,10 @@ impl Features {
             }
             bail!("{}", msg);
         }
+    }
+
+    pub fn is_enabled(&self, feature: &Feature) -> bool {
+        feature.is_enabled(self)
     }
 }
 

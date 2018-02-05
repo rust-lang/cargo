@@ -359,6 +359,10 @@ impl Manifest {
             }
         }
     }
+
+    pub fn epoch(&self) -> Epoch {
+        self.epoch
+    }
 }
 
 impl VirtualManifest {
