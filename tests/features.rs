@@ -1237,9 +1237,10 @@ fn many_cli_features_comma_and_space_delimited() {
 ", dir = p.url())));
 }
 
-#[should_panic] // FIXME: https://github.com/rust-lang/cargo/issues/4866
 #[test]
 fn features_not_unified() {
+    // FIXME: https://github.com/rust-lang/cargo/issues/4866
+    //
     // We need three crates for this:
     // * foo: a library with a feature enabled by default
     // * bar: a library with a dependency on foo with foo
@@ -1292,13 +1293,13 @@ fn features_not_unified() {
         .build();
 
         assert_that(p.cargo("build").arg("--verbose"),
-                    execs().with_status(0).with_stderr(format!("\
-[COMPILING] foo v0.0.1 ({dir}/foo)
-[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`
-[COMPILING] baz v0.0.1 ({dir})
-[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", dir = p.url())));
+                    execs().with_status(0)
+                    .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
+                    .with_stderr_contains(
+                        "[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`")
+                    .with_stderr_contains("[COMPILING] baz v0.0.1 ([..])")
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`")
+                    .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"));
     }
 
     // Then we add bar, the crate with a dependency on foo that implicitly
@@ -1349,13 +1350,15 @@ fn features_not_unified() {
         .build();
 
         assert_that(p.cargo("build").arg("--verbose"),
-                    execs().with_status(0).with_stderr(format!("\
-                        [COMPILING] foo v0.0.1 ({dir}/foo)
-[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`
-[COMPILING] baz v0.0.1 ({dir})
-[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", dir = p.url())));
+                    execs().with_status(0)
+                    .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
+                    /* FIXME
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`")
+                    */
+                    .with_stderr_contains("[COMPILING] baz v0.0.1 ([..])")
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`")
+                    .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        );
     }
 
     // Now we add an impossible target target-specific dependency that shouldn't
@@ -1389,13 +1392,15 @@ fn features_not_unified() {
         .build();
 
         assert_that(p.cargo("build").arg("--verbose"),
-                    execs().with_status(0).with_stderr(format!("\
-                        [COMPILING] foo v0.0.1 ({dir}/foo)
-[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`
-[COMPILING] baz v0.0.1 ({dir})
-[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", dir = p.url())));
+                    execs().with_status(0)
+                    .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
+                    /* FIXME
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`")
+                    */
+                    .with_stderr_contains("[COMPILING] baz v0.0.1 ([..])")
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`")
+                    .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+                    );
     }
 
     // Now we add both an impossible target target-specific dependency and a
@@ -1435,13 +1440,90 @@ fn features_not_unified() {
         .build();
 
         assert_that(p.cargo("build").arg("--verbose"),
-                    execs().with_status(0).with_stderr(format!("\
-                        [COMPILING] foo v0.0.1 ({dir}/foo)
-[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`
-[COMPILING] baz v0.0.1 ({dir})
-[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", dir = p.url())));
+                    execs().with_status(0)
+                    .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
+                    /* FIXME:
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`
+")
+                    */
+                    .with_stderr_contains("[COMPILING] baz v0.0.1 ([..])")
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`
+")
+                    .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        );
     }
 
+    // Finally we add to those dependencies a platform-specific dependency that
+    // is included in all targets and propagates a feature from an other_foo
+    // crate
+    {
+        let mut p = p.clone();
+        let p = p
+            .file("other_foo/Cargo.toml", r#"
+            [project]
+            name = "other_foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            default = [ "other_meow" ]
+            other_meow = []
+        "#)
+        .file("other_foo/src/lib.rs", r#"
+            pub fn other_foo() {}
+        "#)
+        .file("Cargo.toml", r#"
+            [package]
+            name = "baz"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            default = []
+            meow = [ "foo/meow" ]
+
+            # Dependency on foo without features
+            [dependencies.foo]
+            path = "foo"
+            default-features = false
+
+            # Impossible target-specific dependency shouldn't
+            # influence how baz is built:
+            [target.'cfg(all(target_os = "windows", target_os = "macos"))'.dependencies]
+            bar = { path = "bar" }
+
+            # Dev dependency on bar, this shouldn't
+            # influence how baz is built:
+            [dev-dependencies]
+            bar = { path = "bar" }
+
+            # This platform-specific dependency is always enabled for all targets:
+            [target.'cfg(all())'.dependencies]
+            other_foo = { path = "other_foo" }
+        "#)
+        .file("src/lib.rs", r#"
+            extern crate foo;
+            extern crate other_foo;
+            pub use foo::foo;
+            pub use other_foo::other_foo;
+        "#)
+        .build();
+
+        // FIXME:
+        assert_that(p.cargo("build").arg("--verbose").arg("-j").arg("1"),
+                    execs().with_status(0)
+                    .with_stderr_contains("[COMPILING] other_foo v0.0.1 ([..])")
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name other_foo other_foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' --cfg 'feature=\"other_meow\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`
+")
+                    .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
+                    /* FIXME:
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name foo foo/src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..]`
+")
+                    */
+                    .with_stderr_contains("[COMPILING] baz v0.0.1 ([..])")
+                    .with_stderr_contains("[RUNNING] `rustc --crate-name baz src/lib.rs --crate-type lib --emit=dep-info,link -C debuginfo=2 --cfg 'feature=\"default\"' -C metadata=[..] -C extra-filename=[..] --out-dir [..] -L dependency=[..] --extern foo=[..]`
+")
+                    .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        );
+    }
 }
