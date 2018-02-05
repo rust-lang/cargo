@@ -146,6 +146,9 @@ features! {
 
         // Downloading packages from alternative registry indexes.
         [unstable] alternative_registries: bool,
+
+        // Using epochs
+        [unstable] epoch: bool,
     }
 }
 
