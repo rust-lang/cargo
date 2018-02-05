@@ -1055,14 +1055,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn lib_or_check_profile(&self, unit: &Unit, target: &Target) -> &'a Profile {
-        if unit.profile.check && !target.is_custom_build() && !target.for_host() {
-            &self.profiles.check
-        } else if unit.profile.doc && !unit.profile.test &&
-                !target.is_custom_build() && !target.for_host() {
-            &self.profiles.check
-        } else {
-            self.lib_profile()
+        if !target.is_custom_build() && !target.for_host() {
+            if unit.profile.check || (unit.profile.doc && !unit.profile.test) {
+                return &self.profiles.check
+            }
         }
+        self.lib_profile()
     }
 
     pub fn build_script_profile(&self, _pkg: &PackageId) -> &'a Profile {
