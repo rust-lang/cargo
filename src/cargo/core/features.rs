@@ -47,6 +47,7 @@ use util::errors::CargoResult;
 
 /// The epoch of the compiler (RFC 2052)
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq)]
+#[derive(Serialize, Deserialize)]
 pub enum Epoch {
     /// The 2015 epoch
     Epoch2015,
