@@ -228,7 +228,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     let specs = spec.into_package_id_specs(ws)?;
     let features = Method::split_features(features);
     let method = Method::Required {
-        dev_deps: filter.need_dev_deps(),
+        dev_deps: ws.require_optional_deps() || filter.need_dev_deps(),
         features: &features,
         all_features,
         uses_default_features: !no_default_features,

@@ -300,6 +300,11 @@ impl<'cfg> Workspace<'cfg> {
         self.require_optional_deps
     }
 
+    pub fn set_require_optional_deps<'a>(&'a mut self, require_optional_deps: bool) -> &mut Workspace<'cfg> {
+        self.require_optional_deps = require_optional_deps;
+        self
+    }
+
     /// Finds the root of a workspace for the crate whose manifest is located
     /// at `manifest_path`.
     ///

@@ -12,6 +12,7 @@ pub struct Options {
     flag_features: Vec<String>,
     flag_all_features: bool,
     flag_no_default_features: bool,
+    flag_avoid_dev_deps: bool,
     flag_target: Option<String>,
     flag_manifest_path: Option<String>,
     flag_verbose: u32,
@@ -63,6 +64,7 @@ Options:
     --features FEATURES          Space-separated list of features to also build
     --all-features               Build all available features
     --no-default-features        Do not build the `default` feature
+    --avoid-dev-deps             Avoid installing dev-dependencies if possible
     --target TRIPLE              Build for the target triple
     --manifest-path PATH         Path to the manifest to compile
     -v, --verbose ...            Use verbose output (-vv very verbose/build.rs output)
@@ -98,7 +100,10 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      &options.flag_z)?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
-    let ws = Workspace::new(&root, config)?;
+    let mut ws = Workspace::new(&root, config)?;
+    if options.flag_avoid_dev_deps {
+        ws.set_require_optional_deps(false);
+    }
 
     let spec = Packages::from_flags(options.flag_all,
                                     &options.flag_exclude,
