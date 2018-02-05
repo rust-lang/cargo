@@ -421,7 +421,7 @@ impl<'a> CompileFilter<'a> {
 
     pub fn need_dev_deps(&self) -> bool {
         match *self {
-            CompileFilter::Default { .. } => true,
+            CompileFilter::Default { .. } => false,
             CompileFilter::Only { examples, tests, benches, .. } =>
                 examples.is_specific() || tests.is_specific() || benches.is_specific()
         }
@@ -429,7 +429,11 @@ impl<'a> CompileFilter<'a> {
 
     pub fn matches(&self, target: &Target) -> bool {
         match *self {
-            CompileFilter::Default { .. } => true,
+            CompileFilter::Default { .. } => match *target.kind() {
+                TargetKind::Bin => true,
+                TargetKind::Lib(..) => true,
+                _ => false,
+            },
             CompileFilter::Only { lib, bins, examples, tests, benches, .. } => {
                 let rule = match *target.kind() {
                     TargetKind::Bin => bins,
