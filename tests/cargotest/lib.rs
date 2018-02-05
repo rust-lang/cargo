@@ -46,8 +46,8 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env("__CARGO_TEST_ROOT", support::paths::root())
 
      // Force cargo to think it's on the stable channel for all tests, this
-     // should hopefully not suprise us as we add cargo features over time and
-     // cargo rides the trains
+     // should hopefully not surprise us as we add cargo features over time and
+     // cargo rides the trains.
      .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
 
      // For now disable incremental by default as support hasn't ridden to the
