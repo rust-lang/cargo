@@ -745,9 +745,16 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     Ok(cx)
 }
 
-// Searches up `backtrack_stack` until it finds a dependency with remaining
-// candidates. Resets `cx` and `remaining_deps` to that level and returns the
+// Looks through the states in `backtrack_stack` for dependencies with
+// remaining candidates. For each one, also checks if rolling back
+// could change the outcome of the failed resolution that caused backtracking
+// in the first place - namely, if we've backtracked past the parent of the
+// failed dep, or the previous number of activations of the failed dep has
+// changed (possibly relaxing version constraints). If the outcome could differ,
+// resets `cx` and `remaining_deps` to that level and returns the
 // next candidate. If all candidates have been exhausted, returns None.
+// Read https://github.com/rust-lang/cargo/pull/4834#issuecomment-362871537 for
+// a more detailed explanation of the logic here.
 fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
                       cx: &mut Context<'a>,
                       remaining_deps: &mut BinaryHeap<DepsFrame>,
@@ -755,12 +762,21 @@ fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
                       cur: &mut usize,
                       dep: &mut Dependency,
                       features: &mut Rc<Vec<String>>) -> Option<Candidate> {
+    let num_dep_prev_active = cx.prev_active(dep).len();
     while let Some(mut frame) = backtrack_stack.pop() {
         let (next, has_another) = {
             let prev_active = frame.context_backup.prev_active(&frame.dep);
             (frame.remaining_candidates.next(prev_active),
              frame.remaining_candidates.clone().next(prev_active).is_some())
         };
+        let cur_num_dep_prev_active = frame.context_backup.prev_active(dep).len();
+        // Activations should monotonically decrease during backtracking
+        assert!(cur_num_dep_prev_active <= num_dep_prev_active);
+        let maychange = !frame.context_backup.is_active(parent) ||
+            cur_num_dep_prev_active != num_dep_prev_active;
+        if !maychange {
+            continue
+        }
         if let Some(candidate) = next {
             *cur = frame.cur;
             if has_another {
@@ -1176,6 +1192,14 @@ impl<'a> Context<'a> {
             .and_then(|v| v.get(dep.source_id()))
             .map(|v| &v[..])
             .unwrap_or(&[])
+    }
+
+    fn is_active(&mut self, summary: &Summary) -> bool {
+        let id = summary.package_id();
+        self.activations.get(id.name())
+            .and_then(|v| v.get(id.source_id()))
+            .map(|v| v.iter().any(|s| s == summary))
+            .unwrap_or(false)
     }
 
     /// Return all dependencies and the features we want from them.

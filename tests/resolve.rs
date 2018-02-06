@@ -74,6 +74,13 @@ impl ToPkgId for (&'static str, &'static str) {
     }
 }
 
+impl ToPkgId for (&'static str, String) {
+    fn to_pkgid(&self) -> PackageId {
+        let (name, ref vers) = *self;
+        PackageId::new(name, vers, &registry_loc()).unwrap()
+    }
+}
+
 macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),+]) => ({
         let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
@@ -362,6 +369,137 @@ fn resolving_with_deep_backtracking() {
                                        ("foo", "1.0.0"),
                                        ("bar", "2.0.0"),
                                        ("baz", "1.0.1")])));
+}
+
+#[test]
+fn resolving_with_constrained_sibling_backtrack_parent() {
+    // There is no point in considering all of the backtrack_trap{1,2}
+    // candidates since they can't change the result of failing to
+    // resolve 'constrained'. Cargo should (ideally) skip past them and resume
+    // resolution once the activation of the parent, 'bar', is rolled back.
+    // Note that the traps are slightly more constrained to make sure they
+    // get picked first.
+    let mut reglist = vec![
+        pkg!(("foo", "1.0.0") => [dep_req("bar", "1.0"),
+                                  dep_req("constrained", "=1.0.0")]),
+
+        pkg!(("bar", "1.0.0") => [dep_req("backtrack_trap1", "1.0.2"),
+                                  dep_req("backtrack_trap2", "1.0.2"),
+                                  dep_req("constrained", "1.0.0")]),
+        pkg!(("constrained", "1.0.0")),
+        pkg!(("backtrack_trap1", "1.0.0")),
+        pkg!(("backtrack_trap2", "1.0.0")),
+    ];
+    // Bump this to make the test harder - it adds more versions of bar that will
+    // fail to resolve, and more versions of the traps to consider.
+    const NUM_BARS_AND_TRAPS: usize = 50; // minimum 2
+    for i in 1..NUM_BARS_AND_TRAPS {
+        let vsn = format!("1.0.{}", i);
+        reglist.push(pkg!(("bar", vsn.clone()) => [dep_req("backtrack_trap1", "1.0.2"),
+                                                   dep_req("backtrack_trap2", "1.0.2"),
+                                                   dep_req("constrained", "1.0.1")]));
+        reglist.push(pkg!(("backtrack_trap1", vsn.clone())));
+        reglist.push(pkg!(("backtrack_trap2", vsn.clone())));
+        reglist.push(pkg!(("constrained", vsn.clone())));
+    }
+    let reg = registry(reglist);
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("foo", "1"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.0"),
+                                       ("bar", "1.0.0"),
+                                       ("constrained", "1.0.0")])));
+}
+
+#[test]
+fn resolving_with_constrained_sibling_backtrack_activation() {
+    // It makes sense to resolve most-constrained deps first, but
+    // with that logic the backtrack traps here come between the two
+    // attempted resolutions of 'constrained'. When backtracking,
+    // cargo should skip past them and resume resolution once the
+    // number of activations for 'constrained' changes.
+    let mut reglist = vec![
+        pkg!(("foo", "1.0.0") => [dep_req("bar", "=1.0.0"),
+                                  dep_req("backtrack_trap1", "1.0"),
+                                  dep_req("backtrack_trap2", "1.0"),
+                                  dep_req("constrained", "<=1.0.60")]),
+        pkg!(("bar", "1.0.0") => [dep_req("constrained", ">=1.0.60")]),
+    ];
+    // Bump these to make the test harder, but you'll also need to
+    // change the version constraints on `constrained` above. To correctly
+    // exercise Cargo, the relationship between the values is:
+    // NUM_CONSTRAINED - vsn < NUM_TRAPS < vsn
+    // to make sure the traps are resolved between `constrained`.
+    const NUM_TRAPS: usize = 45; // min 1
+    const NUM_CONSTRAINED: usize = 100; // min 1
+    for i in 0..NUM_TRAPS {
+        let vsn = format!("1.0.{}", i);
+        reglist.push(pkg!(("backtrack_trap1", vsn.clone())));
+        reglist.push(pkg!(("backtrack_trap2", vsn.clone())));
+    }
+    for i in 0..NUM_CONSTRAINED {
+        let vsn = format!("1.0.{}", i);
+        reglist.push(pkg!(("constrained", vsn.clone())));
+    }
+    let reg = registry(reglist);
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("foo", "1"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.0"),
+                                       ("bar", "1.0.0"),
+                                       ("constrained", "1.0.60")])));
+}
+
+#[test]
+fn resolving_with_constrained_sibling_transitive_dep_effects() {
+    // When backtracking due to a failed dependency, if Cargo is
+    // trying to be clever and skip irrelevant dependencies, care must
+    // be taken to not miss the transitive effects of alternatives. E.g.
+    // in the right-to-left resolution of the graph below, B may
+    // affect whether D is successfully resolved.
+    //
+    //    A
+    //  / | \
+    // B  C  D
+    // |  |
+    // C  D
+    let reg = registry(vec![
+        pkg!(("A", "1.0.0") => [dep_req("B", "1.0"),
+                                dep_req("C", "1.0"),
+                                dep_req("D", "1.0.100")]),
+
+        pkg!(("B", "1.0.0") => [dep_req("C", ">=1.0.0")]),
+        pkg!(("B", "1.0.1") => [dep_req("C", ">=1.0.1")]),
+
+        pkg!(("C", "1.0.0") => [dep_req("D", "1.0.0")]),
+        pkg!(("C", "1.0.1") => [dep_req("D", ">=1.0.1,<1.0.100")]),
+        pkg!(("C", "1.0.2") => [dep_req("D", ">=1.0.2,<1.0.100")]),
+
+        pkg!(("D", "1.0.0")),
+        pkg!(("D", "1.0.1")),
+        pkg!(("D", "1.0.2")),
+        pkg!(("D", "1.0.100")),
+        pkg!(("D", "1.0.101")),
+        pkg!(("D", "1.0.102")),
+        pkg!(("D", "1.0.103")),
+        pkg!(("D", "1.0.104")),
+        pkg!(("D", "1.0.105")),
+    ]);
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("A", "1"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("A", "1.0.0"),
+                                       ("B", "1.0.0"),
+                                       ("C", "1.0.0"),
+                                       ("D", "1.0.105")])));
 }
 
 #[test]
