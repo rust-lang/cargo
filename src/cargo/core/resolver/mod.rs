@@ -753,6 +753,8 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
 // changed (possibly relaxing version constraints). If the outcome could differ,
 // resets `cx` and `remaining_deps` to that level and returns the
 // next candidate. If all candidates have been exhausted, returns None.
+// Read https://github.com/rust-lang/cargo/pull/4834#issuecomment-362871537 for
+// a more detailed explanation of the logic here.
 fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
                       cx: &mut Context<'a>,
                       remaining_deps: &mut BinaryHeap<DepsFrame>,
