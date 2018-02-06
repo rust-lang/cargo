@@ -897,7 +897,7 @@ fn test_epoch() {
             name = "foo"
             version = "0.0.1"
             authors = []
-            epoch = "2018"
+            rust = "2018"
         "#)
         .file("src/lib.rs", r#" "#)
         .build();
@@ -957,7 +957,7 @@ fn test_epoch_malformed() {
             name = "foo"
             version = "0.0.1"
             authors = []
-            epoch = "chicken"
+            rust = "chicken"
         "#)
         .file("src/lib.rs", r#" "#)
         .build();
@@ -970,7 +970,7 @@ fn test_epoch_malformed() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  the `epoch` key must be one of: `2015`, `2018`
+  the `rust` key must be one of: `2015`, `2018`
 ")));
 }
 
@@ -983,7 +983,7 @@ fn test_epoch_nightly() {
             name = "foo"
             version = "0.0.1"
             authors = []
-            epoch = "2015"
+            rust = "2015"
         "#)
         .file("src/lib.rs", r#" "#)
         .build();

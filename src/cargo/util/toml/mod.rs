@@ -441,7 +441,7 @@ pub struct TomlProject {
     license_file: Option<String>,
     repository: Option<String>,
     metadata: Option<toml::Value>,
-    epoch: Option<String>,
+    rust: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -717,14 +717,14 @@ impl TomlManifest {
             None | Some(VecStringOrBool::Bool(true)) => None,
         };
 
-        let epoch = if let Some(ref epoch) = project.epoch {
+        let epoch = if let Some(ref epoch) = project.rust {
             features.require(Feature::epoch()).chain_err(|| {
                 "epoches are unstable"
             })?;
             if let Ok(epoch) = epoch.parse() {
                 epoch
             } else {
-                bail!("the `epoch` key must be one of: `2015`, `2018`")
+                bail!("the `rust` key must be one of: `2015`, `2018`")
             }
         } else {
                 Epoch::Epoch2015
