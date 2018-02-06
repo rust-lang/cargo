@@ -887,3 +887,120 @@ fn package_two_kinds_of_deps() {
     assert_that(p.cargo("package").arg("--no-verify"),
                 execs().with_status(0));
 }
+
+#[test]
+fn test_epoch() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["epoch"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            rust = "2018"
+        "#)
+        .file("src/lib.rs", r#" "#)
+        .build();
+
+    assert_that(p.cargo("build").arg("-v")
+                 .masquerade_as_nightly_cargo(),
+                execs()
+                // -Zepoch is still in flux and we're not passing -Zunstable-options
+                // from Cargo so it will probably error. Only partially match the output
+                // until stuff stabilizes
+                .with_stderr_contains(format!("\
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
+        --emit=dep-info,link -Zepoch=2018 -C debuginfo=2 \
+        -C metadata=[..] \
+        --out-dir [..] \
+        -L dependency={dir}[/]target[/]debug[/]deps`
+", dir = p.root().display(), url = p.url())));
+}
+
+#[test]
+fn test_epoch_missing() {
+    // no epoch = 2015
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["epoch"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#" "#)
+        .build();
+
+    assert_that(p.cargo("build").arg("-v")
+                 .masquerade_as_nightly_cargo(),
+                execs()
+                // -Zepoch is still in flux and we're not passing -Zunstable-options
+                // from Cargo so it will probably error. Only partially match the output
+                // until stuff stabilizes
+                .with_stderr_contains(format!("\
+[COMPILING] foo v0.0.1 ({url})
+[RUNNING] `rustc --crate-name foo src[/]lib.rs --crate-type lib \
+        --emit=dep-info,link -Zepoch=2015 -C debuginfo=2 \
+        -C metadata=[..] \
+        --out-dir [..] \
+        -L dependency={dir}[/]target[/]debug[/]deps`
+", dir = p.root().display(), url = p.url())));
+}
+
+#[test]
+fn test_epoch_malformed() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["epoch"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            rust = "chicken"
+        "#)
+        .file("src/lib.rs", r#" "#)
+        .build();
+
+    assert_that(p.cargo("build").arg("-v")
+                 .masquerade_as_nightly_cargo(),
+                execs()
+                .with_status(101)
+                .with_stderr(format!("\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  the `rust` key must be one of: `2015`, `2018`
+")));
+}
+
+
+#[test]
+fn test_epoch_nightly() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            rust = "2015"
+        "#)
+        .file("src/lib.rs", r#" "#)
+        .build();
+
+    assert_that(p.cargo("build").arg("-v")
+                 .masquerade_as_nightly_cargo(),
+                execs()
+                .with_status(101)
+                .with_stderr(format!("\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  epoches are unstable
+
+Caused by:
+  feature `epoch` is required
+
+consider adding `cargo-features = [\"epoch\"]` to the manifest
+")));
+}
