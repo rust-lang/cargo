@@ -513,9 +513,9 @@ fn resolving_but_no_exists() {
     assert!(res.is_err());
 
     assert_eq!(res.err().unwrap().to_string(), "\
-no matching package named `foo` found (required by `root`)
-location searched: registry `http://example.com/`
-version required: ^1\
+no matching package named `foo` found\n\
+location searched: registry `http://example.com/`\n\
+required by package `root v1.0.0 (registry `http://example.com/`)`\
 ");
 }
 
