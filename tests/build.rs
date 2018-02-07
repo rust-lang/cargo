@@ -997,6 +997,43 @@ fn main(){
 }
 
 #[test]
+fn incompatible_dependencies() {
+    Package::new("bad", "0.1.0").publish();
+    Package::new("bad", "1.0.0").publish();
+    Package::new("bad", "1.0.1").publish();
+    Package::new("bad", "1.0.2").publish();
+    Package::new("foo", "0.1.0").dep("bad", "0.1.0").publish();
+    Package::new("bar", "0.1.1").dep("bad", "=1.0.0").publish();
+    Package::new("bar", "0.1.0").dep("bad", "=1.0.0").publish();
+    Package::new("baz", "0.1.2").dep("bad", ">=1.0.1").publish();
+    Package::new("baz", "0.1.1").dep("bad", ">=1.0.1").publish();
+    Package::new("baz", "0.1.0").dep("bad", ">=1.0.1").publish();
+
+    let p = project("transitive_load_test")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "incompatible_dependencies"
+            version = "0.0.1"
+
+            [dependencies]
+            foo = "0.1.0"
+            bar = "0.1.0"
+            baz = "0.1.0"
+        "#)
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    assert_that(p.cargo("build"),
+        execs().with_status(101)
+            .with_stderr_contains("\
+error: failed to select a version for `bad` (required by `baz`):
+all possible versions conflict with previously selected versions of `bad`
+  version 0.1.0 in use by bad v0.1.0
+  version 1.0.0 in use by bad v1.0.0
+  possible versions to select: 1.0.2, 1.0.1"));
+}
+
+#[test]
 fn compile_offline_while_transitive_dep_not_cached() {
     let bar = Package::new("bar", "1.0.0");
     let bar_path = bar.archive_dst();
