@@ -118,28 +118,8 @@ struct Candidate {
 impl Resolve {
     /// Resolves one of the paths from the given dependent package up to
     /// the root.
-    pub fn path_to_top<'a>(&'a self, mut pkg: &'a PackageId) -> Vec<&'a PackageId> {
-        // Note that this implementation isn't the most robust per se, we'll
-        // likely have to tweak this over time. For now though it works for what
-        // it's used for!
-        let mut result = vec![pkg];
-        let first_pkg_depending_on = |pkg: &PackageId| {
-            self.graph.get_nodes()
-                .iter()
-                .filter(|&(_node, adjacent)| adjacent.contains(pkg))
-                .next()
-                .map(|p| p.0)
-        };
-        while let Some(p) = first_pkg_depending_on(pkg) {
-            // Note that we can have "cycles" introduced through dev-dependency
-            // edges, so make sure we don't loop infinitely.
-            if result.contains(&p) {
-                break
-            }
-            result.push(p);
-            pkg = p;
-        }
-        result
+    pub fn path_to_top<'a>(&'a self, pkg: &'a PackageId) -> Vec<&'a PackageId> {
+        self.graph.path_to_top(pkg)
     }
     pub fn register_used_patches(&mut self,
                                  patches: &HashMap<Url, Vec<Summary>>) {
