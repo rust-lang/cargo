@@ -220,7 +220,7 @@ fn transmit(config: &Config,
 
             Ok(())
         },
-        Err(e) => Err(e.into()),
+        Err(e) => Err(e),
     }
 }
 
@@ -437,7 +437,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
                 (Some(name), Some(email)) => println!(" ({} <{}>)", name, email),
                 (Some(s), None) |
                 (None, Some(s)) => println!(" ({})", s),
-                (None, None) => println!(""),
+                (None, None) => println!(),
             }
         }
     }
