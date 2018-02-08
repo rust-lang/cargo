@@ -1034,3 +1034,37 @@ fn doc_all_member_dependency_same_name() {
                        .with_stderr_contains("[..] Updating registry `[..]`")
                        .with_stderr_contains("[..] Documenting a v0.1.0 ([..])"));
 }
+
+#[test]
+fn doc_workspace_open_help_message() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo", "bar"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("foo/src/lib.rs", "")
+        .file("bar/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+        "#)
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // The order in which bar is compiled or documented is not deterministic
+    assert_that(p.cargo("doc")
+                 .arg("--all")
+                 .arg("--open"),
+                execs().with_status(101)
+                       .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+                       .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
+                       .with_stderr_contains("error: Passing multiple packages and `open` is not supported.")
+                       .with_stderr_contains("Please re-run this command with `-p <spec>` where `<spec>` is one of the following:")
+                       .with_stderr_contains("  foo")
+                       .with_stderr_contains("  bar"));
+}
