@@ -29,7 +29,7 @@ mod build_script_env;
 mod build_script;
 mod cargo_alias_config;
 mod cargo_features;
-//mod cargo;
+mod cargo_command;
 mod cfg;
 mod check;
 mod clean;

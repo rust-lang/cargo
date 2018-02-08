@@ -4,6 +4,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::str;
 
+use cargo;
 use cargotest::cargo_process;
 use cargotest::support::paths::{self, CargoPathExt};
 use cargotest::support::{execs, project, Project, basic_bin_manifest};
