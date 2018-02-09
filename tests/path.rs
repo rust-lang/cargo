@@ -950,9 +950,9 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-error: no matching package named `bar` found (required by `foo`)
+error: no matching package named `bar` found
 location searched: [..]
-version required: *
+required by package `foo v0.5.0 ([..])`
 "));
 }
 

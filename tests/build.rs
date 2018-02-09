@@ -784,9 +784,9 @@ fn cargo_compile_with_dep_name_mismatch() {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr(&format!(
-r#"[ERROR] no matching package named `notquitebar` found (required by `foo`)
+r#"error: no matching package named `notquitebar` found
 location searched: {proj_dir}/bar
-version required: *
+required by package `foo v0.0.1 ({proj_dir})`
 "#, proj_dir = p.url())));
 }
 
@@ -921,9 +921,9 @@ fn cargo_compile_offline_not_try_update() {
     assert_that(p.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
                 execs().with_status(101)
                     .with_stderr("\
-error: no matching package named `not_cached_dep` found (required by `bar`)
+error: no matching package named `not_cached_dep` found
 location searched: registry `[..]`
-version required: ^1.2.5
+required by package `bar v0.1.0 ([..])`
 As a reminder, you're using offline mode (-Z offline) \
 which can sometimes cause surprising resolution failures, \
 if this error is too confusing you may with to retry \
@@ -997,6 +997,49 @@ fn main(){
 }
 
 #[test]
+fn incompatible_dependencies() {
+    Package::new("bad", "0.1.0").publish();
+    Package::new("bad", "1.0.0").publish();
+    Package::new("bad", "1.0.1").publish();
+    Package::new("bad", "1.0.2").publish();
+    Package::new("foo", "0.1.0").dep("bad", "0.1.0").publish();
+    Package::new("bar", "0.1.1").dep("bad", "=1.0.0").publish();
+    Package::new("bar", "0.1.0").dep("bad", "=1.0.0").publish();
+    Package::new("baz", "0.1.2").dep("bad", ">=1.0.1").publish();
+    Package::new("baz", "0.1.1").dep("bad", ">=1.0.1").publish();
+    Package::new("baz", "0.1.0").dep("bad", ">=1.0.1").publish();
+
+    let p = project("transitive_load_test")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "incompatible_dependencies"
+            version = "0.0.1"
+
+            [dependencies]
+            foo = "0.1.0"
+            bar = "0.1.0"
+            baz = "0.1.0"
+        "#)
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    assert_that(p.cargo("build"),
+        execs().with_status(101)
+            .with_stderr_contains("\
+error: failed to select a version for `bad`
+all possible versions conflict with previously selected versions of `bad`
+required by package `baz v0.1.0`
+    ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
+  previously selected package `bad v0.1.0`
+    ... which is depended on by `foo v0.1.0`
+    ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
+  previously selected package `bad v1.0.0`
+    ... which is depended on by `bar v0.1.0`
+    ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
+  possible versions to select: 1.0.2, 1.0.1"));
+}
+
+#[test]
 fn compile_offline_while_transitive_dep_not_cached() {
     let bar = Package::new("bar", "1.0.0");
     let bar_path = bar.archive_dst();
@@ -1031,9 +1074,10 @@ fn compile_offline_while_transitive_dep_not_cached() {
     assert_that(p.cargo("build").masquerade_as_nightly_cargo().arg("-Zoffline"),
         execs().with_status(101)
             .with_stderr("\
-error: no matching package named `bar` found (required by `foo`)
+error: no matching package named `bar` found
 location searched: registry `[..]`
-version required: = 1.0.0
+required by package `foo v0.1.0`
+    ... which is depended on by `transitive_load_test v0.0.1 ([..]/transitive_load_test)`
 As a reminder, you're using offline mode (-Z offline) \
 which can sometimes cause surprising resolution failures, \
 if this error is too confusing you may with to retry \
@@ -1073,9 +1117,10 @@ fn compile_path_dep_then_change_version() {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
-[ERROR] no matching version `= 0.0.1` found for package `bar` (required by `foo`)
+error: no matching version `= 0.0.1` found for package `bar`
 location searched: [..]
 versions found: 0.0.2
+required by package `foo v0.0.1 ([..]/foo)`
 consider running `cargo update` to update a path dependency's locked version
 "));
 }
