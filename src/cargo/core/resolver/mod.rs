@@ -118,28 +118,8 @@ struct Candidate {
 impl Resolve {
     /// Resolves one of the paths from the given dependent package up to
     /// the root.
-    pub fn path_to_top<'a>(&'a self, mut pkg: &'a PackageId) -> Vec<&'a PackageId> {
-        // Note that this implementation isn't the most robust per se, we'll
-        // likely have to tweak this over time. For now though it works for what
-        // it's used for!
-        let mut result = vec![pkg];
-        let first_pkg_depending_on = |pkg: &PackageId| {
-            self.graph.get_nodes()
-                .iter()
-                .filter(|&(_node, adjacent)| adjacent.contains(pkg))
-                .next()
-                .map(|p| p.0)
-        };
-        while let Some(p) = first_pkg_depending_on(pkg) {
-            // Note that we can have "cycles" introduced through dev-dependency
-            // edges, so make sure we don't loop infinitely.
-            if result.contains(&p) {
-                break
-            }
-            result.push(p);
-            pkg = p;
-        }
-        result
+    pub fn path_to_top<'a>(&'a self, pkg: &'a PackageId) -> Vec<&'a PackageId> {
+        self.graph.path_to_top(pkg)
     }
     pub fn register_used_patches(&mut self,
                                  patches: &HashMap<Url, Vec<Summary>>) {
@@ -806,30 +786,28 @@ fn activation_error(cx: &Context,
                     prev_active: &[Summary],
                     candidates: &[Candidate],
                     config: Option<&Config>) -> CargoError {
+    let graph = cx.graph();
+    let describe_path = |pkgid: &PackageId| -> String {
+        use std::fmt::Write;
+        let dep_path = graph.path_to_top(pkgid);
+        let mut dep_path_desc = format!("package `{}`", dep_path[0]);
+        for dep in dep_path.iter().skip(1) {
+            write!(dep_path_desc,
+                   "\n    ... which is depended on by `{}`",
+                   dep).unwrap();
+        }
+        dep_path_desc
+    };
     if !candidates.is_empty() {
-        let mut msg = format!("failed to select a version for `{}` \
-                               (required by `{}`):\n\
+        let mut msg = format!("failed to select a version for `{0}`\n\
                                all possible versions conflict with \
-                               previously selected versions of `{}`",
-                              dep.name(), parent.name(),
+                               previously selected versions of `{0}`\n",
                               dep.name());
-        let graph = cx.graph();
-        'outer: for v in prev_active.iter() {
-            for node in graph.iter() {
-                let edges = match graph.edges(node) {
-                    Some(edges) => edges,
-                    None => continue,
-                };
-                for edge in edges {
-                    if edge != v.package_id() { continue }
-
-                    msg.push_str(&format!("\n  version {} in use by {}",
-                                          v.version(), edge));
-                    continue 'outer;
-                }
-            }
-            msg.push_str(&format!("\n  version {} in use by ??",
-                                  v.version()));
+        msg.push_str("required by ");
+        msg.push_str(&describe_path(parent.package_id()));
+        for v in prev_active.iter() {
+            msg.push_str("\n  previously selected ");
+            msg.push_str(&describe_path(v.package_id()));
         }
 
         msg.push_str(&format!("\n  possible versions to select: {}",
@@ -873,15 +851,15 @@ fn activation_error(cx: &Context,
             versions.join(", ")
         };
 
-        let mut msg = format!("no matching version `{}` found for package `{}` \
-                               (required by `{}`)\n\
+        let mut msg = format!("no matching version `{}` found for package `{}`\n\
                                location searched: {}\n\
-                               versions found: {}",
+                               versions found: {}\n",
                               dep.version_req(),
                               dep.name(),
-                              parent.name(),
                               dep.source_id(),
                               versions);
+        msg.push_str("required by ");
+        msg.push_str(&describe_path(parent.package_id()));
 
         // If we have a path dependency with a locked version, then this may
         // indicate that we updated a sub-package and forgot to run `cargo
@@ -894,13 +872,13 @@ fn activation_error(cx: &Context,
 
         msg
     } else {
-        format!("no matching package named `{}` found \
-                 (required by `{}`)\n\
-                 location searched: {}\n\
-                 version required: {}",
-                dep.name(), parent.name(),
-                dep.source_id(),
-                dep.version_req())
+        let mut msg = format!("no matching package named `{}` found\n\
+                 location searched: {}\n",
+                dep.name(), dep.source_id());
+        msg.push_str("required by ");
+        msg.push_str(&describe_path(parent.package_id()));
+
+        msg
     };
 
     if let Some(config) = config {
