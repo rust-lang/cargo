@@ -7,7 +7,7 @@ $ cargo new hello_world --bin
 ```
 
 We’re passing `--bin` because we’re making a binary program: if we
-were making a library, we’d leave it off. This also initializes a new `git`
+were making a library, we’d pass `--lib`. This also initializes a new `git`
 repository by default. If you don't want it to do that, pass `--vcs none`.
 
 Let’s check out what Cargo has generated for us:
@@ -23,9 +23,7 @@ $ tree .
 1 directory, 2 files
 ```
 
-If we had just used `cargo new hello_world` without the `--bin` flag, then
-we would have a `lib.rs` instead of a `main.rs`. For now, however, this is all
-we need to get started. First, let’s check out `Cargo.toml`:
+Let’s take a closer look at `Cargo.toml`:
 
 ```toml
 [package]

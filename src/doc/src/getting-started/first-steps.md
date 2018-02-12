@@ -7,7 +7,7 @@ $ cargo new hello_world --bin
 ```
 
 We’re passing `--bin` because we’re making a binary program: if we
-were making a library, we’d leave it off.
+were making a library, we’d pass `--lib`.
 
 Let’s check out what Cargo has generated for us:
 
