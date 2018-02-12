@@ -62,25 +62,20 @@ impl<'de> Deserialize<'de> for VersionControl {
 
 impl<'a> NewOptions<'a> {
     pub fn new(version_control: Option<VersionControl>,
-           bin: bool,
-           lib: bool,
-           path: &'a str,
-           name: Option<&'a str>) -> NewOptions<'a> {
+               bin: bool,
+               lib: bool,
+               path: &'a str,
+               name: Option<&'a str>) -> NewOptions<'a> {
 
         // default to lib
-        let is_lib = if !bin {
-            true
-        }
-        else {
-            lib
-        };
+        let is_lib = !bin || lib;
 
         NewOptions {
-            version_control: version_control,
-            bin: bin,
+            version_control,
+            bin,
             lib: is_lib,
-            path: path,
-            name: name,
+            path,
+            name,
         }
     }
 }
