@@ -56,17 +56,16 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
 
     let path = &arg_path.unwrap_or_else(|| String::from("."));
     let opts = ops::NewOptions::new(flag_vcs,
-                                     flag_bin,
-                                     flag_lib,
-                                     path,
-                                     flag_name.as_ref().map(|s| s.as_ref()));
+                                    flag_bin,
+                                    flag_lib,
+                                    path,
+                                    flag_name.as_ref().map(|s| s.as_ref()));
 
     let opts_lib = opts.lib;
     ops::init(&opts, config)?;
 
-    config.shell().status("Created", format!("{} project",
-                                             if opts_lib { "library" }
-                                             else {"binary (application)"}))?;
+    let project_kind = if opts_lib { "library" } else { "binary (application)" };
+    config.shell().status("Created", format!("{} project", project_kind))?;
 
     Ok(())
 }
