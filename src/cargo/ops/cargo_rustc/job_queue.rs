@@ -8,7 +8,7 @@ use std::sync::mpsc::{channel, Sender, Receiver};
 use crossbeam::{self, Scope};
 use jobserver::{Acquired, HelperThread};
 
-use core::{PackageId, Target, Profile};
+use core::{PackageId, Target, TargetKind, Profile};
 use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
 use util::{CargoResult, ProcessBuilder, profile, internal, CargoResultExt};
 use {handle_error};
@@ -372,8 +372,16 @@ impl<'a> JobQueue<'a> {
                         config.shell().status("Documenting", key.pkg)?;
                     }
                 } else {
-                    self.compiled.insert(key.pkg);
-                    config.shell().status("Compiling", key.pkg)?;
+                    match *key.target.kind() {
+                        TargetKind::Bin => {
+                            config.shell().status("Linking", key.pkg.name())?;
+                        },
+                        TargetKind::Lib(..) => {
+                                self.compiled.insert(key.pkg);
+                                config.shell().status("Compiling", key.pkg)?;
+                            },
+                        _ => {}
+                    }
                 }
             }
             Fresh if self.counts[key.pkg] == 0 => {
