@@ -6,7 +6,7 @@ use std::path::{PathBuf, Path};
 use flate2::Compression;
 use flate2::write::GzEncoder;
 use git2;
-use hex::ToHex;
+use hex;
 use tar::{Builder, Header};
 use url::Url;
 
@@ -320,5 +320,5 @@ impl Package {
 pub fn cksum(s: &[u8]) -> String {
     let mut sha = Sha256::new();
     sha.update(s);
-    sha.finish().to_hex()
+    hex::encode(&sha.finish())
 }
