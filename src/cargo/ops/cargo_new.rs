@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
+use std::fmt;
 use std::path::Path;
 
 use serde::{Deserialize, Deserializer};
@@ -23,10 +24,30 @@ pub enum VersionControl { Git, Hg, Pijul, Fossil, NoVcs }
 #[derive(Debug)]
 pub struct NewOptions<'a> {
     pub version_control: Option<VersionControl>,
-    pub bin: bool,
-    pub lib: bool,
+    pub kind: NewProjectKind,
     pub path: &'a str,
     pub name: Option<&'a str>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NewProjectKind {
+    Bin,
+    Lib,
+}
+
+impl NewProjectKind {
+    fn is_bin(&self) -> bool {
+        *self == NewProjectKind::Bin
+    }
+}
+
+impl fmt::Display for NewProjectKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            NewProjectKind::Bin => "binary (application)",
+            NewProjectKind::Lib => "library",
+        }.fmt(f)
+    }
 }
 
 struct SourceFileInformation {
@@ -65,18 +86,18 @@ impl<'a> NewOptions<'a> {
                bin: bool,
                lib: bool,
                path: &'a str,
-               name: Option<&'a str>) -> NewOptions<'a> {
+               name: Option<&'a str>) -> CargoResult<NewOptions<'a>> {
 
-        // default to lib
-        let is_lib = !bin || lib;
+        let kind = match (bin, lib) {
+            (true, true) => bail!("can't specify both lib and binary outputs"),
+            (true, false) => NewProjectKind::Bin,
+            (false, true) => NewProjectKind::Lib,
+            // default to lib
+            (false, false) => NewProjectKind::Lib,
+        };
 
-        NewOptions {
-            version_control,
-            bin,
-            lib: is_lib,
-            path,
-            name,
-        }
+        let opts = NewOptions { version_control, kind, path, name };
+        Ok(opts)
     }
 }
 
@@ -122,7 +143,7 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
         "super", "test", "trait", "true", "type", "typeof",
         "unsafe", "unsized", "use", "virtual", "where",
         "while", "yield"];
-    if blacklist.contains(&name) || (opts.bin && is_bad_artifact_name(name)) {
+    if blacklist.contains(&name) || (opts.kind.is_bin() && is_bad_artifact_name(name)) {
         bail!("The name `{}` cannot be used as a crate name{}",
             name,
             name_help)
@@ -264,10 +285,6 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         )
     }
 
-    if opts.lib && opts.bin {
-        bail!("can't specify both lib and binary outputs")
-    }
-
     let name = get_name(&path, opts)?;
     check_name(name, opts)?;
 
@@ -275,8 +292,8 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         version_control: opts.version_control,
         path: &path,
         name: name,
-        source_files: vec![plan_new_source_file(opts.bin, name.to_string())],
-        bin: opts.bin,
+        source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
+        bin: opts.kind.is_bin(),
     };
 
     mk(config, &mkopts).chain_err(|| {
@@ -294,10 +311,6 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         bail!("`cargo init` cannot be run on existing Cargo projects")
     }
 
-    if opts.lib && opts.bin {
-        bail!("can't specify both lib and binary outputs");
-    }
-
     let name = get_name(&path, opts)?;
     check_name(name, opts)?;
 
@@ -306,7 +319,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     detect_source_paths_and_types(&path, name, &mut src_paths_types)?;
 
     if src_paths_types.is_empty() {
-        src_paths_types.push(plan_new_source_file(opts.bin, name.to_string()));
+        src_paths_types.push(plan_new_source_file(opts.kind.is_bin(), name.to_string()));
     } else {
         // --bin option may be ignored if lib.rs or src/lib.rs present
         // Maybe when doing `cargo init --bin` inside a library project stub,
@@ -348,9 +361,9 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     }
 
     let mkopts = MkOptions {
-        version_control: version_control,
+        version_control,
         path: &path,
-        name: name,
+        name,
         bin: src_paths_types.iter().any(|x|x.bin),
         source_files: src_paths_types,
     };
