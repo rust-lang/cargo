@@ -7,11 +7,12 @@ use std::path::{Path, PathBuf};
 use semver::Version;
 use serde::ser;
 use toml;
+use lazycell::LazyCell;
 
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{Summary, SourceMap};
 use ops;
-use util::{Config, LazyCell, internal, lev_distance};
+use util::{Config, internal, lev_distance};
 use util::errors::{CargoResult, CargoResultExt};
 
 /// Information about a package that is available somewhere in the file system.

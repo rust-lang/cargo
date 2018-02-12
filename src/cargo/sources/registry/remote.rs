@@ -9,12 +9,13 @@ use std::str;
 use git2;
 use hex;
 use serde_json;
+use lazycell::LazyCell;
 
 use core::{PackageId, SourceId};
 use sources::git;
 use sources::registry::{RegistryData, RegistryConfig, INDEX_LOCK, CRATE_TEMPLATE, VERSION_TEMPLATE};
 use util::network;
-use util::{FileLock, Filesystem, LazyCell};
+use util::{FileLock, Filesystem};
 use util::{Config, Sha256, ToUrl, Progress};
 use util::errors::{CargoResult, CargoResultExt, HttpNot200};
 
@@ -43,7 +44,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
     }
 
     fn repo(&self) -> CargoResult<&git2::Repository> {
-        self.repo.get_or_try_init(|| {
+        self.repo.try_borrow_with(|| {
             let path = self.index_path.clone().into_path_unlocked();
 
             // Fast path without a lock
