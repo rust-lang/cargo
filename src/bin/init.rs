@@ -59,13 +59,11 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                                     flag_bin,
                                     flag_lib,
                                     path,
-                                    flag_name.as_ref().map(|s| s.as_ref()));
+                                    flag_name.as_ref().map(|s| s.as_ref()))?;
 
-    let opts_lib = opts.lib;
     ops::init(&opts, config)?;
 
-    let project_kind = if opts_lib { "library" } else { "binary (application)" };
-    config.shell().status("Created", format!("{} project", project_kind))?;
+    config.shell().status("Created", format!("{} project", opts.kind))?;
 
     Ok(())
 }
