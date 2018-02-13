@@ -177,7 +177,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // Handle `cargo update --precise` here. If specified, our own source
         // will have a precise version listed of the form `<pkg>=<req>` where
         // `<pkg>` is the name of a crate on this source and `<req>` is the
-        // version requested (agument to `--precise`).
+        // version requested (argument to `--precise`).
         let summaries = summaries.filter(|s| {
             match source_id.precise() {
                 Some(p) if p.starts_with(dep.name()) &&

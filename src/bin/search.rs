@@ -6,7 +6,7 @@ use std::cmp;
 #[derive(Deserialize)]
 pub struct Options {
     flag_index: Option<String>,
-    flag_host: Option<String>,  // TODO: Depricated, remove
+    flag_host: Option<String>,  // TODO: Deprecated, remove
     flag_verbose: u32,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
@@ -49,7 +49,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      &options.flag_z)?;
     let Options {
         flag_index: index,
-        flag_host: host,    // TODO: Depricated, remove
+        flag_host: host,    // TODO: Deprecated, remove
         flag_limit: limit,
         arg_query: query,
         flag_registry: registry,
@@ -61,7 +61,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                                 requires -Zunstable-options to use.").into())
     }
 
-    // TODO: Depricated
+    // TODO: Deprecated
     // remove once it has been decided --host can be safely removed
     // We may instead want to repurpose the host flag, as
     // mentioned in this issue
@@ -70,7 +70,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     let msg = "The flag '--host' is no longer valid.
 
 Previous versions of Cargo accepted this flag, but it is being
-depricated. The flag is being renamed to 'index', as the flag
+deprecated. The flag is being renamed to 'index', as the flag
 wants the location of the index in which to search. Please
 use '--index' instead.
 

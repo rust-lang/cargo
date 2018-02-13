@@ -59,7 +59,10 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
 
     if options.open_result {
         let name = if pkgs.len() > 1 {
-            bail!("Passing multiple packages and `open` is not supported")
+            bail!("Passing multiple packages and `open` is not supported.\n\
+                   Please re-run this command with `-p <spec>` where `<spec>` \
+                   is one of the following:\n  {}",
+                   pkgs.iter().map(|p| p.name()).collect::<Vec<_>>().join("\n  "));
         } else if pkgs.len() == 1 {
             pkgs[0].name().replace("-", "_")
         } else {

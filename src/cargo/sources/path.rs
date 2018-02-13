@@ -97,10 +97,10 @@ impl<'cfg> PathSource<'cfg> {
     /// 1) Only warn users about the future change iff their matching rules are
     ///    affected.  (CURRENT STAGE)
     ///
-    /// 2) Switch to the new strategy and upate documents. Still keep warning
+    /// 2) Switch to the new strategy and update documents. Still keep warning
     ///    affected users.
     ///
-    /// 3) Drop the old strategy and no mor warnings.
+    /// 3) Drop the old strategy and no more warnings.
     ///
     /// See <https://github.com/rust-lang/cargo/issues/4268> for more info.
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {

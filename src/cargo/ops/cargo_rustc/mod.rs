@@ -9,8 +9,9 @@ use std::sync::Arc;
 use same_file::is_same_file;
 use serde_json;
 
-use core::{Package, PackageId, PackageSet, Target, Resolve};
+use core::{Feature, Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
+use core::manifest::Lto;
 use core::shell::ColorChoice;
 use util::{self, ProcessBuilder, machine_message};
 use util::{Config, internal, profile, join_paths};
@@ -744,7 +745,7 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                              unit: &Unit<'a>,
                              crate_types: &[&str]) -> CargoResult<()> {
     let Profile {
-        ref opt_level, lto, codegen_units, ref rustc_args, debuginfo,
+        ref opt_level, ref lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, overflow_checks, rpath, test, doc: _doc,
         run_custom_build, ref panic, rustdoc_args: _, check, incremental: _,
     } = *unit.profile;
@@ -803,12 +804,27 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             cmd.arg("-C").arg(format!("panic={}", panic));
         }
     }
+    let manifest = unit.pkg.manifest();
+
+    if manifest.features().is_enabled(Feature::epoch()) {
+        cmd.arg(format!("-Zepoch={}", manifest.epoch()));
+    }
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually
     // exclusive.
-    if unit.target.can_lto() && lto && !unit.target.for_host() {
-        cmd.args(&["-C", "lto"]);
-    } else if let Some(n) = codegen_units {
+    if unit.target.can_lto() && !unit.target.for_host() {
+        match *lto {
+            Lto::Bool(false) => {}
+            Lto::Bool(true) => {
+                cmd.args(&["-C", "lto"]);
+            }
+            Lto::Named(ref s) => {
+                cmd.arg("-C").arg(format!("lto={}", s));
+            }
+        }
+    }
+
+    if let Some(n) = codegen_units {
         // There are some restrictions with LTO and codegen-units, so we
         // only add codegen units when LTO is not used.
         cmd.arg("-C").arg(&format!("codegen-units={}", n));

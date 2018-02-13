@@ -17,7 +17,7 @@ fn enabled() -> bool {
     true
 }
 
-// On Windows suport for these tests is only enabled through the usage of job
+// On Windows support for these tests is only enabled through the usage of job
 // objects. Support for nested job objects, however, was added in recent-ish
 // versions of Windows, so this test may not always be able to succeed.
 //
