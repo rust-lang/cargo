@@ -332,7 +332,7 @@ struct Context<'a> {
     //       make these much cheaper to clone in general.
     activations: Activations,
     resolve_features: HashMap<PackageId, HashSet<String>>,
-    links: HashSet<String>,
+    links: HashMap<String, PackageId>,
 
     // These are two cheaply-cloneable lists (O(1) clone) which are effectively
     // hash maps but are built up as "construction lists". We'll iterate these
@@ -357,7 +357,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
     let cx = Context {
         resolve_graph: RcList::new(),
         resolve_features: HashMap::new(),
-        links: HashSet::new(),
+        links: HashMap::new(),
         resolve_replacements: RcList::new(),
         activations: HashMap::new(),
         replacements,
@@ -551,7 +551,7 @@ struct RemainingCandidates {
 }
 
 impl RemainingCandidates {
-    fn next(&mut self, prev_active: &[Summary], links: &HashSet<String>) -> Result<Candidate, HashSet<PackageId>> {
+    fn next(&mut self, prev_active: &[Summary], links: &HashMap<String, PackageId>) -> Result<Candidate, HashSet<PackageId>> {
         // Filter the set of candidates based on the previously activated
         // versions for this dependency. We can actually use a version if it
         // precisely matches an activated version or if it is otherwise
@@ -565,9 +565,11 @@ impl RemainingCandidates {
         // that conflicted with the ones we tried. If any of these change
         // then we would have considered different candidates.
         for (_, b) in self.remaining.by_ref() {
-            if b.summary.links().map(|l| links.contains(l)).unwrap_or(false) {
-                // TODO: self.conflicting_prev_active.insert(___.package_id().clone());
-                continue
+            if let Some(a) = b.summary.links().and_then(|l| links.get(l)) {
+                if a != b.summary.package_id() {
+                    self.conflicting_prev_active.insert(a.clone());
+                    continue
+                }
             }
             if let Some(a) = prev_active.iter().find(|a| compatible(a.version(), b.summary.version())) {
                 if *a != b.summary {
@@ -1077,7 +1079,7 @@ impl<'a> Context<'a> {
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.push(GraphNode::Add(id.clone()));
             if let Some(link) = summary.links() {
-                ensure!(self.links.insert(link.to_owned()),
+                ensure!(self.links.insert(link.to_owned(), id.clone()).is_none(),
                 "Attempting to resolve a with more then one crate with the links={}. \n\
                  This will not build as is. Consider rebuilding the .lock file.", link);
             }
