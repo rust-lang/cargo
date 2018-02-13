@@ -741,7 +741,7 @@ The TOML spec requires newlines after table definitions (e.g. `[a] b = 1` is
 invalid), but this file has a table header which does not have a newline after
 it. A newline needs to be added and this warning will soon become a hard error
 in the future.
-[COMPILING] empty_deps v0.0.0 ([..])
+[LINKING] empty_deps
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 "));
 }
