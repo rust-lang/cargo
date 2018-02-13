@@ -14,9 +14,9 @@ use url::Url;
 
 use core::{SourceId, Profiles, PackageIdSpec, GitReference, WorkspaceConfig, WorkspaceRootConfig};
 use core::{Summary, Manifest, Target, Dependency, PackageId};
-use core::{EitherManifest, VirtualManifest, Features, Feature};
+use core::{EitherManifest, Epoch, VirtualManifest, Features, Feature};
 use core::dependency::{Kind, Platform};
-use core::manifest::{LibKind, Profile, ManifestMetadata};
+use core::manifest::{LibKind, Profile, ManifestMetadata, Lto};
 use sources::CRATES_IO;
 use util::paths;
 use util::{self, ToUrl, Config};
@@ -327,7 +327,7 @@ impl<'de> de::Deserialize<'de> for U32OrBool {
 pub struct TomlProfile {
     #[serde(rename = "opt-level")]
     opt_level: Option<TomlOptLevel>,
-    lto: Option<bool>,
+    lto: Option<StringOrBool>,
     #[serde(rename = "codegen-units")]
     codegen_units: Option<u32>,
     debug: Option<U32OrBool>,
@@ -441,6 +441,7 @@ pub struct TomlProject {
     license_file: Option<String>,
     repository: Option<String>,
     metadata: Option<toml::Value>,
+    rust: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -716,6 +717,19 @@ impl TomlManifest {
             Some(VecStringOrBool::Bool(false)) => Some(vec![]),
             None | Some(VecStringOrBool::Bool(true)) => None,
         };
+
+        let epoch = if let Some(ref epoch) = project.rust {
+            features.require(Feature::epoch()).chain_err(|| {
+                "epoches are unstable"
+            })?;
+            if let Ok(epoch) = epoch.parse() {
+                epoch
+            } else {
+                bail!("the `rust` key must be one of: `2015`, `2018`")
+            }
+        } else {
+                Epoch::Epoch2015
+        };
         let mut manifest = Manifest::new(summary,
                                          targets,
                                          exclude,
@@ -728,6 +742,7 @@ impl TomlManifest {
                                          patch,
                                          workspace_config,
                                          features,
+                                         epoch,
                                          project.im_a_teapot,
                                          Rc::clone(me));
         if project.license_file.is_some() && project.license.is_some() {
@@ -1151,7 +1166,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
 
     fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
         let &TomlProfile {
-            ref opt_level, lto, codegen_units, ref debug, debug_assertions, rpath,
+            ref opt_level, ref lto, codegen_units, ref debug, debug_assertions, rpath,
             ref panic, ref overflow_checks, ref incremental,
         } = match toml {
             Some(toml) => toml,
@@ -1165,7 +1180,11 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
         };
         Profile {
             opt_level: opt_level.clone().unwrap_or(TomlOptLevel(profile.opt_level)).0,
-            lto: lto.unwrap_or(profile.lto),
+            lto: match *lto {
+                Some(StringOrBool::Bool(b)) => Lto::Bool(b),
+                Some(StringOrBool::String(ref n)) => Lto::Named(n.clone()),
+                None => profile.lto,
+            },
             codegen_units: codegen_units,
             rustc_args: None,
             rustdoc_args: None,

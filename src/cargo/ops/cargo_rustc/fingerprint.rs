@@ -9,7 +9,7 @@ use serde::ser::{self, Serialize};
 use serde::de::{self, Deserialize};
 use serde_json;
 
-use core::{Package, TargetKind};
+use core::{Epoch, Package, TargetKind};
 use util;
 use util::{Fresh, Dirty, Freshness, internal, profile};
 use util::errors::{CargoResult, CargoResultExt};
@@ -145,6 +145,7 @@ pub struct Fingerprint {
     #[serde(skip_serializing, skip_deserializing)]
     memoized_hash: Mutex<Option<u64>>,
     rustflags: Vec<String>,
+    epoch: Epoch,
 }
 
 fn serialize_deps<S>(deps: &[(String, Arc<Fingerprint>)], ser: S)
@@ -170,6 +171,7 @@ fn deserialize_deps<'de, D>(d: D) -> Result<Vec<(String, Arc<Fingerprint>)>, D::
             features: String::new(),
             deps: Vec::new(),
             memoized_hash: Mutex::new(Some(hash)),
+            epoch: Epoch::Epoch2015,
             rustflags: Vec::new(),
         }))
     }).collect())
@@ -252,6 +254,9 @@ impl Fingerprint {
         if self.local.len() != old.local.len() {
             bail!("local lens changed");
         }
+        if self.epoch != old.epoch {
+            bail!("epoch changed")
+        }
         for (new, old) in self.local.iter().zip(&old.local) {
             match (new, old) {
                 (&LocalFingerprint::Precalculated(ref a),
@@ -315,9 +320,10 @@ impl hash::Hash for Fingerprint {
             ref deps,
             ref local,
             memoized_hash: _,
+            epoch,
             ref rustflags,
         } = *self;
-        (rustc, features, target, path, profile, local, rustflags).hash(h);
+        (rustc, features, target, path, profile, local, epoch, rustflags).hash(h);
 
         h.write_usize(deps.len());
         for &(ref name, ref fingerprint) in deps {
@@ -416,6 +422,7 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         deps: deps,
         local: vec![local],
         memoized_hash: Mutex::new(None),
+        epoch: unit.pkg.manifest().epoch(),
         rustflags: extra_flags,
     });
     cx.fingerprints.insert(*unit, Arc::clone(&fingerprint));
@@ -468,6 +475,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         deps: Vec::new(),
         local: local,
         memoized_hash: Mutex::new(None),
+        epoch: Epoch::Epoch2015,
         rustflags: Vec::new(),
     };
     let compare = compare_old_fingerprint(&loc, &fingerprint);

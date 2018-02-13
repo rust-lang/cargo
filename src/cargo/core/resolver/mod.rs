@@ -120,28 +120,8 @@ struct Candidate {
 impl Resolve {
     /// Resolves one of the paths from the given dependent package up to
     /// the root.
-    pub fn path_to_top<'a>(&'a self, mut pkg: &'a PackageId) -> Vec<&'a PackageId> {
-        // Note that this implementation isn't the most robust per se, we'll
-        // likely have to tweak this over time. For now though it works for what
-        // it's used for!
-        let mut result = vec![pkg];
-        let first_pkg_depending_on = |pkg: &PackageId| {
-            self.graph.get_nodes()
-                .iter()
-                .filter(|&(_node, adjacent)| adjacent.contains(pkg))
-                .next()
-                .map(|p| p.0)
-        };
-        while let Some(p) = first_pkg_depending_on(pkg) {
-            // Note that we can have "cycles" introduced through dev-dependency
-            // edges, so make sure we don't loop infinitely.
-            if result.contains(&p) {
-                break
-            }
-            result.push(p);
-            pkg = p;
-        }
-        result
+    pub fn path_to_top<'a>(&'a self, pkg: &'a PackageId) -> Vec<&'a PackageId> {
+        self.graph.path_to_top(pkg)
     }
     pub fn register_used_patches(&mut self,
                                  patches: &HashMap<Url, Vec<Summary>>) {
@@ -347,7 +327,7 @@ enum GraphNode {
 // possible.
 #[derive(Clone)]
 struct Context<'a> {
-    // TODO: Both this and the map two below are super expensive to clone. We should
+    // TODO: Both this and the two maps below are super expensive to clone. We should
     //       switch to persistent hash maps if we can at some point or otherwise
     //       make these much cheaper to clone in general.
     activations: Activations,
@@ -560,15 +540,18 @@ struct BacktrackFrame<'a> {
     parent: Summary,
     dep: Dependency,
     features: Rc<Vec<String>>,
+    conflicting_activations: HashSet<PackageId>,
 }
 
 #[derive(Clone)]
 struct RemainingCandidates {
     remaining: RcVecIter<Candidate>,
+    // note: change to RcList or something if clone is to expensive
+    conflicting_prev_active: HashSet<PackageId>,
 }
 
 impl RemainingCandidates {
-    fn next(&mut self, prev_active: &[Summary], links: &HashSet<String>) -> Option<Candidate> {
+    fn next(&mut self, prev_active: &[Summary], links: &HashSet<String>) -> Result<Candidate, HashSet<PackageId>> {
         // Filter the set of candidates based on the previously activated
         // versions for this dependency. We can actually use a version if it
         // precisely matches an activated version or if it is otherwise
@@ -577,13 +560,24 @@ impl RemainingCandidates {
         // the left-most nonzero digit is the same they're considered
         // compatible unless we have a `*-sys` crate (defined by having a
         // linked attribute) then we can only have one version.
-        self.remaining.by_ref().map(|p| p.1).find(|b| {
-            prev_active.iter().any(|a| *a == b.summary)
-                || (b.summary.links().map(|l| !links.contains(l)).unwrap_or(true)
-                    && prev_active
-                        .iter()
-                        .all(|a| !compatible(a.version(), b.summary.version())))
-        })
+        //
+        // When we are done we return the set of previously activated
+        // that conflicted with the ones we tried. If any of these change
+        // then we would have considered different candidates.
+        for (_, b) in self.remaining.by_ref() {
+            if b.summary.links().map(|l| links.contains(l)).unwrap_or(false) {
+                // TODO: self.conflicting_prev_active.insert(___.package_id().clone());
+                continue
+            }
+            if let Some(a) = prev_active.iter().find(|a| compatible(a.version(), b.summary.version())) {
+                if *a != b.summary {
+                    self.conflicting_prev_active.insert(a.package_id().clone());
+                    continue
+                }
+            }
+            return Ok(b);
+        }
+        Err(self.conflicting_prev_active.clone())
     }
 }
 
@@ -606,6 +600,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     // use (those with more candidates).
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = BinaryHeap::new();
+    let mut conflicting_activations;
     for &(ref summary, ref method) in summaries {
         debug!("initial activation: {}", summary.package_id());
         let candidate = Candidate { summary: summary.clone(), replace: None };
@@ -626,7 +621,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     // You'll note that a few stacks are maintained on the side, which might
     // seem odd when this algorithm looks like it could be implemented
     // recursively. While correct, this is implemented iteratively to avoid
-    // blowing the stack (the recusion depth is proportional to the size of the
+    // blowing the stack (the recursion depth is proportional to the size of the
     // input).
     //
     // The general sketch of this loop is to run until there are no dependencies
@@ -676,9 +671,11 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                    dep.name(), prev_active.len());
             let mut candidates = RemainingCandidates {
                 remaining: RcVecIter::new(Rc::clone(&candidates)),
+                conflicting_prev_active: HashSet::new(),
             };
+            conflicting_activations = HashSet::new();
             (candidates.next(prev_active, &cx.links),
-             candidates.clone().next(prev_active, &cx.links).is_some(),
+             candidates.clone().next(prev_active, &cx.links).is_ok(),
              candidates)
         };
 
@@ -695,7 +692,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         // turn. We could possibly fail to activate each candidate, so we try
         // each one in turn.
         let candidate = match next {
-            Some(candidate) => {
+            Ok(candidate) => {
                 // We have a candidate. Add an entry to the `backtrack_stack` so
                 // we can try the next one if this one fails.
                 if has_another {
@@ -707,11 +704,13 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                         parent: Summary::clone(&parent),
                         dep: Dependency::clone(&dep),
                         features: Rc::clone(&features),
+                        conflicting_activations: conflicting_activations.clone(),
                     });
                 }
                 candidate
             }
-            None => {
+            Err(mut conflicting) => {
+                conflicting_activations.extend(conflicting.drain());
                 // This dependency has no valid candidate. Backtrack until we
                 // find a dependency that does have a candidate to try, and try
                 // to activate that one.  This resets the `remaining_deps` to
@@ -724,10 +723,11 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                                      &mut parent,
                                      &mut cur,
                                      &mut dep,
-                                     &mut features) {
+                                     &mut features,
+                                     &mut conflicting_activations) {
                     None => return Err(activation_error(&cx, registry, &parent,
                                                         &dep,
-                                                        cx.prev_active(&dep),
+                                                        conflicting_activations,
                                                         &candidates, config)),
                     Some(candidate) => candidate,
                 }
@@ -751,23 +751,44 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     Ok(cx)
 }
 
-// Searches up `backtrack_stack` until it finds a dependency with remaining
-// candidates. Resets `cx` and `remaining_deps` to that level and returns the
-// next candidate. If all candidates have been exhausted, returns None.
-fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
-                      cx: &mut Context<'a>,
-                      remaining_deps: &mut BinaryHeap<DepsFrame>,
-                      parent: &mut Summary,
-                      cur: &mut usize,
-                      dep: &mut Dependency,
-                      features: &mut Rc<Vec<String>>) -> Option<Candidate> {
+/// Looks through the states in `backtrack_stack` for dependencies with
+/// remaining candidates. For each one, also checks if rolling back
+/// could change the outcome of the failed resolution that caused backtracking
+/// in the first place. Namely, if we've backtracked past the parent of the
+/// failed dep, or any of the packages flagged as giving us trouble in conflicting_activations.
+/// Read https://github.com/rust-lang/cargo/pull/4834
+/// For several more detailed explanations of the logic here.
+///
+/// If the outcome could differ, resets `cx` and `remaining_deps` to that
+/// level and returns the next candidate.
+/// If all candidates have been exhausted, returns None.
+fn find_candidate<'a>(
+    backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
+    cx: &mut Context<'a>,
+    remaining_deps: &mut BinaryHeap<DepsFrame>,
+    parent: &mut Summary,
+    cur: &mut usize,
+    dep: &mut Dependency,
+    features: &mut Rc<Vec<String>>,
+    conflicting_activations: &mut HashSet<PackageId>,
+) -> Option<Candidate> {
     while let Some(mut frame) = backtrack_stack.pop() {
         let (next, has_another) = {
             let prev_active = frame.context_backup.prev_active(&frame.dep);
-            (frame.remaining_candidates.next(prev_active, &frame.context_backup.links),
-             frame.remaining_candidates.clone().next(prev_active, &frame.context_backup.links).is_some())
+            (
+                frame.remaining_candidates.next(prev_active, &frame.context_backup.links),
+                frame.remaining_candidates.clone().next(prev_active, &frame.context_backup.links).is_ok(),
+            )
         };
-        if let Some(candidate) = next {
+        if frame.context_backup.is_active(parent.package_id())
+           && conflicting_activations
+           .iter()
+           // note: a lot of redundant work in is_active for similar debs
+           .all(|con| frame.context_backup.is_active(con))
+        {
+            continue;
+        }
+        if let Ok(candidate) = next {
             *cur = frame.cur;
             if has_another {
                 *cx = frame.context_backup.clone();
@@ -775,6 +796,7 @@ fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
                 *parent = frame.parent.clone();
                 *dep = frame.dep.clone();
                 *features = Rc::clone(&frame.features);
+                *conflicting_activations = frame.conflicting_activations.clone();
                 backtrack_stack.push(frame);
             } else {
                 *cx = frame.context_backup;
@@ -782,8 +804,9 @@ fn find_candidate<'a>(backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
                 *parent = frame.parent;
                 *dep = frame.dep;
                 *features = frame.features;
+                *conflicting_activations = frame.conflicting_activations
             }
-            return Some(candidate)
+            return Some(candidate);
         }
     }
     None
@@ -793,47 +816,47 @@ fn activation_error(cx: &Context,
                     registry: &mut Registry,
                     parent: &Summary,
                     dep: &Dependency,
-                    prev_active: &[Summary],
+                    conflicting_activations: HashSet<PackageId>,
                     candidates: &[Candidate],
                     config: Option<&Config>) -> CargoError {
+    let graph = cx.graph();
+    let describe_path = |pkgid: &PackageId| -> String {
+        use std::fmt::Write;
+        let dep_path = graph.path_to_top(pkgid);
+        let mut dep_path_desc = format!("package `{}`", dep_path[0]);
+        for dep in dep_path.iter().skip(1) {
+            write!(dep_path_desc,
+                   "\n    ... which is depended on by `{}`",
+                   dep).unwrap();
+        }
+        dep_path_desc
+    };
     if !candidates.is_empty() {
-        let mut msg = format!("failed to select a version for `{}` \
-                               (required by `{}`):\n\
+        let mut msg = format!("failed to select a version for `{}`.\n\
                                all possible versions conflict with \
-                               previously selected versions of `{}`",
-                              dep.name(), parent.name(),
+                               previously selected packages.\n",
                               dep.name());
-        let graph = cx.graph();
-        'outer: for v in prev_active.iter() {
-            for node in graph.iter() {
-                let edges = match graph.edges(node) {
-                    Some(edges) => edges,
-                    None => continue,
-                };
-                for edge in edges {
-                    if edge != v.package_id() { continue }
-
-                    msg.push_str(&format!("\n  version {} in use by {}",
-                                          v.version(), edge));
-                    continue 'outer;
-                }
-            }
-            msg.push_str(&format!("\n  version {} in use by ??",
-                                  v.version()));
+        msg.push_str("required by ");
+        msg.push_str(&describe_path(parent.package_id()));
+        let mut conflicting_activations: Vec<_> = conflicting_activations.iter().collect();
+        conflicting_activations.sort_unstable();
+        for v in conflicting_activations.iter().rev() {
+            msg.push_str("\n  previously selected ");
+            msg.push_str(&describe_path(v));
         }
 
-        msg.push_str(&format!("\n  possible versions to select: {}",
-                              candidates.iter()
-                                        .map(|v| v.summary.version())
-                                        .map(|v| v.to_string())
-                                        .collect::<Vec<_>>()
-                                        .join(", ")));
+        msg.push_str("\n  possible versions to select: ");
+        msg.push_str(&candidates.iter()
+                                       .map(|v| v.summary.version())
+                                       .map(|v| v.to_string())
+                                       .collect::<Vec<_>>()
+                                       .join(", "));
 
         return format_err!("{}", msg)
     }
 
     // Once we're all the way down here, we're definitely lost in the
-    // weeds! We didn't actually use any candidates above, so we need to
+    // weeds! We didn't actually find any candidates, so we need to
     // give an error message that nothing was found.
     //
     // Note that we re-query the registry with a new dependency that
@@ -846,7 +869,7 @@ fn activation_error(cx: &Context,
         Ok(candidates) => candidates,
         Err(e) => return e,
     };
-    candidates.sort_by(|a, b| {
+    candidates.sort_unstable_by(|a, b| {
         b.version().cmp(a.version())
     });
 
@@ -863,15 +886,15 @@ fn activation_error(cx: &Context,
             versions.join(", ")
         };
 
-        let mut msg = format!("no matching version `{}` found for package `{}` \
-                               (required by `{}`)\n\
+        let mut msg = format!("no matching version `{}` found for package `{}`\n\
                                location searched: {}\n\
-                               versions found: {}",
+                               versions found: {}\n",
                               dep.version_req(),
                               dep.name(),
-                              parent.name(),
                               dep.source_id(),
                               versions);
+        msg.push_str("required by ");
+        msg.push_str(&describe_path(parent.package_id()));
 
         // If we have a path dependency with a locked version, then this may
         // indicate that we updated a sub-package and forgot to run `cargo
@@ -884,13 +907,13 @@ fn activation_error(cx: &Context,
 
         msg
     } else {
-        format!("no matching package named `{}` found \
-                 (required by `{}`)\n\
-                 location searched: {}\n\
-                 version required: {}",
-                dep.name(), parent.name(),
-                dep.source_id(),
-                dep.version_req())
+        let mut msg = format!("no matching package named `{}` found\n\
+                 location searched: {}\n",
+                dep.name(), dep.source_id());
+        msg.push_str("required by ");
+        msg.push_str(&describe_path(parent.package_id()));
+
+        msg
     };
 
     if let Some(config) = config {
@@ -1084,7 +1107,7 @@ impl<'a> Context<'a> {
                   registry: &mut Registry,
                   candidate: &Summary,
                   method: &Method) -> CargoResult<Vec<DepInfo>> {
-        // First, figure out our set of dependencies based on the requsted set
+        // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
         let deps = self.resolve_features(candidate, method)?;
@@ -1187,6 +1210,13 @@ impl<'a> Context<'a> {
             .and_then(|v| v.get(dep.source_id()))
             .map(|v| &v[..])
             .unwrap_or(&[])
+    }
+
+    fn is_active(&self, id: &PackageId) -> bool {
+        self.activations.get(id.name())
+            .and_then(|v| v.get(id.source_id()))
+            .map(|v| v.iter().any(|s| s.package_id() == id))
+            .unwrap_or(false)
     }
 
     /// Return all dependencies and the features we want from them.

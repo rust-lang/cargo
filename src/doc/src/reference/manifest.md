@@ -189,7 +189,7 @@ license-file = "..."
 #   Appveyor, CircleCI, GitLab, and TravisCI.
 # - Available badges pertaining to code test coverage are Codecov and
 #   Coveralls.
-# - There are also maintenance-related badges basesed on isitmaintained.com
+# - There are also maintenance-related badges based on isitmaintained.com
 #   which state the issue resolution time, percent of open issues, and future
 #   maintenance intentions.
 #
@@ -294,12 +294,14 @@ rpath = false      # controls whether compiler should set loader paths.
                    # If true, passes `-C rpath` flag to the compiler.
 lto = false        # Link Time Optimization usually reduces size of binaries
                    # and static libraries. Increases compilation time.
-                   # If true, passes `-C lto` flag to the compiler.
+                   # If true, passes `-C lto` flag to the compiler, and if a
+                   # string is specified like 'thin' then `-C lto=thin` will
+                   # be passed
 debug-assertions = true # controls whether debug assertions are enabled
                    # (e.g. debug_assert!() and arithmetic overflow checks)
 codegen-units = 1  # if > 1 enables parallel code generation which improves
                    # compile times, but prevents some optimizations.
-                   # Passes `-C codegen-units`. Ignored when `lto = true`.
+                   # Passes `-C codegen-units`.
 panic = 'unwind'   # panic strategy (`-C panic=...`), can also be 'abort'
 incremental = true # whether or not incremental compilation is enabled
 overflow-checks = true # use overflow checks for integer arithmetic.

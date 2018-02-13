@@ -40,8 +40,39 @@
 //! we'll be sure to update this documentation!
 
 use std::env;
+use std::fmt;
+use std::str::FromStr;
 
 use util::errors::CargoResult;
+
+/// The epoch of the compiler (RFC 2052)
+#[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq)]
+#[derive(Serialize, Deserialize)]
+pub enum Epoch {
+    /// The 2015 epoch
+    Epoch2015,
+    /// The 2018 epoch
+    Epoch2018,
+}
+
+impl fmt::Display for Epoch {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Epoch::Epoch2015 => f.write_str("2015"),
+            Epoch::Epoch2018 => f.write_str("2018"),
+        }
+    }
+}
+impl FromStr for Epoch {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, ()> {
+        match s {
+            "2015" => Ok(Epoch::Epoch2015),
+            "2018" => Ok(Epoch::Epoch2018),
+            _ => Err(())
+        }
+    }
+}
 
 enum Status {
     Stable,
@@ -125,6 +156,9 @@ features! {
 
         // Downloading packages from alternative registry indexes.
         [unstable] alternative_registries: bool,
+
+        // Using epochs
+        [unstable] epoch: bool,
     }
 }
 
@@ -201,6 +235,10 @@ impl Features {
             bail!("{}", msg);
         }
     }
+
+    pub fn is_enabled(&self, feature: &Feature) -> bool {
+        feature.is_enabled(self)
+    }
 }
 
 /// A parsed representation of all unstable flags that Cargo accepts.
@@ -233,6 +271,7 @@ pub struct CliUnstable {
     pub print_im_a_teapot: bool,
     pub unstable_options: bool,
     pub offline: bool,
+    pub no_index_update: bool,
 }
 
 impl CliUnstable {
@@ -264,6 +303,7 @@ impl CliUnstable {
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(v)?,
             "unstable-options" => self.unstable_options = true,
             "offline" => self.offline = true,
+            "no-index-update" => self.no_index_update = true,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 

@@ -67,6 +67,30 @@ impl<N: Eq + Hash + Clone> Graph<N> {
     pub fn iter(&self) -> Nodes<N> {
         self.nodes.keys()
     }
+
+    /// Resolves one of the paths from the given dependent package up to
+    /// the root.
+    pub fn path_to_top<'a>(&'a self, mut pkg: &'a N) -> Vec<&'a N> {
+        // Note that this implementation isn't the most robust per se, we'll
+        // likely have to tweak this over time. For now though it works for what
+        // it's used for!
+        let mut result = vec![pkg];
+        let first_pkg_depending_on = |pkg: &N, res: &[&N]| {
+            self.get_nodes()
+                .iter()
+                .filter(|&(_node, adjacent)| adjacent.contains(pkg))
+                // Note that we can have "cycles" introduced through dev-dependency
+                // edges, so make sure we don't loop infinitely.
+                .filter(|&(_node, _)| !res.contains(&_node))
+                .next()
+                .map(|p| p.0)
+        };
+        while let Some(p) = first_pkg_depending_on(pkg, &result) {
+            result.push(p);
+            pkg = p;
+        }
+        result
+    }
 }
 
 impl<N: Eq + Hash + Clone> Default for Graph<N> {

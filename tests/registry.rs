@@ -110,9 +110,9 @@ fn nonexistent() {
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
 [UPDATING] registry [..]
-[ERROR] no matching package named `nonexistent` found (required by `foo`)
+error: no matching package named `nonexistent` found
 location searched: registry [..]
-version required: >= 0.0.0
+required by package `foo v0.0.1 ([..])`
 "));
 }
 
@@ -136,9 +136,10 @@ fn wrong_version() {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
-[ERROR] no matching version `>= 1.0.0` found for package `foo` (required by `foo`)
+error: no matching version `>= 1.0.0` found for package `foo`
 location searched: registry [..]
 versions found: 0.0.2, 0.0.1
+required by package `foo v0.0.1 ([..])`
 "));
 
     Package::new("foo", "0.0.3").publish();
@@ -146,9 +147,10 @@ versions found: 0.0.2, 0.0.1
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
-[ERROR] no matching version `>= 1.0.0` found for package `foo` (required by `foo`)
+error: no matching version `>= 1.0.0` found for package `foo`
 location searched: registry [..]
 versions found: 0.0.4, 0.0.3, 0.0.2, ...
+required by package `foo v0.0.1 ([..])`
 "));
 }
 
@@ -204,9 +206,9 @@ fn update_registry() {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
-[ERROR] no matching package named `notyet` found (required by `foo`)
-location searched: registry [..]
-version required: >= 0.0.0
+error: no matching package named `notyet` found
+location searched: registry `[..]`
+required by package `foo v0.0.1 ([..])`
 "));
 
     Package::new("notyet", "0.0.1").publish();
@@ -256,9 +258,9 @@ fn package_with_path_deps() {
 [ERROR] failed to verify package tarball
 
 Caused by:
-  no matching package named `notyet` found (required by `foo`)
+  no matching package named `notyet` found
 location searched: registry [..]
-version required: ^0.0.1
+required by package `foo v0.0.1 ([..])`
 "));
 
     Package::new("notyet", "0.0.1").publish();
@@ -401,9 +403,10 @@ fn relying_on_a_yank_is_bad() {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr_contains("\
-[ERROR] no matching version `= 0.0.2` found for package `baz` (required by `bar`)
-location searched: registry [..]
+error: no matching version `= 0.0.2` found for package `baz`
+location searched: registry `[..]`
 versions found: 0.0.1
+required by package `bar v0.0.1`
 "));
 }
 
@@ -436,9 +439,9 @@ fn yanks_in_lockfiles_are_ok() {
 
     assert_that(p.cargo("update"),
                 execs().with_status(101).with_stderr_contains("\
-[ERROR] no matching package named `bar` found (required by `foo`)
+error: no matching package named `bar` found
 location searched: registry [..]
-version required: *
+required by package `foo v0.0.1 ([..])`
 "));
 }
 

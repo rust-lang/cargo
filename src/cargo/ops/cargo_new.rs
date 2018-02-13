@@ -91,32 +91,18 @@ struct CargoNewConfig {
     version_control: Option<VersionControl>,
 }
 
-fn get_name<'a>(path: &'a Path, opts: &'a NewOptions, config: &Config) -> CargoResult<&'a str> {
+fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
     if let Some(name) = opts.name {
         return Ok(name);
     }
 
-    if path.file_name().is_none() {
-        bail!("cannot auto-detect project name from path {:?} ; use --name to override",
-                              path.as_os_str());
-    }
-
-    let dir_name = path.file_name().and_then(|s| s.to_str()).ok_or_else(|| {
-        format_err!("cannot create a project with a non-unicode name: {:?}",
-                    path.file_name().unwrap())
+    let file_name = path.file_name().ok_or_else(|| {
+        format_err!("cannot auto-detect project name from path {:?} ; use --name to override", path.as_os_str())
     })?;
 
-    if opts.bin {
-        Ok(dir_name)
-    } else {
-        let new_name = strip_rust_affixes(dir_name);
-        if new_name != dir_name {
-            writeln!(config.shell().err(),
-                     "note: package will be named `{}`; use --name to override",
-                     new_name)?;
-        }
-        Ok(new_name)
-    }
+    file_name.to_str().ok_or_else(|| {
+        format_err!("cannot create project with a non-unicode name: {:?}", file_name)
+    })
 }
 
 fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
@@ -287,7 +273,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         bail!("can't specify both lib and binary outputs")
     }
 
-    let name = get_name(&path, opts, config)?;
+    let name = get_name(&path, opts)?;
     check_name(name, opts)?;
 
     let mkopts = MkOptions {
@@ -317,7 +303,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         bail!("can't specify both lib and binary outputs");
     }
 
-    let name = get_name(&path, opts, config)?;
+    let name = get_name(&path, opts)?;
     check_name(name, opts)?;
 
     let mut src_paths_types = vec![];
@@ -379,20 +365,6 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
                     name, path.display())
     })?;
     Ok(())
-}
-
-fn strip_rust_affixes(name: &str) -> &str {
-    for &prefix in &["rust-", "rust_", "rs-", "rs_"] {
-        if name.starts_with(prefix) {
-            return &name[prefix.len()..];
-        }
-    }
-    for &suffix in &["-rust", "_rust", "-rs", "_rs"] {
-        if name.ends_with(suffix) {
-            return &name[..name.len()-suffix.len()];
-        }
-    }
-    name
 }
 
 fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
@@ -590,6 +562,7 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
     let vcs = match vcs.as_ref().map(|p| (&p.val[..], &p.definition)) {
         Some(("git", _)) => Some(VersionControl::Git),
         Some(("hg", _)) => Some(VersionControl::Hg),
+        Some(("pijul", _)) => Some(VersionControl::Pijul),
         Some(("none", _)) => Some(VersionControl::NoVcs),
         Some((s, p)) => {
             return Err(internal(format!("invalid configuration for key \
@@ -603,21 +576,4 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
         email: email,
         version_control: vcs,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::strip_rust_affixes;
-
-    #[test]
-    fn affixes_stripped() {
-        assert_eq!(strip_rust_affixes("rust-foo"), "foo");
-        assert_eq!(strip_rust_affixes("foo-rs"), "foo");
-        assert_eq!(strip_rust_affixes("rs_foo"), "foo");
-        // Only one affix is stripped
-        assert_eq!(strip_rust_affixes("rs-foo-rs"), "foo-rs");
-        assert_eq!(strip_rust_affixes("foo-rs-rs"), "foo-rs");
-        // It shouldn't touch the middle
-        assert_eq!(strip_rust_affixes("some-rust-crate"), "some-rust-crate");
-    }
 }
