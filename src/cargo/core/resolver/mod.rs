@@ -532,6 +532,12 @@ impl Ord for DepsFrame {
     }
 }
 
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq)]
+enum ConflictReason {
+    Semver,
+    Links(String),
+}
+
 struct BacktrackFrame<'a> {
     cur: usize,
     context_backup: Context<'a>,
@@ -540,18 +546,18 @@ struct BacktrackFrame<'a> {
     parent: Summary,
     dep: Dependency,
     features: Rc<Vec<String>>,
-    conflicting_activations: HashSet<PackageId>,
+    conflicting_activations: HashMap<PackageId, ConflictReason>,
 }
 
 #[derive(Clone)]
 struct RemainingCandidates {
     remaining: RcVecIter<Candidate>,
     // note: change to RcList or something if clone is to expensive
-    conflicting_prev_active: HashSet<PackageId>,
+    conflicting_prev_active: HashMap<PackageId, ConflictReason>,
 }
 
 impl RemainingCandidates {
-    fn next(&mut self, prev_active: &[Summary], links: &HashMap<String, PackageId>) -> Result<Candidate, HashSet<PackageId>> {
+    fn next(&mut self, prev_active: &[Summary], links: &HashMap<String, PackageId>) -> Result<Candidate, HashMap<PackageId, ConflictReason>> {
         // Filter the set of candidates based on the previously activated
         // versions for this dependency. We can actually use a version if it
         // precisely matches an activated version or if it is otherwise
@@ -565,15 +571,17 @@ impl RemainingCandidates {
         // that conflicted with the ones we tried. If any of these change
         // then we would have considered different candidates.
         for (_, b) in self.remaining.by_ref() {
-            if let Some(a) = b.summary.links().and_then(|l| links.get(l)) {
-                if a != b.summary.package_id() {
-                    self.conflicting_prev_active.insert(a.clone());
-                    continue
+            if let Some(link) = b.summary.links() {
+                if let Some(a) = links.get(link) {
+                    if a != b.summary.package_id() {
+                        self.conflicting_prev_active.insert(a.clone(), ConflictReason::Links(link.to_owned()));
+                        continue
+                    }
                 }
             }
             if let Some(a) = prev_active.iter().find(|a| compatible(a.version(), b.summary.version())) {
                 if *a != b.summary {
-                    self.conflicting_prev_active.insert(a.package_id().clone());
+                    self.conflicting_prev_active.insert(a.package_id().clone(), ConflictReason::Semver);
                     continue
                 }
             }
@@ -673,9 +681,9 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                    dep.name(), prev_active.len());
             let mut candidates = RemainingCandidates {
                 remaining: RcVecIter::new(Rc::clone(&candidates)),
-                conflicting_prev_active: HashSet::new(),
+                conflicting_prev_active: HashMap::new(),
             };
-            conflicting_activations = HashSet::new();
+            conflicting_activations = HashMap::new();
             (candidates.next(prev_active, &cx.links),
              candidates.clone().next(prev_active, &cx.links).is_ok(),
              candidates)
@@ -772,7 +780,7 @@ fn find_candidate<'a>(
     cur: &mut usize,
     dep: &mut Dependency,
     features: &mut Rc<Vec<String>>,
-    conflicting_activations: &mut HashSet<PackageId>,
+    conflicting_activations: &mut HashMap<PackageId, ConflictReason>,
 ) -> Option<Candidate> {
     while let Some(mut frame) = backtrack_stack.pop() {
         let (next, has_another) = {
@@ -786,7 +794,7 @@ fn find_candidate<'a>(
            && conflicting_activations
            .iter()
            // note: a lot of redundant work in is_active for similar debs
-           .all(|con| frame.context_backup.is_active(con))
+           .all(|(con, _)| frame.context_backup.is_active(con))
         {
             continue;
         }
@@ -818,7 +826,7 @@ fn activation_error(cx: &Context,
                     registry: &mut Registry,
                     parent: &Summary,
                     dep: &Dependency,
-                    conflicting_activations: HashSet<PackageId>,
+                    conflicting_activations: HashMap<PackageId, ConflictReason>,
                     candidates: &[Candidate],
                     config: Option<&Config>) -> CargoError {
     let graph = cx.graph();
@@ -842,9 +850,17 @@ fn activation_error(cx: &Context,
         msg.push_str(&describe_path(parent.package_id()));
         let mut conflicting_activations: Vec<_> = conflicting_activations.iter().collect();
         conflicting_activations.sort_unstable();
-        for v in conflicting_activations.iter().rev() {
+        for &(p, r) in conflicting_activations.iter().rev() {
+            match r {
+                &ConflictReason::Links(ref link) => {
+                    msg.push_str("\n  multiple packages link to native library `");
+                    msg.push_str(link);
+                    msg.push_str("`, but a native library can be linked only once.")
+                },
+                _ => (),
+            }
             msg.push_str("\n  previously selected ");
-            msg.push_str(&describe_path(v));
+            msg.push_str(&describe_path(p));
         }
 
         msg.push_str("\n  possible versions to select: ");
