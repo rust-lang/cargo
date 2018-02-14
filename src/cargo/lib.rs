@@ -50,6 +50,7 @@ use core::shell::Verbosity::Verbose;
 
 pub use util::{CargoError, CargoResult, CliError, CliResult, Config};
 pub use util::errors::Internal;
+use util::important_paths::{find_project_manifest};
 
 pub const CARGO_ENV: &'static str = "CARGO";
 
@@ -115,21 +116,50 @@ pub fn call_main_without_stdin<'de, Flags: Deserialize<'de>>(
         .argv(args.iter().map(|s| &s[..]))
         .help(true);
 
-    let flags = docopt.deserialize().map_err(|e|
-    {
+    let flags = docopt.deserialize().map_err(|e| {
         let code = if e.fatal() {1} else {0};
+
+        // Overwrites the missing --example docopt error.
+        // Fix for [issue](https://github.com/rust-lang/cargo/issues/2548)
         if &format!("{}", e) == "Expected argument for flag '--example' but reached end of arguments.
 
 Usage:
     cargo run [options] [--] [<args>...]" {
-            CliError::new(format_err!("{}", "Updated error message goes in here").into(), code)
-        } else {
-            CliError::new(e.into(), code)
+            
+            // Can't handle manifest without the `run` `Options` type.
+            // let flags: run::Options = docopt.deserialize().map_err(|_| CliError::new(e.into(), code))?;
+
+            if let Some(examples) = find_project_manifest(config.cwd(), "cargo.toml").ok()
+                .and_then(|mut root| {
+                    root.pop();
+                    root.push("examples");
+
+                    std::fs::read_dir(root).ok()
+                }).map(|paths: std::fs::ReadDir| {
+                    paths.filter_map(|p| p.ok() )
+                         .filter(|p| p.path().extension().and_then(|s|s.to_str()) == Some("rs"))
+                         .filter_map(|p| p.path().file_stem().and_then(|s| s.to_str()).map(|s| String::from(s)))
+                         .collect::<Vec<String>>()
+                }) {
+
+                    return CliError::new(format_err!("{}\n\n{} {}\n\n{}", "Expected argument for flag '--example' but reached end of arguments.",
+                        "Available examples are:",
+                        match examples.len() {
+                            0 => String::from("There are no examples in the 'examples' directory"),
+                            1 => examples[0].clone(),
+                            _ => examples.as_slice()[..examples.len()-1].join(", ") + " and " + &examples[examples.len()-1]
+                        },
+                        "Usage:\n    cargo run [options] [--] [<args>...]").into(), code);
+                }
         }
+
+        CliError::new(e.into(), code)
     })?;
 
     exec(flags, config)
 }
+
+
 
 pub fn print_json<T: ser::Serialize>(obj: &T) {
     let encoded = serde_json::to_string(&obj).unwrap();
