@@ -1026,17 +1026,52 @@ fn incompatible_dependencies() {
     assert_that(p.cargo("build"),
         execs().with_status(101)
             .with_stderr_contains("\
-error: failed to select a version for `bad`
-all possible versions conflict with previously selected versions of `bad`
+error: failed to select a version for `bad`.
+all possible versions conflict with previously selected packages.
 required by package `baz v0.1.0`
-    ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
-  previously selected package `bad v0.1.0`
-    ... which is depended on by `foo v0.1.0`
     ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
   previously selected package `bad v1.0.0`
     ... which is depended on by `bar v0.1.0`
     ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
   possible versions to select: 1.0.2, 1.0.1"));
+}
+
+#[test]
+fn incompatible_dependencies_with_multi_semver() {
+    Package::new("bad", "1.0.0").publish();
+    Package::new("bad", "1.0.1").publish();
+    Package::new("bad", "2.0.0").publish();
+    Package::new("bad", "2.0.1").publish();
+    Package::new("bar", "0.1.0").dep("bad", "=1.0.0").publish();
+    Package::new("baz", "0.1.0").dep("bad", ">=2.0.1").publish();
+
+    let p = project("transitive_load_test")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "incompatible_dependencies"
+            version = "0.0.1"
+
+            [dependencies]
+            bar = "0.1.0"
+            baz = "0.1.0"
+            bad = ">=1.0.1, <=2.0.0"
+        "#)
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    assert_that(p.cargo("build"),
+        execs().with_status(101)
+            .with_stderr_contains("\
+error: failed to select a version for `bad`.
+all possible versions conflict with previously selected packages.
+required by package `incompatible_dependencies v0.0.1 ([..])`
+  previously selected package `bad v2.0.1`
+    ... which is depended on by `baz v0.1.0`
+    ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
+  previously selected package `bad v1.0.0`
+    ... which is depended on by `bar v0.1.0`
+    ... which is depended on by `incompatible_dependencies v0.0.1 ([..])`
+  possible versions to select: 2.0.0, 1.0.1"));
 }
 
 #[test]
