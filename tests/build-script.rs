@@ -257,8 +257,11 @@ fn links_duplicates() {
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-error: failed to select a version for `a-sys` (required by `foo`):
-all possible versions conflict with previously selected versions of `a-sys`
+error: failed to select a version for `a-sys`.
+all possible versions conflict with previously selected packages.
+required by package `foo v0.5.0 ([..])`
+  multiple packages link to native library `a`, but a native library can be linked only once.
+  previously selected package `foo v0.5.0 ([..])`
   possible versions to select: 0.5.0
 "));
 }
@@ -307,8 +310,12 @@ fn links_duplicates_deep_dependency() {
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-error: failed to select a version for `a-sys` (required by `a`):
-all possible versions conflict with previously selected versions of `a-sys`
+error: failed to select a version for `a-sys`.
+all possible versions conflict with previously selected packages.
+required by package `a v0.5.0 ([..])`
+    ... which is depended on by `foo v0.5.0 ([..])`
+  multiple packages link to native library `a`, but a native library can be linked only once.
+  previously selected package `foo v0.5.0 ([..])`
   possible versions to select: 0.5.0
 "));
 }
@@ -2773,8 +2780,11 @@ fn links_duplicates_with_cycle() {
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-error: failed to select a version for `a` (required by `foo`):
-all possible versions conflict with previously selected versions of `a`
+error: failed to select a version for `a`.
+all possible versions conflict with previously selected packages.
+required by package `foo v0.5.0 ([..])`
+  multiple packages link to native library `a`, but a native library can be linked only once.
+  previously selected package `foo v0.5.0 ([..])`
   possible versions to select: 0.5.0
 "));
 }
