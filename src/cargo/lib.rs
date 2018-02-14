@@ -129,7 +129,7 @@ Usage:
             // Can't handle manifest without the `run` `Options` type.
             // let flags: run::Options = docopt.deserialize().map_err(|_| CliError::new(e.into(), code))?;
 
-            if let Some(examples) = find_project_manifest(config.cwd(), "cargo.toml").ok()
+            if let Some(mut examples) = find_project_manifest(config.cwd(), "cargo.toml").ok()
                 .and_then(|mut root| {
                     root.pop();
                     root.push("examples");
@@ -141,7 +141,7 @@ Usage:
                          .filter_map(|p| p.path().file_stem().and_then(|s| s.to_str()).map(|s| String::from(s)))
                          .collect::<Vec<String>>()
                 }) {
-
+                    examples.sort();
                     return CliError::new(format_err!("{}\n\n{}\n\n{}", "Expected argument for flag '--example' but reached end of arguments.",
                         match examples.len() {
                             0 => String::from("There are no examples in the 'examples' directory"),
