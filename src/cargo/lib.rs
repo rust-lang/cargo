@@ -115,9 +115,17 @@ pub fn call_main_without_stdin<'de, Flags: Deserialize<'de>>(
         .argv(args.iter().map(|s| &s[..]))
         .help(true);
 
-    let flags = docopt.deserialize().map_err(|e| {
+    let flags = docopt.deserialize().map_err(|e|
+    {
         let code = if e.fatal() {1} else {0};
-        CliError::new(e.into(), code)
+        if &format!("{}", e) == "Expected argument for flag '--example' but reached end of arguments.
+
+Usage:
+    cargo run [options] [--] [<args>...]" {
+            CliError::new(format_err!("{}", "Updated error message goes in here").into(), code)
+        } else {
+            CliError::new(e.into(), code)
+        }
     })?;
 
     exec(flags, config)
