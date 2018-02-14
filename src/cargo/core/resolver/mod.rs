@@ -536,7 +536,6 @@ struct BacktrackFrame<'a> {
     parent: Summary,
     dep: Dependency,
     features: Rc<Vec<String>>,
-    conflicting_activations: HashSet<PackageId>,
 }
 
 #[derive(Clone)]
@@ -591,7 +590,6 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     // use (those with more candidates).
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = BinaryHeap::new();
-    let mut conflicting_activations;
     for &(ref summary, ref method) in summaries {
         debug!("initial activation: {}", summary.package_id());
         let candidate = Candidate { summary: summary.clone(), replace: None };
@@ -664,7 +662,6 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                 remaining: RcVecIter::new(Rc::clone(&candidates)),
                 conflicting_prev_active: HashSet::new(),
             };
-            conflicting_activations = HashSet::new();
             (candidates.next(prev_active),
              candidates.clone().next(prev_active).is_ok(),
              candidates)
@@ -695,13 +692,11 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                         parent: Summary::clone(&parent),
                         dep: Dependency::clone(&dep),
                         features: Rc::clone(&features),
-                        conflicting_activations: conflicting_activations.clone(),
                     });
                 }
                 candidate
             }
             Err(mut conflicting) => {
-                conflicting_activations.extend(conflicting.drain());
                 // This dependency has no valid candidate. Backtrack until we
                 // find a dependency that does have a candidate to try, and try
                 // to activate that one.  This resets the `remaining_deps` to
@@ -715,10 +710,10 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                                      &mut cur,
                                      &mut dep,
                                      &mut features,
-                                     &mut conflicting_activations) {
+                                     &mut conflicting) {
                     None => return Err(activation_error(&cx, registry, &parent,
                                                         &dep,
-                                                        conflicting_activations,
+                                                        conflicting,
                                                         &candidates, config)),
                     Some(candidate) => candidate,
                 }
@@ -787,7 +782,6 @@ fn find_candidate<'a>(
                 *parent = frame.parent.clone();
                 *dep = frame.dep.clone();
                 *features = Rc::clone(&frame.features);
-                *conflicting_activations = frame.conflicting_activations.clone();
                 backtrack_stack.push(frame);
             } else {
                 *cx = frame.context_backup;
@@ -795,7 +789,6 @@ fn find_candidate<'a>(
                 *parent = frame.parent;
                 *dep = frame.dep;
                 *features = frame.features;
-                *conflicting_activations = frame.conflicting_activations
             }
             return Some(candidate);
         }
