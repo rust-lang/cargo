@@ -142,12 +142,11 @@ Usage:
                          .collect::<Vec<String>>()
                 }) {
 
-                    return CliError::new(format_err!("{}\n\n{} {}\n\n{}", "Expected argument for flag '--example' but reached end of arguments.",
-                        "Available examples are:",
+                    return CliError::new(format_err!("{}\n\n{}\n\n{}", "Expected argument for flag '--example' but reached end of arguments.",
                         match examples.len() {
                             0 => String::from("There are no examples in the 'examples' directory"),
-                            1 => examples[0].clone(),
-                            _ => examples.as_slice()[..examples.len()-1].join(", ") + " and " + &examples[examples.len()-1]
+                            1 => String::from("Available examples are: ") + &examples[0],
+                            _ => String::from("Available examples are: ") + &examples.as_slice()[..examples.len()-1].join(", ") + " and " + &examples[examples.len()-1]
                         },
                         "Usage:\n    cargo run [options] [--] [<args>...]").into(), code);
                 }
