@@ -40,7 +40,7 @@ extern crate core_foundation;
 
 use std::fmt;
 
-use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use serde::ser;
 use docopt::Docopt;
 use failure::Error;
@@ -103,7 +103,7 @@ impl fmt::Display for VersionInfo {
     }
 }
 
-pub fn call_main_without_stdin<'de, Flags: Deserialize<'de>>(
+pub fn call_main_without_stdin<Flags: DeserializeOwned>(
             exec: fn(Flags, &mut Config) -> CliResult,
             config: &mut Config,
             usage: &str,
