@@ -4188,3 +4188,24 @@ fn no_linkable_target() {
                 [WARNING] The package `the_lib` provides no linkable [..] \
 while compiling `foo`. [..] in `the_lib`'s Cargo.toml. [..]"));
 }
+
+#[test]
+fn avoid_dev_deps() {
+    Package::new("foo", "1.0.0").publish();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [dev-dependencies]
+            baz = "1.0.0"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("build"), execs().with_status(101));
+    assert_that(p.cargo("build").masquerade_as_nightly_cargo()
+                .arg("-Zavoid-dev-deps"), execs().with_status(0));
+}
