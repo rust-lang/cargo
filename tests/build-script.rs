@@ -258,11 +258,13 @@ fn links_duplicates() {
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to select a version for `a-sys`.
-all possible versions conflict with previously selected packages.
-required by package `foo v0.5.0 ([..])`
-  multiple packages link to native library `a`, but a native library can be linked only once.
-  previously selected package `foo v0.5.0 ([..])`
-  possible versions to select: 0.5.0
+    ... required by package `foo v0.5.0 ([..])`
+versions that meet the requirements `*` are: 0.5.0
+
+the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+package `foo v0.5.0 ([..])`
+
+failed to select a version for `a-sys` which could resolve this conflict
 "));
 }
 
@@ -311,12 +313,14 @@ fn links_duplicates_deep_dependency() {
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to select a version for `a-sys`.
-all possible versions conflict with previously selected packages.
-required by package `a v0.5.0 ([..])`
+    ... required by package `a v0.5.0 ([..])`
     ... which is depended on by `foo v0.5.0 ([..])`
-  multiple packages link to native library `a`, but a native library can be linked only once.
-  previously selected package `foo v0.5.0 ([..])`
-  possible versions to select: 0.5.0
+versions that meet the requirements `*` are: 0.5.0
+
+the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+package `foo v0.5.0 ([..])`
+
+failed to select a version for `a-sys` which could resolve this conflict
 "));
 }
 
@@ -2781,11 +2785,13 @@ fn links_duplicates_with_cycle() {
                 execs().with_status(101)
                        .with_stderr("\
 error: failed to select a version for `a`.
-all possible versions conflict with previously selected packages.
-required by package `foo v0.5.0 ([..])`
-  multiple packages link to native library `a`, but a native library can be linked only once.
-  previously selected package `foo v0.5.0 ([..])`
-  possible versions to select: 0.5.0
+    ... required by package `foo v0.5.0 ([..])`
+versions that meet the requirements `*` are: 0.5.0
+
+the package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+package `foo v0.5.0 ([..])`
+
+failed to select a version for `a` which could resolve this conflict
 "));
 }
 
