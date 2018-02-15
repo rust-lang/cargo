@@ -528,6 +528,7 @@ impl Ord for DepsFrame {
     }
 }
 
+#[derive(Clone)]
 struct BacktrackFrame<'a> {
     cur: usize,
     context_backup: Context<'a>,
@@ -543,10 +544,20 @@ struct RemainingCandidates {
     remaining: RcVecIter<Candidate>,
     // note: change to RcList or something if clone is to expensive
     conflicting_prev_active: HashSet<PackageId>,
+    // This is a inlined peekable generator
+    has_another: Option<Candidate>,
 }
 
 impl RemainingCandidates {
-    fn next(&mut self, prev_active: &[Summary]) -> Result<Candidate, HashSet<PackageId>> {
+    fn new(candidates: &Rc<Vec<Candidate>>) -> RemainingCandidates {
+        RemainingCandidates {
+            remaining: RcVecIter::new(Rc::clone(candidates)),
+            conflicting_prev_active: HashSet::new(),
+            has_another: None,
+        }
+    }
+
+    fn next(&mut self, prev_active: &[Summary]) -> Result<(Candidate, bool), HashSet<PackageId>> {
         // Filter the set of candidates based on the previously activated
         // versions for this dependency. We can actually use a version if it
         // precisely matches an activated version or if it is otherwise
@@ -559,15 +570,22 @@ impl RemainingCandidates {
         // that conflicted with the ones we tried. If any of these change
         // then we would have considered different candidates.
         for (_, b) in self.remaining.by_ref() {
-            if let Some(a) = prev_active.iter().find(|a| compatible(a.version(), b.summary.version())) {
+            if let Some(a) = prev_active
+                .iter()
+                .find(|a| compatible(a.version(), b.summary.version()))
+            {
                 if *a != b.summary {
                     self.conflicting_prev_active.insert(a.package_id().clone());
-                    continue
+                    continue;
                 }
             }
-            return Ok(b);
+            if let Some(r) = ::std::mem::replace(&mut self.has_another, Some(b)) {
+                return Ok((r, true));
+            }
         }
-        Err(self.conflicting_prev_active.clone())
+        ::std::mem::replace(&mut self.has_another, None)
+            .map(|r| (r, false))
+            .ok_or_else(|| self.conflicting_prev_active.clone())
     }
 }
 
@@ -652,20 +670,10 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         let (mut parent, (mut cur, (mut dep, candidates, mut features))) = frame;
         assert!(!remaining_deps.is_empty());
 
-        let (next, has_another, remaining_candidates) = {
-            let prev_active = cx.prev_active(&dep);
-            trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
-                   candidates.len());
-            trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
-                   dep.name(), prev_active.len());
-            let mut candidates = RemainingCandidates {
-                remaining: RcVecIter::new(Rc::clone(&candidates)),
-                conflicting_prev_active: HashSet::new(),
-            };
-            (candidates.next(prev_active),
-             candidates.clone().next(prev_active).is_ok(),
-             candidates)
-        };
+        trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(), candidates.len());
+        trace!("{}[{}]>{} {} prev activations", parent.name(), cur, dep.name(), cx.prev_active(&dep).len());
+        let mut remaining_candidates = RemainingCandidates::new(&candidates);
+        let next = remaining_candidates.next(cx.prev_active(&dep));
 
         // Alright, for each candidate that's gotten this far, it meets the
         // following requirements:
@@ -680,7 +688,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         // turn. We could possibly fail to activate each candidate, so we try
         // each one in turn.
         let candidate = match next {
-            Ok(candidate) => {
+            Ok((candidate, has_another)) => {
                 // We have a candidate. Add an entry to the `backtrack_stack` so
                 // we can try the next one if this one fails.
                 if has_another {
@@ -688,7 +696,7 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
                         cur,
                         context_backup: Context::clone(&cx),
                         deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
-                        remaining_candidates: remaining_candidates,
+                        remaining_candidates,
                         parent: Summary::clone(&parent),
                         dep: Dependency::clone(&dep),
                         features: Rc::clone(&features),
@@ -759,13 +767,7 @@ fn find_candidate<'a>(
     conflicting_activations: &mut HashSet<PackageId>,
 ) -> Option<Candidate> {
     while let Some(mut frame) = backtrack_stack.pop() {
-        let (next, has_another) = {
-            let prev_active = frame.context_backup.prev_active(&frame.dep);
-            (
-                frame.remaining_candidates.next(prev_active),
-                frame.remaining_candidates.clone().next(prev_active).is_ok(),
-            )
-        };
+        let next= frame.remaining_candidates.next(frame.context_backup.prev_active(&frame.dep));
         if frame.context_backup.is_active(parent.package_id())
            && conflicting_activations
            .iter()
@@ -774,22 +776,16 @@ fn find_candidate<'a>(
         {
             continue;
         }
-        if let Ok(candidate) = next {
-            *cur = frame.cur;
+        if let Ok((candidate, has_another)) = next {
             if has_another {
-                *cx = frame.context_backup.clone();
-                *remaining_deps = frame.deps_backup.clone();
-                *parent = frame.parent.clone();
-                *dep = frame.dep.clone();
-                *features = Rc::clone(&frame.features);
-                backtrack_stack.push(frame);
-            } else {
-                *cx = frame.context_backup;
-                *remaining_deps = frame.deps_backup;
-                *parent = frame.parent;
-                *dep = frame.dep;
-                *features = frame.features;
+                backtrack_stack.push(frame.clone());
             }
+            *cur = frame.cur;
+            *cx = frame.context_backup;
+            *remaining_deps = frame.deps_backup;
+            *parent = frame.parent;
+            *dep = frame.dep;
+            *features = frame.features;
             return Some(candidate);
         }
     }
