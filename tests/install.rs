@@ -6,6 +6,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 
 use cargo::util::ProcessBuilder;
+use cargotest::ChannelChanger;
 use cargotest::install::{cargo_home, has_installed_exe};
 use cargotest::support::git;
 use cargotest::support::paths;
@@ -898,6 +899,56 @@ fn use_path_workspace() {
             foo = "1"
         "#)
         .file("baz/src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    let lock = p.read_lockfile();
+    assert_that(p.cargo("install"), execs().with_status(0));
+    let lock2 = p.read_lockfile();
+    assert!(lock == lock2, "different lockfiles");
+}
+
+#[test]
+fn dev_dependencies_no_check() {
+    Package::new("foo", "1.0.0").publish();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+
+            [dev-dependencies]
+            baz = "1.0.0"
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("build"), execs().with_status(101));
+    assert_that(p.cargo("install"), execs().with_status(0));
+}
+
+#[test]
+fn dev_dependencies_lock_file_untouched() {
+    Package::new("foo", "1.0.0").publish();
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+
+            [dev-dependencies]
+            bar = { path = "a" }
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .file("a/Cargo.toml", r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("a/src/lib.rs", "")
         .build();
 
     assert_that(p.cargo("build"), execs().with_status(0));
