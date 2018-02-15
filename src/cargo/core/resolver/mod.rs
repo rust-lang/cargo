@@ -538,6 +538,15 @@ enum ConflictReason {
     Links(String),
 }
 
+impl ConflictReason {
+    fn is_links(&self) -> bool {
+        match self {
+            &ConflictReason::Semver => false,
+            &ConflictReason::Links(_) => true,
+        }
+    }
+}
+
 struct BacktrackFrame<'a> {
     cur: usize,
     context_backup: Context<'a>,
@@ -835,33 +844,52 @@ fn activation_error(cx: &Context,
         dep_path_desc
     };
     if !candidates.is_empty() {
-        let mut msg = format!("failed to select a version for `{}`.\n\
-                               all possible versions conflict with \
-                               previously selected packages.\n",
-                              dep.name());
-        msg.push_str("required by ");
+        let mut msg = format!("failed to select a version for `{}`.", dep.name());
+        msg.push_str("\n    ... required by ");
         msg.push_str(&describe_path(parent.package_id()));
-        let mut conflicting_activations: Vec<_> = conflicting_activations.iter().collect();
-        conflicting_activations.sort_unstable();
-        for &(p, r) in conflicting_activations.iter().rev() {
-            match r {
-                &ConflictReason::Links(ref link) => {
-                    msg.push_str("\n  multiple packages link to native library `");
-                    msg.push_str(link);
-                    msg.push_str("`, but a native library can be linked only once.")
-                },
-                _ => (),
-            }
-            msg.push_str("\n  previously selected ");
-            msg.push_str(&describe_path(p));
-        }
 
-        msg.push_str("\n  possible versions to select: ");
+        msg.push_str("\nversions that meet the requirements `");
+        msg.push_str(&dep.version_req().to_string());
+        msg.push_str("` are: ");
         msg.push_str(&candidates.iter()
                                        .map(|v| v.summary.version())
                                        .map(|v| v.to_string())
                                        .collect::<Vec<_>>()
                                        .join(", "));
+
+        let mut conflicting_activations: Vec<_> = conflicting_activations.iter().collect();
+        conflicting_activations.sort_unstable();
+        let (links_errors, other_errors): (Vec<_>, Vec<_>) = conflicting_activations.drain(..).rev().partition(|&(_, r)| r.is_links());
+
+        for &(p, r) in &links_errors {
+            match r {
+                &ConflictReason::Links(ref link) => {
+                     msg.push_str("\n\nthe package `");
+                     msg.push_str(dep.name());
+                     msg.push_str("` links to the native library `");
+                     msg.push_str(&link);
+                     msg.push_str("`, but it conflicts with a previous package which links to `");
+                     msg.push_str(&link);
+                     msg.push_str("` as well:\n");
+                },
+                _ => (),
+            }
+            msg.push_str(&describe_path(p));
+        }
+
+        if links_errors.is_empty() {
+             msg.push_str("\n\nall possible versions conflict with \
+                             previously selected packages.");
+        }
+
+        for &(p, _) in &other_errors {
+            msg.push_str("\n\n  previously selected ");
+            msg.push_str(&describe_path(p));
+        }
+
+        msg.push_str("\n\nfailed to select a version for `");
+        msg.push_str(dep.name());
+        msg.push_str("` which could resolve this conflict");
 
         return format_err!("{}", msg)
     }
