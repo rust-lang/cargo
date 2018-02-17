@@ -10,11 +10,11 @@ fn simple() {
     let p = project("foo").build();
 
     assert_that(p.cargo("version"),
-                execs().with_status(0).with_stdout(&format!("{}\n",
+                execs().with_status(0).with_stderr(&format!("{}\n",
                                                             cargo::version())));
 
     assert_that(p.cargo("--version"),
-                execs().with_status(0).with_stdout(&format!("{}\n",
+                execs().with_status(0).with_stderr(&format!("{}\n",
                                                             cargo::version())));
 
 }

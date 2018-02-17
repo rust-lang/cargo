@@ -73,7 +73,7 @@ fn list_command_looks_at_path() {
     let output = pr.arg("-v").arg("--list")
                    .env("PATH", &path);
     let output = output.exec_with_output().unwrap();
-    let output = str::from_utf8(&output.stdout).unwrap();
+    let output = str::from_utf8(&output.stderr).unwrap();
     assert!(output.contains("\n    1\n"), "missing 1: {}", output);
 }
 
@@ -94,7 +94,7 @@ fn list_command_resolves_symlinks() {
     let output = pr.arg("-v").arg("--list")
                    .env("PATH", &path);
     let output = output.exec_with_output().unwrap();
-    let output = str::from_utf8(&output.stdout).unwrap();
+    let output = str::from_utf8(&output.stderr).unwrap();
     assert!(output.contains("\n    2\n"), "missing 2: {}", output);
 }
 

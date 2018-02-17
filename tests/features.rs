@@ -377,7 +377,7 @@ fn no_feature_doesnt_build() {
             #[cfg(feature = "bar")]
             extern crate bar;
             #[cfg(feature = "bar")]
-            fn main() { bar::bar(); println!("bar") }
+            fn main() { bar::bar(); eprintln!("bar") }
             #[cfg(not(feature = "bar"))]
             fn main() {}
         "#)
@@ -405,7 +405,7 @@ fn no_feature_doesnt_build() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ", dir = p.url())));
     assert_that(p.process(&p.bin("foo")),
-                execs().with_status(0).with_stdout("bar\n"));
+                execs().with_status(0).with_stderr("bar\n"));
 }
 
 #[test]
