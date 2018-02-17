@@ -161,16 +161,16 @@ fn execute(flags: Flags, config: &mut Config) -> CliResult {
 
     if flags.flag_version {
         let version = cargo::version();
-        println!("{}", version);
+        eprintln!("{}", version);
         if flags.flag_verbose > 0 {
-            println!("release: {}.{}.{}",
+            eprintln!("release: {}.{}.{}",
                      version.major,
                      version.minor,
                      version.patch);
             if let Some(ref cfg) = version.cfg_info {
                 if let Some(ref ci) = cfg.commit_info {
-                    println!("commit-hash: {}", ci.commit_hash);
-                    println!("commit-date: {}", ci.commit_date);
+                    eprintln!("commit-hash: {}", ci.commit_hash);
+                    eprintln!("commit-date: {}", ci.commit_date);
                 }
             }
         }
@@ -178,9 +178,9 @@ fn execute(flags: Flags, config: &mut Config) -> CliResult {
     }
 
     if flags.flag_list {
-        println!("Installed Commands:");
+        eprintln!("Installed Commands:");
         for command in list_commands(config) {
-            println!("    {}", command);
+            eprintln!("    {}", command);
         }
         return Ok(());
     }

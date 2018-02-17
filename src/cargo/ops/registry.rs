@@ -432,12 +432,12 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
             format!("failed to list owners of crate {}", name)
         })?;
         for owner in owners.iter() {
-            print!("{}", owner.login);
+            eprint!("{}", owner.login);
             match (owner.name.as_ref(), owner.email.as_ref()) {
-                (Some(name), Some(email)) => println!(" ({} <{}>)", name, email),
+                (Some(name), Some(email)) => eprintln!(" ({} <{}>)", name, email),
                 (Some(s), None) |
-                (None, Some(s)) => println!(" ({})", s),
-                (None, None) => println!(),
+                (None, Some(s)) => eprintln!(" ({})", s),
+                (None, None) => eprintln!(),
             }
         }
     }
@@ -529,15 +529,15 @@ pub fn search(query: &str,
             }
             None => name
         };
-        println!("{}", line);
+        eprintln!("{}", line);
     }
 
     let search_max_limit = 100;
     if total_crates > u32::from(limit) && limit < search_max_limit {
-        println!("... and {} crates more (use --limit N to see more)",
+        eprintln!("... and {} crates more (use --limit N to see more)",
                  total_crates - u32::from(limit));
     } else if total_crates > u32::from(limit) && limit >= search_max_limit {
-        println!("... and {} crates more (go to http://crates.io/search?q={} to see more)",
+        eprintln!("... and {} crates more (go to http://crates.io/search?q={} to see more)",
                  total_crates - u32::from(limit),
                  percent_encode(query.as_bytes(), QUERY_ENCODE_SET));
     }

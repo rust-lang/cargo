@@ -46,7 +46,7 @@ impl Drop for Profiler {
                 let mut last = 0;
                 for (i, &(l, time, ref msg)) in msgs.iter().enumerate() {
                     if l != lvl { continue }
-                    println!("{} {:6}ms - {}",
+                    eprintln!("{} {:6}ms - {}",
                              repeat("    ").take(lvl + 1).collect::<String>(),
                              time, msg);
 

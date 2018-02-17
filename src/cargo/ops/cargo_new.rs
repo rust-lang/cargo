@@ -493,7 +493,7 @@ authors = [{}]
         let default_file_content : &[u8] = if i.bin {
             b"\
 fn main() {
-    println!(\"Hello, world!\");
+    eprintln!(\"Hello, world!\");
 }
 "
         } else {

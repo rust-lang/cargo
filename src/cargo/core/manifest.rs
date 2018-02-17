@@ -355,7 +355,7 @@ impl Manifest {
     pub fn print_teapot(&self, config: &Config) {
         if let Some(teapot) = self.im_a_teapot {
             if config.cli_unstable().print_im_a_teapot {
-                println!("im-a-teapot = {}", teapot);
+                eprintln!("im-a-teapot = {}", teapot);
             }
         }
     }

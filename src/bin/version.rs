@@ -21,7 +21,7 @@ Options:
 pub fn execute(_: Options, _: &mut Config) -> CliResult {
     debug!("executing; cmd=cargo-version; args={:?}", env::args().collect::<Vec<_>>());
 
-    println!("{}", cargo::version());
+    eprintln!("{}", cargo::version());
 
     Ok(())
 }
