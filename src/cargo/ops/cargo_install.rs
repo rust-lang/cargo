@@ -558,9 +558,9 @@ pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
     let dst = metadata(config, &dst)?;
     let list = read_crate_list(&dst)?;
     for (k, v) in list.v1.iter() {
-        println!("{}:", k);
+        eprintln!("{}:", k);
         for bin in v {
-            println!("    {}", bin);
+            eprintln!("    {}", bin);
         }
     }
     Ok(())

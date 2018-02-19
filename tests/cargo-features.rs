@@ -244,11 +244,7 @@ error: unknown `-Z` flag specified: arg
                  .masquerade_as_nightly_cargo()
                  .arg("-Zprint-im-a-teapot"),
                 execs().with_status(0)
-                       .with_stdout("im-a-teapot = true\n")
-                       .with_stderr("\
-[COMPILING] a [..]
-[FINISHED] [..]
-"));
+                       .with_stderr_contains("im-a-teapot = true\n"));
 }
 
 #[test]

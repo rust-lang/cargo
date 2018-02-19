@@ -49,7 +49,7 @@ pub fn package(ws: &Workspace,
         }).collect();
         list.sort();
         for file in list.iter() {
-            println!("{}", file.display());
+            eprintln!("{}", file.display());
         }
         return Ok(None)
     }

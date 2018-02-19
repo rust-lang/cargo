@@ -462,7 +462,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
         home = cargo_home().display())));
 
     assert_that(cargo_process("install").arg("--list"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 foo v0.2.0 ([..]):
     foo[..]
 "));
@@ -507,7 +507,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
         home = cargo_home().display())));
 
     assert_that(cargo_process("install").arg("--list"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 foo v0.1.0 ([..]):
     foo-bin1[..]
 foo v0.2.0 ([..]):
@@ -558,7 +558,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
         home = cargo_home().display())));
 
     assert_that(cargo_process("install").arg("--list"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 foo v0.1.0 ([..]):
     foo-bin1[..]
 foo v0.2.0 ([..]):
@@ -631,7 +631,7 @@ fn list() {
     assert_that(cargo_process("install").arg("foo"),
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--list"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 bar v0.2.1:
     bar[..]
 foo v0.0.1:
@@ -645,7 +645,7 @@ fn list_error() {
     assert_that(cargo_process("install").arg("foo"),
                 execs().with_status(0));
     assert_that(cargo_process("install").arg("--list"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr("\
 foo v0.0.1:
     foo[..]
 "));
@@ -732,16 +732,16 @@ fn subcommand_works_out_of_the_box() {
     Package::new("cargo-foo", "1.0.0")
         .file("src/main.rs", r#"
             fn main() {
-                println!("bar");
+                eprintln!("bar");
             }
         "#)
         .publish();
     assert_that(cargo_process("install").arg("cargo-foo"),
                 execs().with_status(0));
     assert_that(cargo_process("foo"),
-                execs().with_status(0).with_stdout("bar\n"));
+                execs().with_status(0).with_stderr("bar\n"));
     assert_that(cargo_process("--list"),
-                execs().with_status(0).with_stdout_contains("    foo\n"));
+                execs().with_status(0).with_stderr_contains("    foo\n"));
 }
 
 #[test]
@@ -799,7 +799,7 @@ fn reports_unsuccessful_subcommand_result() {
     assert_that(cargo_process("install").arg("cargo-fail"),
                 execs().with_status(0));
     assert_that(cargo_process("--list"),
-                execs().with_status(0).with_stdout_contains("    fail\n"));
+                execs().with_status(0).with_stderr_contains("    fail\n"));
     assert_that(cargo_process("fail"),
                 execs().with_status(101).with_stderr_contains("\
 thread '[..]' panicked at 'explicit panic', [..]

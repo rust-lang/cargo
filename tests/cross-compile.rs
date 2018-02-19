@@ -436,9 +436,9 @@ fn cross_tests() {
 [COMPILING] foo v0.0.0 ({foo})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] target[/]{triple}[/]debug[/]deps[/]foo-[..][EXE]
-[RUNNING] target[/]{triple}[/]debug[/]deps[/]bar-[..][EXE]", foo = p.url(), triple = target))
-                       .with_stdout_contains("test test_foo ... ok")
-                       .with_stdout_contains("test test ... ok"));
+test test_foo ... ok
+[RUNNING] target[/]{triple}[/]debug[/]deps[/]bar-[..][EXE]
+test test ... ok", foo = p.url(), triple = target)));
 }
 
 #[test]

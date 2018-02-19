@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::io::{self, Write};
 use std::path::{self, PathBuf};
 use std::sync::Arc;
 
@@ -415,7 +414,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                         });
                     } else {
                         // Forward non-JSON to stderr
-                        writeln!(io::stderr(), "{}", line)?;
+                        eprintln!("{}", line);
                     }
                     Ok(())
                 }

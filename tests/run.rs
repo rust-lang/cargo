@@ -16,7 +16,7 @@ fn simple() {
             authors = []
         "#)
         .file("src/main.rs", r#"
-            fn main() { println!("hello"); }
+            fn main() { eprintln!("hello"); }
         "#)
         .build();
 
@@ -25,10 +25,8 @@ fn simple() {
                        .with_stderr(&format!("\
 [COMPILING] foo v0.0.1 ({dir})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`", dir = path2url(p.root())))
-                       .with_stdout("\
-hello
-"));
+[RUNNING] `target[/]debug[/]foo[EXE]`
+hello", dir = path2url(p.root()))));
     assert_that(&p.bin("foo"), existing_file());
 }
 

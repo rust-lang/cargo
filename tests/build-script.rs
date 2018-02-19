@@ -2561,7 +2561,7 @@ fn switch_features_rerun() {
         "#)
         .file("src/main.rs", r#"
             fn main() {
-                println!(include_str!(concat!(env!("OUT_DIR"), "/output")));
+                eprintln!(include_str!(concat!(env!("OUT_DIR"), "/output")));
             }
         "#)
         .file("build.rs", r#"
@@ -2585,11 +2585,11 @@ fn switch_features_rerun() {
         .build();
 
     assert_that(p.cargo("run").arg("-v").arg("--features=foo"),
-                execs().with_status(0).with_stdout("foo\n"));
+                execs().with_status(0).with_stderr_contains("foo\n"));
     assert_that(p.cargo("run").arg("-v"),
-                execs().with_status(0).with_stdout("bar\n"));
+                execs().with_status(0).with_stderr_contains("bar\n"));
     assert_that(p.cargo("run").arg("-v").arg("--features=foo"),
-                execs().with_status(0).with_stdout("foo\n"));
+                execs().with_status(0).with_stderr_contains("foo\n"));
 }
 
 #[test]

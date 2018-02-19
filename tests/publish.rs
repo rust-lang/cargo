@@ -224,7 +224,7 @@ fn simple_with_index_and_host() {
     assert_that(p.cargo("publish").arg("--no-verify")
                  .arg("--index").arg(publish::registry().to_string())
                  .arg("--host").arg(publish::registry().to_string()),
-                execs().with_status(0).with_stderr(&format!("\
+                execs().with_status(0).with_stderr_contains(&format!("\
 [WARNING] The flag '--host' is no longer valid.
 
 Previous versions of Cargo accepted this flag, but it is being

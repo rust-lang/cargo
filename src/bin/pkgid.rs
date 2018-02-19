@@ -74,7 +74,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     };
     let spec = spec.as_ref().map(|s| &s[..]);
     let spec = ops::pkgid(&ws, spec)?;
-    println!("{}", spec);
+    eprintln!("{}", spec);
     Ok(())
 }
 

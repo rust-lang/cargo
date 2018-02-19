@@ -84,7 +84,7 @@ fn simple() {
     assert_that(cargo_process("search").arg("postgres")
                     .arg("--index").arg(registry().to_string()),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 hoare = \"0.1.1\"    # Design by contract style assertions for Rust"));
 }
 
@@ -136,7 +136,7 @@ fn simple_with_host() {
     assert_that(cargo_process("search").arg("postgres")
                     .arg("--host").arg(registry().to_string()),
                 execs().with_status(0)
-                       .with_stderr(&format!("\
+                       .with_stderr_contains(&format!("\
 [WARNING] The flag '--host' is no longer valid.
 
 Previous versions of Cargo accepted this flag, but it is being
@@ -150,7 +150,7 @@ about this warning.
 [UPDATING] registry `{reg}`
 ",
     reg = registry()))
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 hoare = \"0.1.1\"    # Design by contract style assertions for Rust"));
 }
 
@@ -203,7 +203,7 @@ fn simple_with_index_and_host() {
                     .arg("--index").arg(registry().to_string())
                     .arg("--host").arg(registry().to_string()),
                 execs().with_status(0)
-                        .with_stderr(&format!("\
+                        .with_stderr_contains(&format!("\
 [WARNING] The flag '--host' is no longer valid.
 
 Previous versions of Cargo accepted this flag, but it is being
@@ -217,7 +217,7 @@ about this warning.
 [UPDATING] registry `{reg}`
 ",
     reg = registry()))
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 hoare = \"0.1.1\"    # Design by contract style assertions for Rust"));
 }
 
@@ -267,7 +267,7 @@ fn multiple_query_params() {
     assert_that(cargo_process("search").arg("postgres").arg("sql")
                     .arg("--index").arg(registry().to_string()),
                 execs().with_status(0)
-                       .with_stdout_contains("\
+                       .with_stderr_contains("\
 hoare = \"0.1.1\"    # Design by contract style assertions for Rust"));
 }
 
@@ -277,9 +277,9 @@ fn help() {
                 execs().with_status(0));
     assert_that(cargo_process("help").arg("search"),
                 execs().with_status(0));
-    // Ensure that help output goes to stdout, not stderr.
+    // Ensure that help output goes to stderr, not stdout.
     assert_that(cargo_process("search").arg("--help"),
-                execs().with_stderr(""));
+                execs().with_stdout(""));
     assert_that(cargo_process("search").arg("--help"),
-                execs().with_stdout_contains("[..] --frozen [..]"));
+                execs().with_stderr_contains("[..] --frozen [..]"));
 }

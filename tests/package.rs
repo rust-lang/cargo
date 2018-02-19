@@ -29,7 +29,7 @@ fn simple() {
             description = "foo"
         "#)
         .file("src/main.rs", r#"
-            fn main() { println!("hello"); }
+            fn main() { eprintln!("hello"); }
         "#)
         .file("src/bar.txt", "") // should be ignored when packaging
         .build();
@@ -46,7 +46,7 @@ See [..]
         dir = p.url())));
     assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
     assert_that(p.cargo("package").arg("-l"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr_contains("\
 Cargo.toml
 src[/]main.rs
 "));
@@ -316,7 +316,7 @@ fn exclude() {
         .build();
 
     assert_that(p.cargo("package").arg("--no-verify").arg("-v"),
-                execs().with_status(0).with_stdout("").with_stderr("\
+                execs().with_status(0).with_stdout("").with_stderr_contains("\
 [WARNING] manifest has no description[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([..])
@@ -355,7 +355,7 @@ See [..]
     assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
 
     assert_that(p.cargo("package").arg("-l"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr_contains("\
 Cargo.toml
 dir_root_1[/]some_dir[/]file
 dir_root_2[/]some_dir[/]file
@@ -473,13 +473,13 @@ fn no_duplicates_from_modified_tracked_files() {
         "#)
         .build();
     File::create(p.root().join("src/main.rs")).unwrap().write_all(br#"
-            fn main() { println!("A change!"); }
+            fn main() { eprintln!("A change!"); }
         "#).unwrap();
     let mut cargo = cargo_process();
     cargo.cwd(p.root());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
     assert_that(cargo.arg("package").arg("--list"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr_contains("\
 Cargo.toml
 src/main.rs
 "));
@@ -496,7 +496,7 @@ fn ignore_nested() {
             description = "nested"
         "#;
     let main_rs = r#"
-            fn main() { println!("hello"); }
+            fn main() { eprintln!("hello"); }
         "#;
     let p = project("nested")
         .file("Cargo.toml", cargo_toml)
@@ -508,7 +508,7 @@ fn ignore_nested() {
         .build();
 
     assert_that(p.cargo("package"),
-                execs().with_status(0).with_stderr(&format!("\
+                execs().with_status(0).with_stderr_contains(&format!("\
 [WARNING] manifest has no documentation[..]
 See http://doc.crates.io/manifest.html#package-metadata for more info.
 [PACKAGING] nested v0.0.1 ({dir})
@@ -519,7 +519,7 @@ See http://doc.crates.io/manifest.html#package-metadata for more info.
         dir = p.url())));
     assert_that(&p.root().join("target/package/nested-0.0.1.crate"), existing_file());
     assert_that(p.cargo("package").arg("-l"),
-                execs().with_status(0).with_stdout("\
+                execs().with_status(0).with_stderr_contains("\
 Cargo.toml
 src[..]main.rs
 "));

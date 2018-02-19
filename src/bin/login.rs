@@ -68,7 +68,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                     options.flag_host.clone().unwrap_or(config.api.unwrap())
                 }
             };
-            println!("please visit {}me and paste the API Token below", host);
+            eprintln!("please visit {}me and paste the API Token below", host);
             let mut line = String::new();
             let input = io::stdin();
             input.lock().read_line(&mut line).chain_err(|| {
