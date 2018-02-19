@@ -61,6 +61,8 @@ pub enum GitReference {
     Branch(String),
     /// from a specific revision
     Rev(String),
+    /// from a specific refspec
+    Refspec(String),
 }
 
 impl SourceId {
@@ -107,6 +109,7 @@ impl SourceId {
 
                         "rev" => reference = GitReference::Rev(v.into_owned()),
                         "tag" => reference = GitReference::Tag(v.into_owned()),
+                        "refspec" => reference = GitReference::Refspec(v.into_owned()),
                         _ => {}
                     }
                 }
@@ -502,6 +505,7 @@ impl<'a> fmt::Display for PrettyRef<'a> {
             GitReference::Branch(ref b) => write!(f, "branch={}", b),
             GitReference::Tag(ref s) => write!(f, "tag={}", s),
             GitReference::Rev(ref s) => write!(f, "rev={}", s),
+            GitReference::Refspec(ref s) => write!(f, "refspec={}", s),
         }
     }
 }

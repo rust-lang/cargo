@@ -30,6 +30,7 @@ pub struct Options {
     flag_branch: Option<String>,
     flag_tag: Option<String>,
     flag_rev: Option<String>,
+    flag_refspec: Option<String>,
 
     flag_path: Option<String>,
     #[serde(rename = "flag_Z")]
@@ -50,6 +51,7 @@ Specifying what crate to install:
     --branch BRANCH           Branch to use when installing from git
     --tag TAG                 Tag to use when installing from git
     --rev SHA                 Specific commit to use when installing from git
+    --refspec REFSPEC         Remote refspec to use when installing from git
     --path PATH               Filesystem path to local crate to install
 
 Build and install options:
@@ -146,6 +148,8 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
             GitReference::Tag(tag)
         } else if let Some(rev) = options.flag_rev {
             GitReference::Rev(rev)
+        } else if let Some(refspec) = options.flag_refspec {
+            GitReference::Refspec(refspec)
         } else {
             GitReference::Branch("master".to_string())
         };

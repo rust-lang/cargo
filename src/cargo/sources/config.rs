@@ -177,7 +177,12 @@ restore the source replacement configuration to continue the build
                         None => {
                             match try("rev")? {
                                 Some(b) => GitReference::Rev(b.0.to_string()),
-                                None => GitReference::Branch("master".to_string()),
+                                None => {
+                                    match try("refspec")? {
+                                        Some(b) => GitReference::Refspec(b.0.to_string()),
+                                        None => GitReference::Branch("master".to_string()),
+                                    }
+                                }
                             }
                         }
                     }

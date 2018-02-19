@@ -30,6 +30,18 @@ fn serialize_str<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
     t.to_string().serialize(s)
 }
 
+fn git_ref_to_fetch_refspec(reference: &GitReference) -> String {
+    if let GitReference::Refspec(ref s) = *reference {
+        if s.starts_with("refs/") {
+            format!("{}:{}", s, s)
+        } else {
+            format!("refs/{}:refs/{}", s, s)
+        }
+    } else {
+        "refs/heads/*:refs/heads/*".to_string()
+    }
+}
+
 impl fmt::Display for GitRevision {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&self.0, f)
@@ -91,16 +103,17 @@ impl GitRemote {
         db.rev_for(reference)
     }
 
-    pub fn checkout(&self, into: &Path, cargo_config: &Config) -> CargoResult<GitDatabase> {
+    pub fn checkout(&self, into: &Path, reference: &GitReference, cargo_config: &Config)
+                    -> CargoResult<GitDatabase> {
         let repo = match git2::Repository::open(into) {
             Ok(mut repo) => {
-                self.fetch_into(&mut repo, cargo_config).chain_err(|| {
+                self.fetch_into(&mut repo, reference, cargo_config).chain_err(|| {
                     format!("failed to fetch into {}", into.display())
                 })?;
                 repo
             }
             Err(..) => {
-                self.clone_into(into, cargo_config).chain_err(|| {
+                self.clone_into(into, reference, cargo_config).chain_err(|| {
                     format!("failed to clone into: {}", into.display())
                 })?
             }
@@ -122,19 +135,20 @@ impl GitRemote {
         })
     }
 
-    fn fetch_into(&self, dst: &mut git2::Repository, cargo_config: &Config) -> CargoResult<()> {
+    fn fetch_into(&self, dst: &mut git2::Repository, reference: &GitReference, cargo_config: &Config) -> CargoResult<()> {
         // Create a local anonymous remote in the repository to fetch the url
-        let refspec = "refs/heads/*:refs/heads/*";
-        fetch(dst, &self.url, refspec, cargo_config)
+        let refspec = git_ref_to_fetch_refspec(reference);
+        fetch(dst, &self.url, &refspec, cargo_config)
     }
 
-    fn clone_into(&self, dst: &Path, cargo_config: &Config) -> CargoResult<git2::Repository> {
+    fn clone_into(&self, dst: &Path, reference: &GitReference, cargo_config: &Config) -> CargoResult<git2::Repository> {
         if fs::metadata(&dst).is_ok() {
             fs::remove_dir_all(dst)?;
         }
         fs::create_dir_all(dst)?;
         let mut repo = git2::Repository::init_bare(dst)?;
-        fetch(&mut repo, &self.url, "refs/heads/*:refs/heads/*", cargo_config)?;
+        let refspec = git_ref_to_fetch_refspec(reference);
+        fetch(&mut repo, &self.url, &refspec, cargo_config)?;
         Ok(repo)
     }
 }
@@ -183,6 +197,21 @@ impl GitDatabase {
             }
             GitReference::Rev(ref s) => {
                 let obj = self.repo.revparse_single(s)?;
+                match obj.as_tag() {
+                    Some(tag) => tag.target_id(),
+                    None => obj.id(),
+                }
+            }
+            GitReference::Refspec(ref s) => {
+                if s.contains(':') {
+                    Err(format_err!("refspec `{}` should not contain colon", s))?;
+                }
+                let obj = if s.starts_with("refs/") {
+                    self.repo.revparse_single(s)?
+                } else {
+                    let canon = format!("refs/{}", s);
+                    self.repo.revparse_single(&canon)?
+                };
                 match obj.as_tag() {
                     Some(tag) => tag.target_id(),
                     None => obj.id(),
@@ -280,7 +309,7 @@ impl<'a> GitCheckout<'a> {
     fn fetch(&mut self, cargo_config: &Config) -> CargoResult<()> {
         info!("fetch {}", self.repo.path().display());
         let url = self.database.path.to_url()?;
-        let refspec = "refs/heads/*:refs/heads/*";
+        let refspec = "refs/*:refs/*";
         fetch(&mut self.repo, &url, refspec, cargo_config)?;
         Ok(())
     }
@@ -357,7 +386,7 @@ impl<'a> GitCheckout<'a> {
             };
 
             // Fetch data from origin and reset to the head commit
-            let refspec = "refs/heads/*:refs/heads/*";
+            let refspec = "refs/*:refs/*";
             let url = url.to_url()?;
             fetch(&mut repo, &url, refspec, cargo_config).chain_err(|| {
                 internal(format!("failed to fetch submodule `{}` from {}",

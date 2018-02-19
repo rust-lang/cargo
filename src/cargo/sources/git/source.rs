@@ -170,7 +170,7 @@ impl<'cfg> Source for GitSource<'cfg> {
 
             trace!("updating git source `{:?}`", self.remote);
 
-            let repo = self.remote.checkout(&db_path, self.config)?;
+            let repo = self.remote.checkout(&db_path, &self.reference, self.config)?;
             let rev = repo.rev_for(&self.reference).map_err(Internal::new)?;
             (repo, rev)
         } else {
