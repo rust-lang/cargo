@@ -74,7 +74,7 @@ fn list_command_looks_at_path() {
                    .env("PATH", &path);
     let output = output.exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
-    assert!(output.contains("\n    1\n"), "missing 1: {}", output);
+    assert!(output.contains("\n    1                   "), "missing 1: {}", output);
 }
 
 // windows and symlinks don't currently agree that well
@@ -95,7 +95,7 @@ fn list_command_resolves_symlinks() {
                    .env("PATH", &path);
     let output = output.exec_with_output().unwrap();
     let output = str::from_utf8(&output.stdout).unwrap();
-    assert!(output.contains("\n    2\n"), "missing 2: {}", output);
+    assert!(output.contains("\n    2                   "), "missing 2: {}", output);
 }
 
 #[test]
