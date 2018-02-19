@@ -193,7 +193,8 @@ fn cargo_metadata_with_deps_and_version() {
                         "req": "^0.0.1",
                         "source": "registry+[..]",
                         "target": null,
-                        "uses_default_features": true
+                        "uses_default_features": true,
+                        "rename": null
                     }
                 ],
                 "features": {},
@@ -228,7 +229,8 @@ fn cargo_metadata_with_deps_and_version() {
                         "req": "*",
                         "source": "registry+[..]",
                         "target": null,
-                        "uses_default_features": true
+                        "uses_default_features": true,
+                        "rename": null
                     }
                 ],
                 "features": {},

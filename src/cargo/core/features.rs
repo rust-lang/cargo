@@ -159,6 +159,9 @@ features! {
 
         // Using epochs
         [unstable] epoch: bool,
+
+        // Renaming a package in the manifest via the `package` key
+        [unstable] rename_dependency: bool,
     }
 }
 
