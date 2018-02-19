@@ -180,7 +180,15 @@ fn execute(flags: Flags, config: &mut Config) -> CliResult {
     if flags.flag_list {
         println!("Installed Commands:");
         for command in list_commands(config) {
-            println!("    {}", command);
+            let (command, path) = command;
+            if flags.flag_verbose > 0 {
+                match path {
+                    Some(p) => println!("    {:<20} {}", command, p),
+                    None => println!("    {:<20}", command),
+                }
+            } else {
+                println!("    {}", command);
+            }
         }
         return Ok(());
     }
@@ -301,7 +309,7 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
     // Only consider candidates with a lev_distance of 3 or less so we don't
     // suggest out-of-the-blue options.
     let mut filtered = cmds.iter()
-        .map(|c| (lev_distance(c, cmd), c))
+        .map(|&(ref c, _)| (lev_distance(c, cmd), c))
         .filter(|&(d, _)| d < 4)
         .collect::<Vec<_>>();
     filtered.sort_by(|a, b| a.0.cmp(&b.0));
@@ -347,7 +355,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> C
 }
 
 /// List all runnable commands
-fn list_commands(config: &Config) -> BTreeSet<String> {
+fn list_commands(config: &Config) -> BTreeSet<(String, Option<String>)> {
     let prefix = "cargo-";
     let suffix = env::consts::EXE_SUFFIX;
     let mut commands = BTreeSet::new();
@@ -367,13 +375,16 @@ fn list_commands(config: &Config) -> BTreeSet<String> {
             }
             if is_executable(entry.path()) {
                 let end = filename.len() - suffix.len();
-                commands.insert(filename[prefix.len()..end].to_string());
+                commands.insert(
+                        (filename[prefix.len()..end].to_string(),
+                         Some(path.display().to_string()))
+                );
             }
         }
     }
 
     macro_rules! add_cmd {
-        ($cmd:ident) => ({ commands.insert(stringify!($cmd).replace("_", "-")); })
+        ($cmd:ident) => ({ commands.insert((stringify!($cmd).replace("_", "-"), None)); })
     }
     each_subcommand!(add_cmd);
     commands
