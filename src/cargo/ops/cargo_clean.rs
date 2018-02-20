@@ -17,6 +17,7 @@ pub struct CleanOptions<'a> {
 /// Cleans the project from build artifacts.
 pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     let target_dir = ws.target_dir();
+    let config = ws.config();
 
     // If we have a spec, then we need to delete some packages, otherwise, just
     // remove the whole target directory and be done with it!
@@ -25,7 +26,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     // blow it all away anyway.
     if opts.spec.is_empty() {
         let target_dir = target_dir.into_path_unlocked();
-        return rm_rf(&target_dir);
+        return rm_rf(&target_dir, config);
     }
 
     let (packages, resolve) = ops::resolve_ws(ws)?;
@@ -73,20 +74,20 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     cx.probe_target_info(&units)?;
 
     for unit in units.iter() {
-        rm_rf(&cx.fingerprint_dir(unit))?;
+        rm_rf(&cx.fingerprint_dir(unit), config)?;
         if unit.target.is_custom_build() {
             if unit.profile.run_custom_build {
-                rm_rf(&cx.build_script_out_dir(unit))?;
+                rm_rf(&cx.build_script_out_dir(unit), config)?;
             } else {
-                rm_rf(&cx.build_script_dir(unit))?;
+                rm_rf(&cx.build_script_dir(unit), config)?;
             }
             continue
         }
 
         for &(ref src, ref link_dst, _) in cx.target_filenames(unit)?.iter() {
-            rm_rf(src)?;
+            rm_rf(src, config)?;
             if let Some(ref dst) = *link_dst {
-                rm_rf(dst)?;
+                rm_rf(dst, config)?;
             }
         }
     }
@@ -94,13 +95,15 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     Ok(())
 }
 
-fn rm_rf(path: &Path) -> CargoResult<()> {
+fn rm_rf(path: &Path, config: &Config) -> CargoResult<()> {
     let m = fs::metadata(path);
     if m.as_ref().map(|s| s.is_dir()).unwrap_or(false) {
+        config.shell().verbose(|shell| {shell.status("Removing", path.display())})?;
         fs::remove_dir_all(path).chain_err(|| {
             format_err!("could not remove build directory")
         })?;
     } else if m.is_ok() {
+        config.shell().verbose(|shell| {shell.status("Removing", path.display())})?;
         fs::remove_file(path).chain_err(|| {
             format_err!("failed to remove build artifact")
         })?;
