@@ -80,7 +80,7 @@ features = [
 
 [dev-dependencies]
 bufstream = "0.1"
-cargotest = { path = "tests/cargotest", version = "0.1" }
+cargotest = { path = "tests/testsuite/cargotest", version = "0.1" }
 filetime = "0.1"
 hamcrest = "=0.1.1"
 
@@ -88,3 +88,7 @@ hamcrest = "=0.1.1"
 name = "cargo"
 test = false
 doc = false
+
+[[test]]
+name = "testsuite"
+path = "tests/testsuite/lib.rs"
