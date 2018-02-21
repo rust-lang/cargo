@@ -28,8 +28,8 @@ fn enabled() -> bool {
         let me = processthreadsapi::GetCurrentProcess();
         let mut ret = 0;
         let r = jobapi::IsProcessInJob(me, 0 as *mut _, &mut ret);
-        assert!(r != 0);
-        if ret == winapi::shared::minwindef::FALSE {
+        assert_ne!(r, 0);
+        if ret == ::winapi::shared::minwindef::FALSE {
             return true
         }
 
