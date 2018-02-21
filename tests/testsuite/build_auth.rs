@@ -118,7 +118,9 @@ Caused by:
   failed to authenticate when downloading repository
 attempted to find username/password via `credential.helper`, but [..]
 
-To learn more, run the command again with --verbose.
+Caused by:
+  curl error: Failed to connect to 127.0.0.1 port [..]: Connection refused
+; class=Net (12)
 ",
         addr = addr)));
 
