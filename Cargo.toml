@@ -33,8 +33,9 @@ git2-curl = "0.7"
 glob = "0.2"
 hex = "0.3"
 home = "0.3"
-ignore = "0.3"
+ignore = "0.4"
 jobserver = "0.1.9"
+lazycell = "0.6"
 libc = "0.2"
 libgit2-sys = "0.6"
 log = "0.4"
@@ -54,10 +55,10 @@ toml = "0.4"
 url = "1.1"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-core-foundation = { version = "0.4.4", features = ["mac_os_10_7_support"] }
+core-foundation = { version = "0.5.1", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
-miow = "0.2"
+miow = "0.3"
 
 [target.'cfg(windows)'.dependencies.winapi]
 version = "0.3"
@@ -79,7 +80,7 @@ features = [
 
 [dev-dependencies]
 bufstream = "0.1"
-cargotest = { path = "tests/cargotest", version = "0.1" }
+cargotest = { path = "tests/testsuite/cargotest", version = "0.1" }
 filetime = "0.1"
 hamcrest = "=0.1.1"
 
@@ -87,3 +88,7 @@ hamcrest = "=0.1.1"
 name = "cargo"
 test = false
 doc = false
+
+[[test]]
+name = "testsuite"
+path = "tests/testsuite/lib.rs"
