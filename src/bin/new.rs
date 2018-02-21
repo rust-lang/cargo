@@ -32,8 +32,8 @@ Options:
                         control system (git, hg, pijul, or fossil) or do not
                         initialize any version control at all (none), overriding
                         a global configuration.
-    --bin               Use a binary (application) template
-    --lib               Use a library template [default]
+    --bin               Use a binary (application) template [default]
+    --lib               Use a library template
     --name NAME         Set the resulting package name, defaults to the value of <path>
     -v, --verbose ...   Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet         No output printed to stdout
@@ -58,15 +58,11 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                                     flag_bin,
                                     flag_lib,
                                     &arg_path,
-                                    flag_name.as_ref().map(|s| s.as_ref()));
+                                    flag_name.as_ref().map(|s| s.as_ref()))?;
 
-    let opts_lib = opts.lib;
     ops::new(&opts, config)?;
 
-    config.shell().status("Created", format!("{} `{}` project",
-                                             if opts_lib { "library" }
-                                             else {"binary (application)"},
-                                             arg_path))?;
+    config.shell().status("Created", format!("{} `{}` project", opts.kind, arg_path))?;
 
     Ok(())
 }

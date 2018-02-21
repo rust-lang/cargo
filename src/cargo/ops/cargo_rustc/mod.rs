@@ -947,12 +947,12 @@ Cargo.toml. This warning might turn into a hard error in the future.",
             }
     }
 
-    for unit in dep_targets {
-        if unit.profile.run_custom_build {
-            cmd.env("OUT_DIR", &cx.build_script_out_dir(&unit));
+    for dep in dep_targets {
+        if dep.profile.run_custom_build {
+            cmd.env("OUT_DIR", &cx.build_script_out_dir(&dep));
         }
-        if unit.target.linkable() && !unit.profile.doc {
-            link_to(cmd, cx, &unit)?;
+        if dep.target.linkable() && !dep.profile.doc {
+            link_to(cmd, cx, &unit, &dep)?;
         }
     }
 
@@ -960,15 +960,31 @@ Cargo.toml. This warning might turn into a hard error in the future.",
 
     fn link_to<'a, 'cfg>(cmd: &mut ProcessBuilder,
                          cx: &mut Context<'a, 'cfg>,
-                         unit: &Unit<'a>) -> CargoResult<()> {
-        for &(ref dst, _, file_type) in cx.target_filenames(unit)?.iter() {
+                         current: &Unit<'a>,
+                         dep: &Unit<'a>) -> CargoResult<()> {
+        for &(ref dst, _, file_type) in cx.target_filenames(dep)?.iter() {
             if file_type != TargetFileType::Linkable {
                 continue
             }
             let mut v = OsString::new();
-            v.push(&unit.target.crate_name());
+
+            // Unfortunately right now Cargo doesn't have a great way to get a
+            // 1:1 mapping of entries in `dependencies()` to the actual crate
+            // we're depending on. Instead we're left to do some guesswork here
+            // to figure out what `Dependency` the `dep` unit corresponds to in
+            // `current` to see if we're renaming it.
+            //
+            // This I believe mostly works out for now, but we'll likely want
+            // to tighten up this in the future.
+            let name = current.pkg.dependencies()
+                .iter()
+                .filter(|d| d.matches_ignoring_source(dep.pkg.summary()))
+                .filter_map(|d| d.rename())
+                .next();
+
+            v.push(name.unwrap_or(&dep.target.crate_name()));
             v.push("=");
-            v.push(cx.out_dir(unit));
+            v.push(cx.out_dir(dep));
             v.push(&path::MAIN_SEPARATOR.to_string());
             v.push(&dst.file_name().unwrap());
             cmd.arg("--extern").arg(&v);
