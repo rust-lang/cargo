@@ -469,6 +469,34 @@ fn resolving_with_constrained_sibling_backtrack_parent() {
 }
 
 #[test]
+fn resolving_with_many_equivalent_backtracking() {
+    let mut reglist = vec![
+        pkg!(("level0", "1.0.0")),
+    ];
+
+    const DEPTH: usize = 10;
+    const BRANCHING_FACTOR: usize = 5;
+
+    for l in 0..DEPTH {
+        let name = format!("level{}", l);
+        let next = format!("level{}", l + 1);
+        for i in 1..BRANCHING_FACTOR {
+            let vsn = format!("1.0.{}", i);
+            reglist.push(pkg!((name.as_str(), vsn.as_str()) => [dep_req(next.as_str(), "*")]));
+        }
+    }
+
+    let reg = registry(reglist);
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("level0", "*"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("level0", "1.0.0")])));
+}
+
+#[test]
 fn resolving_with_constrained_sibling_backtrack_activation() {
     // It makes sense to resolve most-constrained deps first, but
     // with that logic the backtrack traps here come between the two
