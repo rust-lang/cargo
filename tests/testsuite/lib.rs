@@ -65,6 +65,7 @@ mod profiles;
 mod publish;
 mod read_manifest;
 mod registry;
+mod rename_deps;
 mod required_features;
 mod resolve;
 mod run;
