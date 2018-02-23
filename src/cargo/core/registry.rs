@@ -110,7 +110,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
             overrides: Vec::new(),
-            source_config: source_config,
+            source_config,
             locked: HashMap::new(),
             patches: HashMap::new(),
             patches_locked: false,

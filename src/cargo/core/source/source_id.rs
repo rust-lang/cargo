@@ -70,9 +70,9 @@ impl SourceId {
     fn new(kind: Kind, url: Url) -> CargoResult<SourceId> {
         let source_id = SourceId {
             inner: Arc::new(SourceIdInner {
-                kind: kind,
+                kind,
                 canonical_url: git::canonicalize_url(&url)?,
-                url: url,
+                url,
                 precise: None,
                 name: None,
             }),
@@ -191,7 +191,7 @@ impl SourceId {
             inner: Arc::new(SourceIdInner {
                 kind: Kind::Registry,
                 canonical_url: git::canonicalize_url(&url)?,
-                url: url,
+                url,
                 precise: None,
                 name: Some(key.to_string()),
             }),
@@ -524,6 +524,6 @@ mod tests {
 
         let foo = Kind::Git(GitReference::Branch("foo".to_string()));
         let s3 = SourceId::new(foo, loc).unwrap();
-        assert!(s1 != s3);
+        assert_ne!(s1, s3);
     }
 }

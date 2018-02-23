@@ -59,10 +59,10 @@ fn metadata_full(ws: &Workspace,
                            .collect::<CargoResult<Vec<_>>>()?;
 
     Ok(ExportInfo {
-        packages: packages,
+        packages,
         workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
         resolve: Some(MetadataResolve{
-            resolve: resolve,
+            resolve,
             root: ws.current_opt().map(|pkg| pkg.package_id().clone()),
         }),
         target_directory: ws.target_dir().display().to_string(),
@@ -102,7 +102,7 @@ fn serialize_resolve<S>(resolve: &Resolve, s: S) -> Result<S::Ok, S::Error>
 
     resolve.iter().map(|id| {
         Node {
-            id: id,
+            id,
             dependencies: resolve.deps(id).collect(),
         }
     }).collect::<Vec<_>>().serialize(s)

@@ -37,13 +37,13 @@ impl<'cfg> GitSource<'cfg> {
         };
 
         let source = GitSource {
-            remote: remote,
-            reference: reference,
+            remote,
+            reference,
             source_id: source_id.clone(),
             path_source: None,
             rev: None,
-            ident: ident,
-            config: config,
+            ident,
+            config,
         };
 
         Ok(source)

@@ -244,9 +244,9 @@ impl ProcessBuilder {
                 None)
         })?;
         let output = Output {
-            stdout: stdout,
-            stderr: stderr,
-            status: status,
+            stdout,
+            stderr,
+            status,
         };
 
         {

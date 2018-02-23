@@ -58,9 +58,9 @@ impl ser::Serialize for Package {
             name: package_id.name(),
             version: &package_id.version().to_string(),
             id: package_id,
-            license: license,
-            license_file: license_file,
-            description: description,
+            license,
+            license_file,
+            description,
             source: summary.source_id(),
             dependencies: summary.dependencies(),
             targets: self.manifest.targets(),
@@ -75,7 +75,7 @@ impl Package {
     pub fn new(manifest: Manifest,
                manifest_path: &Path) -> Package {
         Package {
-            manifest: manifest,
+            manifest,
             manifest_path: manifest_path.to_path_buf(),
         }
     }

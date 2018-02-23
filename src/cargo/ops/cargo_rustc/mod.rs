@@ -149,9 +149,9 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         };
         targets.iter().map(move |&(target, profile)| {
             Unit {
-                pkg: pkg,
-                target: target,
-                profile: profile,
+                pkg,
+                target,
+                profile,
                 kind: if target.for_host() {Kind::Host} else {default_kind},
             }
         })
@@ -576,9 +576,9 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                 package_id: &package_id,
                 target: &target,
                 profile: &profile,
-                features: features,
+                features,
                 filenames: destinations,
-                fresh: fresh,
+                fresh,
             });
         }
         Ok(())

@@ -114,7 +114,7 @@ mod imp {
             return None
         }
 
-        Some(Setup { job: job })
+        Some(Setup { job })
     }
 
     impl Drop for Setup {

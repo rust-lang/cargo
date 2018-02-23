@@ -288,15 +288,15 @@ impl<'cfg> RegistrySource<'cfg> {
            index_locked: bool) -> RegistrySource<'cfg> {
         RegistrySource {
             src_path: config.registry_source_path().join(name),
-            config: config,
+            config,
             source_id: source_id.clone(),
             updated: false,
             index: index::RegistryIndex::new(source_id,
                                              ops.index_path(),
                                              config,
                                              index_locked),
-            index_locked: index_locked,
-            ops: ops,
+            index_locked,
+            ops,
         }
     }
 

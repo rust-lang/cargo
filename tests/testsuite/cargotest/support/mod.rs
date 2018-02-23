@@ -45,7 +45,7 @@ struct FileBuilder {
 
 impl FileBuilder {
     pub fn new(path: PathBuf, body: &str) -> FileBuilder {
-        FileBuilder { path: path, body: body.to_string() }
+        FileBuilder { path, body: body.to_string() }
     }
 
     fn mk(&self) {
@@ -71,7 +71,7 @@ struct SymlinkBuilder {
 
 impl SymlinkBuilder {
     pub fn new(dst: PathBuf, src: PathBuf) -> SymlinkBuilder {
-        SymlinkBuilder { dst: dst, src: src }
+        SymlinkBuilder { dst, src }
     }
 
     #[cfg(unix)]
@@ -699,7 +699,7 @@ fn find_mismatch<'a>(expected: &'a Value, actual: &'a Value)
                 assert!(r.len() > 0);
                 Some((&l[0], &r[0]))
             } else {
-                assert!(r.len() == 0);
+                assert_eq!(r.len(), 0);
                 None
             }
         }

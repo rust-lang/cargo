@@ -175,26 +175,26 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
 
         Ok(Context {
-            ws: ws,
+            ws,
             host: host_layout,
             target: target_layout,
-            resolve: resolve,
-            packages: packages,
-            config: config,
+            resolve,
+            packages,
+            config,
             target_info: TargetInfo::default(),
             host_info: TargetInfo::default(),
             compilation: Compilation::new(config),
             build_state: Arc::new(BuildState::new(&build_config)),
-            build_config: build_config,
+            build_config,
             fingerprints: HashMap::new(),
-            profiles: profiles,
+            profiles,
             compiled: HashSet::new(),
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),
             links: Links::new(),
             used_in_plugin: HashSet::new(),
             incremental_env,
-            jobserver: jobserver,
+            jobserver,
             build_script_overridden: HashSet::new(),
 
             // TODO: Pre-Calculate these with a topo-sort, rather than lazy-calculating
@@ -346,7 +346,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         let cfg = if has_cfg_and_sysroot {
-            Some(try!(lines.map(Cfg::from_str).collect()))
+            Some(lines.map(Cfg::from_str).collect::<CargoResult<_>>()?)
         } else {
             None
         };
@@ -819,7 +819,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 Ok(pkg) => {
                     pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
                         let unit = Unit {
-                            pkg: pkg,
+                            pkg,
                             target: t,
                             profile: self.lib_or_check_profile(unit, t),
                             kind: unit.kind.for_target(t),

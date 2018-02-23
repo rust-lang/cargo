@@ -84,7 +84,7 @@ impl Config {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
             rustc: LazyCell::new(),
-            cwd: cwd,
+            cwd,
             values: LazyCell::new(),
             cargo_exe: LazyCell::new(),
             rustdoc: LazyCell::new(),

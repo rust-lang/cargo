@@ -17,7 +17,7 @@ pub struct FileLock {
     state: State,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 enum State {
     Unlocked,
     Shared,
@@ -35,13 +35,13 @@ impl FileLock {
     /// Note that special care must be taken to ensure that the path is not
     /// referenced outside the lifetime of this lock.
     pub fn path(&self) -> &Path {
-        assert!(self.state != State::Unlocked);
+        assert_ne!(self.state, State::Unlocked);
         &self.path
     }
 
     /// Returns the parent path containing this file
     pub fn parent(&self) -> &Path {
-        assert!(self.state != State::Unlocked);
+        assert_ne!(self.state, State::Unlocked);
         self.path.parent().unwrap()
     }
 
@@ -229,7 +229,7 @@ impl Filesystem {
             State::Unlocked => {}
 
         }
-        Ok(FileLock { f: Some(f), path: path, state: state })
+        Ok(FileLock { f: Some(f), path, state })
     }
 }
 

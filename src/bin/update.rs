@@ -74,7 +74,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         aggressive: options.flag_aggressive,
         precise: options.flag_precise.as_ref().map(|s| &s[..]),
         to_update: &options.flag_package,
-        config: config,
+        config,
     };
 
     let ws = Workspace::new(&root, config)?;

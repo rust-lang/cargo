@@ -331,7 +331,7 @@ impl BuildState {
         }
         BuildState {
             outputs: Mutex::new(HashMap::new()),
-            overrides: overrides,
+            overrides,
         }
     }
 
@@ -416,14 +416,14 @@ impl BuildOutput {
         }
 
         Ok(BuildOutput {
-            library_paths: library_paths,
-            library_links: library_links,
-            cfgs: cfgs,
-            env: env,
-            metadata: metadata,
-            rerun_if_changed: rerun_if_changed,
-            rerun_if_env_changed: rerun_if_env_changed,
-            warnings: warnings,
+            library_paths,
+            library_links,
+            cfgs,
+            env,
+            metadata,
+            rerun_if_changed,
+            rerun_if_env_changed,
+            warnings,
         })
     }
 

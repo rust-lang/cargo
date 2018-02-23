@@ -86,13 +86,13 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     let spec = Packages::Packages(&packages);
 
     let compile_opts = ops::CompileOptions {
-        config: config,
+        config,
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| &t[..]),
         features: &options.flag_features,
         all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
-        spec: spec,
+        spec,
         release: options.flag_release,
         mode: ops::CompileMode::Build,
         filter: if examples.is_empty() && bins.is_empty() {
