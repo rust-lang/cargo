@@ -308,7 +308,7 @@ resolve to 1.0.1 inside the repository instead of trying to download a version
 from crates.io. Once 1.0.1 is published on crates.io the `[patch]` section can
 be deleted.
 
-It's also worth nothing that `[patch]` applies *transitively*. Let's say you use
+It's also worth noting that `[patch]` applies *transitively*. Let's say you use
 `my-library` in a larger project, such as:
 
 ```toml
