@@ -33,6 +33,33 @@ fn maybe_spurious(err: &Error) -> bool {
     false
 }
 
+
+/// Suggest the user to update their windows 7 to support modern TLS versions.
+/// See https://github.com/rust-lang/cargo/issues/5066 for details.
+#[cfg(windows)]
+fn should_warn_about_old_tls_for_win7(err: &Error) -> bool {
+    err.causes()
+        .filter_map(|e| e.downcast_ref::<git2::Error>())
+        .find(|e| e.class() == git2::ErrorClass::Net && e.code() == git2::ErrorCode::Certificate)
+        .is_some()
+}
+
+#[cfg(not(windows))]
+fn should_warn_about_old_tls_for_win7(_err: &Error) -> bool {
+    false
+}
+
+const WIN7_TLS_WARNING: &str = "\
+Certificate check failure might be caused by outdated TLS on older versions of Windows.
+If you are using Windows 7, Windows Server 2008 R2 or Windows Server 2012,
+please follow these instructions to enable more secure TLS:
+
+    https://support.microsoft.com/en-us/help/3140245/
+
+See https://github.com/rust-lang/cargo/issues/5066 for details.
+";
+
+
 /// Wrapper method for network call retry logic.
 ///
 /// Retry counts provided by Config object `net.retry`. Config shell outputs
@@ -54,9 +81,14 @@ pub fn with_retry<T, F>(config: &Config, mut callback: F) -> CargoResult<T>
         match callback() {
             Ok(ret) => return Ok(ret),
             Err(ref e) if maybe_spurious(e) && remaining > 0 => {
-                let msg = format!("spurious network error ({} tries \
-                          remaining): {}", remaining, e);
-                config.shell().warn(msg)?;
+                config.shell().warn(
+                    format!("spurious network error ({} tries remaining): {}", remaining, e)
+                )?;
+
+                if should_warn_about_old_tls_for_win7(e) {
+                    config.shell().warn(WIN7_TLS_WARNING)?;
+                }
+
                 remaining -= 1;
             }
             //todo impl from
