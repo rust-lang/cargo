@@ -98,13 +98,13 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     let doc_opts = ops::DocOptions {
         open_result: options.flag_open,
         compile_opts: ops::CompileOptions {
-            config: config,
+            config,
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|t| &t[..]),
             features: &options.flag_features,
             all_features: options.flag_all_features,
             no_default_features: options.flag_no_default_features,
-            spec: spec,
+            spec,
             filter: ops::CompileFilter::new(options.flag_lib,
                                             &options.flag_bin, options.flag_bins,
                                             &empty, false,

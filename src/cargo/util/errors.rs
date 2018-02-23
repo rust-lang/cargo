@@ -104,8 +104,8 @@ impl CargoTestError {
                                 .collect::<Vec<String>>()
                                 .join("\n");
         CargoTestError {
-            test: test,
-            desc: desc,
+            test,
+            desc,
             exit: errors[0].exit,
             causes: errors,
         }
@@ -201,7 +201,7 @@ pub fn process_error(msg: &str,
     }
 
     return ProcessError {
-        desc: desc,
+        desc,
         exit: status.cloned(),
         output: output.cloned(),
     };

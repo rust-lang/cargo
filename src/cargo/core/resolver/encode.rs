@@ -179,10 +179,10 @@ impl EncodableResolve {
             graph: g,
             empty_features: HashSet::new(),
             features: HashMap::new(),
-            replacements: replacements,
-            checksums: checksums,
-            metadata: metadata,
-            unused_patches: unused_patches,
+            replacements,
+            checksums,
+            metadata,
+            unused_patches,
         })
     }
 }
@@ -372,8 +372,8 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
         EncodableResolve {
             package: Some(encodable),
             root: None,
-            metadata: metadata,
-            patch: patch,
+            metadata,
+            patch,
         }.serialize(s)
     }
 }
@@ -399,7 +399,7 @@ fn encodable_resolve_node(id: &PackageId, resolve: &Resolve)
         version: id.version().to_string(),
         source: encode_source(id.source_id()),
         dependencies: deps,
-        replace: replace,
+        replace,
     }
 }
 

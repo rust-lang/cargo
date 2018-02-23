@@ -180,7 +180,7 @@ fn transmit(config: &Config,
     let publish = registry.publish(&NewCrate {
         name: pkg.name().to_string(),
         vers: pkg.version().to_string(),
-        deps: deps,
+        deps,
         features: pkg.summary().features().clone(),
         authors: authors.clone(),
         description: description.clone(),
@@ -241,8 +241,8 @@ pub fn registry_configuration(config: &Config,
     };
 
     Ok(RegistryConfig {
-        index: index,
-        token: token
+        index,
+        token
     })
 }
 

@@ -34,7 +34,7 @@ impl<'cfg> PathSource<'cfg> {
             path: path.to_path_buf(),
             updated: false,
             packages: Vec::new(),
-            config: config,
+            config,
             recursive: false,
         }
     }

@@ -97,17 +97,17 @@ about this warning.";
     let root = find_root_manifest_for_wd(flag_manifest_path.clone(), config.cwd())?;
     let ws = Workspace::new(&root, config)?;
     ops::publish(&ws, &ops::PublishOpts {
-        config: config,
-        token: token,
+        config,
+        token,
         index:
             if host.clone().is_none() || host.clone().unwrap().is_empty() { index }
             else { config.shell().warn(&msg)?; host },  // TODO: Deprecated, remove
         verify: !no_verify,
-        allow_dirty: allow_dirty,
+        allow_dirty,
         target: target.as_ref().map(|t| &t[..]),
-        jobs: jobs,
-        dry_run: dry_run,
-        registry: registry,
+        jobs,
+        dry_run,
+        registry,
     })?;
     Ok(())
 }

@@ -67,7 +67,7 @@ pub trait CargoPathExt {
         self.move_in_time(|sec, nsec| (sec + 3600, nsec))
     }
 
-    fn move_in_time<F>(&self, F)
+    fn move_in_time<F>(&self, travel_amount: F)
         where F: Fn(u64, u32) -> (u64, u32);
 }
 

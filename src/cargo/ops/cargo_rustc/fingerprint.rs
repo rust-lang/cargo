@@ -419,7 +419,7 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         // actually affect the output artifact so there's no need to hash it.
         path: util::hash_u64(&super::path_args(cx, unit).0),
         features: format!("{:?}", cx.resolve.features_sorted(unit.pkg.package_id())),
-        deps: deps,
+        deps,
         local: vec![local],
         memoized_hash: Mutex::new(None),
         epoch: unit.pkg.manifest().epoch(),
@@ -473,7 +473,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         path: 0,
         features: String::new(),
         deps: Vec::new(),
-        local: local,
+        local,
         memoized_hash: Mutex::new(None),
         epoch: Epoch::Epoch2015,
         rustflags: Vec::new(),

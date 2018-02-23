@@ -602,7 +602,7 @@ fn git_lock_file_doesnt_change() {
 
     let mut lock2 = String::new();
     t!(t!(File::open(p.root().join("Cargo.lock"))).read_to_string(&mut lock2));
-    assert!(lock1 == lock2, "lock files changed");
+    assert_eq!(lock1, lock2, "lock files changed");
 }
 
 #[test]

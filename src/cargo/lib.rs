@@ -216,7 +216,7 @@ pub fn version() -> VersionInfo {
                 pre_release: option_env_str!("CARGO_PKG_VERSION_PRE"),
                 cfg_info: Some(CfgInfo {
                     release_channel: option_env_str!("CFG_RELEASE_CHANNEL").unwrap(),
-                    commit_info: commit_info,
+                    commit_info,
                 }),
             }
         },

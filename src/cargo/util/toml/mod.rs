@@ -301,6 +301,12 @@ impl<'de> de::Deserialize<'de> for U32OrBool {
                 formatter.write_str("a boolean or an integer")
             }
 
+            fn visit_bool<E>(self, b: bool) -> Result<Self::Value, E>
+                where E: de::Error,
+            {
+                Ok(U32OrBool::Bool(b))
+            }
+
             fn visit_i64<E>(self, u: i64) -> Result<Self::Value, E>
                 where E: de::Error,
             {
@@ -311,12 +317,6 @@ impl<'de> de::Deserialize<'de> for U32OrBool {
                 where E: de::Error,
             {
                 Ok(U32OrBool::U32(u as u32))
-            }
-
-            fn visit_bool<E>(self, b: bool) -> Result<Self::Value, E>
-                where E: de::Error,
-            {
-                Ok(U32OrBool::Bool(b))
             }
         }
 
@@ -361,16 +361,16 @@ impl<'de> de::Deserialize<'de> for StringOrBool {
                 formatter.write_str("a boolean or a string")
             }
 
-            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-                where E: de::Error,
-            {
-                Ok(StringOrBool::String(s.to_string()))
-            }
-
             fn visit_bool<E>(self, b: bool) -> Result<Self::Value, E>
                 where E: de::Error,
             {
                 Ok(StringOrBool::Bool(b))
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+                where E: de::Error,
+            {
+                Ok(StringOrBool::String(s.to_string()))
             }
         }
 
@@ -604,9 +604,9 @@ impl TomlManifest {
             let mut cx = Context {
                 pkgid: Some(&pkgid),
                 deps: &mut deps,
-                source_id: source_id,
+                source_id,
                 nested_paths: &mut nested_paths,
-                config: config,
+                config,
                 warnings: &mut warnings,
                 features: &features,
                 platform: None,
@@ -800,13 +800,13 @@ impl TomlManifest {
             let mut cx = Context {
                 pkgid: None,
                 deps: &mut deps,
-                source_id: source_id,
+                source_id,
                 nested_paths: &mut nested_paths,
-                config: config,
+                config,
                 warnings: &mut warnings,
                 platform: None,
                 features: &features,
-                root: root
+                root
             };
             (me.replace(&mut cx)?, me.patch(&mut cx)?)
         };
@@ -1207,7 +1207,7 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
                 Some(StringOrBool::String(ref n)) => Lto::Named(n.clone()),
                 None => profile.lto,
             },
-            codegen_units: codegen_units,
+            codegen_units,
             rustc_args: None,
             rustdoc_args: None,
             debuginfo: debug.unwrap_or(profile.debuginfo),

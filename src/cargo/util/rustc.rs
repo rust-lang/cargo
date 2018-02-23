@@ -40,10 +40,10 @@ impl Rustc {
         };
 
         Ok(Rustc {
-            path: path,
-            wrapper: wrapper,
-            verbose_version: verbose_version,
-            host: host,
+            path,
+            wrapper,
+            verbose_version,
+            host,
         })
     }
 

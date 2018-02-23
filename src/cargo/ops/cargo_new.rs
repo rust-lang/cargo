@@ -291,7 +291,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let mkopts = MkOptions {
         version_control: opts.version_control,
         path: &path,
-        name: name,
+        name,
         source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
         bin: opts.kind.is_bin(),
     };
@@ -580,8 +580,8 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
         None => None
     };
     Ok(CargoNewConfig {
-        name: name,
-        email: email,
+        name,
+        email,
         version_control: vcs,
     })
 }
