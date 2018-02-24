@@ -674,7 +674,7 @@ impl TomlManifest {
         let include = project.include.clone().unwrap_or_default();
 
         let summary = Summary::new(pkgid, deps, me.features.clone()
-            .unwrap_or_else(BTreeMap::new))?;
+            .unwrap_or_else(BTreeMap::new), project.links.clone())?;
         let metadata = ManifestMetadata {
             description: project.description.clone(),
             homepage: project.homepage.clone(),
@@ -687,6 +687,7 @@ impl TomlManifest {
             keywords: project.keywords.clone().unwrap_or_default(),
             categories: project.categories.clone().unwrap_or_default(),
             badges: me.badges.clone().unwrap_or_default(),
+            links: project.links.clone(),
         };
 
         let workspace_config = match (me.workspace.as_ref(),
