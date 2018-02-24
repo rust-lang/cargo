@@ -103,8 +103,10 @@ fn http_auth_offered() {
         ")
         .build();
 
+    // This is a "contains" check because the last error differs by platform,
+    // may span multiple lines, and isn't relevant to this test.
     assert_that(p.cargo("build"),
-                execs().with_status(101).with_stderr(&format!("\
+                execs().with_status(101).with_stderr_contains(&format!("\
 [UPDATING] git repository `http://{addr}/foo/bar`
 [ERROR] failed to load source for a dependency on `bar`
 
@@ -118,7 +120,7 @@ Caused by:
   failed to authenticate when downloading repository
 attempted to find username/password via `credential.helper`, but [..]
 
-To learn more, run the command again with --verbose.
+Caused by:
 ",
         addr = addr)));
 
