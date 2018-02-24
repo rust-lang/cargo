@@ -231,7 +231,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                                             features,
                                             all_features,
                                             no_default_features,
-                                            &specs)?;
+                                            &specs,
+                                            "")?;
     let (packages, resolve_with_overrides) = resolve;
 
     if specs.is_empty() {

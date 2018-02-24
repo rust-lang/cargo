@@ -9,6 +9,7 @@ use util::CargoResult;
 
 pub struct DocOptions<'a> {
     pub open_result: bool,
+    pub excludes: &'a str,
     pub compile_opts: ops::CompileOptions<'a>,
 }
 
@@ -19,7 +20,8 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
                                             options.compile_opts.features,
                                             options.compile_opts.all_features,
                                             options.compile_opts.no_default_features,
-                                            &specs)?;
+                                            &specs,
+                                            options.excludes)?;
     let (packages, resolve_with_overrides) = resolve;
 
     if specs.is_empty() {

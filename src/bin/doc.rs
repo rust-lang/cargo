@@ -14,6 +14,7 @@ pub struct Options {
     flag_manifest_path: Option<String>,
     flag_no_default_features: bool,
     flag_no_deps: bool,
+    flag_excludes: String,
     flag_open: bool,
     flag_release: bool,
     flag_verbose: u32,
@@ -42,6 +43,7 @@ Options:
     --open                       Opens the docs in a browser after the operation
     -p SPEC, --package SPEC ...  Package to document
     --all                        Document all packages in the workspace
+    --excludes SPECS             Document all packages except specified
     --no-deps                    Don't build documentation for dependencies
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --lib                        Document only this package's library
@@ -97,6 +99,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     let empty = Vec::new();
     let doc_opts = ops::DocOptions {
         open_result: options.flag_open,
+        excludes: &options.flag_excludes,
         compile_opts: ops::CompileOptions {
             config: config,
             jobs: options.flag_jobs,

@@ -16,7 +16,7 @@ use util::errors::{CargoResult, CargoResultExt};
 pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let resolve = resolve_with_registry(ws, &mut registry, true)?;
-    let packages = get_resolved_packages(&resolve, registry);
+    let packages = get_resolved_packages(&resolve, registry, "");
     Ok((packages, resolve))
 }
 
@@ -27,7 +27,8 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
                                 features: &[String],
                                 all_features: bool,
                                 no_default_features: bool,
-                                specs: &[PackageIdSpec])
+                                specs: &[PackageIdSpec],
+                                excludes: &str)
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
     let features = features.iter()
         .flat_map(|s| s.split_whitespace())
@@ -88,7 +89,7 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
                                add_patches,
                                true)?;
 
-    let packages = get_resolved_packages(&resolved_with_overrides, registry);
+    let packages = get_resolved_packages(&resolved_with_overrides, registry, excludes);
 
     Ok((packages, resolved_with_overrides))
 }
@@ -316,9 +317,19 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
 }
 
 fn get_resolved_packages<'a>(resolve: &Resolve,
-                             registry: PackageRegistry<'a>)
+                             registry: PackageRegistry<'a>,
+                             excludes: &str)
                              -> PackageSet<'a> {
-    let ids: Vec<PackageId> = resolve.iter().cloned().collect();
+    let excludes = excludes.split(",").collect::<Vec<&str>>();
+    let filter = |id: &PackageId| {
+        for e in &excludes {
+            if &id.name() == e {
+                return false;
+            }
+        }
+        true
+    };
+    let ids: Vec<PackageId> = resolve.iter().cloned().filter(|id| filter(id)).collect();
     registry.get(&ids)
 }
 
