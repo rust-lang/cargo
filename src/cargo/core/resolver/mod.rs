@@ -569,6 +569,7 @@ impl RemainingCandidates {
         // When we are done we return the set of previously activated
         // that conflicted with the ones we tried. If any of these change
         // then we would have considered different candidates.
+        use std::mem::replace;
         for (_, b) in self.remaining.by_ref() {
             if let Some(a) = prev_active
                 .iter()
@@ -579,11 +580,11 @@ impl RemainingCandidates {
                     continue;
                 }
             }
-            if let Some(r) = ::std::mem::replace(&mut self.has_another, Some(b)) {
+            if let Some(r) = replace(&mut self.has_another, Some(b)) {
                 return Ok((r, true));
             }
         }
-        ::std::mem::replace(&mut self.has_another, None)
+        replace(&mut self.has_another, None)
             .map(|r| (r, false))
             .ok_or_else(|| self.conflicting_prev_active.clone())
     }
