@@ -547,6 +547,7 @@ impl ConflictReason {
     }
 }
 
+#[derive(Clone)]
 struct BacktrackFrame<'a> {
     cur: usize,
     context_backup: Context<'a>,
@@ -562,10 +563,20 @@ struct RemainingCandidates {
     remaining: RcVecIter<Candidate>,
     // note: change to RcList or something if clone is to expensive
     conflicting_prev_active: HashMap<PackageId, ConflictReason>,
+    // This is a inlined peekable generator
+    has_another: Option<Candidate>,
 }
 
 impl RemainingCandidates {
-    fn next(&mut self, prev_active: &[Summary], links: &HashMap<String, PackageId>) -> Result<Candidate, HashMap<PackageId, ConflictReason>> {
+    fn new(candidates: &Rc<Vec<Candidate>>) -> RemainingCandidates {
+        RemainingCandidates {
+            remaining: RcVecIter::new(Rc::clone(candidates)),
+            conflicting_prev_active: HashMap::new(),
+            has_another: None,
+        }
+    }
+
+    fn next(&mut self, prev_active: &[Summary], links: &HashMap<String, PackageId>) -> Result<(Candidate, bool), HashMap<PackageId, ConflictReason>> {
         // Filter the set of candidates based on the previously activated
         // versions for this dependency. We can actually use a version if it
         // precisely matches an activated version or if it is otherwise
@@ -578,6 +589,7 @@ impl RemainingCandidates {
         // When we are done we return the set of previously activated
         // that conflicted with the ones we tried. If any of these change
         // then we would have considered different candidates.
+        use std::mem::replace;
         for (_, b) in self.remaining.by_ref() {
             if let Some(link) = b.summary.links() {
                 if let Some(a) = links.get(link) {
@@ -587,15 +599,22 @@ impl RemainingCandidates {
                     }
                 }
             }
-            if let Some(a) = prev_active.iter().find(|a| compatible(a.version(), b.summary.version())) {
+            if let Some(a) = prev_active
+                .iter()
+                .find(|a| compatible(a.version(), b.summary.version()))
+            {
                 if *a != b.summary {
                     self.conflicting_prev_active.insert(a.package_id().clone(), ConflictReason::Semver);
-                    continue
+                    continue;
                 }
             }
-            return Ok(b);
+            if let Some(r) = replace(&mut self.has_another, Some(b)) {
+                return Ok((r, true));
+            }
         }
-        Err(self.conflicting_prev_active.clone())
+        replace(&mut self.has_another, None)
+            .map(|r| (r, false))
+            .ok_or_else(|| self.conflicting_prev_active.clone())
     }
 }
 
@@ -604,11 +623,12 @@ impl RemainingCandidates {
 ///
 /// If all dependencies can be activated and resolved to a version in the
 /// dependency graph, cx.resolve is returned.
-fn activate_deps_loop<'a>(mut cx: Context<'a>,
-                          registry: &mut Registry,
-                          summaries: &[(Summary, Method)],
-                          config: Option<&Config>)
-                          -> CargoResult<Context<'a>> {
+fn activate_deps_loop<'a>(
+    mut cx: Context<'a>,
+    registry: &mut Registry,
+    summaries: &[(Summary, Method)],
+    config: Option<&Config>,
+) -> CargoResult<Context<'a>> {
     // Note that a `BinaryHeap` is used for the remaining dependencies that need
     // activation. This heap is sorted such that the "largest value" is the most
     // constrained dependency, or the one with the least candidates.
@@ -620,7 +640,10 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     let mut remaining_deps = BinaryHeap::new();
     for &(ref summary, ref method) in summaries {
         debug!("initial activation: {}", summary.package_id());
-        let candidate = Candidate { summary: summary.clone(), replace: None };
+        let candidate = Candidate {
+            summary: summary.clone(),
+            replace: None,
+        };
         let res = activate(&mut cx, registry, None, candidate, method)?;
         if let Some((frame, _)) = res {
             remaining_deps.push(frame);
@@ -647,7 +670,6 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
     // backtracking states where if we hit an error we can return to in order to
     // attempt to continue resolving.
     while let Some(mut deps_frame) = remaining_deps.pop() {
-
         // If we spend a lot of time here (we shouldn't in most cases) then give
         // a bit of a visual indicator as to what we're doing. Only enable this
         // when stderr is a tty (a human is likely to be watching) to ensure we
@@ -659,10 +681,8 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         // to amortize the cost of the current time lookup.
         ticks += 1;
         if let Some(config) = config {
-            if config.shell().is_err_tty() &&
-                !printed &&
-                ticks % 1000 == 0 &&
-                start.elapsed() - deps_time > time_to_print
+            if config.shell().is_err_tty() && !printed && ticks % 1000 == 0
+                && start.elapsed() - deps_time > time_to_print
             {
                 printed = true;
                 config.shell().status("Resolving", "dependency graph...")?;
@@ -680,20 +700,10 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         let (mut parent, (mut cur, (mut dep, candidates, mut features))) = frame;
         assert!(!remaining_deps.is_empty());
 
-        let (next, has_another, remaining_candidates) = {
-            let prev_active = cx.prev_active(&dep);
-            trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(),
-                   candidates.len());
-            trace!("{}[{}]>{} {} prev activations", parent.name(), cur,
-                   dep.name(), prev_active.len());
-            let mut candidates = RemainingCandidates {
-                remaining: RcVecIter::new(Rc::clone(&candidates)),
-                conflicting_prev_active: HashMap::new(),
-            };
-            (candidates.next(prev_active, &cx.links),
-             candidates.clone().next(prev_active, &cx.links).is_ok(),
-             candidates)
-        };
+        trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(), candidates.len());
+        trace!("{}[{}]>{} {} prev activations", parent.name(), cur, dep.name(), cx.prev_active(&dep).len());
+        let mut remaining_candidates = RemainingCandidates::new(&candidates);
+        let next = remaining_candidates.next(cx.prev_active(&dep), &cx.links);
 
         // Alright, for each candidate that's gotten this far, it meets the
         // following requirements:
@@ -707,54 +717,55 @@ fn activate_deps_loop<'a>(mut cx: Context<'a>,
         // This means that we're going to attempt to activate each candidate in
         // turn. We could possibly fail to activate each candidate, so we try
         // each one in turn.
-        let candidate = match next {
-            Ok(candidate) => {
-                // We have a candidate. Add an entry to the `backtrack_stack` so
-                // we can try the next one if this one fails.
-                if has_another {
-                    backtrack_stack.push(BacktrackFrame {
-                        cur,
-                        context_backup: Context::clone(&cx),
-                        deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
-                        remaining_candidates,
-                        parent: Summary::clone(&parent),
-                        dep: Dependency::clone(&dep),
-                        features: Rc::clone(&features),
-                    });
-                }
-                candidate
-            }
-            Err(mut conflicting) => {
-                // This dependency has no valid candidate. Backtrack until we
-                // find a dependency that does have a candidate to try, and try
-                // to activate that one.  This resets the `remaining_deps` to
-                // their state at the found level of the `backtrack_stack`.
-                trace!("{}[{}]>{} -- no candidates", parent.name(), cur,
-                       dep.name());
-                match find_candidate(&mut backtrack_stack,
-                                     &mut cx,
-                                     &mut remaining_deps,
-                                     &mut parent,
-                                     &mut cur,
-                                     &mut dep,
-                                     &mut features,
-                                     &mut conflicting) {
-                    None => return Err(activation_error(&cx, registry, &parent,
-                                                        &dep,
-                                                        conflicting,
-                                                        &candidates, config)),
-                    Some(candidate) => candidate,
-                }
-            }
-        };
+        let (candidate, has_another) = next.or_else(|mut conflicting| {
+            // This dependency has no valid candidate. Backtrack until we
+            // find a dependency that does have a candidate to try, and try
+            // to activate that one.  This resets the `remaining_deps` to
+            // their state at the found level of the `backtrack_stack`.
+            trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
+            find_candidate(
+                &mut backtrack_stack,
+                &mut cx,
+                &mut remaining_deps,
+                &mut parent,
+                &mut cur,
+                &mut dep,
+                &mut features,
+                &mut remaining_candidates,
+                &mut conflicting,
+            ).ok_or_else(|| {
+                activation_error(
+                    &cx,
+                    registry,
+                    &parent,
+                    &dep,
+                    conflicting,
+                    &candidates,
+                    config,
+                )
+            })
+        })?;
+
+        // We have a candidate. Add an entry to the `backtrack_stack` so
+        // we can try the next one if this one fails.
+        if has_another {
+            backtrack_stack.push(BacktrackFrame {
+                cur,
+                context_backup: Context::clone(&cx),
+                deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
+                remaining_candidates,
+                parent: Summary::clone(&parent),
+                dep: Dependency::clone(&dep),
+                features: Rc::clone(&features),
+            });
+        }
 
         let method = Method::Required {
             dev_deps: false,
             features: &features,
             uses_default_features: dep.uses_default_features(),
         };
-        trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(),
-               candidate.summary.version());
+        trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(), candidate.summary.version());
         let res = activate(&mut cx, registry, Some(&parent), candidate, &method)?;
         if let Some((frame, dur)) = res {
             remaining_deps.push(frame);
@@ -784,16 +795,11 @@ fn find_candidate<'a>(
     cur: &mut usize,
     dep: &mut Dependency,
     features: &mut Rc<Vec<String>>,
+    remaining_candidates: &mut RemainingCandidates,
     conflicting_activations: &mut HashMap<PackageId, ConflictReason>,
-) -> Option<Candidate> {
+) -> Option<(Candidate, bool)> {
     while let Some(mut frame) = backtrack_stack.pop() {
-        let (next, has_another) = {
-            let prev_active = frame.context_backup.prev_active(&frame.dep);
-            (
-                frame.remaining_candidates.next(prev_active, &frame.context_backup.links),
-                frame.remaining_candidates.clone().next(prev_active, &frame.context_backup.links).is_ok(),
-            )
-        };
+        let next= frame.remaining_candidates.next(frame.context_backup.prev_active(&frame.dep), &frame.context_backup.links);
         if frame.context_backup.is_active(parent.package_id())
            && conflicting_activations
            .iter()
@@ -802,23 +808,15 @@ fn find_candidate<'a>(
         {
             continue;
         }
-        if let Ok(candidate) = next {
+        if let Ok((candidate, has_another)) = next {
             *cur = frame.cur;
-            if has_another {
-                *cx = frame.context_backup.clone();
-                *remaining_deps = frame.deps_backup.clone();
-                *parent = frame.parent.clone();
-                *dep = frame.dep.clone();
-                *features = Rc::clone(&frame.features);
-                backtrack_stack.push(frame);
-            } else {
-                *cx = frame.context_backup;
-                *remaining_deps = frame.deps_backup;
-                *parent = frame.parent;
-                *dep = frame.dep;
-                *features = frame.features;
-            }
-            return Some(candidate);
+            *cx = frame.context_backup;
+            *remaining_deps = frame.deps_backup;
+            *parent = frame.parent;
+            *dep = frame.dep;
+            *features = frame.features;
+            *remaining_candidates = frame.remaining_candidates;
+            return Some((candidate, has_another));
         }
     }
     None
