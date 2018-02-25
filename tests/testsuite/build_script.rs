@@ -224,6 +224,7 @@ not have a custom build script
 
 #[test]
 fn links_duplicates() {
+    // this tests that the links_duplicates are caught at resolver time
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -253,20 +254,20 @@ fn links_duplicates() {
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] multiple packages link to native library `a`, but a native library can \
-be linked only once
+error: failed to select a version for `a-sys`.
+    ... required by package `foo v0.5.0 ([..])`
+versions that meet the requirements `*` are: 0.5.0
 
+the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
 package `foo v0.5.0 ([..])`
-links to native library `a`
 
-package `a-sys v0.5.0 ([..])`
-    ... which is depended on by `foo v0.5.0 ([..])`
-also links to native library `a`
+failed to select a version for `a-sys` which could resolve this conflict
 "));
 }
 
 #[test]
 fn links_duplicates_deep_dependency() {
+    // this tests that the links_duplicates are caught at resolver time
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -308,16 +309,15 @@ fn links_duplicates_deep_dependency() {
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] multiple packages link to native library `a`, but a native library can \
-be linked only once
-
-package `foo v0.5.0 ([..])`
-links to native library `a`
-
-package `a-sys v0.5.0 ([..])`
-    ... which is depended on by `a v0.5.0 ([..])`
+error: failed to select a version for `a-sys`.
+    ... required by package `a v0.5.0 ([..])`
     ... which is depended on by `foo v0.5.0 ([..])`
-also links to native library `a`
+versions that meet the requirements `*` are: 0.5.0
+
+the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
+package `foo v0.5.0 ([..])`
+
+failed to select a version for `a-sys` which could resolve this conflict
 "));
 }
 
@@ -2738,6 +2738,7 @@ fn deterministic_rustc_dependency_flags() {
 
 #[test]
 fn links_duplicates_with_cycle() {
+    // this tests that the links_duplicates are caught at resolver time
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -2780,17 +2781,14 @@ fn links_duplicates_with_cycle() {
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] multiple packages link to native library `a`, but a native library can \
-be linked only once
+error: failed to select a version for `a`.
+    ... required by package `foo v0.5.0 ([..])`
+versions that meet the requirements `*` are: 0.5.0
 
+the package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
 package `foo v0.5.0 ([..])`
-    ... which is depended on by `b v0.5.0 ([..])`
-links to native library `a`
 
-package `a v0.5.0 (file://[..])`
-    ... which is depended on by `foo v0.5.0 ([..])`
-    ... which is depended on by `b v0.5.0 ([..])`
-also links to native library `a`
+failed to select a version for `a` which could resolve this conflict
 "));
 }
 

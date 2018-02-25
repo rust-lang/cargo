@@ -146,12 +146,12 @@ impl<'cfg> RegistryIndex<'cfg> {
     fn parse_registry_package(&mut self, line: &str)
                               -> CargoResult<(Summary, bool)> {
         let RegistryPackage {
-            name, vers, cksum, deps, features, yanked
+            name, vers, cksum, deps, features, yanked, links
         } = super::DEFAULT_ID.set(&self.source_id, || {
             serde_json::from_str::<RegistryPackage>(line)
         })?;
         let pkgid = PackageId::new(&name, &vers, &self.source_id)?;
-        let summary = Summary::new(pkgid, deps.inner, features)?;
+        let summary = Summary::new(pkgid, deps.inner, features, links)?;
         let summary = summary.set_checksum(cksum.clone());
         if self.hashes.contains_key(&name[..]) {
             self.hashes.get_mut(&name[..]).unwrap().insert(vers, cksum);
