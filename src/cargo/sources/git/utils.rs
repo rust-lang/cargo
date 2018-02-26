@@ -591,7 +591,7 @@ pub fn with_fetch_options(git_config: &git2::Config,
     -> CargoResult<()>
 {
     let mut progress = Progress::new("Fetch", config);
-    network::with_retry(config, || {
+    network::with_retry(config, url, || {
         with_authentication(url.as_str(), git_config, |f| {
             let mut rcb = git2::RemoteCallbacks::new();
             rcb.credentials(f);
