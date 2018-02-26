@@ -12,7 +12,7 @@ use url::Url;
 
 use core::GitReference;
 use util::{ToUrl, internal, Config, network, Progress};
-use util::errors::{CargoResult, CargoResultExt, Internal};
+use util::errors::{CargoResult, CargoResultExt, CargoError};
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRevision(git2::Oid);
@@ -546,7 +546,7 @@ fn with_authentication<T, F>(url: &str, cfg: &git2::Config, mut f: F)
     // In the case of an authentication failure (where we tried something) then
     // we try to give a more helpful error message about precisely what we
     // tried.
-    let res = res.map_err(Internal::new).chain_err(|| {
+    let res = res.map_err(CargoError::from).chain_err(|| {
         let mut msg = "failed to authenticate when downloading \
                        repository".to_string();
         if !ssh_agent_attempts.is_empty() {
@@ -591,7 +591,7 @@ pub fn with_fetch_options(git_config: &git2::Config,
     -> CargoResult<()>
 {
     let mut progress = Progress::new("Fetch", config);
-    network::with_retry(config, || {
+    network::with_retry(config, url, || {
         with_authentication(url.as_str(), git_config, |f| {
             let mut rcb = git2::RemoteCallbacks::new();
             rcb.credentials(f);

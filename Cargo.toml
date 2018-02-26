@@ -1,6 +1,6 @@
 [package]
 name = "cargo"
-version = "0.26.0"
+version = "0.27.0"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
            "Alex Crichton <alex@alexcrichton.com>"]
@@ -18,7 +18,7 @@ path = "src/cargo/lib.rs"
 
 [dependencies]
 atty = "0.2"
-crates-io = { path = "src/crates-io", version = "0.15" }
+crates-io = { path = "src/crates-io", version = "0.16" }
 crossbeam = "0.3"
 crypto-hash = "0.3"
 curl = "0.4.6"
@@ -80,7 +80,7 @@ features = [
 
 [dev-dependencies]
 bufstream = "0.1"
-cargotest = { path = "tests/cargotest", version = "0.1" }
+cargotest = { path = "tests/testsuite/cargotest", version = "0.1" }
 filetime = "0.1"
 hamcrest = "=0.1.1"
 
@@ -88,3 +88,7 @@ hamcrest = "=0.1.1"
 name = "cargo"
 test = false
 doc = false
+
+[[test]]
+name = "testsuite"
+path = "tests/testsuite/lib.rs"

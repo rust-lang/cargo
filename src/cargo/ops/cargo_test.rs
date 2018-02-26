@@ -107,7 +107,7 @@ fn run_unit_tests(options: &TestOptions,
         match result {
             Err(e) => {
                 let e = e.downcast::<ProcessError>()?;
-                errors.push((kind.clone(), test.clone(), e));
+                errors.push((kind.clone(), test.clone(), pkg.name().to_string(), e));
                 if !options.no_fail_fast {
                     break;
                 }
@@ -117,10 +117,10 @@ fn run_unit_tests(options: &TestOptions,
     }
 
     if errors.len() == 1 {
-        let (kind, test, e) = errors.pop().unwrap();
-        Ok((Test::UnitTest(kind, test), vec![e]))
+        let (kind, name, pkg_name, e) = errors.pop().unwrap();
+        Ok((Test::UnitTest{kind, name, pkg_name}, vec![e]))
     } else {
-        Ok((Test::Multiple, errors.into_iter().map(|(_, _, e)| e).collect()))
+        Ok((Test::Multiple, errors.into_iter().map(|(_, _, _, e)| e).collect()))
     }
 }
 
