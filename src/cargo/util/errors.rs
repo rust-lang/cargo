@@ -4,7 +4,7 @@ use std::fmt;
 use std::process::{Output, ExitStatus};
 use std::str;
 
-use core::TargetKind;
+use core::{TargetKind, Workspace};
 use failure::{Context, Error, Fail};
 
 pub use failure::Error as CargoError;
@@ -92,7 +92,7 @@ pub struct CargoTestError {
 pub enum Test {
     Multiple,
     Doc,
-    UnitTest(TargetKind, String)
+    UnitTest{kind: TargetKind, name: String, pkg_name: String}
 }
 
 impl CargoTestError {
@@ -111,16 +111,26 @@ impl CargoTestError {
         }
     }
 
-    pub fn hint(&self) -> String {
+    pub fn hint(&self, ws: &Workspace) -> String {
         match self.test {
-            Test::UnitTest(ref kind, ref name) => {
+            Test::UnitTest{ref kind, ref name, ref pkg_name} => {
+                let pkg_info = if ws.members().count() > 1 && ws.is_virtual() {
+                    format!("-p {} ", pkg_name)
+                } else {
+                    String::new()
+                };
+
                 match *kind {
-                    TargetKind::Bench => format!("test failed, to rerun pass '--bench {}'", name),
-                    TargetKind::Bin => format!("test failed, to rerun pass '--bin {}'", name),
-                    TargetKind::Lib(_) => "test failed, to rerun pass '--lib'".into(),
-                    TargetKind::Test => format!("test failed, to rerun pass '--test {}'", name),
+                    TargetKind::Bench =>
+                        format!("test failed, to rerun pass '{}--bench {}'", pkg_info, name),
+                    TargetKind::Bin =>
+                        format!("test failed, to rerun pass '{}--bin {}'", pkg_info, name),
+                    TargetKind::Lib(_) =>
+                        format!("test failed, to rerun pass '{}--lib'", pkg_info),
+                    TargetKind::Test =>
+                        format!("test failed, to rerun pass '{}--test {}'", pkg_info, name),
                     TargetKind::ExampleBin | TargetKind::ExampleLib(_) =>
-                        format!("test failed, to rerun pass '--example {}", name),
+                        format!("test failed, to rerun pass '{}--example {}", pkg_info, name),
                     _ => "test failed.".into()
                 }
             },
