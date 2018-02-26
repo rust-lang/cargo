@@ -237,3 +237,30 @@ fn registry() {
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 }
+
+#[test]
+fn clean_verbose(){
+    let p = project("foo")
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.0.1"
+
+        [dependencies]
+        bar = "0.1"
+    "#)
+    .file("src/main.rs", "fn main() {}")
+    .build();
+
+    Package::new("bar", "0.1.0").publish();
+
+    assert_that(p.cargo("build"),
+                execs().with_status(0));
+    assert_that(p.cargo("clean").arg("-p").arg("bar").arg("--verbose"),
+                execs().with_status(0).with_stderr("\
+[REMOVING] [..]
+[REMOVING] [..]
+"));
+    assert_that(p.cargo("build"),
+            execs().with_status(0));
+}
