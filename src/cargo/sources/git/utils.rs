@@ -600,7 +600,7 @@ pub fn fetch(repo: &mut git2::Repository,
         opts.remote_callbacks(cb)
             .download_tags(git2::AutotagOption::All);
 
-        network::with_retry(config, || {
+        network::with_retry(config, url, || {
             debug!("initiating fetch of {} from {}", refspec, url);
             remote.fetch(&[refspec], Some(&mut opts), None)
                 .map_err(CargoError::from)
