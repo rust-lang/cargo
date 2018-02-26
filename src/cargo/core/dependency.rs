@@ -27,6 +27,7 @@ struct Inner {
     specified_req: bool,
     kind: Kind,
     only_match_name: bool,
+    rename: Option<String>,
 
     optional: bool,
     default_features: bool,
@@ -49,6 +50,7 @@ struct SerializedDependency<'a> {
     source: &'a SourceId,
     req: String,
     kind: Kind,
+    rename: Option<&'a str>,
 
     optional: bool,
     uses_default_features: bool,
@@ -69,6 +71,7 @@ impl ser::Serialize for Dependency {
             uses_default_features: self.uses_default_features(),
             features: self.features(),
             target: self.platform(),
+            rename: self.rename(),
         }.serialize(s)
     }
 }
@@ -182,6 +185,7 @@ impl Dependency {
                 default_features: true,
                 specified_req: false,
                 platform: None,
+                rename: None,
             }),
         }
     }
@@ -221,6 +225,10 @@ impl Dependency {
         self.inner.platform.as_ref()
     }
 
+    pub fn rename(&self) -> Option<&str> {
+        self.inner.rename.as_ref().map(|s| &**s)
+    }
+
     pub fn set_kind(&mut self, kind: Kind) -> &mut Dependency {
         Rc::make_mut(&mut self.inner).kind = kind;
         self
@@ -258,6 +266,11 @@ impl Dependency {
 
     pub fn set_platform(&mut self, platform: Option<Platform>) -> &mut Dependency {
         Rc::make_mut(&mut self.inner).platform = platform;
+        self
+    }
+
+    pub fn set_rename(&mut self, rename: &str) -> &mut Dependency {
+        Rc::make_mut(&mut self.inner).rename = Some(rename.to_string());
         self
     }
 
