@@ -1,5 +1,6 @@
 use curl;
 use git2;
+use url::Url;
 
 use failure::Error;
 
@@ -37,15 +38,17 @@ fn maybe_spurious(err: &Error) -> bool {
 /// Suggest the user to update their windows 7 to support modern TLS versions.
 /// See https://github.com/rust-lang/cargo/issues/5066 for details.
 #[cfg(windows)]
-fn should_warn_about_old_tls_for_win7(err: &Error) -> bool {
-    err.causes()
+fn should_warn_about_old_tls_for_win7(url: &Url, err: &Error) -> bool {
+    let is_github = url.host_str() == Some("github.com");
+    let is_cert_error = err.causes()
         .filter_map(|e| e.downcast_ref::<git2::Error>())
         .find(|e| e.class() == git2::ErrorClass::Net && e.code() == git2::ErrorCode::Certificate)
-        .is_some()
+        .is_some();
+    is_github && is_cert_error
 }
 
 #[cfg(not(windows))]
-fn should_warn_about_old_tls_for_win7(_err: &Error) -> bool {
+fn should_warn_about_old_tls_for_win7(_url: &Url, _err: &Error) -> bool {
     false
 }
 
@@ -71,9 +74,9 @@ See https://github.com/rust-lang/cargo/issues/5066 for details.
 ///
 /// ```ignore
 /// use util::network;
-/// cargo_result = network.with_retry(&config, || something.download());
+/// cargo_result = network::with_retry(&config, || something.download());
 /// ```
-pub fn with_retry<T, F>(config: &Config, mut callback: F) -> CargoResult<T>
+pub fn with_retry<T, F>(config: &Config, url: &Url, mut callback: F) -> CargoResult<T>
     where F: FnMut() -> CargoResult<T>
 {
     let mut remaining = config.net_retry()?;
@@ -85,7 +88,7 @@ pub fn with_retry<T, F>(config: &Config, mut callback: F) -> CargoResult<T>
                     format!("spurious network error ({} tries remaining): {}", remaining, e)
                 )?;
 
-                if should_warn_about_old_tls_for_win7(e) {
+                if should_warn_about_old_tls_for_win7(url, e) {
                     config.shell().warn(WIN7_TLS_WARNING)?;
                 }
 
@@ -103,7 +106,8 @@ fn with_retry_repeats_the_call_then_works() {
     let error2 = HttpNot200 { code: 502, url: "Uri".to_string() }.into();
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
     let config = Config::default().unwrap();
-    let result = with_retry(&config, || results.pop().unwrap());
+    let url = "http://example.com".parse().unwrap();
+    let result = with_retry(&config, &url, || results.pop().unwrap());
     assert_eq!(result.unwrap(), ())
 }
 
@@ -119,6 +123,7 @@ fn with_retry_finds_nested_spurious_errors() {
     let error2 = CargoError::from(error2.context("A second chained error"));
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
     let config = Config::default().unwrap();
-    let result = with_retry(&config, || results.pop().unwrap());
+    let url = "http://example.com".parse().unwrap();
+    let result = with_retry(&config, &url, || results.pop().unwrap());
     assert_eq!(result.unwrap(), ())
 }
