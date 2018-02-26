@@ -186,7 +186,7 @@ pub fn execute(mut options: Options, config: &mut Config) -> CliResult {
         None => Ok(()),
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
-                Some(i) => CliError::new(format_err!("{}", err.hint()), i),
+                Some(i) => CliError::new(format_err!("{}", err.hint(&ws)), i),
                 None => CliError::new(err.into(), 101),
             })
         }
