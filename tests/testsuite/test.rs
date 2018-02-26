@@ -2936,3 +2936,36 @@ fn test_hint_not_masked_by_doctest() {
                 .with_stderr_contains("[ERROR] test failed, to rerun pass \
                                       '--test integ'"));
 }
+
+#[test]
+fn test_hint_workspace() {
+   let workspace = project("workspace")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["a", "b"]
+        "#)
+        .file("a/Cargo.toml", r#"
+            [project]
+            name = "a"
+            version = "0.1.0"
+        "#)
+        .file("a/src/lib.rs", r#"
+            #[test]
+            fn t1() {}
+        "#)
+        .file("b/Cargo.toml", r#"
+            [project]
+            name = "b"
+            version = "0.1.0"
+        "#)
+        .file("b/src/lib.rs", r#"
+            #[test]
+            fn t1() {assert!(false)}
+        "#)
+        .build();
+
+    assert_that(workspace.cargo("test"),
+                execs().with_stderr_contains(
+                    "[ERROR] test failed, to rerun pass '-p b --lib'")
+                       .with_status(101));
+}
