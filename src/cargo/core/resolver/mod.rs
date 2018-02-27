@@ -576,7 +576,11 @@ impl RemainingCandidates {
         }
     }
 
-    fn next(&mut self, prev_active: &[Summary], links: &HashMap<String, PackageId>) -> Result<(Candidate, bool), HashMap<PackageId, ConflictReason>> {
+    fn next(
+        &mut self,
+        prev_active: &[Summary],
+        links: &HashMap<String, PackageId>,
+    ) -> Result<(Candidate, bool), HashMap<PackageId, ConflictReason>> {
         // Filter the set of candidates based on the previously activated
         // versions for this dependency. We can actually use a version if it
         // precisely matches an activated version or if it is otherwise
@@ -594,8 +598,10 @@ impl RemainingCandidates {
             if let Some(link) = b.summary.links() {
                 if let Some(a) = links.get(link) {
                     if a != b.summary.package_id() {
-                        self.conflicting_prev_active.insert(a.clone(), ConflictReason::Links(link.to_owned()));
-                        continue
+                        self.conflicting_prev_active
+                            .entry(a.clone())
+                            .or_insert_with(|| ConflictReason::Links(link.to_owned()));
+                        continue;
                     }
                 }
             }
@@ -604,7 +610,9 @@ impl RemainingCandidates {
                 .find(|a| compatible(a.version(), b.summary.version()))
             {
                 if *a != b.summary {
-                    self.conflicting_prev_active.insert(a.package_id().clone(), ConflictReason::Semver);
+                    self.conflicting_prev_active
+                        .entry(a.package_id().clone())
+                        .or_insert(ConflictReason::Semver);
                     continue;
                 }
             }
