@@ -10,7 +10,7 @@ path = "lib.rs"
 cargo = { path = "../../.." }
 filetime = "0.1"
 flate2 = "1.0"
-git2 = { version = "0.6", default-features = false }
+git2 = { version = "0.7", default-features = false }
 hamcrest = "=0.1.1"
 hex = "0.3"
 log = "0.4"

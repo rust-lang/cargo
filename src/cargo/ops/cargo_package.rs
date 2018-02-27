@@ -146,7 +146,7 @@ fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
             let path = p.manifest_path();
             let path = path.strip_prefix(workdir).unwrap_or(path);
             if let Ok(status) = repo.status_file(path) {
-                if (status & git2::STATUS_IGNORED).is_empty() {
+                if (status & git2::Status::IGNORED).is_empty() {
                     debug!("Cargo.toml found in repo, checking if dirty");
                     return git(p, src, &repo)
                 }
@@ -165,7 +165,7 @@ fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
         let dirty = src.list_files(p)?.iter().filter(|file| {
             let relative = file.strip_prefix(workdir).unwrap();
             if let Ok(status) = repo.status_file(relative) {
-                status != git2::STATUS_CURRENT
+                status != git2::Status::CURRENT
             } else {
                 false
             }

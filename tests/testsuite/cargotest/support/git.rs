@@ -97,7 +97,7 @@ pub fn add(repo: &git2::Repository) {
         t!(submodule.add_to_index(false));
     }
     let mut index = t!(repo.index());
-    t!(index.add_all(["*"].iter(), git2::ADD_DEFAULT,
+    t!(index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT,
                   Some(&mut (|a, _b| {
         if s.iter().any(|s| a.starts_with(s.path())) {1} else {0}
     }))));
