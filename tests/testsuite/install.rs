@@ -1044,3 +1044,33 @@ dependencies = [
     assert_that(cargo_process("install").arg("foo"),
                 execs().with_status(0));
 }
+
+#[test]
+fn lock_file_path_deps_ok() {
+    Package::new("bar", "0.1.0").publish();
+
+    Package::new("foo", "0.1.0")
+        .dep("bar", "0.1")
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "
+            extern crate foo;
+            extern crate bar;
+            fn main() {}
+        ")
+        .file("Cargo.lock", r#"
+[[package]]
+name = "bar"
+version = "0.1.0"
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+dependencies = [
+ "bar 0.1.0",
+]
+"#)
+        .publish();
+
+    assert_that(cargo_process("install").arg("foo"),
+                execs().with_status(0));
+}

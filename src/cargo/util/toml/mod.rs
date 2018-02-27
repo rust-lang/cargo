@@ -426,6 +426,8 @@ pub struct TomlProject {
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
     publish: Option<VecStringOrBool>,
+    #[serde(rename = "publish-lockfile")]
+    publish_lockfile: Option<bool>,
     workspace: Option<String>,
     #[serde(rename = "im-a-teapot")]
     im_a_teapot: Option<bool>,
@@ -719,6 +721,14 @@ impl TomlManifest {
             None | Some(VecStringOrBool::Bool(true)) => None,
         };
 
+        let publish_lockfile = match project.publish_lockfile {
+            Some(b) => {
+                features.require(Feature::publish_lockfile())?;
+                b
+            }
+            None => false,
+        };
+
         let epoch = if let Some(ref epoch) = project.rust {
             features.require(Feature::epoch()).chain_err(|| {
                 "epoches are unstable"
@@ -739,6 +749,7 @@ impl TomlManifest {
                                          metadata,
                                          profiles,
                                          publish,
+                                         publish_lockfile,
                                          replace,
                                          patch,
                                          workspace_config,
