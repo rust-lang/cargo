@@ -2,6 +2,11 @@
 #![cfg_attr(test, deny(warnings))]
 #![recursion_limit="128"]
 
+// Currently, Cargo does not use clippy for its source code.
+// But if someone runs it they should know that
+// @alexcrichton disagree with clippy on some style things
+#![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
+
 #[macro_use] extern crate failure;
 #[macro_use] extern crate log;
 #[macro_use] extern crate scoped_tls;
@@ -51,7 +56,7 @@ use core::shell::Verbosity::Verbose;
 pub use util::{CargoError, CargoResult, CliError, CliResult, Config};
 pub use util::errors::Internal;
 
-pub const CARGO_ENV: &'static str = "CARGO";
+pub const CARGO_ENV: &str = "CARGO";
 
 pub mod core;
 pub mod ops;

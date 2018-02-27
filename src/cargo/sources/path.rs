@@ -452,7 +452,8 @@ impl<'cfg> PathSource<'cfg> {
             // Skip dotfile directories
             if name.map(|s| s.starts_with('.')) == Some(true) {
                 continue
-            } else if is_root {
+            }
+            if is_root {
                 // Skip cargo artifacts
                 match name {
                     Some("target") | Some("Cargo.lock") => continue,

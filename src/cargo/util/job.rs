@@ -257,7 +257,7 @@ mod imp {
                 killed = true;
             }
 
-            return killed
+            killed
         }
     }
 

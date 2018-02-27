@@ -319,9 +319,9 @@ impl hash::Hash for Fingerprint {
             profile,
             ref deps,
             ref local,
-            memoized_hash: _,
             epoch,
             ref rustflags,
+            ..
         } = *self;
         (rustc, features, target, path, profile, local, epoch, rustflags).hash(h);
 
@@ -632,7 +632,7 @@ pub fn parse_dep_info(pkg: &Package, dep_info: &Path)
         .filter(|x| !x.is_empty())
         .map(|p| util::bytes2path(p).map(|p| pkg.root().join(p)))
         .collect::<Result<Vec<_>, _>>()?;
-    if paths.len() == 0 {
+    if paths.is_empty() {
         Ok(None)
     } else {
         Ok(Some(paths))

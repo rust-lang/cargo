@@ -444,7 +444,7 @@ impl Hash for SourceId {
     }
 }
 
-/// A `Display`able view into a SourceId that will write it as a url
+/// A `Display`able view into a `SourceId` that will write it as a url
 pub struct SourceIdToUrl<'a> {
     inner: &'a SourceIdInner,
 }
