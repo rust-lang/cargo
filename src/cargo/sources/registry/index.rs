@@ -31,8 +31,8 @@ impl<'cfg> RegistryIndex<'cfg> {
             path: path.clone(),
             cache: HashMap::new(),
             hashes: HashMap::new(),
-            config: config,
-            locked: locked,
+            config,
+            locked,
         }
     }
 

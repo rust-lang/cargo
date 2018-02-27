@@ -319,9 +319,9 @@ impl hash::Hash for Fingerprint {
             profile,
             ref deps,
             ref local,
-            memoized_hash: _,
             epoch,
             ref rustflags,
+            ..
         } = *self;
         (rustc, features, target, path, profile, local, epoch, rustflags).hash(h);
 
@@ -419,7 +419,7 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         // actually affect the output artifact so there's no need to hash it.
         path: util::hash_u64(&super::path_args(cx, unit).0),
         features: format!("{:?}", cx.resolve.features_sorted(unit.pkg.package_id())),
-        deps: deps,
+        deps,
         local: vec![local],
         memoized_hash: Mutex::new(None),
         epoch: unit.pkg.manifest().epoch(),
@@ -473,7 +473,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         path: 0,
         features: String::new(),
         deps: Vec::new(),
-        local: local,
+        local,
         memoized_hash: Mutex::new(None),
         epoch: Epoch::Epoch2015,
         rustflags: Vec::new(),
@@ -632,7 +632,7 @@ pub fn parse_dep_info(pkg: &Package, dep_info: &Path)
         .filter(|x| !x.is_empty())
         .map(|p| util::bytes2path(p).map(|p| pkg.root().join(p)))
         .collect::<Result<Vec<_>, _>>()?;
-    if paths.len() == 0 {
+    if paths.is_empty() {
         Ok(None)
     } else {
         Ok(Some(paths))

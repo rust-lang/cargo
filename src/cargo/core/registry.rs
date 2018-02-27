@@ -110,7 +110,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
             overrides: Vec::new(),
-            source_config: source_config,
+            source_config,
             locked: HashMap::new(),
             patches: HashMap::new(),
             patches_locked: false,
@@ -187,9 +187,9 @@ impl<'cfg> PackageRegistry<'cfg> {
             trace!("\t-> {}", dep);
         }
         let sub_map = self.locked.entry(id.source_id().clone())
-                                 .or_insert(HashMap::new());
+                                 .or_insert_with(HashMap::new);
         let sub_vec = sub_map.entry(id.name().to_string())
-                             .or_insert(Vec::new());
+                             .or_insert_with(Vec::new);
         sub_vec.push((id, deps));
     }
 

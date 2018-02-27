@@ -681,7 +681,7 @@ fn remove_patch() {
 
     assert!(lock_file1.contains("bar"));
     assert_eq!(lock_file2, lock_file3);
-    assert!(lock_file1 != lock_file2);
+    assert_ne!(lock_file1, lock_file2);
 }
 
 #[test]

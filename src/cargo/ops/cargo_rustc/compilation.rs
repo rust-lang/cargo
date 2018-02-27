@@ -80,7 +80,7 @@ impl<'cfg> Compilation<'cfg> {
             to_doc_test: Vec::new(),
             cfgs: HashMap::new(),
             rustdocflags: HashMap::new(),
-            config: config,
+            config,
             target: String::new(),
             target_runner: LazyCell::new(),
         }

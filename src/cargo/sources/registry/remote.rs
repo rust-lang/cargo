@@ -36,7 +36,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
             source_id: source_id.clone(),
-            config: config,
+            config,
             tree: RefCell::new(None),
             repo: LazyCell::new(),
             head: Cell::new(None),

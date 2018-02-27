@@ -109,7 +109,7 @@ impl GitRemote {
         Ok(GitDatabase {
             remote: self.clone(),
             path: into.to_path_buf(),
-            repo: repo,
+            repo,
         })
     }
 
@@ -118,7 +118,7 @@ impl GitRemote {
         Ok(GitDatabase {
             remote: self.clone(),
             path: db_path.to_path_buf(),
-            repo: repo,
+            repo,
         })
     }
 
@@ -210,9 +210,9 @@ impl<'a> GitCheckout<'a> {
     {
         GitCheckout {
             location: path.to_path_buf(),
-            database: database,
-            revision: revision,
-            repo: repo,
+            database,
+            revision,
+            repo,
         }
     }
 

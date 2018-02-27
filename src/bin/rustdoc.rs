@@ -99,7 +99,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     let doc_opts = ops::DocOptions {
         open_result: options.flag_open,
         compile_opts: ops::CompileOptions {
-            config: config,
+            config,
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|t| &t[..]),
             features: &options.flag_features,

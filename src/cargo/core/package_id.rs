@@ -64,8 +64,8 @@ impl<'de> de::Deserialize<'de> for PackageId {
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
                 name: name.to_string(),
-                version: version,
-                source_id: source_id,
+                version,
+                source_id,
             }),
         })
     }

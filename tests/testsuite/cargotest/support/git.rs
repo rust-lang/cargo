@@ -27,7 +27,7 @@ impl RepoBuilder {
             t!(config.set_str("user.name", "name"));
             t!(config.set_str("user.email", "email"));
         }
-        RepoBuilder { repo: repo, files: Vec::new() }
+        RepoBuilder { repo, files: Vec::new() }
     }
 
     pub fn file(self, path: &str, contents: &str) -> RepoBuilder {

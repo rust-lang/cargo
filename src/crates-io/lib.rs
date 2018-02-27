@@ -103,9 +103,9 @@ impl Registry {
                       token: Option<String>,
                       handle: Easy) -> Registry {
         Registry {
-            host: host,
-            token: token,
-            handle: handle,
+            host,
+            token,
+            handle,
         }
     }
 
@@ -197,8 +197,8 @@ impl Registry {
             .unwrap_or_else(Vec::new);
 
         Ok(Warnings {
-            invalid_categories: invalid_categories,
-            invalid_badges: invalid_badges,
+            invalid_categories,
+            invalid_badges,
         })
     }
 

@@ -275,22 +275,22 @@ impl Manifest {
                im_a_teapot: Option<bool>,
                original: Rc<TomlManifest>) -> Manifest {
         Manifest {
-            summary: summary,
-            targets: targets,
+            summary,
+            targets,
             warnings: Vec::new(),
-            exclude: exclude,
-            include: include,
-            links: links,
-            metadata: metadata,
-            profiles: profiles,
-            publish: publish,
-            replace: replace,
-            patch: patch,
-            workspace: workspace,
-            features: features,
-            epoch: epoch,
-            original: original,
-            im_a_teapot: im_a_teapot,
+            exclude,
+            include,
+            links,
+            metadata,
+            profiles,
+            publish,
+            replace,
+            patch,
+            workspace,
+            features,
+            epoch,
+            original,
+            im_a_teapot,
         }
     }
 
@@ -372,10 +372,10 @@ impl VirtualManifest {
                workspace: WorkspaceConfig,
                profiles: Profiles) -> VirtualManifest {
         VirtualManifest {
-            replace: replace,
-            patch: patch,
-            workspace: workspace,
-            profiles: profiles,
+            replace,
+            patch,
+            workspace,
+            profiles,
         }
     }
 
@@ -430,7 +430,7 @@ impl Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
-            required_features: required_features,
+            required_features,
             doc: true,
             ..Target::with_path(src_path)
         }
@@ -459,9 +459,9 @@ impl Target {
         };
 
         Target {
-            kind: kind,
+            kind,
             name: name.to_string(),
-            required_features: required_features,
+            required_features,
             benched: false,
             ..Target::with_path(src_path)
         }
@@ -472,7 +472,7 @@ impl Target {
         Target {
             kind: TargetKind::Test,
             name: name.to_string(),
-            required_features: required_features,
+            required_features,
             benched: false,
             ..Target::with_path(src_path)
         }
@@ -483,7 +483,7 @@ impl Target {
         Target {
             kind: TargetKind::Bench,
             name: name.to_string(),
-            required_features: required_features,
+            required_features,
             tested: false,
             ..Target::with_path(src_path)
         }

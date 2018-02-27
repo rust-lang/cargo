@@ -901,7 +901,7 @@ fn use_path_workspace() {
     let lock = p.read_lockfile();
     assert_that(p.cargo("install"), execs().with_status(0));
     let lock2 = p.read_lockfile();
-    assert!(lock == lock2, "different lockfiles");
+    assert_eq!(lock, lock2, "different lockfiles");
 }
 
 #[test]

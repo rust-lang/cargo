@@ -25,7 +25,7 @@ impl<'cfg> LocalRegistry<'cfg> {
             src_path: config.registry_source_path().join(name),
             index_path: Filesystem::new(root.join("index")),
             root: Filesystem::new(root.to_path_buf()),
-            config: config,
+            config,
         }
     }
 }

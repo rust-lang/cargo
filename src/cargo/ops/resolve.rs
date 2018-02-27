@@ -234,7 +234,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             // for any other packages specified with `-p`.
             Method::Required { dev_deps, .. } => {
                 let base = Method::Required {
-                    dev_deps: dev_deps,
+                    dev_deps,
                     features: &[],
                     uses_default_features: true,
                 };

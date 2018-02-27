@@ -40,7 +40,7 @@ impl PackageIdSpec {
         }
         Ok(PackageIdSpec {
             name: name.to_string(),
-            version: version,
+            version,
             url: None,
         })
     }
@@ -100,8 +100,8 @@ impl PackageIdSpec {
             }
         };
         Ok(PackageIdSpec {
-            name: name,
-            version: version,
+            name,
+            version,
             url: Some(url),
         })
     }
