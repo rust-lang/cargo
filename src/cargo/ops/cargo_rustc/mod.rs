@@ -139,7 +139,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                                      config: &'cfg Config,
                                      build_config: BuildConfig,
                                      profiles: &'a Profiles,
-                                     exec: Arc<Executor>)
+                                     exec: &Arc<Executor>)
                                      -> CargoResult<Compilation<'cfg>> {
     let units = pkg_targets.iter().flat_map(|&(pkg, ref targets)| {
         let default_kind = if build_config.requested_target.is_some() {
@@ -173,7 +173,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         // part of this, that's all done next as part of the `execute`
         // function which will run everything in order with proper
         // parallelism.
-        compile(&mut cx, &mut queue, unit, Arc::clone(&exec))?;
+        compile(&mut cx, &mut queue, unit, exec)?;
     }
 
     // Now that we've figured out everything that we're going to do, do it!
@@ -199,7 +199,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                 cx.compilation.binaries.push(bindst.clone());
             } else if unit.target.is_lib() {
                 let pkgid = unit.pkg.package_id().clone();
-                cx.compilation.libraries.entry(pkgid).or_insert(HashSet::new())
+                cx.compilation.libraries.entry(pkgid).or_insert_with(HashSet::new)
                   .insert((unit.target.clone(), dst.clone()));
             }
         }
@@ -210,7 +210,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             if dep.profile.run_custom_build {
                 let out_dir = cx.build_script_out_dir(dep).display().to_string();
                 cx.compilation.extra_env.entry(dep.pkg.package_id().clone())
-                  .or_insert(Vec::new())
+                  .or_insert_with(Vec::new)
                   .push(("OUT_DIR".to_string(), out_dir));
             }
 
@@ -220,7 +220,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             let v = cx.target_filenames(dep)?;
             cx.compilation.libraries
                 .entry(unit.pkg.package_id().clone())
-                .or_insert(HashSet::new())
+                .or_insert_with(HashSet::new)
                 .extend(v.iter().map(|&(ref f, _, _)| {
                     (dep.target.clone(), f.clone())
                 }));
@@ -232,7 +232,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                 feats.iter().map(|feat| format!("feature=\"{}\"", feat)).collect()
             });
         }
-        let rustdocflags = cx.rustdocflags_args(&unit)?;
+        let rustdocflags = cx.rustdocflags_args(unit)?;
         if !rustdocflags.is_empty() {
             cx.compilation.rustdocflags.entry(unit.pkg.package_id().clone())
                 .or_insert(rustdocflags);
@@ -261,7 +261,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
 fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
                          jobs: &mut JobQueue<'a>,
                          unit: &Unit<'a>,
-                         exec: Arc<Executor>) -> CargoResult<()> {
+                         exec: &Arc<Executor>) -> CargoResult<()> {
     if !cx.compiled.insert(*unit) {
         return Ok(())
     }
@@ -283,7 +283,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         let work = if unit.profile.doc {
             rustdoc(cx, unit)?
         } else {
-            rustc(cx, unit, Arc::clone(&exec))?
+            rustc(cx, unit, exec)?
         };
         // Need to link targets on both the dirty and fresh
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
@@ -300,7 +300,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
 
     // Be sure to compile all dependencies of this target as well.
     for unit in cx.dep_targets(unit)?.iter() {
-        compile(cx, jobs, unit, exec.clone())?;
+        compile(cx, jobs, unit, exec)?;
     }
 
     Ok(())
@@ -308,7 +308,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
 
 fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                    unit: &Unit<'a>,
-                   exec: Arc<Executor>) -> CargoResult<Work> {
+                   exec: &Arc<Executor>) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
 
     let name = unit.pkg.name().to_string();
@@ -359,7 +359,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
     let root_output = cx.target_root().to_path_buf();
     let pkg_root = unit.pkg.root().to_path_buf();
-    let cwd = rustc.get_cwd().unwrap_or(cx.config.cwd()).to_path_buf();
+    let cwd = rustc.get_cwd().unwrap_or_else(|| cx.config.cwd()).to_path_buf();
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -747,7 +747,7 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let Profile {
         ref opt_level, ref lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, overflow_checks, rpath, test, doc: _doc,
-        run_custom_build, ref panic, rustdoc_args: _, check, incremental: _,
+        run_custom_build, ref panic, check, ..
     } = *unit.profile;
     assert!(!run_custom_build);
 
@@ -935,8 +935,7 @@ fn build_deps_args<'a, 'cfg>(cmd: &mut ProcessBuilder,
     // error in the future, see PR #4797
     if !dep_targets.iter().any(|u| !u.profile.doc && u.target.linkable()) {
         if let Some(u) = dep_targets.iter()
-                         .filter(|u| !u.profile.doc && u.target.is_lib())
-                         .next() {
+                         .find(|u| !u.profile.doc && u.target.is_lib()) {
                 cx.config.shell().warn(format!("The package `{}` \
 provides no linkable target. The compiler might raise an error while compiling \
 `{}`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `{}`'s \
@@ -952,7 +951,7 @@ Cargo.toml. This warning might turn into a hard error in the future.",
             cmd.env("OUT_DIR", &cx.build_script_out_dir(&dep));
         }
         if dep.target.linkable() && !dep.profile.doc {
-            link_to(cmd, cx, &unit, &dep)?;
+            link_to(cmd, cx, unit, &dep)?;
         }
     }
 

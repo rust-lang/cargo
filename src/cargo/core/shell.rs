@@ -27,13 +27,13 @@ pub struct Shell {
 
 impl fmt::Debug for Shell {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self.err {
-            &ShellOut::Write(_) => {
+        match self.err {
+            ShellOut::Write(_) => {
                 f.debug_struct("Shell")
                     .field("verbosity", &self.verbosity)
                     .finish()
             }
-            &ShellOut::Stream { color_choice, .. } => {
+            ShellOut::Stream { color_choice, .. } => {
                 f.debug_struct("Shell")
                     .field("verbosity", &self.verbosity)
                     .field("color_choice", &color_choice)
@@ -218,6 +218,12 @@ impl Shell {
             ShellOut::Stream { color_choice, .. } => color_choice,
             ShellOut::Write(_) => ColorChoice::Never,
         }
+    }
+}
+
+impl Default for Shell {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

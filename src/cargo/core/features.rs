@@ -99,7 +99,7 @@ macro_rules! features {
                     }
                     static FEAT: Feature = Feature {
                         name: stringify!($feature),
-                        get: get,
+                        get,
                     };
                     &FEAT
                 }

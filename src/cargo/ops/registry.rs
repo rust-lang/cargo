@@ -48,7 +48,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         bail!("cannot publish crates which activate nightly-only cargo features to crates.io")
     }
 
-    if let &Some(ref allowed_registries) = pkg.publish() {
+    if let Some(ref allowed_registries) = *pkg.publish() {
         if !match opts.registry {
             Some(ref registry) => allowed_registries.contains(registry),
             None => false,

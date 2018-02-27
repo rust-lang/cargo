@@ -206,7 +206,7 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
     for member in members.iter() {
         build_pkg(member, ws.config(), &mut ret, &mut visited);
     }
-    for (_, deps) in ws.root_patch() {
+    for deps in ws.root_patch().values()  {
         for dep in deps {
             build_dep(dep, ws.config(), &mut ret, &mut visited);
         }

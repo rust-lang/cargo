@@ -44,13 +44,11 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
                           or marking one of the targets as `doc = false`.",
                           target.crate_name(), prev, package);
                 }
-            } else {
-                if let Some(prev) = bin_names.insert(target.crate_name(), package) {
-                    bail!("The binary `{}` is specified by packages `{}` and \
-                          `{}` but can be documented only once. Consider renaming \
-                          or marking one of the targets as `doc = false`.",
-                          target.crate_name(), prev, package);
-                }
+            } else if let Some(prev) = bin_names.insert(target.crate_name(), package) {
+                bail!("The binary `{}` is specified by packages `{}` and \
+                      `{}` but can be documented only once. Consider renaming \
+                      or marking one of the targets as `doc = false`.",
+                      target.crate_name(), prev, package);
             }
         }
     }

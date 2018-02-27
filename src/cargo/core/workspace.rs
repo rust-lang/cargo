@@ -340,7 +340,7 @@ impl<'cfg> Workspace<'cfg> {
                 match *self.packages.load(&ances_manifest_path)?.workspace_config() {
                     WorkspaceConfig::Root(ref ances_root_config) => {
                         debug!("find_root - found a root checking exclusion");
-                        if !ances_root_config.is_excluded(&manifest_path) {
+                        if !ances_root_config.is_excluded(manifest_path) {
                             debug!("find_root - found!");
                             return Ok(Some(ances_manifest_path))
                         }
@@ -443,13 +443,10 @@ impl<'cfg> Workspace<'cfg> {
             return Ok(())
         }
 
-        match *self.packages.load(root_manifest)?.workspace_config() {
-            WorkspaceConfig::Root(ref root_config) => {
-                if root_config.is_excluded(&manifest_path) {
-                    return Ok(())
-                }
+        if let WorkspaceConfig::Root(ref root_config) = *self.packages.load(root_manifest)?.workspace_config() {
+            if root_config.is_excluded(&manifest_path) {
+                return Ok(())
             }
-            _ => {}
         }
 
         debug!("find_members - {}", manifest_path.display());

@@ -321,7 +321,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                              config,
                              build_config,
                              profiles,
-                             exec)?
+                             &exec)?
     };
 
     ret.to_doc_test = to_builds.into_iter().cloned().collect();

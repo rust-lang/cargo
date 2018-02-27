@@ -90,10 +90,9 @@ impl<'a> NewOptions<'a> {
 
         let kind = match (bin, lib) {
             (true, true) => bail!("can't specify both lib and binary outputs"),
-            (true, false) => NewProjectKind::Bin,
             (false, true) => NewProjectKind::Lib,
             // default to bin
-            (false, false) => NewProjectKind::Bin,
+            (_, false) => NewProjectKind::Bin,
         };
 
         let opts = NewOptions { version_control, kind, path, name };

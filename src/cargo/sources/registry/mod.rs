@@ -177,10 +177,10 @@ use util::errors::CargoResultExt;
 use util::hex;
 use util::to_url::ToUrl;
 
-const INDEX_LOCK: &'static str = ".cargo-index-lock";
-pub const CRATES_IO: &'static str = "https://github.com/rust-lang/crates.io-index";
-const CRATE_TEMPLATE: &'static str = "{crate}";
-const VERSION_TEMPLATE: &'static str = "{version}";
+const INDEX_LOCK: &str = ".cargo-index-lock";
+pub const CRATES_IO: &str = "https://github.com/rust-lang/crates.io-index";
+const CRATE_TEMPLATE: &str = "{crate}";
+const VERSION_TEMPLATE: &str = "{version}";
 
 pub struct RegistrySource<'cfg> {
     source_id: SourceId,

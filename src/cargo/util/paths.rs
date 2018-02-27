@@ -20,7 +20,7 @@ pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsStri
     let more_explain = format!("failed to join search paths together\n\
                                 Does ${} have an unterminated quote character?",
                                env);
-    return Err(err.context(more_explain).into())
+    Err(err.context(more_explain).into())
 }
 
 pub fn dylib_path_envvar() -> &'static str {

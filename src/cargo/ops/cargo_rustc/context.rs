@@ -471,7 +471,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Return the target triple which this context is targeting.
     pub fn target_triple(&self) -> &str {
-        self.requested_target().unwrap_or(self.host_triple())
+        self.requested_target().unwrap_or_else(|| self.host_triple())
     }
 
     /// Requested (not actual) target for the build
@@ -694,8 +694,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     match *crate_type_info {
                         Some((ref prefix, ref suffix)) => {
                             let suffixes = add_target_specific_suffixes(
-                                &self.target_triple(),
-                                &crate_type,
+                                self.target_triple(),
+                                crate_type,
                                 unit.target.kind(),
                                 suffix,
                                 file_type,
@@ -1055,10 +1055,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn lib_or_check_profile(&self, unit: &Unit, target: &Target) -> &'a Profile {
-        if !target.is_custom_build() && !target.for_host() {
-            if unit.profile.check || (unit.profile.doc && !unit.profile.test) {
+        if !target.is_custom_build() && !target.for_host()
+            && (unit.profile.check || (unit.profile.doc && !unit.profile.test)) {
                 return &self.profiles.check
-            }
         }
         self.lib_profile()
     }

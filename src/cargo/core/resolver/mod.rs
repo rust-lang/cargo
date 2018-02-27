@@ -540,9 +540,9 @@ enum ConflictReason {
 
 impl ConflictReason {
     fn is_links(&self) -> bool {
-        match self {
-            &ConflictReason::Semver => false,
-            &ConflictReason::Links(_) => true,
+        match *self {
+            ConflictReason::Semver => false,
+            ConflictReason::Links(_) => true,
         }
     }
 }
@@ -739,7 +739,7 @@ fn activate_deps_loop<'a>(
                     registry,
                     &parent,
                     &dep,
-                    conflicting,
+                    &conflicting,
                     &candidates,
                     config,
                 )
@@ -780,8 +780,8 @@ fn activate_deps_loop<'a>(
 /// remaining candidates. For each one, also checks if rolling back
 /// could change the outcome of the failed resolution that caused backtracking
 /// in the first place. Namely, if we've backtracked past the parent of the
-/// failed dep, or any of the packages flagged as giving us trouble in conflicting_activations.
-/// Read https://github.com/rust-lang/cargo/pull/4834
+/// failed dep, or any of the packages flagged as giving us trouble in `conflicting_activations`.
+/// Read <https://github.com/rust-lang/cargo/pull/4834>
 /// For several more detailed explanations of the logic here.
 ///
 /// If the outcome could differ, resets `cx` and `remaining_deps` to that
@@ -826,7 +826,7 @@ fn activation_error(cx: &Context,
                     registry: &mut Registry,
                     parent: &Summary,
                     dep: &Dependency,
-                    conflicting_activations: HashMap<PackageId, ConflictReason>,
+                    conflicting_activations: &HashMap<PackageId, ConflictReason>,
                     candidates: &[Candidate],
                     config: Option<&Config>) -> CargoError {
     let graph = cx.graph();
@@ -860,17 +860,14 @@ fn activation_error(cx: &Context,
         let (links_errors, other_errors): (Vec<_>, Vec<_>) = conflicting_activations.drain(..).rev().partition(|&(_, r)| r.is_links());
 
         for &(p, r) in &links_errors {
-            match r {
-                &ConflictReason::Links(ref link) => {
-                     msg.push_str("\n\nthe package `");
-                     msg.push_str(dep.name());
-                     msg.push_str("` links to the native library `");
-                     msg.push_str(&link);
-                     msg.push_str("`, but it conflicts with a previous package which links to `");
-                     msg.push_str(&link);
-                     msg.push_str("` as well:\n");
-                },
-                _ => (),
+            if let ConflictReason::Links(ref link) = *r {
+                msg.push_str("\n\nthe package `");
+                msg.push_str(dep.name());
+                msg.push_str("` links to the native library `");
+                msg.push_str(link);
+                msg.push_str("`, but it conflicts with a previous package which links to `");
+                msg.push_str(link);
+                msg.push_str("` as well:\n");
             }
             msg.push_str(&describe_path(p));
         }
@@ -1031,7 +1028,7 @@ impl<'r> Requirements<'r> {
             return Ok(());
         }
         for f in self.summary.features().get(feat).expect("must be a valid feature") {
-            if f == &feat {
+            if f == feat {
                 bail!("Cyclic feature dependency: feature `{}` depends on itself", feat);
             }
             self.add_feature(f)?;
@@ -1095,7 +1092,7 @@ fn build_requirements<'a, 'b: 'a>(s: &'a Summary, method: &'b Method)
         }
         Method::Required { uses_default_features: false, .. } => {}
     }
-    return Ok(reqs);
+    Ok(reqs)
 }
 
 impl<'a> Context<'a> {
@@ -1110,7 +1107,7 @@ impl<'a> Context<'a> {
                        .entry(id.name().to_string())
                        .or_insert_with(HashMap::new)
                        .entry(id.source_id().clone())
-                       .or_insert(Vec::new());
+                       .or_insert_with(Vec::new);
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.push(GraphNode::Add(id.clone()));
             if let Some(link) = summary.links() {
@@ -1294,7 +1291,7 @@ impl<'a> Context<'a> {
             let mut base = base.1;
             base.extend(dep.features().iter().cloned());
             for feature in base.iter() {
-                if feature.contains("/") {
+                if feature.contains('/') {
                     bail!("feature names may not contain slashes: `{}`", feature);
                 }
             }
