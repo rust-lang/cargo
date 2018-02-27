@@ -244,9 +244,9 @@ impl ProcessBuilder {
                 None)
         })?;
         let output = Output {
-            stdout: stdout,
-            stderr: stderr,
-            status: status,
+            stdout,
+            stderr,
+            status,
         };
 
         {
@@ -305,7 +305,7 @@ impl ProcessBuilder {
     }
 }
 
-/// A helper function to create a ProcessBuilder.
+/// A helper function to create a `ProcessBuilder`.
 pub fn process<T: AsRef<OsStr>>(cmd: T) -> ProcessBuilder {
     ProcessBuilder {
         program: cmd.as_ref().to_os_string(),

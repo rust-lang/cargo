@@ -5,6 +5,7 @@ use core::{Resolve, PackageId};
 use util::CargoResult;
 use super::Unit;
 
+#[derive(Default)]
 pub struct Links<'a> {
     validated: HashSet<&'a PackageId>,
     links: HashMap<String, &'a PackageId>,

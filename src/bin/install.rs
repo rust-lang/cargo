@@ -118,7 +118,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      &options.flag_z)?;
 
     let compile_opts = ops::CompileOptions {
-        config: config,
+        config,
         jobs: options.flag_jobs,
         target: None,
         features: &options.flag_features,

@@ -56,7 +56,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     let opts = ops::CleanOptions {
-        config: config,
+        config,
         spec: &options.flag_package,
         target: options.flag_target.as_ref().map(|s| &s[..]),
         release: options.flag_release,

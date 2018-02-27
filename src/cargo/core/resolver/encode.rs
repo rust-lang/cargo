@@ -179,10 +179,10 @@ impl EncodableResolve {
             graph: g,
             empty_features: HashSet::new(),
             features: HashMap::new(),
-            replacements: replacements,
-            checksums: checksums,
-            metadata: metadata,
-            unused_patches: unused_patches,
+            replacements,
+            checksums,
+            metadata,
+            unused_patches,
         })
     }
 }
@@ -206,7 +206,7 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
     for member in members.iter() {
         build_pkg(member, ws.config(), &mut ret, &mut visited);
     }
-    for (_, deps) in ws.root_patch() {
+    for deps in ws.root_patch().values()  {
         for dep in deps {
             build_dep(dep, ws.config(), &mut ret, &mut visited);
         }
@@ -372,8 +372,8 @@ impl<'a, 'cfg> ser::Serialize for WorkspaceResolve<'a, 'cfg> {
         EncodableResolve {
             package: Some(encodable),
             root: None,
-            metadata: metadata,
-            patch: patch,
+            metadata,
+            patch,
         }.serialize(s)
     }
 }
@@ -399,7 +399,7 @@ fn encodable_resolve_node(id: &PackageId, resolve: &Resolve)
         version: id.version().to_string(),
         source: encode_source(id.source_id()),
         dependencies: deps,
-        replace: replace,
+        replace,
     }
 }
 

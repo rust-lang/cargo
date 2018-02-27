@@ -81,8 +81,8 @@ impl<'a> JobQueue<'a> {
         let (tx, rx) = channel();
         JobQueue {
             queue: DependencyQueue::new(),
-            tx: tx,
-            rx: rx,
+            tx,
+            rx,
             active: 0,
             pending: HashMap::new(),
             compiled: HashSet::new(),

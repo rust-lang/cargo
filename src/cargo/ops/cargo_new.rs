@@ -90,10 +90,9 @@ impl<'a> NewOptions<'a> {
 
         let kind = match (bin, lib) {
             (true, true) => bail!("can't specify both lib and binary outputs"),
-            (true, false) => NewProjectKind::Bin,
             (false, true) => NewProjectKind::Lib,
             // default to bin
-            (false, false) => NewProjectKind::Bin,
+            (_, false) => NewProjectKind::Bin,
         };
 
         let opts = NewOptions { version_control, kind, path, name };
@@ -291,7 +290,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let mkopts = MkOptions {
         version_control: opts.version_control,
         path: &path,
-        name: name,
+        name,
         source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
         bin: opts.kind.is_bin(),
     };
@@ -580,8 +579,8 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
         None => None
     };
     Ok(CargoNewConfig {
-        name: name,
-        email: email,
+        name,
+        email,
         version_control: vcs,
     })
 }

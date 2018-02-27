@@ -292,7 +292,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
 
     ops::compile_ws(&ws, None, &ops::CompileOptions {
-        config: config,
+        config,
         jobs: opts.jobs,
         target: opts.target,
         features: &[],

@@ -42,7 +42,7 @@ fn adding_and_removing_packages() {
     assert_that(p.cargo("generate-lockfile"),
                 execs().with_status(0));
     let lock2 = p.read_lockfile();
-    assert!(lock1 != lock2);
+    assert_ne!(lock1, lock2);
 
     // change the dep
     File::create(&p.root().join("bar/Cargo.toml")).unwrap().write_all(br#"
@@ -54,8 +54,8 @@ fn adding_and_removing_packages() {
     assert_that(p.cargo("generate-lockfile"),
                 execs().with_status(0));
     let lock3 = p.read_lockfile();
-    assert!(lock1 != lock3);
-    assert!(lock2 != lock3);
+    assert_ne!(lock1, lock3);
+    assert_ne!(lock2, lock3);
 
     // remove the dep
     println!("lock4");
