@@ -875,20 +875,25 @@ fn activate_deps_loop(
                 conflicting_activations.extend(conflicting);
                 // This dependency has no valid candidate. Backtrack until we
                 // find a dependency that does have a candidate to try, and try
-                // to activate that one.  This resets the `remaining_deps` to
-                // their state at the found level of the `backtrack_stack`.
+                // to activate that one.
                 trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
                 find_candidate(
                     &mut backtrack_stack,
-                    &mut cx,
-                    &mut remaining_deps,
-                    &mut parent,
-                    &mut cur,
-                    &mut dep,
-                    &mut features,
-                    &mut remaining_candidates,
-                    &mut conflicting_activations,
-                ).ok_or_else(|| {
+                    &parent,
+                    &conflicting_activations,
+                ).map(|(candidate, has_another, frame)| {
+                    // This resets the `remaining_deps` to
+                    // their state at the found level of the `backtrack_stack`.
+                    cur = frame.cur;
+                    cx = frame.context_backup;
+                    remaining_deps = frame.deps_backup;
+                    remaining_candidates = frame.remaining_candidates;
+                    parent = frame.parent;
+                    dep = frame.dep;
+                    features = frame.features;
+                    conflicting_activations = frame.conflicting_activations;
+                    (candidate, has_another)
+                }).ok_or_else(|| {
                     activation_error(
                         &cx,
                         registry.registry,
@@ -968,17 +973,11 @@ fn activate_deps_loop(
 /// If the outcome could differ, resets `cx` and `remaining_deps` to that
 /// level and returns the next candidate.
 /// If all candidates have been exhausted, returns None.
-fn find_candidate(
+fn find_candidate<'a>(
     backtrack_stack: &mut Vec<BacktrackFrame>,
-    cx: &mut Context,
-    remaining_deps: &mut BinaryHeap<DepsFrame>,
-    parent: &mut Summary,
-    cur: &mut usize,
-    dep: &mut Dependency,
-    features: &mut Rc<Vec<String>>,
-    remaining_candidates: &mut RemainingCandidates,
-    conflicting_activations: &mut HashMap<PackageId, ConflictReason>,
-) -> Option<(Candidate, bool)> {
+    parent: &Summary,
+    conflicting_activations: &HashMap<PackageId, ConflictReason>,
+) -> Option<(Candidate, bool, BacktrackFrame)> {
     while let Some(mut frame) = backtrack_stack.pop() {
         let next= frame.remaining_candidates.next(frame.context_backup.prev_active(&frame.dep), &frame.context_backup.links);
         if frame.context_backup.is_active(parent.package_id())
@@ -990,15 +989,7 @@ fn find_candidate(
             continue;
         }
         if let Ok((candidate, has_another)) = next {
-            *cur = frame.cur;
-            *cx = frame.context_backup;
-            *remaining_deps = frame.deps_backup;
-            *parent = frame.parent;
-            *dep = frame.dep;
-            *features = frame.features;
-            *remaining_candidates = frame.remaining_candidates;
-            *conflicting_activations = frame.conflicting_activations;
-            return Some((candidate, has_another));
+            return Some((candidate, has_another, frame));
         }
     }
     None
