@@ -31,6 +31,7 @@ pub struct Manifest {
     metadata: ManifestMetadata,
     profiles: Profiles,
     publish: Option<Vec<String>>,
+    publish_lockfile: bool,
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
@@ -267,6 +268,7 @@ impl Manifest {
                metadata: ManifestMetadata,
                profiles: Profiles,
                publish: Option<Vec<String>>,
+               publish_lockfile: bool,
                replace: Vec<(PackageIdSpec, Dependency)>,
                patch: HashMap<Url, Vec<Dependency>>,
                workspace: WorkspaceConfig,
@@ -291,6 +293,7 @@ impl Manifest {
             epoch,
             original,
             im_a_teapot,
+            publish_lockfile,
         }
     }
 
@@ -306,6 +309,7 @@ impl Manifest {
     pub fn warnings(&self) -> &[DelayedWarning] { &self.warnings }
     pub fn profiles(&self) -> &Profiles { &self.profiles }
     pub fn publish(&self) -> &Option<Vec<String>> { &self.publish }
+    pub fn publish_lockfile(&self) -> bool { self.publish_lockfile }
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] { &self.replace }
     pub fn original(&self) -> &TomlManifest { &self.original }
     pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> { &self.patch }

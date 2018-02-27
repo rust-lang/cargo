@@ -702,8 +702,9 @@ to proceed despite this, pass the `--allow-dirty` flag
 #[test]
 fn generated_manifest() {
     Package::new("abc", "1.0.0").publish();
-    Package::new("def", "1.0.0").publish();
+    Package::new("def", "1.0.0").alternative(true).publish();
     Package::new("ghi", "1.0.0").publish();
+
     let p = project("foo")
         .file("Cargo.toml", r#"
             cargo-features = ["alternative-registries"]
@@ -994,4 +995,161 @@ Caused by:
 
 consider adding `cargo-features = [\"epoch\"]` to the manifest
 ")));
+}
+
+#[test]
+fn package_lockfile() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["publish-lockfile"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish-lockfile = true
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("package").masquerade_as_nightly_cargo(),
+                execs().with_status(0).with_stderr(&format!("\
+[WARNING] manifest has no documentation[..]
+See [..]
+[PACKAGING] foo v0.0.1 ({dir})
+[VERIFYING] foo v0.0.1 ({dir})
+[COMPILING] foo v0.0.1 ({dir}[..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        dir = p.url())));
+    assert_that(&p.root().join("target/package/foo-0.0.1.crate"), existing_file());
+    assert_that(p.cargo("package").arg("-l").masquerade_as_nightly_cargo(),
+                execs().with_status(0).with_stdout("\
+Cargo.lock
+Cargo.toml
+src[/]main.rs
+"));
+    assert_that(p.cargo("package").masquerade_as_nightly_cargo(),
+                execs().with_status(0).with_stdout(""));
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let mut rdr = GzDecoder::new(f);
+    let mut contents = Vec::new();
+    rdr.read_to_end(&mut contents).unwrap();
+    let mut ar = Archive::new(&contents[..]);
+    for f in ar.entries().unwrap() {
+        let f = f.unwrap();
+        let fname = f.header().path_bytes();
+        let fname = &*fname;
+        assert!(fname == b"foo-0.0.1/Cargo.toml" ||
+                fname == b"foo-0.0.1/Cargo.toml.orig" ||
+                fname == b"foo-0.0.1/Cargo.lock" ||
+                fname == b"foo-0.0.1/src/main.rs",
+                "unexpected filename: {:?}", f.header().path())
+    }
+}
+
+#[test]
+fn package_lockfile_git_repo() {
+    let p = project("foo").build();
+
+    // Create a Git repository containing a minimal Rust project.
+    let _ = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", r#"
+            cargo-features = ["publish-lockfile"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+            publish-lockfile = true
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    assert_that(p.cargo("package").arg("-l").masquerade_as_nightly_cargo(),
+                execs().with_status(0).with_stdout("\
+Cargo.lock
+Cargo.toml
+src/main.rs
+"));
+}
+
+#[test]
+fn no_lock_file_with_library() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            cargo-features = ["publish-lockfile"]
+
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish-lockfile = true
+        "#)
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("package").masquerade_as_nightly_cargo(),
+                execs().with_status(0));
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let mut rdr = GzDecoder::new(f);
+    let mut contents = Vec::new();
+    rdr.read_to_end(&mut contents).unwrap();
+    let mut ar = Archive::new(&contents[..]);
+    for f in ar.entries().unwrap() {
+        let f = f.unwrap();
+        let fname = f.header().path().unwrap();
+        assert!(!fname.ends_with("Cargo.lock"));
+    }
+}
+
+#[test]
+fn lock_file_and_workspace() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [workspace]
+            members = ["foo"]
+        "#)
+        .file("foo/Cargo.toml", r#"
+            cargo-features = ["publish-lockfile"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            publish-lockfile = true
+        "#)
+        .file("foo/src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(p.cargo("package")
+                 .cwd(p.root().join("foo"))
+                 .masquerade_as_nightly_cargo(),
+                execs().with_status(0));
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    let mut rdr = GzDecoder::new(f);
+    let mut contents = Vec::new();
+    rdr.read_to_end(&mut contents).unwrap();
+    let mut ar = Archive::new(&contents[..]);
+    assert!(
+        ar.entries().unwrap()
+            .into_iter()
+            .any(|f|{
+                let f = f.unwrap();
+                let fname = f.header().path().unwrap();
+                fname.ends_with("Cargo.lock")
+            })
+    );
 }
