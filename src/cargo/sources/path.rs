@@ -327,7 +327,7 @@ impl<'cfg> PathSource<'cfg> {
         let statuses = repo.statuses(Some(&mut opts))?;
         let untracked = statuses.iter().filter_map(|entry| {
             match entry.status() {
-                git2::STATUS_WT_NEW => Some((join(root, entry.path_bytes()), None)),
+                git2::Status::WT_NEW => Some((join(root, entry.path_bytes()), None)),
                 _ => None,
             }
         });
