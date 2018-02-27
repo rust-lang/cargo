@@ -710,74 +710,84 @@ fn activate_deps_loop<'a>(
 
         trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(), candidates.len());
         trace!("{}[{}]>{} {} prev activations", parent.name(), cur, dep.name(), cx.prev_active(&dep).len());
+
         let mut remaining_candidates = RemainingCandidates::new(&candidates);
-        let next = remaining_candidates.next(cx.prev_active(&dep), &cx.links);
+        let mut successfully_activated = false;
 
-        // Alright, for each candidate that's gotten this far, it meets the
-        // following requirements:
-        //
-        // 1. The version matches the dependency requirement listed for this
-        //    package
-        // 2. There are no activated versions for this package which are
-        //    semver/links-compatible, or there's an activated version which is
-        //    precisely equal to `candidate`.
-        //
-        // This means that we're going to attempt to activate each candidate in
-        // turn. We could possibly fail to activate each candidate, so we try
-        // each one in turn.
-        let (candidate, has_another) = next.or_else(|mut conflicting| {
-            // This dependency has no valid candidate. Backtrack until we
-            // find a dependency that does have a candidate to try, and try
-            // to activate that one.  This resets the `remaining_deps` to
-            // their state at the found level of the `backtrack_stack`.
-            trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
-            find_candidate(
-                &mut backtrack_stack,
-                &mut cx,
-                &mut remaining_deps,
-                &mut parent,
-                &mut cur,
-                &mut dep,
-                &mut features,
-                &mut remaining_candidates,
-                &mut conflicting,
-            ).ok_or_else(|| {
-                activation_error(
-                    &cx,
-                    registry,
-                    &parent,
-                    &dep,
-                    &conflicting,
-                    &candidates,
-                    config,
-                )
-            })
-        })?;
+        while !successfully_activated {
+            let next = remaining_candidates.next(cx.prev_active(&dep), &cx.links);
 
-        // We have a candidate. Add an entry to the `backtrack_stack` so
-        // we can try the next one if this one fails.
-        if has_another {
-            backtrack_stack.push(BacktrackFrame {
-                cur,
-                context_backup: Context::clone(&cx),
-                deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
-                remaining_candidates,
-                parent: Summary::clone(&parent),
-                dep: Dependency::clone(&dep),
-                features: Rc::clone(&features),
-            });
-        }
+            // Alright, for each candidate that's gotten this far, it meets the
+            // following requirements:
+            //
+            // 1. The version matches the dependency requirement listed for this
+            //    package
+            // 2. There are no activated versions for this package which are
+            //    semver/links-compatible, or there's an activated version which is
+            //    precisely equal to `candidate`.
+            //
+            // This means that we're going to attempt to activate each candidate in
+            // turn. We could possibly fail to activate each candidate, so we try
+            // each one in turn.
+            let (candidate, has_another) = next.or_else(|mut conflicting| {
+                // This dependency has no valid candidate. Backtrack until we
+                // find a dependency that does have a candidate to try, and try
+                // to activate that one.  This resets the `remaining_deps` to
+                // their state at the found level of the `backtrack_stack`.
+                trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
+                find_candidate(
+                    &mut backtrack_stack,
+                    &mut cx,
+                    &mut remaining_deps,
+                    &mut parent,
+                    &mut cur,
+                    &mut dep,
+                    &mut features,
+                    &mut remaining_candidates,
+                    &mut conflicting,
+                ).ok_or_else(|| {
+                    activation_error(
+                        &cx,
+                        registry,
+                        &parent,
+                        &dep,
+                        &conflicting,
+                        &candidates,
+                        config,
+                    )
+                })
+            })?;
 
-        let method = Method::Required {
-            dev_deps: false,
-            features: &features,
-            uses_default_features: dep.uses_default_features(),
-        };
-        trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(), candidate.summary.version());
-        let res = activate(&mut cx, registry, Some(&parent), candidate, &method)?;
-        if let Some((frame, dur)) = res {
-            remaining_deps.push(frame);
-            deps_time += dur;
+            // We have a candidate. Add an entry to the `backtrack_stack` so
+            // we can try the next one if this one fails.
+            if has_another {
+                // TODO: when to push this vs. activation error
+                backtrack_stack.push(BacktrackFrame {
+                    cur,
+                    context_backup: Context::clone(&cx),
+                    deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
+                    remaining_candidates: remaining_candidates.clone(),
+                    parent: Summary::clone(&parent),
+                    dep: Dependency::clone(&dep),
+                    features: Rc::clone(&features),
+                });
+            }
+
+            let method = Method::Required {
+                dev_deps: false,
+                features: &features,
+                uses_default_features: dep.uses_default_features(),
+            };
+            trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(), candidate.summary.version());
+            let res = activate(&mut cx, registry, Some(&parent), candidate, &method);
+            successfully_activated = res.is_ok();
+            // TODO: disable fast-backtracking
+            // TODO: save that disable status in backtrack frame
+            // TODO: integrate with error messages
+            if let Ok(Some((frame, dur))) = res {
+                remaining_deps.push(frame);
+                deps_time += dur;
+            }
         }
     }
 
