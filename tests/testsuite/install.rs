@@ -1011,3 +1011,66 @@ fn custom_target_dir_for_git_source() {
     assert_that(&paths::root().join("target/release"),
                 existing_dir());
 }
+
+#[test]
+fn install_respects_lock_file() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.1")
+        .file("src/lib.rs", "not rust")
+        .publish();
+    Package::new("foo", "0.1.0")
+        .dep("bar", "0.1")
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "
+            extern crate foo;
+            extern crate bar;
+            fn main() {}
+        ")
+        .file("Cargo.lock", r#"
+[[package]]
+name = "bar"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+dependencies = [
+ "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+"#)
+        .publish();
+
+    assert_that(cargo_process("install").arg("foo"),
+                execs().with_status(0));
+}
+
+#[test]
+fn lock_file_path_deps_ok() {
+    Package::new("bar", "0.1.0").publish();
+
+    Package::new("foo", "0.1.0")
+        .dep("bar", "0.1")
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "
+            extern crate foo;
+            extern crate bar;
+            fn main() {}
+        ")
+        .file("Cargo.lock", r#"
+[[package]]
+name = "bar"
+version = "0.1.0"
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+dependencies = [
+ "bar 0.1.0",
+]
+"#)
+        .publish();
+
+    assert_that(cargo_process("install").arg("foo"),
+                execs().with_status(0));
+}
