@@ -233,12 +233,13 @@ pub struct PublishBuildInfoOpts<'cfg> {
     pub rust_version: String,
     pub target: Option<String>,
     pub passed: bool,
+    pub registry: Option<String>,
 }
 
 pub fn publish_build_info(ws: &Workspace, opts: PublishBuildInfoOpts) -> CargoResult<()> {
     let pkg = ws.current()?;
 
-    let (mut registry, _reg_id) = registry(opts.config, opts.token, opts.index)?;
+    let (mut registry, _reg_id) = registry(opts.config, opts.token, opts.index, opts.registry)?;
 
     // Upload build info to the specified destination
     opts.config.shell().status("Uploading build info", pkg.package_id().to_string())?;
@@ -275,8 +276,6 @@ fn transmit_build_info(config: &Config,
         rust_version: rust_version.to_string(),
         target: target.to_string(),
         passed: passed,
-    }).map_err(|e| {
-        CargoError::from(e.to_string())
     })
 }
 
