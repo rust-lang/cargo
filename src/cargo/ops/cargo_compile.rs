@@ -156,11 +156,13 @@ impl<'a> Packages<'a> {
             }
         };
         if specs.is_empty() {
-            bail!("Workspace contains no members to be compiled. \
-                   Be sure all workspace members haven't been excluded")
-        } else {
-            Ok(specs)
+            match ws.is_virtual() {
+                true => bail!("manifest path `{}` contains no package: The manifest is virtual, \
+                                       and the workspace has no members.", ws.root().display()),
+                false => bail!("no packages to compile"),
+            }
         }
+        Ok(specs)
     }
 }
 
