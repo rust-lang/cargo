@@ -162,6 +162,9 @@ features! {
 
         // Renaming a package in the manifest via the `package` key
         [unstable] rename_dependency: bool,
+
+        // Whether a lock file is published with this crate
+        [unstable] publish_lockfile: bool,
     }
 }
 
