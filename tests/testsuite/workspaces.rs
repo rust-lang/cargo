@@ -780,9 +780,9 @@ fn virtual_build_no_members() {
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-                        error: Workspace contains no members to be compiled. \
-                        Be sure all workspace members haven't been excluded")
-    );
+error: manifest path `[..]` contains no package: The manifest is virtual, \
+and the workspace has no members.
+"));
 }
 
 #[test]
