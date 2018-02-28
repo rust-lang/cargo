@@ -152,6 +152,7 @@ fn cargo_compile_with_workspace_excluded() {
     assert_that(
         p.cargo("build").arg("--all").arg("--exclude").arg("foo"),
         execs().with_stderr_does_not_contain("[..]virtual[..]")
+            .with_stderr_contains("[..]no packages to compile")
             .with_status(101));
 }
 
