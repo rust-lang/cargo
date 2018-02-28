@@ -224,13 +224,14 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         // TODO: don't download into memory, but ensure that if we ctrl-c a
         //       download we should resume either from the start or the middle
         //       on the next time
+        let url = url.to_string();
         let mut handle = self.config.http()?.borrow_mut();
         handle.get(true)?;
-        handle.url(&url.to_string())?;
+        handle.url(&url)?;
         handle.follow_location(true)?;
         let mut state = Sha256::new();
         let mut body = Vec::new();
-        network::with_retry(self.config, &url, || {
+        network::with_retry(self.config, || {
             state = Sha256::new();
             body = Vec::new();
             let mut pb = Progress::new("Fetch", self.config);
@@ -249,10 +250,8 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             }
             let code = handle.response_code()?;
             if code != 200 && code != 0 {
-                let url = handle.effective_url()?
-                    .map(|url| url.to_string())
-                    .unwrap_or_else(|| url.to_string());
-                Err(HttpNot200 { code, url }.into())
+                let url = handle.effective_url()?.unwrap_or(&url);
+                Err(HttpNot200 { code, url: url.to_string() }.into())
             } else {
                 Ok(())
             }
