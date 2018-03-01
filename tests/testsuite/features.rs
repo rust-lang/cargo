@@ -109,8 +109,14 @@ fn invalid4() {
 
     assert_that(p.cargo("build"),
                 execs().with_status(101).with_stderr("\
-[ERROR] Package `bar v0.0.1 ([..])` does not have these features: `bar`
-"));
+error: failed to select a version for `bar`.
+    ... required by package `foo v0.0.1 ([..])`
+versions that meet the requirements `*` are: 0.0.1
+
+the package `foo` depends on `bar`, with features: `bar` but `bar` does not have these features.
+
+
+failed to select a version for `bar` which could resolve this conflict"));
 
     p.change_file("Cargo.toml", r#"
         [project]
@@ -121,8 +127,7 @@ fn invalid4() {
 
     assert_that(p.cargo("build").arg("--features").arg("test"),
                 execs().with_status(101).with_stderr("\
-[ERROR] Package `foo v0.0.1 ([..])` does not have these features: `test`
-"));
+error: Package `foo v0.0.1 ([..])` does not have these features: `test`"));
 }
 
 #[test]
@@ -1052,8 +1057,7 @@ fn dep_feature_in_cmd_line() {
     // Trying to enable features of transitive dependencies is an error
     assert_that(p.cargo("build").arg("--features").arg("bar/some-feat"),
                 execs().with_status(101).with_stderr("\
-[ERROR] Package `foo v0.0.1 ([..])` does not have these features: `bar`
-"));
+error: Package `foo v0.0.1 ([..])` does not have these features: `bar`"));
 
     // Hierarchical feature specification should still be disallowed
     assert_that(p.cargo("build").arg("--features").arg("derived/bar/some-feat"),

@@ -2,7 +2,8 @@ use std::fmt;
 use std::path::{PathBuf, Path};
 
 use hamcrest::{Matcher, MatchResult, existing_file};
-use support::paths;
+
+use cargotest::support::paths;
 
 pub use self::InstalledExe as has_installed_exe;
 
@@ -23,7 +24,7 @@ impl<P: AsRef<Path>> Matcher<P> for InstalledExe {
     }
 }
 
-impl fmt::Display for InstalledExe {
+impl fmt::Debug for InstalledExe {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "installed exe `{}`", self.0)
     }

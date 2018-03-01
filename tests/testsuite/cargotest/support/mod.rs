@@ -15,9 +15,8 @@ use hamcrest as ham;
 use cargo::util::ProcessBuilder;
 use cargo::util::{ProcessError};
 
-use support::paths::CargoPathExt;
+use cargotest::support::paths::CargoPathExt;
 
-#[macro_export]
 macro_rules! t {
     ($e:expr) => (match $e {
         Ok(e) => e,
@@ -108,10 +107,6 @@ pub struct ProjectBuilder {
 impl ProjectBuilder {
     pub fn root(&self) -> PathBuf {
         self.root.root()
-    }
-
-    pub fn build_dir(&self) -> PathBuf {
-        self.root.build_dir()
     }
 
     pub fn target_debug_dir(&self) -> PathBuf {
@@ -218,7 +213,7 @@ impl Project {
     }
 
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
-        let mut p = ::process(program);
+        let mut p = ::cargotest::process(program);
         p.cwd(self.root());
         return p
     }
@@ -406,11 +401,6 @@ impl Execs {
         self
     }
 
-    pub fn with_neither_contains<S: ToString>(mut self, expected: S) -> Execs {
-        self.expect_neither_contains.push(expected.to_string());
-        self
-    }
-
     pub fn with_json(mut self, expected: &str) -> Execs {
         self.expect_json = Some(expected.split("\n\n").map(|obj| {
             obj.parse().unwrap()
@@ -426,11 +416,10 @@ impl Execs {
 
     fn match_status(&self, actual: &Output) -> ham::MatchResult {
         match self.expect_exit_code {
-            None => ham::success(),
-            Some(code) => {
-                ham::expect(
-                    actual.status.code() == Some(code),
-                    format!("exited with {}\n--- stdout\n{}\n--- stderr\n{}",
+            None => Ok(()),
+            Some(code) if actual.status.code() == Some(code) => Ok(()),
+            Some(_) => {
+                Err(format!("exited with {}\n--- stdout\n{}\n--- stderr\n{}",
                             actual.status,
                             String::from_utf8_lossy(&actual.stdout),
                             String::from_utf8_lossy(&actual.stderr)))
@@ -507,7 +496,7 @@ impl Execs {
                  kind: MatchKind) -> ham::MatchResult {
         let out = match expected {
             Some(out) => out,
-            None => return ham::success(),
+            None => return Ok(()),
         };
         let actual = match str::from_utf8(actual) {
             Err(..) => return Err(format!("{} was not utf8 encoded",
@@ -524,12 +513,15 @@ impl Execs {
                 let e = out.lines();
 
                 let diffs = self.diff_lines(a, e, false);
-                ham::expect(diffs.is_empty(),
-                            format!("differences:\n\
-                                    {}\n\n\
-                                    other output:\n\
-                                    `{}`", diffs.join("\n"),
-                                    String::from_utf8_lossy(extra)))
+                if diffs.is_empty() {
+                    Ok(())
+                } else {
+                    Err(format!("differences:\n\
+                                 {}\n\n\
+                                 other output:\n\
+                                 `{}`", diffs.join("\n"),
+                                 String::from_utf8_lossy(extra)))
+                }
             }
             MatchKind::Partial => {
                 let mut a = actual.lines();
@@ -542,12 +534,15 @@ impl Execs {
                         diffs = a;
                     }
                 }
-                ham::expect(diffs.is_empty(),
-                            format!("expected to find:\n\
-                                     {}\n\n\
-                                     did not find in output:\n\
-                                     {}", out,
-                                     actual))
+                if diffs.is_empty() {
+                    Ok(())
+                } else {
+                    Err(format!("expected to find:\n\
+                                 {}\n\n\
+                                 did not find in output:\n\
+                                 {}", out,
+                                 actual))
+                }
             }
             MatchKind::PartialN(number) => {
                 let mut a = actual.lines();
@@ -562,20 +557,26 @@ impl Execs {
                     a.next()
                 } {}
 
-                ham::expect(matches == number,
-                            format!("expected to find {} occurrences:\n\
-                                     {}\n\n\
-                                     did not find in output:\n\
-                                     {}", number, out,
-                                     actual))
+                if matches == number {
+                    Ok(())
+                } else {
+                    Err(format!("expected to find {} occurrences:\n\
+                                 {}\n\n\
+                                 did not find in output:\n\
+                                 {}", number, out,
+                                 actual))
+                }
             }
             MatchKind::NotPresent => {
-                ham::expect(!actual.contains(out),
-                            format!("expected not to find:\n\
-                                     {}\n\n\
-                                     but found in output:\n\
-                                     {}", out,
-                                     actual))
+                if !actual.contains(out) {
+                    Ok(())
+                } else {
+                    Err(format!("expected not to find:\n\
+                                 {}\n\n\
+                                 but found in output:\n\
+                                 {}", out,
+                                 actual))
+                }
             }
         }
     }
@@ -746,7 +747,7 @@ fn zip_all<T, I1: Iterator<Item=T>, I2: Iterator<Item=T>>(a: I1, b: I2) -> ZipAl
     }
 }
 
-impl fmt::Display for Execs {
+impl fmt::Debug for Execs {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "execs")
     }
@@ -801,31 +802,6 @@ pub fn execs() -> Execs {
         expect_neither_contains: Vec::new(),
         expect_json: None,
     }
-}
-
-#[derive(Clone)]
-pub struct ShellWrites {
-    expected: String
-}
-
-impl fmt::Display for ShellWrites {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "`{}` written to the shell", self.expected)
-    }
-}
-
-impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
-    fn matches(&self, actual: &[u8])
-        -> ham::MatchResult
-    {
-        let actual = String::from_utf8_lossy(actual);
-        let actual = actual.to_string();
-        ham::expect(actual == self.expected, actual)
-    }
-}
-
-pub fn shell_writes<T: fmt::Display>(string: T) -> ShellWrites {
-    ShellWrites { expected: string.to_string() }
 }
 
 pub trait Tap {

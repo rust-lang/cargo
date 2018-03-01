@@ -80,9 +80,7 @@ features = [
 
 [dev-dependencies]
 bufstream = "0.1"
-cargotest = { path = "tests/testsuite/cargotest", version = "0.1" }
 filetime = "0.1"
-hamcrest = "=0.1.1"
 
 [[bin]]
 name = "cargo"
