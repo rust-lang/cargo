@@ -4,7 +4,6 @@ extern crate filetime;
 extern crate flate2;
 extern crate git2;
 extern crate glob;
-extern crate hamcrest;
 extern crate hex;
 extern crate libc;
 #[macro_use]
@@ -20,6 +19,7 @@ extern crate winapi;
 
 #[macro_use]
 mod cargotest;
+mod hamcrest;
 
 mod alt_registry;
 mod bad_config;

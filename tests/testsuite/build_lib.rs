@@ -1,5 +1,3 @@
-extern crate hamcrest;
-
 use cargotest::support::{basic_bin_manifest, execs, project, Project};
 use hamcrest::{assert_that};
 
