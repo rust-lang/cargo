@@ -414,7 +414,7 @@ fn activate(cx: &mut Context,
             parent: Option<&Summary>,
             candidate: Candidate,
             method: &Method)
-            -> CargoResult<Option<(DepsFrame, Duration)>> {
+            -> ActivateResult<Option<(DepsFrame, Duration)>> {
     if let Some(parent) = parent {
         cx.resolve_graph.push(GraphNode::Link(parent.package_id().clone(),
                                            candidate.summary.package_id().clone()));
@@ -443,7 +443,7 @@ fn activate(cx: &mut Context,
     };
 
     let now = Instant::now();
-    let deps = cx.build_deps(registry, &candidate, method)?;
+    let deps = cx.build_deps(registry, parent, &candidate, method)?;
     let frame = DepsFrame {
         parent: candidate,
         remaining_siblings: RcVecIter::new(Rc::new(deps)),
@@ -536,14 +536,40 @@ impl Ord for DepsFrame {
 enum ConflictReason {
     Semver,
     Links(String),
+    MissingFeatures(String),
+}
+
+enum ActivateError {
+    Error(::failure::Error),
+    Conflict(PackageId, ConflictReason),
+}
+type ActivateResult<T> = Result<T, ActivateError>;
+
+impl From<::failure::Error> for ActivateError {
+    fn from(t: ::failure::Error) -> Self {
+        ActivateError::Error(t)
+    }
+}
+
+impl From<(PackageId, ConflictReason)> for ActivateError {
+    fn from(t: (PackageId, ConflictReason)) -> Self {
+        ActivateError::Conflict(t.0, t.1)
+    }
 }
 
 impl ConflictReason {
     fn is_links(&self) -> bool {
-        match *self {
-            ConflictReason::Semver => false,
-            ConflictReason::Links(_) => true,
+        if let ConflictReason::Links(_) = *self {
+            return true;
         }
+        false
+    }
+
+    fn is_missing_features(&self) -> bool {
+        if let ConflictReason::MissingFeatures(_) = *self {
+            return true;
+        }
+        false
     }
 }
 
@@ -556,6 +582,7 @@ struct BacktrackFrame<'a> {
     parent: Summary,
     dep: Dependency,
     features: Rc<Vec<String>>,
+    conflicting_activations: HashMap<PackageId, ConflictReason>,
 }
 
 #[derive(Clone)]
@@ -652,9 +679,12 @@ fn activate_deps_loop<'a>(
             summary: summary.clone(),
             replace: None,
         };
-        let res = activate(&mut cx, registry, None, candidate, method)?;
-        if let Some((frame, _)) = res {
-            remaining_deps.push(frame);
+        let res = activate(&mut cx, registry, None, candidate, method);
+        match res {
+            Ok(Some((frame, _))) => remaining_deps.push(frame),
+            Ok(None) => (),
+            Err(ActivateError::Error(e)) => return Err(e),
+            Err(ActivateError::Conflict(_, _)) => panic!("bad error from activate")
         }
     }
 
@@ -710,74 +740,96 @@ fn activate_deps_loop<'a>(
 
         trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(), candidates.len());
         trace!("{}[{}]>{} {} prev activations", parent.name(), cur, dep.name(), cx.prev_active(&dep).len());
+
         let mut remaining_candidates = RemainingCandidates::new(&candidates);
-        let next = remaining_candidates.next(cx.prev_active(&dep), &cx.links);
+        let mut successfully_activated = false;
+        let mut conflicting_activations = HashMap::new();
 
-        // Alright, for each candidate that's gotten this far, it meets the
-        // following requirements:
-        //
-        // 1. The version matches the dependency requirement listed for this
-        //    package
-        // 2. There are no activated versions for this package which are
-        //    semver/links-compatible, or there's an activated version which is
-        //    precisely equal to `candidate`.
-        //
-        // This means that we're going to attempt to activate each candidate in
-        // turn. We could possibly fail to activate each candidate, so we try
-        // each one in turn.
-        let (candidate, has_another) = next.or_else(|mut conflicting| {
-            // This dependency has no valid candidate. Backtrack until we
-            // find a dependency that does have a candidate to try, and try
-            // to activate that one.  This resets the `remaining_deps` to
-            // their state at the found level of the `backtrack_stack`.
-            trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
-            find_candidate(
-                &mut backtrack_stack,
-                &mut cx,
-                &mut remaining_deps,
-                &mut parent,
-                &mut cur,
-                &mut dep,
-                &mut features,
-                &mut remaining_candidates,
-                &mut conflicting,
-            ).ok_or_else(|| {
-                activation_error(
-                    &cx,
-                    registry,
-                    &parent,
-                    &dep,
-                    &conflicting,
-                    &candidates,
-                    config,
-                )
-            })
-        })?;
+        while !successfully_activated {
+            let next = remaining_candidates.next(cx.prev_active(&dep), &cx.links);
 
-        // We have a candidate. Add an entry to the `backtrack_stack` so
-        // we can try the next one if this one fails.
-        if has_another {
-            backtrack_stack.push(BacktrackFrame {
+            // Alright, for each candidate that's gotten this far, it meets the
+            // following requirements:
+            //
+            // 1. The version matches the dependency requirement listed for this
+            //    package
+            // 2. There are no activated versions for this package which are
+            //    semver/links-compatible, or there's an activated version which is
+            //    precisely equal to `candidate`.
+            //
+            // This means that we're going to attempt to activate each candidate in
+            // turn. We could possibly fail to activate each candidate, so we try
+            // each one in turn.
+            let (candidate, has_another) = next.or_else(|conflicting| {
+                conflicting_activations.extend(conflicting);
+                // This dependency has no valid candidate. Backtrack until we
+                // find a dependency that does have a candidate to try, and try
+                // to activate that one.  This resets the `remaining_deps` to
+                // their state at the found level of the `backtrack_stack`.
+                trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
+                find_candidate(
+                    &mut backtrack_stack,
+                    &mut cx,
+                    &mut remaining_deps,
+                    &mut parent,
+                    &mut cur,
+                    &mut dep,
+                    &mut features,
+                    &mut remaining_candidates,
+                    &mut conflicting_activations,
+                ).ok_or_else(|| {
+                    // if we hit an activation error and we are out of other combinations
+                    // then just report that error
+                    activation_error(
+                        &cx,
+                        registry,
+                        &parent,
+                        &dep,
+                        &conflicting_activations,
+                        &candidates,
+                        config,
+                    )
+                })
+            })?;
+
+            // We have a candidate. Clone a `BacktrackFrame`
+            // so we can add it to the `backtrack_stack` if activation succeeds.
+            // We clone now in case `activate` changes `cx` and then fails.
+            let backtrack = BacktrackFrame {
                 cur,
                 context_backup: Context::clone(&cx),
                 deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
-                remaining_candidates,
+                remaining_candidates: remaining_candidates.clone(),
                 parent: Summary::clone(&parent),
                 dep: Dependency::clone(&dep),
                 features: Rc::clone(&features),
-            });
-        }
+                conflicting_activations: conflicting_activations.clone(),
+            };
 
-        let method = Method::Required {
-            dev_deps: false,
-            features: &features,
-            uses_default_features: dep.uses_default_features(),
-        };
-        trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(), candidate.summary.version());
-        let res = activate(&mut cx, registry, Some(&parent), candidate, &method)?;
-        if let Some((frame, dur)) = res {
-            remaining_deps.push(frame);
-            deps_time += dur;
+            let method = Method::Required {
+                dev_deps: false,
+                features: &features,
+                uses_default_features: dep.uses_default_features(),
+            };
+            trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(), candidate.summary.version());
+            let res = activate(&mut cx, registry, Some(&parent), candidate, &method);
+            successfully_activated = res.is_ok();
+
+            match res {
+                Ok(Some((frame, dur))) => {
+                    remaining_deps.push(frame);
+                    deps_time += dur;
+                }
+                Ok(None) => (),
+                Err(ActivateError::Error(e)) => return Err(e),
+                Err(ActivateError::Conflict(id, reason)) => { conflicting_activations.insert(id, reason); },
+            }
+
+            // Add an entry to the `backtrack_stack` so
+            // we can try the next one if this one fails.
+            if has_another && successfully_activated {
+                backtrack_stack.push(backtrack);
+            }
         }
     }
 
@@ -824,6 +876,7 @@ fn find_candidate<'a>(
             *dep = frame.dep;
             *features = frame.features;
             *remaining_candidates = frame.remaining_candidates;
+            *conflicting_activations = frame.conflicting_activations;
             return Some((candidate, has_another));
         }
     }
@@ -865,9 +918,9 @@ fn activation_error(cx: &Context,
 
         let mut conflicting_activations: Vec<_> = conflicting_activations.iter().collect();
         conflicting_activations.sort_unstable();
-        let (links_errors, other_errors): (Vec<_>, Vec<_>) = conflicting_activations.drain(..).rev().partition(|&(_, r)| r.is_links());
+        let (links_errors, mut other_errors): (Vec<_>, Vec<_>) = conflicting_activations.drain(..).rev().partition(|&(_, r)| r.is_links());
 
-        for &(p, r) in &links_errors {
+        for &(p, r) in links_errors.iter() {
             if let ConflictReason::Links(ref link) = *r {
                 msg.push_str("\n\nthe package `");
                 msg.push_str(dep.name());
@@ -880,12 +933,29 @@ fn activation_error(cx: &Context,
             msg.push_str(&describe_path(p));
         }
 
-        if links_errors.is_empty() {
+        let (features_errors, other_errors): (Vec<_>, Vec<_>) = other_errors.drain(..).partition(|&(_, r)| r.is_missing_features());
+
+        for &(p, r) in features_errors.iter() {
+            if let ConflictReason::MissingFeatures(ref features) = *r {
+                msg.push_str("\n\nthe package `");
+                msg.push_str(p.name());
+                msg.push_str("` depends on `");
+                msg.push_str(dep.name());
+                msg.push_str("`, with features: `");
+                msg.push_str(features);
+                msg.push_str("` but `");
+                msg.push_str(dep.name());
+                msg.push_str("` does not have these features.\n");
+            }
+            // p == parent so the full path is redundant.
+        }
+
+        if !other_errors.is_empty() {
              msg.push_str("\n\nall possible versions conflict with \
                              previously selected packages.");
         }
 
-        for &(p, _) in &other_errors {
+        for &(p, _) in other_errors.iter() {
             msg.push_str("\n\n  previously selected ");
             msg.push_str(&describe_path(p));
         }
@@ -1070,9 +1140,9 @@ impl<'r> Requirements<'r> {
     }
 }
 
-// Takes requested features for a single package from the input Method and
-// recurses to find all requested features, dependencies and requested
-// dependency features in a Requirements object, returning it to the resolver.
+/// Takes requested features for a single package from the input Method and
+/// recurses to find all requested features, dependencies and requested
+/// dependency features in a Requirements object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(s: &'a Summary, method: &'b Method)
                                   -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
@@ -1147,12 +1217,13 @@ impl<'a> Context<'a> {
 
     fn build_deps(&mut self,
                   registry: &mut Registry,
+                  parent: Option<&Summary>,
                   candidate: &Summary,
-                  method: &Method) -> CargoResult<Vec<DepInfo>> {
+                  method: &Method) -> ActivateResult<Vec<DepInfo>> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let deps = self.resolve_features(candidate, method)?;
+        let deps = self.resolve_features(parent,candidate, method)?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -1263,9 +1334,10 @@ impl<'a> Context<'a> {
 
     /// Return all dependencies and the features we want from them.
     fn resolve_features<'b>(&mut self,
+                            parent: Option<&Summary>,
                             s: &'b Summary,
                             method: &'b Method)
-                            -> CargoResult<Vec<(Dependency, Vec<String>)>> {
+                            -> ActivateResult<Vec<(Dependency, Vec<String>)>> {
         let dev_deps = match *method {
             Method::Everything => true,
             Method::Required { dev_deps, .. } => dev_deps,
@@ -1300,7 +1372,7 @@ impl<'a> Context<'a> {
             base.extend(dep.features().iter().cloned());
             for feature in base.iter() {
                 if feature.contains('/') {
-                    bail!("feature names may not contain slashes: `{}`", feature);
+                    return Err(format_err!("feature names may not contain slashes: `{}`", feature).into());
                 }
             }
             ret.push((dep.clone(), base));
@@ -1314,8 +1386,11 @@ impl<'a> Context<'a> {
                                    .map(|s| &s[..])
                                    .collect::<Vec<&str>>();
             let features = unknown.join(", ");
-            bail!("Package `{}` does not have these features: `{}`",
-                    s.package_id(), features)
+            return Err(match parent {
+                None => format_err!("Package `{}` does not have these features: `{}`",
+                    s.package_id(), features).into(),
+                Some(p) => (p.package_id().clone(), ConflictReason::MissingFeatures(features)).into(),
+            });
         }
 
         // Record what list of features is active for this package.

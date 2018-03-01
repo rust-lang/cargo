@@ -58,20 +58,20 @@ trait ToPkgId {
     fn to_pkgid(&self) -> PackageId;
 }
 
-impl ToPkgId for &'static str {
+impl<'a> ToPkgId for &'a str {
     fn to_pkgid(&self) -> PackageId {
         PackageId::new(*self, "1.0.0", &registry_loc()).unwrap()
     }
 }
 
-impl ToPkgId for (&'static str, &'static str) {
+impl<'a> ToPkgId for (&'a str, &'a str) {
     fn to_pkgid(&self) -> PackageId {
         let (name, vers) = *self;
         PackageId::new(name, vers, &registry_loc()).unwrap()
     }
 }
 
-impl ToPkgId for (&'static str, String) {
+impl<'a> ToPkgId for (&'a str, String) {
     fn to_pkgid(&self) -> PackageId {
         let (name, ref vers) = *self;
         PackageId::new(name, vers, &registry_loc()).unwrap()
@@ -317,6 +317,27 @@ fn resolving_backtrack() {
     assert_that(&res, contains(names(&[("root", "1.0.0"),
                                        ("foo", "1.0.1"),
                                        ("baz", "1.0.0")])));
+}
+
+#[test]
+fn resolving_backtrack_features() {
+    // test for cargo/issues/4347
+    let mut bad = dep("bar");
+    bad.set_features(vec!["bad".to_string()]);
+
+    let reg = registry(vec![
+        pkg!(("foo", "1.0.2") => [bad]),
+        pkg!(("foo", "1.0.1") => [dep("bar")]),
+        pkg!("bar"),
+    ]);
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("foo", "^1"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("foo", "1.0.1"),
+                                       ("bar", "1.0.0")])));
 }
 
 #[test]
