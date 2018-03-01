@@ -2,11 +2,11 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
-use url::Url;
-use git2;
-
 use cargo::util::ProcessError;
-use support::{ProjectBuilder, Project, project, path2url};
+use git2;
+use url::Url;
+
+use cargotest::support::{ProjectBuilder, Project, project, path2url};
 
 #[must_use]
 pub struct RepoBuilder {

@@ -1,7 +1,7 @@
 use cargotest::is_nightly;
 use cargotest::install::{cargo_home, has_installed_exe};
 use cargotest::support::{project, execs};
-use hamcrest::{assert_that, existing_file, not};
+use hamcrest::{assert_that, existing_file, is_not};
 
 #[test]
 fn build_bin_default_features() {
@@ -110,7 +110,7 @@ fn build_bin_multiple_required_features() {
     assert_that(p.cargo("build"),
                 execs().with_status(0));
 
-    assert_that(&p.bin("foo_1"), not(existing_file()));
+    assert_that(&p.bin("foo_1"), is_not(existing_file()));
     assert_that(&p.bin("foo_2"), existing_file());
 
     assert_that(p.cargo("build").arg("--features").arg("c"),
@@ -213,7 +213,7 @@ Consider enabling them by passing e.g. `--features=\"b c\"`
     assert_that(p.cargo("build").arg("--example=foo_2"),
                 execs().with_status(0));
 
-    assert_that(&p.bin("examples/foo_1"), not(existing_file()));
+    assert_that(&p.bin("examples/foo_1"), is_not(existing_file()));
     assert_that(&p.bin("examples/foo_2"), existing_file());
 
     assert_that(p.cargo("build").arg("--example=foo_1")
@@ -553,7 +553,7 @@ fn install_default_features() {
 [FINISHED] release [optimized] target(s) in [..]
 [ERROR] no binaries are available for install using the selected features
 ")));
-    assert_that(cargo_home(), not(has_installed_exe("foo")));
+    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
     assert_that(p.cargo("install").arg("--bin=foo"),
                 execs().with_status(0));
@@ -571,7 +571,7 @@ Caused by:
   target `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ")));
-    assert_that(cargo_home(), not(has_installed_exe("foo")));
+    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
     assert_that(p.cargo("install").arg("--example=foo"),
                 execs().with_status(0));
@@ -589,7 +589,7 @@ Caused by:
   target `foo` requires the features: `a`
 Consider enabling them by passing e.g. `--features=\"a\"`
 ")));
-    assert_that(cargo_home(), not(has_installed_exe("foo")));
+    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 }
 
 #[test]
@@ -649,7 +649,7 @@ fn install_multiple_required_features() {
 
     assert_that(p.cargo("install"),
                 execs().with_status(0));
-    assert_that(cargo_home(), not(has_installed_exe("foo_1")));
+    assert_that(cargo_home(), is_not(has_installed_exe("foo_1")));
     assert_that(cargo_home(), has_installed_exe("foo_2"));
     assert_that(p.cargo("uninstall").arg("foo"),
                 execs().with_status(0));
@@ -667,8 +667,8 @@ fn install_multiple_required_features() {
 [FINISHED] release [optimized] target(s) in [..]
 [ERROR] no binaries are available for install using the selected features
 "));
-    assert_that(cargo_home(), not(has_installed_exe("foo_1")));
-    assert_that(cargo_home(), not(has_installed_exe("foo_2")));
+    assert_that(cargo_home(), is_not(has_installed_exe("foo_1")));
+    assert_that(cargo_home(), is_not(has_installed_exe("foo_2")));
 }
 
 #[test]
@@ -872,7 +872,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
 [FINISHED] release [optimized] target(s) in [..]
 [ERROR] no binaries are available for install using the selected features
 ")));
-    assert_that(cargo_home(), not(has_installed_exe("foo")));
+    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
     assert_that(p.cargo("install").arg("--features").arg("bar/a"),
                 execs().with_status(0));

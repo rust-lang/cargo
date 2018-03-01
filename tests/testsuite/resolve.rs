@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use hamcrest::{assert_that, equal_to, contains, not};
+use hamcrest::{assert_that, contains, is_not};
 
 use cargo::core::source::{SourceId, GitReference};
 use cargo::core::dependency::Kind::{self, Development};
@@ -156,23 +156,28 @@ fn test_resolving_empty_dependency_list() {
     let res = resolve(&pkg_id("root"), Vec::new(),
                       &registry(vec![])).unwrap();
 
-    assert_that(&res, equal_to(&names(&["root"])));
+    assert_eq!(res, names(&["root"]));
+}
+
+fn assert_same(a: &[PackageId], b: &[PackageId]) {
+    assert_eq!(a.len(), b.len());
+    for item in a {
+        assert!(b.contains(item));
+    }
 }
 
 #[test]
 fn test_resolving_only_package() {
     let reg = registry(vec![pkg("foo")]);
-    let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg);
-
-    assert_that(&res.unwrap(), contains(names(&["root", "foo"])).exactly());
+    let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg).unwrap();
+    assert_same(&res, &names(&["root", "foo"]));
 }
 
 #[test]
 fn test_resolving_one_dep() {
     let reg = registry(vec![pkg("foo"), pkg("bar")]);
-    let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg);
-
-    assert_that(&res.unwrap(), contains(names(&["root", "foo"])).exactly());
+    let res = resolve(&pkg_id("root"), vec![dep("foo")], &reg).unwrap();
+    assert_same(&res, &names(&["root", "foo"]));
 }
 
 #[test]
@@ -180,8 +185,7 @@ fn test_resolving_multiple_deps() {
     let reg = registry(vec![pkg!("foo"), pkg!("bar"), pkg!("baz")]);
     let res = resolve(&pkg_id("root"), vec![dep("foo"), dep("baz")],
                       &reg).unwrap();
-
-    assert_that(&res, contains(names(&["root", "foo", "baz"])).exactly());
+    assert_same(&res, &names(&["root", "foo", "baz"]));
 }
 
 #[test]
@@ -210,14 +214,13 @@ fn test_resolving_with_same_name() {
     let res = resolve(&pkg_id("root"),
                       vec![dep_loc("foo", "http://first.example.com"),
                            dep_loc("bar", "http://second.example.com")],
-                      &reg);
+                      &reg).unwrap();
 
     let mut names = loc_names(&[("foo", "http://first.example.com"),
                                 ("bar", "http://second.example.com")]);
 
     names.push(pkg_id("root"));
-
-    assert_that(&res.unwrap(), contains(names).exactly());
+    assert_same(&res, &names);
 }
 
 #[test]
@@ -280,8 +283,8 @@ fn test_resolving_maximum_version_with_transitive_deps() {
                                        ("foo", "1.0.0"),
                                        ("bar", "1.0.0"),
                                        ("util", "1.2.2")])));
-    assert_that(&res, not(contains(names(&[("util", "1.0.1")]))));
-    assert_that(&res, not(contains(names(&[("util", "1.1.1")]))));
+    assert_that(&res, is_not(contains(names(&[("util", "1.0.1")]))));
+    assert_that(&res, is_not(contains(names(&[("util", "1.1.1")]))));
 }
 
 #[test]
