@@ -3,7 +3,7 @@ use std::process::Command;
 use std::sync::{Once, ONCE_INIT};
 use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT, Ordering};
 
-use support::{project, main_file, basic_bin_manifest};
+use cargotest::support::{project, main_file, basic_bin_manifest};
 
 pub fn disabled() -> bool {
     // First, disable if ./configure requested so

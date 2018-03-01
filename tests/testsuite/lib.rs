@@ -1,22 +1,25 @@
-extern crate cargo;
-#[macro_use]
-extern crate cargotest;
-extern crate hamcrest;
-extern crate tempdir;
 extern crate bufstream;
+extern crate cargo;
+extern crate filetime;
+extern crate flate2;
 extern crate git2;
 extern crate glob;
-extern crate flate2;
-extern crate tar;
+extern crate hamcrest;
+extern crate hex;
 extern crate libc;
-#[cfg(windows)]
-extern crate winapi;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
 extern crate serde_json;
+extern crate tar;
+extern crate tempdir;
 extern crate toml;
 extern crate url;
+#[cfg(windows)]
+extern crate winapi;
 
+#[macro_use]
+mod cargotest;
 
 mod alt_registry;
 mod bad_config;
