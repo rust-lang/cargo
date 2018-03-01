@@ -1,5 +1,3 @@
-extern crate hamcrest;
-
 use cargotest::support::{project, execs};
 use cargotest::support::registry::Package;
 use cargotest::ChannelChanger;

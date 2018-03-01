@@ -1,10 +1,10 @@
-use cargotest::is_nightly;
-use cargotest::support::{execs, project};
-use cargotest::support::registry::Package;
-use hamcrest::prelude::*;
-use cargotest::support::paths::CargoPathExt;
 use cargotest::install::exe;
+use cargotest::is_nightly;
+use cargotest::support::paths::CargoPathExt;
+use cargotest::support::registry::Package;
+use cargotest::support::{execs, project};
 use glob::glob;
+use hamcrest::{assert_that, existing_file, is_not};
 
 const SIMPLE_MANIFEST: &str = r#"
 [package]
@@ -662,9 +662,8 @@ fn check_artifacts()
         is_not(existing_file()));
     assert_that(&p.root().join("target/debug").join(exe("foo")),
         is_not(existing_file()));
-    assert_that(glob(&p.root().join("target/debug/t1-*").to_str().unwrap())
-            .unwrap().count(),
-        is(equal_to(0)));
+    assert_eq!(glob(&p.root().join("target/debug/t1-*").to_str().unwrap())
+            .unwrap().count(), 0);
 
     p.root().join("target").rm_rf();
     assert_that(p.cargo("check").arg("--example").arg("ex1"),
@@ -685,7 +684,6 @@ fn check_artifacts()
         is_not(existing_file()));
     assert_that(&p.root().join("target/debug").join(exe("foo")),
         is_not(existing_file()));
-    assert_that(glob(&p.root().join("target/debug/b1-*").to_str().unwrap())
-            .unwrap().count(),
-        is(equal_to(0)));
+    assert_eq!(glob(&p.root().join("target/debug/b1-*").to_str().unwrap())
+            .unwrap().count(), 0);
 }

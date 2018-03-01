@@ -416,11 +416,10 @@ impl Execs {
 
     fn match_status(&self, actual: &Output) -> ham::MatchResult {
         match self.expect_exit_code {
-            None => ham::success(),
-            Some(code) => {
-                ham::expect(
-                    actual.status.code() == Some(code),
-                    format!("exited with {}\n--- stdout\n{}\n--- stderr\n{}",
+            None => Ok(()),
+            Some(code) if actual.status.code() == Some(code) => Ok(()),
+            Some(_) => {
+                Err(format!("exited with {}\n--- stdout\n{}\n--- stderr\n{}",
                             actual.status,
                             String::from_utf8_lossy(&actual.stdout),
                             String::from_utf8_lossy(&actual.stderr)))
@@ -497,7 +496,7 @@ impl Execs {
                  kind: MatchKind) -> ham::MatchResult {
         let out = match expected {
             Some(out) => out,
-            None => return ham::success(),
+            None => return Ok(()),
         };
         let actual = match str::from_utf8(actual) {
             Err(..) => return Err(format!("{} was not utf8 encoded",
@@ -514,12 +513,15 @@ impl Execs {
                 let e = out.lines();
 
                 let diffs = self.diff_lines(a, e, false);
-                ham::expect(diffs.is_empty(),
-                            format!("differences:\n\
-                                    {}\n\n\
-                                    other output:\n\
-                                    `{}`", diffs.join("\n"),
-                                    String::from_utf8_lossy(extra)))
+                if diffs.is_empty() {
+                    Ok(())
+                } else {
+                    Err(format!("differences:\n\
+                                 {}\n\n\
+                                 other output:\n\
+                                 `{}`", diffs.join("\n"),
+                                 String::from_utf8_lossy(extra)))
+                }
             }
             MatchKind::Partial => {
                 let mut a = actual.lines();
@@ -532,12 +534,15 @@ impl Execs {
                         diffs = a;
                     }
                 }
-                ham::expect(diffs.is_empty(),
-                            format!("expected to find:\n\
-                                     {}\n\n\
-                                     did not find in output:\n\
-                                     {}", out,
-                                     actual))
+                if diffs.is_empty() {
+                    Ok(())
+                } else {
+                    Err(format!("expected to find:\n\
+                                 {}\n\n\
+                                 did not find in output:\n\
+                                 {}", out,
+                                 actual))
+                }
             }
             MatchKind::PartialN(number) => {
                 let mut a = actual.lines();
@@ -552,20 +557,26 @@ impl Execs {
                     a.next()
                 } {}
 
-                ham::expect(matches == number,
-                            format!("expected to find {} occurrences:\n\
-                                     {}\n\n\
-                                     did not find in output:\n\
-                                     {}", number, out,
-                                     actual))
+                if matches == number {
+                    Ok(())
+                } else {
+                    Err(format!("expected to find {} occurrences:\n\
+                                 {}\n\n\
+                                 did not find in output:\n\
+                                 {}", number, out,
+                                 actual))
+                }
             }
             MatchKind::NotPresent => {
-                ham::expect(!actual.contains(out),
-                            format!("expected not to find:\n\
-                                     {}\n\n\
-                                     but found in output:\n\
-                                     {}", out,
-                                     actual))
+                if !actual.contains(out) {
+                    Ok(())
+                } else {
+                    Err(format!("expected not to find:\n\
+                                 {}\n\n\
+                                 but found in output:\n\
+                                 {}", out,
+                                 actual))
+                }
             }
         }
     }
@@ -736,7 +747,7 @@ fn zip_all<T, I1: Iterator<Item=T>, I2: Iterator<Item=T>>(a: I1, b: I2) -> ZipAl
     }
 }
 
-impl fmt::Display for Execs {
+impl fmt::Debug for Execs {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "execs")
     }
