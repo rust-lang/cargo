@@ -797,21 +797,19 @@ fn activate_deps_loop<'a>(
                 })
             })?;
 
-            // We have a candidate. Add an entry to the `backtrack_stack` so
-            // we can try the next one if this one fails.
-            if has_another {
-                // TODO: when to push this vs. activation error
-                backtrack_stack.push(BacktrackFrame {
-                    cur,
-                    context_backup: Context::clone(&cx),
-                    deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
-                    remaining_candidates: remaining_candidates.clone(),
-                    parent: Summary::clone(&parent),
-                    dep: Dependency::clone(&dep),
-                    features: Rc::clone(&features),
-                    conflicting_activations: conflicting_activations.clone(),
-                });
-            }
+            // We have a candidate. Clone a `BacktrackFrame`
+            // so we can add it to the `backtrack_stack` if activation succeeds.
+            // We clone now in case `activate` changes `cx` and then fails.
+            let backtrack = BacktrackFrame {
+                cur,
+                context_backup: Context::clone(&cx),
+                deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
+                remaining_candidates: remaining_candidates.clone(),
+                parent: Summary::clone(&parent),
+                dep: Dependency::clone(&dep),
+                features: Rc::clone(&features),
+                conflicting_activations: conflicting_activations.clone(),
+            };
 
             let method = Method::Required {
                 dev_deps: false,
@@ -821,6 +819,7 @@ fn activate_deps_loop<'a>(
             trace!("{}[{}]>{} trying {}", parent.name(), cur, dep.name(), candidate.summary.version());
             let res = activate(&mut cx, registry, Some(&parent), candidate, &method);
             successfully_activated = res.is_ok();
+
             match res {
                 Ok(Some((frame, dur))) => {
                     remaining_deps.push(frame);
@@ -829,6 +828,12 @@ fn activate_deps_loop<'a>(
                 Ok(None) => (),
                 Err(ActivateError::Error(e)) => return Err(e),
                 Err(ActivateError::Conflict(id, reason)) => { conflicting_activations.insert(id, reason); },
+            }
+
+            // Add an entry to the `backtrack_stack` so
+            // we can try the next one if this one fails.
+            if has_another && successfully_activated {
+                backtrack_stack.push(backtrack);
             }
         }
     }
