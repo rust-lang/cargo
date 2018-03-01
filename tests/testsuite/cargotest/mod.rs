@@ -1,23 +1,13 @@
-#![deny(warnings)]
-
-extern crate cargo;
-extern crate filetime;
-extern crate flate2;
-extern crate git2;
-extern crate hamcrest;
-extern crate hex;
-#[macro_use]
-extern crate serde_json;
-extern crate tar;
-extern crate url;
-
 use std::ffi::OsStr;
 use std::time::Duration;
 
 use cargo::util::Rustc;
+use cargo;
 use std::path::PathBuf;
 
+#[macro_use]
 pub mod support;
+
 pub mod install;
 
 thread_local!(pub static RUSTC: Rustc = Rustc::new(PathBuf::from("rustc"), None).unwrap());
@@ -95,5 +85,5 @@ pub fn cargo_process() -> cargo::util::ProcessBuilder {
 }
 
 pub fn sleep_ms(ms: u64) {
-    std::thread::sleep(Duration::from_millis(ms));
+    ::std::thread::sleep(Duration::from_millis(ms));
 }

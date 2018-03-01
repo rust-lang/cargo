@@ -15,9 +15,8 @@ use hamcrest as ham;
 use cargo::util::ProcessBuilder;
 use cargo::util::{ProcessError};
 
-use support::paths::CargoPathExt;
+use cargotest::support::paths::CargoPathExt;
 
-#[macro_export]
 macro_rules! t {
     ($e:expr) => (match $e {
         Ok(e) => e,
@@ -108,10 +107,6 @@ pub struct ProjectBuilder {
 impl ProjectBuilder {
     pub fn root(&self) -> PathBuf {
         self.root.root()
-    }
-
-    pub fn build_dir(&self) -> PathBuf {
-        self.root.build_dir()
     }
 
     pub fn target_debug_dir(&self) -> PathBuf {
@@ -218,7 +213,7 @@ impl Project {
     }
 
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> ProcessBuilder {
-        let mut p = ::process(program);
+        let mut p = ::cargotest::process(program);
         p.cwd(self.root());
         return p
     }
@@ -403,11 +398,6 @@ impl Execs {
 
     pub fn with_stderr_does_not_contain<S: ToString>(mut self, expected: S) -> Execs {
         self.expect_stderr_not_contains.push(expected.to_string());
-        self
-    }
-
-    pub fn with_neither_contains<S: ToString>(mut self, expected: S) -> Execs {
-        self.expect_neither_contains.push(expected.to_string());
         self
     }
 
@@ -801,31 +791,6 @@ pub fn execs() -> Execs {
         expect_neither_contains: Vec::new(),
         expect_json: None,
     }
-}
-
-#[derive(Clone)]
-pub struct ShellWrites {
-    expected: String
-}
-
-impl fmt::Display for ShellWrites {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "`{}` written to the shell", self.expected)
-    }
-}
-
-impl<'a> ham::Matcher<&'a [u8]> for ShellWrites {
-    fn matches(&self, actual: &[u8])
-        -> ham::MatchResult
-    {
-        let actual = String::from_utf8_lossy(actual);
-        let actual = actual.to_string();
-        ham::expect(actual == self.expected, actual)
-    }
-}
-
-pub fn shell_writes<T: fmt::Display>(string: T) -> ShellWrites {
-    ShellWrites { expected: string.to_string() }
 }
 
 pub trait Tap {

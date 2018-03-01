@@ -3,6 +3,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{PathBuf, Path};
 
+use cargo::util::Sha256;
 use flate2::Compression;
 use flate2::write::GzEncoder;
 use git2;
@@ -10,9 +11,8 @@ use hex;
 use tar::{Builder, Header};
 use url::Url;
 
-use support::paths;
-use support::git::repo;
-use cargo::util::Sha256;
+use cargotest::support::paths;
+use cargotest::support::git::repo;
 
 pub fn registry_path() -> PathBuf { paths::root().join("registry") }
 pub fn registry() -> Url { Url::from_file_path(&*registry_path()).ok().unwrap() }
