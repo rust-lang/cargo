@@ -443,7 +443,7 @@ fn activate(cx: &mut Context,
     };
 
     let now = Instant::now();
-    let deps = cx.build_deps(registry, &candidate, method)?;
+    let deps = cx.build_deps(registry, parent, &candidate, method)?;
     let frame = DepsFrame {
         parent: candidate,
         remaining_siblings: RcVecIter::new(Rc::new(deps)),
@@ -684,12 +684,7 @@ fn activate_deps_loop<'a>(
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
             Err(ActivateError::Error(e)) => return Err(e),
-            Err(ActivateError::Conflict(id, reason)) => {
-                match reason {
-                    ConflictReason::MissingFeatures(features) => bail!("Package `{}` does not have these features: `{}`", id, features),
-                    _ => panic!("bad error from activate"),
-                }
-            }
+            Err(ActivateError::Conflict(_, _)) => panic!("bad error from activate")
         }
     }
 
@@ -943,17 +938,19 @@ fn activation_error(cx: &Context,
         for &(p, r) in features_errors.iter() {
             if let ConflictReason::MissingFeatures(ref features) = *r {
                 msg.push_str("\n\nthe package `");
-                msg.push_str(dep.name());
-                msg.push_str("` depends on `");
                 msg.push_str(p.name());
+                msg.push_str("` depends on `");
+                msg.push_str(dep.name());
                 msg.push_str("`, with features: `");
                 msg.push_str(features);
-                msg.push_str("` but it does not have these features.\n");
+                msg.push_str("` but `");
+                msg.push_str(dep.name());
+                msg.push_str("` does not have these features.\n");
             }
-            msg.push_str(&describe_path(p));
+            // p == parent so the full path is redundant.
         }
 
-        if links_errors.is_empty() {
+        if !other_errors.is_empty() {
              msg.push_str("\n\nall possible versions conflict with \
                              previously selected packages.");
         }
@@ -1143,9 +1140,9 @@ impl<'r> Requirements<'r> {
     }
 }
 
-// Takes requested features for a single package from the input Method and
-// recurses to find all requested features, dependencies and requested
-// dependency features in a Requirements object, returning it to the resolver.
+/// Takes requested features for a single package from the input Method and
+/// recurses to find all requested features, dependencies and requested
+/// dependency features in a Requirements object, returning it to the resolver.
 fn build_requirements<'a, 'b: 'a>(s: &'a Summary, method: &'b Method)
                                   -> CargoResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
@@ -1220,12 +1217,13 @@ impl<'a> Context<'a> {
 
     fn build_deps(&mut self,
                   registry: &mut Registry,
+                  parent: Option<&Summary>,
                   candidate: &Summary,
                   method: &Method) -> ActivateResult<Vec<DepInfo>> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let deps = self.resolve_features(candidate, method)?;
+        let deps = self.resolve_features(parent,candidate, method)?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -1336,6 +1334,7 @@ impl<'a> Context<'a> {
 
     /// Return all dependencies and the features we want from them.
     fn resolve_features<'b>(&mut self,
+                            parent: Option<&Summary>,
                             s: &'b Summary,
                             method: &'b Method)
                             -> ActivateResult<Vec<(Dependency, Vec<String>)>> {
@@ -1387,7 +1386,11 @@ impl<'a> Context<'a> {
                                    .map(|s| &s[..])
                                    .collect::<Vec<&str>>();
             let features = unknown.join(", ");
-            return Err((s.package_id().clone(), ConflictReason::MissingFeatures(features)))?;
+            return Err(match parent {
+                None => format_err!("Package `{}` does not have these features: `{}`",
+                    s.package_id(), features).into(),
+                Some(p) => (p.package_id().clone(), ConflictReason::MissingFeatures(features)).into(),
+            });
         }
 
         // Record what list of features is active for this package.
