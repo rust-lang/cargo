@@ -65,7 +65,7 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
 
         Some(resolve)
     } else {
-        None
+        ops::load_pkg_lockfile(ws)?
     };
 
     let method = if all_features {

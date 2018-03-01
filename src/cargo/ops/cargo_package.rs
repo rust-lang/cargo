@@ -12,6 +12,7 @@ use tar::{Archive, Builder, Header, EntryType};
 use core::{Package, Workspace, Source, SourceId};
 use sources::PathSource;
 use util::{self, internal, Config, FileLock};
+use util::paths;
 use util::errors::{CargoResult, CargoResultExt};
 use ops::{self, DefaultExecutor};
 
@@ -28,6 +29,7 @@ pub struct PackageOpts<'cfg> {
 
 pub fn package(ws: &Workspace,
                opts: &PackageOpts) -> CargoResult<Option<FileLock>> {
+    ops::resolve_ws(ws)?;
     let pkg = ws.current()?;
     let config = ws.config();
 
@@ -47,6 +49,9 @@ pub fn package(ws: &Workspace,
         let mut list: Vec<_> = src.list_files(pkg)?.iter().map(|file| {
             util::without_prefix(file, root).unwrap().to_path_buf()
         }).collect();
+        if include_lockfile(&pkg) {
+            list.push("Cargo.lock".into());
+        }
         list.sort();
         for file in list.iter() {
             println!("{}", file.display());
@@ -89,6 +94,11 @@ pub fn package(ws: &Workspace,
         })?;
     }
     Ok(Some(dst))
+}
+
+fn include_lockfile(pkg: &Package) -> bool {
+    pkg.manifest().publish_lockfile() &&
+        pkg.targets().iter().any(|t| t.is_example() || t.is_bin())
 }
 
 // check that the package has some piece of metadata that a human can
@@ -265,6 +275,22 @@ fn tar(ws: &Workspace,
             })?;
         }
     }
+
+    if include_lockfile(pkg) {
+        let toml = paths::read(&ws.root().join("Cargo.lock"))?;
+        let path = format!("{}-{}{}Cargo.lock", pkg.name(), pkg.version(),
+                           path::MAIN_SEPARATOR);
+        let mut header = Header::new_ustar();
+        header.set_path(&path)?;
+        header.set_entry_type(EntryType::file());
+        header.set_mode(0o644);
+        header.set_size(toml.len() as u64);
+        header.set_cksum();
+        ar.append(&header, toml.as_bytes()).chain_err(|| {
+            internal("could not archive source file `Cargo.lock`")
+        })?;
+    }
+
     let encoder = ar.into_inner()?;
     encoder.finish()?;
     Ok(())
