@@ -113,11 +113,8 @@ error: failed to select a version for `bar`.
     ... required by package `foo v0.0.1 ([..])`
 versions that meet the requirements `*` are: 0.0.1
 
-the package `bar` depends on `bar`, with features: `bar` but it does not have these features.
-package `bar v0.0.1 ([..])`
-    ... which is depended on by `foo v0.0.1 ([..])`
+the package `foo` depends on `bar`, with features: `bar` but `bar` does not have these features.
 
-all possible versions conflict with previously selected packages.
 
 failed to select a version for `bar` which could resolve this conflict"));
 
