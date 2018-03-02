@@ -304,8 +304,8 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
 
     let f = GzDecoder::new(tar.file());
     let dst = tar.parent().join(&format!("{}-{}", pkg.name(), pkg.version()));
-    if fs::metadata(&dst).is_ok() {
-        fs::remove_dir_all(&dst)?;
+    if dst.exists() {
+        paths::remove_dir_all(&dst)?;
     }
     let mut archive = Archive::new(f);
     archive.unpack(dst.parent().unwrap())?;

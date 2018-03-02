@@ -12,6 +12,7 @@ use url::Url;
 
 use core::GitReference;
 use util::{ToUrl, internal, Config, network, Progress};
+use util::paths;
 use util::errors::{CargoResult, CargoResultExt, CargoError};
 
 #[derive(PartialEq, Clone, Debug)]
@@ -87,30 +88,40 @@ impl GitRemote {
 
     pub fn rev_for(&self, path: &Path, reference: &GitReference)
                    -> CargoResult<GitRevision> {
-        let db = self.db_at(path)?;
-        db.rev_for(reference)
+        reference.resolve(&self.db_at(path)?.repo)
     }
 
-    pub fn checkout(&self, into: &Path, cargo_config: &Config) -> CargoResult<GitDatabase> {
-        let repo = match git2::Repository::open(into) {
-            Ok(mut repo) => {
-                self.fetch_into(&mut repo, cargo_config).chain_err(|| {
-                    format!("failed to fetch into {}", into.display())
-                })?;
-                repo
+    pub fn checkout(&self,
+                    into: &Path,
+                    reference: &GitReference,
+                    cargo_config: &Config)
+        -> CargoResult<(GitDatabase, GitRevision)>
+    {
+        let mut repo_and_rev = None;
+        if let Ok(mut repo) = git2::Repository::open(into) {
+            self.fetch_into(&mut repo, cargo_config).chain_err(|| {
+                format!("failed to fetch into {}", into.display())
+            })?;
+            if let Ok(rev) = reference.resolve(&repo) {
+                repo_and_rev = Some((repo, rev));
             }
-            Err(..) => {
-                self.clone_into(into, cargo_config).chain_err(|| {
+        }
+        let (repo, rev) = match repo_and_rev {
+            Some(pair) => pair,
+            None => {
+                let repo = self.clone_into(into, cargo_config).chain_err(|| {
                     format!("failed to clone into: {}", into.display())
-                })?
+                })?;
+                let rev = reference.resolve(&repo)?;
+                (repo, rev)
             }
         };
 
-        Ok(GitDatabase {
+        Ok((GitDatabase {
             remote: self.clone(),
             path: into.to_path_buf(),
             repo,
-        })
+        }, rev))
     }
 
     pub fn db_at(&self, db_path: &Path) -> CargoResult<GitDatabase> {
@@ -130,7 +141,7 @@ impl GitRemote {
 
     fn clone_into(&self, dst: &Path, cargo_config: &Config) -> CargoResult<git2::Repository> {
         if fs::metadata(&dst).is_ok() {
-            fs::remove_dir_all(dst)?;
+            paths::remove_dir_all(dst)?;
         }
         fs::create_dir_all(dst)?;
         let mut repo = git2::Repository::init_bare(dst)?;
@@ -142,54 +153,30 @@ impl GitRemote {
 impl GitDatabase {
     pub fn copy_to(&self, rev: GitRevision, dest: &Path, cargo_config: &Config)
                    -> CargoResult<GitCheckout> {
-        let checkout = match git2::Repository::open(dest) {
-            Ok(repo) => {
-                let mut checkout = GitCheckout::new(dest, self, rev, repo);
-                if !checkout.is_fresh() {
-                    checkout.fetch(cargo_config)?;
-                    checkout.reset(cargo_config)?;
-                    assert!(checkout.is_fresh());
+        let mut checkout = None;
+        if let Ok(repo) = git2::Repository::open(dest) {
+            let mut co = GitCheckout::new(dest, self, rev.clone(), repo);
+            if !co.is_fresh() {
+                // After a successful fetch operation do a sanity check to
+                // ensure we've got the object in our database to reset to. This
+                // can fail sometimes for corrupt repositories where the fetch
+                // operation succeeds but the object isn't actually there.
+                co.fetch(cargo_config)?;
+                if co.has_object() {
+                    co.reset(cargo_config)?;
+                    assert!(co.is_fresh());
+                    checkout = Some(co);
                 }
-                checkout
+            } else {
+                checkout = Some(co);
             }
-            Err(..) => GitCheckout::clone_into(dest, self, rev, cargo_config)?,
+        };
+        let checkout = match checkout {
+            Some(c) => c,
+            None => GitCheckout::clone_into(dest, self, rev, cargo_config)?,
         };
         checkout.update_submodules(cargo_config)?;
         Ok(checkout)
-    }
-
-    pub fn rev_for(&self, reference: &GitReference) -> CargoResult<GitRevision> {
-        let id = match *reference {
-            GitReference::Tag(ref s) => {
-                (|| -> CargoResult<git2::Oid> {
-                    let refname = format!("refs/tags/{}", s);
-                    let id = self.repo.refname_to_id(&refname)?;
-                    let obj = self.repo.find_object(id, None)?;
-                    let obj = obj.peel(ObjectType::Commit)?;
-                    Ok(obj.id())
-                })().chain_err(|| {
-                    format!("failed to find tag `{}`", s)
-                })?
-            }
-            GitReference::Branch(ref s) => {
-                (|| {
-                    let b = self.repo.find_branch(s, git2::BranchType::Local)?;
-                    b.get().target().ok_or_else(|| {
-                        format_err!("branch `{}` did not have a target", s)
-                    })
-                })().chain_err(|| {
-                    format!("failed to find branch `{}`", s)
-                })?
-            }
-            GitReference::Rev(ref s) => {
-                let obj = self.repo.revparse_single(s)?;
-                match obj.as_tag() {
-                    Some(tag) => tag.target_id(),
-                    None => obj.id(),
-                }
-            }
-        };
-        Ok(GitRevision(id))
     }
 
     pub fn to_short_id(&self, revision: GitRevision) -> CargoResult<GitShortID> {
@@ -200,6 +187,42 @@ impl GitDatabase {
     pub fn has_ref(&self, reference: &str) -> CargoResult<()> {
         self.repo.revparse_single(reference)?;
         Ok(())
+    }
+}
+
+impl GitReference {
+    fn resolve(&self, repo: &git2::Repository) -> CargoResult<GitRevision> {
+        let id = match *self {
+            GitReference::Tag(ref s) => {
+                (|| -> CargoResult<git2::Oid> {
+                    let refname = format!("refs/tags/{}", s);
+                    let id = repo.refname_to_id(&refname)?;
+                    let obj = repo.find_object(id, None)?;
+                    let obj = obj.peel(ObjectType::Commit)?;
+                    Ok(obj.id())
+                })().chain_err(|| {
+                    format!("failed to find tag `{}`", s)
+                })?
+            }
+            GitReference::Branch(ref s) => {
+                (|| {
+                    let b = repo.find_branch(s, git2::BranchType::Local)?;
+                    b.get().target().ok_or_else(|| {
+                        format_err!("branch `{}` did not have a target", s)
+                    })
+                })().chain_err(|| {
+                    format!("failed to find branch `{}`", s)
+                })?
+            }
+            GitReference::Rev(ref s) => {
+                let obj = repo.revparse_single(s)?;
+                match obj.as_tag() {
+                    Some(tag) => tag.target_id(),
+                    None => obj.id(),
+                }
+            }
+        };
+        Ok(GitRevision(id))
     }
 }
 
@@ -227,9 +250,7 @@ impl<'a> GitCheckout<'a> {
             format!("Couldn't mkdir {}", dirname.display())
         })?;
         if into.exists() {
-            fs::remove_dir_all(into).chain_err(|| {
-                format!("Couldn't rmdir {}", into.display())
-            })?;
+            paths::remove_dir_all(into)?;
         }
 
         // we're doing a local filesystem-to-filesystem clone so there should
@@ -285,6 +306,10 @@ impl<'a> GitCheckout<'a> {
         Ok(())
     }
 
+    fn has_object(&self) -> bool {
+        self.repo.find_object(self.revision.0, None).is_ok()
+    }
+
     fn reset(&self, config: &Config) -> CargoResult<()> {
         // If we're interrupted while performing this reset (e.g. we die because
         // of a signal) Cargo needs to be sure to try to check out this repo
@@ -295,7 +320,7 @@ impl<'a> GitCheckout<'a> {
         // ready to go. Hence if we start to do a reset, we make sure this file
         // *doesn't* exist, and then once we're done we create the file.
         let ok_file = self.location.join(".cargo-ok");
-        let _ = fs::remove_file(&ok_file);
+        let _ = paths::remove_file(&ok_file);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
         let object = self.repo.find_object(self.revision.0, None)?;
         reset(&self.repo, &object, config)?;
@@ -351,7 +376,7 @@ impl<'a> GitCheckout<'a> {
                 }
                 Err(..) => {
                     let path = parent.workdir().unwrap().join(child.path());
-                    let _ = fs::remove_dir_all(&path);
+                    let _ = paths::remove_dir_all(&path);
                     git2::Repository::init(&path)?
                 }
             };
@@ -644,10 +669,40 @@ pub fn fetch(repo: &mut git2::Repository,
     maybe_gc_repo(repo)?;
 
     debug!("doing a fetch for {}", url);
-    with_fetch_options(&repo.config()?, url, config, &mut |mut opts| {
-        debug!("initiating fetch of {} from {}", refspec, url);
-        let mut remote = repo.remote_anonymous(url.as_str())?;
-        remote.fetch(&[refspec], Some(&mut opts), None)?;
+    let git_config = git2::Config::open_default()?;
+    with_fetch_options(&git_config, url, config, &mut |mut opts| {
+        // The `fetch` operation here may fail spuriously due to a corrupt
+        // repository. It could also fail, however, for a whole slew of other
+        // reasons (aka network related reasons). We want Cargo to automatically
+        // recover from corrupt repositories, but we don't want Cargo to stomp
+        // over other legitimate errors.o
+        //
+        // Consequently we save off the error of the `fetch` operation and if it
+        // looks like a "corrupt repo" error then we blow away the repo and try
+        // again. If it looks like any other kind of error, or if we've already
+        // blown away the repository, then we want to return the error as-is.
+        let mut repo_reinitialized = false;
+        loop {
+            debug!("initiating fetch of {} from {}", refspec, url);
+            let res = repo.remote_anonymous(url.as_str())?
+                .fetch(&[refspec], Some(&mut opts), None);
+            let err = match res {
+                Ok(()) => break,
+                Err(e) => e,
+            };
+            debug!("fetch failed: {}", err);
+
+            if !repo_reinitialized && err.class() == git2::ErrorClass::Reference {
+                repo_reinitialized = true;
+                debug!("looks like this is a corrupt repository, reinitializing \
+                        and trying again");
+                if reinitialize(repo).is_ok() {
+                    continue
+                }
+            }
+
+            return Err(err.into())
+        }
         Ok(())
     })
 }
@@ -703,30 +758,33 @@ fn maybe_gc_repo(repo: &mut git2::Repository) -> CargoResult<()> {
     }
 
     // Alright all else failed, let's start over.
-    //
+    reinitialize(repo)
+}
+
+fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
     // Here we want to drop the current repository object pointed to by `repo`,
     // so we initialize temporary repository in a sub-folder, blow away the
     // existing git folder, and then recreate the git repo. Finally we blow away
     // the `tmp` folder we allocated.
     let path = repo.path().to_path_buf();
+    debug!("reinitializing git repo at {:?}", path);
     let tmp = path.join("tmp");
-    mem::replace(repo, git2::Repository::init(&tmp)?);
+    let bare = !repo.path().ends_with(".git");
+    *repo = git2::Repository::init(&tmp)?;
     for entry in path.read_dir()? {
         let entry = entry?;
         if entry.file_name().to_str() == Some("tmp") {
             continue
         }
         let path = entry.path();
-        drop(fs::remove_file(&path).or_else(|_| fs::remove_dir_all(&path)));
+        drop(paths::remove_file(&path).or_else(|_| paths::remove_dir_all(&path)));
     }
-    if repo.is_bare() {
-        mem::replace(repo, git2::Repository::init_bare(path)?);
+    if bare {
+        *repo = git2::Repository::init_bare(path)?;
     } else {
-        mem::replace(repo, git2::Repository::init(path)?);
+        *repo = git2::Repository::init(path)?;
     }
-    fs::remove_dir_all(&tmp).chain_err(|| {
-        format!("failed to remove {:?}", tmp)
-    })?;
+    paths::remove_dir_all(&tmp)?;
     Ok(())
 }
 
