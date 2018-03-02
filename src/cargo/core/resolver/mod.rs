@@ -1231,13 +1231,8 @@ impl<'a> Context<'a> {
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
         let mut deps = deps.into_iter().map(|(dep, features)| {
-            let mut candidates = self.query(registry, &dep)?;
-            // When we attempt versions for a package, we'll want to start at
-            // the maximum version and work our way down.
-            candidates.sort_by(|a, b| {
-                b.summary.version().cmp(a.summary.version())
-            });
-            Ok((dep, Rc::new(candidates), Rc::new(features)))
+            let candidates = self.query(registry, &dep)?;
+            Ok((dep, candidates, Rc::new(features)))
         }).collect::<CargoResult<Vec<DepInfo>>>()?;
 
         // Attempt to resolve dependencies with fewer candidates before trying
@@ -1257,7 +1252,13 @@ impl<'a> Context<'a> {
     /// return.
     fn query(&self,
              registry: &mut Registry,
-             dep: &Dependency) -> CargoResult<Vec<Candidate>> {
+             dep: &Dependency) -> CargoResult<Rc<Vec<Candidate>>> {
+        use ::std::cell::RefCell;
+        thread_local!(static CACHE: RefCell<BTreeMap<Dependency, Rc<Vec<Candidate>>>> = RefCell::new(BTreeMap::new()));
+        if let Some(out) = CACHE.with(|m| m.borrow().get(dep).cloned()) {
+            return Ok(out);
+        }
+
         let mut ret = Vec::new();
         registry.query(dep, &mut |s| {
             ret.push(Candidate { summary: s, replace: None });
@@ -1318,7 +1319,18 @@ impl<'a> Context<'a> {
 
             candidate.replace = replace;
         }
-        Ok(ret)
+
+        // When we attempt versions for a package, we'll want to start at
+        // the maximum version and work our way down.
+        ret.sort_unstable_by(|a, b| {
+            b.summary.version().cmp(a.summary.version())
+        });
+
+        let out = Rc::new(ret);
+
+        CACHE.with(|m| m.borrow_mut().insert(dep.clone(), out.clone()));
+
+        Ok(out)
     }
 
     fn prev_active(&self, dep: &Dependency) -> &[Summary] {
