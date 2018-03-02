@@ -541,7 +541,7 @@ impl Ord for DepsFrame {
     }
 }
 
-#[derive(Clone, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq)]
 enum ConflictReason {
     Semver,
     Links(String),
@@ -784,6 +784,7 @@ fn activate_deps_loop(
     // use (those with more candidates).
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = BinaryHeap::new();
+    let mut past_conflicting_activations: HashMap<Dependency, Vec<HashMap<PackageId, ConflictReason>>> = HashMap::new();
     for &(ref summary, ref method) in summaries {
         debug!("initial activation: {}", summary.package_id());
         let candidate = Candidate {
@@ -854,6 +855,7 @@ fn activate_deps_loop(
 
         let mut remaining_candidates = RemainingCandidates::new(&candidates);
         let mut successfully_activated = false;
+        let mut backtracked = false;
         let mut conflicting_activations = HashMap::new();
 
         while !successfully_activated {
@@ -877,6 +879,13 @@ fn activate_deps_loop(
                 // find a dependency that does have a candidate to try, and try
                 // to activate that one.
                 trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
+
+                let past = past_conflicting_activations.entry(dep.clone()).or_insert_with(Vec::new);
+                if !past.contains(&conflicting_activations) {
+                    trace!("{}[{}]>{} adding a skip {:?}", parent.name(), cur, dep.name(), conflicting_activations);
+                    past.push(conflicting_activations.clone());
+                }
+
                 find_candidate(
                     &mut backtrack_stack,
                     &parent,
@@ -892,6 +901,7 @@ fn activate_deps_loop(
                     dep = frame.dep;
                     features = frame.features;
                     conflicting_activations = frame.conflicting_activations;
+                    backtracked = true;
                     (candidate, has_another)
                 }).ok_or_else(|| {
                     activation_error(
@@ -924,6 +934,7 @@ fn activate_deps_loop(
                 None
             };
 
+            let pid = candidate.summary.package_id().clone();
             let method = Method::Required {
                 dev_deps: false,
                 features: &features,
@@ -936,7 +947,36 @@ fn activate_deps_loop(
 
             match res {
                 Ok(Some((frame, dur))) => {
-                    remaining_deps.push(frame);
+                    let mut has_past_conflicting_dep = false;
+                    if let Some(conflicting) = frame.remaining_siblings.clone().filter_map(|(_, (deb, _, _))| {
+                        past_conflicting_activations.get(&deb).and_then(|past_bad| {
+                            past_bad.iter().find(|conflicting| {
+                                conflicting
+                                    .iter()
+                                    // note: a lot of redundant work in is_active for similar debs
+                                    .all(|(con, _)| cx.is_active(con) || *con == pid)
+                            })
+                        })
+                    }).next() {
+                        conflicting_activations.extend(conflicting.clone());
+                        has_past_conflicting_dep = true;
+                    }
+                    if !has_another && has_past_conflicting_dep && !backtracked {
+                        // we have not activated ANY candidates and
+                        // we are out of choices
+                        let past = past_conflicting_activations.entry(dep.clone()).or_insert_with(Vec::new);
+                        if !past.contains(&conflicting_activations) {
+                            trace!("{}[{}]>{} adding a meta-skip {:?}", parent.name(), cur, dep.name(), conflicting_activations);
+                            past.push(conflicting_activations.clone());
+                        }
+                    }
+                    // if not has_another we we activate for the better error messages
+                    if has_past_conflicting_dep && has_another {
+                        trace!("{}[{}]>{} skipping {} ", parent.name(), cur, dep.name(), pid.version());
+                        successfully_activated = false;
+                    } else {
+                        remaining_deps.push(frame);
+                    }
                     deps_time += dur;
                 }
                 Ok(None) => (),
