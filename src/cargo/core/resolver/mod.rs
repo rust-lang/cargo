@@ -831,14 +831,7 @@ fn activate_deps_loop<'a>(
                 }
             } else {
                 // `activate` changed `cx` and then failed so put things back.
-                cur = backtrack.cur;
                 cx = backtrack.context_backup;
-                remaining_deps = backtrack.deps_backup;
-                remaining_candidates = backtrack.remaining_candidates;
-                parent = backtrack.parent;
-                dep = backtrack.dep;
-                features = backtrack.features;
-                conflicting_activations = backtrack.conflicting_activations;
             }
         }
     }
