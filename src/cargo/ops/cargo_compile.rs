@@ -155,6 +155,13 @@ impl<'a> Packages<'a> {
                     .collect()
             }
         };
+        if specs.is_empty() {
+            if ws.is_virtual() {
+                bail!("manifest path `{}` contains no package: The manifest is virtual, \
+                       and the workspace has no members.", ws.root().display())
+            }
+            bail!("no packages to compile")
+        }
         Ok(specs)
     }
 }
@@ -233,12 +240,6 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                                             no_default_features,
                                             &specs)?;
     let (packages, resolve_with_overrides) = resolve;
-
-    if specs.is_empty() {
-        bail!("manifest path `{}` contains no package: The manifest is virtual, \
-               and the workspace has no members.",
-              ws.current_manifest().display())
-    }
 
     let to_builds = specs.iter().map(|p| {
         let pkgid = p.query(resolve_with_overrides.iter())?;
