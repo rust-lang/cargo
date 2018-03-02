@@ -38,6 +38,7 @@ mod check;
 mod clean;
 mod concurrent;
 mod config;
+mod corrupt_git;
 mod cross_compile;
 mod cross_publish;
 mod death;
