@@ -778,8 +778,6 @@ fn activate_deps_loop<'a>(
                     &mut remaining_candidates,
                     &mut conflicting_activations,
                 ).ok_or_else(|| {
-                    // if we hit an activation error and we are out of other combinations
-                    // then just report that error
                     activation_error(
                         &cx,
                         registry,
@@ -827,8 +825,20 @@ fn activate_deps_loop<'a>(
 
             // Add an entry to the `backtrack_stack` so
             // we can try the next one if this one fails.
-            if has_another && successfully_activated {
-                backtrack_stack.push(backtrack);
+            if successfully_activated {
+                if has_another {
+                    backtrack_stack.push(backtrack);
+                }
+            } else {
+                // `activate` changed `cx` and then failed so put things back.
+                cur = backtrack.cur;
+                cx = backtrack.context_backup;
+                remaining_deps = backtrack.deps_backup;
+                remaining_candidates = backtrack.remaining_candidates;
+                parent = backtrack.parent;
+                dep = backtrack.dep;
+                features = backtrack.features;
+                conflicting_activations = backtrack.conflicting_activations;
             }
         }
     }
