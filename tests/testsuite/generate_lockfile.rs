@@ -88,7 +88,7 @@ fn no_index_update() {
         .build();
 
     assert_that(p.cargo("generate-lockfile"),
-                execs().with_status(0).with_stdout("")
+                execs().with_stdout("")
                     .with_stderr_contains("    Updating registry `https://github.com/rust-lang/crates.io-index`"));
 
     assert_that(p.cargo("generate-lockfile").masquerade_as_nightly_cargo().arg("-Zno-index-update"),
