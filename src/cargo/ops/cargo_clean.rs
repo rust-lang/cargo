@@ -5,6 +5,7 @@ use std::path::Path;
 use core::{Profiles, Workspace};
 use util::Config;
 use util::errors::{CargoResult, CargoResultExt};
+use util::paths;
 use ops::{self, Context, BuildConfig, Kind, Unit};
 
 pub struct CleanOptions<'a> {
@@ -99,12 +100,12 @@ fn rm_rf(path: &Path, config: &Config) -> CargoResult<()> {
     let m = fs::metadata(path);
     if m.as_ref().map(|s| s.is_dir()).unwrap_or(false) {
         config.shell().verbose(|shell| {shell.status("Removing", path.display())})?;
-        fs::remove_dir_all(path).chain_err(|| {
+        paths::remove_dir_all(path).chain_err(|| {
             format_err!("could not remove build directory")
         })?;
     } else if m.is_ok() {
         config.shell().verbose(|shell| {shell.status("Removing", path.display())})?;
-        fs::remove_file(path).chain_err(|| {
+        paths::remove_file(path).chain_err(|| {
             format_err!("failed to remove build artifact")
         })?;
     }

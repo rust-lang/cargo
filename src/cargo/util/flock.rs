@@ -9,6 +9,7 @@ use fs2::{FileExt, lock_contended_error};
 use libc;
 
 use util::Config;
+use util::paths;
 use util::errors::{CargoResult, CargoResultExt, CargoError};
 
 pub struct FileLock {
@@ -49,7 +50,7 @@ impl FileLock {
     ///
     /// This can be useful if a directory is locked with a sentinel file but it
     /// needs to be cleared out as it may be corrupt.
-    pub fn remove_siblings(&self) -> io::Result<()> {
+    pub fn remove_siblings(&self) -> CargoResult<()> {
         let path = self.path();
         for entry in path.parent().unwrap().read_dir()? {
             let entry = entry?;
@@ -58,9 +59,9 @@ impl FileLock {
             }
             let kind = entry.file_type()?;
             if kind.is_dir() {
-                fs::remove_dir_all(entry.path())?;
+                paths::remove_dir_all(entry.path())?;
             } else {
-                fs::remove_file(entry.path())?;
+                paths::remove_file(entry.path())?;
             }
         }
         Ok(())

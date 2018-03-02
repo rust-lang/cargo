@@ -6,7 +6,7 @@ use core::source::{Source, SourceId};
 use core::GitReference;
 use core::{Package, PackageId, Summary, Registry, Dependency};
 use util::Config;
-use util::errors::{CargoResult, Internal};
+use util::errors::CargoResult;
 use util::hex::short_hash;
 use sources::PathSource;
 use sources::git::utils::{GitRemote, GitRevision};
@@ -170,9 +170,7 @@ impl<'cfg> Source for GitSource<'cfg> {
 
             trace!("updating git source `{:?}`", self.remote);
 
-            let repo = self.remote.checkout(&db_path, self.config)?;
-            let rev = repo.rev_for(&self.reference).map_err(Internal::new)?;
-            (repo, rev)
+            self.remote.checkout(&db_path, &self.reference, self.config)?
         } else {
             (self.remote.db_at(&db_path)?, actual_rev.unwrap())
         };

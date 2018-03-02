@@ -34,7 +34,7 @@ matrix:
       script:
         - cargo test
         - cargo doc --no-deps
-        - (cd src/doc && mdbook build --no-create --dest-dir ../../target/doc)
+        - (cd src/doc && mdbook build --dest-dir ../../target/doc)
 
   exclude:
     - rust: stable

@@ -15,6 +15,7 @@ use core::manifest::Lto;
 use core::shell::ColorChoice;
 use util::{self, ProcessBuilder, machine_message};
 use util::{Config, internal, profile, join_paths};
+use util::paths;
 use util::errors::{CargoResult, CargoResultExt, Internal};
 use util::Freshness;
 
@@ -385,9 +386,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             if filename.extension() == Some(OsStr::new("rmeta")) {
                 let dst = root.join(filename).with_extension("rlib");
                 if dst.exists() {
-                    fs::remove_file(&dst).chain_err(|| {
-                        format!("Could not remove file: {}.", dst.display())
-                    })?;
+                    paths::remove_file(&dst)?;
                 }
             }
         }
@@ -541,9 +540,7 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                 continue
             }
             if dst.exists() {
-                fs::remove_file(&dst).chain_err(|| {
-                    format!("failed to remove: {}", dst.display())
-                })?;
+                paths::remove_file(&dst)?;
             }
 
             let link_result = if src.is_dir() {
