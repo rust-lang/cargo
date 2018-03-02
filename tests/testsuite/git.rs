@@ -855,7 +855,8 @@ git = git_project.url(), dir = p.url())));
 [UPDATING] git repository [..]
 [ERROR] Unable to update [..]
 
-To learn more, run the command again with --verbose.
+Caused by:
+  revspec '0.1.2' not found; [..]
 "));
 
     // Specifying a precise rev to the old rev shouldn't actually update

@@ -17,6 +17,7 @@ use sources::{GitSource, PathSource, SourceConfigMap};
 use util::{Config, internal};
 use util::{Filesystem, FileLock};
 use util::errors::{CargoResult, CargoResultExt};
+use util::paths;
 
 #[derive(Deserialize, Serialize)]
 #[serde(untagged)]
@@ -47,7 +48,7 @@ impl Transaction {
 impl Drop for Transaction {
     fn drop(&mut self) {
         for bin in self.bins.iter() {
-            let _ = fs::remove_file(bin);
+            let _ = paths::remove_file(bin);
         }
     }
 }
@@ -319,7 +320,7 @@ fn install_one(root: &Filesystem,
         // Don't bother grabbing a lock as we're going to blow it all away
         // anyway.
         let target_dir = ws.target_dir().into_path_unlocked();
-        fs::remove_dir_all(&target_dir)?;
+        paths::remove_dir_all(&target_dir)?;
     }
 
     Ok(())
@@ -667,7 +668,7 @@ pub fn uninstall_one(root: &Filesystem,
     write_crate_list(&crate_metadata, metadata)?;
     for bin in to_remove {
         config.shell().status("Removing", bin.display())?;
-        fs::remove_file(bin)?;
+        paths::remove_file(bin)?;
     }
 
     Ok(())
