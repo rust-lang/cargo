@@ -138,6 +138,25 @@ fn incremental_config() {
 }
 
 #[test]
+fn cargo_compile_with_workspace_excluded() {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#)
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("--all").arg("--exclude").arg("foo"),
+        execs().with_stderr_does_not_contain("[..]virtual[..]")
+            .with_stderr_contains("[..]no packages to compile")
+            .with_status(101));
+}
+
+#[test]
 fn cargo_compile_manifest_path() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
