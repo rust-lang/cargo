@@ -1,12 +1,21 @@
 command -v cargo >/dev/null 2>&1 &&
 _cargo()
 {
-	local cur prev words cword cmd
+	local cur prev words cword
 	_get_comp_words_by_ref cur prev words cword
 
 	COMPREPLY=()
 
-	cmd=${words[1]}
+	# Skip past - and + options to find the command.
+	local nwords=${#words[@]}
+	local cmd_i cmd
+	for (( cmd_i=1; cmd_i<$nwords; cmd_i++ ));
+	do
+		if [[ ! "${words[$cmd_i]}" =~ ^[+-] ]]; then
+			cmd="${words[$cmd_i]}"
+			break
+		fi
+	done
 
 	local vcs='git hg none'
 	local color='auto always never'
@@ -57,13 +66,16 @@ _cargo()
 	local opt__version="$opt_help $opt_verbose $opt_color"
 	local opt__yank="$opt_common $opt_lock --vers --undo --index --token"
 
-	if [[ $cword -eq 1 ]]; then
+	if [[ $cmd_i -ge $nwords-1 ]]; then
+		# Completion before or at the command.
 		if [[ "$cur" == -* ]]; then
 			COMPREPLY=( $( compgen -W "${opt___nocmd}" -- "$cur" ) )
+		elif [[ "$cur" == +* ]]; then
+			COMPREPLY=( $( compgen -W "$(_toolchains)" -- "$cur" ) )
 		else
 			COMPREPLY=( $( compgen -W "$__cargo_commands" -- "$cur" ) )
 		fi
-	elif [[ $cword -ge 2 ]]; then
+	else
 		case "${prev}" in
 			--vcs)
 				COMPREPLY=( $( compgen -W "$vcs" -- "$cur" ) )
@@ -208,4 +220,27 @@ _get_targets(){
 	done
 	echo "${TARGETS[@]}"
 }
+
+_toolchains(){
+	local result=()
+	local toolchains=$(rustup toolchain list)
+	local channels="nightly|beta|stable|[0-9]\.[0-9]{1,2}\.[0-9]"
+	local date="[0-9]{4}-[0-9]{2}-[0-9]{2}"
+	while read line
+	do
+		# Strip " (default)"
+		line=${line%% *}
+		if [[ "$line" =~ ^($channels)(-($date))?(-.*) ]]; then
+			if [[ -z ${BASH_REMATCH[3]} ]]; then
+				result+=("+${BASH_REMATCH[1]}")
+			else
+				# channel-date
+				result+=("+${BASH_REMATCH[1]}-${BASH_REMATCH[3]}")
+			fi
+			result+=("+$line")
+		fi
+	done <<< "$toolchains"
+	echo "${result[@]}"
+}
+
 # vim:ft=sh
