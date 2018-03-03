@@ -33,7 +33,7 @@ impl<'cfg> DirectorySource<'cfg> {
         DirectorySource {
             source_id: id.clone(),
             root: path.to_path_buf(),
-            config: config,
+            config,
             packages: HashMap::new(),
         }
     }

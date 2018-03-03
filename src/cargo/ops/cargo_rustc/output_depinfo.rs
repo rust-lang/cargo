@@ -1,10 +1,11 @@
 use std::collections::HashSet;
-use std::io::{Write, BufWriter, ErrorKind};
-use std::fs::{self, File};
+use std::io::{Write, BufWriter};
+use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use ops::{Context, Unit};
 use util::{CargoResult, internal};
+use util::paths;
 use ops::cargo_rustc::fingerprint;
 
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
@@ -81,13 +82,12 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
                     write!(outfile, " {}", render_filename(dep, basedir)?)?;
                 }
                 writeln!(outfile, "")?;
-            } else if let Err(err) = fs::remove_file(output_path) {
-                // dep-info generation failed, so delete output file. This will usually
-                // cause the build system to always rerun the build rule, which is correct
-                // if inefficient.
-                if err.kind() != ErrorKind::NotFound {
-                    return Err(err.into());
-                }
+
+            // dep-info generation failed, so delete output file. This will
+            // usually cause the build system to always rerun the build
+            // rule, which is correct if inefficient.
+            } else if output_path.exists() {
+                paths::remove_file(output_path)?;
             }
         }
     }

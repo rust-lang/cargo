@@ -12,6 +12,7 @@ use tar::{Archive, Builder, Header, EntryType};
 use core::{Package, Workspace, Source, SourceId};
 use sources::PathSource;
 use util::{self, internal, Config, FileLock};
+use util::paths;
 use util::errors::{CargoResult, CargoResultExt};
 use ops::{self, DefaultExecutor};
 
@@ -28,6 +29,7 @@ pub struct PackageOpts<'cfg> {
 
 pub fn package(ws: &Workspace,
                opts: &PackageOpts) -> CargoResult<Option<FileLock>> {
+    ops::resolve_ws(ws)?;
     let pkg = ws.current()?;
     let config = ws.config();
 
@@ -47,6 +49,9 @@ pub fn package(ws: &Workspace,
         let mut list: Vec<_> = src.list_files(pkg)?.iter().map(|file| {
             util::without_prefix(file, root).unwrap().to_path_buf()
         }).collect();
+        if include_lockfile(&pkg) {
+            list.push("Cargo.lock".into());
+        }
         list.sort();
         for file in list.iter() {
             println!("{}", file.display());
@@ -89,6 +94,11 @@ pub fn package(ws: &Workspace,
         })?;
     }
     Ok(Some(dst))
+}
+
+fn include_lockfile(pkg: &Package) -> bool {
+    pkg.manifest().publish_lockfile() &&
+        pkg.targets().iter().any(|t| t.is_example() || t.is_bin())
 }
 
 // check that the package has some piece of metadata that a human can
@@ -146,7 +156,7 @@ fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
             let path = p.manifest_path();
             let path = path.strip_prefix(workdir).unwrap_or(path);
             if let Ok(status) = repo.status_file(path) {
-                if (status & git2::STATUS_IGNORED).is_empty() {
+                if (status & git2::Status::IGNORED).is_empty() {
                     debug!("Cargo.toml found in repo, checking if dirty");
                     return git(p, src, &repo)
                 }
@@ -165,7 +175,7 @@ fn check_not_dirty(p: &Package, src: &PathSource) -> CargoResult<()> {
         let dirty = src.list_files(p)?.iter().filter(|file| {
             let relative = file.strip_prefix(workdir).unwrap();
             if let Ok(status) = repo.status_file(relative) {
-                status != git2::STATUS_CURRENT
+                status != git2::Status::CURRENT
             } else {
                 false
             }
@@ -265,6 +275,22 @@ fn tar(ws: &Workspace,
             })?;
         }
     }
+
+    if include_lockfile(pkg) {
+        let toml = paths::read(&ws.root().join("Cargo.lock"))?;
+        let path = format!("{}-{}{}Cargo.lock", pkg.name(), pkg.version(),
+                           path::MAIN_SEPARATOR);
+        let mut header = Header::new_ustar();
+        header.set_path(&path)?;
+        header.set_entry_type(EntryType::file());
+        header.set_mode(0o644);
+        header.set_size(toml.len() as u64);
+        header.set_cksum();
+        ar.append(&header, toml.as_bytes()).chain_err(|| {
+            internal("could not archive source file `Cargo.lock`")
+        })?;
+    }
+
     let encoder = ar.into_inner()?;
     encoder.finish()?;
     Ok(())
@@ -278,8 +304,8 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
 
     let f = GzDecoder::new(tar.file());
     let dst = tar.parent().join(&format!("{}-{}", pkg.name(), pkg.version()));
-    if fs::metadata(&dst).is_ok() {
-        fs::remove_dir_all(&dst)?;
+    if dst.exists() {
+        paths::remove_dir_all(&dst)?;
     }
     let mut archive = Archive::new(f);
     archive.unpack(dst.parent().unwrap())?;
@@ -292,7 +318,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
     let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
 
     ops::compile_ws(&ws, None, &ops::CompileOptions {
-        config: config,
+        config,
         jobs: opts.jobs,
         target: opts.target,
         features: &[],

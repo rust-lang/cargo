@@ -44,7 +44,7 @@ fn maybe_spurious(err: &Error) -> bool {
 ///
 /// ```ignore
 /// use util::network;
-/// cargo_result = network.with_retry(&config, || something.download());
+/// cargo_result = network::with_retry(&config, || something.download());
 /// ```
 pub fn with_retry<T, F>(config: &Config, mut callback: F) -> CargoResult<T>
     where F: FnMut() -> CargoResult<T>

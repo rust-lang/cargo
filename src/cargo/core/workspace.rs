@@ -126,14 +126,14 @@ impl<'cfg> Workspace<'cfg> {
         let target_dir = config.target_dir()?;
 
         let mut ws = Workspace {
-            config: config,
+            config,
             current_manifest: manifest_path.to_path_buf(),
             packages: Packages {
-                config: config,
+                config,
                 packages: HashMap::new(),
             },
             root_manifest: None,
-            target_dir: target_dir,
+            target_dir,
             members: Vec::new(),
             default_members: Vec::new(),
             is_ephemeral: false,
@@ -143,10 +143,6 @@ impl<'cfg> Workspace<'cfg> {
         ws.find_members()?;
         ws.validate()?;
         Ok(ws)
-    }
-
-    pub fn current_manifest(&self) -> &Path {
-        &self.current_manifest
     }
 
     /// Creates a "temporary workspace" from one package which only contains
@@ -163,10 +159,10 @@ impl<'cfg> Workspace<'cfg> {
                      target_dir: Option<Filesystem>,
                      require_optional_deps: bool) -> CargoResult<Workspace<'cfg>> {
         let mut ws = Workspace {
-            config: config,
+            config,
             current_manifest: package.manifest_path().to_path_buf(),
             packages: Packages {
-                config: config,
+                config,
                 packages: HashMap::new(),
             },
             root_manifest: None,
@@ -174,7 +170,7 @@ impl<'cfg> Workspace<'cfg> {
             members: Vec::new(),
             default_members: Vec::new(),
             is_ephemeral: true,
-            require_optional_deps: require_optional_deps,
+            require_optional_deps,
         };
         {
             let key = ws.current_manifest.parent().unwrap();
@@ -346,7 +342,7 @@ impl<'cfg> Workspace<'cfg> {
                 match *self.packages.load(&ances_manifest_path)?.workspace_config() {
                     WorkspaceConfig::Root(ref ances_root_config) => {
                         debug!("find_root - found a root checking exclusion");
-                        if !ances_root_config.is_excluded(&manifest_path) {
+                        if !ances_root_config.is_excluded(manifest_path) {
                             debug!("find_root - found!");
                             return Ok(Some(ances_manifest_path))
                         }
@@ -449,13 +445,10 @@ impl<'cfg> Workspace<'cfg> {
             return Ok(())
         }
 
-        match *self.packages.load(root_manifest)?.workspace_config() {
-            WorkspaceConfig::Root(ref root_config) => {
-                if root_config.is_excluded(&manifest_path) {
-                    return Ok(())
-                }
+        if let WorkspaceConfig::Root(ref root_config) = *self.packages.load(root_manifest)?.workspace_config() {
+            if root_config.is_excluded(&manifest_path) {
+                return Ok(())
             }
-            _ => {}
         }
 
         debug!("find_members - {}", manifest_path.display());

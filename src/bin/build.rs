@@ -108,13 +108,13 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                                     &options.flag_package)?;
 
     let opts = CompileOptions {
-        config: config,
+        config,
         jobs: options.flag_jobs,
         target: options.flag_target.as_ref().map(|t| &t[..]),
         features: &options.flag_features,
         all_features: options.flag_all_features,
         no_default_features: options.flag_no_default_features,
-        spec: spec,
+        spec,
         mode: ops::CompileMode::Build,
         release: options.flag_release,
         filter: ops::CompileFilter::new(options.flag_lib,

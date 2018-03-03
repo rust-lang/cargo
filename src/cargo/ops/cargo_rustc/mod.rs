@@ -9,12 +9,13 @@ use std::sync::Arc;
 use same_file::is_same_file;
 use serde_json;
 
-use core::{Package, PackageId, PackageSet, Target, Resolve};
+use core::{Feature, Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles, Workspace};
 use core::manifest::Lto;
 use core::shell::ColorChoice;
 use util::{self, ProcessBuilder, machine_message};
 use util::{Config, internal, profile, join_paths};
+use util::paths;
 use util::errors::{CargoResult, CargoResultExt, Internal};
 use util::Freshness;
 
@@ -139,7 +140,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                                      config: &'cfg Config,
                                      build_config: BuildConfig,
                                      profiles: &'a Profiles,
-                                     exec: Arc<Executor>)
+                                     exec: &Arc<Executor>)
                                      -> CargoResult<Compilation<'cfg>> {
     let units = pkg_targets.iter().flat_map(|&(pkg, ref targets)| {
         let default_kind = if build_config.requested_target.is_some() {
@@ -149,9 +150,9 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         };
         targets.iter().map(move |&(target, profile)| {
             Unit {
-                pkg: pkg,
-                target: target,
-                profile: profile,
+                pkg,
+                target,
+                profile,
                 kind: if target.for_host() {Kind::Host} else {default_kind},
             }
         })
@@ -173,7 +174,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
         // part of this, that's all done next as part of the `execute`
         // function which will run everything in order with proper
         // parallelism.
-        compile(&mut cx, &mut queue, unit, Arc::clone(&exec))?;
+        compile(&mut cx, &mut queue, unit, exec)?;
     }
 
     // Now that we've figured out everything that we're going to do, do it!
@@ -199,7 +200,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                 cx.compilation.binaries.push(bindst.clone());
             } else if unit.target.is_lib() {
                 let pkgid = unit.pkg.package_id().clone();
-                cx.compilation.libraries.entry(pkgid).or_insert(HashSet::new())
+                cx.compilation.libraries.entry(pkgid).or_insert_with(HashSet::new)
                   .insert((unit.target.clone(), dst.clone()));
             }
         }
@@ -210,7 +211,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             if dep.profile.run_custom_build {
                 let out_dir = cx.build_script_out_dir(dep).display().to_string();
                 cx.compilation.extra_env.entry(dep.pkg.package_id().clone())
-                  .or_insert(Vec::new())
+                  .or_insert_with(Vec::new)
                   .push(("OUT_DIR".to_string(), out_dir));
             }
 
@@ -220,7 +221,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             let v = cx.target_filenames(dep)?;
             cx.compilation.libraries
                 .entry(unit.pkg.package_id().clone())
-                .or_insert(HashSet::new())
+                .or_insert_with(HashSet::new)
                 .extend(v.iter().map(|&(ref f, _, _)| {
                     (dep.target.clone(), f.clone())
                 }));
@@ -232,7 +233,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
                 feats.iter().map(|feat| format!("feature=\"{}\"", feat)).collect()
             });
         }
-        let rustdocflags = cx.rustdocflags_args(&unit)?;
+        let rustdocflags = cx.rustdocflags_args(unit)?;
         if !rustdocflags.is_empty() {
             cx.compilation.rustdocflags.entry(unit.pkg.package_id().clone())
                 .or_insert(rustdocflags);
@@ -261,7 +262,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
 fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
                          jobs: &mut JobQueue<'a>,
                          unit: &Unit<'a>,
-                         exec: Arc<Executor>) -> CargoResult<()> {
+                         exec: &Arc<Executor>) -> CargoResult<()> {
     if !cx.compiled.insert(*unit) {
         return Ok(())
     }
@@ -283,7 +284,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         let work = if unit.profile.doc {
             rustdoc(cx, unit)?
         } else {
-            rustc(cx, unit, Arc::clone(&exec))?
+            rustc(cx, unit, exec)?
         };
         // Need to link targets on both the dirty and fresh
         let dirty = work.then(link_targets(cx, unit, false)?).then(dirty);
@@ -300,7 +301,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
 
     // Be sure to compile all dependencies of this target as well.
     for unit in cx.dep_targets(unit)?.iter() {
-        compile(cx, jobs, unit, exec.clone())?;
+        compile(cx, jobs, unit, exec)?;
     }
 
     Ok(())
@@ -308,7 +309,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
 
 fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                    unit: &Unit<'a>,
-                   exec: Arc<Executor>) -> CargoResult<Work> {
+                   exec: &Arc<Executor>) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
 
     let name = unit.pkg.name().to_string();
@@ -359,7 +360,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
     let root_output = cx.target_root().to_path_buf();
     let pkg_root = unit.pkg.root().to_path_buf();
-    let cwd = rustc.get_cwd().unwrap_or(cx.config.cwd()).to_path_buf();
+    let cwd = rustc.get_cwd().unwrap_or_else(|| cx.config.cwd()).to_path_buf();
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -385,9 +386,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             if filename.extension() == Some(OsStr::new("rmeta")) {
                 let dst = root.join(filename).with_extension("rlib");
                 if dst.exists() {
-                    fs::remove_file(&dst).chain_err(|| {
-                        format!("Could not remove file: {}.", dst.display())
-                    })?;
+                    paths::remove_file(&dst)?;
                 }
             }
         }
@@ -541,9 +540,7 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                 continue
             }
             if dst.exists() {
-                fs::remove_file(&dst).chain_err(|| {
-                    format!("failed to remove: {}", dst.display())
-                })?;
+                paths::remove_file(&dst)?;
             }
 
             let link_result = if src.is_dir() {
@@ -576,9 +573,9 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                 package_id: &package_id,
                 target: &target,
                 profile: &profile,
-                features: features,
+                features,
                 filenames: destinations,
-                fresh: fresh,
+                fresh,
             });
         }
         Ok(())
@@ -747,7 +744,7 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let Profile {
         ref opt_level, ref lto, codegen_units, ref rustc_args, debuginfo,
         debug_assertions, overflow_checks, rpath, test, doc: _doc,
-        run_custom_build, ref panic, rustdoc_args: _, check, incremental: _,
+        run_custom_build, ref panic, check, ..
     } = *unit.profile;
     assert!(!run_custom_build);
 
@@ -803,6 +800,11 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         if !cx.used_in_plugin.contains(unit) {
             cmd.arg("-C").arg(format!("panic={}", panic));
         }
+    }
+    let manifest = unit.pkg.manifest();
+
+    if manifest.features().is_enabled(Feature::epoch()) {
+        cmd.arg(format!("-Zepoch={}", manifest.epoch()));
     }
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually
@@ -930,8 +932,7 @@ fn build_deps_args<'a, 'cfg>(cmd: &mut ProcessBuilder,
     // error in the future, see PR #4797
     if !dep_targets.iter().any(|u| !u.profile.doc && u.target.linkable()) {
         if let Some(u) = dep_targets.iter()
-                         .filter(|u| !u.profile.doc && u.target.is_lib())
-                         .next() {
+                         .find(|u| !u.profile.doc && u.target.is_lib()) {
                 cx.config.shell().warn(format!("The package `{}` \
 provides no linkable target. The compiler might raise an error while compiling \
 `{}`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `{}`'s \
@@ -942,12 +943,12 @@ Cargo.toml. This warning might turn into a hard error in the future.",
             }
     }
 
-    for unit in dep_targets {
-        if unit.profile.run_custom_build {
-            cmd.env("OUT_DIR", &cx.build_script_out_dir(&unit));
+    for dep in dep_targets {
+        if dep.profile.run_custom_build {
+            cmd.env("OUT_DIR", &cx.build_script_out_dir(&dep));
         }
-        if unit.target.linkable() && !unit.profile.doc {
-            link_to(cmd, cx, &unit)?;
+        if dep.target.linkable() && !dep.profile.doc {
+            link_to(cmd, cx, unit, &dep)?;
         }
     }
 
@@ -955,15 +956,31 @@ Cargo.toml. This warning might turn into a hard error in the future.",
 
     fn link_to<'a, 'cfg>(cmd: &mut ProcessBuilder,
                          cx: &mut Context<'a, 'cfg>,
-                         unit: &Unit<'a>) -> CargoResult<()> {
-        for &(ref dst, _, file_type) in cx.target_filenames(unit)?.iter() {
+                         current: &Unit<'a>,
+                         dep: &Unit<'a>) -> CargoResult<()> {
+        for &(ref dst, _, file_type) in cx.target_filenames(dep)?.iter() {
             if file_type != TargetFileType::Linkable {
                 continue
             }
             let mut v = OsString::new();
-            v.push(&unit.target.crate_name());
+
+            // Unfortunately right now Cargo doesn't have a great way to get a
+            // 1:1 mapping of entries in `dependencies()` to the actual crate
+            // we're depending on. Instead we're left to do some guesswork here
+            // to figure out what `Dependency` the `dep` unit corresponds to in
+            // `current` to see if we're renaming it.
+            //
+            // This I believe mostly works out for now, but we'll likely want
+            // to tighten up this in the future.
+            let name = current.pkg.dependencies()
+                .iter()
+                .filter(|d| d.matches_ignoring_source(dep.pkg.summary()))
+                .filter_map(|d| d.rename())
+                .next();
+
+            v.push(name.unwrap_or(&dep.target.crate_name()));
             v.push("=");
-            v.push(cx.out_dir(unit));
+            v.push(cx.out_dir(dep));
             v.push(&path::MAIN_SEPARATOR.to_string());
             v.push(&dst.file_name().unwrap());
             cmd.arg("--extern").arg(&v);

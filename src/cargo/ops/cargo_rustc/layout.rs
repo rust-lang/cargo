@@ -117,7 +117,7 @@ impl Layout {
             incremental: root.join("incremental"),
             fingerprint: root.join(".fingerprint"),
             examples: root.join("examples"),
-            root: root,
+            root,
             _lock: lock,
         })
     }

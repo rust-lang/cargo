@@ -16,6 +16,7 @@ use curl::easy::Easy;
 use jobserver;
 use serde::{Serialize, Serializer};
 use toml;
+use lazycell::LazyCell;
 
 use core::shell::Verbosity;
 use core::{Shell, CliUnstable};
@@ -26,7 +27,7 @@ use util::Rustc;
 use util::errors::{CargoResult, CargoResultExt, CargoError, internal};
 use util::paths;
 use util::toml as cargo_toml;
-use util::{Filesystem, LazyCell};
+use util::Filesystem;
 
 use self::ConfigValue as CV;
 
@@ -83,7 +84,7 @@ impl Config {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
             rustc: LazyCell::new(),
-            cwd: cwd,
+            cwd,
             values: LazyCell::new(),
             cargo_exe: LazyCell::new(),
             rustdoc: LazyCell::new(),
@@ -144,18 +145,18 @@ impl Config {
 
     /// Get the path to the `rustdoc` executable
     pub fn rustdoc(&self) -> CargoResult<&Path> {
-        self.rustdoc.get_or_try_init(|| self.get_tool("rustdoc")).map(AsRef::as_ref)
+        self.rustdoc.try_borrow_with(|| self.get_tool("rustdoc")).map(AsRef::as_ref)
     }
 
     /// Get the path to the `rustc` executable
     pub fn rustc(&self) -> CargoResult<&Rustc> {
-        self.rustc.get_or_try_init(|| Rustc::new(self.get_tool("rustc")?,
+        self.rustc.try_borrow_with(|| Rustc::new(self.get_tool("rustc")?,
                                                  self.maybe_get_tool("rustc_wrapper")?))
     }
 
     /// Get the path to the `cargo` executable
     pub fn cargo_exe(&self) -> CargoResult<&Path> {
-        self.cargo_exe.get_or_try_init(|| {
+        self.cargo_exe.try_borrow_with(|| {
             fn from_current_exe() -> CargoResult<PathBuf> {
                 // Try fetching the path to `cargo` using env::current_exe().
                 // The method varies per operating system and might fail; in particular,
@@ -207,7 +208,7 @@ impl Config {
     }
 
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
-        self.values.get_or_try_init(|| self.load_values())
+        self.values.try_borrow_with(|| self.load_values())
     }
 
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
@@ -648,7 +649,7 @@ impl Config {
     }
 
     pub fn http(&self) -> CargoResult<&RefCell<Easy>> {
-        let http = self.easy.get_or_try_init(|| {
+        let http = self.easy.try_borrow_with(|| {
             ops::http_handle(self).map(RefCell::new)
         })?;
         {

@@ -54,7 +54,7 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     let ws = Workspace::new(&root, config)?;
     ops::package(&ws, &ops::PackageOpts {
-        config: config,
+        config,
         verify: !options.flag_no_verify,
         list: options.flag_list,
         check_metadata: !options.flag_no_metadata,

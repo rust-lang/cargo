@@ -56,7 +56,7 @@ impl<'cfg> SourceConfigMap<'cfg> {
         let mut base = SourceConfigMap {
             cfgs: HashMap::new(),
             id2name: HashMap::new(),
-            config: config,
+            config,
         };
         base.add("crates-io", SourceConfig {
             id: SourceId::crates_io(config)?,
@@ -208,7 +208,7 @@ restore the source replacement configuration to continue the build
 
         self.add(name, SourceConfig {
             id: src,
-            replace_with: replace_with,
+            replace_with,
         });
 
         return Ok(());

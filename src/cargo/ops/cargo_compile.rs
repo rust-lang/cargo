@@ -70,14 +70,14 @@ impl<'a> CompileOptions<'a> {
     pub fn default(config: &'a Config, mode: CompileMode) -> CompileOptions<'a>
     {
         CompileOptions {
-            config: config,
+            config,
             jobs: None,
             target: None,
             features: &[],
             all_features: false,
             no_default_features: false,
             spec: ops::Packages::Packages(&[]),
-            mode: mode,
+            mode,
             release: false,
             filter: CompileFilter::Default { required_features_filterable: false },
             message_format: MessageFormat::Human,
@@ -155,6 +155,13 @@ impl<'a> Packages<'a> {
                     .collect()
             }
         };
+        if specs.is_empty() {
+            if ws.is_virtual() {
+                bail!("manifest path `{}` contains no package: The manifest is virtual, \
+                       and the workspace has no members.", ws.root().display())
+            }
+            bail!("no packages to compile")
+        }
         Ok(specs)
     }
 }
@@ -240,12 +247,6 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                                               )?;
     let (packages, resolve_with_overrides) = resolve;
 
-    if specs.is_empty() {
-        bail!("manifest path `{}` contains no package: The manifest is virtual, \
-               and the workspace has no members.",
-              ws.current_manifest().display())
-    }
-
     let to_builds = specs.iter().map(|p| {
         let pkgid = p.query(resolve_with_overrides.iter())?;
         let p = packages.get(pkgid)?;
@@ -327,7 +328,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                              config,
                              build_config,
                              profiles,
-                             exec)?
+                             &exec)?
     };
 
     ret.to_doc_test = to_builds.into_iter().cloned().collect();
@@ -473,7 +474,7 @@ fn generate_auto_targets<'a>(mode: CompileMode, targets: &'a [Target],
             targets.iter().filter(|t| t.benched()).map(|t| {
                 BuildProposal {
                     target: t,
-                    profile: profile,
+                    profile,
                     required: !required_features_filterable,
                 }
             }).collect::<Vec<_>>()
@@ -507,7 +508,7 @@ fn generate_auto_targets<'a>(mode: CompileMode, targets: &'a [Target],
                 t.is_bin() || t.is_lib()
             }).map(|t| BuildProposal {
                 target: t,
-                profile: profile,
+                profile,
                 required: !required_features_filterable,
             }).collect()
         }
@@ -519,7 +520,7 @@ fn generate_auto_targets<'a>(mode: CompileMode, targets: &'a [Target],
                 )
             }).map(|t| BuildProposal {
                 target: t,
-                profile: profile,
+                profile,
                 required: !required_features_filterable,
             }).collect()
         }
@@ -528,7 +529,7 @@ fn generate_auto_targets<'a>(mode: CompileMode, targets: &'a [Target],
                 if t.doctested() {
                     return vec![BuildProposal {
                         target: t,
-                        profile: profile,
+                        profile,
                         required: !required_features_filterable,
                     }];
                 }
@@ -550,7 +551,7 @@ fn propose_indicated_targets<'a>(pkg: &'a Package,
             let result = pkg.targets().iter().filter(|t| is_expected_kind(t)).map(|t| {
                 BuildProposal {
                     target: t,
-                    profile: profile,
+                    profile,
                     required: false,
                 }
             });
@@ -579,7 +580,7 @@ fn propose_indicated_targets<'a>(pkg: &'a Package,
                 debug!("found {} `{}`", desc, name);
                 targets.push(BuildProposal {
                     target: t,
-                    profile: profile,
+                    profile,
                     required: true,
                 });
             }
@@ -668,7 +669,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                 if let Some(t) = pkg.targets().iter().find(|t| t.is_lib()) {
                     targets.push(BuildProposal {
                         target: t,
-                        profile: profile,
+                        profile,
                         required: true,
                     });
                 } else if !all_targets {
@@ -739,7 +740,7 @@ fn scrape_build_config(config: &Config,
     let mut base = ops::BuildConfig {
         host_triple: config.rustc()?.host.clone(),
         requested_target: target.clone(),
-        jobs: jobs,
+        jobs,
         ..Default::default()
     };
     base.host = scrape_target_config(config, &base.host_triple)?;

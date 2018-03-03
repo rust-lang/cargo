@@ -2,6 +2,11 @@
 #![cfg_attr(test, deny(warnings))]
 #![recursion_limit="128"]
 
+// Currently, Cargo does not use clippy for its source code.
+// But if someone runs it they should know that
+// @alexcrichton disagree with clippy on some style things
+#![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
+
 #[macro_use] extern crate failure;
 #[macro_use] extern crate log;
 #[macro_use] extern crate scoped_tls;
@@ -21,6 +26,7 @@ extern crate hex;
 extern crate home;
 extern crate ignore;
 extern crate jobserver;
+extern crate lazycell;
 extern crate libc;
 extern crate libgit2_sys;
 extern crate num_cpus;
@@ -39,7 +45,7 @@ extern crate core_foundation;
 
 use std::fmt;
 
-use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use serde::ser;
 use docopt::Docopt;
 use failure::Error;
@@ -50,7 +56,7 @@ use core::shell::Verbosity::Verbose;
 pub use util::{CargoError, CargoResult, CliError, CliResult, Config};
 pub use util::errors::Internal;
 
-pub const CARGO_ENV: &'static str = "CARGO";
+pub const CARGO_ENV: &str = "CARGO";
 
 pub mod core;
 pub mod ops;
@@ -71,9 +77,9 @@ pub struct CfgInfo {
 }
 
 pub struct VersionInfo {
-    pub major: String,
-    pub minor: String,
-    pub patch: String,
+    pub major: u8,
+    pub minor: u8,
+    pub patch: u8,
     pub pre_release: Option<String>,
     // Information that's only available when we were built with
     // configure/make, rather than cargo itself.
@@ -102,7 +108,7 @@ impl fmt::Display for VersionInfo {
     }
 }
 
-pub fn call_main_without_stdin<'de, Flags: Deserialize<'de>>(
+pub fn call_main_without_stdin<Flags: DeserializeOwned>(
             exec: fn(Flags, &mut Config) -> CliResult,
             config: &mut Config,
             usage: &str,
@@ -191,12 +197,28 @@ fn handle_cause(cargo_err: &Error, shell: &mut Shell) -> bool {
 }
 
 pub fn version() -> VersionInfo {
-    macro_rules! env_str {
-        ($name:expr) => { env!($name).to_string() }
-    }
     macro_rules! option_env_str {
         ($name:expr) => { option_env!($name).map(|s| s.to_string()) }
     }
+
+    // So this is pretty horrible...
+    // There are two versions at play here:
+    //   - version of cargo-the-binary, which you see when you type `cargo --version`
+    //   - version of cargo-the-library, which you download from crates.io for use
+    //     in your projects.
+    //
+    // We want to make the `binary` version the same as the corresponding Rust/rustc release.
+    // At the same time, we want to keep the library version at `0.x`, because Cargo as
+    // a library is (and probably will always be) unstable.
+    //
+    // Historically, Cargo used the same version number for both the binary and the library.
+    // Specifically, rustc 1.x.z was paired with cargo 0.x+1.w.
+    // We continue to use this scheme for the library, but transform it to 1.x.w for the purposes
+    // of `cargo --version`.
+    let major = 1;
+    let minor = env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap() - 1;
+    let patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
+
     match option_env!("CFG_RELEASE_CHANNEL") {
         // We have environment variables set up from configure/make.
         Some(_) => {
@@ -209,22 +231,22 @@ pub fn version() -> VersionInfo {
                     }
                 });
             VersionInfo {
-                major: env_str!("CARGO_PKG_VERSION_MAJOR"),
-                minor: env_str!("CARGO_PKG_VERSION_MINOR"),
-                patch: env_str!("CARGO_PKG_VERSION_PATCH"),
+                major,
+                minor,
+                patch,
                 pre_release: option_env_str!("CARGO_PKG_VERSION_PRE"),
                 cfg_info: Some(CfgInfo {
                     release_channel: option_env_str!("CFG_RELEASE_CHANNEL").unwrap(),
-                    commit_info: commit_info,
+                    commit_info,
                 }),
             }
         },
         // We are being compiled by Cargo itself.
         None => {
             VersionInfo {
-                major: env_str!("CARGO_PKG_VERSION_MAJOR"),
-                minor: env_str!("CARGO_PKG_VERSION_MINOR"),
-                patch: env_str!("CARGO_PKG_VERSION_PATCH"),
+                major,
+                minor,
+                patch,
                 pre_release: option_env_str!("CARGO_PKG_VERSION_PRE"),
                 cfg_info: None,
             }

@@ -17,6 +17,7 @@ use sources::{GitSource, PathSource, SourceConfigMap};
 use util::{Config, internal};
 use util::{Filesystem, FileLock};
 use util::errors::{CargoResult, CargoResultExt};
+use util::paths;
 
 #[derive(Deserialize, Serialize)]
 #[serde(untagged)]
@@ -47,7 +48,7 @@ impl Transaction {
 impl Drop for Transaction {
     fn drop(&mut self) {
         for bin in self.bins.iter() {
-            let _ = fs::remove_file(bin);
+            let _ = paths::remove_file(bin);
         }
     }
 }
@@ -290,7 +291,7 @@ fn install_one(root: &Filesystem,
             }
         }
         list.v1.entry(pkg.package_id().clone())
-               .or_insert_with(|| BTreeSet::new())
+               .or_insert_with(BTreeSet::new)
                .insert(bin.to_string());
     }
 
@@ -305,7 +306,7 @@ fn install_one(root: &Filesystem,
     // If installation was successful record newly installed binaries.
     if result.is_ok() {
         list.v1.entry(pkg.package_id().clone())
-               .or_insert_with(|| BTreeSet::new())
+               .or_insert_with(BTreeSet::new)
                .extend(to_install.iter().map(|s| s.to_string()));
     }
 
@@ -323,7 +324,7 @@ fn install_one(root: &Filesystem,
         // Don't bother grabbing a lock as we're going to blow it all away
         // anyway.
         let target_dir = ws.target_dir().into_path_unlocked();
-        fs::remove_dir_all(&target_dir)?;
+        paths::remove_dir_all(&target_dir)?;
     }
 
     Ok(())
@@ -351,7 +352,7 @@ fn select_pkg<'a, T>(mut source: T,
                     // version range, otherwise parse it as a specific version
                     let first = v.chars()
                         .nth(0)
-                        .ok_or(format_err!("no version provided for the `--vers` flag"))?;
+                        .ok_or_else(||format_err!("no version provided for the `--vers` flag"))?;
 
                     match first {
                         '<' | '>' | '=' | '^' | '~' => match v.parse::<VersionReq>() {
@@ -574,20 +575,20 @@ pub fn uninstall(root: Option<&str>,
                  specs: Vec<&str>,
                  bins: &[String],
                  config: &Config) -> CargoResult<()> {
-    if specs.len() > 1 && bins.len() > 0 {
+    if specs.len() > 1 && !bins.is_empty() {
         bail!("A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.");
     }
 
     let root = resolve_root(root, config)?;
     let scheduled_error = if specs.len() == 1 {
-        uninstall_one(root, specs[0], bins, config)?;
+        uninstall_one(&root, specs[0], bins, config)?;
         false
     } else {
         let mut succeeded = vec![];
         let mut failed = vec![];
         for spec in specs {
             let root = root.clone();
-            match uninstall_one(root, spec, bins, config) {
+            match uninstall_one(&root, spec, bins, config) {
                 Ok(()) => succeeded.push(spec),
                 Err(e) => {
                     ::handle_error(e, &mut config.shell());
@@ -618,11 +619,11 @@ pub fn uninstall(root: Option<&str>,
     Ok(())
 }
 
-pub fn uninstall_one(root: Filesystem,
+pub fn uninstall_one(root: &Filesystem,
                      spec: &str,
                      bins: &[String],
                      config: &Config) -> CargoResult<()> {
-    let crate_metadata = metadata(config, &root)?;
+    let crate_metadata = metadata(config, root)?;
     let mut metadata = read_crate_list(&crate_metadata)?;
     let mut to_remove = Vec::new();
     {
@@ -671,7 +672,7 @@ pub fn uninstall_one(root: Filesystem,
     write_crate_list(&crate_metadata, metadata)?;
     for bin in to_remove {
         config.shell().status("Removing", bin.display())?;
-        fs::remove_file(bin)?;
+        paths::remove_file(bin)?;
     }
 
     Ok(())

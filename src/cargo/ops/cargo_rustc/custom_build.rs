@@ -145,9 +145,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         match *cfg {
             Cfg::Name(ref n) => { cfg_map.insert(n.clone(), None); }
             Cfg::KeyPair(ref k, ref v) => {
-                match *cfg_map.entry(k.clone()).or_insert(Some(Vec::new())) {
-                    Some(ref mut values) => values.push(v.clone()),
-                    None => { /* ... */ }
+                if let Some(ref mut values) = *cfg_map.entry(k.clone()).or_insert_with(||Some(Vec::new())) {
+                    values.push(v.clone())
                 }
             }
         }
@@ -196,7 +195,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // track of whether it has told us about some explicit dependencies
     let prev_root_output = paths::read_bytes(&root_output_file)
         .and_then(|bytes| util::bytes2path(&bytes))
-        .unwrap_or(cmd.get_cwd().unwrap().to_path_buf());
+        .unwrap_or_else(|_| cmd.get_cwd().unwrap().to_path_buf());
     let prev_output = BuildOutput::parse_file(
         &output_file,
         &pkg_name,
@@ -273,7 +272,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         // well.
         paths::write(&output_file, &output.stdout)?;
         paths::write(&err_file, &output.stderr)?;
-        paths::write(&root_output_file, &util::path2bytes(&root_output)?)?;
+        paths::write(&root_output_file, util::path2bytes(&root_output)?)?;
         let parsed_output = BuildOutput::parse(
             &output.stdout,
             &pkg_name,
@@ -331,7 +330,7 @@ impl BuildState {
         }
         BuildState {
             outputs: Mutex::new(HashMap::new()),
-            overrides: overrides,
+            overrides,
         }
     }
 
@@ -416,14 +415,14 @@ impl BuildOutput {
         }
 
         Ok(BuildOutput {
-            library_paths: library_paths,
-            library_links: library_links,
-            cfgs: cfgs,
-            env: env,
-            metadata: metadata,
-            rerun_if_changed: rerun_if_changed,
-            rerun_if_env_changed: rerun_if_env_changed,
-            warnings: warnings,
+            library_paths,
+            library_links,
+            cfgs,
+            env,
+            metadata,
+            rerun_if_changed,
+            rerun_if_env_changed,
+            warnings,
         })
     }
 
@@ -553,7 +552,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>,
             }
         }
 
-        let prev = out.entry(*unit).or_insert(BuildScripts::default());
+        let prev = out.entry(*unit).or_insert_with(BuildScripts::default);
         for (pkg, kind) in ret.to_link {
             add_to_link(prev, &pkg, kind);
         }

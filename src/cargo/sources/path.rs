@@ -34,7 +34,7 @@ impl<'cfg> PathSource<'cfg> {
             path: path.to_path_buf(),
             updated: false,
             packages: Vec::new(),
-            config: config,
+            config,
             recursive: false,
         }
     }
@@ -327,7 +327,7 @@ impl<'cfg> PathSource<'cfg> {
         let statuses = repo.statuses(Some(&mut opts))?;
         let untracked = statuses.iter().filter_map(|entry| {
             match entry.status() {
-                git2::STATUS_WT_NEW => Some((join(root, entry.path_bytes()), None)),
+                git2::Status::WT_NEW => Some((join(root, entry.path_bytes()), None)),
                 _ => None,
             }
         });
@@ -452,7 +452,8 @@ impl<'cfg> PathSource<'cfg> {
             // Skip dotfile directories
             if name.map(|s| s.starts_with('.')) == Some(true) {
                 continue
-            } else if is_root {
+            }
+            if is_root {
                 // Skip cargo artifacts
                 match name {
                     Some("target") | Some("Cargo.lock") => continue,
