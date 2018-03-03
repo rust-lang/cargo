@@ -326,7 +326,7 @@ enum GraphNode {
 // risk of being cloned *a lot* so we want to make this as cheap to clone as
 // possible.
 #[derive(Clone)]
-struct Context<'a> {
+struct Context {
     // TODO: Both this and the two maps below are super expensive to clone. We should
     //       switch to persistent hash maps if we can at some point or otherwise
     //       make these much cheaper to clone in general.
@@ -339,8 +339,6 @@ struct Context<'a> {
     // at the very end and actually construct the map that we're making.
     resolve_graph: RcList<GraphNode>,
     resolve_replacements: RcList<(PackageId, PackageId)>,
-
-    replacements: &'a [(PackageIdSpec, Dependency)],
 
     // These warnings are printed after resolution.
     warnings: RcList<String>,
@@ -360,11 +358,10 @@ pub fn resolve(summaries: &[(Summary, Method)],
         links: HashMap::new(),
         resolve_replacements: RcList::new(),
         activations: HashMap::new(),
-        replacements,
         warnings: RcList::new(),
     };
     let _p = profile::start("resolving");
-    let cx = activate_deps_loop(cx, registry, summaries, config)?;
+    let cx = activate_deps_loop(cx, &mut RegistryQueryer::new(registry, replacements), summaries, config)?;
 
     let mut resolve = Resolve {
         graph: cx.graph(),
@@ -410,7 +407,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
 /// If `candidate` was activated, this function returns the dependency frame to
 /// iterate through next.
 fn activate(cx: &mut Context,
-            registry: &mut Registry,
+            registry: &mut RegistryQueryer,
             parent: Option<&Summary>,
             candidate: Candidate,
             method: &Method)
@@ -573,10 +570,112 @@ impl ConflictReason {
     }
 }
 
+struct RegistryQueryer<'a> {
+    registry: &'a mut (Registry + 'a),
+    replacements: &'a [(PackageIdSpec, Dependency)],
+    // TODO: with nll the Rc can be removed
+    cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
+}
+
+impl<'a> RegistryQueryer<'a> {
+    fn new(registry: &'a mut Registry, replacements: &'a [(PackageIdSpec, Dependency)],) -> Self {
+        RegistryQueryer {
+            registry,
+            replacements,
+            cache: HashMap::new(),
+        }
+    }
+
+    /// Queries the `registry` to return a list of candidates for `dep`.
+    ///
+    /// This method is the location where overrides are taken into account. If
+    /// any candidates are returned which match an override then the override is
+    /// applied by performing a second query for what the override should
+    /// return.
+    fn query(&mut self, dep: &Dependency) -> CargoResult<Rc<Vec<Candidate>>> {
+        if let Some(out) = self.cache.get(dep).cloned() {
+            return Ok(out);
+        }
+
+        let mut ret = Vec::new();
+        self.registry.query(dep, &mut |s| {
+            ret.push(Candidate { summary: s, replace: None });
+        })?;
+        for candidate in ret.iter_mut() {
+            let summary = &candidate.summary;
+
+            let mut potential_matches = self.replacements.iter()
+                .filter(|&&(ref spec, _)| spec.matches(summary.package_id()));
+
+            let &(ref spec, ref dep) = match potential_matches.next() {
+                None => continue,
+                Some(replacement) => replacement,
+            };
+            debug!("found an override for {} {}", dep.name(), dep.version_req());
+
+            let mut summaries = self.registry.query_vec(dep)?.into_iter();
+            let s = summaries.next().ok_or_else(|| {
+                format_err!("no matching package for override `{}` found\n\
+                             location searched: {}\n\
+                             version required: {}",
+                            spec, dep.source_id(), dep.version_req())
+            })?;
+            let summaries = summaries.collect::<Vec<_>>();
+            if !summaries.is_empty() {
+                let bullets = summaries.iter().map(|s| {
+                    format!("  * {}", s.package_id())
+                }).collect::<Vec<_>>();
+                bail!("the replacement specification `{}` matched \
+                       multiple packages:\n  * {}\n{}", spec, s.package_id(),
+                      bullets.join("\n"));
+            }
+
+            // The dependency should be hard-coded to have the same name and an
+            // exact version requirement, so both of these assertions should
+            // never fail.
+            assert_eq!(s.version(), summary.version());
+            assert_eq!(s.name(), summary.name());
+
+            let replace = if s.source_id() == summary.source_id() {
+                debug!("Preventing\n{:?}\nfrom replacing\n{:?}", summary, s);
+                None
+            } else {
+                Some(s)
+            };
+            let matched_spec = spec.clone();
+
+            // Make sure no duplicates
+            if let Some(&(ref spec, _)) = potential_matches.next() {
+                bail!("overlapping replacement specifications found:\n\n  \
+                       * {}\n  * {}\n\nboth specifications match: {}",
+                      matched_spec, spec, summary.package_id());
+            }
+
+            for dep in summary.dependencies() {
+                debug!("\t{} => {}", dep.name(), dep.version_req());
+            }
+
+            candidate.replace = replace;
+        }
+
+        // When we attempt versions for a package, we'll want to start at
+        // the maximum version and work our way down.
+        ret.sort_unstable_by(|a, b| {
+            b.summary.version().cmp(a.summary.version())
+        });
+
+        let out = Rc::new(ret);
+
+        self.cache.insert(dep.clone(), out.clone());
+
+        Ok(out)
+    }
+}
+
 #[derive(Clone)]
-struct BacktrackFrame<'a> {
+struct BacktrackFrame {
     cur: usize,
-    context_backup: Context<'a>,
+    context_backup: Context,
     deps_backup: BinaryHeap<DepsFrame>,
     remaining_candidates: RemainingCandidates,
     parent: Summary,
@@ -658,12 +757,12 @@ impl RemainingCandidates {
 ///
 /// If all dependencies can be activated and resolved to a version in the
 /// dependency graph, cx.resolve is returned.
-fn activate_deps_loop<'a>(
-    mut cx: Context<'a>,
-    registry: &mut Registry,
+fn activate_deps_loop(
+    mut cx: Context,
+    registry: &mut RegistryQueryer,
     summaries: &[(Summary, Method)],
     config: Option<&Config>,
-) -> CargoResult<Context<'a>> {
+) -> CargoResult<Context> {
     // Note that a `BinaryHeap` is used for the remaining dependencies that need
     // activation. This heap is sorted such that the "largest value" is the most
     // constrained dependency, or the one with the least candidates.
@@ -780,7 +879,7 @@ fn activate_deps_loop<'a>(
                 ).ok_or_else(|| {
                     activation_error(
                         &cx,
-                        registry,
+                        registry.registry,
                         &parent,
                         &dep,
                         &conflicting_activations,
@@ -850,9 +949,9 @@ fn activate_deps_loop<'a>(
 /// If the outcome could differ, resets `cx` and `remaining_deps` to that
 /// level and returns the next candidate.
 /// If all candidates have been exhausted, returns None.
-fn find_candidate<'a>(
-    backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
-    cx: &mut Context<'a>,
+fn find_candidate(
+    backtrack_stack: &mut Vec<BacktrackFrame>,
+    cx: &mut Context,
     remaining_deps: &mut BinaryHeap<DepsFrame>,
     parent: &mut Summary,
     cur: &mut usize,
@@ -1176,7 +1275,7 @@ fn build_requirements<'a, 'b: 'a>(s: &'a Summary, method: &'b Method)
     Ok(reqs)
 }
 
-impl<'a> Context<'a> {
+impl Context {
     /// Activate this summary by inserting it into our list of known activations.
     ///
     /// Returns true if this summary with the given method is already activated.
@@ -1219,7 +1318,7 @@ impl<'a> Context<'a> {
     }
 
     fn build_deps(&mut self,
-                  registry: &mut Registry,
+                  registry: &mut RegistryQueryer,
                   parent: Option<&Summary>,
                   candidate: &Summary,
                   method: &Method) -> ActivateResult<Vec<DepInfo>> {
@@ -1231,13 +1330,8 @@ impl<'a> Context<'a> {
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
         let mut deps = deps.into_iter().map(|(dep, features)| {
-            let mut candidates = self.query(registry, &dep)?;
-            // When we attempt versions for a package, we'll want to start at
-            // the maximum version and work our way down.
-            candidates.sort_by(|a, b| {
-                b.summary.version().cmp(a.summary.version())
-            });
-            Ok((dep, Rc::new(candidates), Rc::new(features)))
+            let candidates = registry.query(&dep)?;
+            Ok((dep, candidates, Rc::new(features)))
         }).collect::<CargoResult<Vec<DepInfo>>>()?;
 
         // Attempt to resolve dependencies with fewer candidates before trying
@@ -1247,78 +1341,6 @@ impl<'a> Context<'a> {
         deps.sort_by_key(|&(_, ref a, _)| a.len());
 
         Ok(deps)
-    }
-
-    /// Queries the `registry` to return a list of candidates for `dep`.
-    ///
-    /// This method is the location where overrides are taken into account. If
-    /// any candidates are returned which match an override then the override is
-    /// applied by performing a second query for what the override should
-    /// return.
-    fn query(&self,
-             registry: &mut Registry,
-             dep: &Dependency) -> CargoResult<Vec<Candidate>> {
-        let mut ret = Vec::new();
-        registry.query(dep, &mut |s| {
-            ret.push(Candidate { summary: s, replace: None });
-        })?;
-        for candidate in ret.iter_mut() {
-            let summary = &candidate.summary;
-
-            let mut potential_matches = self.replacements.iter()
-                .filter(|&&(ref spec, _)| spec.matches(summary.package_id()));
-
-            let &(ref spec, ref dep) = match potential_matches.next() {
-                None => continue,
-                Some(replacement) => replacement,
-            };
-            debug!("found an override for {} {}", dep.name(), dep.version_req());
-
-            let mut summaries = registry.query_vec(dep)?.into_iter();
-            let s = summaries.next().ok_or_else(|| {
-                format_err!("no matching package for override `{}` found\n\
-                             location searched: {}\n\
-                             version required: {}",
-                            spec, dep.source_id(), dep.version_req())
-            })?;
-            let summaries = summaries.collect::<Vec<_>>();
-            if !summaries.is_empty() {
-                let bullets = summaries.iter().map(|s| {
-                    format!("  * {}", s.package_id())
-                }).collect::<Vec<_>>();
-                bail!("the replacement specification `{}` matched \
-                       multiple packages:\n  * {}\n{}", spec, s.package_id(),
-                      bullets.join("\n"));
-            }
-
-            // The dependency should be hard-coded to have the same name and an
-            // exact version requirement, so both of these assertions should
-            // never fail.
-            assert_eq!(s.version(), summary.version());
-            assert_eq!(s.name(), summary.name());
-
-            let replace = if s.source_id() == summary.source_id() {
-                debug!("Preventing\n{:?}\nfrom replacing\n{:?}", summary, s);
-                None
-            } else {
-                Some(s)
-            };
-            let matched_spec = spec.clone();
-
-            // Make sure no duplicates
-            if let Some(&(ref spec, _)) = potential_matches.next() {
-                bail!("overlapping replacement specifications found:\n\n  \
-                       * {}\n  * {}\n\nboth specifications match: {}",
-                      matched_spec, spec, summary.package_id());
-            }
-
-            for dep in summary.dependencies() {
-                debug!("\t{} => {}", dep.name(), dep.version_req());
-            }
-
-            candidate.replace = replace;
-        }
-        Ok(ret)
     }
 
     fn prev_active(&self, dep: &Dependency) -> &[Summary] {
