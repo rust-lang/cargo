@@ -81,8 +81,8 @@ impl<'a> JobQueue<'a> {
         let (tx, rx) = channel();
         JobQueue {
             queue: DependencyQueue::new(),
-            tx: tx,
-            rx: rx,
+            tx,
+            rx,
             active: 0,
             pending: HashMap::new(),
             compiled: HashSet::new(),
@@ -111,6 +111,7 @@ impl<'a> JobQueue<'a> {
     /// possible along each dependency chain.
     pub fn execute(&mut self, cx: &mut Context) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
+        self.queue.queue_finished();
 
         // We need to give a handle to the send half of our message queue to the
         // jobserver helper thread. Unfortunately though we need the handle to be

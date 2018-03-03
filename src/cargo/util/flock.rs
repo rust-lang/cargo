@@ -9,6 +9,7 @@ use fs2::{FileExt, lock_contended_error};
 use libc;
 
 use util::Config;
+use util::paths;
 use util::errors::{CargoResult, CargoResultExt, CargoError};
 
 pub struct FileLock {
@@ -17,7 +18,7 @@ pub struct FileLock {
     state: State,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 enum State {
     Unlocked,
     Shared,
@@ -35,13 +36,13 @@ impl FileLock {
     /// Note that special care must be taken to ensure that the path is not
     /// referenced outside the lifetime of this lock.
     pub fn path(&self) -> &Path {
-        assert!(self.state != State::Unlocked);
+        assert_ne!(self.state, State::Unlocked);
         &self.path
     }
 
     /// Returns the parent path containing this file
     pub fn parent(&self) -> &Path {
-        assert!(self.state != State::Unlocked);
+        assert_ne!(self.state, State::Unlocked);
         self.path.parent().unwrap()
     }
 
@@ -49,7 +50,7 @@ impl FileLock {
     ///
     /// This can be useful if a directory is locked with a sentinel file but it
     /// needs to be cleared out as it may be corrupt.
-    pub fn remove_siblings(&self) -> io::Result<()> {
+    pub fn remove_siblings(&self) -> CargoResult<()> {
         let path = self.path();
         for entry in path.parent().unwrap().read_dir()? {
             let entry = entry?;
@@ -58,9 +59,9 @@ impl FileLock {
             }
             let kind = entry.file_type()?;
             if kind.is_dir() {
-                fs::remove_dir_all(entry.path())?;
+                paths::remove_dir_all(entry.path())?;
             } else {
-                fs::remove_file(entry.path())?;
+                paths::remove_file(entry.path())?;
             }
         }
         Ok(())
@@ -229,7 +230,7 @@ impl Filesystem {
             State::Unlocked => {}
 
         }
-        Ok(FileLock { f: Some(f), path: path, state: state })
+        Ok(FileLock { f: Some(f), path, state })
     }
 }
 

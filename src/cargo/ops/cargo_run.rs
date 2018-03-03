@@ -34,7 +34,7 @@ pub fn run(ws: &Workspace,
     .map(|bin| bin.name())
     .collect();
 
-    if bins.len() == 0 {
+    if bins.is_empty() {
         if !options.filter.is_specific() {
             bail!("a bin target must be available for `cargo run`")
         } else {

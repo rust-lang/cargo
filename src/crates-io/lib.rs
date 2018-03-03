@@ -55,6 +55,8 @@ pub struct NewCrate {
     pub license_file: Option<String>,
     pub repository: Option<String>,
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
+    #[serde(default)]
+    pub links: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -101,9 +103,9 @@ impl Registry {
                       token: Option<String>,
                       handle: Easy) -> Registry {
         Registry {
-            host: host,
-            token: token,
-            handle: handle,
+            host,
+            token,
+            handle,
         }
     }
 
@@ -195,8 +197,8 @@ impl Registry {
             .unwrap_or_else(Vec::new);
 
         Ok(Warnings {
-            invalid_categories: invalid_categories,
-            invalid_badges: invalid_badges,
+            invalid_categories,
+            invalid_badges,
         })
     }
 

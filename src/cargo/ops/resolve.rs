@@ -77,7 +77,7 @@ pub fn resolve_ws_with_method<'a>(ws: &Workspace<'a>,
 
         Some(resolve)
     } else {
-        None
+        ops::load_pkg_lockfile(ws)?
     };
 
     let resolved_with_overrides =
@@ -236,7 +236,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
             // for any other packages specified with `-p`.
             Method::Required { dev_deps, .. } => {
                 let base = Method::Required {
-                    dev_deps: dev_deps,
+                    dev_deps,
                     features: &[],
                     all_features: false,
                     uses_default_features: true,

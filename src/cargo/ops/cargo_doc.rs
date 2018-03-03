@@ -22,12 +22,6 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
                                             &specs)?;
     let (packages, resolve_with_overrides) = resolve;
 
-    if specs.is_empty() {
-        bail!("manifest path `{}` contains no package: The manifest is virtual, \
-               and the workspace has no members.",
-              ws.current_manifest().display())
-    };
-
     let pkgs = specs.iter().map(|p| {
         let pkgid = p.query(resolve_with_overrides.iter())?;
         packages.get(pkgid)
@@ -44,13 +38,11 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
                           or marking one of the targets as `doc = false`.",
                           target.crate_name(), prev, package);
                 }
-            } else {
-                if let Some(prev) = bin_names.insert(target.crate_name(), package) {
-                    bail!("The binary `{}` is specified by packages `{}` and \
-                          `{}` but can be documented only once. Consider renaming \
-                          or marking one of the targets as `doc = false`.",
-                          target.crate_name(), prev, package);
-                }
+            } else if let Some(prev) = bin_names.insert(target.crate_name(), package) {
+                bail!("The binary `{}` is specified by packages `{}` and \
+                      `{}` but can be documented only once. Consider renaming \
+                      or marking one of the targets as `doc = false`.",
+                      target.crate_name(), prev, package);
             }
         }
     }
@@ -59,7 +51,10 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
 
     if options.open_result {
         let name = if pkgs.len() > 1 {
-            bail!("Passing multiple packages and `open` is not supported")
+            bail!("Passing multiple packages and `open` is not supported.\n\
+                   Please re-run this command with `-p <spec>` where `<spec>` \
+                   is one of the following:\n  {}",
+                   pkgs.iter().map(|p| p.name()).collect::<Vec<_>>().join("\n  "));
         } else if pkgs.len() == 1 {
             pkgs[0].name().replace("-", "_")
         } else {

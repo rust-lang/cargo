@@ -47,7 +47,7 @@ impl Work {
 impl Job {
     /// Create a new job representing a unit of work.
     pub fn new(dirty: Work, fresh: Work) -> Job {
-        Job { dirty: dirty, fresh: fresh }
+        Job { dirty, fresh }
     }
 
     /// Consumes this job by running it, returning the result of the

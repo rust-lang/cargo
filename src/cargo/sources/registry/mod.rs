@@ -177,10 +177,10 @@ use util::errors::CargoResultExt;
 use util::hex;
 use util::to_url::ToUrl;
 
-const INDEX_LOCK: &'static str = ".cargo-index-lock";
-pub const CRATES_IO: &'static str = "https://github.com/rust-lang/crates.io-index";
-const CRATE_TEMPLATE: &'static str = "{crate}";
-const VERSION_TEMPLATE: &'static str = "{version}";
+const INDEX_LOCK: &str = ".cargo-index-lock";
+pub const CRATES_IO: &str = "https://github.com/rust-lang/crates.io-index";
+const CRATE_TEMPLATE: &str = "{crate}";
+const VERSION_TEMPLATE: &str = "{version}";
 
 pub struct RegistrySource<'cfg> {
     source_id: SourceId,
@@ -220,6 +220,8 @@ struct RegistryPackage<'a> {
     features: BTreeMap<String, Vec<String>>,
     cksum: String,
     yanked: Option<bool>,
+    #[serde(default)]
+    links: Option<String>,
 }
 
 struct DependencyList {
@@ -286,15 +288,15 @@ impl<'cfg> RegistrySource<'cfg> {
            index_locked: bool) -> RegistrySource<'cfg> {
         RegistrySource {
             src_path: config.registry_source_path().join(name),
-            config: config,
+            config,
             source_id: source_id.clone(),
             updated: false,
             index: index::RegistryIndex::new(source_id,
                                              ops.index_path(),
                                              config,
                                              index_locked),
-            index_locked: index_locked,
-            ops: ops,
+            index_locked,
+            ops,
         }
     }
 

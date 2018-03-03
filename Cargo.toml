@@ -1,6 +1,6 @@
 [package]
 name = "cargo"
-version = "0.26.0"
+version = "0.27.0"
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
            "Alex Crichton <alex@alexcrichton.com>"]
@@ -18,7 +18,7 @@ path = "src/cargo/lib.rs"
 
 [dependencies]
 atty = "0.2"
-crates-io = { path = "src/crates-io", version = "0.15" }
+crates-io = { path = "src/crates-io", version = "0.16" }
 crossbeam = "0.3"
 crypto-hash = "0.3"
 curl = "0.4.6"
@@ -28,15 +28,16 @@ failure = "0.1.1"
 filetime = "0.1"
 flate2 = "1.0"
 fs2 = "0.4"
-git2 = "0.6.11"
-git2-curl = "0.7"
+git2 = "0.7.0"
+git2-curl = "0.8"
 glob = "0.2"
 hex = "0.3"
 home = "0.3"
-ignore = "0.3"
+ignore = "0.4"
 jobserver = "0.1.9"
+lazycell = "0.6"
 libc = "0.2"
-libgit2-sys = "0.6"
+libgit2-sys = "0.7"
 log = "0.4"
 num_cpus = "1.0"
 same-file = "1"
@@ -54,10 +55,10 @@ toml = "0.4"
 url = "1.1"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-core-foundation = { version = "0.4.4", features = ["mac_os_10_7_support"] }
+core-foundation = { version = "0.5.1", features = ["mac_os_10_7_support"] }
 
 [target.'cfg(windows)'.dependencies]
-miow = "0.2"
+miow = "0.3"
 
 [target.'cfg(windows)'.dependencies.winapi]
 version = "0.3"
@@ -79,11 +80,13 @@ features = [
 
 [dev-dependencies]
 bufstream = "0.1"
-cargotest = { path = "tests/cargotest", version = "0.1" }
 filetime = "0.1"
-hamcrest = "=0.1.1"
 
 [[bin]]
 name = "cargo"
 test = false
 doc = false
+
+[[test]]
+name = "testsuite"
+path = "tests/testsuite/lib.rs"

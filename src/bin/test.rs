@@ -159,16 +159,16 @@ pub fn execute(mut options: Options, config: &mut Config) -> CliResult {
         no_fail_fast: options.flag_no_fail_fast,
         only_doc: options.flag_doc,
         compile_opts: ops::CompileOptions {
-            config: config,
+            config,
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|s| &s[..]),
             features: &options.flag_features,
             all_features: options.flag_all_features,
             no_default_features: options.flag_no_default_features,
-            spec: spec,
+            spec,
             release: options.flag_release,
-            mode: mode,
-            filter: filter,
+            mode,
+            filter,
             message_format: options.flag_message_format,
             target_rustdoc_args: None,
             target_rustc_args: None,
@@ -186,7 +186,7 @@ pub fn execute(mut options: Options, config: &mut Config) -> CliResult {
         None => Ok(()),
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
-                Some(i) => CliError::new(format_err!("{}", err.hint()), i),
+                Some(i) => CliError::new(format_err!("{}", err.hint(&ws)), i),
                 None => CliError::new(err.into(), 101),
             })
         }

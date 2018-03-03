@@ -27,6 +27,7 @@ pub struct Options {
     flag_frozen: bool,
     flag_locked: bool,
     flag_all: bool,
+    flag_exclude: Vec<String>,
     #[serde(rename = "flag_Z")]
     flag_z: Vec<String>,
 }
@@ -42,6 +43,7 @@ Options:
     --open                       Opens the docs in a browser after the operation
     -p SPEC, --package SPEC ...  Package to document
     --all                        Document all packages in the workspace
+    --exclude SPEC ...           Exclude packages from the build
     --no-deps                    Don't build documentation for dependencies
     -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
     --lib                        Document only this package's library
@@ -88,23 +90,21 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
     let ws = Workspace::new(&root, config)?;
 
-    let spec = if options.flag_all || (ws.is_virtual() && options.flag_package.is_empty()) {
-        Packages::All
-    } else {
-        Packages::Packages(&options.flag_package)
-    };
+    let spec = Packages::from_flags(options.flag_all,
+                                    &options.flag_exclude,
+                                    &options.flag_package)?;
 
     let empty = Vec::new();
     let doc_opts = ops::DocOptions {
         open_result: options.flag_open,
         compile_opts: ops::CompileOptions {
-            config: config,
+            config,
             jobs: options.flag_jobs,
             target: options.flag_target.as_ref().map(|t| &t[..]),
             features: &options.flag_features,
             all_features: options.flag_all_features,
             no_default_features: options.flag_no_default_features,
-            spec: spec,
+            spec,
             filter: ops::CompileFilter::new(options.flag_lib,
                                             &options.flag_bin, options.flag_bins,
                                             &empty, false,

@@ -48,7 +48,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         bail!("cannot publish crates which activate nightly-only cargo features to crates.io")
     }
 
-    if let &Some(ref allowed_registries) = pkg.publish() {
+    if let Some(ref allowed_registries) = *pkg.publish() {
         if !match opts.registry {
             Some(ref registry) => allowed_registries.contains(registry),
             None => false,
@@ -159,7 +159,7 @@ fn transmit(config: &Config,
     let ManifestMetadata {
         ref authors, ref description, ref homepage, ref documentation,
         ref keywords, ref readme, ref repository, ref license, ref license_file,
-        ref categories, ref badges,
+        ref categories, ref badges, ref links,
     } = *manifest.metadata();
     let readme_content = match *readme {
         Some(ref readme) => Some(paths::read(&pkg.root().join(readme))?),
@@ -180,7 +180,7 @@ fn transmit(config: &Config,
     let publish = registry.publish(&NewCrate {
         name: pkg.name().to_string(),
         vers: pkg.version().to_string(),
-        deps: deps,
+        deps,
         features: pkg.summary().features().clone(),
         authors: authors.clone(),
         description: description.clone(),
@@ -194,6 +194,7 @@ fn transmit(config: &Config,
         license: license.clone(),
         license_file: license_file.clone(),
         badges: badges.clone(),
+        links: links.clone(),
     }, tarball);
 
     match publish {
@@ -220,7 +221,7 @@ fn transmit(config: &Config,
 
             Ok(())
         },
-        Err(e) => Err(e.into()),
+        Err(e) => Err(e),
     }
 }
 
@@ -240,8 +241,8 @@ pub fn registry_configuration(config: &Config,
     };
 
     Ok(RegistryConfig {
-        index: index,
-        token: token
+        index,
+        token
     })
 }
 
@@ -437,7 +438,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
                 (Some(name), Some(email)) => println!(" ({} <{}>)", name, email),
                 (Some(s), None) |
                 (None, Some(s)) => println!(" ({})", s),
-                (None, None) => println!(""),
+                (None, None) => println!(),
             }
         }
     }

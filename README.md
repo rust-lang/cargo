@@ -2,12 +2,14 @@
 
 Cargo downloads your Rust project’s dependencies and compiles your project.
 
-Learn more at http://doc.crates.io/
+Learn more at https://doc.rust-lang.org/cargo/
 
 ## Code Status
 
 [![Build Status](https://travis-ci.org/rust-lang/cargo.svg?branch=master)](https://travis-ci.org/rust-lang/cargo)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/rust-lang/cargo?branch=master&svg=true)](https://ci.appveyor.com/project/rust-lang-libs/cargo)
+
+Code documentation: https://docs.rs/cargo/
 
 ## Installing Cargo
 

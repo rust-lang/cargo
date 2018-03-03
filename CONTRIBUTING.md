@@ -109,12 +109,15 @@ and [merges][mergequeue] it into Cargo's `master` branch.
 
 To contribute to the documentation, all you need to do is change the markdown
 files in the `src/doc` directory. To view the rendered version of changes you
-have made locally, run:
+have made locally, make sure you have `mdbook` installed and run:
 
 ```sh
-sh src/ci/dox.sh
-open target/doc/index.html
+cd src/doc
+mdbook build
+open book/index.html
 ```
+
+To install `mdbook` run `cargo install mdbook`.
 
 
 ## Issue Triage

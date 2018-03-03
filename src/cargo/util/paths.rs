@@ -1,7 +1,7 @@
 use std::env;
 use std::ffi::{OsStr, OsString};
-use std::fs::File;
-use std::fs::OpenOptions;
+use std::fs::{self, File, OpenOptions};
+use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf, Component};
 
@@ -20,7 +20,7 @@ pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsStri
     let more_explain = format!("failed to join search paths together\n\
                                 Does ${} have an unterminated quote character?",
                                env);
-    return Err(err.context(more_explain).into())
+    Err(err.context(more_explain).into())
 }
 
 pub fn dylib_path_envvar() -> &'static str {
@@ -187,4 +187,73 @@ impl<'a> Iterator for PathAncestors<'a> {
             None
         }
     }
+}
+
+pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> CargoResult<()> {
+    _remove_dir_all(p.as_ref())
+}
+
+fn _remove_dir_all(p: &Path) -> CargoResult<()> {
+    if p.symlink_metadata()?.file_type().is_symlink() {
+        return remove_file(p)
+    }
+    let entries = p.read_dir().chain_err(|| {
+        format!("failed to read directory `{}`", p.display())
+    })?;
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        if entry.file_type()?.is_dir() {
+            remove_dir_all(&path)?;
+        } else {
+            remove_file(&path)?;
+        }
+    }
+    remove_dir(&p)
+}
+
+pub fn remove_dir<P: AsRef<Path>>(p: P) -> CargoResult<()> {
+    _remove_dir(p.as_ref())
+}
+
+fn _remove_dir(p: &Path) -> CargoResult<()> {
+    fs::remove_dir(p).chain_err(|| {
+        format!("failed to remove directory `{}`", p.display())
+    })?;
+    Ok(())
+}
+
+pub fn remove_file<P: AsRef<Path>>(p: P) -> CargoResult<()> {
+    _remove_file(p.as_ref())
+}
+
+fn _remove_file(p: &Path) -> CargoResult<()> {
+    let mut err = match fs::remove_file(p) {
+        Ok(()) => return Ok(()),
+        Err(e) => e,
+    };
+
+    if err.kind() == io::ErrorKind::PermissionDenied {
+        if set_not_readonly(p).unwrap_or(false) {
+            match fs::remove_file(p) {
+                Ok(()) => return Ok(()),
+                Err(e) => err = e,
+            }
+        }
+    }
+
+    Err(err).chain_err(|| {
+        format!("failed to remove file `{}`", p.display())
+    })?;
+    Ok(())
+}
+
+fn set_not_readonly(p: &Path) -> io::Result<bool> {
+    let mut perms = p.metadata()?.permissions();
+    if !perms.readonly() {
+        return Ok(false)
+    }
+    perms.set_readonly(false);
+    fs::set_permissions(p, perms)?;
+    Ok(true)
 }
