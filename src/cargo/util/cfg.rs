@@ -4,13 +4,13 @@ use std::fmt;
 
 use util::{CargoError, CargoResult};
 
-#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Debug)]
+#[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum Cfg {
     Name(String),
     KeyPair(String, String),
 }
 
-#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Debug)]
+#[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum CfgExpr {
     Not(Box<CfgExpr>),
     All(Vec<CfgExpr>),

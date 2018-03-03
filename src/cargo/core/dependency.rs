@@ -12,13 +12,13 @@ use util::errors::{CargoResult, CargoResultExt, CargoError};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
-#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub struct Dependency {
     inner: Rc<Inner>,
 }
 
 /// The data underlying a Dependency.
-#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone, Debug)]
 struct Inner {
     name: String,
     source_id: SourceId,
@@ -38,7 +38,7 @@ struct Inner {
     platform: Option<Platform>,
 }
 
-#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Debug)]
+#[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum Platform {
     Name(String),
     Cfg(CfgExpr),
@@ -76,7 +76,7 @@ impl ser::Serialize for Dependency {
     }
 }
 
-#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Debug, Copy)]
+#[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone, Debug, Copy)]
 pub enum Kind {
     Normal,
     Development,

@@ -574,7 +574,7 @@ struct RegistryQueryer<'a> {
     registry: &'a mut (Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
     // TODO: with nll the Rc can be removed
-    cache: BTreeMap<Dependency, Rc<Vec<Candidate>>>,
+    cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
 }
 
 impl<'a> RegistryQueryer<'a> {
@@ -582,7 +582,7 @@ impl<'a> RegistryQueryer<'a> {
         RegistryQueryer {
             registry,
             replacements,
-            cache: BTreeMap::new(),
+            cache: HashMap::new(),
         }
     }
 
