@@ -326,7 +326,7 @@ enum GraphNode {
 // risk of being cloned *a lot* so we want to make this as cheap to clone as
 // possible.
 #[derive(Clone)]
-struct Context<'a> {
+struct Context {
     // TODO: Both this and the two maps below are super expensive to clone. We should
     //       switch to persistent hash maps if we can at some point or otherwise
     //       make these much cheaper to clone in general.
@@ -339,8 +339,6 @@ struct Context<'a> {
     // at the very end and actually construct the map that we're making.
     resolve_graph: RcList<GraphNode>,
     resolve_replacements: RcList<(PackageId, PackageId)>,
-
-    replacements: &'a [(PackageIdSpec, Dependency)],
 
     // These warnings are printed after resolution.
     warnings: RcList<String>,
@@ -360,7 +358,6 @@ pub fn resolve(summaries: &[(Summary, Method)],
         links: HashMap::new(),
         resolve_replacements: RcList::new(),
         activations: HashMap::new(),
-        replacements,
         warnings: RcList::new(),
     };
     let _p = profile::start("resolving");
@@ -676,9 +673,9 @@ impl<'a> RegistryQueryer<'a> {
 }
 
 #[derive(Clone)]
-struct BacktrackFrame<'a> {
+struct BacktrackFrame {
     cur: usize,
-    context_backup: Context<'a>,
+    context_backup: Context,
     deps_backup: BinaryHeap<DepsFrame>,
     remaining_candidates: RemainingCandidates,
     parent: Summary,
@@ -760,12 +757,12 @@ impl RemainingCandidates {
 ///
 /// If all dependencies can be activated and resolved to a version in the
 /// dependency graph, cx.resolve is returned.
-fn activate_deps_loop<'a>(
-    mut cx: Context<'a>,
+fn activate_deps_loop(
+    mut cx: Context,
     registry: &mut RegistryQueryer,
     summaries: &[(Summary, Method)],
     config: Option<&Config>,
-) -> CargoResult<Context<'a>> {
+) -> CargoResult<Context> {
     // Note that a `BinaryHeap` is used for the remaining dependencies that need
     // activation. This heap is sorted such that the "largest value" is the most
     // constrained dependency, or the one with the least candidates.
@@ -952,9 +949,9 @@ fn activate_deps_loop<'a>(
 /// If the outcome could differ, resets `cx` and `remaining_deps` to that
 /// level and returns the next candidate.
 /// If all candidates have been exhausted, returns None.
-fn find_candidate<'a>(
-    backtrack_stack: &mut Vec<BacktrackFrame<'a>>,
-    cx: &mut Context<'a>,
+fn find_candidate(
+    backtrack_stack: &mut Vec<BacktrackFrame>,
+    cx: &mut Context,
     remaining_deps: &mut BinaryHeap<DepsFrame>,
     parent: &mut Summary,
     cur: &mut usize,
@@ -1278,7 +1275,7 @@ fn build_requirements<'a, 'b: 'a>(s: &'a Summary, method: &'b Method)
     Ok(reqs)
 }
 
-impl<'a> Context<'a> {
+impl Context {
     /// Activate this summary by inserting it into our list of known activations.
     ///
     /// Returns true if this summary with the given method is already activated.
