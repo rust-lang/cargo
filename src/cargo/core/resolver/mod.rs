@@ -344,7 +344,7 @@ struct Context {
     warnings: RcList<String>,
 }
 
-type Activations = HashMap<String, HashMap<SourceId, Vec<Summary>>>;
+type Activations = HashMap<String, HashMap<SourceId, Rc<Vec<Summary>>>>;
 
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summaries: &[(Summary, Method)],
@@ -1287,7 +1287,7 @@ impl Context {
                        .entry(id.name().to_string())
                        .or_insert_with(HashMap::new)
                        .entry(id.source_id().clone())
-                       .or_insert_with(Vec::new);
+                       .or_insert_with(||Rc::new(Vec::new()));
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.push(GraphNode::Add(id.clone()));
             if let Some(link) = summary.links() {
@@ -1295,7 +1295,9 @@ impl Context {
                 "Attempting to resolve a with more then one crate with the links={}. \n\
                  This will not build as is. Consider rebuilding the .lock file.", link);
             }
-            prev.push(summary.clone());
+            let mut inner: Vec<_> = (**prev).clone();
+            inner.push(summary.clone());
+            *prev = Rc::new(inner);
             return Ok(false)
         }
         debug!("checking if {} is already activated", summary.package_id());
@@ -1463,7 +1465,7 @@ fn check_cycles(resolve: &Resolve, activations: &Activations)
                 -> CargoResult<()> {
     let summaries: HashMap<&PackageId, &Summary> = activations.values()
         .flat_map(|v| v.values())
-        .flat_map(|v| v)
+        .flat_map(|v| v.iter())
         .map(|s| (s.package_id(), s))
         .collect();
 
