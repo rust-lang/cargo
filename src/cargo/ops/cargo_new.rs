@@ -191,7 +191,7 @@ fn detect_source_paths_and_types(project_path : &Path,
         Test { proposed_path: format!("{}.rs", name),          handling: H::Detect },
         Test { proposed_path: format!("src/lib.rs"),              handling: H::Lib },
         Test { proposed_path: format!("lib.rs"),                  handling: H::Lib },
-        Test { proposed_path: format!("examples/{}.rs", name), handling: H::Detect }.
+        Test { proposed_path: format!("examples/{}.rs", name), handling: H::Detect },
     ];
 
     for i in tests {
@@ -516,8 +516,8 @@ mod tests {
     // If we're building a lib crate,
     // and there's no existing examples directory
     // create one
-    if !opts.bin && !opts.source_files.filter(|file| file.relative_path.starts_with("examples/")).any() {
-        fs::create_dir("examples/");
+    if !opts.bin && !opts.source_files.iter().any(|file| file.relative_path.starts_with("examples/")) {
+        fs::create_dir(&path.join("examples/"))?;
     }
 
     if let Err(e) = Workspace::new(&path.join("Cargo.toml"), config) {
