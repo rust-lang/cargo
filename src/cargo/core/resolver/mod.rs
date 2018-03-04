@@ -333,7 +333,7 @@ struct Context {
     //       make these much cheaper to clone in general.
     activations: Activations,
     resolve_features: HashMap<PackageId, HashSet<InternedString>>,
-    links: HashMap<String, PackageId>,
+    links: HashMap<InternedString, PackageId>,
 
     // These are two cheaply-cloneable lists (O(1) clone) which are effectively
     // hash maps but are built up as "construction lists". We'll iterate these
@@ -706,7 +706,7 @@ impl RemainingCandidates {
     fn next(
         &mut self,
         prev_active: &[Summary],
-        links: &HashMap<String, PackageId>,
+        links: &HashMap<InternedString, PackageId>,
     ) -> Result<(Candidate, bool), HashMap<PackageId, ConflictReason>> {
         // Filter the set of candidates based on the previously activated
         // versions for this dependency. We can actually use a version if it
@@ -723,7 +723,7 @@ impl RemainingCandidates {
         use std::mem::replace;
         for (_, b) in self.remaining.by_ref() {
             if let Some(link) = b.summary.links() {
-                if let Some(a) = links.get(link) {
+                if let Some(a) = links.get(&InternedString::new(link)) {
                     if a != b.summary.package_id() {
                         self.conflicting_prev_active
                             .entry(a.clone())
@@ -1298,7 +1298,7 @@ impl Context {
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.push(GraphNode::Add(id.clone()));
             if let Some(link) = summary.links() {
-                ensure!(self.links.insert(link.to_owned(), id.clone()).is_none(),
+                ensure!(self.links.insert(InternedString::new(link), id.clone()).is_none(),
                 "Attempting to resolve a with more then one crate with the links={}. \n\
                  This will not build as is. Consider rebuilding the .lock file.", link);
             }
