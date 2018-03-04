@@ -60,6 +60,7 @@ use url::Url;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
+use core::interning::InternedString;
 use util::config::Config;
 use util::Graph;
 use util::errors::{CargoResult, CargoError};
@@ -344,7 +345,7 @@ struct Context {
     warnings: RcList<String>,
 }
 
-type Activations = HashMap<String, HashMap<SourceId, Rc<Vec<Summary>>>>;
+type Activations = HashMap<InternedString, HashMap<SourceId, Rc<Vec<Summary>>>>;
 
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summaries: &[(Summary, Method)],
@@ -1290,7 +1291,7 @@ impl Context {
                       method: &Method) -> CargoResult<bool> {
         let id = summary.package_id();
         let prev = self.activations
-                       .entry(id.name().to_string())
+                       .entry(InternedString::new(id.name()))
                        .or_insert_with(HashMap::new)
                        .entry(id.source_id().clone())
                        .or_insert_with(||Rc::new(Vec::new()));
@@ -1352,14 +1353,14 @@ impl Context {
     }
 
     fn prev_active(&self, dep: &Dependency) -> &[Summary] {
-        self.activations.get(dep.name())
+        self.activations.get(&InternedString::new(dep.name()))
             .and_then(|v| v.get(dep.source_id()))
             .map(|v| &v[..])
             .unwrap_or(&[])
     }
 
     fn is_active(&self, id: &PackageId) -> bool {
-        self.activations.get(id.name())
+        self.activations.get(&InternedString::new(id.name()))
             .and_then(|v| v.get(id.source_id()))
             .map(|v| v.iter().any(|s| s.package_id() == id))
             .unwrap_or(false)
