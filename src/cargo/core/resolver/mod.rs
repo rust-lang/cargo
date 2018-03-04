@@ -332,7 +332,7 @@ struct Context {
     //       switch to persistent hash maps if we can at some point or otherwise
     //       make these much cheaper to clone in general.
     activations: Activations,
-    resolve_features: HashMap<PackageId, HashSet<String>>,
+    resolve_features: HashMap<PackageId, HashSet<InternedString>>,
     links: HashMap<String, PackageId>,
 
     // These are two cheaply-cloneable lists (O(1) clone) which are effectively
@@ -371,7 +371,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
         metadata: BTreeMap::new(),
         replacements: cx.resolve_replacements(),
         features: cx.resolve_features.iter().map(|(k, v)| {
-            (k.clone(), v.clone())
+            (k.clone(), v.iter().map(|x| x.to_inner()).collect())
         }).collect(),
         unused_patches: Vec::new(),
     };
@@ -1318,8 +1318,8 @@ impl Context {
         let has_default_feature = summary.features().contains_key("default");
         Ok(match self.resolve_features.get(id) {
             Some(prev) => {
-                features.iter().all(|f| prev.contains(f)) &&
-                    (!use_default || prev.contains("default") ||
+                features.iter().all(|f| prev.contains(&InternedString::new(f))) &&
+                    (!use_default || prev.contains(&InternedString::new("default")) ||
                      !has_default_feature)
             }
             None => features.is_empty() && (!use_default || !has_default_feature)
@@ -1434,9 +1434,7 @@ impl Context {
             let set = self.resolve_features.entry(pkgid.clone())
                               .or_insert_with(HashSet::new);
             for feature in reqs.used {
-                if !set.contains(feature) {
-                    set.insert(feature.to_string());
-                }
+                set.insert(InternedString::new(feature));
             }
         }
 

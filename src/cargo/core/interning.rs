@@ -22,9 +22,9 @@ impl InternedString {
         id_from_str.insert(str.to_string(), str_from_id.len() - 1);
         return InternedString { id: str_from_id.len() - 1 }
     }
-//    pub fn to_inner(&self) -> String {
-//        STRING_CASHE.read().unwrap().0[self.id].to_string()
-//    }
+    pub fn to_inner(&self) -> String {
+        STRING_CASHE.read().unwrap().0[self.id].to_string()
+    }
 }
 
 impl fmt::Debug for InternedString {
