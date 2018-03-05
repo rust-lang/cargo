@@ -298,7 +298,7 @@ fn linker_and_ar() {
             linker = "my-linker-tool"
         "#, target))
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &format!(r#"
+        .file("src/main.rs", &format!(r#"
             use std::env;
             fn main() {{
                 assert_eq!(env::consts::ARCH, "{}");
@@ -311,12 +311,13 @@ fn linker_and_ar() {
                 execs().with_status(101)
                        .with_stderr_contains(&format!("\
 [COMPILING] foo v0.5.0 ({url})
-[RUNNING] `rustc --crate-name foo src[/]foo.rs --crate-type bin \
+[RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
     --emit=dep-info,link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir {dir}[/]target[/]{target}[/]debug[/]deps \
     --target {target} \
     -C ar=my-ar-tool -C linker=my-linker-tool \
+    -C incremental=[..] \
     -L dependency={dir}[/]target[/]{target}[/]debug[/]deps \
     -L dependency={dir}[/]target[/]debug[/]deps`
 ",

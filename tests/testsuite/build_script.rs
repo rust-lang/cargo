@@ -839,6 +839,7 @@ fn build_cmd_with_a_build_cmd() {
     --emit=dep-info,link -C debuginfo=2 \
     -C metadata=[..] \
     --out-dir [..]target[/]debug[/]deps \
+    -C incremental=[..] \
     -L [..]target[/]debug[/]deps`
 [COMPILING] foo v0.5.0 (file://[..])
 [RUNNING] `rustc --crate-name build_script_build build.rs --crate-type bin \

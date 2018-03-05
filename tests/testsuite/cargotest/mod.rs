@@ -40,11 +40,6 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      // cargo rides the trains.
      .env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "stable")
 
-     // For now disable incremental by default as support hasn't ridden to the
-     // stable channel yet. Once incremental support hits the stable compiler we
-     // can switch this to one and then fix the tests.
-     .env("CARGO_INCREMENTAL", "0")
-
      // This env var can switch the git backend from libgit2 to git2-curl, which
      // can tweak error messages and cause some tests to fail, so let's forcibly
      // remove it.
@@ -66,7 +61,9 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env_remove("GIT_COMMITTER_NAME")
      .env_remove("GIT_COMMITTER_EMAIL")
      .env_remove("CARGO_TARGET_DIR")     // we assume 'target'
-     .env_remove("MSYSTEM");             // assume cmd.exe everywhere on windows
+     .env_remove("MSYSTEM")              // assume cmd.exe everywhere on windows
+     .env_remove("CI")
+     .env_remove("CARGO_INCREMENTAL");
     return p
 }
 

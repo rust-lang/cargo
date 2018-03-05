@@ -260,6 +260,11 @@ impl<'a> JobQueue<'a> {
         if profile.debuginfo.is_some() {
             opt_type += " + debuginfo";
         }
+        match (profile.incremental, cx.incremental_enabled()?) {
+            (true, false) => opt_type += " + non-incremental",
+            (false, true) => opt_type += " + incremental",
+            (false, false) | (true, true) => {}
+        }
         let duration = start_time.elapsed();
         let time_elapsed = format!("{}.{1:.2} secs",
                                    duration.as_secs(),
