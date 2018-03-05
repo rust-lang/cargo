@@ -129,6 +129,76 @@ crate-type = ["lib", "staticlib"]
 }
 
 #[test]
+fn library_with_features() {
+    let p = project("foo")
+        .file("src/lib.rs", "")
+        .file("Cargo.toml", r#"
+[package]
+name = "foo"
+version = "0.5.0"
+
+[features]
+default = ["default_feat"]
+default_feat = []
+optional_feat = []
+            "#)
+        .build();
+
+    assert_that(p.cargo("metadata"), execs().with_json(r#"
+    {
+        "packages": [
+            {
+                "name": "foo",
+                "version": "0.5.0",
+                "id": "foo[..]",
+                "source": null,
+                "dependencies": [],
+                "license": null,
+                "license_file": null,
+                "description": null,
+                "targets": [
+                    {
+                        "kind": [
+                            "lib"
+                        ],
+                        "crate_types": [
+                            "lib"
+                        ],
+                        "name": "foo",
+                        "src_path": "[..][/]foo[/]src[/]lib.rs"
+                    }
+                ],
+                "features": {
+                  "default": [
+                    "default_feat"
+                  ],
+                  "default_feat": [],
+                  "optional_feat": []
+                },
+                "manifest_path": "[..]Cargo.toml"
+            }
+        ],
+        "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "resolve": {
+            "nodes": [
+                {
+                    "dependencies": [],
+                    "features": [
+                      "default",
+                      "default_feat"
+                    ],
+                    "id": "foo 0.5.0 (path+file:[..]foo)"
+                }
+            ],
+            "root": "foo 0.5.0 (path+file:[..]foo)"
+        },
+        "target_directory": "[..]foo[/]target",
+        "version": 1,
+        "workspace_root": "[..][/]foo"
+    }"#));
+}
+
+#[test]
 fn cargo_metadata_with_deps_and_version() {
     let p = project("foo")
         .file("src/foo.rs", "")
