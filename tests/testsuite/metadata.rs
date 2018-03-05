@@ -42,6 +42,7 @@ fn cargo_metadata_simple() {
             "nodes": [
                 {
                     "dependencies": [],
+                    "features": [],
                     "id": "foo 0.5.0 (path+file:[..]foo)"
                 }
             ],
@@ -117,6 +118,7 @@ crate-type = ["lib", "staticlib"]
             "nodes": [
                 {
                     "dependencies": [],
+                    "features": [],
                     "id": "foo 0.5.0 (path+file:[..]foo)"
                 }
             ],
@@ -330,16 +332,19 @@ fn cargo_metadata_with_deps_and_version() {
                     "dependencies": [
                         "bar 0.0.1 (registry+[..])"
                     ],
+                    "features": [],
                     "id": "foo 0.5.0 (path+file:[..]foo)"
                 },
                 {
                     "dependencies": [
                         "baz 0.0.1 (registry+[..])"
                     ],
+                    "features": [],
                     "id": "bar 0.0.1 (registry+[..])"
                 },
                 {
                     "dependencies": [],
+                    "features": [],
                     "id": "baz 0.0.1 (registry+[..])"
                 }
             ],
@@ -404,6 +409,7 @@ name = "ex"
             "nodes": [
                 {
                     "id": "foo 0.1.0 (path+file:[..]foo)",
+                    "features": [],
                     "dependencies": []
                 }
             ]
@@ -468,6 +474,7 @@ crate-type = ["rlib", "dylib"]
             "nodes": [
                 {
                     "id": "foo 0.1.0 (path+file:[..]foo)",
+                    "features": [],
                     "dependencies": []
                 }
             ]
@@ -540,10 +547,12 @@ fn workspace_metadata() {
             "nodes": [
                 {
                     "dependencies": [],
+                    "features": [],
                     "id": "baz 0.5.0 (path+file:[..]baz)"
                 },
                 {
                     "dependencies": [],
+                    "features": [],
                     "id": "bar 0.5.0 (path+file:[..]bar)"
                 }
             ],
