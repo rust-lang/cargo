@@ -1491,8 +1491,8 @@ fn check_cycles(resolve: &Resolve, activations: &Activations)
                  -> CargoResult<()> {
         // See if we visited ourselves
         if !visited.insert(id) {
-            bail!("cyclic package dependency: package `{}` depends on itself",
-                  id);
+            bail!("cyclic package dependency: package `{}` depends on itself. Cycle (not in order): {:#?}",
+                  id, visited);
         }
 
         // If we've already checked this node no need to recurse again as we'll
