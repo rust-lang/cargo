@@ -98,12 +98,14 @@ fn serialize_resolve<S>(resolve: &Resolve, s: S) -> Result<S::Ok, S::Error>
     struct Node<'a> {
         id: &'a PackageId,
         dependencies: Vec<&'a PackageId>,
+        features: Vec<&'a str>,
     }
 
     resolve.iter().map(|id| {
         Node {
             id,
             dependencies: resolve.deps(id).collect(),
+            features: resolve.features_sorted(id),
         }
     }).collect::<Vec<_>>().serialize(s)
 }
