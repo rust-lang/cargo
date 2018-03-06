@@ -246,6 +246,18 @@ impl Project {
         buffer
     }
 
+    pub fn uncomment_root_manifest(&self) {
+        let mut contents = String::new();
+        fs::File::open(self.root().join("Cargo.toml"))
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+        fs::File::create(self.root().join("Cargo.toml"))
+            .unwrap()
+            .write_all(contents.replace("#", "").as_bytes())
+            .unwrap();
+    }
+
     fn get_lib_prefix(kind: &str) -> &str {
         match kind {
             "lib" | "rlib" => "lib",

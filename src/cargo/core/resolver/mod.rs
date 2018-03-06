@@ -384,10 +384,39 @@ struct Context {
 type Activations = HashMap<(InternedString, SourceId), Rc<Vec<Summary>>>;
 
 /// Builds the list of all packages required to build the first argument.
+///
+/// * `summaries` - the list of package summaries along with how to resolve
+///   their features. This is a list of all top-level packages that are intended
+///   to be part of the lock file (resolve output). These typically are a list
+///   of all workspace members.
+///
+/// * `replacements` - this is a list of `[replace]` directives found in the
+///   root of the workspace. The list here is a `PackageIdSpec` of what to
+///   replace and a `Dependency` to replace that with. In general it's not
+///   recommended to use `[replace]` any more and use `[patch]` instead, which
+///   is supported elsewhere.
+///
+/// * `registry` - this is the source from which all package summaries are
+///   loaded. It's expected that this is extensively configured ahead of time
+///   and is idempotent with our requests to it (aka returns the same results
+///   for the same query every time). Typically this is an instance of a
+///   `PackageRegistry`.
+///
+/// * `try_to_use` - this is a list of package ids which were previously found
+///   in the lock file. We heuristically prefer the ids listed in `try_to_use`
+///   when sorting candidates to activate, but otherwise this isn't used
+///   anywhere else.
+///
+/// * `config` - a location to print warnings and such, or `None` if no warnings
+///   should be printed
+///
+/// * `print_warnings` - whether or not to print backwards-compatibility
+///   warnings and such
 pub fn resolve(
     summaries: &[(Summary, Method)],
     replacements: &[(PackageIdSpec, Dependency)],
     registry: &mut Registry,
+    try_to_use: &[&PackageId],
     config: Option<&Config>,
     print_warnings: bool,
 ) -> CargoResult<Resolve> {
@@ -400,12 +429,8 @@ pub fn resolve(
         warnings: RcList::new(),
     };
     let _p = profile::start("resolving");
-    let cx = activate_deps_loop(
-        cx,
-        &mut RegistryQueryer::new(registry, replacements),
-        summaries,
-        config,
-    )?;
+    let mut registry = RegistryQueryer::new(registry, replacements, try_to_use);
+    let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
     let mut resolve = Resolve {
         graph: cx.graph(),
@@ -637,16 +662,22 @@ impl ConflictReason {
 struct RegistryQueryer<'a> {
     registry: &'a mut (Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
+    try_to_use: HashSet<&'a PackageId>,
     // TODO: with nll the Rc can be removed
     cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
 }
 
 impl<'a> RegistryQueryer<'a> {
-    fn new(registry: &'a mut Registry, replacements: &'a [(PackageIdSpec, Dependency)]) -> Self {
+    fn new(
+        registry: &'a mut Registry,
+        replacements: &'a [(PackageIdSpec, Dependency)],
+        try_to_use: &'a [&'a PackageId],
+    ) -> Self {
         RegistryQueryer {
             registry,
             replacements,
             cache: HashMap::new(),
+            try_to_use: try_to_use.iter().cloned().collect(),
         }
     }
 
@@ -739,9 +770,17 @@ impl<'a> RegistryQueryer<'a> {
             candidate.replace = replace;
         }
 
-        // When we attempt versions for a package, we'll want to start at
-        // the maximum version and work our way down.
-        ret.sort_unstable_by(|a, b| b.summary.version().cmp(a.summary.version()));
+        // When we attempt versions for a package we'll want to do so in a
+        // sorted fashion to pick the "best candidates" first. Currently we try
+        // prioritized summaries (those in `try_to_use`) and failing that we
+        // list everything from the maximum version to the lowest version.
+        ret.sort_unstable_by(|a, b| {
+            let a_in_previous = self.try_to_use.contains(a.summary.package_id());
+            let b_in_previous = self.try_to_use.contains(b.summary.package_id());
+            let a = (a_in_previous, a.summary.version());
+            let b = (b_in_previous, b.summary.version());
+            a.cmp(&b).reverse()
+        });
 
         let out = Rc::new(ret);
 

@@ -434,7 +434,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                 patches.extend(
                     extra
                         .iter()
-                        .filter(|s| dep.matches_ignoring_source(s))
+                        .filter(|s| dep.matches_ignoring_source(s.package_id()))
                         .cloned(),
                 );
             }

@@ -7,9 +7,11 @@ use std::slice;
 use glob::glob;
 use url::Url;
 
-use core::{Dependency, PackageIdSpec, Profile, Profiles};
+use core::registry::PackageRegistry;
 use core::{EitherManifest, Package, SourceId, VirtualManifest};
+use core::{Dependency, PackageIdSpec, Profile, Profiles};
 use ops;
+use sources::PathSource;
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 use util::toml::read_manifest;
@@ -70,6 +72,8 @@ pub struct Workspace<'cfg> {
     // cases `false` also results in the non-enforcement of dev-dependencies.
     require_optional_deps: bool,
 
+    // A cache of lodaed packages for particular paths which is disjoint from
+    // `packages` up above, used in the `load` method down below.
     loaded_packages: RefCell<HashMap<PathBuf, Package>>,
 }
 
@@ -691,6 +695,37 @@ impl<'cfg> Workspace<'cfg> {
         let (package, _nested_paths) = ops::read_package(manifest_path, &source_id, self.config)?;
         loaded.insert(manifest_path.to_path_buf(), package.clone());
         Ok(package)
+    }
+
+    /// Preload the provided registry with already loaded packages.
+    ///
+    /// A workspace may load packages during construction/parsing/early phases
+    /// for various operations, and this preload step avoids doubly-loading and
+    /// parsing crates on the filesystem by inserting them all into the registry
+    /// with their in-memory formats.
+    pub fn preload(&self, registry: &mut PackageRegistry<'cfg>) {
+        // These can get weird as this generally represents a workspace during
+        // `cargo install`. Things like git repositories will actually have a
+        // `PathSource` with multiple entries in it, so the logic below is
+        // mostly just an optimization for normal `cargo build` in workspaces
+        // during development.
+        if self.is_ephemeral {
+            return;
+        }
+
+        for pkg in self.packages.packages.values() {
+            let pkg = match *pkg {
+                MaybePackage::Package(ref p) => p.clone(),
+                MaybePackage::Virtual(_) => continue,
+            };
+            let mut src = PathSource::new(
+                pkg.manifest_path(),
+                pkg.package_id().source_id(),
+                self.config,
+            );
+            src.preload_with(pkg);
+            registry.add_preloaded(Box::new(src));
+        }
     }
 }
 
