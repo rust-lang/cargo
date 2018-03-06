@@ -1,34 +1,51 @@
 use std::fmt;
 use std::sync::RwLock;
-use std::collections::HashMap;
+use std::collections::HashSet;
+use std::slice;
+use std::str;
+use std::mem;
+
+pub fn leek(s: String) -> &'static str {
+    let ptr = s.as_ptr();
+    let len = s.len();
+    mem::forget(s);
+    unsafe {
+        let slice = slice::from_raw_parts(ptr, len);
+        str::from_utf8_unchecked(slice)
+    }
+}
 
 lazy_static! {
-    static ref STRING_CASHE: RwLock<(Vec<String>, HashMap<String, usize>)> =
-        RwLock::new((Vec::new(), HashMap::new()));
+    static ref STRING_CASHE: RwLock<HashSet<&'static str>> =
+        RwLock::new(HashSet::new());
 }
 
 #[derive(Eq, PartialEq, Hash, Clone, Copy)]
 pub struct InternedString {
-    id: usize
+    ptr: *const u8,
+    len: usize,
 }
 
 impl InternedString {
     pub fn new(str: &str) -> InternedString {
-        let (ref mut str_from_id, ref mut id_from_str) = *STRING_CASHE.write().unwrap();
-        if let Some(&id) = id_from_str.get(str) {
-            return InternedString { id };
+        let mut cache = STRING_CASHE.write().unwrap();
+        if let Some(&s) = cache.get(str) {
+            return InternedString { ptr: s.as_ptr(), len: s.len() };
         }
-        str_from_id.push(str.to_string());
-        id_from_str.insert(str.to_string(), str_from_id.len() - 1);
-        return InternedString { id: str_from_id.len() - 1 }
+        let s = leek(str.to_string());
+        cache.insert(s);
+        InternedString { ptr: s.as_ptr(), len: s.len() }
     }
-    pub fn to_inner(&self) -> String {
-        STRING_CASHE.read().unwrap().0[self.id].to_string()
+    pub fn to_inner(&self) -> &'static str {
+        unsafe {
+            let slice = slice::from_raw_parts(self.ptr, self.len);
+            str::from_utf8_unchecked(slice)
+        }
     }
 }
 
 impl fmt::Debug for InternedString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "InternedString {{ {} }}", STRING_CASHE.read().unwrap().0[self.id])
+        write!(f, "InternedString {{ {} }}", self.to_inner())
     }
 }
