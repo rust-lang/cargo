@@ -1,6 +1,5 @@
 use command_prelude::*;
 
-use cargo::core::Package;
 use cargo::print_json;
 
 pub fn cli() -> App {
@@ -13,8 +12,7 @@ Print a JSON representation of a Cargo.toml manifest.",
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let root = args.root_manifest(config)?;
-    let pkg = Package::for_path(&root, config)?;
-    print_json(&pkg);
+    let ws = args.workspace(config)?;
+    print_json(&ws.current()?);
     Ok(())
 }

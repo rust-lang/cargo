@@ -1,17 +1,19 @@
-use std::collections::hash_map::{Entry, HashMap};
+use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::collections::hash_map::{Entry, HashMap};
 use std::path::{Path, PathBuf};
 use std::slice;
 
 use glob::glob;
 use url::Url;
 
-use core::{EitherManifest, Package, SourceId, VirtualManifest};
 use core::{Dependency, PackageIdSpec, Profile, Profiles};
-use util::{Config, Filesystem};
+use core::{EitherManifest, Package, SourceId, VirtualManifest};
+use ops;
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 use util::toml::read_manifest;
+use util::{Config, Filesystem};
 
 /// The core abstraction in Cargo for working with a workspace of crates.
 ///
@@ -67,6 +69,8 @@ pub struct Workspace<'cfg> {
     // needed by the current configuration (such as in cargo install). In some
     // cases `false` also results in the non-enforcement of dev-dependencies.
     require_optional_deps: bool,
+
+    loaded_packages: RefCell<HashMap<PathBuf, Package>>,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -137,6 +141,7 @@ impl<'cfg> Workspace<'cfg> {
             default_members: Vec::new(),
             is_ephemeral: false,
             require_optional_deps: true,
+            loaded_packages: RefCell::new(HashMap::new()),
         };
         ws.root_manifest = ws.find_root(manifest_path)?;
         ws.find_members()?;
@@ -172,6 +177,7 @@ impl<'cfg> Workspace<'cfg> {
             default_members: Vec::new(),
             is_ephemeral: true,
             require_optional_deps,
+            loaded_packages: RefCell::new(HashMap::new()),
         };
         {
             let key = ws.current_manifest.parent().unwrap();
@@ -669,11 +675,32 @@ impl<'cfg> Workspace<'cfg> {
 
         Ok(())
     }
+
+    pub fn load(&self, manifest_path: &Path) -> CargoResult<Package> {
+        match self.packages.maybe_get(manifest_path) {
+            Some(&MaybePackage::Package(ref p)) => return Ok(p.clone()),
+            Some(&MaybePackage::Virtual(_)) => bail!("cannot load workspace root"),
+            None => {}
+        }
+
+        let mut loaded = self.loaded_packages.borrow_mut();
+        if let Some(p) = loaded.get(manifest_path).cloned() {
+            return Ok(p);
+        }
+        let source_id = SourceId::for_path(manifest_path.parent().unwrap())?;
+        let (package, _nested_paths) = ops::read_package(manifest_path, &source_id, self.config)?;
+        loaded.insert(manifest_path.to_path_buf(), package.clone());
+        Ok(package)
+    }
 }
 
 impl<'cfg> Packages<'cfg> {
     fn get(&self, manifest_path: &Path) -> &MaybePackage {
-        &self.packages[manifest_path.parent().unwrap()]
+        self.maybe_get(manifest_path).unwrap()
+    }
+
+    fn maybe_get(&self, manifest_path: &Path) -> Option<&MaybePackage> {
+        self.packages.get(manifest_path.parent().unwrap())
     }
 
     fn load(&mut self, manifest_path: &Path) -> CargoResult<&MaybePackage> {

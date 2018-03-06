@@ -188,7 +188,7 @@ impl EncodableResolve {
     }
 }
 
-fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
+fn build_path_deps(ws: &Workspace) -> (HashMap<String, SourceId>) {
     // If a crate is *not* a path source, then we're probably in a situation
     // such as `cargo install` with a lock file from a remote dependency. In
     // that case we don't need to fixup any path dependencies (as they're not
@@ -207,33 +207,33 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
         visited.insert(member.package_id().source_id().clone());
     }
     for member in members.iter() {
-        build_pkg(member, ws.config(), &mut ret, &mut visited);
+        build_pkg(member, ws, &mut ret, &mut visited);
     }
     for deps in ws.root_patch().values() {
         for dep in deps {
-            build_dep(dep, ws.config(), &mut ret, &mut visited);
+            build_dep(dep, ws, &mut ret, &mut visited);
         }
     }
     for &(_, ref dep) in ws.root_replace() {
-        build_dep(dep, ws.config(), &mut ret, &mut visited);
+        build_dep(dep, ws, &mut ret, &mut visited);
     }
 
     return ret;
 
     fn build_pkg(
         pkg: &Package,
-        config: &Config,
+        ws: &Workspace,
         ret: &mut HashMap<String, SourceId>,
         visited: &mut HashSet<SourceId>,
     ) {
         for dep in pkg.dependencies() {
-            build_dep(dep, config, ret, visited);
+            build_dep(dep, ws, ret, visited);
         }
     }
 
     fn build_dep(
         dep: &Dependency,
-        config: &Config,
+        ws: &Workspace,
         ret: &mut HashMap<String, SourceId>,
         visited: &mut HashSet<SourceId>,
     ) {
@@ -245,13 +245,13 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
             Ok(p) => p.join("Cargo.toml"),
             Err(_) => return,
         };
-        let pkg = match Package::for_path(&path, config) {
+        let pkg = match ws.load(&path) {
             Ok(p) => p,
             Err(_) => return,
         };
         ret.insert(pkg.name().to_string(), pkg.package_id().source_id().clone());
         visited.insert(pkg.package_id().source_id().clone());
-        build_pkg(&pkg, config, ret, visited);
+        build_pkg(&pkg, ws, ret, visited);
     }
 }
 
