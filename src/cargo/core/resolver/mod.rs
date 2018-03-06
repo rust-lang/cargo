@@ -892,15 +892,19 @@ fn activate_deps_loop(
             // We have a candidate. Clone a `BacktrackFrame`
             // so we can add it to the `backtrack_stack` if activation succeeds.
             // We clone now in case `activate` changes `cx` and then fails.
-            let backtrack = BacktrackFrame {
-                cur,
-                context_backup: Context::clone(&cx),
-                deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
-                remaining_candidates: remaining_candidates.clone(),
-                parent: Summary::clone(&parent),
-                dep: Dependency::clone(&dep),
-                features: Rc::clone(&features),
-                conflicting_activations: conflicting_activations.clone(),
+            let backtrack = if has_another {
+                Some(BacktrackFrame {
+                    cur,
+                    context_backup: Context::clone(&cx),
+                    deps_backup: <BinaryHeap<DepsFrame>>::clone(&remaining_deps),
+                    remaining_candidates: remaining_candidates.clone(),
+                    parent: Summary::clone(&parent),
+                    dep: Dependency::clone(&dep),
+                    features: Rc::clone(&features),
+                    conflicting_activations: conflicting_activations.clone(),
+                })
+            } else {
+                None
             };
 
             let method = Method::Required {
@@ -925,12 +929,14 @@ fn activate_deps_loop(
             // Add an entry to the `backtrack_stack` so
             // we can try the next one if this one fails.
             if successfully_activated {
-                if has_another {
-                    backtrack_stack.push(backtrack);
+                if let Some(b) = backtrack {
+                    backtrack_stack.push(b);
                 }
             } else {
-                // `activate` changed `cx` and then failed so put things back.
-                cx = backtrack.context_backup;
+                if let Some(b) = backtrack {
+                    // `activate` changed `cx` and then failed so put things back.
+                    cx = b.context_backup;
+                } // else we are just using the cx for the error message so we can live with a corrupted one
             }
         }
     }
