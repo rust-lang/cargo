@@ -76,8 +76,6 @@ runner = ".."
 # custom flags to pass to all compiler invocations that target $triple
 # this value overrides build.rustflags when both are present
 rustflags = ["..", ".."]
-# Whether or not to enable incremental compilation
-incremental = true
 
 [target.'cfg(...)']
 # Similar for the $triple configuration, but using the `cfg` syntax.
@@ -105,6 +103,7 @@ rustdoc = "rustdoc"       # the doc generator tool
 target = "triple"         # build for the target triple
 target-dir = "target"     # path of where to place all generated artifacts
 rustflags = ["..", ".."]  # custom flags to pass to all compiler invocations
+incremental = true        # whether or not to enable incremental compilation
 
 [term]
 verbose = false        # whether cargo provides verbose output
