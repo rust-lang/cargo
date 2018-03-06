@@ -499,7 +499,7 @@ impl<'de> de::Deserialize<'de> for DependencyList {
 fn parse_registry_dependency(dep: RegistryDependency)
                              -> CargoResult<Dependency> {
     let RegistryDependency {
-        name, req, features, optional, default_features, target, kind, registry
+        name, req, mut features, optional, default_features, target, kind, registry
     } = dep;
 
     let id = if let Some(registry) = registry {
@@ -527,7 +527,7 @@ fn parse_registry_dependency(dep: RegistryDependency)
     // empty feature, "", inside. This confuses the resolution process much
     // later on and these features aren't actually valid, so filter them all
     // out here.
-    let features = features.into_iter().filter(|s| !s.is_empty()).collect();
+    features.retain(|s| !s.is_empty());
 
     dep.set_optional(optional)
        .set_default_features(default_features)
