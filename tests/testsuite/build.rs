@@ -1531,9 +1531,8 @@ fn self_dependency() {
         .build();
     assert_that(p.cargo("build"),
                 execs().with_status(101)
-                       .with_stderr("\
-[ERROR] cyclic package dependency: package `test v0.0.0 ([..])` depends on itself
-"));
+                       .with_stderr_contains("\
+[ERROR] cyclic package dependency: package `test v0.0.0 ([..])` depends on itself[..]"));
 }
 
 #[test]
@@ -2652,9 +2651,9 @@ fn cyclic_deps_rejected() {
 
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr("\
-[ERROR] cyclic package dependency: package `a v0.0.1 ([..])` depends on itself
-"));
+                       .with_stderr_contains("\
+[ERROR] cyclic package dependency: package `a v0.0.1 ([..]")
+                       .with_stderr_contains("[..]depends on itself[..]"));
 }
 
 #[test]
