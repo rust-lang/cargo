@@ -9,6 +9,7 @@ extern crate log;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate clap;
 
 use std::collections::BTreeSet;
 use std::collections::HashMap;
@@ -19,6 +20,8 @@ use std::path::{Path, PathBuf};
 use cargo::core::shell::{Shell, Verbosity};
 use cargo::util::{self, CliResult, lev_distance, Config, CargoResult};
 use cargo::util::{CliError, ProcessError};
+
+mod cli;
 
 #[derive(Deserialize)]
 pub struct Flags {
@@ -85,17 +88,26 @@ fn main() {
         }
     };
 
-    let result = (|| {
-        let args: Vec<_> = try!(env::args_os()
-            .map(|s| {
-                s.into_string().map_err(|s| {
-                    format_err!("invalid unicode in argument: {:?}", s)
+    let is_clapified = ::std::env::args().any(|arg| match arg.as_ref() {
+        "build" | "bench" => true,
+        _ => false
+    });
+
+    let result = if is_clapified {
+        cli::do_main(&mut config)
+    } else {
+        (|| {
+            let args: Vec<_> = try!(env::args_os()
+                .map(|s| {
+                    s.into_string().map_err(|s| {
+                        format_err!("invalid unicode in argument: {:?}", s)
+                    })
                 })
-            })
-            .collect());
-        let rest = &args;
-        cargo::call_main_without_stdin(execute, &mut config, USAGE, rest, true)
-    })();
+                .collect());
+            let rest = &args;
+            cargo::call_main_without_stdin(execute, &mut config, USAGE, rest, true)
+        })()
+    };
 
     match result {
         Err(e) => cargo::exit_with_error(e, &mut *config.shell()),
@@ -105,8 +117,8 @@ fn main() {
 
 macro_rules! each_subcommand{
     ($mac:ident) => {
-        $mac!(bench);
-        $mac!(build);
+//        $mac!(bench);
+//        $mac!(build);
         $mac!(check);
         $mac!(clean);
         $mac!(doc);
