@@ -2875,7 +2875,10 @@ fn rename_with_link_search_path() {
     fs::copy(&src, &dst).unwrap();
     // copy the import library for windows, if it exists
     drop(fs::copy(&root.join("foo.dll.lib"), p2.root().join("foo.dll.lib")));
-    fs::remove_dir_all(p.root()).unwrap();
+    let mut new_dst = p.root();
+    new_dst.pop();
+    new_dst.push("__another_location");
+    fs::rename(p.root(), new_dst).unwrap();
 
     // Everything should work the first time
     assert_that(p2.cargo("run"),
