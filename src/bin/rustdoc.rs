@@ -55,7 +55,7 @@ Options:
     --tests                  Build all tests
     --bench NAME             Build only the specified bench target
     --benches                Build all benches
-    --all-targets            Build all targets (default)
+    --all-targets            Build all targets (lib and bin targets by default)
     --release                Build artifacts in release mode, with optimizations
     --features FEATURES      Space-separated list of features to also build
     --all-features           Build all available features

@@ -59,7 +59,7 @@ Options:
     --tests                      Benchmark all tests
     --bench NAME ...             Benchmark only the specified bench target
     --benches                    Benchmark all benches
-    --all-targets                Benchmark all targets (default)
+    --all-targets                Benchmark all targets (lib and bin targets by default)
     --no-run                     Compile, but don't run benchmarks
     -p SPEC, --package SPEC ...  Package to run benchmarks for
     --all                        Benchmark all packages in the workspace
