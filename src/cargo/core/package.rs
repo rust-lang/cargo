@@ -81,14 +81,6 @@ impl Package {
         }
     }
 
-    /// Calculate the Package from the manifest path (and cargo configuration).
-    pub fn for_path(manifest_path: &Path, config: &Config) -> CargoResult<Package> {
-        let path = manifest_path.parent().unwrap();
-        let source_id = SourceId::for_path(path)?;
-        let (pkg, _) = ops::read_package(manifest_path, &source_id, config)?;
-        Ok(pkg)
-    }
-
     /// Get the manifest dependencies
     pub fn dependencies(&self) -> &[Dependency] {
         self.manifest.dependencies()

@@ -447,8 +447,8 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         Some(ref name) => name.clone(),
         None => {
             let manifest_path = find_root_manifest_for_wd(None, config.cwd())?;
-            let pkg = Package::for_path(&manifest_path, config)?;
-            pkg.name().to_string()
+            let ws = Workspace::new(&manifest_path, config)?;
+            ws.current()?.package_id().name().to_string()
         }
     };
 
@@ -508,8 +508,8 @@ pub fn yank(
         Some(name) => name,
         None => {
             let manifest_path = find_root_manifest_for_wd(None, config.cwd())?;
-            let pkg = Package::for_path(&manifest_path, config)?;
-            pkg.name().to_string()
+            let ws = Workspace::new(&manifest_path, config)?;
+            ws.current()?.package_id().name().to_string()
         }
     };
     let version = match version {
