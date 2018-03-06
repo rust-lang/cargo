@@ -29,33 +29,6 @@ hello
 }
 
 #[test]
-#[ignore]
-fn simple_implicit_main() {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#)
-        .file("src/main.rs", r#"
-            fn main() { println!("hello world"); }
-        "#)
-        .build();
-
-    assert_that(p.cargo("run").arg("--bins"),
-                execs().with_status(0)
-                       .with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]foo[EXE]`", dir = path2url(p.root())))
-                       .with_stdout("\
-hello
-"));
-    assert_that(&p.bin("foo"), existing_file());
-}
-
-#[test]
 fn simple_quiet() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -216,25 +189,6 @@ fn no_main_file() {
 }
 
 #[test]
-#[ignore]
-fn no_main_file_implicit() {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#)
-        .file("src/lib.rs", "")
-        .build();
-
-    assert_that(p.cargo("run").arg("--bins"),
-                execs().with_status(101)
-                       .with_stderr("[ERROR] a bin target must be available \
-                                     for `cargo run`\n"));
-}
-
-#[test]
 fn too_many_bins() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -249,28 +203,6 @@ fn too_many_bins() {
         .build();
 
     assert_that(p.cargo("run"),
-                execs().with_status(101)
-                       .with_stderr("[ERROR] `cargo run` requires that a project only \
-                                     have one executable; use the `--bin` option \
-                                     to specify which one to run\navailable binaries: [..]\n"));
-}
-
-#[test]
-#[ignore]
-fn too_many_bins_implicit() {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#)
-        .file("src/lib.rs", "")
-        .file("src/bin/a.rs", "")
-        .file("src/bin/b.rs", "")
-        .build();
-
-    assert_that(p.cargo("run").arg("--bins"),
                 execs().with_status(101)
                        .with_stderr("[ERROR] `cargo run` requires that a project only \
                                      have one executable; use the `--bin` option \
@@ -353,8 +285,7 @@ example
 }
 
 #[test]
-#[ignore]
-fn run_bin_implicit() {
+fn run_bins() {
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -372,44 +303,9 @@ fn run_bin_implicit() {
         .build();
 
     assert_that(p.cargo("run").arg("--bins"),
-                execs().with_status(0)
-                       .with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]examples[/]a[EXE]`", dir = path2url(p.root())))
-                       .with_stdout("\
-bin
-"));
-}
-
-#[test]
-#[ignore]
-fn run_example_implicit() {
-    let p = project("foo")
-        .file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-        "#)
-        .file("src/lib.rs", "")
-        .file("examples/a.rs", r#"
-            fn main() { println!("example"); }
-        "#)
-        .file("src/bin/a.rs", r#"
-            fn main() { println!("bin"); }
-        "#)
-        .build();
-
-    assert_that(p.cargo("run").arg("--examples"),
-                execs().with_status(0)
-                       .with_stderr(&format!("\
-[COMPILING] foo v0.0.1 ({dir})
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target[/]debug[/]examples[/]a[EXE]`", dir = path2url(p.root())))
-                       .with_stdout("\
-example
-"));
+                execs().with_status(1)
+                       .with_stderr_contains("\
+[ERROR] Unknown flag: '--bins'. Did you mean '--bin'?"));
 }
 
 #[test]
