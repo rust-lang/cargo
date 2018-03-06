@@ -19,7 +19,7 @@ use toml;
 use lazycell::LazyCell;
 
 use core::shell::Verbosity;
-use core::{Shell, CliUnstable};
+use core::{Shell, CliUnstable, SourceId};
 use ops;
 use url::Url;
 use util::ToUrl;
@@ -63,6 +63,8 @@ pub struct Config {
     cli_flags: CliUnstable,
     /// A handle on curl easy mode for http calls
     easy: LazyCell<RefCell<Easy>>,
+    /// Cache of the `SourceId` for crates.io
+    crates_io_source_id: LazyCell<SourceId>,
 }
 
 impl Config {
@@ -100,6 +102,7 @@ impl Config {
             },
             cli_flags: CliUnstable::default(),
             easy: LazyCell::new(),
+            crates_io_source_id: LazyCell::new(),
         }
     }
 
@@ -658,6 +661,12 @@ impl Config {
             ops::configure_http_handle(self, &mut http)?;
         }
         Ok(http)
+    }
+
+    pub fn crates_io_source_id<F>(&self, f: F) -> CargoResult<SourceId>
+        where F: FnMut() -> CargoResult<SourceId>
+    {
+        Ok(self.crates_io_source_id.try_borrow_with(f)?.clone())
     }
 }
 

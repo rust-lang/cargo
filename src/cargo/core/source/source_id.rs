@@ -168,21 +168,23 @@ impl SourceId {
     /// This is the main cargo registry by default, but it can be overridden in
     /// a `.cargo/config`.
     pub fn crates_io(config: &Config) -> CargoResult<SourceId> {
-        let cfg = ops::registry_configuration(config, None)?;
-        let url = if let Some(ref index) = cfg.index {
-            static WARNED: AtomicBool = ATOMIC_BOOL_INIT;
-            if !WARNED.swap(true, SeqCst) {
-                config.shell().warn("custom registry support via \
-                                     the `registry.index` configuration is \
-                                     being removed, this functionality \
-                                     will not work in the future")?;
-            }
-            &index[..]
-        } else {
-            CRATES_IO
-        };
-        let url = url.to_url()?;
-        SourceId::for_registry(&url)
+        config.crates_io_source_id(|| {
+            let cfg = ops::registry_configuration(config, None)?;
+            let url = if let Some(ref index) = cfg.index {
+                static WARNED: AtomicBool = ATOMIC_BOOL_INIT;
+                if !WARNED.swap(true, SeqCst) {
+                    config.shell().warn("custom registry support via \
+                                         the `registry.index` configuration is \
+                                         being removed, this functionality \
+                                         will not work in the future")?;
+                }
+                &index[..]
+            } else {
+                CRATES_IO
+            };
+            let url = url.to_url()?;
+            SourceId::for_registry(&url)
+        })
     }
 
     pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
