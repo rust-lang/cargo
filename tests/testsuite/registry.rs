@@ -1149,9 +1149,13 @@ fn update_backtracking_ok() {
 
     assert_that(
         p.cargo("update").arg("-p").arg("hyper"),
-        execs()
-            .with_status(0)
-            .with_stderr("[UPDATING] registry `[..]`"),
+        execs().with_status(0).with_stderr(
+            "\
+[UPDATING] registry `[..]`
+[UPDATING] hyper v0.6.5 -> v0.6.6
+[UPDATING] openssl v0.1.0 -> v0.1.1
+",
+        ),
     );
 }
 

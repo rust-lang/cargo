@@ -6,7 +6,7 @@ use serde::ser;
 use serde::de;
 
 use core::{Dependency, Package, PackageId, SourceId, Workspace};
-use util::{internal, Config, Graph};
+use util::{internal, Graph};
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 use super::Resolve;
@@ -188,7 +188,7 @@ impl EncodableResolve {
     }
 }
 
-fn build_path_deps(ws: &Workspace) -> (HashMap<String, SourceId>) {
+fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
     // If a crate is *not* a path source, then we're probably in a situation
     // such as `cargo install` with a lock file from a remote dependency. In
     // that case we don't need to fixup any path dependencies (as they're not

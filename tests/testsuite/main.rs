@@ -81,6 +81,7 @@ mod search;
 mod small_fd_limits;
 mod test;
 mod tool_paths;
+mod update;
 mod verify_project;
 mod version;
 mod warn_on_failure;

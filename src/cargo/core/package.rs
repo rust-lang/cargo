@@ -12,7 +12,6 @@ use lazycell::LazyCell;
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{SourceMap, Summary};
 use core::interning::InternedString;
-use ops;
 use util::{internal, lev_distance, Config};
 use util::errors::{CargoResult, CargoResultExt};
 

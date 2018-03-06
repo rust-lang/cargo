@@ -101,9 +101,9 @@ pub fn resolve_ws_with_method<'a>(
     Ok((packages, resolved_with_overrides))
 }
 
-fn resolve_with_registry(
-    ws: &Workspace,
-    registry: &mut PackageRegistry,
+fn resolve_with_registry<'cfg>(
+    ws: &Workspace<'cfg>,
+    registry: &mut PackageRegistry<'cfg>,
     warn: bool,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
@@ -133,9 +133,9 @@ fn resolve_with_registry(
 ///
 /// The previous resolve normally comes from a lockfile. This function does not
 /// read or write lockfiles from the filesystem.
-pub fn resolve_with_previous<'a>(
-    registry: &mut PackageRegistry,
-    ws: &Workspace,
+pub fn resolve_with_previous<'a, 'cfg>(
+    registry: &mut PackageRegistry<'cfg>,
+    ws: &Workspace<'cfg>,
     method: Method,
     previous: Option<&'a Resolve>,
     to_avoid: Option<&HashSet<&'a PackageId>>,
@@ -169,31 +169,18 @@ pub fn resolve_with_previous<'a>(
 
     // In the case where a previous instance of resolve is available, we
     // want to lock as many packages as possible to the previous version
-    // without disturbing the graph structure. To this end we perform
-    // two actions here:
-    //
-    // 1. We inform the package registry of all locked packages. This
-    //    involves informing it of both the locked package's id as well
-    //    as the versions of all locked dependencies. The registry will
-    //    then takes this information into account when it is queried.
-    //
-    // 2. The specified package's summary will have its dependencies
-    //    modified to their precise variants. This will instruct the
-    //    first step of the resolution process to not query for ranges
-    //    but rather for precise dependency versions.
-    //
-    //    This process must handle altered dependencies, however, as
-    //    it's possible for a manifest to change over time to have
-    //    dependencies added, removed, or modified to different version
-    //    ranges. To deal with this, we only actually lock a dependency
-    //    to the previously resolved version if the dependency listed
-    //    still matches the locked version.
+    // without disturbing the graph structure.
+    let mut try_to_use = Vec::new();
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
-        for node in r.iter().filter(keep) {
-            let deps = r.deps_not_replaced(node).filter(keep).cloned().collect();
-            registry.register_lock(node.clone(), deps);
-        }
+        register_previous_locks(ws, registry, r, keep);
+
+        // Everything in the previous lock file we want to keep is prioritized
+        // in dependency selection if it comes up, aka we want to have
+        // conservative updates.
+        try_to_use.extend(r.iter().filter(keep).inspect(|id| {
+            debug!("attempting to prefer {}", id);
+        }));
     }
 
     if register_patches {
@@ -293,7 +280,15 @@ pub fn resolve_with_previous<'a>(
         None => root_replace.to_vec(),
     };
 
-    let mut resolved = resolver::resolve(&summaries, &replace, registry, Some(ws.config()), warn)?;
+    ws.preload(registry);
+    let mut resolved = resolver::resolve(
+        &summaries,
+        &replace,
+        registry,
+        &try_to_use,
+        Some(ws.config()),
+        warn,
+    )?;
     resolved.register_used_patches(registry.patches());
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;
@@ -335,4 +330,146 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>, ws: &Workspace<'a>) -> 
 fn get_resolved_packages<'a>(resolve: &Resolve, registry: PackageRegistry<'a>) -> PackageSet<'a> {
     let ids: Vec<PackageId> = resolve.iter().cloned().collect();
     registry.get(&ids)
+}
+
+/// In this function we're responsible for informing the `registry` of all
+/// locked dependencies from the previous lock file we had, `resolve`.
+///
+/// This gets particularly tricky for a couple of reasons. The first is that we
+/// want all updates to be conservative, so we actually want to take the
+/// `resolve` into account (and avoid unnecessary registry updates and such).
+/// the second, however, is that we want to be resilient to updates of
+/// manifests. For example if a dependency is added or a version is changed we
+/// want to make sure that we properly re-resolve (conservatively) instead of
+/// providing an opaque error.
+///
+/// The logic here is somewhat subtle but there should be more comments below to
+/// help out, and otherwise feel free to ask on IRC if there's questions!
+///
+/// Note that this function, at the time of this writing, is basically the
+/// entire fix for #4127
+fn register_previous_locks<'a>(
+    ws: &Workspace,
+    registry: &mut PackageRegistry,
+    resolve: &'a Resolve,
+    keep: &Fn(&&'a PackageId) -> bool,
+) {
+    // Ok so we've been passed in a `keep` function which basically says "if I
+    // return true then this package wasn't listed for an update on the command
+    // line". AKA if we run `cargo update -p foo` then `keep(bar)` will return
+    // `true`, whereas `keep(foo)` will return `true` (roughly).
+    //
+    // This isn't actually quite what we want, however. Instead we want to
+    // further refine this `keep` function with *all transitive dependencies* of
+    // the packages we're not keeping. For example consider a case like this:
+    //
+    // * There's a crate `log`
+    // * There's a crate `serde` which depends on `log`
+    //
+    // Let's say we then run `cargo update -p serde`. This may *also* want to
+    // update the `log` dependency as our newer version of `serde` may have a
+    // new minimum version required for `log`. Now this isn't always guaranteed
+    // to work. What'll happen here is we *won't* lock the `log` dependency nor
+    // the `log` crate itself, but we will inform the registry "please prefer
+    // this version of `log`". That way if our newer version of serde works with
+    // the older version of `log`, we conservatively won't update `log`. If,
+    // however, nothing else in the dependency graph depends on `log` and the
+    // newer version of `serde` requires a new version of `log` it'll get pulled
+    // in (as we didn't accidentally lock it to an old version).
+    let mut avoid_locking = HashSet::new();
+    for node in resolve.iter() {
+        if !keep(&node) {
+            add_deps(resolve, node, &mut avoid_locking);
+        }
+    }
+
+    // Ok but the above loop isn't the entire story! Updates to the dependency
+    // graph can come from two locations, the `cargo update` command or
+    // manifests themselves. For example a manifest on the filesystem may
+    // have been updated to have an updated version requirement on `serde`. In
+    // this case both `keep(serde)` and `keep(log)` return `true` (the `keep`
+    // that's an argument to this function). We, however, don't want to keep
+    // either of those! Otherwise we'll get obscure resolve errors about locked
+    // versions.
+    //
+    // To solve this problem we iterate over all packages with path sources
+    // (aka ones with manifests that are changing) and take a look at all of
+    // their dependencies. If any dependency does not match something in the
+    // previous lock file, then we're guaranteed that the main resolver will
+    // update the source of this dependency no matter what. Knowing this we
+    // poison all packages from the same source, forcing them all to get
+    // updated.
+    //
+    // This may seem like a heavy hammer, and it is! It means that if you change
+    // anything from crates.io then all of crates.io becomes unlocked. Note,
+    // however, that we still want conservative updates. This currently happens
+    // because the first candidate the resolver picks is the previously locked
+    // version, and only if that fails to activate to we move on and try
+    // a different version. (giving the guise of conservative updates)
+    //
+    // For example let's say we had `serde = "0.1"` written in our lock file.
+    // When we later edit this to `serde = "0.1.3"` we don't want to lock serde
+    // at its old version, 0.1.1. Instead we want to allow it to update to
+    // `0.1.3` and update its own dependencies (like above). To do this *all
+    // crates from crates.io* are not locked (aka added to `avoid_locking`).
+    // For dependencies like `log` their previous version in the lock file will
+    // come up first before newer version, if newer version are available.
+    let mut path_deps = ws.members().cloned().collect::<Vec<_>>();
+    let mut visited = HashSet::new();
+    while let Some(member) = path_deps.pop() {
+        if !visited.insert(member.package_id().clone()) {
+            continue;
+        }
+        for dep in member.dependencies() {
+            let source = dep.source_id();
+
+            // If this is a path dependency then try to push it onto our
+            // worklist
+            if source.is_path() {
+                if let Ok(path) = source.url().to_file_path() {
+                    if let Ok(pkg) = ws.load(&path.join("Cargo.toml")) {
+                        path_deps.push(pkg);
+                    }
+                    continue;
+                }
+            }
+
+            // If we match *anything* in the dependency graph then we consider
+            // ourselves A-OK and assume that we'll resolve to that. If,
+            // however, nothing matches, then we poison the source of this
+            // dependencies and the previous lock file.
+            if resolve.iter().any(|id| dep.matches_ignoring_source(id)) {
+                continue;
+            }
+            for id in resolve.iter().filter(|id| id.source_id() == source) {
+                add_deps(resolve, id, &mut avoid_locking);
+            }
+        }
+    }
+
+    // Alright now that we've got our new, fresh, shiny, and refined `keep`
+    // function let's put it to action. Take a look at the previous lockfile,
+    // filter everything by this callback, and then shove everything else into
+    // the registry as a locked dependency.
+    let ref keep = |id: &&'a PackageId| keep(id) && !avoid_locking.contains(id);
+
+    for node in resolve.iter().filter(keep) {
+        let deps = resolve
+            .deps_not_replaced(node)
+            .filter(keep)
+            .cloned()
+            .collect();
+        registry.register_lock(node.clone(), deps);
+    }
+
+    /// recursively add `node` and all its transitive dependencies to `set`
+    fn add_deps<'a>(resolve: &'a Resolve, node: &'a PackageId, set: &mut HashSet<&'a PackageId>) {
+        if !set.insert(node) {
+            return;
+        }
+        debug!("ignoring any lock pointing directly at {}", node);
+        for dep in resolve.deps_not_replaced(node) {
+            add_deps(resolve, dep, set);
+        }
+    }
 }
