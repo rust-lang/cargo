@@ -743,6 +743,7 @@ fn cargo_metadata_no_deps_cwd() {
 }
 
 #[test]
+#[ignore]
 fn cargo_metadata_bad_version() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
