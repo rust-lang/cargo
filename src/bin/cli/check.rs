@@ -27,7 +27,7 @@ pub fn cli() -> App {
                 .value_name("PROFILE")
         )
         .arg_features()
-        .arg_target_triple()
+        .arg_target_triple("Check for the target triple")
         .arg_manifest_path()
         .arg_message_format()
         .arg_locked()

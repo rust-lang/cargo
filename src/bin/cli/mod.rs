@@ -158,6 +158,18 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             ops::compile(&ws, &compile_opts)?;
             return Ok(());
         }
+        ("clean", Some(args)) => {
+            config_from_args(config, args)?;
+            let ws = workspace_from_args(config, args)?;
+            let opts = ops::CleanOptions {
+                config,
+                spec: &values(args, "package"),
+                target: args.value_of("target"),
+                release: args.is_present("release"),
+            };
+            ops::clean(&ws, &opts)?;
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
@@ -223,6 +235,7 @@ See 'cargo help <command>' for more information on a specific command.
             bench::cli(),
             build::cli(),
             check::cli(),
+            clean::cli(),
         ])
     ;
     app
@@ -231,6 +244,7 @@ See 'cargo help <command>' for more information on a specific command.
 mod bench;
 mod build;
 mod check;
+mod clean;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
@@ -293,8 +307,8 @@ mod utils {
             self._arg(opt("release", release))
         }
 
-        fn arg_target_triple(self) -> Self {
-            self._arg(opt("target", "Build for the target triple").value_name("TRIPLE"))
+        fn arg_target_triple(self, target: &'static str) -> Self {
+            self._arg(opt("target", target).value_name("TRIPLE"))
         }
 
         fn arg_manifest_path(self) -> Self {
