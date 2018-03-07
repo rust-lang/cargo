@@ -21,6 +21,7 @@ pub mod resolver;
 pub mod summary;
 pub mod shell;
 pub mod registry;
+mod interning;
 mod package_id_spec;
 mod workspace;
 mod features;
