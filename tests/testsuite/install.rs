@@ -984,6 +984,7 @@ fn version_too() {
 }
 
 #[test]
+#[ignore]
 fn not_both_vers_and_version() {
     pkg("foo", "0.1.1");
     pkg("foo", "0.1.2");

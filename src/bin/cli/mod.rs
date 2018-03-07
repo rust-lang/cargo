@@ -77,11 +77,10 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             &values(args, "package"),
         )?;
 
-        let release = mode == CompileMode::Bench || args.is_present("release");
         let message_format = match args.value_of("message-format") {
             Some("json") => MessageFormat::Json,
-            Some("human") => MessageFormat::Human,
-            f => panic!("Impossible message format: {:?}", f),
+            Some("human") | None => MessageFormat::Human,
+            Some(f) => panic!("Impossible message format: {:?}", f),
         };
 
         let opts = CompileOptions {
@@ -93,7 +92,7 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             no_default_features: args.is_present("no-default-features"),
             spec,
             mode,
-            release,
+            release: args.is_present("release"),
             filter: ops::CompileFilter::new(args.is_present("lib"),
                                             values(args, "bin"), args.is_present("bins"),
                                             values(args, "test"), args.is_present("tests"),
@@ -111,7 +110,8 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
     match args.subcommand() {
         ("bench", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
-            let compile_opts = compile_options_from_args(config, args, CompileMode::Bench)?;
+            let mut compile_opts = compile_options_from_args(config, args, CompileMode::Bench)?;
+            compile_opts.release = true;
 
             let ops = ops::TestOptions {
                 no_run: args.is_present("no-run"),
@@ -222,6 +222,43 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             config.shell().status("Created", format!("{} project", opts.kind))?;
             return Ok(());
         }
+        ("install", Some(args)) => {
+            let mut compile_opts = compile_options_from_args(config, args, CompileMode::Build)?;
+            compile_opts.release = !args.is_present("debug");
+
+            let krates = args.values_of("crate").unwrap_or_default().collect::<Vec<_>>();
+
+            let source = if let Some(url) = args.value_of("git") {
+                let url = url.to_url()?;
+                let gitref = if let Some(branch) = args.value_of("branch") {
+                    GitReference::Branch(branch.to_string())
+                } else if let Some(tag) = args.value_of("tag") {
+                    GitReference::Tag(tag.to_string())
+                } else if let Some(rev) = args.value_of("rev") {
+                    GitReference::Rev(rev.to_string())
+                } else {
+                    GitReference::Branch("master".to_string())
+                };
+                SourceId::for_git(&url, gitref)?
+            } else if let Some(path) = args.value_of("path") {
+                SourceId::for_path(&config.cwd().join(path))?
+            } else if krates.is_empty() {
+                SourceId::for_path(config.cwd())?
+            } else {
+                SourceId::crates_io(config)?
+            };
+
+            let version = args.value_of("version");
+            let root = args.value_of("root");
+
+            if args.is_present("list") {
+                ops::install_list(root, config)?;
+            } else {
+                ops::install(root, krates, &source, version, &compile_opts, args.is_present("force"))?;
+            }
+            return Ok(());
+
+        }
         _ => return Ok(())
     }
 }
@@ -301,6 +338,7 @@ See 'cargo help <command>' for more information on a specific command.
             generate_lockfile::cli(),
             git_checkout::cli(),
             init::cli(),
+            install::cli(),
         ])
     ;
     app
@@ -313,9 +351,12 @@ mod clean;
 mod doc;
 mod fetch;
 mod generate_lockfile;
-mod git_checkout;
+
 // FIXME: let's just drop this subcommand?
+mod git_checkout;
+
 mod init;
+mod install;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
@@ -373,14 +414,27 @@ mod utils {
                 ._arg(opt("bins", bins))
         }
 
+        fn arg_targets_bin_example(
+            self,
+            bin: &'static str,
+            bins: &'static str,
+            example: &'static str,
+            examples: &'static str,
+        ) -> Self {
+            self._arg(opt("bin", bin).value_name("NAME").multiple(true))
+                ._arg(opt("bins", bins))
+                ._arg(opt("example", example).value_name("NAME").multiple(true))
+                ._arg(opt("examples", examples))
+        }
+
         fn arg_features(self) -> Self {
             self
                 ._arg(
-                    opt("features", "Space-separated list of features to also enable")
+                    opt("features", "Space-separated list of features to activate")
                         .value_name("FEATURES")
                 )
-                ._arg(opt("all-features", "Enable all available features"))
-                ._arg(opt("no-default-features", "Do not enable the `default` feature"))
+                ._arg(opt("all-features", "Activate all available features"))
+                ._arg(opt("no-default-features", "Do not activate the `default` feature"))
         }
 
         fn arg_release(self, release: &'static str) -> Self {
