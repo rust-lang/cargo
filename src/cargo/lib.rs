@@ -27,6 +27,7 @@ extern crate home;
 extern crate ignore;
 extern crate jobserver;
 extern crate lazycell;
+#[macro_use] extern crate lazy_static;
 extern crate libc;
 extern crate libgit2_sys;
 extern crate num_cpus;
