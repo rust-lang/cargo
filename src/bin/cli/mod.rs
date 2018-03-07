@@ -3,17 +3,19 @@ extern crate clap;
 extern crate cargo;
 
 use std::slice;
-
-use cargo;
+use std::io::{self, BufRead};
+use std::path::PathBuf;
 
 use clap::{AppSettings, Arg, ArgMatches};
-use cargo::{Config, CargoResult, CliError};
+
+use cargo::{self, Config, CargoResult, CargoError, CliError};
 use cargo::core::{Workspace, Source, SourceId, GitReference};
-use cargo::util::ToUrl;
+use cargo::util::{ToUrl, CargoResultExt};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::ops::{self, MessageFormat, Packages, CompileOptions, CompileMode, VersionControl};
-use cargo::sources::GitSource;
+use cargo::sources::{GitSource, RegistrySource};
 
+use self::utils::*;
 
 pub fn do_main(config: &mut Config) -> Result<(), CliError> {
     let args = cli().get_matches();
@@ -282,12 +284,47 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             cargo::print_json(&location);
             return Ok(());
         }
+        ("login", Some(args)) => {
+            let registry = args.value_of("registry").map(|s| s.to_string());
+            if registry.is_some() && !config.cli_unstable().unstable_options {
+                return Err(format_err!("registry option is an unstable feature and \
+                                requires -Zunstable-options to use.").into());
+            }
+
+            let token = match args.value_of("token") {
+                Some(token) => token.to_string(),
+                None => {
+                    let host = match registry {
+                        Some(ref _registry) => {
+                            return Err(format_err!("token must be provided when \
+                                            --registry is provided.").into())
+                        }
+                        None => {
+                            let src = SourceId::crates_io(config)?;
+                            let mut src = RegistrySource::remote(&src, config);
+                            src.update()?;
+                            let config = src.config()?.unwrap();
+                            args.value_of("host").map(|s| s.to_string())
+                                .unwrap_or(config.api.unwrap())
+                        }
+                    };
+                    println!("please visit {}me and paste the API Token below", host);
+                    let mut line = String::new();
+                    let input = io::stdin();
+                    input.lock().read_line(&mut line).chain_err(|| {
+                        "failed to read stdin"
+                    }).map_err(CargoError::from)?;
+                    line.trim().to_string()
+                }
+            };
+
+            ops::registry_login(config, token, registry)?;
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
 
-use self::utils::*;
-use std::path::PathBuf;
 
 fn cli() -> App {
     let app = App::new("cargo")
@@ -364,6 +401,7 @@ See 'cargo help <command>' for more information on a specific command.
             init::cli(),
             install::cli(),
             locate_project::cli(),
+            login::cli(),
         ])
     ;
     app
@@ -383,6 +421,7 @@ mod git_checkout;
 mod init;
 mod install;
 mod locate_project;
+mod login;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
