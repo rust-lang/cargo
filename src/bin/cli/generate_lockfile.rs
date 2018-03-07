@@ -1,8 +1,8 @@
 use super::utils::*;
 
 pub fn cli() -> App {
-    subcommand("fetch")
-        .about("Fetch dependencies of a package from the network")
+    subcommand("generate-lockfile")
+        .about("Generate the lockfile for a project")
         .arg_manifest_path()
         .arg_locked()
         .after_help("\
