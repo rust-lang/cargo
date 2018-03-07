@@ -73,6 +73,10 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
         Workspace::new(&root, config)
     }
 
+    fn jobs_from_args(args: &ArgMatches) -> Option<u32> { //FIXME: validation
+        args.value_of("jobs").and_then(|v| v.parse().ok())
+    }
+
     fn compile_options_from_args<'a>(
         config: &'a Config,
         args: &'a ArgMatches<'a>,
@@ -92,7 +96,7 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
 
         let opts = CompileOptions {
             config,
-            jobs: args.value_of("jobs").and_then(|v| v.parse().ok()),
+            jobs: jobs_from_args(args),
             target: args.value_of("target"),
             features: &values(args, "features"),
             all_features: args.is_present("all-features"),
@@ -377,9 +381,23 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
                 to_remove: args.values_of("remove")
                     .map(|xs| xs.map(|s| s.to_string()).collect()),
                 list: args.is_present("list"),
-                registry: args.value_of("registry").map(|s| s.to_string()),
+                registry,
             };
             ops::modify_owners(config, &opts)?;
+            return Ok(());
+        }
+        ("package", Some(args)) => {
+            let ws = workspace_from_args(config, args)?;
+            ops::package(&ws, &ops::PackageOpts {
+                config,
+                verify: !args.is_present("no-verify"),
+                list: args.is_present("list"),
+                check_metadata: !args.is_present("no-metadata"),
+                allow_dirty: args.is_present("allow-dirty"),
+                target: args.value_of("target"),
+                jobs: jobs_from_args(args),
+                registry: None,
+            })?;
             return Ok(());
         }
         _ => return Ok(())
@@ -466,6 +484,7 @@ See 'cargo help <command>' for more information on a specific command.
             metadata::cli(),
             new::cli(),
             owner::cli(),
+            package::cli(),
         ])
     ;
     app
@@ -489,6 +508,7 @@ mod login;
 mod metadata;
 mod new;
 mod owner;
+mod package;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};

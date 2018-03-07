@@ -91,7 +91,7 @@ fn main() {
     let is_clapified = ::std::env::args().any(|arg| match arg.as_ref() {
         "build" | "bench" | "check" | "clean" | "doc" | "fetch" | "generate-lockfile" | "git-checkout" |
         "init" | "install" | "locate-project" | "login" | "metadata" | "new" |
-        "owner" => true,
+        "owner" | "package" => true,
         _ => false
     });
 
@@ -135,7 +135,7 @@ macro_rules! each_subcommand{
 //        $mac!(metadata);
 //        $mac!(new);
 //        $mac!(owner);
-        $mac!(package);
+//        $mac!(package);
         $mac!(pkgid);
         $mac!(publish);
         $mac!(read_manifest);
