@@ -1,7 +1,9 @@
 use super::utils::*;
+use clap::AppSettings;
 
 pub fn cli() -> App {
     subcommand("bench")
+        .setting(AppSettings::TrailingVarArg)
         .about("Execute all benchmarks of a local package")
         .arg(
             Arg::with_name("BENCHNAME").help(

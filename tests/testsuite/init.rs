@@ -440,6 +440,7 @@ fn with_argument() {
 
 
 #[test]
+#[ignore]
 fn unknown_flags() {
     assert_that(cargo_process("init").arg("foo").arg("--flag"),
                 execs().with_status(1)
