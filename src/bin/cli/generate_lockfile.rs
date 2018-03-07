@@ -4,7 +4,6 @@ pub fn cli() -> App {
     subcommand("generate-lockfile")
         .about("Generate the lockfile for a project")
         .arg_manifest_path()
-        .arg_locked()
         .after_help("\
 If a lockfile is available, this command will ensure that all of the git
 dependencies and/or registries dependencies are downloaded and locally

@@ -25,7 +25,6 @@ pub fn cli() -> App {
         .arg_target_triple("Build for the target triple")
         .arg_manifest_path()
         .arg_message_format()
-        .arg_locked()
         .after_help("\
 By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.

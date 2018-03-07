@@ -24,5 +24,4 @@ a global configuration."
             opt("name", "Set the resulting package name")
                 .value_name("NAME")
         )
-        .arg_locked()
 }

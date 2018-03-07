@@ -26,7 +26,6 @@ pub fn cli() -> App {
         .arg_target_triple("Build for the target triple")
         .arg_manifest_path()
         .arg_message_format()
-        .arg_locked()
         .after_help("\
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be built. If it is not given, then the
