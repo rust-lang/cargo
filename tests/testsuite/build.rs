@@ -4307,7 +4307,11 @@ fn avoid_dev_deps() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("build"), execs().with_status(101));
-    assert_that(p.cargo("build").masquerade_as_nightly_cargo()
-                .arg("-Zavoid-dev-deps"), execs().with_status(0));
+    // --bins is needed because of #5134
+    assert_that(p.cargo("build").arg("--bins"),
+        execs().with_status(101));
+    assert_that(p.cargo("build").arg("--bins")
+                .masquerade_as_nightly_cargo()
+                .arg("-Zavoid-dev-deps"),
+        execs().with_status(0));
 }
