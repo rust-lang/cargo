@@ -13,7 +13,7 @@ use cargo::core::{Workspace, Source, SourceId, GitReference};
 use cargo::util::{ToUrl, CargoResultExt};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::ops::{self, MessageFormat, Packages, CompileOptions, CompileMode, VersionControl,
-                 OutputMetadataOptions};
+                 OutputMetadataOptions, NewOptions};
 use cargo::sources::{GitSource, RegistrySource};
 
 use self::utils::*;
@@ -111,6 +111,22 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             target_rustc_args: None,
         };
         Ok(opts)
+    }
+
+    fn new_opts_from_args<'a>(args: &'a ArgMatches<'a>, path: &'a str) -> CargoResult<NewOptions<'a>> {
+        let vcs = args.value_of("vcs").map(|vcs| match vcs {
+            "git" => VersionControl::Git,
+            "hg" => VersionControl::Hg,
+            "pijul" => VersionControl::Pijul,
+            "fossil" => VersionControl::Fossil,
+            "none" => VersionControl::NoVcs,
+            vcs => panic!("Impossible vcs: {:?}", vcs),
+        });
+        NewOptions::new(vcs,
+                        args.is_present("bin"),
+                        args.is_present("lib"),
+                        path,
+                        args.value_of("name"))
     }
 
     config_from_args(config, &args)?;
@@ -211,20 +227,7 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
         }
         ("init", Some(args)) => {
             let path = args.value_of("path").unwrap_or(".");
-            let vcs = args.value_of("vcs").map(|vcs| match vcs {
-                "git" => VersionControl::Git,
-                "hg" => VersionControl::Hg,
-                "pijul" => VersionControl::Pijul,
-                "fossil" => VersionControl::Fossil,
-                "none" => VersionControl::NoVcs,
-                vcs => panic!("Impossible vcs: {:?}", vcs),
-            });
-            let opts = ops::NewOptions::new(vcs,
-                                            args.is_present("bin"),
-                                            args.is_present("lib"),
-                                            path,
-                                            args.value_of("name"))?;
-
+            let opts = new_opts_from_args(args, path)?;
             ops::init(&opts, config)?;
             config.shell().status("Created", format!("{} project", opts.kind))?;
             return Ok(());
@@ -264,7 +267,6 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
                 ops::install(root, krates, &source, version, &compile_opts, args.is_present("force"))?;
             }
             return Ok(());
-
         }
         ("locate-project", Some(args)) => {
             let root = root_manifest_from_args(config, args)?;
@@ -298,7 +300,7 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
                     let host = match registry {
                         Some(ref _registry) => {
                             return Err(format_err!("token must be provided when \
-                                            --registry is provided.").into())
+                                            --registry is provided.").into());
                         }
                         None => {
                             let src = SourceId::crates_io(config)?;
@@ -347,6 +349,13 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             let result = ops::output_metadata(&ws, &options)?;
             cargo::print_json(&result);
             return Ok(());
+        }
+        ("new", Some(args)) => {
+            let path = args.value_of("path").unwrap();
+            let opts = new_opts_from_args(args, path)?;
+            ops::new(&opts, config)?;
+            config.shell().status("Created", format!("{} `{}` project", opts.kind, path))?;
+            Ok(())
         }
         _ => return Ok(())
     }
@@ -430,6 +439,7 @@ See 'cargo help <command>' for more information on a specific command.
             locate_project::cli(),
             login::cli(),
             metadata::cli(),
+            new::cli(),
         ])
     ;
     app
@@ -451,6 +461,7 @@ mod install;
 mod locate_project;
 mod login;
 mod metadata;
+mod new;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
@@ -550,9 +561,22 @@ mod utils {
             )
         }
 
-        fn arg_locked(self) -> Self {
-            self._arg(opt("frozen", "Require Cargo.lock and cache are up to date"))
-                ._arg(opt("locked", "Require Cargo.lock is up to date"))
+        fn arg_new_opts(self) -> Self {
+            self._arg(
+                opt("vcs", "\
+Initialize a new repository for the given version \
+control system (git, hg, pijul, or fossil) or do not \
+initialize any version control at all (none), overriding \
+a global configuration.")
+                    .value_name("VCS")
+                    .possible_values(&["git", "hg", "pijul", "fossil", "none"])
+            )
+                ._arg(opt("bin", "Use a binary (application) template [default]"))
+                ._arg(opt("lib", "Use a library template"))
+                ._arg(
+                    opt("name", "Set the resulting package name, defaults to the directory name")
+                        .value_name("NAME")
+                )
         }
     }
 
