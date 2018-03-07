@@ -73,7 +73,7 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
         let spec = Packages::from_flags(
             args.is_present("all"),
             &values(args, "exclude"),
-            &values(args, "package")
+            &values(args, "package"),
         )?;
 
         let release = mode == CompileMode::Bench || args.is_present("release");
@@ -150,7 +150,7 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
                 Some(profile) => {
                     let err = format_err!("unknown profile: `{}`, only `test` is \
                                        currently supported", profile);
-                    return Err(CliError::new(err, 101))
+                    return Err(CliError::new(err, 101));
                 }
             };
             let mode = CompileMode::Check { test };
@@ -168,6 +168,18 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
                 release: args.is_present("release"),
             };
             ops::clean(&ws, &opts)?;
+            return Ok(());
+        }
+        ("doc", Some(args)) => {
+            config_from_args(config, args)?;
+            let ws = workspace_from_args(config, args)?;
+            let mode = ops::CompileMode::Doc { deps: !args.is_present("no-deps") };
+            let compile_opts = compile_options_from_args(config, args, mode)?;
+            let doc_opts = ops::DocOptions {
+                open_result: args.is_present("open"),
+                compile_opts,
+            };
+            ops::doc(&ws, &doc_opts)?;
             return Ok(());
         }
         _ => return Ok(())
@@ -236,6 +248,7 @@ See 'cargo help <command>' for more information on a specific command.
             build::cli(),
             check::cli(),
             clean::cli(),
+            doc::cli(),
         ])
     ;
     app
@@ -245,6 +258,7 @@ mod bench;
 mod build;
 mod check;
 mod clean;
+mod doc;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
@@ -268,7 +282,7 @@ mod utils {
             )
         }
 
-        fn arg_target(
+        fn arg_targets_all(
             self,
             lib: &'static str,
             bin: &'static str,
@@ -281,9 +295,7 @@ mod utils {
             benchs: &'static str,
             all: &'static str,
         ) -> Self {
-            self._arg(opt("lib", lib))
-                ._arg(opt("bin", bin).value_name("NAME").multiple(true))
-                ._arg(opt("bins", bins))
+            self.arg_targets_lib_bin(lib, bin, bins)
                 ._arg(opt("example", examle).value_name("NAME").multiple(true))
                 ._arg(opt("examples", examles))
                 ._arg(opt("test", test).value_name("NAME").multiple(true))
@@ -291,6 +303,17 @@ mod utils {
                 ._arg(opt("bench", bench).value_name("NAME").multiple(true))
                 ._arg(opt("benches", benchs))
                 ._arg(opt("all-targets", all))
+        }
+
+        fn arg_targets_lib_bin(
+            self,
+            lib: &'static str,
+            bin: &'static str,
+            bins: &'static str,
+        ) -> Self {
+            self._arg(opt("lib", lib))
+                ._arg(opt("bin", bin).value_name("NAME").multiple(true))
+                ._arg(opt("bins", bins))
         }
 
         fn arg_features(self) -> Self {

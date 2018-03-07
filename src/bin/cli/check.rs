@@ -9,7 +9,7 @@ pub fn cli() -> App {
             "Exclude packages from the check",
         )
         .arg_jobs()
-        .arg_target(
+        .arg_targets_all(
             "Check only this package's library",
             "Check only the specified binary",
             "Check all binaries",
