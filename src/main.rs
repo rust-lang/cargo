@@ -68,6 +68,11 @@ fn try_main() -> Result<(), ProgramError> {
             .long("only")
             .help("Only show errors or lints with the specific id(s) (comma separated)")
             .use_delimiter(true))
+        .arg(Arg::with_name("file")
+            .long("file")
+            .short("f")
+            .takes_value(true)
+            .help("Load errors from the given JSON file"))
         .get_matches();
 
     let mut extra_args = Vec::new();
@@ -97,7 +102,14 @@ fn try_main() -> Result<(), ProgramError> {
     }
 
     // Get JSON output from rustc...
-    let json = get_json(&extra_args)?;
+    let json = if let Some(file) = matches.value_of("file") {
+        let mut f = File::open(file)?;
+        let mut j = "".into();
+        f.read_to_string(&mut j)?;
+        j
+    } else {
+        get_json(&extra_args)?
+    };
 
     let suggestions: Vec<Suggestion> = json.lines()
         .filter(not_empty)
