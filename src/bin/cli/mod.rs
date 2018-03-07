@@ -129,6 +129,19 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
                         args.value_of("name"))
     }
 
+    fn registry_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
+        match args.value_of("registry") {
+            Some(registry) => {
+                if !config.cli_unstable().unstable_options {
+                    return Err(format_err!("registry option is an unstable feature and \
+                                requires -Zunstable-options to use.").into());
+                }
+                Ok(Some(registry.to_string()))
+            }
+            None => Ok(None),
+        }
+    }
+
     config_from_args(config, &args)?;
     match args.subcommand() {
         ("bench", Some(args)) => {
@@ -288,11 +301,7 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             return Ok(());
         }
         ("login", Some(args)) => {
-            let registry = args.value_of("registry").map(|s| s.to_string());
-            if registry.is_some() && !config.cli_unstable().unstable_options {
-                return Err(format_err!("registry option is an unstable feature and \
-                                requires -Zunstable-options to use.").into());
-            }
+            let registry = registry_from_args(config, args)?;
 
             let token = match args.value_of("token") {
                 Some(token) => token.to_string(),
@@ -356,6 +365,22 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             ops::new(&opts, config)?;
             config.shell().status("Created", format!("{} `{}` project", opts.kind, path))?;
             Ok(())
+        }
+        ("owner", Some(args)) => {
+            let registry = registry_from_args(config, args)?;
+            let opts = ops::OwnersOptions {
+                krate: args.value_of("crate").map(|s| s.to_string()),
+                token: args.value_of("token").map(|s| s.to_string()),
+                index: args.value_of("index").map(|s| s.to_string()),
+                to_add: args.values_of("add")
+                    .map(|xs| xs.map(|s| s.to_string()).collect()),
+                to_remove: args.values_of("remove")
+                    .map(|xs| xs.map(|s| s.to_string()).collect()),
+                list: args.is_present("list"),
+                registry: args.value_of("registry").map(|s| s.to_string()),
+            };
+            ops::modify_owners(config, &opts)?;
+            return Ok(());
         }
         _ => return Ok(())
     }
@@ -440,6 +465,7 @@ See 'cargo help <command>' for more information on a specific command.
             login::cli(),
             metadata::cli(),
             new::cli(),
+            owner::cli(),
         ])
     ;
     app
@@ -462,6 +488,7 @@ mod locate_project;
 mod login;
 mod metadata;
 mod new;
+mod owner;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
