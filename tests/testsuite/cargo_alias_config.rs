@@ -23,6 +23,7 @@ expected a list, but found a integer for [..]"));
 
 
 #[test]
+#[ignore]
 fn alias_default_config_overrides_config() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -41,6 +42,7 @@ fn alias_default_config_overrides_config() {
 }
 
 #[test]
+#[ignore]
 fn alias_config() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -60,6 +62,7 @@ fn alias_config() {
 }
 
 #[test]
+#[ignore]
 fn alias_list_test() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -80,6 +83,7 @@ fn alias_list_test() {
 }
 
 #[test]
+#[ignore]
 fn alias_with_flags_config() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))

@@ -96,6 +96,7 @@ fn list_command_resolves_symlinks() {
 }
 
 #[test]
+#[ignore]
 fn find_closest_biuld_to_build() {
     let mut pr = cargo_process();
     pr.arg("biuld");
