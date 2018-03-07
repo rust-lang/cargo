@@ -400,6 +400,13 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             })?;
             return Ok(());
         }
+        ("pkgid", Some(args)) => {
+            let ws = workspace_from_args(config, args)?;
+            let spec = args.value_of("spec").or(args.value_of("package"));
+            let spec = ops::pkgid(&ws, spec)?;
+            println!("{}", spec);
+            Ok(())
+        }
         _ => return Ok(())
     }
 }
@@ -485,6 +492,7 @@ See 'cargo help <command>' for more information on a specific command.
             new::cli(),
             owner::cli(),
             package::cli(),
+            pkgid::cli(),
         ])
     ;
     app
@@ -509,6 +517,7 @@ mod metadata;
 mod new;
 mod owner;
 mod package;
+mod pkgid;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
