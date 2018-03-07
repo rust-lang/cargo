@@ -4,11 +4,13 @@ use std::collections::HashSet;
 use std::slice;
 use std::str;
 use std::mem;
+use std::cmp::Ordering;
 
 pub fn leek(s: String) -> &'static str {
-    let ptr = s.as_ptr();
-    let len = s.len();
-    mem::forget(s);
+    let boxed = s.into_boxed_str();
+    let ptr = boxed.as_ptr();
+    let len = boxed.len();
+    mem::forget(boxed);
     unsafe {
         let slice = slice::from_raw_parts(ptr, len);
         str::from_utf8_unchecked(slice)
@@ -49,3 +51,18 @@ impl fmt::Debug for InternedString {
         write!(f, "InternedString {{ {} }}", self.to_inner())
     }
 }
+
+impl Ord for InternedString {
+    fn cmp(&self, other: &InternedString) -> Ordering {
+        self.to_inner().cmp(&other.to_inner())
+    }
+}
+
+impl PartialOrd for InternedString {
+    fn partial_cmp(&self, other: &InternedString) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+unsafe impl Send for InternedString {}
+unsafe impl Sync for InternedString {}
