@@ -64,7 +64,8 @@ pub struct Workspace<'cfg> {
 
     // True if this workspace should enforce optional dependencies even when
     // not needed; false if this workspace should only enforce dependencies
-    // needed by the current configuration (such as in cargo install).
+    // needed by the current configuration (such as in cargo install). In some
+    // cases `false` also results in the non-enforcement of dev-dependencies.
     require_optional_deps: bool,
 }
 
@@ -294,6 +295,11 @@ impl<'cfg> Workspace<'cfg> {
 
     pub fn require_optional_deps(&self) -> bool {
         self.require_optional_deps
+    }
+
+    pub fn set_require_optional_deps<'a>(&'a mut self, require_optional_deps: bool) -> &mut Workspace<'cfg> {
+        self.require_optional_deps = require_optional_deps;
+        self
     }
 
     /// Finds the root of a workspace for the crate whose manifest is located

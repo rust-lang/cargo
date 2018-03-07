@@ -278,6 +278,7 @@ pub struct CliUnstable {
     pub unstable_options: bool,
     pub offline: bool,
     pub no_index_update: bool,
+    pub avoid_dev_deps: bool,
 }
 
 impl CliUnstable {
@@ -310,6 +311,7 @@ impl CliUnstable {
             "unstable-options" => self.unstable_options = true,
             "offline" => self.offline = true,
             "no-index-update" => self.no_index_update = true,
+            "avoid-dev-deps" => self.avoid_dev_deps = true,
             _ => bail!("unknown `-Z` flag specified: {}", k),
         }
 
