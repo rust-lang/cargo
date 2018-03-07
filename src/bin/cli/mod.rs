@@ -7,11 +7,11 @@ use std::slice;
 use cargo;
 
 use clap::{AppSettings, Arg, ArgMatches};
-use cargo::{Config, CargoResult};
-use cargo::core::Workspace;
+use cargo::{Config, CargoResult, CliError};
+use cargo::core::{Workspace, Source};
+use cargo::util::ToUrl;
 use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::ops::{self, MessageFormat, Packages, CompileOptions, CompileMode};
-use cargo::CliError;
 
 
 pub fn do_main(config: &mut Config) -> Result<(), CliError> {
@@ -194,11 +194,29 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             ops::generate_lockfile(&ws)?;
             return Ok(());
         }
+        ("git-checkout", Some(args)) => {
+            config_from_args(config, args)?;
+
+            let url = args.value_of("url").unwrap().to_url()?;
+            let reference = args.value_of("reference").unwrap();
+
+            let reference = GitReference::Branch(reference.to_string());
+            let source_id = SourceId::for_git(&url, reference)?;
+
+            let mut source = GitSource::new(&source_id, config)?;
+
+            source.update()?;
+
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
 
 use self::utils::*;
+use cargo::core::GitReference;
+use cargo::core::SourceId;
+use cargo::sources::GitSource;
 
 fn cli() -> App {
     let app = App::new("cargo")
@@ -263,6 +281,7 @@ See 'cargo help <command>' for more information on a specific command.
             doc::cli(),
             fetch::cli(),
             generate_lockfile::cli(),
+            git_checkout::cli(),
         ])
     ;
     app
@@ -275,6 +294,7 @@ mod clean;
 mod doc;
 mod fetch;
 mod generate_lockfile;
+mod git_checkout; // FIXME: let's just drop this subcommand?
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
