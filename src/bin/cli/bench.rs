@@ -14,7 +14,7 @@ pub fn cli() -> App {
             ).multiple(true).last(true)
         )
 
-        .arg_target(
+        .arg_targets_all(
             "Benchmark only this package's library",
             "Benchmark only the specified binary",
             "Benchmark all binaries",

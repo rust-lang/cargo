@@ -9,7 +9,7 @@ pub fn cli() -> App {
             "Exclude packages from the build",
         )
         .arg_jobs()
-        .arg_target(
+        .arg_targets_all(
             "Build only this package's library",
             "Build only the specified binary",
             "Build all binaries",
