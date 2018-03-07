@@ -72,7 +72,7 @@ fn try_main() -> Result<(), ProgramError> {
             .long("file")
             .short("f")
             .takes_value(true)
-            .help("Load errors from the given JSON file"))
+            .help("Load errors from the given JSON file (produced by `cargo build --message-format=json`)"))
         .get_matches();
 
     let mut extra_args = Vec::new();
@@ -108,7 +108,7 @@ fn try_main() -> Result<(), ProgramError> {
         f.read_to_string(&mut j)?;
         j
     } else {
-        get_json(&extra_args)?
+        get_json(&extra_args, matches.is_present("clippy"))?
     };
 
     let suggestions: Vec<Suggestion> = json.lines()
@@ -129,9 +129,14 @@ struct CargoMessage {
     message: Diagnostic,
 }
 
-fn get_json(extra_args: &[&str]) -> Result<String, ProgramError> {
+fn get_json(extra_args: &[&str], clippy: bool) -> Result<String, ProgramError> {
+    let build_cmd = if clippy {
+        "clippy"
+    } else {
+        "rustc"
+    };
     let output = try!(Command::new("cargo")
-        .args(&["clippy", "--message-format", "json"])
+        .args(&[build_cmd, "--message-format", "json"])
         .arg("--")
         .args(extra_args)
         .output());
