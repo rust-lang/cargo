@@ -371,7 +371,7 @@ pub fn resolve(summaries: &[(Summary, Method)],
         metadata: BTreeMap::new(),
         replacements: cx.resolve_replacements(),
         features: cx.resolve_features.iter().map(|(k, v)| {
-            (k.clone(), v.iter().map(|x| x.to_inner().to_string()).collect())
+            (k.clone(), v.iter().map(|x| x.to_string()).collect())
         }).collect(),
         unused_patches: Vec::new(),
     };
