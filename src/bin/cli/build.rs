@@ -21,9 +21,7 @@ pub fn cli() -> App {
             "Build all benches",
             "Build all targets (lib and bin targets by default)",
         )
-        .arg(
-            opt("release", "Build artifacts in release mode, with optimizations")
-        )
+        .arg_release("Build artifacts in release mode, with optimizations")
         .arg_features()
         .arg_target_triple()
         .arg_manifest_path()
