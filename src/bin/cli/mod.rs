@@ -12,7 +12,8 @@ use cargo::{self, Config, CargoResult, CargoError, CliError};
 use cargo::core::{Workspace, Source, SourceId, GitReference};
 use cargo::util::{ToUrl, CargoResultExt};
 use cargo::util::important_paths::find_root_manifest_for_wd;
-use cargo::ops::{self, MessageFormat, Packages, CompileOptions, CompileMode, VersionControl};
+use cargo::ops::{self, MessageFormat, Packages, CompileOptions, CompileMode, VersionControl,
+                 OutputMetadataOptions};
 use cargo::sources::{GitSource, RegistrySource};
 
 use self::utils::*;
@@ -321,6 +322,32 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             ops::registry_login(config, token, registry)?;
             return Ok(());
         }
+        ("metadata", Some(args)) => {
+            let ws = workspace_from_args(config, args)?;
+
+            let version = match args.value_of("format-version") {
+                None => {
+                    config.shell().warn("\
+                        please specify `--format-version` flag explicitly \
+                        to avoid compatibility problems"
+                    )?;
+                    1
+                }
+                Some(version) => version.parse().unwrap(),
+            };
+
+            let options = OutputMetadataOptions {
+                features: values(args, "features").to_vec(),
+                all_features: args.is_present("all-features"),
+                no_default_features: args.is_present("no-default-features"),
+                no_deps: args.is_present("no-deps"),
+                version,
+            };
+
+            let result = ops::output_metadata(&ws, &options)?;
+            cargo::print_json(&result);
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
@@ -402,6 +429,7 @@ See 'cargo help <command>' for more information on a specific command.
             install::cli(),
             locate_project::cli(),
             login::cli(),
+            metadata::cli(),
         ])
     ;
     app
@@ -422,6 +450,7 @@ mod init;
 mod install;
 mod locate_project;
 mod login;
+mod metadata;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
