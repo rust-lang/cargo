@@ -188,6 +188,12 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             ops::fetch(&ws)?;
             return Ok(());
         }
+        ("generate-lockfile", Some(args)) => {
+            config_from_args(config, args)?;
+            let ws = workspace_from_args(config, args)?;
+            ops::generate_lockfile(&ws)?;
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
@@ -256,6 +262,7 @@ See 'cargo help <command>' for more information on a specific command.
             clean::cli(),
             doc::cli(),
             fetch::cli(),
+            generate_lockfile::cli(),
         ])
     ;
     app
@@ -267,6 +274,7 @@ mod check;
 mod clean;
 mod doc;
 mod fetch;
+mod generate_lockfile;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
