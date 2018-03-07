@@ -98,7 +98,10 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
                      &options.flag_z)?;
 
     let root = find_root_manifest_for_wd(options.flag_manifest_path, config.cwd())?;
-    let ws = Workspace::new(&root, config)?;
+    let mut ws = Workspace::new(&root, config)?;
+    if config.cli_unstable().avoid_dev_deps {
+        ws.set_require_optional_deps(false);
+    }
 
     let spec = Packages::from_flags(options.flag_all,
                                     &options.flag_exclude,

@@ -29,7 +29,7 @@ use std::sync::Arc;
 
 use core::{Source, Package, Target};
 use core::{Profile, TargetKind, Profiles, Workspace, PackageId, PackageIdSpec};
-use core::resolver::Resolve;
+use core::resolver::{Resolve, Method};
 use ops::{self, BuildOutput, Executor, DefaultExecutor};
 use util::config::Config;
 use util::{CargoResult, profile};
@@ -233,12 +233,18 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     let profiles = ws.profiles();
 
     let specs = spec.into_package_id_specs(ws)?;
-    let resolve = ops::resolve_ws_precisely(ws,
-                                            source,
-                                            features,
-                                            all_features,
-                                            no_default_features,
-                                            &specs)?;
+    let features = Method::split_features(features);
+    let method = Method::Required {
+        dev_deps: ws.require_optional_deps() || filter.need_dev_deps(),
+        features: &features,
+        all_features,
+        uses_default_features: !no_default_features,
+    };
+    let resolve = ops::resolve_ws_with_method(ws,
+                                              source,
+                                              method,
+                                              &specs,
+                                              )?;
     let (packages, resolve_with_overrides) = resolve;
 
     let to_builds = specs.iter().map(|p| {
@@ -411,6 +417,14 @@ impl<'a> CompileFilter<'a> {
             CompileFilter::Default {
                 required_features_filterable: true,
             }
+        }
+    }
+
+    pub fn need_dev_deps(&self) -> bool {
+        match *self {
+            CompileFilter::Default { .. } => true,
+            CompileFilter::Only { examples, tests, benches, .. } =>
+                examples.is_specific() || tests.is_specific() || benches.is_specific()
         }
     }
 

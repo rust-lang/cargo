@@ -29,13 +29,25 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
                                 no_default_features: bool,
                                 specs: &[PackageIdSpec])
                                 -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let features = features.iter()
-        .flat_map(|s| s.split_whitespace())
-        .flat_map(|s| s.split(','))
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>();
+    let features = Method::split_features(features);
+    let method = if all_features {
+        Method::Everything
+    } else {
+        Method::Required {
+            dev_deps: true,
+            features: &features,
+            all_features: false,
+            uses_default_features: !no_default_features,
+        }
+    };
+    resolve_ws_with_method(ws, source, method, specs)
+}
 
+pub fn resolve_ws_with_method<'a>(ws: &Workspace<'a>,
+                                  source: Option<Box<Source + 'a>>,
+                                  method: Method,
+                                  specs: &[PackageIdSpec])
+                                  -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
     if let Some(source) = source {
         registry.add_preloaded(source);
@@ -66,16 +78,6 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
         Some(resolve)
     } else {
         ops::load_pkg_lockfile(ws)?
-    };
-
-    let method = if all_features {
-        Method::Everything
-    } else {
-        Method::Required {
-            dev_deps: true, // TODO: remove this option?
-            features: &features,
-            uses_default_features: !no_default_features,
-        }
     };
 
     let resolved_with_overrides =
@@ -236,6 +238,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                 let base = Method::Required {
                     dev_deps,
                     features: &[],
+                    all_features: false,
                     uses_default_features: true,
                 };
                 let member_id = member.package_id();

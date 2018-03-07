@@ -176,7 +176,11 @@ fn install_one(root: &Filesystem,
 
     let ws = match overidden_target_dir {
         Some(dir) => Workspace::ephemeral(pkg, config, Some(dir), false)?,
-        None => Workspace::new(pkg.manifest_path(), config)?,
+        None => {
+            let mut ws = Workspace::new(pkg.manifest_path(), config)?;
+            ws.set_require_optional_deps(false);
+            ws
+        }
     };
     let pkg = ws.current()?;
 
