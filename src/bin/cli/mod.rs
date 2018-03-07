@@ -182,6 +182,12 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             ops::doc(&ws, &doc_opts)?;
             return Ok(());
         }
+        ("fetch", Some(args)) => {
+            config_from_args(config, args)?;
+            let ws = workspace_from_args(config, args)?;
+            ops::fetch(&ws)?;
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
@@ -249,6 +255,7 @@ See 'cargo help <command>' for more information on a specific command.
             check::cli(),
             clean::cli(),
             doc::cli(),
+            fetch::cli(),
         ])
     ;
     app
@@ -259,6 +266,7 @@ mod build;
 mod check;
 mod clean;
 mod doc;
+mod fetch;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
