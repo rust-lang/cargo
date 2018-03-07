@@ -60,9 +60,13 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
         )
     }
 
-    fn workspace_from_args<'a>(config: &'a Config, args: &ArgMatches) -> CargoResult<Workspace<'a>> {
+    fn root_manifest_from_args(config: &Config, args: &ArgMatches) -> CargoResult<PathBuf> {
         let manifest_path = args.value_of("manifest-path").map(|s| s.to_string());
-        let root = find_root_manifest_for_wd(manifest_path, config.cwd())?;
+        find_root_manifest_for_wd(manifest_path, config.cwd())
+    }
+
+    fn workspace_from_args<'a>(config: &'a Config, args: &ArgMatches) -> CargoResult<Workspace<'a>> {
+        let root = root_manifest_from_args(config, args)?;
         Workspace::new(&root, config)
     }
 
@@ -259,11 +263,31 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             return Ok(());
 
         }
+        ("locate-project", Some(args)) => {
+            let root = root_manifest_from_args(config, args)?;
+
+            let root = root.to_str()
+                .ok_or_else(|| format_err!("your project path contains characters \
+                                            not representable in Unicode"))
+                .map_err(|e| CliError::new(e, 1))?
+                .to_string();
+
+            #[derive(Serialize)]
+            pub struct ProjectLocation {
+                root: String
+            }
+
+            let location = ProjectLocation { root };
+
+            cargo::print_json(&location);
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
 
 use self::utils::*;
+use std::path::PathBuf;
 
 fn cli() -> App {
     let app = App::new("cargo")
@@ -339,6 +363,7 @@ See 'cargo help <command>' for more information on a specific command.
             git_checkout::cli(),
             init::cli(),
             install::cli(),
+            locate_project::cli(),
         ])
     ;
     app
@@ -357,6 +382,7 @@ mod git_checkout;
 
 mod init;
 mod install;
+mod locate_project;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
