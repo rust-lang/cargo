@@ -3242,6 +3242,7 @@ fn compiler_json_error_format() {
 }
 
 #[test]
+#[ignore]
 fn wrong_message_format_option() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
