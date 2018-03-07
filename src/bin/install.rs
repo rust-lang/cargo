@@ -54,7 +54,7 @@ Specifying what crate to install:
 
 Build and install options:
     -h, --help                Print this message
-    -j N, --jobs N            Number of parallel jobs, defaults to # of CPUs
+    -j N, --jobs N            Number of parallel jobs, defaults to # of threads
     -f, --force               Force overwriting existing crates or binaries
     --features FEATURES       Space-separated list of features to activate
     --all-features            Build all available features

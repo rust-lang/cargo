@@ -45,7 +45,7 @@ Options:
     --all                        Document all packages in the workspace
     --exclude SPEC ...           Exclude packages from the build
     --no-deps                    Don't build documentation for dependencies
-    -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
+    -j N, --jobs N               Number of parallel jobs, defaults to # of threads
     --lib                        Document only this package's library
     --bin NAME                   Document only the specified binary
     --bins                       Document all binaries

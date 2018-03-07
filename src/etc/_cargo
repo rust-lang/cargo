@@ -39,7 +39,7 @@ case $state in
                     '--features=[space separated feature list]' \
                     '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of threads]' \
                     "${command_scope_spec[@]}" \
                     '--manifest-path=[path to manifest]: :_files -/' \
                     '--no-default-features[do not build the default features]' \
@@ -56,7 +56,7 @@ case $state in
                     '--features=[space separated feature list]' \
                     '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of threads]' \
                     "${command_scope_spec[@]}" \
                     '--manifest-path=[path to manifest]: :_files -/' \
                     '--no-default-features[do not build the default features]' \
@@ -73,7 +73,7 @@ case $state in
                     '--features=[space separated feature list]' \
                     '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of threads]' \
                     "${command_scope_spec[@]}" \
                     '--manifest-path=[path to manifest]: :_files -/' \
                     '--no-default-features[do not check the default features]' \
@@ -102,7 +102,7 @@ case $state in
                     '--features=[space separated feature list]' \
                     '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of threads]' \
                     '--manifest-path=[path to manifest]: :_files -/' \
                     '--no-deps[do not build docs for dependencies]' \
                     '--no-default-features[do not build the default features]' \
@@ -171,7 +171,7 @@ case $state in
                     '--all-features[enable all available features]' \
                     '--git=[URL from which to install the crate]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of threads]' \
                     '--no-default-features[do not build the default features]' \
                     '--path=[local filesystem path to crate to install]: :_files -/' \
                     '(-q, --quiet)'{-q,--quiet}'[no output printed to stdout]' \
@@ -282,7 +282,7 @@ case $state in
                     '--features=[space separated feature list]' \
                     '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of threads]' \
                     '--manifest-path=[path to manifest]: :_files -/' \
                     '--bin=[name of the bin target]' \
                     '--no-default-features[do not build the default features]' \
@@ -300,7 +300,7 @@ case $state in
                     '--features=[features to compile for the package]' \
                     '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '(-j, --jobs)'{-j,--jobs}'=[number of parallel jobs, defaults to # of CPUs]' \
+                    '(-j, --jobs)'{-j,--jobs}'=[number of parallel jobs, defaults to # of threads]' \
                     '--manifest-path=[path to the manifest to fetch dependencies for]: :_files -/' \
                     '--no-default-features[do not compile default features for the package]' \
                     '(-p, --package)'{-p,--package}'=[profile to compile for]' \
@@ -318,7 +318,7 @@ case $state in
                     '--features=[space-separated list of features to also build]' \
                     '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '(-j, --jobs)'{-j,--jobs}'=[number of parallel jobs, defaults to # of CPUs]' \
+                    '(-j, --jobs)'{-j,--jobs}'=[number of parallel jobs, defaults to # of threads]' \
                     '--manifest-path=[path to the manifest to document]: :_files -/' \
                     '--no-default-features[do not build the `default` feature]' \
                     '--open[open the docs in a browser after the operation]' \
@@ -345,7 +345,7 @@ case $state in
                     '--features=[space separated feature list]' \
                     '--all-features[enable all available features]' \
                     '(-h, --help)'{-h,--help}'[show help message]' \
-                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of CPUs]' \
+                    '(-j, --jobs)'{-j,--jobs}'[number of parallel jobs, defaults to # of threads]' \
                     '--manifest-path=[path to manifest]: :_files -/' \
                     '--test=[test name]: :_test_names' \
                     '--no-default-features[do not build the default features]' \

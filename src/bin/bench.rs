@@ -64,7 +64,7 @@ Options:
     -p SPEC, --package SPEC ...  Package to run benchmarks for
     --all                        Benchmark all packages in the workspace
     --exclude SPEC ...           Exclude packages from the benchmark
-    -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
+    -j N, --jobs N               Number of parallel jobs, defaults to # of threads
     --features FEATURES          Space-separated list of features to also build
     --all-features               Build all available features
     --no-default-features        Do not build the `default` feature

@@ -45,7 +45,7 @@ Options:
     -h, --help               Print this message
     --open                   Opens the docs in a browser after the operation
     -p SPEC, --package SPEC  Package to document
-    -j N, --jobs N           Number of parallel jobs, defaults to # of CPUs
+    -j N, --jobs N           Number of parallel jobs, defaults to # of threads
     --lib                    Build only this package's library
     --bin NAME               Build only the specified binary
     --bins                   Build all binaries

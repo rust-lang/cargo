@@ -39,7 +39,7 @@ Options:
     --allow-dirty            Allow publishing with a dirty source directory
     --target TRIPLE          Build for the target triple
     --manifest-path PATH     Path to the manifest of the package to publish
-    -j N, --jobs N           Number of parallel jobs, defaults to # of CPUs
+    -j N, --jobs N           Number of parallel jobs, defaults to # of threads
     --dry-run                Perform all checks without uploading
     -v, --verbose ...        Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet              No output printed to stdout
