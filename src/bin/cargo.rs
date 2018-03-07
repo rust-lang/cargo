@@ -89,7 +89,8 @@ fn main() {
     };
 
     let is_clapified = ::std::env::args().any(|arg| match arg.as_ref() {
-        "build" | "bench" | "check" | "clean" | "doc" | "fetch" | "generate-lockfile" | "git-checkout" => true,
+        "build" | "bench" | "check" | "clean" | "doc" | "fetch" | "generate-lockfile" | "git-checkout" |
+        "init" => true,
         _ => false
     });
 
@@ -126,7 +127,7 @@ macro_rules! each_subcommand{
 //        $mac!(generate_lockfile);
 //        $mac!(git_checkout);
         $mac!(help);
-        $mac!(init);
+//        $mac!(init);
         $mac!(install);
         $mac!(locate_project);
         $mac!(login);

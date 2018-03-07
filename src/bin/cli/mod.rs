@@ -8,10 +8,11 @@ use cargo;
 
 use clap::{AppSettings, Arg, ArgMatches};
 use cargo::{Config, CargoResult, CliError};
-use cargo::core::{Workspace, Source};
+use cargo::core::{Workspace, Source, SourceId, GitReference};
 use cargo::util::ToUrl;
 use cargo::util::important_paths::find_root_manifest_for_wd;
-use cargo::ops::{self, MessageFormat, Packages, CompileOptions, CompileMode};
+use cargo::ops::{self, MessageFormat, Packages, CompileOptions, CompileMode, VersionControl};
+use cargo::sources::GitSource;
 
 
 pub fn do_main(config: &mut Config) -> Result<(), CliError> {
@@ -209,14 +210,33 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
 
             return Ok(());
         }
+        ("init", Some(args)) => {
+            config_from_args(config, args)?;
+
+            let path = args.value_of("path").unwrap_or(".");
+            let vcs = args.value_of("vcs").map(|vcs| match vcs {
+                "git" => VersionControl::Git,
+                "hg" => VersionControl::Hg,
+                "pijul" => VersionControl::Pijul,
+                "fossil" => VersionControl::Fossil,
+                "none" => VersionControl::NoVcs,
+                vcs => panic!("Impossible vcs: {:?}", vcs),
+            });
+            let opts = ops::NewOptions::new(vcs,
+                                            args.is_present("bin"),
+                                            args.is_present("lib"),
+                                            path,
+                                            args.value_of("name"))?;
+
+            ops::init(&opts, config)?;
+            config.shell().status("Created", format!("{} project", opts.kind))?;
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
 
 use self::utils::*;
-use cargo::core::GitReference;
-use cargo::core::SourceId;
-use cargo::sources::GitSource;
 
 fn cli() -> App {
     let app = App::new("cargo")
@@ -282,6 +302,7 @@ See 'cargo help <command>' for more information on a specific command.
             fetch::cli(),
             generate_lockfile::cli(),
             git_checkout::cli(),
+            init::cli(),
         ])
     ;
     app
@@ -294,7 +315,9 @@ mod clean;
 mod doc;
 mod fetch;
 mod generate_lockfile;
-mod git_checkout; // FIXME: let's just drop this subcommand?
+mod git_checkout;
+// FIXME: let's just drop this subcommand?
+mod init;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
@@ -402,7 +425,6 @@ mod utils {
             .settings(&[
                 AppSettings::UnifiedHelpMessage,
                 AppSettings::DeriveDisplayOrder,
-                AppSettings::TrailingVarArg,
                 AppSettings::DontCollapseArgsInUsage,
             ])
     }
