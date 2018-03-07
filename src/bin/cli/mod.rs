@@ -2,23 +2,16 @@ extern crate clap;
 #[cfg(never)]
 extern crate cargo;
 
+use std::slice;
+
 use cargo;
 
-use clap::AppSettings;
-use clap::Arg;
-use clap::SubCommand;
-use clap::ArgMatches;
-use cargo::Config;
-use cargo::CargoResult;
+use clap::{AppSettings, Arg, ArgMatches};
+use cargo::{Config, CargoResult};
 use cargo::core::Workspace;
 use cargo::util::important_paths::find_root_manifest_for_wd;
-use cargo::ops::Packages;
-use cargo::ops::CompileOptions;
-use cargo::ops;
-use std::slice;
-use cargo::ops::MessageFormat;
+use cargo::ops::{self, MessageFormat, Packages, CompileOptions, CompileMode};
 use cargo::CliError;
-use cargo::ops::CompileMode;
 
 
 pub fn do_main(config: &mut Config) -> Result<(), CliError> {
@@ -148,6 +141,23 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             ops::compile(&ws, &compile_opts)?;
             return Ok(());
         }
+        ("check", Some(args)) => {
+            config_from_args(config, args)?;
+            let ws = workspace_from_args(config, args)?;
+            let test = match args.value_of("profile") {
+                Some("test") => true,
+                None => false,
+                Some(profile) => {
+                    let err = format_err!("unknown profile: `{}`, only `test` is \
+                                       currently supported", profile);
+                    return Err(CliError::new(err, 101))
+                }
+            };
+            let mode = CompileMode::Check { test };
+            let compile_opts = compile_options_from_args(config, args, mode)?;
+            ops::compile(&ws, &compile_opts)?;
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
@@ -212,10 +222,15 @@ See 'cargo help <command>' for more information on a specific command.
         .subcommands(vec![
             bench::cli(),
             build::cli(),
+            check::cli(),
         ])
     ;
     app
 }
+
+mod bench;
+mod build;
+mod check;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
@@ -265,12 +280,17 @@ mod utils {
         }
 
         fn arg_features(self) -> Self {
-            self._arg(
-                opt("features", "Space-separated list of features to also build")
-                    .value_name("FEATURES")
-            )
-                ._arg(opt("all-features", "Build all available features"))
-                ._arg(opt("no-default-features", "Do not build the `default` feature"))
+            self
+                ._arg(
+                    opt("features", "Space-separated list of features to also enable")
+                        .value_name("FEATURES")
+                )
+                ._arg(opt("all-features", "Enable all available features"))
+                ._arg(opt("no-default-features", "Do not enable the `default` feature"))
+        }
+
+        fn arg_release(self, release: &'static str) -> Self {
+            self._arg(opt("release", release))
         }
 
         fn arg_target_triple(self) -> Self {
@@ -314,6 +334,3 @@ mod utils {
             ])
     }
 }
-
-mod bench;
-mod build;

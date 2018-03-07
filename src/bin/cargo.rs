@@ -89,7 +89,7 @@ fn main() {
     };
 
     let is_clapified = ::std::env::args().any(|arg| match arg.as_ref() {
-        "build" | "bench" => true,
+        "build" | "bench" | "check" => true,
         _ => false
     });
 
@@ -119,7 +119,7 @@ macro_rules! each_subcommand{
     ($mac:ident) => {
 //        $mac!(bench);
 //        $mac!(build);
-        $mac!(check);
+//        $mac!(check);
         $mac!(clean);
         $mac!(doc);
         $mac!(fetch);
