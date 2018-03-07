@@ -107,9 +107,9 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
         Ok(opts)
     }
 
+    config_from_args(config, &args)?;
     match args.subcommand() {
         ("bench", Some(args)) => {
-            config_from_args(config, args)?;
             let ws = workspace_from_args(config, args)?;
             let compile_opts = compile_options_from_args(config, args, CompileMode::Bench)?;
 
@@ -136,14 +136,12 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             };
         }
         ("build", Some(args)) => {
-            config_from_args(config, args)?;
             let ws = workspace_from_args(config, args)?;
             let compile_opts = compile_options_from_args(config, args, CompileMode::Build)?;
             ops::compile(&ws, &compile_opts)?;
             return Ok(());
         }
         ("check", Some(args)) => {
-            config_from_args(config, args)?;
             let ws = workspace_from_args(config, args)?;
             let test = match args.value_of("profile") {
                 Some("test") => true,
@@ -160,7 +158,6 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             return Ok(());
         }
         ("clean", Some(args)) => {
-            config_from_args(config, args)?;
             let ws = workspace_from_args(config, args)?;
             let opts = ops::CleanOptions {
                 config,
@@ -172,7 +169,6 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             return Ok(());
         }
         ("doc", Some(args)) => {
-            config_from_args(config, args)?;
             let ws = workspace_from_args(config, args)?;
             let mode = ops::CompileMode::Doc { deps: !args.is_present("no-deps") };
             let compile_opts = compile_options_from_args(config, args, mode)?;
@@ -184,20 +180,16 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             return Ok(());
         }
         ("fetch", Some(args)) => {
-            config_from_args(config, args)?;
             let ws = workspace_from_args(config, args)?;
             ops::fetch(&ws)?;
             return Ok(());
         }
         ("generate-lockfile", Some(args)) => {
-            config_from_args(config, args)?;
             let ws = workspace_from_args(config, args)?;
             ops::generate_lockfile(&ws)?;
             return Ok(());
         }
         ("git-checkout", Some(args)) => {
-            config_from_args(config, args)?;
-
             let url = args.value_of("url").unwrap().to_url()?;
             let reference = args.value_of("reference").unwrap();
 
@@ -211,8 +203,6 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             return Ok(());
         }
         ("init", Some(args)) => {
-            config_from_args(config, args)?;
-
             let path = args.value_of("path").unwrap_or(".");
             let vcs = args.value_of("vcs").map(|vcs| match vcs {
                 "git" => VersionControl::Git,
@@ -269,6 +259,14 @@ fn cli() -> App {
         .arg(
             opt("color", "Coloring: auto, always, never")
                 .value_name("WHEN").global(true)
+        )
+        .arg(
+            opt("frozen", "Require Cargo.lock and cache are up to date")
+                .global(true)
+        )
+        .arg(
+            opt("locked", "Require Cargo.lock is up to date")
+                .global(true)
         )
         .arg(
             Arg::with_name("unstable-features").help("Unstable (nightly-only) flags to Cargo")

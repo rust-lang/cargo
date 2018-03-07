@@ -10,7 +10,6 @@ pub fn cli() -> App {
         .arg_manifest_path()
         .arg_target_triple("Target triple to clean output for (default all)")
         .arg_release("Whether or not to clean release artifacts")
-        .arg_locked()
         .after_help("\
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package's artifacts should be cleaned out. If it is not

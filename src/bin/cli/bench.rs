@@ -45,7 +45,6 @@ pub fn cli() -> App {
         .arg(
             opt("no-fail-fast", "Run all benchmarks regardless of failure")
         )
-        .arg_locked()
         .after_help("\
 All of the trailing arguments are passed to the benchmark binaries generated
 for filtering benchmarks and generally providing options configuring how they
