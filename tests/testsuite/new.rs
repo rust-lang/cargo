@@ -100,6 +100,7 @@ fn simple_git() {
 }
 
 #[test]
+#[ignore]
 fn no_argument() {
     assert_that(cargo_process("new"),
                 execs().with_status(1)
@@ -370,6 +371,7 @@ fn subpackage_git_with_vcs_arg() {
 }
 
 #[test]
+#[ignore]
 fn unknown_flags() {
     assert_that(cargo_process("new").arg("foo").arg("--flag"),
                 execs().with_status(1)
