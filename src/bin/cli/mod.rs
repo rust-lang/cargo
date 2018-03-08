@@ -474,7 +474,10 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             }
 
             let mut contents = String::new();
-            let filename = root_manifest_from_args(config, args)?;
+            let filename = match root_manifest_from_args(config, args) {
+                Ok(filename) => filename,
+                Err(e) => fail("invalid", &e.to_string()),
+            };
 
             let file = File::open(&filename);
             match file.and_then(|mut f| f.read_to_string(&mut contents)) {

@@ -312,7 +312,6 @@ fn update_dir_to_nonexistent_cargo_toml() {
 }
 
 #[test]
-#[ignore]
 fn verify_project_dir_containing_cargo_toml() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -329,7 +328,6 @@ fn verify_project_dir_containing_cargo_toml() {
 }
 
 #[test]
-#[ignore]
 fn verify_project_dir_plus_file() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -346,7 +344,6 @@ fn verify_project_dir_plus_file() {
 }
 
 #[test]
-#[ignore]
 fn verify_project_dir_plus_path() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -363,7 +360,6 @@ fn verify_project_dir_plus_path() {
 }
 
 #[test]
-#[ignore]
 fn verify_project_dir_to_nonexistent_cargo_toml() {
     let p = project("foo").build();
     assert_that(p.cargo("verify-project")
