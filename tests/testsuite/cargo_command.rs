@@ -59,7 +59,6 @@ fn path() -> Vec<PathBuf> {
 }
 
 #[test]
-#[ignore]
 fn list_command_looks_at_path() {
     let proj = project("list-non-overlapping").build();
     let proj = fake_file(proj, Path::new("path-test"), "cargo-1", &FakeKind::Executable);
@@ -78,7 +77,6 @@ fn list_command_looks_at_path() {
 // windows and symlinks don't currently agree that well
 #[cfg(unix)]
 #[test]
-#[ignore]
 fn list_command_resolves_symlinks() {
     use cargotest::support::cargo_exe;
 
@@ -98,23 +96,26 @@ fn list_command_resolves_symlinks() {
 }
 
 #[test]
-#[ignore]
 fn find_closest_biuld_to_build() {
     let mut pr = cargo_process();
     pr.arg("biuld");
 
     assert_that(pr,
-                execs().with_status(101)
-                       .with_stderr("[ERROR] no such subcommand: `biuld`
+                execs().with_status(1)
+                       .with_stderr("\
+error: The subcommand 'biuld' wasn't recognized
+<tab>Did you mean 'build'?
 
-<tab>Did you mean `build`?
+If you believe you received this message in error, try re-running with 'cargo -- biuld'
 
-"));
+USAGE:
+    cargo [OPTIONS] [SUBCOMMAND]
+
+For more information try --help"));
 }
 
 // if a subcommand is more than 3 edit distance away, we don't make a suggestion
 #[test]
-#[ignore]
 fn find_closest_dont_correct_nonsense() {
     let mut pr = cargo_process();
     pr.arg("there-is-no-way-that-there-is-a-command-close-to-this")
@@ -128,7 +129,6 @@ fn find_closest_dont_correct_nonsense() {
 }
 
 #[test]
-#[ignore]
 fn displays_subcommand_on_error() {
     let mut pr = cargo_process();
     pr.arg("invalid-command");
