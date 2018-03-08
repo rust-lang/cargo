@@ -71,10 +71,10 @@ pub fn do_main(config: &mut Config) -> CliResult {
         return Ok(());
     }
 
-    execte_subcommand(config, args)
+    execute_subcommand(config, args)
 }
 
-fn execte_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
+fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
     config_from_args(config, &args)?;
 
     match args.subcommand() {
@@ -548,7 +548,7 @@ fn execte_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                 let args = cli()
                     .setting(AppSettings::NoBinaryName)
                     .get_matches_from(alias);
-                return execte_subcommand(config, args);
+                return execute_subcommand(config, args);
             }
             let mut ext_args: Vec<&str> = vec![cmd];
             ext_args.extend(args.values_of("").unwrap_or_default());
