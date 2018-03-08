@@ -22,13 +22,19 @@ use cargo::ops::{self, MessageFormat, Packages, CompileOptions, CompileMode, Ver
 use cargo::sources::{GitSource, RegistrySource};
 
 use self::utils::*;
+use std::collections::BTreeSet;
+use std::env;
+use std::fs;
+use search_directories;
+use is_executable;
 
 pub fn do_main(config: &mut Config) -> CliResult {
     let args = cli().get_matches();
+    let is_verbose = args.occurrences_of("verbose") > 0;
     if args.is_present("version") {
         let version = cargo::version();
         println!("{}", version);
-        if args.occurrences_of("verbose") > 0 {
+        if is_verbose {
             println!("release: {}.{}.{}",
                      version.major,
                      version.minor,
@@ -38,6 +44,22 @@ pub fn do_main(config: &mut Config) -> CliResult {
                     println!("commit-hash: {}", ci.commit_hash);
                     println!("commit-date: {}", ci.commit_date);
                 }
+            }
+        }
+        return Ok(());
+    }
+
+    if args.is_present("list") {
+        println!("Installed Commands:");
+        for command in list_commands(config) {
+            let (command, path) = command;
+            if is_verbose {
+                match path {
+                    Some(p) => println!("    {:<20} {}", command, p),
+                    None => println!("    {:<20}", command),
+                }
+            } else {
+                println!("    {}", command);
             }
         }
         return Ok(());
@@ -595,40 +617,81 @@ Some common cargo commands are (see all commands with --list):
 
 See 'cargo help <command>' for more information on a specific command.
 ")
-        .subcommands(vec![
-            bench::cli(),
-            build::cli(),
-            check::cli(),
-            clean::cli(),
-            doc::cli(),
-            fetch::cli(),
-            generate_lockfile::cli(),
-            git_checkout::cli(),
-            init::cli(),
-            install::cli(),
-            locate_project::cli(),
-            login::cli(),
-            metadata::cli(),
-            new::cli(),
-            owner::cli(),
-            package::cli(),
-            pkgid::cli(),
-            publish::cli(),
-            read_manifest::cli(),
-            run::cli(),
-            rustc::cli(),
-            rustdoc::cli(),
-            search::cli(),
-            test::cli(),
-            uninstall::cli(),
-            update::cli(),
-            verify_project::cli(),
-            version::cli(),
-            yank::cli(),
-        ])
+        .subcommands(builtin_subcommands())
     ;
     app
 }
+
+fn builtin_subcommands() -> Vec<App> {
+    vec![
+        bench::cli(),
+        build::cli(),
+        check::cli(),
+        clean::cli(),
+        doc::cli(),
+        fetch::cli(),
+        generate_lockfile::cli(),
+        git_checkout::cli(),
+        init::cli(),
+        install::cli(),
+        locate_project::cli(),
+        login::cli(),
+        metadata::cli(),
+        new::cli(),
+        owner::cli(),
+        package::cli(),
+        pkgid::cli(),
+        publish::cli(),
+        read_manifest::cli(),
+        run::cli(),
+        rustc::cli(),
+        rustdoc::cli(),
+        search::cli(),
+        test::cli(),
+        uninstall::cli(),
+        update::cli(),
+        verify_project::cli(),
+        version::cli(),
+        yank::cli(),
+    ]
+}
+
+/// List all runnable commands
+fn list_commands(config: &Config) -> BTreeSet<(String, Option<String>)> {
+    let prefix = "cargo-";
+    let suffix = env::consts::EXE_SUFFIX;
+    let mut commands = BTreeSet::new();
+    for dir in search_directories(config) {
+        let entries = match fs::read_dir(dir) {
+            Ok(entries) => entries,
+            _ => continue,
+        };
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            let filename = match path.file_name().and_then(|s| s.to_str()) {
+                Some(filename) => filename,
+                _ => continue,
+            };
+            if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
+                continue;
+            }
+            if is_executable(entry.path()) {
+                let end = filename.len() - suffix.len();
+                commands.insert(
+                    (filename[prefix.len()..end].to_string(),
+                     Some(path.display().to_string()))
+                );
+            }
+        }
+    }
+
+    for cmd in builtin_subcommands() {
+        commands.insert((cmd.get_name().to_string(), None));
+    }
+
+    commands
+}
+
 
 mod bench;
 mod build;
