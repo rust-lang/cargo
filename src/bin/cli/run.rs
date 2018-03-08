@@ -11,10 +11,7 @@ pub fn cli() -> App {
             "Name of the bin target to run",
             "Name of the example target to run",
         )
-        .arg(
-            opt("package", "Package with the target to run")
-                .short("p").value_name("SPEC")
-        )
+        .arg_single_package("Package with the target to run")
         .arg_jobs()
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_features()

@@ -124,6 +124,18 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
         Ok(opts)
     }
 
+    fn compile_options_from_args_for_single_package<'a>(
+        config: &'a Config,
+        args: &'a ArgMatches<'a>,
+        mode: CompileMode,
+    ) -> CargoResult<CompileOptions<'a>> {
+        let mut compile_opts = compile_options_from_args(config, args, mode)?;
+        let packages = values(args, "package");
+        compile_opts.spec = Packages::Packages(&packages);
+        Ok(compile_opts)
+    }
+
+
     fn new_opts_from_args<'a>(args: &'a ArgMatches<'a>, path: &'a str) -> CargoResult<NewOptions<'a>> {
         let vcs = args.value_of("vcs").map(|vcs| match vcs {
             "git" => VersionControl::Git,
@@ -464,9 +476,9 @@ about this warning.";
         ("run", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
 
-            let mut compile_opts = compile_options_from_args(config, args, CompileMode::Build)?;
-            let packages = values(args, "package");
-            compile_opts.spec = Packages::Packages(&packages);
+            let mut compile_opts = compile_options_from_args_for_single_package(
+                config, args, CompileMode::Build
+            )?;
             if !args.is_present("example") && !args.is_present("bin") {
                 compile_opts.filter = ops::CompileFilter::Default {
                     required_features_filterable: false,
@@ -507,19 +519,18 @@ about this warning.";
                     return Err(CliError::new(err, 101))
                 }
             };
-            let mut compile_opts = compile_options_from_args(config, args, mode)?;
-            let packages = values(args, "package");
-            compile_opts.spec = Packages::Packages(&packages);
+            let mut compile_opts = compile_options_from_args_for_single_package(
+                config, args, mode
+            )?;
             compile_opts.target_rustc_args = Some(&values(args, "args"));
             ops::compile(&ws, &compile_opts)?;
             return Ok(());
         }
         ("rustdoc", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
-            let mode = CompileMode::Doc { deps: false };
-            let mut compile_opts = compile_options_from_args(config, args, mode)?;
-            let packages = values(args, "package");
-            compile_opts.spec = Packages::Packages(&packages);
+            let mut compile_opts = compile_options_from_args_for_single_package(
+                config, args, CompileMode::Doc { deps: false }
+            )?;
             compile_opts.target_rustdoc_args = Some(&values(args, "args"));
             let doc_opts = ops::DocOptions {
                 open_result: args.is_present("open"),
@@ -663,6 +674,10 @@ mod utils {
             self._arg(opt("package", package).short("p").value_name("SPEC").multiple(true))
                 ._arg(opt("all", all))
                 ._arg(opt("exclude", exclude).value_name("SPEC").multiple(true))
+        }
+
+        fn arg_single_package(self, package: &'static str) -> Self {
+            self._arg(opt("package", package).short("p").value_name("SPEC"))
         }
 
         fn arg_jobs(self) -> Self {

@@ -4,10 +4,7 @@ pub fn cli() -> App {
     subcommand("pkgid")
         .about("Print a fully qualified package specification")
         .arg(Arg::with_name("spec"))
-        .arg(
-            opt("package", "Argument to get the package id specifier for")
-                .short("p").value_name("SPEC")
-        )
+        .arg_single_package("Argument to get the package id specifier for")
         .arg_manifest_path()
         .after_help("\
 Given a <spec> argument, print out the fully qualified package id specifier.

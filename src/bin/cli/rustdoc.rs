@@ -8,10 +8,7 @@ pub fn cli() -> App {
         .about("Build a package's documentation, using specified custom flags.")
         .arg(Arg::with_name("args").multiple(true))
         .arg(opt("open", "Opens the docs in a browser after the operation"))
-        .arg(
-            opt("package", "Package to document")
-                .short("p").value_name("SPEC")
-        )
+        .arg_single_package("Package to document")
         .arg_jobs()
         .arg_targets_all(
             "Build only this package's library",
