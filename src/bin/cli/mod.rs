@@ -593,6 +593,12 @@ about this warning.";
                 }
             };
         }
+        ("uninstall", Some(args)) => {
+            let root = args.value_of("root");
+            let specs = args.values_of("spec").unwrap_or_default().collect();
+            ops::uninstall(root, specs, values(args, "bin"), config)?;
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
@@ -686,6 +692,7 @@ See 'cargo help <command>' for more information on a specific command.
             rustdoc::cli(),
             search::cli(),
             test::cli(),
+            uninstall::cli(),
         ])
     ;
     app
@@ -718,6 +725,7 @@ mod rustc;
 mod rustdoc;
 mod search;
 mod test;
+mod uninstall;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
