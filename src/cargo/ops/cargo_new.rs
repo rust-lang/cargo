@@ -4,9 +4,6 @@ use std::fs;
 use std::fmt;
 use std::path::Path;
 
-use serde::{Deserialize, Deserializer};
-use serde::de;
-
 use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
 
@@ -62,23 +59,6 @@ struct MkOptions<'a> {
     name: &'a str,
     source_files: Vec<SourceFileInformation>,
     bin: bool,
-}
-
-impl<'de> Deserialize<'de> for VersionControl {
-    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<VersionControl, D::Error> {
-        Ok(match &String::deserialize(d)?[..] {
-            "git" => VersionControl::Git,
-            "hg" => VersionControl::Hg,
-            "pijul" => VersionControl::Pijul,
-            "fossil" => VersionControl::Fossil,
-            "none" => VersionControl::NoVcs,
-            n => {
-                let value = de::Unexpected::Str(n);
-                let msg = "unsupported version control system";
-                return Err(de::Error::invalid_value(value, &msg));
-            }
-        })
-    }
 }
 
 impl<'a> NewOptions<'a> {
