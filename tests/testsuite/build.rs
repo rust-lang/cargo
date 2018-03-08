@@ -3242,7 +3242,6 @@ fn compiler_json_error_format() {
 }
 
 #[test]
-#[ignore]
 fn wrong_message_format_option() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -3251,8 +3250,16 @@ fn wrong_message_format_option() {
 
     assert_that(p.cargo("build").arg("--message-format").arg("XML"),
                 execs().with_status(1)
-                       .with_stderr_contains(
-r#"[ERROR] Could not match 'xml' with any of the allowed variants: ["Human", "Json"]"#));
+                       .with_stderr("\
+error: 'XML' isn't a valid value for '--message-format <FMT>'
+<tab>[possible values: human, json]
+
+
+USAGE:
+    cargo build --message-format <FMT>
+
+For more information try --help
+"));
 }
 
 #[test]

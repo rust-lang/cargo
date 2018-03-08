@@ -440,16 +440,16 @@ fn with_argument() {
 
 
 #[test]
-#[ignore]
 fn unknown_flags() {
     assert_that(cargo_process("init").arg("foo").arg("--flag"),
                 execs().with_status(1)
                        .with_stderr("\
-[ERROR] Unknown flag: '--flag'
+error: Found argument '--flag' which wasn't expected, or isn't valid in this context
 
-Usage:
-    cargo init [options] [<path>]
-    cargo init -h | --help
+USAGE:
+    cargo init [OPTIONS] [--] [path]
+
+For more information try --help
 "));
 }
 

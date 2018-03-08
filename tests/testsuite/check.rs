@@ -331,7 +331,6 @@ fn dylib_check_preserves_build_cache() {
 
 // test `cargo rustc --profile check`
 #[test]
-#[ignore]
 fn rustc_check() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
@@ -371,7 +370,6 @@ fn rustc_check() {
 }
 
 #[test]
-#[ignore]
 fn rustc_check_err() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
