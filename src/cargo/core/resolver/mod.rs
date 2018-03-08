@@ -734,11 +734,11 @@ impl RemainingCandidates {
         use std::mem::replace;
         for (_, b) in self.remaining.by_ref() {
             if let Some(link) = b.summary.links() {
-                if let Some(a) = links.get(&InternedString::new(link)) {
+                if let Some(a) = links.get(&link) {
                     if a != b.summary.package_id() {
                         self.conflicting_prev_active
                             .entry(a.clone())
-                            .or_insert_with(|| ConflictReason::Links(link.to_owned()));
+                            .or_insert_with(|| ConflictReason::Links(link.to_string()));
                         continue;
                     }
                 }
@@ -1309,9 +1309,9 @@ impl Context {
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.push(GraphNode::Add(id.clone()));
             if let Some(link) = summary.links() {
-                ensure!(self.links.insert(InternedString::new(link), id.clone()).is_none(),
+                ensure!(self.links.insert(link, id.clone()).is_none(),
                 "Attempting to resolve a with more then one crate with the links={}. \n\
-                 This will not build as is. Consider rebuilding the .lock file.", link);
+                 This will not build as is. Consider rebuilding the .lock file.", &*link);
             }
             let mut inner: Vec<_> = (**prev).clone();
             inner.push(summary.clone());
