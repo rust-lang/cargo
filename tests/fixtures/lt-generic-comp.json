@@ -46,7 +46,7 @@
   ],
   "children": [
     {
-      "message": "try comparing the casted value",
+      "message": "try comparing the cast value",
       "code": null,
       "level": "help",
       "spans": [
