@@ -196,7 +196,6 @@ fn cargo_subcommand_env() {
 }
 
 #[test]
-#[ignore]
 fn cargo_help() {
     assert_that(cargo_process(),
                 execs().with_status(0));
@@ -207,8 +206,6 @@ fn cargo_help() {
     assert_that(cargo_process().arg("help").arg("build"),
                 execs().with_status(0));
     assert_that(cargo_process().arg("build").arg("-h"),
-                execs().with_status(0));
-    assert_that(cargo_process().arg("help").arg("-h"),
                 execs().with_status(0));
     assert_that(cargo_process().arg("help").arg("help"),
                 execs().with_status(0));
