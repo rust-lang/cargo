@@ -2,7 +2,6 @@ use cargotest::support::{project, execs, basic_bin_manifest};
 use hamcrest::{assert_that};
 
 #[test]
-#[ignore]
 fn alias_incorrect_config_type() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -42,7 +41,6 @@ fn alias_default_config_overrides_config() {
 }
 
 #[test]
-#[ignore]
 fn alias_config() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -62,7 +60,6 @@ fn alias_config() {
 }
 
 #[test]
-#[ignore]
 fn alias_list_test() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
@@ -83,7 +80,6 @@ fn alias_list_test() {
 }
 
 #[test]
-#[ignore]
 fn alias_with_flags_config() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
