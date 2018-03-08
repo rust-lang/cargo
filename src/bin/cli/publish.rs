@@ -3,15 +3,7 @@ use super::utils::*;
 pub fn cli() -> App {
     subcommand("publish")
         .about("Upload a package to the registry")
-        .arg(
-            opt("index", "Registry index to upload the package to")
-                .value_name("INDEX")
-        )
-        .arg(
-            opt("host", "DEPRECATED, renamed to '--index'")
-                .value_name("HOST")
-                .hidden(true)
-        )
+        .arg_index()
         .arg(opt("token", "Token to use when uploading").value_name("TOKEN"))
         .arg(opt("no-verify", "Don't verify the contents by building them"))
         .arg(opt("allow-dirty", "Allow dirty working directories to be packaged"))
