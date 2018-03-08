@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use semver::Version;
 use core::{Dependency, PackageId, SourceId};
+use core::interning::InternedString;
 
 use util::CargoResult;
 
@@ -22,7 +23,7 @@ struct Inner {
     dependencies: Vec<Dependency>,
     features: BTreeMap<String, Vec<String>>,
     checksum: Option<String>,
-    links: Option<String>,
+    links: Option<InternedString>,
 }
 
 impl Summary {
@@ -71,7 +72,7 @@ impl Summary {
                 dependencies,
                 features,
                 checksum: None,
-                links,
+                links: links.map(|l| InternedString::new(&l)),
             }),
         })
     }
@@ -85,8 +86,8 @@ impl Summary {
     pub fn checksum(&self) -> Option<&str> {
         self.inner.checksum.as_ref().map(|s| &s[..])
     }
-    pub fn links(&self) -> Option<&str> {
-        self.inner.links.as_ref().map(|s| &s[..])
+    pub fn links(&self) -> Option<InternedString> {
+        self.inner.links
     }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
