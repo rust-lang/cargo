@@ -306,7 +306,6 @@ fn build_only_bar_dependency() {
 }
 
 #[test]
-#[ignore]
 fn fail_with_multiple_packages() {
     let foo = project("foo")
         .file("Cargo.toml", r#"
@@ -357,10 +356,13 @@ fn fail_with_multiple_packages() {
     assert_that(foo.cargo("rustc").arg("-v").arg("-p").arg("bar")
                                           .arg("-p").arg("baz"),
                 execs().with_status(1).with_stderr("\
-[ERROR] Invalid arguments.
+error: The argument '--package <SPEC>' was provided more than once, \
+       but cannot be used multiple times
 
-Usage:
-    cargo rustc [options] [--] [<opts>...]"));
+USAGE:
+    cargo rustc --message-format <FMT> --package <SPEC> --verbose
+
+For more information try --help"));
 }
 
 #[test]

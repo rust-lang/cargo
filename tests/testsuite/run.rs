@@ -743,7 +743,6 @@ fn fail_no_extra_verbose() {
 }
 
 #[test]
-#[ignore]
 fn run_multiple_packages() {
     let p = project("foo")
         .file("foo/Cargo.toml", r#"
@@ -811,7 +810,13 @@ fn run_multiple_packages() {
     assert_that(cargo().arg("-p").arg("d1").arg("-p").arg("d2"),
                 execs()
                     .with_status(1)
-                    .with_stderr_contains("[ERROR] Invalid arguments."));
+                    .with_stderr("\
+error: The argument '--package <SPEC>' was provided more than once, but cannot be used multiple times
+
+USAGE:
+    cargo run --message-format <FMT> --package <SPEC>
+
+For more information try --help"));
 
     assert_that(cargo().arg("-p").arg("d3"),
                 execs()
