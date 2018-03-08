@@ -92,7 +92,7 @@ fn main() {
         "build" | "bench" | "check" | "clean" | "doc" | "fetch" | "generate-lockfile" |
         "git-checkout" | "init" | "install" | "locate-project" | "login" | "metadata" |
         "new" | "owner" | "package" | "pkgid" | "publish" | "read-manifest" | "run" |
-        "rustc" | "rustdoc" | "search" | "test" => true,
+        "rustc" | "rustdoc" | "search" | "test" | "uninstall" => true,
         _ => false
     });
 
@@ -145,7 +145,7 @@ macro_rules! each_subcommand{
 //        $mac!(rustdoc);
 //        $mac!(search);
 //        $mac!(test);
-        $mac!(uninstall);
+//        $mac!(uninstall);
         $mac!(update);
         $mac!(verify_project);
         $mac!(version);
