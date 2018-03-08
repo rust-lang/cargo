@@ -726,6 +726,7 @@ fn uninstall_piecemeal() {
 }
 
 #[test]
+#[ignore]
 fn subcommand_works_out_of_the_box() {
     Package::new("cargo-foo", "1.0.0")
         .file("src/main.rs", r#"
@@ -786,6 +787,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
 }
 
 #[test]
+#[ignore]
 fn reports_unsuccessful_subcommand_result() {
     Package::new("cargo-fail", "1.0.0")
         .file("src/main.rs", r#"

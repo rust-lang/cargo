@@ -88,31 +88,7 @@ fn main() {
         }
     };
 
-    let is_clapified = ::std::env::args().any(|arg| match arg.as_ref() {
-        "build" | "bench" | "check" | "clean" | "doc" | "fetch" | "generate-lockfile" |
-        "git-checkout" | "init" | "install" | "locate-project" | "login" | "metadata" |
-        "new" | "owner" | "package" | "pkgid" | "publish" | "read-manifest" | "run" |
-        "rustc" | "rustdoc" | "search" | "test" | "uninstall" | "update" |
-        "verify-project" | "version" | "yank" => true,
-        _ => false
-    });
-
-    let result = if is_clapified {
-        cli::do_main(&mut config)
-    } else {
-        (|| {
-            let args: Vec<_> = try!(env::args_os()
-                .map(|s| {
-                    s.into_string().map_err(|s| {
-                        format_err!("invalid unicode in argument: {:?}", s)
-                    })
-                })
-                .collect());
-            let rest = &args;
-            cargo::call_main_without_stdin(execute, &mut config, USAGE, rest, true)
-        })()
-    };
-
+    let result = cli::do_main(&mut config);
     match result {
         Err(e) => cargo::exit_with_error(e, &mut *config.shell()),
         Ok(()) => {}
@@ -121,36 +97,6 @@ fn main() {
 
 macro_rules! each_subcommand{
     ($mac:ident) => {
-//        $mac!(bench);
-//        $mac!(build);
-//        $mac!(check);
-//        $mac!(clean);
-//        $mac!(doc);
-//        $mac!(fetch);
-//        $mac!(generate_lockfile);
-//        $mac!(git_checkout);
-        $mac!(help);
-//        $mac!(init);
-//        $mac!(install);
-//        $mac!(locate_project);
-//        $mac!(login);
-//        $mac!(metadata);
-//        $mac!(new);
-//        $mac!(owner);
-//        $mac!(package);
-//        $mac!(pkgid);
-//        $mac!(publish);
-//        $mac!(read_manifest);
-//        $mac!(run);
-//        $mac!(rustc);
-//        $mac!(rustdoc);
-//        $mac!(search);
-//        $mac!(test);
-//        $mac!(uninstall);
-//        $mac!(update);
-//        $mac!(verify_project);
-//        $mac!(version);
-//        $mac!(yank);
     }
 }
 

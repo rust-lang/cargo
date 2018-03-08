@@ -2,6 +2,7 @@ use cargotest::support::{project, execs, basic_bin_manifest};
 use hamcrest::{assert_that};
 
 #[test]
+#[ignore]
 fn alias_incorrect_config_type() {
     let p = project("foo")
         .file("Cargo.toml", &basic_bin_manifest("foo"))
