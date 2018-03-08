@@ -526,7 +526,7 @@ fn execte_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             cargo::print_json(&h);
             Ok(())
         }
-        ("version", Some(args)) => {
+        ("version", _) => {
             println!("{}", cargo::version());
             Ok(())
         }
@@ -663,7 +663,7 @@ fn builtin_subcommands() -> Vec<App> {
 }
 
 /// List all runnable commands
-fn list_commands(config: &Config) -> BTreeSet<(String, Option<String>)> {
+pub fn list_commands(config: &Config) -> BTreeSet<(String, Option<String>)> {
     let prefix = "cargo-";
     let suffix = env::consts::EXE_SUFFIX;
     let mut commands = BTreeSet::new();
