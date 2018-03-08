@@ -106,7 +106,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             }
         }
         ("build", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let mut ws = workspace_from_args(config, args)?;
             if config.cli_unstable().avoid_dev_deps {
                 ws.set_require_optional_deps(false);
             }

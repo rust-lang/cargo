@@ -14,7 +14,7 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use cargo::core::shell::{Shell, Verbosity};
+use cargo::core::shell::Shell;
 use cargo::util::{self, CliResult, lev_distance, Config, CargoResult};
 use cargo::util::{CliError, ProcessError};
 
