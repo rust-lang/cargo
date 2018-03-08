@@ -217,7 +217,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
         }
         let url = url
-            .replace(CRATE_TEMPLATE, pkg.name())
+            .replace(CRATE_TEMPLATE, &*pkg.name())
             .replace(VERSION_TEMPLATE, &pkg.version().to_string())
             .to_url()?;
 

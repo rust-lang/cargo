@@ -136,7 +136,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
                                      resolve: &'a Resolve) ->
                                      Vec<(Vec<&'a PackageId>, Vec<&'a PackageId>)> {
         fn key(dep: &PackageId) -> (&str, &SourceId) {
-            (dep.name(), dep.source_id())
+            (dep.name().to_inner(), dep.source_id())
         }
 
         // Removes all package ids in `b` from `a`. Note that this is somewhat

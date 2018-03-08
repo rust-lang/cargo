@@ -41,7 +41,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                 pkg: &PackageId,
                 load: &mut RegistryData)
                 -> CargoResult<String> {
-        let name = pkg.name();
+        let name = &*pkg.name();
         let version = pkg.version();
         if let Some(s) = self.hashes.get(name).and_then(|v| v.get(version)) {
             return Ok(s.clone())

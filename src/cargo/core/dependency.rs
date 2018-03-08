@@ -329,13 +329,13 @@ impl Dependency {
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
     pub fn matches_ignoring_source(&self, sum: &Summary) -> bool {
-        self.name() == sum.package_id().name() &&
+        self.name() == &*sum.package_id().name() &&
             self.version_req().matches(sum.package_id().version())
     }
 
     /// Returns true if the package (`id`) can fulfill this dependency request.
     pub fn matches_id(&self, id: &PackageId) -> bool {
-        self.inner.name == id.name() &&
+        self.inner.name == &*id.name() &&
             (self.inner.only_match_name || (self.inner.req.matches(id.version()) &&
                                       &self.inner.source_id == id.source_id()))
     }

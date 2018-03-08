@@ -115,7 +115,7 @@ impl PackageIdSpec {
     }
 
     pub fn matches(&self, package_id: &PackageId) -> bool {
-        if self.name() != package_id.name() { return false }
+        if self.name() != &*package_id.name() { return false }
 
         if let Some(ref v) = self.version {
             if v != package_id.version() {

@@ -435,7 +435,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // differ due to historical Cargo bugs. To paper over these we trash the
         // *summary* loaded from the Cargo.toml we just downloaded with the one
         // we loaded from the index.
-        let summaries = self.index.summaries(package.name(), &mut *self.ops)?;
+        let summaries = self.index.summaries(&*package.name(), &mut *self.ops)?;
         let summary = summaries.iter().map(|s| &s.0).find(|s| {
             s.package_id() == package
         }).expect("summary not found");

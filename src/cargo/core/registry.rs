@@ -584,7 +584,7 @@ fn lock(locked: &LockedMap,
         let v = patches.get(dep.source_id().url()).map(|vec| {
             let dep2 = dep.clone();
             let mut iter = vec.iter().filter(move |p| {
-                dep2.name() == p.name() &&
+                dep2.name() == &*p.name() &&
                     dep2.version_req().matches(p.version())
             });
             (iter.next(), iter)
@@ -593,7 +593,7 @@ fn lock(locked: &LockedMap,
             assert!(remaining.next().is_none());
             let patch_source = patch_id.source_id();
             let patch_locked = locked.get(patch_source).and_then(|m| {
-                m.get(patch_id.name())
+                m.get(&*patch_id.name())
             }).map(|list| {
                 list.iter().any(|&(ref id, _)| id == patch_id)
             }).unwrap_or(false);

@@ -301,7 +301,7 @@ impl Manifest {
     pub fn exclude(&self) -> &[String] { &self.exclude }
     pub fn include(&self) -> &[String] { &self.include }
     pub fn metadata(&self) -> &ManifestMetadata { &self.metadata }
-    pub fn name(&self) -> &str { self.package_id().name() }
+    pub fn name(&self) -> &str { self.package_id().name().to_inner() }
     pub fn package_id(&self) -> &PackageId { self.summary.package_id() }
     pub fn summary(&self) -> &Summary { &self.summary }
     pub fn targets(&self) -> &[Target] { &self.targets }

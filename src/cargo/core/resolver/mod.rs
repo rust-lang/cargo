@@ -1059,7 +1059,7 @@ fn activation_error(cx: &Context,
         for &(p, r) in features_errors.iter() {
             if let ConflictReason::MissingFeatures(ref features) = *r {
                 msg.push_str("\n\nthe package `");
-                msg.push_str(p.name());
+                msg.push_str(&*p.name());
                 msg.push_str("` depends on `");
                 msg.push_str(dep.name());
                 msg.push_str("`, with features: `");
@@ -1304,7 +1304,7 @@ impl Context {
                       method: &Method) -> CargoResult<bool> {
         let id = summary.package_id();
         let prev = self.activations
-                       .entry((InternedString::new(id.name()), id.source_id().clone()))
+                       .entry((id.name(), id.source_id().clone()))
                        .or_insert_with(||Rc::new(Vec::new()));
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.push(GraphNode::Add(id.clone()));
@@ -1371,7 +1371,7 @@ impl Context {
     }
 
     fn is_active(&self, id: &PackageId) -> bool {
-        self.activations.get(&(InternedString::new(id.name()), id.source_id().clone()))
+        self.activations.get(&(id.name(), id.source_id().clone()))
             .map(|v| v.iter().any(|s| s.package_id() == id))
             .unwrap_or(false)
     }
