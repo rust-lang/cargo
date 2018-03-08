@@ -223,8 +223,8 @@ fn execute(flags: Flags, config: &mut Config) -> CliResult {
         }
         None => args,
     };
-
-    execute_external_subcommand(config, &args[1], &args)
+    unimplemented!()
+//    execute_external_subcommand(config, &args[1], &args)
 }
 
 fn try_execute_builtin_command(config: &mut Config, args: &[String]) -> Option<CliResult> {
@@ -283,7 +283,7 @@ fn find_closest(config: &Config, cmd: &str) -> Option<String> {
     filtered.get(0).map(|slot| slot.1.clone())
 }
 
-fn execute_external_subcommand(config: &Config, cmd: &str, args: &[String]) -> CliResult {
+fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> CliResult {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     let path = search_directories(config)
         .iter()
