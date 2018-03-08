@@ -285,7 +285,6 @@ example
 }
 
 #[test]
-#[ignore]
 fn run_bins() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -306,7 +305,7 @@ fn run_bins() {
     assert_that(p.cargo("run").arg("--bins"),
                 execs().with_status(1)
                        .with_stderr_contains("\
-[ERROR] Unknown flag: '--bins'. Did you mean '--bin'?"));
+error: Found argument '--bins' which wasn't expected, or isn't valid in this context"));
 }
 
 #[test]
