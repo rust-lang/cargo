@@ -39,7 +39,7 @@ Options:
     --bin NAME                   Name of the bin target to run
     --example NAME               Name of the example target to run
     -p SPEC, --package SPEC      Package with the target to run
-    -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
+    -j N, --jobs N               Number of parallel jobs, defaults to # of threads
     --release                    Build artifacts in release mode, with optimizations
     --features FEATURES          Space-separated list of features to also build
     --all-features               Build all available features

@@ -97,7 +97,7 @@ cainfo = "cert.pem" # Path to Certificate Authority (CA) bundle (optional)
 check-revoke = true # Indicates whether SSL certs are checked for revocation
 
 [build]
-jobs = 1                  # number of parallel jobs, defaults to # of CPUs
+jobs = 1                  # number of parallel jobs, defaults to # of threads
 rustc = "rustc"           # the rust compiler tool
 rustdoc = "rustdoc"       # the doc generator tool
 target = "triple"         # build for the target triple

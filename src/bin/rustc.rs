@@ -46,7 +46,7 @@ Usage:
 Options:
     -h, --help               Print this message
     -p SPEC, --package SPEC  Package to build
-    -j N, --jobs N           Number of parallel jobs, defaults to # of CPUs
+    -j N, --jobs N           Number of parallel jobs, defaults to # of threads
     --lib                    Build only this package's library
     --bin NAME               Build only the specified binary
     --bins                   Build all binaries

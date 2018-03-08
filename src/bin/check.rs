@@ -16,7 +16,7 @@ Options:
     -p SPEC, --package SPEC ...  Package(s) to check
     --all                        Check all packages in the workspace
     --exclude SPEC ...           Exclude packages from the check
-    -j N, --jobs N               Number of parallel jobs, defaults to # of CPUs
+    -j N, --jobs N               Number of parallel jobs, defaults to # of threads
     --lib                        Check only this package's library
     --bin NAME                   Check only the specified binary
     --bins                       Check all binaries
