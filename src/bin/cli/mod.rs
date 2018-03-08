@@ -165,6 +165,33 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
         }
     }
 
+    fn index_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
+        // TODO: Deprecated
+        // remove once it has been decided --host can be removed
+        // We may instead want to repurpose the host flag, as
+        // mentioned in this issue
+        // https://github.com/rust-lang/cargo/issues/4208
+        let msg = "The flag '--host' is no longer valid.
+
+Previous versions of Cargo accepted this flag, but it is being
+deprecated. The flag is being renamed to 'index', as the flag
+wants the location of the index to which to publish. Please
+use '--index' instead.
+
+This will soon become a hard error, so it's either recommended
+to update to a fixed version or contact the upstream maintainer
+about this warning.";
+
+        let index = match args.value_of("host") {
+            Some(host) => {
+                config.shell().warn(&msg)?;
+                Some(host.to_string())
+            }
+            None => args.value_of("index").map(|s| s.to_string())
+        };
+        Ok(index)
+    }
+
     config_from_args(config, &args)?;
     match args.subcommand() {
         ("bench", Some(args)) => {
@@ -429,30 +456,7 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
         ("publish", Some(args)) => {
             let registry = registry_from_args(config, args)?;
             let ws = workspace_from_args(config, args)?;
-
-            // TODO: Deprecated
-            // remove once it has been decided --host can be removed
-            // We may instead want to repurpose the host flag, as
-            // mentioned in this issue
-            // https://github.com/rust-lang/cargo/issues/4208
-            let msg = "The flag '--host' is no longer valid.
-
-Previous versions of Cargo accepted this flag, but it is being
-deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index to which to publish. Please
-use '--index' instead.
-
-This will soon become a hard error, so it's either recommended
-to update to a fixed version or contact the upstream maintainer
-about this warning.";
-
-            let index = match args.value_of("host") {
-                Some(host) => {
-                    config.shell().warn(&msg)?;
-                    Some(host.to_string())
-                }
-                None => args.value_of("index").map(|s| s.to_string())
-            };
+            let index = index_from_args(config, args)?;
 
             ops::publish(&ws, &ops::PublishOpts {
                 config,
@@ -789,6 +793,19 @@ a global configuration.")
                 ._arg(
                     opt("name", "Set the resulting package name, defaults to the directory name")
                         .value_name("NAME")
+                )
+        }
+
+        fn arg_index(self) -> Self {
+            self
+                ._arg(
+                    opt("index", "Registry index to upload the package to")
+                        .value_name("INDEX")
+                )
+                ._arg(
+                    opt("host", "DEPRECATED, renamed to '--index'")
+                        .value_name("HOST")
+                        .hidden(true)
                 )
         }
     }
