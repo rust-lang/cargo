@@ -43,159 +43,6 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
         return Ok(());
     }
 
-    fn values<'a>(args: &ArgMatches, name: &str) -> &'a [String] {
-        let owned: Vec<String> = args.values_of(name).unwrap_or_default()
-            .map(|s| s.to_string())
-            .collect();
-        let owned = owned.into_boxed_slice();
-        let ptr = owned.as_ptr();
-        let len = owned.len();
-        ::std::mem::forget(owned);
-        unsafe {
-            slice::from_raw_parts(ptr, len)
-        }
-    }
-
-    fn config_from_args(config: &mut Config, args: &ArgMatches) -> CargoResult<()> {
-        let color = args.value_of("color").map(|s| s.to_string());
-        config.configure(
-            args.occurrences_of("verbose") as u32,
-            if args.is_present("quite") { Some(true) } else { None },
-            &color,
-            args.is_present("frozen"),
-            args.is_present("locked"),
-            &args.values_of_lossy("unstable-features").unwrap_or_default(),
-        )
-    }
-
-    fn root_manifest_from_args(config: &Config, args: &ArgMatches) -> CargoResult<PathBuf> {
-        let manifest_path = args.value_of("manifest-path").map(|s| s.to_string());
-        find_root_manifest_for_wd(manifest_path, config.cwd())
-    }
-
-    fn workspace_from_args<'a>(config: &'a Config, args: &ArgMatches) -> CargoResult<Workspace<'a>> {
-        let root = root_manifest_from_args(config, args)?;
-        Workspace::new(&root, config)
-    }
-
-    fn jobs_from_args(args: &ArgMatches) -> Option<u32> { //FIXME: validation
-        args.value_of("jobs").and_then(|v| v.parse().ok())
-    }
-
-    fn compile_options_from_args<'a>(
-        config: &'a Config,
-        args: &'a ArgMatches<'a>,
-        mode: CompileMode,
-    ) -> CargoResult<CompileOptions<'a>> {
-        let spec = Packages::from_flags(
-            args.is_present("all"),
-            &values(args, "exclude"),
-            &values(args, "package"),
-        )?;
-
-        let message_format = match args.value_of("message-format") {
-            None => MessageFormat::Human,
-            Some(f) => {
-                if f.eq_ignore_ascii_case("json") {
-                    MessageFormat::Json
-                } else if f.eq_ignore_ascii_case("human") {
-                    MessageFormat::Human
-                } else {
-                    panic!("Impossible message format: {:?}", f)
-                }
-            }
-        };
-
-        let opts = CompileOptions {
-            config,
-            jobs: jobs_from_args(args),
-            target: args.value_of("target"),
-            features: &values(args, "features"),
-            all_features: args.is_present("all-features"),
-            no_default_features: args.is_present("no-default-features"),
-            spec,
-            mode,
-            release: args.is_present("release"),
-            filter: ops::CompileFilter::new(args.is_present("lib"),
-                                            values(args, "bin"), args.is_present("bins"),
-                                            values(args, "test"), args.is_present("tests"),
-                                            values(args, "example"), args.is_present("examples"),
-                                            values(args, "bench"), args.is_present("benches"),
-                                            args.is_present("all-targets")),
-            message_format,
-            target_rustdoc_args: None,
-            target_rustc_args: None,
-        };
-        Ok(opts)
-    }
-
-    fn compile_options_from_args_for_single_package<'a>(
-        config: &'a Config,
-        args: &'a ArgMatches<'a>,
-        mode: CompileMode,
-    ) -> CargoResult<CompileOptions<'a>> {
-        let mut compile_opts = compile_options_from_args(config, args, mode)?;
-        let packages = values(args, "package");
-        compile_opts.spec = Packages::Packages(&packages);
-        Ok(compile_opts)
-    }
-
-
-    fn new_opts_from_args<'a>(args: &'a ArgMatches<'a>, path: &'a str) -> CargoResult<NewOptions<'a>> {
-        let vcs = args.value_of("vcs").map(|vcs| match vcs {
-            "git" => VersionControl::Git,
-            "hg" => VersionControl::Hg,
-            "pijul" => VersionControl::Pijul,
-            "fossil" => VersionControl::Fossil,
-            "none" => VersionControl::NoVcs,
-            vcs => panic!("Impossible vcs: {:?}", vcs),
-        });
-        NewOptions::new(vcs,
-                        args.is_present("bin"),
-                        args.is_present("lib"),
-                        path,
-                        args.value_of("name"))
-    }
-
-    fn registry_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
-        match args.value_of("registry") {
-            Some(registry) => {
-                if !config.cli_unstable().unstable_options {
-                    return Err(format_err!("registry option is an unstable feature and \
-                                requires -Zunstable-options to use.").into());
-                }
-                Ok(Some(registry.to_string()))
-            }
-            None => Ok(None),
-        }
-    }
-
-    fn index_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
-        // TODO: Deprecated
-        // remove once it has been decided --host can be removed
-        // We may instead want to repurpose the host flag, as
-        // mentioned in this issue
-        // https://github.com/rust-lang/cargo/issues/4208
-        let msg = "The flag '--host' is no longer valid.
-
-Previous versions of Cargo accepted this flag, but it is being
-deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index. Please use '--index' instead.
-
-This will soon become a hard error, so it's either recommended
-to update to a fixed version or contact the upstream maintainer
-about this warning.";
-
-        let index = match args.value_of("host") {
-            Some(host) => {
-                config.shell().warn(&msg)?;
-                Some(host.to_string())
-            }
-            None => args.value_of("index").map(|s| s.to_string())
-        };
-        Ok(index)
-    }
-
     config_from_args(config, &args)?;
     match args.subcommand() {
         ("bench", Some(args)) => {
@@ -215,7 +62,7 @@ about this warning.";
             bench_args.extend(args.values_of("args").unwrap_or_default().map(|s| s.to_string()));
 
             let err = ops::run_benches(&ws, &ops, &bench_args)?;
-            return match err {
+            match err {
                 None => Ok(()),
                 Some(err) => {
                     Err(match err.exit.as_ref().and_then(|e| e.code()) {
@@ -223,7 +70,7 @@ about this warning.";
                         None => CliError::new(err.into(), 101)
                     })
                 }
-            };
+            }
         }
         ("build", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -232,7 +79,7 @@ about this warning.";
             }
             let compile_opts = compile_options_from_args(config, args, CompileMode::Build)?;
             ops::compile(&ws, &compile_opts)?;
-            return Ok(());
+            Ok(())
         }
         ("check", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -248,7 +95,7 @@ about this warning.";
             let mode = CompileMode::Check { test };
             let compile_opts = compile_options_from_args(config, args, mode)?;
             ops::compile(&ws, &compile_opts)?;
-            return Ok(());
+            Ok(())
         }
         ("clean", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -259,7 +106,7 @@ about this warning.";
                 release: args.is_present("release"),
             };
             ops::clean(&ws, &opts)?;
-            return Ok(());
+            Ok(())
         }
         ("doc", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -270,17 +117,17 @@ about this warning.";
                 compile_opts,
             };
             ops::doc(&ws, &doc_opts)?;
-            return Ok(());
+            Ok(())
         }
         ("fetch", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
             ops::fetch(&ws)?;
-            return Ok(());
+            Ok(())
         }
         ("generate-lockfile", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
             ops::generate_lockfile(&ws)?;
-            return Ok(());
+            Ok(())
         }
         ("git-checkout", Some(args)) => {
             let url = args.value_of("url").unwrap().to_url()?;
@@ -293,14 +140,14 @@ about this warning.";
 
             source.update()?;
 
-            return Ok(());
+            Ok(())
         }
         ("init", Some(args)) => {
             let path = args.value_of("path").unwrap_or(".");
             let opts = new_opts_from_args(args, path)?;
             ops::init(&opts, config)?;
             config.shell().status("Created", format!("{} project", opts.kind))?;
-            return Ok(());
+            Ok(())
         }
         ("install", Some(args)) => {
             let mut compile_opts = compile_options_from_args(config, args, CompileMode::Build)?;
@@ -336,7 +183,7 @@ about this warning.";
             } else {
                 ops::install(root, krates, &source, version, &compile_opts, args.is_present("force"))?;
             }
-            return Ok(());
+            Ok(())
         }
         ("locate-project", Some(args)) => {
             let root = root_manifest_from_args(config, args)?;
@@ -355,7 +202,7 @@ about this warning.";
             let location = ProjectLocation { root };
 
             cargo::print_json(&location);
-            return Ok(());
+            Ok(())
         }
         ("login", Some(args)) => {
             let registry = registry_from_args(config, args)?;
@@ -388,7 +235,7 @@ about this warning.";
             };
 
             ops::registry_login(config, token, registry)?;
-            return Ok(());
+            Ok(())
         }
         ("metadata", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -414,7 +261,7 @@ about this warning.";
 
             let result = ops::output_metadata(&ws, &options)?;
             cargo::print_json(&result);
-            return Ok(());
+            Ok(())
         }
         ("new", Some(args)) => {
             let path = args.value_of("path").unwrap();
@@ -437,7 +284,7 @@ about this warning.";
                 registry,
             };
             ops::modify_owners(config, &opts)?;
-            return Ok(());
+            Ok(())
         }
         ("package", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -451,7 +298,7 @@ about this warning.";
                 jobs: jobs_from_args(args),
                 registry: None,
             })?;
-            return Ok(());
+            Ok(())
         }
         ("pkgid", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -476,13 +323,13 @@ about this warning.";
                 dry_run: args.is_present("dry-run"),
                 registry,
             })?;
-            return Ok(());
+            Ok(())
         }
         ("read-manifest", Some(args)) => {
             let root = root_manifest_from_args(config, args)?;
             let pkg = Package::for_path(&root, config)?;
             cargo::print_json(&pkg);
-            return Ok(());
+            Ok(())
         }
         ("run", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -495,7 +342,7 @@ about this warning.";
                     required_features_filterable: false,
                 };
             };
-            return match ops::run(&ws, &compile_opts, &values(args, "args"))? {
+            match ops::run(&ws, &compile_opts, &values(args, "args"))? {
                 None => Ok(()),
                 Some(err) => {
                     // If we never actually spawned the process then that sounds pretty
@@ -515,7 +362,7 @@ about this warning.";
                         CliError::new(err.into(), exit_code)
                     })
                 }
-            };
+            }
         }
         ("rustc", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -535,7 +382,7 @@ about this warning.";
             )?;
             compile_opts.target_rustc_args = Some(&values(args, "args"));
             ops::compile(&ws, &compile_opts)?;
-            return Ok(());
+            Ok(())
         }
         ("rustdoc", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -548,7 +395,7 @@ about this warning.";
                 compile_opts
             };
             ops::doc(&ws, &doc_opts)?;
-            return Ok(());
+            Ok(())
         }
         ("search", Some(args)) => {
             let registry = registry_from_args(config, args)?;
@@ -559,7 +406,7 @@ about this warning.";
             let query: Vec<&str> = args.values_of("query").unwrap_or_default().collect();
             let query: String = query.join("+");
             ops::search(&query, config, index, limit, registry)?;
-            return Ok(());
+            Ok(())
         }
         ("test", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -604,7 +451,7 @@ about this warning.";
             let root = args.value_of("root");
             let specs = args.values_of("spec").unwrap_or_default().collect();
             ops::uninstall(root, specs, values(args, "bin"), config)?;
-            return Ok(());
+            Ok(())
         }
         ("update", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -616,7 +463,7 @@ about this warning.";
                 config,
             };
             ops::update_lockfile(&ws, &update_opts)?;
-            return Ok(());
+            Ok(())
         }
         ("verify-project", Some(args)) => {
             fn fail(reason: &str, value: &str) -> ! {
@@ -641,11 +488,11 @@ about this warning.";
             let mut h = HashMap::new();
             h.insert("success".to_string(), "true".to_string());
             cargo::print_json(&h);
-            return Ok(());
+            Ok(())
         }
         ("version", Some(args)) => {
             println!("{}", cargo::version());
-            return Ok(());
+            Ok(())
         }
         ("yank", Some(args)) => {
             let registry = registry_from_args(config, args)?;
@@ -659,7 +506,7 @@ about this warning.";
                       registry)?;
             Ok(())
         }
-        _ => return Ok(())
+        _ => Ok(())
     }
 }
 
@@ -958,4 +805,158 @@ a global configuration.")
                 AppSettings::DontCollapseArgsInUsage,
             ])
     }
+}
+
+
+
+fn values<'a>(args: &ArgMatches, name: &str) -> &'a [String] {
+    let owned: Vec<String> = args.values_of(name).unwrap_or_default()
+        .map(|s| s.to_string())
+        .collect();
+    let owned = owned.into_boxed_slice();
+    let ptr = owned.as_ptr();
+    let len = owned.len();
+    ::std::mem::forget(owned);
+    unsafe {
+        slice::from_raw_parts(ptr, len)
+    }
+}
+
+fn config_from_args(config: &mut Config, args: &ArgMatches) -> CargoResult<()> {
+    let color = args.value_of("color").map(|s| s.to_string());
+    config.configure(
+        args.occurrences_of("verbose") as u32,
+        if args.is_present("quite") { Some(true) } else { None },
+        &color,
+        args.is_present("frozen"),
+        args.is_present("locked"),
+        &args.values_of_lossy("unstable-features").unwrap_or_default(),
+    )
+}
+
+fn root_manifest_from_args(config: &Config, args: &ArgMatches) -> CargoResult<PathBuf> {
+    let manifest_path = args.value_of("manifest-path").map(|s| s.to_string());
+    find_root_manifest_for_wd(manifest_path, config.cwd())
+}
+
+fn workspace_from_args<'a>(config: &'a Config, args: &ArgMatches) -> CargoResult<Workspace<'a>> {
+    let root = root_manifest_from_args(config, args)?;
+    Workspace::new(&root, config)
+}
+
+fn jobs_from_args(args: &ArgMatches) -> Option<u32> { //FIXME: validation
+    args.value_of("jobs").and_then(|v| v.parse().ok())
+}
+
+fn compile_options_from_args<'a>(
+    config: &'a Config,
+    args: &'a ArgMatches<'a>,
+    mode: CompileMode,
+) -> CargoResult<CompileOptions<'a>> {
+    let spec = Packages::from_flags(
+        args.is_present("all"),
+        &values(args, "exclude"),
+        &values(args, "package"),
+    )?;
+
+    let message_format = match args.value_of("message-format") {
+        None => MessageFormat::Human,
+        Some(f) => {
+            if f.eq_ignore_ascii_case("json") {
+                MessageFormat::Json
+            } else if f.eq_ignore_ascii_case("human") {
+                MessageFormat::Human
+            } else {
+                panic!("Impossible message format: {:?}", f)
+            }
+        }
+    };
+
+    let opts = CompileOptions {
+        config,
+        jobs: jobs_from_args(args),
+        target: args.value_of("target"),
+        features: &values(args, "features"),
+        all_features: args.is_present("all-features"),
+        no_default_features: args.is_present("no-default-features"),
+        spec,
+        mode,
+        release: args.is_present("release"),
+        filter: ops::CompileFilter::new(args.is_present("lib"),
+                                        values(args, "bin"), args.is_present("bins"),
+                                        values(args, "test"), args.is_present("tests"),
+                                        values(args, "example"), args.is_present("examples"),
+                                        values(args, "bench"), args.is_present("benches"),
+                                        args.is_present("all-targets")),
+        message_format,
+        target_rustdoc_args: None,
+        target_rustc_args: None,
+    };
+    Ok(opts)
+}
+
+fn compile_options_from_args_for_single_package<'a>(
+    config: &'a Config,
+    args: &'a ArgMatches<'a>,
+    mode: CompileMode,
+) -> CargoResult<CompileOptions<'a>> {
+    let mut compile_opts = compile_options_from_args(config, args, mode)?;
+    let packages = values(args, "package");
+    compile_opts.spec = Packages::Packages(&packages);
+    Ok(compile_opts)
+}
+
+fn new_opts_from_args<'a>(args: &'a ArgMatches<'a>, path: &'a str) -> CargoResult<NewOptions<'a>> {
+    let vcs = args.value_of("vcs").map(|vcs| match vcs {
+        "git" => VersionControl::Git,
+        "hg" => VersionControl::Hg,
+        "pijul" => VersionControl::Pijul,
+        "fossil" => VersionControl::Fossil,
+        "none" => VersionControl::NoVcs,
+        vcs => panic!("Impossible vcs: {:?}", vcs),
+    });
+    NewOptions::new(vcs,
+                    args.is_present("bin"),
+                    args.is_present("lib"),
+                    path,
+                    args.value_of("name"))
+}
+
+fn registry_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
+    match args.value_of("registry") {
+        Some(registry) => {
+            if !config.cli_unstable().unstable_options {
+                return Err(format_err!("registry option is an unstable feature and \
+                                requires -Zunstable-options to use.").into());
+            }
+            Ok(Some(registry.to_string()))
+        }
+        None => Ok(None),
+    }
+}
+
+fn index_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
+    // TODO: Deprecated
+    // remove once it has been decided --host can be removed
+    // We may instead want to repurpose the host flag, as
+    // mentioned in this issue
+    // https://github.com/rust-lang/cargo/issues/4208
+    let msg = "The flag '--host' is no longer valid.
+
+Previous versions of Cargo accepted this flag, but it is being
+deprecated. The flag is being renamed to 'index', as the flag
+wants the location of the index. Please use '--index' instead.
+
+This will soon become a hard error, so it's either recommended
+to update to a fixed version or contact the upstream maintainer
+about this warning.";
+
+    let index = match args.value_of("host") {
+        Some(host) => {
+            config.shell().warn(&msg)?;
+            Some(host.to_string())
+        }
+        None => args.value_of("index").map(|s| s.to_string())
+    };
+    Ok(index)
 }
