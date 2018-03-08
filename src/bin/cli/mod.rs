@@ -49,6 +49,12 @@ pub fn do_main(config: &mut Config) -> CliResult {
         return Ok(());
     }
 
+    if let Some(ref code) = args.value_of("explain") {
+        let mut procss = config.rustc()?.process();
+        procss.arg("--explain").arg(code).exec()?;
+        return Ok(());
+    }
+
     if args.is_present("list") {
         println!("Installed Commands:");
         for command in list_commands(config) {
