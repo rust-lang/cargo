@@ -407,6 +407,47 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
             println!("{}", spec);
             Ok(())
         }
+        ("publish", Some(args)) => {
+            let registry = registry_from_args(config, args)?;
+            let ws = workspace_from_args(config, args)?;
+
+            // TODO: Deprecated
+            // remove once it has been decided --host can be removed
+            // We may instead want to repurpose the host flag, as
+            // mentioned in this issue
+            // https://github.com/rust-lang/cargo/issues/4208
+            let msg = "The flag '--host' is no longer valid.
+
+Previous versions of Cargo accepted this flag, but it is being
+deprecated. The flag is being renamed to 'index', as the flag
+wants the location of the index to which to publish. Please
+use '--index' instead.
+
+This will soon become a hard error, so it's either recommended
+to update to a fixed version or contact the upstream maintainer
+about this warning.";
+
+            let index = match args.value_of("host") {
+                Some(host) => {
+                    config.shell().warn(&msg)?;
+                    Some(host.to_string())
+                }
+                None => args.value_of("index").map(|s| s.to_string())
+            };
+
+            ops::publish(&ws, &ops::PublishOpts {
+                config,
+                token: args.value_of("token").map(|s| s.to_string()),
+                index,
+                verify: !args.is_present("no-verify"),
+                allow_dirty: args.is_present("allow-dirty"),
+                target: args.value_of("target"),
+                jobs: jobs_from_args(args),
+                dry_run: args.is_present("dry-run"),
+                registry,
+            })?;
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
@@ -493,6 +534,7 @@ See 'cargo help <command>' for more information on a specific command.
             owner::cli(),
             package::cli(),
             pkgid::cli(),
+            publish::cli(),
         ])
     ;
     app
@@ -518,6 +560,7 @@ mod new;
 mod owner;
 mod package;
 mod pkgid;
+mod publish;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
