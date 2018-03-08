@@ -92,7 +92,8 @@ fn main() {
         "build" | "bench" | "check" | "clean" | "doc" | "fetch" | "generate-lockfile" |
         "git-checkout" | "init" | "install" | "locate-project" | "login" | "metadata" |
         "new" | "owner" | "package" | "pkgid" | "publish" | "read-manifest" | "run" |
-        "rustc" | "rustdoc" | "search" | "test" | "uninstall" => true,
+        "rustc" | "rustdoc" | "search" | "test" | "uninstall" | "update" |
+        "verify-project" | "version" | "yank" => true,
         _ => false
     });
 
@@ -146,10 +147,10 @@ macro_rules! each_subcommand{
 //        $mac!(search);
 //        $mac!(test);
 //        $mac!(uninstall);
-        $mac!(update);
-        $mac!(verify_project);
-        $mac!(version);
-        $mac!(yank);
+//        $mac!(update);
+//        $mac!(verify_project);
+//        $mac!(version);
+//        $mac!(yank);
     }
 }
 
