@@ -16,7 +16,6 @@ extern crate atty;
 extern crate crates_io as registry;
 extern crate crossbeam;
 extern crate curl;
-extern crate docopt;
 extern crate filetime;
 extern crate flate2;
 extern crate fs2;
@@ -46,9 +45,7 @@ extern crate core_foundation;
 
 use std::fmt;
 
-use serde::de::DeserializeOwned;
 use serde::ser;
-use docopt::Docopt;
 use failure::Error;
 
 use core::Shell;
@@ -107,26 +104,6 @@ impl fmt::Display for VersionInfo {
         };
         Ok(())
     }
-}
-
-pub fn call_main_without_stdin<Flags: DeserializeOwned>(
-            exec: fn(Flags, &mut Config) -> CliResult,
-            config: &mut Config,
-            usage: &str,
-            args: &[String],
-            options_first: bool) -> CliResult
-{
-    let docopt = Docopt::new(usage).unwrap()
-        .options_first(options_first)
-        .argv(args.iter().map(|s| &s[..]))
-        .help(true);
-
-    let flags = docopt.deserialize().map_err(|e| {
-        let code = if e.fatal() {1} else {0};
-        CliError::new(e.into(), code)
-    })?;
-
-    exec(flags, config)
 }
 
 pub fn print_json<T: ser::Serialize>(obj: &T) {

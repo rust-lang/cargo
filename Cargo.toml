@@ -22,7 +22,6 @@ crates-io = { path = "src/crates-io", version = "0.16" }
 crossbeam = "0.3"
 crypto-hash = "0.3"
 curl = "0.4.6"
-docopt = "0.8.1"
 env_logger = "0.5"
 failure = "0.1.1"
 filetime = "0.1"
