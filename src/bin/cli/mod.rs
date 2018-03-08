@@ -227,6 +227,9 @@ about this warning.";
         }
         ("build", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
+            if config.cli_unstable().avoid_dev_deps {
+                ws.set_require_optional_deps(false);
+            }
             let compile_opts = compile_options_from_args(config, args, CompileMode::Build)?;
             ops::compile(&ws, &compile_opts)?;
             return Ok(());
