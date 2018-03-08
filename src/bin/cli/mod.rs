@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use clap::{AppSettings, Arg, ArgMatches};
 
 use cargo::{self, Config, CargoResult, CargoError, CliError};
-use cargo::core::{Workspace, Source, SourceId, GitReference};
+use cargo::core::{Workspace, Source, SourceId, GitReference, Package};
 use cargo::util::{ToUrl, CargoResultExt};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::ops::{self, MessageFormat, Packages, CompileOptions, CompileMode, VersionControl,
@@ -448,6 +448,12 @@ about this warning.";
             })?;
             return Ok(());
         }
+        ("read-manifest", Some(args)) => {
+            let root = root_manifest_from_args(config, args)?;
+            let pkg = Package::for_path(&root, config)?;
+            cargo::print_json(&pkg);
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
@@ -535,6 +541,7 @@ See 'cargo help <command>' for more information on a specific command.
             package::cli(),
             pkgid::cli(),
             publish::cli(),
+            read_manifest::cli(),
         ])
     ;
     app
@@ -561,6 +568,7 @@ mod owner;
 mod package;
 mod pkgid;
 mod publish;
+mod read_manifest;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
