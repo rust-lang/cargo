@@ -1,3 +1,4 @@
+use std::fmt;
 use std::sync::RwLock;
 use std::collections::HashSet;
 use std::slice;
@@ -48,6 +49,13 @@ impl Deref for InternedString {
             let slice = slice::from_raw_parts(self.ptr, self.len);
             &str::from_utf8_unchecked(slice)
         }
+    }
+}
+
+impl fmt::Debug for InternedString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let str: &str = &*self;
+        write!(f, "InternedString {{ {} }}", str)
     }
 }
 

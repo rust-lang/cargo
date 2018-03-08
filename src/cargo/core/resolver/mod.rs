@@ -357,7 +357,7 @@ struct Context {
     warnings: RcList<String>,
 }
 
-type Activations = HashMap<InternedString, HashMap<SourceId, Rc<Vec<Summary>>>>;
+type Activations = HashMap<(InternedString, SourceId), Rc<Vec<Summary>>>;
 
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summaries: &[(Summary, Method)],
@@ -389,7 +389,6 @@ pub fn resolve(summaries: &[(Summary, Method)],
     };
 
     for summary in cx.activations.values()
-                                 .flat_map(|v| v.values())
                                  .flat_map(|v| v.iter()) {
         let cksum = summary.checksum().map(|s| s.to_string());
         resolve.checksums.insert(summary.package_id().clone(), cksum);
@@ -735,11 +734,11 @@ impl RemainingCandidates {
         use std::mem::replace;
         for (_, b) in self.remaining.by_ref() {
             if let Some(link) = b.summary.links() {
-                if let Some(a) = links.get(&InternedString::new(link)) {
+                if let Some(a) = links.get(&link) {
                     if a != b.summary.package_id() {
                         self.conflicting_prev_active
                             .entry(a.clone())
-                            .or_insert_with(|| ConflictReason::Links(link.to_owned()));
+                            .or_insert_with(|| ConflictReason::Links(link.to_string()));
                         continue;
                     }
                 }
@@ -1305,16 +1304,14 @@ impl Context {
                       method: &Method) -> CargoResult<bool> {
         let id = summary.package_id();
         let prev = self.activations
-                       .entry(InternedString::new(id.name()))
-                       .or_insert_with(HashMap::new)
-                       .entry(id.source_id().clone())
+                       .entry((InternedString::new(id.name()), id.source_id().clone()))
                        .or_insert_with(||Rc::new(Vec::new()));
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.push(GraphNode::Add(id.clone()));
             if let Some(link) = summary.links() {
-                ensure!(self.links.insert(InternedString::new(link), id.clone()).is_none(),
+                ensure!(self.links.insert(link, id.clone()).is_none(),
                 "Attempting to resolve a with more then one crate with the links={}. \n\
-                 This will not build as is. Consider rebuilding the .lock file.", link);
+                 This will not build as is. Consider rebuilding the .lock file.", &*link);
             }
             let mut inner: Vec<_> = (**prev).clone();
             inner.push(summary.clone());
@@ -1368,15 +1365,13 @@ impl Context {
     }
 
     fn prev_active(&self, dep: &Dependency) -> &[Summary] {
-        self.activations.get(&InternedString::new(dep.name()))
-            .and_then(|v| v.get(dep.source_id()))
+        self.activations.get(&(InternedString::new(dep.name()), dep.source_id().clone()))
             .map(|v| &v[..])
             .unwrap_or(&[])
     }
 
     fn is_active(&self, id: &PackageId) -> bool {
-        self.activations.get(&InternedString::new(id.name()))
-            .and_then(|v| v.get(id.source_id()))
+        self.activations.get(&(InternedString::new(id.name()), id.source_id().clone()))
             .map(|v| v.iter().any(|s| s.package_id() == id))
             .unwrap_or(false)
     }
@@ -1484,7 +1479,6 @@ impl Context {
 fn check_cycles(resolve: &Resolve, activations: &Activations)
                 -> CargoResult<()> {
     let summaries: HashMap<&PackageId, &Summary> = activations.values()
-        .flat_map(|v| v.values())
         .flat_map(|v| v.iter())
         .map(|s| (s.package_id(), s))
         .collect();
