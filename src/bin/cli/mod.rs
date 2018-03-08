@@ -13,7 +13,7 @@ use std::process;
 use clap::{AppSettings, Arg, ArgMatches};
 use toml;
 
-use cargo::{self, Config, CargoResult, CargoError, CliError};
+use cargo::{self, Config, CargoResult, CargoError, CliResult, CliError};
 use cargo::core::{Workspace, Source, SourceId, GitReference, Package};
 use cargo::util::{ToUrl, CargoResultExt};
 use cargo::util::important_paths::find_root_manifest_for_wd;
@@ -23,7 +23,7 @@ use cargo::sources::{GitSource, RegistrySource};
 
 use self::utils::*;
 
-pub fn do_main(config: &mut Config) -> Result<(), CliError> {
+pub fn do_main(config: &mut Config) -> CliResult {
     let args = cli().get_matches();
     if args.is_present("version") {
         let version = cargo::version();
@@ -43,7 +43,12 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
         return Ok(());
     }
 
+    execte_subcommand(config, args)
+}
+
+fn execte_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
     config_from_args(config, &args)?;
+
     match args.subcommand() {
         ("bench", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -509,10 +514,17 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
                       registry)?;
             Ok(())
         }
-        (external, Some(args)) => {
-            let mut ext_args: Vec<&str> = vec![external];
+        (cmd, Some(args)) => {
+            if let Some(mut alias) = super::aliased_command(config, cmd)? {
+                alias.extend(args.values_of("").unwrap_or_default().map(|s| s.to_string()));
+                let args = cli()
+                    .setting(AppSettings::NoBinaryName)
+                    .get_matches_from(alias);
+                return execte_subcommand(config, args);
+            }
+            let mut ext_args: Vec<&str> = vec![cmd];
             ext_args.extend(args.values_of("").unwrap_or_default());
-            super::execute_external_subcommand(config, external, &ext_args)
+            super::execute_external_subcommand(config, cmd, &ext_args)
         }
         _ => Ok(())
     }
