@@ -48,7 +48,6 @@ fn enabled() -> bool {
 }
 
 #[test]
-#[ignore]
 fn ctrl_c_kills_everyone() {
     if !enabled() {
         return
