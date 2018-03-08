@@ -1,70 +1,70 @@
 {
-    "message": "it is more idiomatic to loop over references to containers instead of using explicit iteration methods",
-    "code": {
-      "code": "explicit_iter_loop",
-      "explanation": null
+  "message": "it is more idiomatic to loop over references to containers instead of using explicit iteration methods",
+  "code": {
+    "code": "explicit_iter_loop",
+    "explanation": null
+  },
+  "level": "warning",
+  "spans": [
+    {
+      "file_name": "./tests/fixtures/explicit_iter_loop.rs",
+      "byte_start": 54,
+      "byte_end": 63,
+      "line_start": 4,
+      "line_end": 4,
+      "column_start": 14,
+      "column_end": 23,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    for x in xs.iter() {",
+          "highlight_start": 14,
+          "highlight_end": 23
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "#[warn(explicit_iter_loop)] on by default",
+      "code": null,
+      "level": "note",
+      "spans": [],
+      "children": [],
+      "rendered": null
     },
-    "level": "warning",
-    "spans": [
-      {
-        "file_name": "./tests/fixtures/explicit_iter_loop.rs",
-        "byte_start": 54,
-        "byte_end": 63,
-        "line_start": 4,
-        "line_end": 4,
-        "column_start": 14,
-        "column_end": 23,
-        "is_primary": true,
-        "text": [
-          {
-            "text": "    for x in xs.iter() {",
-            "highlight_start": 14,
-            "highlight_end": 23
-          }
-        ],
-        "label": null,
-        "suggested_replacement": null,
-        "expansion": null
-      }
-    ],
-    "children": [
-      {
-        "message": "#[warn(explicit_iter_loop)] on by default",
-        "code": null,
-        "level": "note",
-        "spans": [],
-        "children": [],
-        "rendered": null
-      },
-      {
-        "message": "to write this more concisely, try",
-        "code": null,
-        "level": "help",
-        "spans": [
-          {
-            "file_name": "./tests/fixtures/explicit_iter_loop.rs",
-            "byte_start": 54,
-            "byte_end": 63,
-            "line_start": 4,
-            "line_end": 4,
-            "column_start": 14,
-            "column_end": 23,
-            "is_primary": true,
-            "text": [
-              {
-                "text": "    for x in xs.iter() {",
-                "highlight_start": 14,
-                "highlight_end": 23
-              }
-            ],
-            "label": null,
-            "suggested_replacement": "&xs",
-            "expansion": null
-          }
-        ],
-        "children": [],
-        "rendered": null
-      }
-    ],
-    "rendered": "warning: it is more idiomatic to loop over references to containers instead of using explicit iteration methods\n --> ./tests/fixtures/explicit_iter_loop.rs:4:14\n  |\n4 |     for x in xs.iter() {\n  |              ^^^^^^^^^ help: to write this more concisely, try: `&xs`\n  |\n  = note: #[warn(explicit_iter_loop)] on by default\n\n"
-  }
+    {
+      "message": "to write this more concisely, try",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/fixtures/explicit_iter_loop.rs",
+          "byte_start": 54,
+          "byte_end": 63,
+          "line_start": 4,
+          "line_end": 4,
+          "column_start": 14,
+          "column_end": 23,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    for x in xs.iter() {",
+              "highlight_start": 14,
+              "highlight_end": 23
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "&xs",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "warning: it is more idiomatic to loop over references to containers instead of using explicit iteration methods\n --> ./tests/fixtures/explicit_iter_loop.rs:4:14\n  |\n4 |     for x in xs.iter() {\n  |              ^^^^^^^^^ help: to write this more concisely, try: `&xs`\n  |\n  = note: #[warn(explicit_iter_loop)] on by default\n\n"
+}
