@@ -55,7 +55,7 @@ impl ser::Serialize for Package {
         let description = manmeta.description.as_ref().map(String::as_ref);
 
         SerializedPackage {
-            name: package_id.name(),
+            name: &*package_id.name(),
             version: &package_id.version().to_string(),
             id: package_id,
             license,
@@ -95,7 +95,7 @@ impl Package {
     /// Get the path to the manifest
     pub fn manifest_path(&self) -> &Path { &self.manifest_path }
     /// Get the name of the package
-    pub fn name(&self) -> &str { self.package_id().name() }
+    pub fn name(&self) -> &str { self.package_id().name().to_inner() }
     /// Get the PackageId object for the package (fully defines a package)
     pub fn package_id(&self) -> &PackageId { self.manifest.package_id() }
     /// Get the root folder of the package
