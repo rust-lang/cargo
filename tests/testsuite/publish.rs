@@ -156,8 +156,7 @@ fn simple_with_host() {
 
 Previous versions of Cargo accepted this flag, but it is being
 deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index to which to publish. Please
-use '--index' instead.
+wants the location of the index. Please use '--index' instead.
 
 This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
@@ -224,8 +223,7 @@ fn simple_with_index_and_host() {
 
 Previous versions of Cargo accepted this flag, but it is being
 deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index to which to publish. Please
-use '--index' instead.
+wants the location of the index. Please use '--index' instead.
 
 This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
