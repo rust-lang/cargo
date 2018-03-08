@@ -5,6 +5,7 @@ extern crate cargo;
 use std::slice;
 use std::io::{self, BufRead};
 use std::path::PathBuf;
+use std::cmp::min;
 
 use clap::{AppSettings, Arg, ArgMatches};
 
@@ -175,8 +176,7 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
 
 Previous versions of Cargo accepted this flag, but it is being
 deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index to which to publish. Please
-use '--index' instead.
+wants the location of the index. Please use '--index' instead.
 
 This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
@@ -488,7 +488,7 @@ about this warning.";
                     required_features_filterable: false,
                 };
             };
-            match ops::run(&ws, &compile_opts, &values(args, "args"))? {
+            return match ops::run(&ws, &compile_opts, &values(args, "args"))? {
                 None => Ok(()),
                 Some(err) => {
                     // If we never actually spawned the process then that sounds pretty
@@ -508,7 +508,7 @@ about this warning.";
                         CliError::new(err.into(), exit_code)
                     })
                 }
-            }
+            };
         }
         ("rustc", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
@@ -541,6 +541,17 @@ about this warning.";
                 compile_opts
             };
             ops::doc(&ws, &doc_opts)?;
+            return Ok(());
+        }
+        ("search", Some(args)) => {
+            let registry = registry_from_args(config, args)?;
+            let index = index_from_args(config, args)?;
+            let limit: Option<u8> = args.value_of("limit")
+                .and_then(|v| v.parse().ok()); //FIXME: validation
+            let limit = min(100, limit.unwrap_or(10));
+            let query: Vec<&str> = args.values_of("query").unwrap_or_default().collect();
+            let query: String = query.join("+");
+            ops::search(&query, config, index, limit, registry)?;
             return Ok(());
         }
         _ => return Ok(())
@@ -634,6 +645,7 @@ See 'cargo help <command>' for more information on a specific command.
             run::cli(),
             rustc::cli(),
             rustdoc::cli(),
+            search::cli(),
         ])
     ;
     app
@@ -664,6 +676,7 @@ mod read_manifest;
 mod run;
 mod rustc;
 mod rustdoc;
+mod search;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
