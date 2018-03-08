@@ -46,7 +46,7 @@
   ],
   "children": [
     {
-      "message": "try comparing the casted value",
+      "message": "try comparing the cast value",
       "code": null,
       "level": "help",
       "spans": [
@@ -75,7 +75,7 @@
       "rendered": null
     }
   ],
-  "rendered": "error: `<` is interpreted as a start of generic arguments for `u32`, not a comparison\n --> ./tests/fixtures/lt-generic-comp.rs:4:17\n  |\n4 |     if x as u32 < 4 {\n  |        -------- ^ - interpreted as generic arguments\n  |        |        |\n  |        |        not interpreted as comparison\n  |        help: try comparing the casted value: `(x as u32)`\n\n"
+  "rendered": "error: `<` is interpreted as a start of generic arguments for `u32`, not a comparison\n --> ./tests/fixtures/lt-generic-comp.rs:4:17\n  |\n4 |     if x as u32 < 4 {\n  |        -------- ^ - interpreted as generic arguments\n  |        |        |\n  |        |        not interpreted as comparison\n  |        help: try comparing the cast value: `(x as u32)`\n\n"
 }
 {
   "message": "aborting due to previous error",

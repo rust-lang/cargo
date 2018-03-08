@@ -8,10 +8,10 @@
   "spans": [
     {
       "file_name": "./tests/fixtures/redundant_closure_call.rs",
-      "byte_start": 24,
-      "byte_end": 33,
-      "line_start": 2,
-      "line_end": 2,
+      "byte_start": 51,
+      "byte_end": 60,
+      "line_start": 3,
+      "line_end": 3,
       "column_start": 13,
       "column_end": 22,
       "is_primary": true,
@@ -43,10 +43,10 @@
       "spans": [
         {
           "file_name": "./tests/fixtures/redundant_closure_call.rs",
-          "byte_start": 24,
-          "byte_end": 33,
-          "line_start": 2,
-          "line_end": 2,
+          "byte_start": 51,
+          "byte_end": 60,
+          "line_start": 3,
+          "line_end": 3,
           "column_start": 13,
           "column_end": 22,
           "is_primary": true,
@@ -66,7 +66,7 @@
       "rendered": null
     }
   ],
-  "rendered": "warning: Try not to call a closure in the expression where it is declared.\n --> ./tests/fixtures/redundant_closure_call.rs:2:13\n  |\n2 |     let a = (|| 42)();\n  |             ^^^^^^^^^ help: Try doing something like: : `42`\n  |\n  = note: #[warn(redundant_closure_call)] on by default\n\n"
+  "rendered": "warning: Try not to call a closure in the expression where it is declared.\n --> ./tests/fixtures/redundant_closure_call.rs:3:13\n  |\n3 |     let a = (|| 42)();\n  |             ^^^^^^^^^ help: Try doing something like: : `42`\n  |\n  = note: #[warn(redundant_closure_call)] on by default\n\n"
 }
 {
   "message": "Try not to call a closure in the expression where it is declared.",
@@ -78,10 +78,10 @@
   "spans": [
     {
       "file_name": "./tests/fixtures/redundant_closure_call.rs",
-      "byte_start": 48,
-      "byte_end": 70,
-      "line_start": 4,
-      "line_end": 6,
+      "byte_start": 75,
+      "byte_end": 97,
+      "line_start": 5,
+      "line_end": 7,
       "column_start": 13,
       "column_end": 8,
       "is_primary": true,
@@ -115,10 +115,10 @@
       "spans": [
         {
           "file_name": "./tests/fixtures/redundant_closure_call.rs",
-          "byte_start": 48,
-          "byte_end": 70,
-          "line_start": 4,
-          "line_end": 6,
+          "byte_start": 75,
+          "byte_end": 97,
+          "line_start": 5,
+          "line_end": 7,
           "column_start": 13,
           "column_end": 8,
           "is_primary": true,
@@ -148,7 +148,7 @@
       "rendered": null
     }
   ],
-  "rendered": "warning: Try not to call a closure in the expression where it is declared.\n --> ./tests/fixtures/redundant_closure_call.rs:4:13\n  |\n4 |       let b = (||\n  |  _____________^\n5 | |         42\n6 | |     )();\n  | |_______^ help: Try doing something like: : `42`\n\n"
+  "rendered": "warning: Try not to call a closure in the expression where it is declared.\n --> ./tests/fixtures/redundant_closure_call.rs:5:13\n  |\n5 |       let b = (||\n  |  _____________^\n6 | |         42\n7 | |     )();\n  | |_______^ help: Try doing something like: : `42`\n\n"
 }
 {
   "message": "Try not to call a closure in the expression where it is declared.",
@@ -160,10 +160,10 @@
   "spans": [
     {
       "file_name": "./tests/fixtures/redundant_closure_call.rs",
-      "byte_start": 85,
-      "byte_end": 95,
-      "line_start": 8,
-      "line_end": 8,
+      "byte_start": 112,
+      "byte_end": 122,
+      "line_start": 9,
+      "line_end": 9,
       "column_start": 13,
       "column_end": 23,
       "is_primary": true,
@@ -187,10 +187,10 @@
       "spans": [
         {
           "file_name": "./tests/fixtures/redundant_closure_call.rs",
-          "byte_start": 85,
-          "byte_end": 95,
-          "line_start": 8,
-          "line_end": 8,
+          "byte_start": 112,
+          "byte_end": 122,
+          "line_start": 9,
+          "line_end": 9,
           "column_start": 13,
           "column_end": 23,
           "is_primary": true,
@@ -210,136 +210,5 @@
       "rendered": null
     }
   ],
-  "rendered": "warning: Try not to call a closure in the expression where it is declared.\n --> ./tests/fixtures/redundant_closure_call.rs:8:13\n  |\n8 |     let c = (|| \"x\")();\n  |             ^^^^^^^^^^ help: Try doing something like: : `\"x\"`\n\n"
-}
-{
-  "message": "unused variable: `a`",
-  "code": {
-    "code": "unused_variables",
-    "explanation": null
-  },
-  "level": "warning",
-  "spans": [
-    {
-      "file_name": "./tests/fixtures/redundant_closure_call.rs",
-      "byte_start": 20,
-      "byte_end": 21,
-      "line_start": 2,
-      "line_end": 2,
-      "column_start": 9,
-      "column_end": 10,
-      "is_primary": true,
-      "text": [
-        {
-          "text": "    let a = (|| 42)();",
-          "highlight_start": 9,
-          "highlight_end": 10
-        }
-      ],
-      "label": null,
-      "suggested_replacement": null,
-      "expansion": null
-    }
-  ],
-  "children": [
-    {
-      "message": "#[warn(unused_variables)] on by default",
-      "code": null,
-      "level": "note",
-      "spans": [],
-      "children": [],
-      "rendered": null
-    },
-    {
-      "message": "to avoid this warning, consider using `_a` instead",
-      "code": null,
-      "level": "note",
-      "spans": [],
-      "children": [],
-      "rendered": null
-    }
-  ],
-  "rendered": "warning: unused variable: `a`\n --> ./tests/fixtures/redundant_closure_call.rs:2:9\n  |\n2 |     let a = (|| 42)();\n  |         ^\n  |\n  = note: #[warn(unused_variables)] on by default\n  = note: to avoid this warning, consider using `_a` instead\n\n"
-}
-{
-  "message": "unused variable: `b`",
-  "code": {
-    "code": "unused_variables",
-    "explanation": null
-  },
-  "level": "warning",
-  "spans": [
-    {
-      "file_name": "./tests/fixtures/redundant_closure_call.rs",
-      "byte_start": 44,
-      "byte_end": 45,
-      "line_start": 4,
-      "line_end": 4,
-      "column_start": 9,
-      "column_end": 10,
-      "is_primary": true,
-      "text": [
-        {
-          "text": "    let b = (||",
-          "highlight_start": 9,
-          "highlight_end": 10
-        }
-      ],
-      "label": null,
-      "suggested_replacement": null,
-      "expansion": null
-    }
-  ],
-  "children": [
-    {
-      "message": "to avoid this warning, consider using `_b` instead",
-      "code": null,
-      "level": "note",
-      "spans": [],
-      "children": [],
-      "rendered": null
-    }
-  ],
-  "rendered": "warning: unused variable: `b`\n --> ./tests/fixtures/redundant_closure_call.rs:4:9\n  |\n4 |     let b = (||\n  |         ^\n  |\n  = note: to avoid this warning, consider using `_b` instead\n\n"
-}
-{
-  "message": "unused variable: `c`",
-  "code": {
-    "code": "unused_variables",
-    "explanation": null
-  },
-  "level": "warning",
-  "spans": [
-    {
-      "file_name": "./tests/fixtures/redundant_closure_call.rs",
-      "byte_start": 81,
-      "byte_end": 82,
-      "line_start": 8,
-      "line_end": 8,
-      "column_start": 9,
-      "column_end": 10,
-      "is_primary": true,
-      "text": [
-        {
-          "text": "    let c = (|| \"x\")();",
-          "highlight_start": 9,
-          "highlight_end": 10
-        }
-      ],
-      "label": null,
-      "suggested_replacement": null,
-      "expansion": null
-    }
-  ],
-  "children": [
-    {
-      "message": "to avoid this warning, consider using `_c` instead",
-      "code": null,
-      "level": "note",
-      "spans": [],
-      "children": [],
-      "rendered": null
-    }
-  ],
-  "rendered": "warning: unused variable: `c`\n --> ./tests/fixtures/redundant_closure_call.rs:8:9\n  |\n8 |     let c = (|| \"x\")();\n  |         ^\n  |\n  = note: to avoid this warning, consider using `_c` instead\n\n"
+  "rendered": "warning: Try not to call a closure in the expression where it is declared.\n --> ./tests/fixtures/redundant_closure_call.rs:9:13\n  |\n9 |     let c = (|| \"x\")();\n  |             ^^^^^^^^^^ help: Try doing something like: : `\"x\"`\n\n"
 }

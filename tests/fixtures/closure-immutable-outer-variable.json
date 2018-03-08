@@ -58,5 +58,13 @@
       "rendered": null
     }
   ],
-  "rendered": "error[E0594]: cannot assign to captured outer variable in an `FnMut` closure\n  --> ./tests/fixtures/closure-immutable-outer-variable.rs:19:26\n   |\n18 |     let y = true;\n   |         - help: consider making `y` mutable: `mut y`\n19 |     foo(Box::new(move || y = false) as Box<_>); //~ ERROR cannot assign to captured outer variable\n   |                          ^^^^^^^^^\n\n"
+  "rendered": "error[E0594]: cannot assign to captured outer variable in an `FnMut` closure\n  --> ./tests/fixtures/closure-immutable-outer-variable.rs:19:26\n   |\n18 |     let y = true;\n   |         - help: consider making `y` mutable: `mut y`\n19 |     foo(Box::new(move || y = false) as Box<_>); //~ ERROR cannot assign to captured outer variable\n   |                          ^^^^^^^^^\n\nIf you want more information on this error, try using \"rustc --explain E0594\"\n"
+}
+{
+  "message": "aborting due to previous error",
+  "code": null,
+  "level": "error",
+  "spans": [],
+  "children": [],
+  "rendered": "error: aborting due to previous error\n\n"
 }

@@ -1,3 +1,3 @@
-const LOREM: & str = "ipsum";
+const LOREM: &str = "ipsum";
 
 fn main() {}

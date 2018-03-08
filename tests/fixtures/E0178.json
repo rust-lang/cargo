@@ -58,5 +58,13 @@
       "rendered": null
     }
   ],
-  "rendered": "error[E0178]: expected a path on the left-hand side of `+`, not `&'a Foo`\n --> ./tests/fixtures/E0178.rs:6:8\n  |\n6 |     w: &'a Foo + Send,\n  |        ^^^^^^^^^^^^^^ help: try adding parentheses: `&'a (Foo + Send)`\n\n"
+  "rendered": "error[E0178]: expected a path on the left-hand side of `+`, not `&'a Foo`\n --> ./tests/fixtures/E0178.rs:6:8\n  |\n6 |     w: &'a Foo + Send,\n  |        ^^^^^^^^^^^^^^ help: try adding parentheses: `&'a (Foo + Send)`\n\nIf you want more information on this error, try using \"rustc --explain E0178\"\n"
+}
+{
+  "message": "aborting due to previous error",
+  "code": null,
+  "level": "error",
+  "spans": [],
+  "children": [],
+  "rendered": "error: aborting due to previous error\n\n"
 }
