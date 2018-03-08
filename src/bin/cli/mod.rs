@@ -554,6 +554,45 @@ about this warning.";
             ops::search(&query, config, index, limit, registry)?;
             return Ok(());
         }
+        ("test", Some(args)) => {
+            let ws = workspace_from_args(config, args)?;
+
+            let mut compile_opts = compile_options_from_args(config, args, CompileMode::Test)?;
+            let doc = args.is_present("doc");
+            if doc {
+                compile_opts.mode = ops::CompileMode::Doctest;
+                compile_opts.filter = ops::CompileFilter::new(true,
+                                                              &[], false,
+                                                              &[], false,
+                                                              &[], false,
+                                                              &[], false,
+                                                              false);
+            }
+
+            let ops = ops::TestOptions {
+                no_run: args.is_present("no-run"),
+                no_fail_fast: args.is_present("no-fail-fast"),
+                only_doc: doc,
+                compile_opts,
+            };
+
+            // TESTNAME is actually an argument of the test binary, but it's
+            // important so we explicitly mention it and reconfigure
+            let mut test_args = vec![];
+            test_args.extend(args.value_of("TESTNAME").into_iter().map(|s| s.to_string()));
+            test_args.extend(args.values_of("args").unwrap_or_default().map(|s| s.to_string()));
+
+            let err = ops::run_tests(&ws, &ops, &test_args)?;
+            return match err {
+                None => Ok(()),
+                Some(err) => {
+                    Err(match err.exit.as_ref().and_then(|e| e.code()) {
+                        Some(i) => CliError::new(format_err!("{}", err.hint(&ws)), i),
+                        None => CliError::new(err.into(), 101),
+                    })
+                }
+            };
+        }
         _ => return Ok(())
     }
 }
@@ -646,6 +685,7 @@ See 'cargo help <command>' for more information on a specific command.
             rustc::cli(),
             rustdoc::cli(),
             search::cli(),
+            test::cli(),
         ])
     ;
     app
@@ -677,6 +717,7 @@ mod run;
 mod rustc;
 mod rustdoc;
 mod search;
+mod test;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
