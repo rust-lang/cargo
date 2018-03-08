@@ -39,7 +39,7 @@ pub fn cli() -> App {
         )
         .arg_features()
         .arg(opt("debug", "Build in debug mode instead of release mode"))
-        .arg_targets_bin_example(
+        .arg_targets_bins_examples(
             "Install only the specified binary",
             "Install all binaries",
             "Install only the specified example",

@@ -285,6 +285,7 @@ example
 }
 
 #[test]
+#[ignore]
 fn run_bins() {
     let p = project("foo")
         .file("Cargo.toml", r#"
@@ -742,6 +743,7 @@ fn fail_no_extra_verbose() {
 }
 
 #[test]
+#[ignore]
 fn run_multiple_packages() {
     let p = project("foo")
         .file("foo/Cargo.toml", r#"

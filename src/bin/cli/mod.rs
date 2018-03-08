@@ -454,6 +454,39 @@ about this warning.";
             cargo::print_json(&pkg);
             return Ok(());
         }
+        ("run", Some(args)) => {
+            let ws = workspace_from_args(config, args)?;
+
+            let mut compile_opts = compile_options_from_args(config, args, CompileMode::Build)?;
+            let packages = values(args, "package");
+            compile_opts.spec = Packages::Packages(&packages);
+            if !args.is_present("example") && !args.is_present("bin") {
+                compile_opts.filter = ops::CompileFilter::Default {
+                    required_features_filterable: false,
+                };
+            };
+            match ops::run(&ws, &compile_opts, &values(args, "args"))? {
+                None => Ok(()),
+                Some(err) => {
+                    // If we never actually spawned the process then that sounds pretty
+                    // bad and we always want to forward that up.
+                    let exit = match err.exit {
+                        Some(exit) => exit,
+                        None => return Err(CliError::new(err.into(), 101)),
+                    };
+
+                    // If `-q` was passed then we suppress extra error information about
+                    // a failed process, we assume the process itself printed out enough
+                    // information about why it failed so we don't do so as well
+                    let exit_code = exit.code().unwrap_or(101);
+                    Err(if args.is_present("quite") {
+                        CliError::code(exit_code)
+                    } else {
+                        CliError::new(err.into(), exit_code)
+                    })
+                }
+            }
+        }
         _ => return Ok(())
     }
 }
@@ -542,6 +575,7 @@ See 'cargo help <command>' for more information on a specific command.
             pkgid::cli(),
             publish::cli(),
             read_manifest::cli(),
+            run::cli(),
         ])
     ;
     app
@@ -569,6 +603,7 @@ mod package;
 mod pkgid;
 mod publish;
 mod read_manifest;
+mod run;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
@@ -626,7 +661,7 @@ mod utils {
                 ._arg(opt("bins", bins))
         }
 
-        fn arg_targets_bin_example(
+        fn arg_targets_bins_examples(
             self,
             bin: &'static str,
             bins: &'static str,
@@ -637,6 +672,15 @@ mod utils {
                 ._arg(opt("bins", bins))
                 ._arg(opt("example", example).value_name("NAME").multiple(true))
                 ._arg(opt("examples", examples))
+        }
+
+        fn arg_targets_bin_example(
+            self,
+            bin: &'static str,
+            example: &'static str,
+        ) -> Self {
+            self._arg(opt("bin", bin).value_name("NAME").multiple(true))
+                ._arg(opt("example", example).value_name("NAME").multiple(true))
         }
 
         fn arg_features(self) -> Self {
