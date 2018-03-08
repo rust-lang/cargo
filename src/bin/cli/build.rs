@@ -1,7 +1,7 @@
 use super::utils::*;
 
 pub fn cli() -> App {
-    subcommand("build")
+    subcommand("build").alias("b")
         .about("Compile a local package and all of its dependencies")
         .arg_package(
             "Package to build",

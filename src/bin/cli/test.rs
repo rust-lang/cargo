@@ -2,7 +2,7 @@ use super::utils::*;
 use clap::AppSettings;
 
 pub fn cli() -> App {
-    subcommand("test")
+    subcommand("test").alias("t")
         .setting(AppSettings::TrailingVarArg)
         .about("Execute all unit and integration tests of a local package")
         .arg(
