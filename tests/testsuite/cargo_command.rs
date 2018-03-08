@@ -214,5 +214,6 @@ fn cargo_help() {
 #[test]
 fn explain() {
     assert_that(cargo_process().arg("--explain").arg("E0001"),
-                execs().with_status(0));
+                execs().with_status(0).with_stdout_contains("\
+This error suggests that the expression arm corresponding to the noted pattern"));
 }
