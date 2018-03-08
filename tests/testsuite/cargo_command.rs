@@ -164,7 +164,6 @@ fn override_cargo_home() {
 }
 
 #[test]
-#[ignore]
 fn cargo_subcommand_env() {
     use cargotest::support::cargo_exe;
 

@@ -506,6 +506,11 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
                       registry)?;
             Ok(())
         }
+        (external, Some(args)) => {
+            let mut ext_args: Vec<&str> = vec![external];
+            ext_args.extend(args.values_of("").unwrap_or_default());
+            super::execute_external_subcommand(config, external, &ext_args)
+        }
         _ => Ok(())
     }
 }
@@ -518,6 +523,7 @@ fn cli() -> App {
             AppSettings::UnifiedHelpMessage,
             AppSettings::DeriveDisplayOrder,
             AppSettings::VersionlessSubcommands,
+            AppSettings::AllowExternalSubcommands,
         ])
         .about("Rust's package manager")
         .arg(
