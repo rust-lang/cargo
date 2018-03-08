@@ -514,6 +514,20 @@ about this warning.";
             ops::compile(&ws, &compile_opts)?;
             return Ok(());
         }
+        ("rustdoc", Some(args)) => {
+            let ws = workspace_from_args(config, args)?;
+            let mode = CompileMode::Doc { deps: false };
+            let mut compile_opts = compile_options_from_args(config, args, mode)?;
+            let packages = values(args, "package");
+            compile_opts.spec = Packages::Packages(&packages);
+            compile_opts.target_rustdoc_args = Some(&values(args, "args"));
+            let doc_opts = ops::DocOptions {
+                open_result: args.is_present("open"),
+                compile_opts
+            };
+            ops::doc(&ws, &doc_opts)?;
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
@@ -604,6 +618,7 @@ See 'cargo help <command>' for more information on a specific command.
             read_manifest::cli(),
             run::cli(),
             rustc::cli(),
+            rustdoc::cli(),
         ])
     ;
     app
@@ -633,6 +648,7 @@ mod publish;
 mod read_manifest;
 mod run;
 mod rustc;
+mod rustdoc;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
