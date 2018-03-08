@@ -306,6 +306,7 @@ fn build_only_bar_dependency() {
 }
 
 #[test]
+#[ignore]
 fn fail_with_multiple_packages() {
     let foo = project("foo")
         .file("Cargo.toml", r#"

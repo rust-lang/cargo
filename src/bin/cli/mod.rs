@@ -89,9 +89,16 @@ pub fn do_main(config: &mut Config) -> Result<(), CliError> {
         )?;
 
         let message_format = match args.value_of("message-format") {
-            Some("json") => MessageFormat::Json,
-            Some("human") | None => MessageFormat::Human,
-            Some(f) => panic!("Impossible message format: {:?}", f),
+            None => MessageFormat::Human,
+            Some(f) => {
+                if f.eq_ignore_ascii_case("json") {
+                    MessageFormat::Json
+                } else if f.eq_ignore_ascii_case("human") {
+                    MessageFormat::Human
+                } else {
+                    panic!("Impossible message format: {:?}", f)
+                }
+            }
         };
 
         let opts = CompileOptions {
@@ -487,6 +494,26 @@ about this warning.";
                 }
             }
         }
+        ("rustc", Some(args)) => {
+            let ws = workspace_from_args(config, args)?;
+            let mode = match args.value_of("profile") {
+                Some("dev") | None => CompileMode::Build,
+                Some("test") => CompileMode::Test,
+                Some("bench") => CompileMode::Bench,
+                Some("check") => CompileMode::Check {test: false},
+                Some(mode) => {
+                    let err = format_err!("unknown profile: `{}`, use dev,
+                                   test, or bench", mode);
+                    return Err(CliError::new(err, 101))
+                }
+            };
+            let mut compile_opts = compile_options_from_args(config, args, mode)?;
+            let packages = values(args, "package");
+            compile_opts.spec = Packages::Packages(&packages);
+            compile_opts.target_rustc_args = Some(&values(args, "args"));
+            ops::compile(&ws, &compile_opts)?;
+            return Ok(());
+        }
         _ => return Ok(())
     }
 }
@@ -576,6 +603,7 @@ See 'cargo help <command>' for more information on a specific command.
             publish::cli(),
             read_manifest::cli(),
             run::cli(),
+            rustc::cli(),
         ])
     ;
     app
@@ -604,6 +632,7 @@ mod pkgid;
 mod publish;
 mod read_manifest;
 mod run;
+mod rustc;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
@@ -708,7 +737,9 @@ mod utils {
         fn arg_message_format(self) -> Self {
             self._arg(
                 opt("message-format", "Error format")
-                    .value_name("FMT").possible_values(&["human", "json"]).default_value("human")
+                    .value_name("FMT")
+                    .case_insensitive(true)
+                    .possible_values(&["human", "json"]).default_value("human")
             )
         }
 

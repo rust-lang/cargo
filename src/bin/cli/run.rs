@@ -1,7 +1,6 @@
-extern crate clap;
+use clap::AppSettings;
 
 use super::utils::*;
-use clap::AppSettings;
 
 pub fn cli() -> App {
     subcommand("run")
