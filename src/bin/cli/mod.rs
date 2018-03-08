@@ -3,11 +3,15 @@ extern crate clap;
 extern crate cargo;
 
 use std::slice;
-use std::io::{self, BufRead};
+use std::io::{self, Read, BufRead};
 use std::path::PathBuf;
 use std::cmp::min;
+use std::fs::File;
+use std::collections::HashMap;
+use std::process;
 
 use clap::{AppSettings, Arg, ArgMatches};
+use toml;
 
 use cargo::{self, Config, CargoResult, CargoError, CliError};
 use cargo::core::{Workspace, Source, SourceId, GitReference, Package};
@@ -599,6 +603,59 @@ about this warning.";
             ops::uninstall(root, specs, values(args, "bin"), config)?;
             return Ok(());
         }
+        ("update", Some(args)) => {
+            let ws = workspace_from_args(config, args)?;
+
+            let update_opts = ops::UpdateOptions {
+                aggressive: args.is_present("aggressive"),
+                precise: args.value_of("precise"),
+                to_update: values(args, "package"),
+                config,
+            };
+            ops::update_lockfile(&ws, &update_opts)?;
+            return Ok(());
+        }
+        ("verify-project", Some(args)) => {
+            fn fail(reason: &str, value: &str) -> ! {
+                let mut h = HashMap::new();
+                h.insert(reason.to_string(), value.to_string());
+                cargo::print_json(&h);
+                process::exit(1)
+            }
+
+            let mut contents = String::new();
+            let filename = root_manifest_from_args(config, args)?;
+
+            let file = File::open(&filename);
+            match file.and_then(|mut f| f.read_to_string(&mut contents)) {
+                Ok(_) => {},
+                Err(e) => fail("invalid", &format!("error reading file: {}", e))
+            };
+            if contents.parse::<toml::Value>().is_err() {
+                fail("invalid", "invalid-format");
+            }
+
+            let mut h = HashMap::new();
+            h.insert("success".to_string(), "true".to_string());
+            cargo::print_json(&h);
+            return Ok(());
+        }
+        ("version", Some(args)) => {
+            println!("{}", cargo::version());
+            return Ok(());
+        }
+        ("yank", Some(args)) => {
+            let registry = registry_from_args(config, args)?;
+
+            ops::yank(config,
+                      args.value_of("crate").map(|s| s.to_string()),
+                      args.value_of("vers").map(|s| s.to_string()),
+                      args.value_of("token").map(|s| s.to_string()),
+                      args.value_of("index").map(|s| s.to_string()),
+                      args.is_present("undo"),
+                      registry)?;
+            Ok(())
+        }
         _ => return Ok(())
     }
 }
@@ -693,6 +750,10 @@ See 'cargo help <command>' for more information on a specific command.
             search::cli(),
             test::cli(),
             uninstall::cli(),
+            update::cli(),
+            verify_project::cli(),
+            version::cli(),
+            yank::cli(),
         ])
     ;
     app
@@ -726,6 +787,10 @@ mod rustdoc;
 mod search;
 mod test;
 mod uninstall;
+mod update;
+mod verify_project;
+mod version;
+mod yank;
 
 mod utils {
     use clap::{self, SubCommand, AppSettings};
