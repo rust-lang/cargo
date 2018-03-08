@@ -3,7 +3,7 @@ use clap::AppSettings;
 use super::utils::*;
 
 pub fn cli() -> App {
-    subcommand("run")
+    subcommand("run").alias("r")
         .setting(AppSettings::TrailingVarArg)
         .about("Run the main binary of the local package (src/main.rs)")
         .arg(Arg::with_name("args").multiple(true))
