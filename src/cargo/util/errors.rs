@@ -6,6 +6,7 @@ use std::str;
 
 use core::{TargetKind, Workspace};
 use failure::{Context, Error, Fail};
+use clap;
 
 pub use failure::Error as CargoError;
 pub type CargoResult<T> = Result<T, Error>;
@@ -166,6 +167,13 @@ impl CliError {
 impl From<CargoError> for CliError {
     fn from(err: CargoError) -> CliError {
         CliError::new(err, 101)
+    }
+}
+
+impl From<clap::Error> for CliError {
+    fn from(err: clap::Error) -> CliError {
+        let code = if err.use_stderr() { 1 } else { 0 };
+        CliError::new(err.into(), code)
     }
 }
 

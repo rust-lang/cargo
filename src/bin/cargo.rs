@@ -31,16 +31,16 @@ fn main() {
         }
     };
 
-    match main_inner(&mut config) {
+    let result = {
+        init_git_transports(&mut config);
+        let _token = cargo::util::job::setup();
+        cli::do_main(&mut config)
+    };
+
+    match result {
         Err(e) => cargo::exit_with_error(e, &mut *config.shell()),
         Ok(()) => {}
     }
-}
-
-fn main_inner(config: &mut Config) -> CliResult {
-    init_git_transports(config);
-    let _token = cargo::util::job::setup();
-    cli::do_main(config)
 }
 
 fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<String>>> {
