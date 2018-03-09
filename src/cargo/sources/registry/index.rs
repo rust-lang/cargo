@@ -169,7 +169,7 @@ impl<'cfg> RegistryIndex<'cfg> {
                  f: &mut FnMut(Summary))
                  -> CargoResult<()> {
         let source_id = self.source_id.clone();
-        let summaries = self.summaries(dep.name(), load)?;
+        let summaries = self.summaries(&*dep.name(), load)?;
         let summaries = summaries.iter().filter(|&&(_, yanked)| {
             dep.source_id().precise().is_some() || !yanked
         }).map(|s| s.0.clone());
@@ -180,7 +180,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         // version requested (argument to `--precise`).
         let summaries = summaries.filter(|s| {
             match source_id.precise() {
-                Some(p) if p.starts_with(dep.name()) &&
+                Some(p) if p.starts_with(&*dep.name()) &&
                            p[dep.name().len()..].starts_with('=') => {
                     let vers = &p[dep.name().len() + 1..];
                     s.version().to_string() == vers

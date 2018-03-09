@@ -1044,7 +1044,7 @@ fn activation_error(cx: &Context,
         for &(p, r) in links_errors.iter() {
             if let ConflictReason::Links(ref link) = *r {
                 msg.push_str("\n\nthe package `");
-                msg.push_str(dep.name());
+                msg.push_str(&*dep.name());
                 msg.push_str("` links to the native library `");
                 msg.push_str(link);
                 msg.push_str("`, but it conflicts with a previous package which links to `");
@@ -1061,11 +1061,11 @@ fn activation_error(cx: &Context,
                 msg.push_str("\n\nthe package `");
                 msg.push_str(&*p.name());
                 msg.push_str("` depends on `");
-                msg.push_str(dep.name());
+                msg.push_str(&*dep.name());
                 msg.push_str("`, with features: `");
                 msg.push_str(features);
                 msg.push_str("` but `");
-                msg.push_str(dep.name());
+                msg.push_str(&*dep.name());
                 msg.push_str("` does not have these features.\n");
             }
             // p == parent so the full path is redundant.
@@ -1082,7 +1082,7 @@ fn activation_error(cx: &Context,
         }
 
         msg.push_str("\n\nfailed to select a version for `");
-        msg.push_str(dep.name());
+        msg.push_str(&*dep.name());
         msg.push_str("` which could resolve this conflict");
 
         return format_err!("{}", msg)
@@ -1274,7 +1274,7 @@ fn build_requirements<'a, 'b: 'a>(s: &'a Summary, method: &'b Method)
                 reqs.require_feature(key)?;
             }
             for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-                reqs.require_dependency(dep.name());
+                reqs.require_dependency(dep.name().to_inner());
             }
         }
         Method::Required { features: requested_features, .. } =>  {
@@ -1365,7 +1365,7 @@ impl Context {
     }
 
     fn prev_active(&self, dep: &Dependency) -> &[Summary] {
-        self.activations.get(&(InternedString::new(dep.name()), dep.source_id().clone()))
+        self.activations.get(&(dep.name(), dep.source_id().clone()))
             .map(|v| &v[..])
             .unwrap_or(&[])
     }
@@ -1397,12 +1397,12 @@ impl Context {
         // Next, collect all actually enabled dependencies and their features.
         for dep in deps {
             // Skip optional dependencies, but not those enabled through a feature
-            if dep.is_optional() && !reqs.deps.contains_key(dep.name()) {
+            if dep.is_optional() && !reqs.deps.contains_key(&*dep.name()) {
                 continue
             }
             // So we want this dependency.  Move the features we want from `feature_deps`
             // to `ret`.
-            let base = reqs.deps.remove(dep.name()).unwrap_or((false, vec![]));
+            let base = reqs.deps.remove(&*dep.name()).unwrap_or((false, vec![]));
             if !dep.is_optional() && base.0 {
                 self.warnings.push(
                     format!("Package `{}` does not have feature `{}`. It has a required dependency \
