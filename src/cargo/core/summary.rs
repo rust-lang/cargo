@@ -32,7 +32,7 @@ impl Summary {
                features: BTreeMap<String, Vec<String>>,
                links: Option<String>) -> CargoResult<Summary> {
         for dep in dependencies.iter() {
-            if features.get(dep.name()).is_some() {
+            if features.get(&*dep.name()).is_some() {
                 bail!("Features and dependencies cannot have the \
                        same name: `{}`", dep.name())
             }
@@ -47,7 +47,7 @@ impl Summary {
                 let dep = parts.next().unwrap();
                 let is_reexport = parts.next().is_some();
                 if !is_reexport && features.get(dep).is_some() { continue }
-                match dependencies.iter().find(|d| d.name() == dep) {
+                match dependencies.iter().find(|d| &*d.name() == dep) {
                     Some(d) => {
                         if d.is_optional() || is_reexport { continue }
                         bail!("Feature `{}` depends on `{}` which is not an \
@@ -78,7 +78,7 @@ impl Summary {
     }
 
     pub fn package_id(&self) -> &PackageId { &self.inner.package_id }
-    pub fn name(&self) -> &str { self.package_id().name() }
+    pub fn name(&self) -> InternedString { self.package_id().name() }
     pub fn version(&self) -> &Version { self.package_id().version() }
     pub fn source_id(&self) -> &SourceId { self.package_id().source_id() }
     pub fn dependencies(&self) -> &[Dependency] { &self.inner.dependencies }

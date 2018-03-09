@@ -6,6 +6,7 @@ use std::str;
 use std::mem;
 use std::cmp::Ordering;
 use std::ops::Deref;
+use std::hash::{Hash, Hasher};
 
 pub fn leek(s: String) -> &'static str {
     let boxed = s.into_boxed_str();
@@ -23,7 +24,7 @@ lazy_static! {
         RwLock::new(HashSet::new());
 }
 
-#[derive(Eq, PartialEq, Hash, Clone, Copy)]
+#[derive(Eq, PartialEq, Clone, Copy)]
 pub struct InternedString {
     ptr: *const u8,
     len: usize,
@@ -39,12 +40,7 @@ impl InternedString {
         cache.insert(s);
         InternedString { ptr: s.as_ptr(), len: s.len() }
     }
-}
-
-impl Deref for InternedString {
-    type Target = str;
-
-    fn deref(&self) -> &'static str {
+    pub fn to_inner(&self) -> &'static str {
         unsafe {
             let slice = slice::from_raw_parts(self.ptr, self.len);
             &str::from_utf8_unchecked(slice)
@@ -52,17 +48,35 @@ impl Deref for InternedString {
     }
 }
 
+impl Deref for InternedString {
+    type Target = str;
+
+    fn deref(&self) -> &'static str {
+        self.to_inner()
+    }
+}
+
+impl Hash for InternedString {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.to_inner().hash(state);
+    }
+}
+
 impl fmt::Debug for InternedString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let str: &str = &*self;
-        write!(f, "InternedString {{ {} }}", str)
+        write!(f, "InternedString {{ {} }}", self.to_inner())
+    }
+}
+
+impl fmt::Display for InternedString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_inner())
     }
 }
 
 impl Ord for InternedString {
     fn cmp(&self, other: &InternedString) -> Ordering {
-        let str: &str = &*self;
-        str.cmp(&*other)
+        self.to_inner().cmp(&*other)
     }
 }
 

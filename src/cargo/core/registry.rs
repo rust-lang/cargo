@@ -317,7 +317,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                        -> CargoResult<Option<Summary>> {
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
-            let dep = Dependency::new_override(dep.name(), s);
+            let dep = Dependency::new_override(&*dep.name(), s);
             let mut results = src.query_vec(&dep)?;
             if !results.is_empty() {
                 return Ok(Some(results.remove(0)))
@@ -519,7 +519,7 @@ fn lock(locked: &LockedMap,
         patches: &HashMap<Url, Vec<PackageId>>,
         summary: Summary) -> Summary {
     let pair = locked.get(summary.source_id()).and_then(|map| {
-        map.get(summary.name())
+        map.get(&*summary.name())
     }).and_then(|vec| {
         vec.iter().find(|&&(ref id, _)| id == summary.package_id())
     });
@@ -568,7 +568,7 @@ fn lock(locked: &LockedMap,
         // all known locked packages to see if they match this dependency.
         // If anything does then we lock it to that and move on.
         let v = locked.get(dep.source_id()).and_then(|map| {
-            map.get(dep.name())
+            map.get(&*dep.name())
         }).and_then(|vec| {
             vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
         });
@@ -593,7 +593,7 @@ fn lock(locked: &LockedMap,
             assert!(remaining.next().is_none());
             let patch_source = patch_id.source_id();
             let patch_locked = locked.get(patch_source).and_then(|m| {
-                m.get(patch_id.name())
+                m.get(&*patch_id.name())
             }).map(|list| {
                 list.iter().any(|&(ref id, _)| id == patch_id)
             }).unwrap_or(false);

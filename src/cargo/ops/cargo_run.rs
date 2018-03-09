@@ -16,7 +16,7 @@ pub fn run(ws: &Workspace,
         Packages::Packages(xs) => match xs.len() {
             0 => ws.current()?,
             1 => ws.members()
-                .find(|pkg| pkg.name() == xs[0])
+                .find(|pkg| &*pkg.name() == xs[0])
                 .ok_or_else(||
                     format_err!("package `{}` is not a member of the workspace", xs[0])
                 )?,
