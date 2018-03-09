@@ -1,4 +1,3 @@
-#![deny(unused)]
 #![cfg_attr(test, deny(warnings))]
 #![recursion_limit="128"]
 

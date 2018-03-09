@@ -1004,6 +1004,19 @@ fn find_candidate(
     None
 }
 
+/// Returns String representation of dependency chain for a particular `pkgid`.
+fn describe_path(graph: &Graph<PackageId>, pkgid: &PackageId) -> String {
+    use std::fmt::Write;
+    let dep_path = graph.path_to_top(pkgid);
+    let mut dep_path_desc = format!("package `{}`", dep_path[0]);
+    for dep in dep_path.iter().skip(1) {
+        write!(dep_path_desc,
+               "\n    ... which is depended on by `{}`",
+               dep).unwrap();
+    }
+    dep_path_desc
+}
+
 fn activation_error(cx: &Context,
                     registry: &mut Registry,
                     parent: &Summary,
@@ -1012,21 +1025,10 @@ fn activation_error(cx: &Context,
                     candidates: &[Candidate],
                     config: Option<&Config>) -> CargoError {
     let graph = cx.graph();
-    let describe_path = |pkgid: &PackageId| -> String {
-        use std::fmt::Write;
-        let dep_path = graph.path_to_top(pkgid);
-        let mut dep_path_desc = format!("package `{}`", dep_path[0]);
-        for dep in dep_path.iter().skip(1) {
-            write!(dep_path_desc,
-                   "\n    ... which is depended on by `{}`",
-                   dep).unwrap();
-        }
-        dep_path_desc
-    };
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.name());
         msg.push_str("\n    ... required by ");
-        msg.push_str(&describe_path(parent.package_id()));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
@@ -1051,7 +1053,7 @@ fn activation_error(cx: &Context,
                 msg.push_str(link);
                 msg.push_str("` as well:\n");
             }
-            msg.push_str(&describe_path(p));
+            msg.push_str(&describe_path(&graph, p));
         }
 
         let (features_errors, other_errors): (Vec<_>, Vec<_>) = other_errors.drain(..).partition(|&(_, r)| r.is_missing_features());
@@ -1078,7 +1080,7 @@ fn activation_error(cx: &Context,
 
         for &(p, _) in other_errors.iter() {
             msg.push_str("\n\n  previously selected ");
-            msg.push_str(&describe_path(p));
+            msg.push_str(&describe_path(&graph, p));
         }
 
         msg.push_str("\n\nfailed to select a version for `");
@@ -1127,7 +1129,7 @@ fn activation_error(cx: &Context,
                               dep.source_id(),
                               versions);
         msg.push_str("required by ");
-        msg.push_str(&describe_path(parent.package_id()));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         // If we have a path dependency with a locked version, then this may
         // indicate that we updated a sub-package and forgot to run `cargo
@@ -1144,7 +1146,7 @@ fn activation_error(cx: &Context,
                  location searched: {}\n",
                 dep.name(), dep.source_id());
         msg.push_str("required by ");
-        msg.push_str(&describe_path(parent.package_id()));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         msg
     };
@@ -1505,8 +1507,8 @@ fn check_cycles(resolve: &Resolve, activations: &Activations)
                  -> CargoResult<()> {
         // See if we visited ourselves
         if !visited.insert(id) {
-            bail!("cyclic package dependency: package `{}` depends on itself",
-                  id);
+            bail!("cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
+                  id, describe_path(&resolve.graph, id));
         }
 
         // If we've already checked this node no need to recurse again as we'll
