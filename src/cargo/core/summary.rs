@@ -78,7 +78,7 @@ impl Summary {
     }
 
     pub fn package_id(&self) -> &PackageId { &self.inner.package_id }
-    pub fn name(&self) -> &str { self.package_id().name().to_inner() }
+    pub fn name(&self) -> InternedString { self.package_id().name() }
     pub fn version(&self) -> &Version { self.package_id().version() }
     pub fn source_id(&self) -> &SourceId { self.package_id().source_id() }
     pub fn dependencies(&self) -> &[Dependency] { &self.inner.dependencies }

@@ -429,9 +429,9 @@ fn select_pkg<'a, T>(mut source: T,
             return Ok((pkg.clone(), Box::new(source)));
 
             fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
-                pkgs.sort_by(|a, b| a.name().cmp(b.name()));
+                pkgs.sort_by(|a, b| a.name().cmp(&b.name()));
                 format!("multiple packages with {} found: {}", kind,
-                        pkgs.iter().map(|p| p.name()).collect::<Vec<_>>()
+                        pkgs.iter().map(|p| p.name().to_inner()).collect::<Vec<_>>()
                             .join(", "))
             }
         }

@@ -11,6 +11,7 @@ use lazycell::LazyCell;
 
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
 use core::{Summary, SourceMap};
+use core::interning::InternedString;
 use ops;
 use util::{Config, internal, lev_distance};
 use util::errors::{CargoResult, CargoResultExt};
@@ -95,7 +96,7 @@ impl Package {
     /// Get the path to the manifest
     pub fn manifest_path(&self) -> &Path { &self.manifest_path }
     /// Get the name of the package
-    pub fn name(&self) -> &str { self.package_id().name().to_inner() }
+    pub fn name(&self) -> InternedString { self.package_id().name() }
     /// Get the PackageId object for the package (fully defines a package)
     pub fn package_id(&self) -> &PackageId { self.manifest.package_id() }
     /// Get the root folder of the package
