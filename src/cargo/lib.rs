@@ -13,6 +13,7 @@
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate serde_json;
 extern crate atty;
+extern crate clap;
 extern crate crates_io as registry;
 extern crate crossbeam;
 extern crate curl;
@@ -113,6 +114,11 @@ pub fn print_json<T: ser::Serialize>(obj: &T) {
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     debug!("exit_with_error; err={:?}", err);
+    if let Some(ref err) = err.error {
+        if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
+            clap_err.exit()
+        }
+    }
 
     let CliError { error, exit_code, unknown } = err;
     // exit_code == 0 is non-fatal error, e.g. docopt version info

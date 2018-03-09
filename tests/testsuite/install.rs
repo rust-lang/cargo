@@ -3,7 +3,6 @@ use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 
 use cargo::util::ProcessBuilder;
-use cargotest::ChannelChanger;
 use cargotest::install::{cargo_home, has_installed_exe};
 use cargotest::support::git;
 use cargotest::support::paths;

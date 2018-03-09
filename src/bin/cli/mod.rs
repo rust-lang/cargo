@@ -29,7 +29,7 @@ use search_directories;
 use is_executable;
 
 pub fn do_main(config: &mut Config) -> CliResult {
-    let args = cli().get_matches();
+    let args = cli().get_matches_safe()?;
     let is_verbose = args.occurrences_of("verbose") > 0;
     if args.is_present("version") {
         let version = cargo::version();
@@ -547,7 +547,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                 alias.extend(args.values_of("").unwrap_or_default().map(|s| s.to_string()));
                 let args = cli()
                     .setting(AppSettings::NoBinaryName)
-                    .get_matches_from(alias);
+                    .get_matches_from_safe(alias)?;
                 return execute_subcommand(config, args);
             }
             let mut ext_args: Vec<&str> = vec![cmd];
