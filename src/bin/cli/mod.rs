@@ -328,7 +328,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                 check_metadata: !args.is_present("no-metadata"),
                 allow_dirty: args.is_present("allow-dirty"),
                 target: args.value_of("target"),
-                jobs: jobs_from_args(args),
+                jobs: jobs_from_args(args)?,
                 registry: None,
             })?;
             Ok(())
@@ -352,7 +352,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                 verify: !args.is_present("no-verify"),
                 allow_dirty: args.is_present("allow-dirty"),
                 target: args.value_of("target"),
-                jobs: jobs_from_args(args),
+                jobs: jobs_from_args(args)?,
                 dry_run: args.is_present("dry-run"),
                 registry,
             })?;
@@ -368,7 +368,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             let ws = workspace_from_args(config, args)?;
 
             let mut compile_opts = compile_options_from_args_for_single_package(
-                config, args, CompileMode::Build
+                config, args, CompileMode::Build,
             )?;
             if !args.is_present("example") && !args.is_present("bin") {
                 compile_opts.filter = ops::CompileFilter::Default {
@@ -403,15 +403,15 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                 Some("dev") | None => CompileMode::Build,
                 Some("test") => CompileMode::Test,
                 Some("bench") => CompileMode::Bench,
-                Some("check") => CompileMode::Check {test: false},
+                Some("check") => CompileMode::Check { test: false },
                 Some(mode) => {
                     let err = format_err!("unknown profile: `{}`, use dev,
                                    test, or bench", mode);
-                    return Err(CliError::new(err, 101))
+                    return Err(CliError::new(err, 101));
                 }
             };
             let mut compile_opts = compile_options_from_args_for_single_package(
-                config, args, mode
+                config, args, mode,
             )?;
             compile_opts.target_rustc_args = Some(&values(args, "args"));
             ops::compile(&ws, &compile_opts)?;
@@ -420,12 +420,12 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
         ("rustdoc", Some(args)) => {
             let ws = workspace_from_args(config, args)?;
             let mut compile_opts = compile_options_from_args_for_single_package(
-                config, args, CompileMode::Doc { deps: false }
+                config, args, CompileMode::Doc { deps: false },
             )?;
             compile_opts.target_rustdoc_args = Some(&values(args, "args"));
             let doc_opts = ops::DocOptions {
                 open_result: args.is_present("open"),
-                compile_opts
+                compile_opts,
             };
             ops::doc(&ws, &doc_opts)?;
             Ok(())
@@ -514,7 +514,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
 
             let file = File::open(&filename);
             match file.and_then(|mut f| f.read_to_string(&mut contents)) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => fail("invalid", &format!("error reading file: {}", e))
             };
             if contents.parse::<toml::Value>().is_err() {
@@ -898,7 +898,6 @@ a global configuration.")
 }
 
 
-
 fn values<'a>(args: &ArgMatches, name: &str) -> &'a [String] {
     let owned: Vec<String> = args.values_of(name).unwrap_or_default()
         .map(|s| s.to_string())
@@ -934,8 +933,16 @@ fn workspace_from_args<'a>(config: &'a Config, args: &ArgMatches) -> CargoResult
     Workspace::new(&root, config)
 }
 
-fn jobs_from_args(args: &ArgMatches) -> Option<u32> { //FIXME: validation
-    args.value_of("jobs").and_then(|v| v.parse().ok())
+fn jobs_from_args(args: &ArgMatches) -> CargoResult<Option<u32>> { //FIXME: validation
+    let jobs = match args.value_of("jobs") {
+        None => None,
+        Some(jobs) => Some(jobs.parse::<u32>().map_err(|_| {
+            clap::Error::value_validation_auto(
+                format!("could not parse `{}` as a number", jobs)
+            )
+        })?)
+    };
+    Ok(jobs)
 }
 
 fn compile_options_from_args<'a>(
@@ -964,7 +971,7 @@ fn compile_options_from_args<'a>(
 
     let opts = CompileOptions {
         config,
-        jobs: jobs_from_args(args),
+        jobs: jobs_from_args(args)?,
         target: args.value_of("target"),
         features: &values(args, "features"),
         all_features: args.is_present("all-features"),

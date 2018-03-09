@@ -4323,3 +4323,16 @@ fn avoid_dev_deps() {
                 .arg("-Zavoid-dev-deps"),
         execs().with_status(0));
 }
+
+#[test]
+fn invalid_jobs() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    assert_that(p.cargo("build").arg("--jobs").arg("over9000"),
+                execs().with_status(1).with_stderr("\
+error: Invalid value: could not parse `over9000` as a number
+"));
+}
