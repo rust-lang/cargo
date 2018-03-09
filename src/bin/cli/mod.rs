@@ -134,7 +134,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             let ws = workspace_from_args(config, args)?;
             let opts = ops::CleanOptions {
                 config,
-                spec: &values(args, "package"),
+                spec: values(args, "package"),
                 target: args.value_of("target"),
                 release: args.is_present("release"),
             };
@@ -285,7 +285,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             };
 
             let options = OutputMetadataOptions {
-                features: values(args, "features").to_vec(),
+                features: values(args, "features"),
                 all_features: args.is_present("all-features"),
                 no_default_features: args.is_present("no-default-features"),
                 no_deps: args.is_present("no-deps"),
@@ -413,7 +413,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             let mut compile_opts = compile_options_from_args_for_single_package(
                 config, args, mode,
             )?;
-            compile_opts.target_rustc_args = Some(&values(args, "args"));
+            compile_opts.target_rustc_args = Some(values(args, "args"));
             ops::compile(&ws, &compile_opts)?;
             Ok(())
         }
@@ -422,7 +422,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             let mut compile_opts = compile_options_from_args_for_single_package(
                 config, args, CompileMode::Doc { deps: false },
             )?;
-            compile_opts.target_rustdoc_args = Some(&values(args, "args"));
+            compile_opts.target_rustdoc_args = Some(values(args, "args"));
             let doc_opts = ops::DocOptions {
                 open_result: args.is_present("open"),
                 compile_opts,
@@ -449,10 +449,10 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             if doc {
                 compile_opts.mode = ops::CompileMode::Doctest;
                 compile_opts.filter = ops::CompileFilter::new(true,
-                                                              &[], false,
-                                                              &[], false,
-                                                              &[], false,
-                                                              &[], false,
+                                                              Vec::new(), false,
+                                                              Vec::new(), false,
+                                                              Vec::new(), false,
+                                                              Vec::new(), false,
                                                               false);
             }
 
@@ -483,7 +483,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
         ("uninstall", Some(args)) => {
             let root = args.value_of("root");
             let specs = args.values_of("spec").unwrap_or_default().collect();
-            ops::uninstall(root, specs, values(args, "bin"), config)?;
+            ops::uninstall(root, specs, &values(args, "bin"), config)?;
             Ok(())
         }
         ("update", Some(args)) => {
@@ -897,19 +897,12 @@ a global configuration.")
     }
 }
 
-
-fn values<'a>(args: &ArgMatches, name: &str) -> &'a [String] {
-    let owned: Vec<String> = args.values_of(name).unwrap_or_default()
+fn values(args: &ArgMatches, name: &str) -> Vec<String> {
+    args.values_of(name).unwrap_or_default()
         .map(|s| s.to_string())
-        .collect();
-    let owned = owned.into_boxed_slice();
-    let ptr = owned.as_ptr();
-    let len = owned.len();
-    ::std::mem::forget(owned);
-    unsafe {
-        slice::from_raw_parts(ptr, len)
-    }
+        .collect()
 }
+
 
 fn config_from_args(config: &mut Config, args: &ArgMatches) -> CargoResult<()> {
     let color = args.value_of("color").map(|s| s.to_string());
@@ -952,8 +945,8 @@ fn compile_options_from_args<'a>(
 ) -> CargoResult<CompileOptions<'a>> {
     let spec = Packages::from_flags(
         args.is_present("all"),
-        &values(args, "exclude"),
-        &values(args, "package"),
+        values(args, "exclude"),
+        values(args, "package"),
     )?;
 
     let message_format = match args.value_of("message-format") {
@@ -973,7 +966,7 @@ fn compile_options_from_args<'a>(
         config,
         jobs: jobs_from_args(args)?,
         target: args.value_of("target"),
-        features: &values(args, "features"),
+        features: values(args, "features"),
         all_features: args.is_present("all-features"),
         no_default_features: args.is_present("no-default-features"),
         spec,
@@ -998,8 +991,7 @@ fn compile_options_from_args_for_single_package<'a>(
     mode: CompileMode,
 ) -> CargoResult<CompileOptions<'a>> {
     let mut compile_opts = compile_options_from_args(config, args, mode)?;
-    let packages = values(args, "package");
-    compile_opts.spec = Packages::Packages(&packages);
+    compile_opts.spec = Packages::Packages(values(args, "package"));
     Ok(compile_opts)
 }
 

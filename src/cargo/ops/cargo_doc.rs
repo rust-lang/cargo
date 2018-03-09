@@ -16,7 +16,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     let specs = options.compile_opts.spec.into_package_id_specs(ws)?;
     let resolve = ops::resolve_ws_precisely(ws,
                                             None,
-                                            options.compile_opts.features,
+                                            &options.compile_opts.features,
                                             options.compile_opts.all_features,
                                             options.compile_opts.no_default_features,
                                             &specs)?;
