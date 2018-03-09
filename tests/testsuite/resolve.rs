@@ -474,8 +474,8 @@ fn resolving_with_many_equivalent_backtracking() {
         pkg!(("level0", "1.0.0")),
     ];
 
-    const DEPTH: usize = 100;
-    const BRANCHING_FACTOR: usize = 10;
+    const DEPTH: usize = 200;
+    const BRANCHING_FACTOR: usize = 100;
 
     for l in 0..DEPTH {
         let name = format!("level{}", l);
