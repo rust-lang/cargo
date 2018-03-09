@@ -7,6 +7,7 @@ use semver::ReqParseError;
 use serde::ser;
 
 use core::{SourceId, Summary, PackageId};
+use core::interning::InternedString;
 use util::{Cfg, CfgExpr, Config};
 use util::errors::{CargoResult, CargoResultExt, CargoError};
 
@@ -20,7 +21,7 @@ pub struct Dependency {
 /// The data underlying a Dependency.
 #[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone, Debug)]
 struct Inner {
-    name: String,
+    name: InternedString,
     source_id: SourceId,
     registry_id: Option<SourceId>,
     req: VersionReq,
@@ -63,7 +64,7 @@ impl ser::Serialize for Dependency {
         where S: ser::Serializer,
     {
         SerializedDependency {
-            name: self.name(),
+            name: &*self.name(),
             source: self.source_id(),
             req: self.version_req().to_string(),
             kind: self.kind(),
@@ -174,7 +175,7 @@ impl Dependency {
     pub fn new_override(name: &str, source_id: &SourceId) -> Dependency {
         Dependency {
             inner: Rc::new(Inner {
-                name: name.to_string(),
+                name: InternedString::new(name),
                 source_id: source_id.clone(),
                 registry_id: None,
                 req: VersionReq::any(),
@@ -194,8 +195,8 @@ impl Dependency {
         &self.inner.req
     }
 
-    pub fn name(&self) -> &str {
-        &self.inner.name
+    pub fn name(&self) -> InternedString {
+        self.inner.name
     }
 
     pub fn source_id(&self) -> &SourceId {
@@ -329,13 +330,13 @@ impl Dependency {
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
     pub fn matches_ignoring_source(&self, sum: &Summary) -> bool {
-        self.name() == &*sum.package_id().name() &&
+        self.name() == sum.package_id().name() &&
             self.version_req().matches(sum.package_id().version())
     }
 
     /// Returns true if the package (`id`) can fulfill this dependency request.
     pub fn matches_id(&self, id: &PackageId) -> bool {
-        self.inner.name == &*id.name() &&
+        self.inner.name == id.name() &&
             (self.inner.only_match_name || (self.inner.req.matches(id.version()) &&
                                       &self.inner.source_id == id.source_id()))
     }

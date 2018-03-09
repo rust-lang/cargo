@@ -317,7 +317,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                        -> CargoResult<Option<Summary>> {
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
-            let dep = Dependency::new_override(dep.name(), s);
+            let dep = Dependency::new_override(&*dep.name(), s);
             let mut results = src.query_vec(&dep)?;
             if !results.is_empty() {
                 return Ok(Some(results.remove(0)))
@@ -568,7 +568,7 @@ fn lock(locked: &LockedMap,
         // all known locked packages to see if they match this dependency.
         // If anything does then we lock it to that and move on.
         let v = locked.get(dep.source_id()).and_then(|map| {
-            map.get(dep.name())
+            map.get(&*dep.name())
         }).and_then(|vec| {
             vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
         });
@@ -584,7 +584,7 @@ fn lock(locked: &LockedMap,
         let v = patches.get(dep.source_id().url()).map(|vec| {
             let dep2 = dep.clone();
             let mut iter = vec.iter().filter(move |p| {
-                dep2.name() == &*p.name() &&
+                dep2.name() == p.name() &&
                     dep2.version_req().matches(p.version())
             });
             (iter.next(), iter)
