@@ -9,7 +9,7 @@ use util::paths;
 use ops::{self, Context, BuildConfig, Kind, Unit};
 
 pub struct CleanOptions<'a> {
-    pub spec: &'a [String],
+    pub spec: Vec<String>,
     pub target: Option<&'a str>,
     pub config: &'a Config,
     pub release: bool,
@@ -45,7 +45,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
                                    profiles)?;
     let mut units = Vec::new();
 
-    for spec in opts.spec {
+    for spec in opts.spec.iter() {
         // Translate the spec to a Package
         let pkgid = resolve.query(spec)?;
         let pkg = packages.get(pkgid)?;

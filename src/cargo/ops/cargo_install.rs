@@ -504,7 +504,7 @@ fn find_duplicates(dst: &Path,
                          .filter_map(|t| check(t.name().to_string()))
                          .collect()
         }
-        CompileFilter::Only { bins, examples, .. } => {
+        CompileFilter::Only { ref bins, ref examples, .. } => {
             let all_bins: Vec<String> = bins.try_collect().unwrap_or_else(|| {
                 pkg.targets().iter().filter(|t| t.is_bin())
                                     .map(|t| t.name().to_string())
