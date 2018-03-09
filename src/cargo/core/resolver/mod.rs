@@ -853,6 +853,15 @@ fn activate_deps_loop(
         trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(), candidates.len());
         trace!("{}[{}]>{} {} prev activations", parent.name(), cur, dep.name(), cx.prev_active(&dep).len());
 
+        let just_here_for_the_error_messages = past_conflicting_activations.get(&dep).and_then(|past_bad| {
+            past_bad.iter().find(|conflicting| {
+                conflicting
+                    .iter()
+                    // note: a lot of redundant work in is_active for similar debs
+                    .all(|(con, _)| cx.is_active(con))
+            })
+        }).is_some();
+
         let mut remaining_candidates = RemainingCandidates::new(&candidates);
         let mut successfully_activated = false;
         let mut backtracked = false;
@@ -881,7 +890,7 @@ fn activate_deps_loop(
                 trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
 
                 let past = past_conflicting_activations.entry(dep.clone()).or_insert_with(Vec::new);
-                if !past.contains(&conflicting_activations) {
+                if !just_here_for_the_error_messages && !past.contains(&conflicting_activations) {
                     trace!("{}[{}]>{} adding a skip {:?}", parent.name(), cur, dep.name(), conflicting_activations);
                     past.push(conflicting_activations.clone());
                 }
@@ -916,6 +925,10 @@ fn activate_deps_loop(
                 })
             })?;
 
+            if just_here_for_the_error_messages && !backtracked && has_another {
+                continue
+            }
+
             // We have a candidate. Clone a `BacktrackFrame`
             // so we can add it to the `backtrack_stack` if activation succeeds.
             // We clone now in case `activate` changes `cx` and then fails.
@@ -947,19 +960,21 @@ fn activate_deps_loop(
 
             match res {
                 Ok(Some((frame, dur))) => {
-                    let mut has_past_conflicting_dep = false;
-                    if let Some(conflicting) = frame.remaining_siblings.clone().filter_map(|(_, (deb, _, _))| {
-                        past_conflicting_activations.get(&deb).and_then(|past_bad| {
-                            past_bad.iter().find(|conflicting| {
-                                conflicting
-                                    .iter()
-                                    // note: a lot of redundant work in is_active for similar debs
-                                    .all(|(con, _)| cx.is_active(con) || *con == pid)
+                    let mut has_past_conflicting_dep = just_here_for_the_error_messages && !backtracked;
+                    if !has_past_conflicting_dep {
+                        if let Some(conflicting) = frame.remaining_siblings.clone().filter_map(|(_, (deb, _, _))| {
+                            past_conflicting_activations.get(&deb).and_then(|past_bad| {
+                                past_bad.iter().find(|conflicting| {
+                                    conflicting
+                                        .iter()
+                                        // note: a lot of redundant work in is_active for similar debs
+                                        .all(|(con, _)| cx.is_active(con) || *con == pid)
+                                })
                             })
-                        })
-                    }).next() {
-                        conflicting_activations.extend(conflicting.clone());
-                        has_past_conflicting_dep = true;
+                        }).next() {
+                            conflicting_activations.extend(conflicting.clone());
+                            has_past_conflicting_dep = true;
+                        }
                     }
                     if !has_another && has_past_conflicting_dep && !backtracked {
                         // we have not activated ANY candidates and
