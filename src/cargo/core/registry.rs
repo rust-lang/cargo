@@ -519,7 +519,7 @@ fn lock(locked: &LockedMap,
         patches: &HashMap<Url, Vec<PackageId>>,
         summary: Summary) -> Summary {
     let pair = locked.get(summary.source_id()).and_then(|map| {
-        map.get(summary.name())
+        map.get(&*summary.name())
     }).and_then(|vec| {
         vec.iter().find(|&&(ref id, _)| id == summary.package_id())
     });
