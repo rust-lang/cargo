@@ -806,7 +806,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
                 // If the dependency is optional, then we're only activating it
                 // if the corresponding feature was activated
-                if d.is_optional() && !self.resolve.features(id).contains(d.name()) {
+                if d.is_optional() && !self.resolve.features(id).contains(&*d.name()) {
                     return false;
                 }
 

@@ -11,6 +11,7 @@ use serde::ser;
 
 use util::{CargoResult, ToSemver};
 use core::source::SourceId;
+use core::interning::InternedString;
 
 /// Identifier for a specific version of a package in a specific source.
 #[derive(Clone)]
@@ -20,7 +21,7 @@ pub struct PackageId {
 
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
 struct PackageIdInner {
-    name: String,
+    name: InternedString,
     version: semver::Version,
     source_id: SourceId,
 }
@@ -63,7 +64,7 @@ impl<'de> de::Deserialize<'de> for PackageId {
 
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
-                name: name.to_string(),
+                name: InternedString::new(name),
                 version,
                 source_id,
             }),
@@ -102,21 +103,21 @@ impl PackageId {
         let v = version.to_semver()?;
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
-                name: name.to_string(),
+                name: InternedString::new(name),
                 version: v,
                 source_id: sid.clone(),
             }),
         })
     }
 
-    pub fn name(&self) -> &str { &self.inner.name }
+    pub fn name(&self) -> InternedString { self.inner.name }
     pub fn version(&self) -> &semver::Version { &self.inner.version }
     pub fn source_id(&self) -> &SourceId { &self.inner.source_id }
 
     pub fn with_precise(&self, precise: Option<String>) -> PackageId {
         PackageId {
             inner: Arc::new(PackageIdInner {
-                name: self.inner.name.to_string(),
+                name: self.inner.name,
                 version: self.inner.version.clone(),
                 source_id: self.inner.source_id.with_precise(precise),
             }),
@@ -126,7 +127,7 @@ impl PackageId {
     pub fn with_source_id(&self, source: &SourceId) -> PackageId {
         PackageId {
             inner: Arc::new(PackageIdInner {
-                name: self.inner.name.to_string(),
+                name: self.inner.name,
                 version: self.inner.version.clone(),
                 source_id: source.clone(),
             }),
