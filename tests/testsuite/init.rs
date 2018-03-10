@@ -443,13 +443,8 @@ fn with_argument() {
 fn unknown_flags() {
     assert_that(cargo_process("init").arg("foo").arg("--flag"),
                 execs().with_status(1)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 error: Found argument '--flag' which wasn't expected, or isn't valid in this context
-
-USAGE:
-    cargo init [OPTIONS] [--] [path]
-
-For more information try --help
 "));
 }
 

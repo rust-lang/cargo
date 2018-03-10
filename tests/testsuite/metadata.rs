@@ -753,15 +753,10 @@ fn cargo_metadata_bad_version() {
                  .arg("--format-version").arg("2")
                  .cwd(p.root()),
                 execs().with_status(1)
-    .with_stderr("\
+                       .with_stderr_contains("\
 error: '2' isn't a valid value for '--format-version <VERSION>'
 <tab>[possible values: 1]
-
-
-USAGE:
-    cargo metadata --format-version <VERSION> --no-deps
-
-For more information try --help"));
+"));
 }
 
 #[test]

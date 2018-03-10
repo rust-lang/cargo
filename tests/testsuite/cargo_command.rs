@@ -102,16 +102,10 @@ fn find_closest_biuld_to_build() {
 
     assert_that(pr,
                 execs().with_status(1)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 error: The subcommand 'biuld' wasn't recognized
 <tab>Did you mean 'build'?
-
-If you believe you received this message in error, try re-running with 'cargo -- biuld'
-
-USAGE:
-    cargo [OPTIONS] [SUBCOMMAND]
-
-For more information try --help"));
+"));
 }
 
 // if a subcommand is more than 3 edit distance away, we don't make a suggestion
