@@ -486,7 +486,7 @@ pub fn yank(config: &Config,
 pub fn search(query: &str,
               config: &Config,
               index: Option<String>,
-              limit: u8,
+              limit: u32,
               reg: Option<String>) -> CargoResult<()> {
     fn truncate_with_ellipsis(s: &str, max_width: usize) -> String {
         // We should truncate at grapheme-boundary and compute character-widths,
