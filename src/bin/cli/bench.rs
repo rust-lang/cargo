@@ -1,4 +1,4 @@
-use super::command_prelude::*;
+use command_prelude::*;
 use clap::AppSettings;
 
 pub fn cli() -> App {

@@ -19,6 +19,8 @@ use cargo::util::{self, CliResult, lev_distance, Config, CargoResult};
 use cargo::util::{CliError, ProcessError};
 
 mod cli;
+mod command_prelude;
+
 
 fn main() {
     env_logger::init();
