@@ -85,7 +85,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
     match args.subcommand() {
         ("bench", Some(args)) => {
             let ws = args.workspace(config)?;
-            let mut compile_opts = compile_options_from_args(config, args, CompileMode::Bench)?;
+            let mut compile_opts = args.compile_options(config, CompileMode::Bench)?;
             compile_opts.release = true;
 
             let ops = ops::TestOptions {
@@ -115,7 +115,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             if config.cli_unstable().avoid_dev_deps {
                 ws.set_require_optional_deps(false);
             }
-            let compile_opts = compile_options_from_args(config, args, CompileMode::Build)?;
+            let compile_opts = args.compile_options(config, CompileMode::Build)?;
             ops::compile(&ws, &compile_opts)?;
             Ok(())
         }
@@ -131,7 +131,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                 }
             };
             let mode = CompileMode::Check { test };
-            let compile_opts = compile_options_from_args(config, args, mode)?;
+            let compile_opts = args.compile_options(config, mode)?;
             ops::compile(&ws, &compile_opts)?;
             Ok(())
         }
@@ -149,7 +149,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
         ("doc", Some(args)) => {
             let ws = args.workspace(config)?;
             let mode = ops::CompileMode::Doc { deps: !args.is_present("no-deps") };
-            let compile_opts = compile_options_from_args(config, args, mode)?;
+            let compile_opts = args.compile_options(config, mode)?;
             let doc_opts = ops::DocOptions {
                 open_result: args.is_present("open"),
                 compile_opts,
@@ -188,7 +188,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("install", Some(args)) => {
-            let mut compile_opts = compile_options_from_args(config, args, CompileMode::Build)?;
+            let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
             compile_opts.release = !args.is_present("debug");
 
             let krates = args.values_of("crate").unwrap_or_default().collect::<Vec<_>>();
@@ -372,8 +372,8 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
         ("run", Some(args)) => {
             let ws = args.workspace(config)?;
 
-            let mut compile_opts = compile_options_from_args_for_single_package(
-                config, args, CompileMode::Build,
+            let mut compile_opts = args.compile_options_for_single_package(
+                config, CompileMode::Build,
             )?;
             if !args.is_present("example") && !args.is_present("bin") {
                 compile_opts.filter = ops::CompileFilter::Default {
@@ -415,8 +415,8 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                     return Err(CliError::new(err, 101));
                 }
             };
-            let mut compile_opts = compile_options_from_args_for_single_package(
-                config, args, mode,
+            let mut compile_opts = args.compile_options_for_single_package(
+                config, mode,
             )?;
             compile_opts.target_rustc_args = Some(values(args, "args"));
             ops::compile(&ws, &compile_opts)?;
@@ -424,8 +424,8 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
         }
         ("rustdoc", Some(args)) => {
             let ws = args.workspace(config)?;
-            let mut compile_opts = compile_options_from_args_for_single_package(
-                config, args, CompileMode::Doc { deps: false },
+            let mut compile_opts = args.compile_options_for_single_package(
+                config, CompileMode::Doc { deps: false },
             )?;
             compile_opts.target_rustdoc_args = Some(values(args, "args"));
             let doc_opts = ops::DocOptions {
@@ -449,7 +449,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
         ("test", Some(args)) => {
             let ws = args.workspace(config)?;
 
-            let mut compile_opts = compile_options_from_args(config, args, CompileMode::Test)?;
+            let mut compile_opts = args.compile_options(config, CompileMode::Test)?;
             let doc = args.is_present("doc");
             if doc {
                 compile_opts.mode = ops::CompileMode::Doctest;
