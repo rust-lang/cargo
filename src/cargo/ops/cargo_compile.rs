@@ -41,7 +41,7 @@ pub struct CompileOptions<'a> {
     /// Number of concurrent jobs to use.
     pub jobs: Option<u32>,
     /// The target platform to compile for (example: `i686-unknown-linux-gnu`).
-    pub target: Option<&'a str>,
+    pub target: Option<String>,
     /// Extra features to build for the root package
     pub features: Vec<String>,
     /// Flag whether all available features should be built for the root package
@@ -217,14 +217,14 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                       options: &CompileOptions<'a>,
                       exec: Arc<Executor>)
                       -> CargoResult<ops::Compilation<'a>> {
-    let CompileOptions { config, jobs, target, ref spec, ref features,
+    let CompileOptions { config, jobs, ref target, ref spec, ref features,
                          all_features, no_default_features,
                          release, mode, message_format,
                          ref filter,
                          ref target_rustdoc_args,
                          ref target_rustc_args } = *options;
 
-    let target = target.map(|s| s.to_string());
+    let target = target.clone();
 
     if jobs == Some(0) {
         bail!("jobs must be at least 1")

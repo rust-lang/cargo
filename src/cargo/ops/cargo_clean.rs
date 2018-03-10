@@ -9,9 +9,9 @@ use util::paths;
 use ops::{self, Context, BuildConfig, Kind, Unit};
 
 pub struct CleanOptions<'a> {
-    pub spec: Vec<String>,
-    pub target: Option<&'a str>,
     pub config: &'a Config,
+    pub spec: Vec<String>,
+    pub target: Option<String>,
     pub release: bool,
 }
 
@@ -37,7 +37,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     let mut cx = Context::new(ws, &resolve, &packages, opts.config,
                                    BuildConfig {
                                        host_triple,
-                                       requested_target: opts.target.map(|s| s.to_owned()),
+                                       requested_target: opts.target.clone(),
                                        release: opts.release,
                                        jobs: 1,
                                        ..BuildConfig::default()
