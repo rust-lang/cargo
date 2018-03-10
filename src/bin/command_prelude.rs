@@ -197,12 +197,83 @@ pub trait ArgMatchesExt {
         self._value_of("target").map(|s| s.to_string())
     }
 
+    fn compile_options<'a>(
+        &self,
+        config: &'a Config,
+        mode: CompileMode
+    ) -> CargoResult<CompileOptions<'a>> {
+        let spec = Packages::from_flags(
+            self._is_present("all"),
+            self._values_of("exclude"),
+            self._values_of("package"),
+        )?;
+
+        let message_format = match self._value_of("message-format") {
+            None => MessageFormat::Human,
+            Some(f) => {
+                if f.eq_ignore_ascii_case("json") {
+                    MessageFormat::Json
+                } else if f.eq_ignore_ascii_case("human") {
+                    MessageFormat::Human
+                } else {
+                    panic!("Impossible message format: {:?}", f)
+                }
+            }
+        };
+
+        let opts = CompileOptions {
+            config,
+            jobs: self.jobs()?,
+            target: self.target(),
+            features: self._values_of("features"),
+            all_features: self._is_present("all-features"),
+            no_default_features: self._is_present("no-default-features"),
+            spec,
+            mode,
+            release: self._is_present("release"),
+            filter: CompileFilter::new(self._is_present("lib"),
+                                       self._values_of("bin"), self._is_present("bins"),
+                                       self._values_of("test"), self._is_present("tests"),
+                                       self._values_of("example"), self._is_present("examples"),
+                                       self._values_of("bench"), self._is_present("benches"),
+                                       self._is_present("all-targets")),
+            message_format,
+            target_rustdoc_args: None,
+            target_rustc_args: None,
+        };
+        Ok(opts)
+    }
+
+    fn compile_options_for_single_package<'a>(
+        &self,
+        config: &'a Config,
+        mode: CompileMode
+    ) -> CargoResult<CompileOptions<'a>> {
+        let mut compile_opts = self.compile_options(config, mode)?;
+        compile_opts.spec = Packages::Packages(self._values_of("package"));
+        Ok(compile_opts)
+    }
+
     fn _value_of(&self, name: &str) -> Option<&str>;
+
+    fn _values_of(&self, name: &str) -> Vec<String>;
+
+    fn _is_present(&self, name: &str) -> bool;
 }
 
 impl<'a> ArgMatchesExt for ArgMatches<'a> {
     fn _value_of(&self, name: &str) -> Option<&str> {
         self.value_of(name)
+    }
+
+    fn _values_of(&self, name: &str) -> Vec<String> {
+        self.values_of(name).unwrap_or_default()
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    fn _is_present(&self, name: &str) -> bool {
+        self.is_present(name)
     }
 }
 
@@ -210,63 +281,6 @@ pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
     args.values_of(name).unwrap_or_default()
         .map(|s| s.to_string())
         .collect()
-}
-
-pub fn compile_options_from_args<'a>(
-    config: &'a Config,
-    args: &'a ArgMatches<'a>,
-    mode: CompileMode,
-) -> CargoResult<CompileOptions<'a>> {
-    let spec = Packages::from_flags(
-        args.is_present("all"),
-        values(args, "exclude"),
-        values(args, "package"),
-    )?;
-
-    let message_format = match args.value_of("message-format") {
-        None => MessageFormat::Human,
-        Some(f) => {
-            if f.eq_ignore_ascii_case("json") {
-                MessageFormat::Json
-            } else if f.eq_ignore_ascii_case("human") {
-                MessageFormat::Human
-            } else {
-                panic!("Impossible message format: {:?}", f)
-            }
-        }
-    };
-
-    let opts = CompileOptions {
-        config,
-        jobs: args.jobs()?,
-        target: args.target(),
-        features: values(args, "features"),
-        all_features: args.is_present("all-features"),
-        no_default_features: args.is_present("no-default-features"),
-        spec,
-        mode,
-        release: args.is_present("release"),
-        filter: CompileFilter::new(args.is_present("lib"),
-                                   values(args, "bin"), args.is_present("bins"),
-                                   values(args, "test"), args.is_present("tests"),
-                                   values(args, "example"), args.is_present("examples"),
-                                   values(args, "bench"), args.is_present("benches"),
-                                   args.is_present("all-targets")),
-        message_format,
-        target_rustdoc_args: None,
-        target_rustc_args: None,
-    };
-    Ok(opts)
-}
-
-pub fn compile_options_from_args_for_single_package<'a>(
-    config: &'a Config,
-    args: &'a ArgMatches<'a>,
-    mode: CompileMode,
-) -> CargoResult<CompileOptions<'a>> {
-    let mut compile_opts = compile_options_from_args(config, args, mode)?;
-    compile_opts.spec = Packages::Packages(values(args, "package"));
-    Ok(compile_opts)
 }
 
 pub fn new_opts_from_args<'a>(args: &'a ArgMatches<'a>, path: &'a str) -> CargoResult<NewOptions<'a>> {
