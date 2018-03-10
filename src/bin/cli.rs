@@ -242,7 +242,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("login", Some(args)) => {
-            let registry = registry_from_args(config, args)?;
+            let registry = args.registry(config)?;
 
             let token = match args.value_of("token") {
                 Some(token) => token.to_string(),
@@ -308,7 +308,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("owner", Some(args)) => {
-            let registry = registry_from_args(config, args)?;
+            let registry = args.registry(config)?;
             let opts = ops::OwnersOptions {
                 krate: args.value_of("crate").map(|s| s.to_string()),
                 token: args.value_of("token").map(|s| s.to_string()),
@@ -345,9 +345,9 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("publish", Some(args)) => {
-            let registry = registry_from_args(config, args)?;
+            let registry = args.registry(config)?;
             let ws = args.workspace(config)?;
-            let index = index_from_args(config, args)?;
+            let index = args.index(config)?;
 
             ops::publish(&ws, &ops::PublishOpts {
                 config,
@@ -435,8 +435,8 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("search", Some(args)) => {
-            let registry = registry_from_args(config, args)?;
-            let index = index_from_args(config, args)?;
+            let registry = args.registry(config)?;
+            let index = args.index(config)?;
             let limit: Option<u8> = args.value_of("limit")
                 .and_then(|v| v.parse().ok()); //FIXME: validation
             let limit = min(100, limit.unwrap_or(10));
@@ -535,7 +535,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("yank", Some(args)) => {
-            let registry = registry_from_args(config, args)?;
+            let registry = args.registry(config)?;
 
             ops::yank(config,
                       args.value_of("crate").map(|s| s.to_string()),
