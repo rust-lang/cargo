@@ -20,6 +20,7 @@ use cargo::util::{CliError, ProcessError};
 
 mod cli;
 mod command_prelude;
+mod commands;
 
 
 fn main() {
