@@ -171,6 +171,18 @@ pub fn subcommand(name: &'static str) -> App {
 
 
 pub trait ArgMatchesExt {
+    fn value_of_u32(&self, name: &str) -> CargoResult<Option<u32>> {
+        let arg = match self._value_of(name) {
+            None => None,
+            Some(arg) => Some(arg.parse::<u32>().map_err(|_| {
+                clap::Error::value_validation_auto(
+                    format!("could not parse `{}` as a number", arg)
+                )
+            })?)
+        };
+        Ok(arg)
+    }
+
     fn root_manifest(&self, config: &Config) -> CargoResult<PathBuf> {
         let manifest_path = self._value_of("manifest-path");
         find_root_manifest_for_wd(manifest_path, config.cwd())
@@ -182,15 +194,7 @@ pub trait ArgMatchesExt {
     }
 
     fn jobs(&self) -> CargoResult<Option<u32>> {
-        let jobs = match self._value_of("jobs") {
-            None => None,
-            Some(jobs) => Some(jobs.parse::<u32>().map_err(|_| {
-                clap::Error::value_validation_auto(
-                    format!("could not parse `{}` as a number", jobs)
-                )
-            })?)
-        };
-        Ok(jobs)
+        self.value_of_u32("jobs")
     }
 
     fn target(&self) -> Option<String> {

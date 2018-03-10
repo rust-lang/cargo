@@ -202,10 +202,10 @@ impl Registry {
         })
     }
 
-    pub fn search(&mut self, query: &str, limit: u8) -> Result<(Vec<Crate>, u32)> {
-        let formated_query = percent_encode(query.as_bytes(), QUERY_ENCODE_SET);
+    pub fn search(&mut self, query: &str, limit: u32) -> Result<(Vec<Crate>, u32)> {
+        let formatted_query = percent_encode(query.as_bytes(), QUERY_ENCODE_SET);
         let body = self.req(
-            format!("/crates?q={}&per_page={}", formated_query, limit),
+            format!("/crates?q={}&per_page={}", formatted_query, limit),
             None, Auth::Unauthorized
         )?;
 

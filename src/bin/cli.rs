@@ -442,8 +442,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
         ("search", Some(args)) => {
             let registry = args.registry(config)?;
             let index = args.index(config)?;
-            let limit: Option<u8> = args.value_of("limit")
-                .and_then(|v| v.parse().ok()); //FIXME: validation
+            let limit = args.value_of_u32("limit")?;
             let limit = min(100, limit.unwrap_or(10));
             let query: Vec<&str> = args.values_of("query").unwrap_or_default().collect();
             let query: String = query.join("+");
