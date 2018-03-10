@@ -1,4 +1,4 @@
-use super::utils::*;
+use super::command_prelude::*;
 
 pub fn cli() -> App {
     subcommand("package")

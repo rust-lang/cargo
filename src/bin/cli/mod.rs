@@ -2,9 +2,7 @@ extern crate clap;
 #[cfg(never)]
 extern crate cargo;
 
-use std::slice;
 use std::io::{self, Read, BufRead};
-use std::path::PathBuf;
 use std::cmp::min;
 use std::fs::File;
 use std::collections::HashMap;
@@ -13,15 +11,13 @@ use std::process;
 use clap::{AppSettings, Arg, ArgMatches};
 use toml;
 
-use cargo::{self, Config, CargoResult, CargoError, CliResult, CliError};
-use cargo::core::{Workspace, Source, SourceId, GitReference, Package};
+use cargo::{self, Config, CargoError, CliResult, CliError};
+use cargo::core::{Source, SourceId, GitReference, Package};
 use cargo::util::{ToUrl, CargoResultExt};
-use cargo::util::important_paths::find_root_manifest_for_wd;
-use cargo::ops::{self, MessageFormat, Packages, CompileOptions, CompileMode, VersionControl,
-                 OutputMetadataOptions, NewOptions};
+use cargo::ops::{self, CompileMode, OutputMetadataOptions};
 use cargo::sources::{GitSource, RegistrySource};
 
-use self::utils::*;
+use self::command_prelude::*;
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
@@ -732,8 +728,16 @@ mod verify_project;
 mod version;
 mod yank;
 
-mod utils {
-    use clap::{self, SubCommand, AppSettings};
+mod command_prelude {
+    use std::path::PathBuf;
+
+    use clap::{self, SubCommand, AppSettings, ArgMatches};
+    use cargo::{Config, CargoResult};
+    use cargo::core::Workspace;
+    use cargo::ops::{CompileMode, CompileOptions, CompileFilter, Packages, MessageFormat,
+                     VersionControl, NewOptions};
+    use cargo::util::important_paths::find_root_manifest_for_wd;
+
     pub use clap::Arg;
 
     pub type App = clap::App<'static, 'static>;
@@ -895,142 +899,141 @@ a global configuration.")
                 AppSettings::DontCollapseArgsInUsage,
             ])
     }
-}
 
-fn values(args: &ArgMatches, name: &str) -> Vec<String> {
-    args.values_of(name).unwrap_or_default()
-        .map(|s| s.to_string())
-        .collect()
-}
-
-
-fn config_from_args(config: &mut Config, args: &ArgMatches) -> CargoResult<()> {
-    let color = args.value_of("color").map(|s| s.to_string());
-    config.configure(
-        args.occurrences_of("verbose") as u32,
-        if args.is_present("quite") { Some(true) } else { None },
-        &color,
-        args.is_present("frozen"),
-        args.is_present("locked"),
-        &args.values_of_lossy("unstable-features").unwrap_or_default(),
-    )
-}
-
-fn root_manifest_from_args(config: &Config, args: &ArgMatches) -> CargoResult<PathBuf> {
-    let manifest_path = args.value_of("manifest-path").map(|s| s.to_string());
-    find_root_manifest_for_wd(manifest_path, config.cwd())
-}
-
-fn workspace_from_args<'a>(config: &'a Config, args: &ArgMatches) -> CargoResult<Workspace<'a>> {
-    let root = root_manifest_from_args(config, args)?;
-    Workspace::new(&root, config)
-}
-
-fn jobs_from_args(args: &ArgMatches) -> CargoResult<Option<u32>> { //FIXME: validation
-    let jobs = match args.value_of("jobs") {
-        None => None,
-        Some(jobs) => Some(jobs.parse::<u32>().map_err(|_| {
-            clap::Error::value_validation_auto(
-                format!("could not parse `{}` as a number", jobs)
-            )
-        })?)
-    };
-    Ok(jobs)
-}
-
-fn compile_options_from_args<'a>(
-    config: &'a Config,
-    args: &'a ArgMatches<'a>,
-    mode: CompileMode,
-) -> CargoResult<CompileOptions<'a>> {
-    let spec = Packages::from_flags(
-        args.is_present("all"),
-        values(args, "exclude"),
-        values(args, "package"),
-    )?;
-
-    let message_format = match args.value_of("message-format") {
-        None => MessageFormat::Human,
-        Some(f) => {
-            if f.eq_ignore_ascii_case("json") {
-                MessageFormat::Json
-            } else if f.eq_ignore_ascii_case("human") {
-                MessageFormat::Human
-            } else {
-                panic!("Impossible message format: {:?}", f)
-            }
-        }
-    };
-
-    let opts = CompileOptions {
-        config,
-        jobs: jobs_from_args(args)?,
-        target: args.value_of("target"),
-        features: values(args, "features"),
-        all_features: args.is_present("all-features"),
-        no_default_features: args.is_present("no-default-features"),
-        spec,
-        mode,
-        release: args.is_present("release"),
-        filter: ops::CompileFilter::new(args.is_present("lib"),
-                                        values(args, "bin"), args.is_present("bins"),
-                                        values(args, "test"), args.is_present("tests"),
-                                        values(args, "example"), args.is_present("examples"),
-                                        values(args, "bench"), args.is_present("benches"),
-                                        args.is_present("all-targets")),
-        message_format,
-        target_rustdoc_args: None,
-        target_rustc_args: None,
-    };
-    Ok(opts)
-}
-
-fn compile_options_from_args_for_single_package<'a>(
-    config: &'a Config,
-    args: &'a ArgMatches<'a>,
-    mode: CompileMode,
-) -> CargoResult<CompileOptions<'a>> {
-    let mut compile_opts = compile_options_from_args(config, args, mode)?;
-    compile_opts.spec = Packages::Packages(values(args, "package"));
-    Ok(compile_opts)
-}
-
-fn new_opts_from_args<'a>(args: &'a ArgMatches<'a>, path: &'a str) -> CargoResult<NewOptions<'a>> {
-    let vcs = args.value_of("vcs").map(|vcs| match vcs {
-        "git" => VersionControl::Git,
-        "hg" => VersionControl::Hg,
-        "pijul" => VersionControl::Pijul,
-        "fossil" => VersionControl::Fossil,
-        "none" => VersionControl::NoVcs,
-        vcs => panic!("Impossible vcs: {:?}", vcs),
-    });
-    NewOptions::new(vcs,
-                    args.is_present("bin"),
-                    args.is_present("lib"),
-                    path,
-                    args.value_of("name"))
-}
-
-fn registry_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
-    match args.value_of("registry") {
-        Some(registry) => {
-            if !config.cli_unstable().unstable_options {
-                return Err(format_err!("registry option is an unstable feature and \
-                                requires -Zunstable-options to use.").into());
-            }
-            Ok(Some(registry.to_string()))
-        }
-        None => Ok(None),
+    pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
+        args.values_of(name).unwrap_or_default()
+            .map(|s| s.to_string())
+            .collect()
     }
-}
 
-fn index_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
-    // TODO: Deprecated
-    // remove once it has been decided --host can be removed
-    // We may instead want to repurpose the host flag, as
-    // mentioned in this issue
-    // https://github.com/rust-lang/cargo/issues/4208
-    let msg = "The flag '--host' is no longer valid.
+
+    pub fn config_from_args(config: &mut Config, args: &ArgMatches) -> CargoResult<()> {
+        let color = args.value_of("color").map(|s| s.to_string());
+        config.configure(
+            args.occurrences_of("verbose") as u32,
+            if args.is_present("quite") { Some(true) } else { None },
+            &color,
+            args.is_present("frozen"),
+            args.is_present("locked"),
+            &args.values_of_lossy("unstable-features").unwrap_or_default(),
+        )
+    }
+
+    pub fn root_manifest_from_args(config: &Config, args: &ArgMatches) -> CargoResult<PathBuf> {
+        let manifest_path = args.value_of("manifest-path").map(|s| s.to_string());
+        find_root_manifest_for_wd(manifest_path, config.cwd())
+    }
+
+    pub fn workspace_from_args<'a>(config: &'a Config, args: &ArgMatches) -> CargoResult<Workspace<'a>> {
+        let root = root_manifest_from_args(config, args)?;
+        Workspace::new(&root, config)
+    }
+
+    pub fn jobs_from_args(args: &ArgMatches) -> CargoResult<Option<u32>> { //FIXME: validation
+        let jobs = match args.value_of("jobs") {
+            None => None,
+            Some(jobs) => Some(jobs.parse::<u32>().map_err(|_| {
+                clap::Error::value_validation_auto(
+                    format!("could not parse `{}` as a number", jobs)
+                )
+            })?)
+        };
+        Ok(jobs)
+    }
+
+    pub fn compile_options_from_args<'a>(
+        config: &'a Config,
+        args: &'a ArgMatches<'a>,
+        mode: CompileMode,
+    ) -> CargoResult<CompileOptions<'a>> {
+        let spec = Packages::from_flags(
+            args.is_present("all"),
+            values(args, "exclude"),
+            values(args, "package"),
+        )?;
+
+        let message_format = match args.value_of("message-format") {
+            None => MessageFormat::Human,
+            Some(f) => {
+                if f.eq_ignore_ascii_case("json") {
+                    MessageFormat::Json
+                } else if f.eq_ignore_ascii_case("human") {
+                    MessageFormat::Human
+                } else {
+                    panic!("Impossible message format: {:?}", f)
+                }
+            }
+        };
+
+        let opts = CompileOptions {
+            config,
+            jobs: jobs_from_args(args)?,
+            target: args.value_of("target"),
+            features: values(args, "features"),
+            all_features: args.is_present("all-features"),
+            no_default_features: args.is_present("no-default-features"),
+            spec,
+            mode,
+            release: args.is_present("release"),
+            filter: CompileFilter::new(args.is_present("lib"),
+                                       values(args, "bin"), args.is_present("bins"),
+                                       values(args, "test"), args.is_present("tests"),
+                                       values(args, "example"), args.is_present("examples"),
+                                       values(args, "bench"), args.is_present("benches"),
+                                       args.is_present("all-targets")),
+            message_format,
+            target_rustdoc_args: None,
+            target_rustc_args: None,
+        };
+        Ok(opts)
+    }
+
+    pub fn compile_options_from_args_for_single_package<'a>(
+        config: &'a Config,
+        args: &'a ArgMatches<'a>,
+        mode: CompileMode,
+    ) -> CargoResult<CompileOptions<'a>> {
+        let mut compile_opts = compile_options_from_args(config, args, mode)?;
+        compile_opts.spec = Packages::Packages(values(args, "package"));
+        Ok(compile_opts)
+    }
+
+    pub fn new_opts_from_args<'a>(args: &'a ArgMatches<'a>, path: &'a str) -> CargoResult<NewOptions<'a>> {
+        let vcs = args.value_of("vcs").map(|vcs| match vcs {
+            "git" => VersionControl::Git,
+            "hg" => VersionControl::Hg,
+            "pijul" => VersionControl::Pijul,
+            "fossil" => VersionControl::Fossil,
+            "none" => VersionControl::NoVcs,
+            vcs => panic!("Impossible vcs: {:?}", vcs),
+        });
+        NewOptions::new(vcs,
+                        args.is_present("bin"),
+                        args.is_present("lib"),
+                        path,
+                        args.value_of("name"))
+    }
+
+    pub fn registry_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
+        match args.value_of("registry") {
+            Some(registry) => {
+                if !config.cli_unstable().unstable_options {
+                    return Err(format_err!("registry option is an unstable feature and \
+                                requires -Zunstable-options to use.").into());
+                }
+                Ok(Some(registry.to_string()))
+            }
+            None => Ok(None),
+        }
+    }
+
+    pub fn index_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
+        // TODO: Deprecated
+        // remove once it has been decided --host can be removed
+        // We may instead want to repurpose the host flag, as
+        // mentioned in this issue
+        // https://github.com/rust-lang/cargo/issues/4208
+        let msg = "The flag '--host' is no longer valid.
 
 Previous versions of Cargo accepted this flag, but it is being
 deprecated. The flag is being renamed to 'index', as the flag
@@ -1040,12 +1043,13 @@ This will soon become a hard error, so it's either recommended
 to update to a fixed version or contact the upstream maintainer
 about this warning.";
 
-    let index = match args.value_of("host") {
-        Some(host) => {
-            config.shell().warn(&msg)?;
-            Some(host.to_string())
-        }
-        None => args.value_of("index").map(|s| s.to_string())
-    };
-    Ok(index)
+        let index = match args.value_of("host") {
+            Some(host) => {
+                config.shell().warn(&msg)?;
+                Some(host.to_string())
+            }
+            None => args.value_of("index").map(|s| s.to_string())
+        };
+        Ok(index)
+    }
 }
