@@ -65,41 +65,43 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: &PackageId, checksum: &str)
-                -> CargoResult<FileLock> {
-        let crate_file = format!("{}-{}.crate", pkg.name(), pkg.version());
-        let mut crate_file = self.root.open_ro(&crate_file,
-                                               self.config,
-                                               "crate file")?;
+    fn download(&mut self, pkgs_with_checksum: &[(&PackageId, &str)])
+                -> CargoResult<Vec<FileLock>> {
+        pkgs_with_checksum.iter().map(|&(pkg, checksum)| {
+            let crate_file = format!("{}-{}.crate", pkg.name(), pkg.version());
+            let mut crate_file = self.root.open_ro(&crate_file,
+                                                   self.config,
+                                                   "crate file")?;
 
-        // If we've already got an unpacked version of this crate, then skip the
-        // checksum below as it is in theory already verified.
-        let dst = format!("{}-{}", pkg.name(), pkg.version());
-        if self.src_path.join(dst).into_path_unlocked().exists() {
-            return Ok(crate_file)
-        }
-
-        self.config.shell().status("Unpacking", pkg)?;
-
-        // We don't actually need to download anything per-se, we just need to
-        // verify the checksum matches the .crate file itself.
-        let mut state = Sha256::new();
-        let mut buf = [0; 64 * 1024];
-        loop {
-            let n = crate_file.read(&mut buf).chain_err(|| {
-                format!("failed to read `{}`", crate_file.path().display())
-            })?;
-            if n == 0 {
-                break
+            // If we've already got an unpacked version of this crate, then skip the
+            // checksum below as it is in theory already verified.
+            let dst = format!("{}-{}", pkg.name(), pkg.version());
+            if self.src_path.join(dst).into_path_unlocked().exists() {
+                return Ok(crate_file);
             }
-            state.update(&buf[..n]);
-        }
-        if hex::encode(state.finish()) != checksum {
-            bail!("failed to verify the checksum of `{}`", pkg)
-        }
 
-        crate_file.seek(SeekFrom::Start(0))?;
+            self.config.shell().status("Unpacking", pkg)?;
 
-        Ok(crate_file)
+            // We don't actually need to download anything per-se, we just need to
+            // verify the checksum matches the .crate file itself.
+            let mut state = Sha256::new();
+            let mut buf = [0; 64 * 1024];
+            loop {
+                let n = crate_file.read(&mut buf).chain_err(|| {
+                    format!("failed to read `{}`", crate_file.path().display())
+                })?;
+                if n == 0 {
+                    break;
+                }
+                state.update(&buf[..n]);
+            }
+            if hex::encode(state.finish()) != checksum {
+                bail!("failed to verify the checksum of `{}`", pkg)
+            }
+
+            crate_file.seek(SeekFrom::Start(0))?;
+
+            Ok(crate_file)
+        }).collect()
     }
 }
