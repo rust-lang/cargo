@@ -176,18 +176,6 @@ pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
 }
 
 
-pub fn config_from_args(config: &mut Config, args: &ArgMatches) -> CargoResult<()> {
-    let color = args.value_of("color").map(|s| s.to_string());
-    config.configure(
-        args.occurrences_of("verbose") as u32,
-        if args.is_present("quite") { Some(true) } else { None },
-        &color,
-        args.is_present("frozen"),
-        args.is_present("locked"),
-        &args.values_of_lossy("unstable-features").unwrap_or_default(),
-    )
-}
-
 pub fn root_manifest_from_args(config: &Config, args: &ArgMatches) -> CargoResult<PathBuf> {
     let manifest_path = args.value_of("manifest-path").map(|s| s.to_string());
     find_root_manifest_for_wd(manifest_path, config.cwd())

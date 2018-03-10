@@ -73,7 +73,14 @@ pub fn do_main(config: &mut Config) -> CliResult {
 }
 
 fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
-    config_from_args(config, &args)?;
+    config.configure(
+        args.occurrences_of("verbose") as u32,
+        if args.is_present("quite") { Some(true) } else { None },
+        &args.value_of("color").map(|s| s.to_string()),
+        args.is_present("frozen"),
+        args.is_present("locked"),
+        &args.values_of_lossy("unstable-features").unwrap_or_default(),
+    )?;
 
     match args.subcommand() {
         ("bench", Some(args)) => {
