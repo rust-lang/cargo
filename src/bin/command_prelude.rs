@@ -169,20 +169,30 @@ pub fn subcommand(name: &'static str) -> App {
         ])
 }
 
+
+pub trait ArgMatchesExt: Sized {
+    fn root_manifest(&self, config: &Config) -> CargoResult<PathBuf> {
+        let manifest_path = self._value_of("manifest-path");
+        find_root_manifest_for_wd(manifest_path, config.cwd())
+    }
+
+    fn _value_of(&self, name: &str) -> Option<&str>;
+}
+
+impl<'a> ArgMatchesExt for ArgMatches<'a> {
+    fn _value_of(&self, name: &str) -> Option<&str> {
+        self.value_of(name)
+    }
+}
+
 pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
     args.values_of(name).unwrap_or_default()
         .map(|s| s.to_string())
         .collect()
 }
 
-
-pub fn root_manifest_from_args(config: &Config, args: &ArgMatches) -> CargoResult<PathBuf> {
-    let manifest_path = args.value_of("manifest-path").map(|s| s.to_string());
-    find_root_manifest_for_wd(manifest_path, config.cwd())
-}
-
 pub fn workspace_from_args<'a>(config: &'a Config, args: &ArgMatches) -> CargoResult<Workspace<'a>> {
-    let root = root_manifest_from_args(config, args)?;
+    let root = args.root_manifest(config)?;
     Workspace::new(&root, config)
 }
 
