@@ -1,4 +1,4 @@
-use super::command_prelude::*;
+use command_prelude::*;
 
 pub fn cli() -> App {
     subcommand("install")
