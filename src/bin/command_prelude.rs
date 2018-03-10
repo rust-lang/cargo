@@ -11,7 +11,7 @@ pub use clap::Arg;
 
 pub type App = clap::App<'static, 'static>;
 
-pub trait CommonArgs: Sized {
+pub trait AppExt: Sized {
     fn _arg(self, arg: Arg<'static, 'static>) -> Self;
 
     fn arg_package(self, package: &'static str, all: &'static str, exclude: &'static str) -> Self {
@@ -150,7 +150,7 @@ a global configuration.")
     }
 }
 
-impl CommonArgs for App {
+impl AppExt for App {
     fn _arg(self, arg: Arg<'static, 'static>) -> Self {
         self.arg(arg)
     }
