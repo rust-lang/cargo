@@ -224,7 +224,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("locate-project", Some(args)) => {
-            let root = root_manifest_from_args(config, args)?;
+            let root = args.root_manifest(config)?;
 
             let root = root.to_str()
                 .ok_or_else(|| format_err!("your project path contains characters \
@@ -364,7 +364,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("read-manifest", Some(args)) => {
-            let root = root_manifest_from_args(config, args)?;
+            let root = args.root_manifest(config)?;
             let pkg = Package::for_path(&root, config)?;
             cargo::print_json(&pkg);
             Ok(())
@@ -512,7 +512,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             }
 
             let mut contents = String::new();
-            let filename = match root_manifest_from_args(config, args) {
+            let filename = match args.root_manifest(config) {
                 Ok(filename) => filename,
                 Err(e) => fail("invalid", &e.to_string()),
             };
