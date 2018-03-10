@@ -20,7 +20,7 @@ pub trait Source: Registry {
 
     /// The download method fetches the full package for each name and
     /// version specified.
-    fn download(&mut self, package: &PackageId) -> CargoResult<Package>;
+    fn download(&mut self, ids: &[&PackageId]) -> CargoResult<Vec<Package>>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
@@ -57,8 +57,8 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
     }
 
     /// Forwards to `Source::download`
-    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
-        (**self).download(id)
+    fn download(&mut self, ids: &[&PackageId]) -> CargoResult<Vec<Package>> {
+        (**self).download(ids)
     }
 
     /// Forwards to `Source::fingerprint`

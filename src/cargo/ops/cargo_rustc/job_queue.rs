@@ -400,7 +400,7 @@ impl<'a> Key<'a> {
     fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>)
                           -> CargoResult<Vec<Key<'a>>> {
         let unit = Unit {
-            pkg: cx.get_package(self.pkg)?,
+            pkg: cx.get_packages(&[self.pkg])?[0],
             target: self.target,
             profile: self.profile,
             kind: self.kind,

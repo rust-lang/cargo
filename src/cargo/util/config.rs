@@ -2,6 +2,7 @@ use std::cell::{RefCell, RefMut};
 use std::collections::HashSet;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::hash_map::HashMap;
+use std::cmp;
 use std::env;
 use std::fmt;
 use std::fs::{self, File};
@@ -12,7 +13,8 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Once, ONCE_INIT};
 
-use curl::easy::Easy;
+use curl::easy::{Easy, Easy2, Handler};
+use curl::multi::Multi;
 use jobserver;
 use serde::{Serialize, Serializer};
 use toml;
@@ -661,6 +663,22 @@ impl Config {
             ops::configure_http_handle(self, &mut http)?;
         }
         Ok(http)
+    }
+
+    pub fn http_multi<H: Handler, F: FnMut() -> H>(&self, max: usize, mut handler: F) -> CargoResult<(Multi, Vec<Easy2<H>>)> {
+        let concurrency = self.get_i64("http.concurrency")?.map(|x| x.val).unwrap_or(16);
+        if concurrency <= 0 {
+            bail!("http.concurrency must be positive, got {}", concurrency);
+        }
+        let multi = ops::http_multi_handle(self)?;
+        let easy: CargoResult<Vec<_>> = (0..cmp::min(max, concurrency as usize)).map(|_| ops::http_easy2_handle(self, handler())).collect();
+        Ok((multi, easy?))
+    }
+
+    pub fn http_easy2_reset<H: Handler>(&self, handle: &mut Easy2<H>) -> CargoResult<()> {
+        handle.reset();
+        ops::configure_http_easy2_handle(self, handle)?;
+        Ok(())
     }
 
     pub fn crates_io_source_id<F>(&self, f: F) -> CargoResult<SourceId>

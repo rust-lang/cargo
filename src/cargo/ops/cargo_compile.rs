@@ -247,12 +247,11 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                                               )?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let to_builds = specs.iter().map(|p| {
-        let pkgid = p.query(resolve_with_overrides.iter())?;
-        let p = packages.get(pkgid)?;
-        p.manifest().print_teapot(ws.config());
-        Ok(p)
-    }).collect::<CargoResult<Vec<_>>>()?;
+    let pkg_ids: CargoResult<Vec<_>> = specs.iter().map(|p| p.query(resolve_with_overrides.iter())).collect();
+    let to_builds = packages.get(&*pkg_ids?)?;
+    for pkg in &to_builds {
+        pkg.manifest().print_teapot(ws.config());
+    }
 
     let mut general_targets = Vec::new();
     let mut package_targets = Vec::new();

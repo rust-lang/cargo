@@ -54,9 +54,8 @@ fn metadata_full(ws: &Workspace,
                                          &specs)?;
     let (packages, resolve) = deps;
 
-    let packages = packages.package_ids()
-                           .map(|i| packages.get(i).map(|p| p.clone()))
-                           .collect::<CargoResult<Vec<_>>>()?;
+    let package_ids: Vec<_> = packages.package_ids().collect();
+    let packages: Vec<_> = packages.get(&*package_ids)?.into_iter().cloned().collect();
 
     Ok(ExportInfo {
         packages,

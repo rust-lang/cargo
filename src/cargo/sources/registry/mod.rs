@@ -249,8 +249,7 @@ pub trait RegistryData {
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
     fn download(&mut self,
-                pkg: &PackageId,
-                checksum: &str) -> CargoResult<FileLock>;
+                pkgs_with_checksum: &[(&PackageId, &str)]) -> CargoResult<Vec<FileLock>>;
 
     fn is_crate_downloaded(&self, _pkg: &PackageId) -> bool { true }
 }
@@ -421,27 +420,30 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
-        let hash = self.index.hash(package, &mut *self.ops)?;
-        let path = self.ops.download(package, &hash)?;
-        let path = self.unpack_package(package, &path).chain_err(|| {
-            internal(format!("failed to unpack package `{}`", package))
-        })?;
-        let mut src = PathSource::new(&path, &self.source_id, self.config);
-        src.update()?;
-        let pkg = src.download(package)?;
+    fn download(&mut self, packages: &[&PackageId]) -> CargoResult<Vec<Package>> {
+        let hashes = packages.iter().map(|&package| self.index.hash(package, &mut *self.ops)).collect::<CargoResult<Vec<_>>>()?;
+        let pkgs_with_checksum: Vec<_> = packages.iter().zip(&hashes).map(|(&pkg, &ref checksum)| (pkg, &**checksum)).collect();
+        let paths = self.ops.download(&*pkgs_with_checksum)?;
+        paths.into_iter().zip(packages).map(|(path, &package)| {
+            let path = self.unpack_package(package, &path).chain_err(|| {
+                internal(format!("failed to unpack package `{}`", package))
+            })?;
+            let mut src = PathSource::new(&path, &self.source_id, self.config);
+            src.update()?;
+            let pkg = src.download(&[package])?.into_iter().next().unwrap();
 
-        // Unfortunately the index and the actual Cargo.toml in the index can
-        // differ due to historical Cargo bugs. To paper over these we trash the
-        // *summary* loaded from the Cargo.toml we just downloaded with the one
-        // we loaded from the index.
-        let summaries = self.index.summaries(&*package.name(), &mut *self.ops)?;
-        let summary = summaries.iter().map(|s| &s.0).find(|s| {
-            s.package_id() == package
-        }).expect("summary not found");
-        let mut manifest = pkg.manifest().clone();
-        manifest.set_summary(summary.clone());
-        Ok(Package::new(manifest, pkg.manifest_path()))
+            // Unfortunately the index and the actual Cargo.toml in the index can
+            // differ due to historical Cargo bugs. To paper over these we trash the
+            // *summary* loaded from the Cargo.toml we just downloaded with the one
+            // we loaded from the index.
+            let summaries = self.index.summaries(&*package.name(), &mut *self.ops)?;
+            let summary = summaries.iter().map(|s| &s.0).find(|s| {
+                s.package_id() == package
+            }).expect("summary not found");
+            let mut manifest = pkg.manifest().clone();
+            manifest.set_summary(summary.clone());
+            Ok(Package::new(manifest, pkg.manifest_path()))
+        }).collect()
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

@@ -200,12 +200,14 @@ impl<'cfg> Source for GitSource<'cfg> {
         self.path_source.as_mut().unwrap().update()
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
-        trace!("getting packages for package id `{}` from `{:?}`", id,
-               self.remote);
+    fn download(&mut self, ids: &[&PackageId]) -> CargoResult<Vec<Package>> {
+        for id in ids {
+            trace!("getting packages for package id `{}` from `{:?}`", id,
+                   self.remote);
+        }
         self.path_source.as_mut()
-                        .expect("BUG: update() must be called before get()")
-                        .download(id)
+            .expect("BUG: update() must be called before get()")
+            .download(ids)
     }
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
