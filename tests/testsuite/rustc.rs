@@ -355,14 +355,10 @@ fn fail_with_multiple_packages() {
 
     assert_that(foo.cargo("rustc").arg("-v").arg("-p").arg("bar")
                                           .arg("-p").arg("baz"),
-                execs().with_status(1).with_stderr("\
+                execs().with_status(1).with_stderr_contains("\
 error: The argument '--package <SPEC>' was provided more than once, \
        but cannot be used multiple times
-
-USAGE:
-    cargo rustc --message-format <FMT> --package <SPEC> --verbose
-
-For more information try --help"));
+"));
 }
 
 #[test]

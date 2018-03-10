@@ -809,13 +809,9 @@ fn run_multiple_packages() {
     assert_that(cargo().arg("-p").arg("d1").arg("-p").arg("d2"),
                 execs()
                     .with_status(1)
-                    .with_stderr("\
+                    .with_stderr_contains("\
 error: The argument '--package <SPEC>' was provided more than once, but cannot be used multiple times
-
-USAGE:
-    cargo run --message-format <FMT> --package <SPEC>
-
-For more information try --help"));
+"));
 
     assert_that(cargo().arg("-p").arg("d3"),
                 execs()

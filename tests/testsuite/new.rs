@@ -103,14 +103,9 @@ fn simple_git() {
 fn no_argument() {
     assert_that(cargo_process("new"),
                 execs().with_status(1)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 error: The following required arguments were not provided:
     <path>
-
-USAGE:
-    cargo new [OPTIONS] <path>
-
-For more information try --help
 "));
 }
 
@@ -375,13 +370,8 @@ fn subpackage_git_with_vcs_arg() {
 fn unknown_flags() {
     assert_that(cargo_process("new").arg("foo").arg("--flag"),
                 execs().with_status(1)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 error: Found argument '--flag' which wasn't expected, or isn't valid in this context
-
-USAGE:
-    cargo new [OPTIONS] <path>
-
-For more information try --help
 "));
 }
 

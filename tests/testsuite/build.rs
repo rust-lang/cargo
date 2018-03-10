@@ -3250,15 +3250,9 @@ fn wrong_message_format_option() {
 
     assert_that(p.cargo("build").arg("--message-format").arg("XML"),
                 execs().with_status(1)
-                       .with_stderr("\
+                       .with_stderr_contains("\
 error: 'XML' isn't a valid value for '--message-format <FMT>'
 <tab>[possible values: human, json]
-
-
-USAGE:
-    cargo build --message-format <FMT>
-
-For more information try --help
 "));
 }
 
