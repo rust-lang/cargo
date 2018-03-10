@@ -19,11 +19,11 @@ use toml;
 pub enum VersionControl { Git, Hg, Pijul, Fossil, NoVcs }
 
 #[derive(Debug)]
-pub struct NewOptions<'a> {
+pub struct NewOptions {
     pub version_control: Option<VersionControl>,
     pub kind: NewProjectKind,
-    pub path: &'a str,
-    pub name: Option<&'a str>,
+    pub path: String,
+    pub name: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -61,12 +61,12 @@ struct MkOptions<'a> {
     bin: bool,
 }
 
-impl<'a> NewOptions<'a> {
+impl NewOptions {
     pub fn new(version_control: Option<VersionControl>,
                bin: bool,
                lib: bool,
-               path: &'a str,
-               name: Option<&'a str>) -> CargoResult<NewOptions<'a>> {
+               path: String,
+               name: Option<String>) -> CargoResult<NewOptions> {
 
         let kind = match (bin, lib) {
             (true, true) => bail!("can't specify both lib and binary outputs"),
@@ -87,7 +87,7 @@ struct CargoNewConfig {
 }
 
 fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
-    if let Some(name) = opts.name {
+    if let Some(ref name) = opts.name {
         return Ok(name);
     }
 
@@ -256,7 +256,7 @@ fn plan_new_source_file(bin: bool, project_name: String) -> SourceFileInformatio
 }
 
 pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
-    let path = config.cwd().join(opts.path);
+    let path = config.cwd().join(&opts.path);
     if fs::metadata(&path).is_ok() {
         bail!("destination `{}` already exists\n\n\
             Use `cargo init` to initialize the directory\
@@ -283,7 +283,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
 }
 
 pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
-    let path = config.cwd().join(opts.path);
+    let path = config.cwd().join(&opts.path);
 
     let cargotoml_path = path.join("Cargo.toml");
     if fs::metadata(&cargotoml_path).is_ok() {
