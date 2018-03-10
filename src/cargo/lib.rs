@@ -1,5 +1,4 @@
 #![cfg_attr(test, deny(warnings))]
-#![recursion_limit="128"]
 
 // Currently, Cargo does not use clippy for its source code.
 // But if someone runs it they should know that
