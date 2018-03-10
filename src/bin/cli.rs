@@ -140,7 +140,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             let opts = ops::CleanOptions {
                 config,
                 spec: values(args, "package"),
-                target: args.value_of("target"),
+                target: args.target(),
                 release: args.is_present("release"),
             };
             ops::clean(&ws, &opts)?;
@@ -332,7 +332,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                 list: args.is_present("list"),
                 check_metadata: !args.is_present("no-metadata"),
                 allow_dirty: args.is_present("allow-dirty"),
-                target: args.value_of("target"),
+                target: args.target(),
                 jobs: args.jobs()?,
                 registry: None,
             })?;
@@ -356,7 +356,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                 index,
                 verify: !args.is_present("no-verify"),
                 allow_dirty: args.is_present("allow-dirty"),
-                target: args.value_of("target"),
+                target: args.target(),
                 jobs: args.jobs()?,
                 dry_run: args.is_present("dry-run"),
                 registry,

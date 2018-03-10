@@ -193,6 +193,10 @@ pub trait ArgMatchesExt {
         Ok(jobs)
     }
 
+    fn target(&self) -> Option<String> {
+        self._value_of("target").map(|s| s.to_string())
+    }
+
     fn _value_of(&self, name: &str) -> Option<&str>;
 }
 
@@ -235,7 +239,7 @@ pub fn compile_options_from_args<'a>(
     let opts = CompileOptions {
         config,
         jobs: args.jobs()?,
-        target: args.value_of("target"),
+        target: args.target(),
         features: values(args, "features"),
         all_features: args.is_present("all-features"),
         no_default_features: args.is_present("no-default-features"),
