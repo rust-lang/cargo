@@ -84,7 +84,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
 
     match args.subcommand() {
         ("bench", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
             let mut compile_opts = compile_options_from_args(config, args, CompileMode::Bench)?;
             compile_opts.release = true;
 
@@ -111,7 +111,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             }
         }
         ("build", Some(args)) => {
-            let mut ws = workspace_from_args(config, args)?;
+            let mut ws = args.workspace(config)?;
             if config.cli_unstable().avoid_dev_deps {
                 ws.set_require_optional_deps(false);
             }
@@ -120,7 +120,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("check", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
             let test = match args.value_of("profile") {
                 Some("test") => true,
                 None => false,
@@ -136,7 +136,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("clean", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
             let opts = ops::CleanOptions {
                 config,
                 spec: values(args, "package"),
@@ -147,7 +147,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("doc", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
             let mode = ops::CompileMode::Doc { deps: !args.is_present("no-deps") };
             let compile_opts = compile_options_from_args(config, args, mode)?;
             let doc_opts = ops::DocOptions {
@@ -158,12 +158,12 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("fetch", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
             ops::fetch(&ws)?;
             Ok(())
         }
         ("generate-lockfile", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
             ops::generate_lockfile(&ws)?;
             Ok(())
         }
@@ -276,7 +276,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("metadata", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
 
             let version = match args.value_of("format-version") {
                 None => {
@@ -325,7 +325,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("package", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
             ops::package(&ws, &ops::PackageOpts {
                 config,
                 verify: !args.is_present("no-verify"),
@@ -333,13 +333,13 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                 check_metadata: !args.is_present("no-metadata"),
                 allow_dirty: args.is_present("allow-dirty"),
                 target: args.value_of("target"),
-                jobs: jobs_from_args(args)?,
+                jobs: args.jobs()?,
                 registry: None,
             })?;
             Ok(())
         }
         ("pkgid", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
             let spec = args.value_of("spec").or(args.value_of("package"));
             let spec = ops::pkgid(&ws, spec)?;
             println!("{}", spec);
@@ -347,7 +347,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
         }
         ("publish", Some(args)) => {
             let registry = registry_from_args(config, args)?;
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
             let index = index_from_args(config, args)?;
 
             ops::publish(&ws, &ops::PublishOpts {
@@ -357,7 +357,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                 verify: !args.is_present("no-verify"),
                 allow_dirty: args.is_present("allow-dirty"),
                 target: args.value_of("target"),
-                jobs: jobs_from_args(args)?,
+                jobs: args.jobs()?,
                 dry_run: args.is_present("dry-run"),
                 registry,
             })?;
@@ -370,7 +370,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("run", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
 
             let mut compile_opts = compile_options_from_args_for_single_package(
                 config, args, CompileMode::Build,
@@ -403,7 +403,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             }
         }
         ("rustc", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
             let mode = match args.value_of("profile") {
                 Some("dev") | None => CompileMode::Build,
                 Some("test") => CompileMode::Test,
@@ -423,7 +423,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("rustdoc", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
             let mut compile_opts = compile_options_from_args_for_single_package(
                 config, args, CompileMode::Doc { deps: false },
             )?;
@@ -447,7 +447,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("test", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
 
             let mut compile_opts = compile_options_from_args(config, args, CompileMode::Test)?;
             let doc = args.is_present("doc");
@@ -492,7 +492,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("update", Some(args)) => {
-            let ws = workspace_from_args(config, args)?;
+            let ws = args.workspace(config)?;
 
             let update_opts = ops::UpdateOptions {
                 aggressive: args.is_present("aggressive"),
