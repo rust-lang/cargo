@@ -254,6 +254,22 @@ pub trait ArgMatchesExt {
         Ok(compile_opts)
     }
 
+    fn new_options(&self) -> CargoResult<NewOptions> {
+        let vcs = self._value_of("vcs").map(|vcs| match vcs {
+            "git" => VersionControl::Git,
+            "hg" => VersionControl::Hg,
+            "pijul" => VersionControl::Pijul,
+            "fossil" => VersionControl::Fossil,
+            "none" => VersionControl::NoVcs,
+            vcs => panic!("Impossible vcs: {:?}", vcs),
+        });
+        NewOptions::new(vcs,
+                        self._is_present("bin"),
+                        self._is_present("lib"),
+                        self._value_of("path").unwrap().to_string(),
+                        self._value_of("name").map(|s| s.to_string()))
+    }
+
     fn _value_of(&self, name: &str) -> Option<&str>;
 
     fn _values_of(&self, name: &str) -> Vec<String>;
@@ -281,22 +297,6 @@ pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
     args.values_of(name).unwrap_or_default()
         .map(|s| s.to_string())
         .collect()
-}
-
-pub fn new_opts_from_args<'a>(args: &'a ArgMatches<'a>, path: &'a str) -> CargoResult<NewOptions<'a>> {
-    let vcs = args.value_of("vcs").map(|vcs| match vcs {
-        "git" => VersionControl::Git,
-        "hg" => VersionControl::Hg,
-        "pijul" => VersionControl::Pijul,
-        "fossil" => VersionControl::Fossil,
-        "none" => VersionControl::NoVcs,
-        vcs => panic!("Impossible vcs: {:?}", vcs),
-    });
-    NewOptions::new(vcs,
-                    args.is_present("bin"),
-                    args.is_present("lib"),
-                    path,
-                    args.value_of("name"))
 }
 
 pub fn registry_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {

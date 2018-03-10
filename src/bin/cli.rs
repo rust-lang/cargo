@@ -181,8 +181,7 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("init", Some(args)) => {
-            let path = args.value_of("path").unwrap_or(".");
-            let opts = new_opts_from_args(args, path)?;
+            let opts = args.new_options()?;
             ops::init(&opts, config)?;
             config.shell().status("Created", format!("{} project", opts.kind))?;
             Ok(())
@@ -302,9 +301,9 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
             Ok(())
         }
         ("new", Some(args)) => {
-            let path = args.value_of("path").unwrap();
-            let opts = new_opts_from_args(args, path)?;
+            let opts = args.new_options()?;
             ops::new(&opts, config)?;
+            let path = args.value_of("path").unwrap();
             config.shell().status("Created", format!("{} `{}` project", opts.kind, path))?;
             Ok(())
         }
