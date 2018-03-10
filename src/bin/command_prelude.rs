@@ -270,6 +270,45 @@ pub trait ArgMatchesExt {
                         self._value_of("name").map(|s| s.to_string()))
     }
 
+    fn registry(&self, config: &Config) -> CargoResult<Option<String>> {
+        match self._value_of("registry") {
+            Some(registry) => {
+                if !config.cli_unstable().unstable_options {
+                    return Err(format_err!("registry option is an unstable feature and \
+                            requires -Zunstable-options to use.").into());
+                }
+                Ok(Some(registry.to_string()))
+            }
+            None => Ok(None),
+        }
+    }
+
+    fn index(&self, config: &Config) -> CargoResult<Option<String>> {
+        // TODO: Deprecated
+        // remove once it has been decided --host can be removed
+        // We may instead want to repurpose the host flag, as
+        // mentioned in this issue
+        // https://github.com/rust-lang/cargo/issues/4208
+        let msg = "The flag '--host' is no longer valid.
+
+Previous versions of Cargo accepted this flag, but it is being
+deprecated. The flag is being renamed to 'index', as the flag
+wants the location of the index. Please use '--index' instead.
+
+This will soon become a hard error, so it's either recommended
+to update to a fixed version or contact the upstream maintainer
+about this warning.";
+
+        let index = match self._value_of("host") {
+            Some(host) => {
+                config.shell().warn(&msg)?;
+                Some(host.to_string())
+            }
+            None => self._value_of("index").map(|s| s.to_string())
+        };
+        Ok(index)
+    }
+
     fn _value_of(&self, name: &str) -> Option<&str>;
 
     fn _values_of(&self, name: &str) -> Vec<String>;
@@ -297,43 +336,4 @@ pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
     args.values_of(name).unwrap_or_default()
         .map(|s| s.to_string())
         .collect()
-}
-
-pub fn registry_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
-    match args.value_of("registry") {
-        Some(registry) => {
-            if !config.cli_unstable().unstable_options {
-                return Err(format_err!("registry option is an unstable feature and \
-                            requires -Zunstable-options to use.").into());
-            }
-            Ok(Some(registry.to_string()))
-        }
-        None => Ok(None),
-    }
-}
-
-pub fn index_from_args(config: &Config, args: &ArgMatches) -> CargoResult<Option<String>> {
-    // TODO: Deprecated
-    // remove once it has been decided --host can be removed
-    // We may instead want to repurpose the host flag, as
-    // mentioned in this issue
-    // https://github.com/rust-lang/cargo/issues/4208
-    let msg = "The flag '--host' is no longer valid.
-
-Previous versions of Cargo accepted this flag, but it is being
-deprecated. The flag is being renamed to 'index', as the flag
-wants the location of the index. Please use '--index' instead.
-
-This will soon become a hard error, so it's either recommended
-to update to a fixed version or contact the upstream maintainer
-about this warning.";
-
-    let index = match args.value_of("host") {
-        Some(host) => {
-            config.shell().warn(&msg)?;
-            Some(host.to_string())
-        }
-        None => args.value_of("index").map(|s| s.to_string())
-    };
-    Ok(index)
 }
