@@ -1,11 +1,9 @@
 extern crate clap;
-#[cfg(never)]
-extern crate cargo;
 
-use std::io::{self, Read, BufRead};
 use std::cmp::min;
-use std::fs::File;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{self, Read, BufRead};
 use std::process;
 
 use clap::{AppSettings, Arg, ArgMatches};
@@ -13,20 +11,15 @@ use toml;
 
 use cargo::{self, Config, CargoError, CliResult, CliError};
 use cargo::core::{Source, SourceId, GitReference, Package};
-use cargo::util::{ToUrl, CargoResultExt};
 use cargo::ops::{self, CompileMode, OutputMetadataOptions};
 use cargo::sources::{GitSource, RegistrySource};
+use cargo::util::{ToUrl, CargoResultExt};
 
-use std::collections::BTreeSet;
-use std::env;
-use std::fs;
-
-use search_directories;
-use is_executable;
+use super::list_commands;
+use super::commands;
 use command_prelude::*;
-use commands;
 
-pub fn do_main(config: &mut Config) -> CliResult {
+pub fn main(config: &mut Config) -> CliResult {
     let args = cli().get_matches_safe()?;
     let is_verbose = args.occurrences_of("verbose") > 0;
     if args.is_present("version") {
@@ -641,41 +634,4 @@ See 'cargo help <command>' for more information on a specific command."
         .subcommands(commands::builtin())
     ;
     app
-}
-
-
-/// List all runnable commands
-pub fn list_commands(config: &Config) -> BTreeSet<(String, Option<String>)> {
-    let prefix = "cargo-";
-    let suffix = env::consts::EXE_SUFFIX;
-    let mut commands = BTreeSet::new();
-    for dir in search_directories(config) {
-        let entries = match fs::read_dir(dir) {
-            Ok(entries) => entries,
-            _ => continue,
-        };
-        for entry in entries.filter_map(|e| e.ok()) {
-            let path = entry.path();
-            let filename = match path.file_name().and_then(|s| s.to_str()) {
-                Some(filename) => filename,
-                _ => continue,
-            };
-            if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
-                continue;
-            }
-            if is_executable(entry.path()) {
-                let end = filename.len() - suffix.len();
-                commands.insert(
-                    (filename[prefix.len()..end].to_string(),
-                     Some(path.display().to_string()))
-                );
-            }
-        }
-    }
-
-    for cmd in commands::builtin() {
-        commands.insert((cmd.get_name().to_string(), None));
-    }
-
-    commands
 }

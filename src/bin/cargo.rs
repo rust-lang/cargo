@@ -13,6 +13,7 @@ extern crate clap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::collections::BTreeSet;
 
 use cargo::core::shell::Shell;
 use cargo::util::{self, CliResult, lev_distance, Config, CargoResult};
@@ -37,7 +38,7 @@ fn main() {
     let result = {
         init_git_transports(&mut config);
         let _token = cargo::util::job::setup();
-        cli::do_main(&mut config)
+        cli::main(&mut config)
     };
 
     match result {
@@ -73,8 +74,45 @@ fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<Str
     result
 }
 
+/// List all runnable commands
+fn list_commands(config: &Config) -> BTreeSet<(String, Option<String>)> {
+    let prefix = "cargo-";
+    let suffix = env::consts::EXE_SUFFIX;
+    let mut commands = BTreeSet::new();
+    for dir in search_directories(config) {
+        let entries = match fs::read_dir(dir) {
+            Ok(entries) => entries,
+            _ => continue,
+        };
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            let filename = match path.file_name().and_then(|s| s.to_str()) {
+                Some(filename) => filename,
+                _ => continue,
+            };
+            if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
+                continue;
+            }
+            if is_executable(entry.path()) {
+                let end = filename.len() - suffix.len();
+                commands.insert(
+                    (filename[prefix.len()..end].to_string(),
+                     Some(path.display().to_string()))
+                );
+            }
+        }
+    }
+
+    for cmd in commands::builtin() {
+        commands.insert((cmd.get_name().to_string(), None));
+    }
+
+    commands
+}
+
+
 fn find_closest(config: &Config, cmd: &str) -> Option<String> {
-    let cmds = cli::list_commands(config);
+    let cmds = list_commands(config);
     // Only consider candidates with a lev_distance of 3 or less so we don't
     // suggest out-of-the-blue options.
     let mut filtered = cmds.iter()
