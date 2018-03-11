@@ -29,7 +29,7 @@ Cargo requires the following tools and packages to build:
 First, you'll want to check out this repository
 
 ```
-git clone --recursive https://github.com/rust-lang/cargo
+git clone https://github.com/rust-lang/cargo
 cd cargo
 ```
 
