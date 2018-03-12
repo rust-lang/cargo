@@ -1,5 +1,7 @@
 use command_prelude::*;
 
+use cargo::ops::{self, UpdateOptions};
+
 pub fn cli() -> App {
     subcommand("update")
         .about("Update dependencies as recorded in the local lock file")
@@ -34,4 +36,17 @@ updated.
 
 For more information about package id specifications, see `cargo help pkgid`.
 ")
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(config)?;
+
+    let update_opts = UpdateOptions {
+        aggressive: args.is_present("aggressive"),
+        precise: args.value_of("precise"),
+        to_update: values(args, "package"),
+        config,
+    };
+    ops::update_lockfile(&ws, &update_opts)?;
+    Ok(())
 }

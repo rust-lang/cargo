@@ -1,5 +1,7 @@
 use command_prelude::*;
 
+use cargo::ops::{self, OwnersOptions};
+
 pub fn cli() -> App {
     subcommand("owner")
         .about("Manage the owners of a crate on the registry")
@@ -25,4 +27,21 @@ pub fn cli() -> App {
 
         See http://doc.crates.io/crates-io.html#cargo-owner for detailed documentation
         and troubleshooting.")
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let registry = args.registry(config)?;
+    let opts = OwnersOptions {
+        krate: args.value_of("crate").map(|s| s.to_string()),
+        token: args.value_of("token").map(|s| s.to_string()),
+        index: args.value_of("index").map(|s| s.to_string()),
+        to_add: args.values_of("add")
+            .map(|xs| xs.map(|s| s.to_string()).collect()),
+        to_remove: args.values_of("remove")
+            .map(|xs| xs.map(|s| s.to_string()).collect()),
+        list: args.is_present("list"),
+        registry,
+    };
+    ops::modify_owners(config, &opts)?;
+    Ok(())
 }

@@ -1,5 +1,7 @@
 use command_prelude::*;
 
+use cargo::ops::{self, PublishOpts};
+
 pub fn cli() -> App {
     subcommand("publish")
         .about("Upload a package to the registry")
@@ -14,4 +16,23 @@ pub fn cli() -> App {
             opt("dry-run", "Perform all checks without uploading")
         )
         .arg(opt("registry", "Registry to publish to").value_name("REGISTRY"))
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let registry = args.registry(config)?;
+    let ws = args.workspace(config)?;
+    let index = args.index(config)?;
+
+    ops::publish(&ws, &PublishOpts {
+        config,
+        token: args.value_of("token").map(|s| s.to_string()),
+        index,
+        verify: !args.is_present("no-verify"),
+        allow_dirty: args.is_present("allow-dirty"),
+        target: args.target(),
+        jobs: args.jobs()?,
+        dry_run: args.is_present("dry-run"),
+        registry,
+    })?;
+    Ok(())
 }

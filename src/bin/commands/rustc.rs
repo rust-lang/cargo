@@ -1,6 +1,6 @@
-use clap::AppSettings;
-
 use command_prelude::*;
+
+use cargo::ops::{self, CompileMode};
 
 pub fn cli() -> App {
     subcommand("rustc")
@@ -44,4 +44,25 @@ must be used to select which target is compiled. To pass flags to all compiler
 processes spawned by Cargo, use the $RUSTFLAGS environment variable or the
 `build.rustflags` configuration option.
 ")
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(config)?;
+    let mode = match args.value_of("profile") {
+        Some("dev") | None => CompileMode::Build,
+        Some("test") => CompileMode::Test,
+        Some("bench") => CompileMode::Bench,
+        Some("check") => CompileMode::Check { test: false },
+        Some(mode) => {
+            let err = format_err!("unknown profile: `{}`, use dev,
+                                   test, or bench", mode);
+            return Err(CliError::new(err, 101));
+        }
+    };
+    let mut compile_opts = args.compile_options_for_single_package(
+        config, mode,
+    )?;
+    compile_opts.target_rustc_args = Some(values(args, "args"));
+    ops::compile(&ws, &compile_opts)?;
+    Ok(())
 }

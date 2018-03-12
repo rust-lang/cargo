@@ -1,5 +1,6 @@
 use command_prelude::*;
-use clap::AppSettings;
+
+use cargo::ops::{self, CompileMode};
 
 pub fn cli() -> App {
     subcommand("test").alias("t")
@@ -81,4 +82,44 @@ To get the list of all options available for the test binaries use this:
 
     cargo test -- --help
 ")
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(config)?;
+
+    let mut compile_opts = args.compile_options(config, CompileMode::Test)?;
+    let doc = args.is_present("doc");
+    if doc {
+        compile_opts.mode = ops::CompileMode::Doctest;
+        compile_opts.filter = ops::CompileFilter::new(true,
+                                                      Vec::new(), false,
+                                                      Vec::new(), false,
+                                                      Vec::new(), false,
+                                                      Vec::new(), false,
+                                                      false);
+    }
+
+    let ops = ops::TestOptions {
+        no_run: args.is_present("no-run"),
+        no_fail_fast: args.is_present("no-fail-fast"),
+        only_doc: doc,
+        compile_opts,
+    };
+
+    // TESTNAME is actually an argument of the test binary, but it's
+    // important so we explicitly mention it and reconfigure
+    let mut test_args = vec![];
+    test_args.extend(args.value_of("TESTNAME").into_iter().map(|s| s.to_string()));
+    test_args.extend(args.values_of("args").unwrap_or_default().map(|s| s.to_string()));
+
+    let err = ops::run_tests(&ws, &ops, &test_args)?;
+    return match err {
+        None => Ok(()),
+        Some(err) => {
+            Err(match err.exit.as_ref().and_then(|e| e.code()) {
+                Some(i) => CliError::new(format_err!("{}", err.hint(&ws)), i),
+                None => CliError::new(err.into(), 101),
+            })
+        }
+    };
 }

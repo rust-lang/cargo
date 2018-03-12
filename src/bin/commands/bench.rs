@@ -1,5 +1,6 @@
 use command_prelude::*;
-use clap::AppSettings;
+
+use cargo::ops::{self, CompileMode, TestOptions};
 
 pub fn cli() -> App {
     subcommand("bench")
@@ -64,4 +65,32 @@ not affect how many jobs are used when running the benchmarks.
 
 Compilation can be customized with the `bench` profile in the manifest.
 ")
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(config)?;
+    let mut compile_opts = args.compile_options(config, CompileMode::Bench)?;
+    compile_opts.release = true;
+
+    let ops = TestOptions {
+        no_run: args.is_present("no-run"),
+        no_fail_fast: args.is_present("no-fail-fast"),
+        only_doc: false,
+        compile_opts,
+    };
+
+    let mut bench_args = vec![];
+    bench_args.extend(args.value_of("BENCHNAME").into_iter().map(|s| s.to_string()));
+    bench_args.extend(args.values_of("args").unwrap_or_default().map(|s| s.to_string()));
+
+    let err = ops::run_benches(&ws, &ops, &bench_args)?;
+    match err {
+        None => Ok(()),
+        Some(err) => {
+            Err(match err.exit.as_ref().and_then(|e| e.code()) {
+                Some(i) => CliError::new(format_err!("bench failed"), i),
+                None => CliError::new(err.into(), 101)
+            })
+        }
+    }
 }

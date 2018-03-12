@@ -1,13 +1,14 @@
 use std::path::PathBuf;
 
-use clap::{self, SubCommand, AppSettings, ArgMatches};
-use cargo::{Config, CargoResult};
+use clap::{self, SubCommand};
+use cargo::CargoResult;
 use cargo::core::Workspace;
 use cargo::ops::{CompileMode, CompileOptions, CompileFilter, Packages, MessageFormat,
                  VersionControl, NewOptions};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
-pub use clap::Arg;
+pub use clap::{Arg, ArgMatches, AppSettings};
+pub use cargo::{Config, CliResult, CliError};
 
 pub type App = clap::App<'static, 'static>;
 

@@ -1,6 +1,6 @@
-use clap::AppSettings;
-
 use command_prelude::*;
+
+use cargo::ops::{self, CompileMode, DocOptions};
 
 pub fn cli() -> App {
     subcommand("rustdoc")
@@ -38,4 +38,18 @@ which indicates which package should be documented. If it is not given, then the
 current package is documented. For more information on SPEC and its format, see
 the `cargo help pkgid` command.
 ")
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(config)?;
+    let mut compile_opts = args.compile_options_for_single_package(
+        config, CompileMode::Doc { deps: false },
+    )?;
+    compile_opts.target_rustdoc_args = Some(values(args, "args"));
+    let doc_opts = DocOptions {
+        open_result: args.is_present("open"),
+        compile_opts,
+    };
+    ops::doc(&ws, &doc_opts)?;
+    Ok(())
 }
