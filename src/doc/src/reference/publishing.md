@@ -168,6 +168,81 @@ The syntax for teams is currently `github:org:team` (see examples above).
 In order to add a team as an owner one must be a member of that team. No
 such restriction applies to removing a team as an owner.
 
+#### `cargo publish-build-info`
+
+The `cargo publish-build-info` command is intended to help automate reporting
+on which versions of Rust your crate's released versions work successfully
+with. It is meant to work with the results of continuous integration runs. It
+will work with any CI service; below are instructions for Travis CI, but the
+idea should be generalizable to any setup.
+
+`cargo publish-build-info` will report the version of rustc, the version of
+your crate, and the target that you run the command with. The target may
+optionally be specified as something other than the operating system the
+command is running on by specifying the `--target` flag.
+
+When CI runs on a tagged (released) version of your crate, run this command
+with the value `pass` or `fail` depending on the results of your CI script.
+
+Results with a particular crate version, rustc version, and target can only be
+reported once. A possible enhancement is to allow overwriting in the future.
+Until then, only report on your final tagged release version.
+
+Crates.io must already know about a crate and version in order for you to
+publish build information about them, so intended workflow is:
+
+1. Run regular CI to verify your crate compiles and passes tests
+2. Bump to the version you want to release in `Cargo.toml` and commit
+3. Tag that commit since the CI setup recommended below will only run on tagged
+   versions
+4. Publish to crates.io
+5. Push the tag in order to run CI on the tagged version, which will then run
+   `cargo publish-build-info` with the results.
+
+Yes, you can report possibly-incorrect results manually, but your users
+will probably report a bug if they can't reproduce your reported results.
+
+On crate list pages such as search results, your crate will have a badge if you
+have reported `pass` results for the max version of your crate. If you have
+reported that it passes on stable, the version of stable will be displayed in a
+green badge. If no stable versions have a reported pass result, but a beta
+version of Rust has, the date of the latest beta that passed will be displayed
+in a yellow badge. If there have been no pass results on stable or beta but
+there have been for nightly, the date of the latest nightly that passed will be
+displayed in an orange badge. If there have been no pass results reported for
+any Rust version, no badge will be shown for that crate.
+
+If there have been any results reported for the Tier 1 targets on 64 bit
+architectures for a version of a crate, there will be a section on that
+version's page titled "Build info" that will display more detailed results for
+the latest version of each of the stable, beta, and nightly channels for those
+targets.
+
+##### Travis configuration to automatically report build info
+
+First, make an [encrypted environment variable][travis-env] named TOKEN with
+your crates.io API key.
+
+Then add this to your `.travis.yml`, substituting in your secure environment
+variable value where indicated:
+
+```yml
+env:
+  - secure: [your secure env var value here]
+
+after_script: >
+  if [ -n "$TRAVIS_TAG" ] ; then
+     result=$([[ $TRAVIS_TEST_RESULT = 0 ]] && echo pass || echo fail)
+     cargo publish-build-info $result --token TOKEN
+  fi
+```
+
+The code in `after_script` checks to see if you're building a tagged commit,
+and if so, checks to see if the build passed or failed, then runs the `cargo
+publish-build-info` command to send the build result to crates.io.
+
+[travis-env]: https://docs.travis-ci.com/user/environment-variables/#Defining-encrypted-variables-in-.travis.yml
+
 ### GitHub permissions
 
 Team membership is not something GitHub provides simple public access to, and it

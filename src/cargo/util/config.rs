@@ -226,6 +226,10 @@ impl Config {
 
     pub fn cwd(&self) -> &Path { &self.cwd }
 
+    pub fn build_target_triple(&self) -> CargoResult<Option<String>> {
+        self.get_string("build.target").map(|r| r.map(|s| s.val))
+    }
+
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
         if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
             Ok(Some(Filesystem::new(self.cwd.join(dir))))

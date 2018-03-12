@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use curl::easy::{Easy, SslOpt};
 use git2;
-use registry::{Registry, NewCrate, NewCrateDependency};
+use registry::{Registry, NewCrate, NewCrateDependency, NewVersionBuildInfo};
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
@@ -223,6 +223,60 @@ fn transmit(config: &Config,
         },
         Err(e) => Err(e),
     }
+}
+
+pub struct PublishBuildInfoOpts<'cfg> {
+    pub config: &'cfg Config,
+    pub token: Option<String>,
+    pub index: Option<String>,
+    pub dry_run: bool,
+    pub rust_version: String,
+    pub target: Option<String>,
+    pub passed: bool,
+    pub registry: Option<String>,
+}
+
+pub fn publish_build_info(ws: &Workspace, opts: PublishBuildInfoOpts) -> CargoResult<()> {
+    let pkg = ws.current()?;
+
+    let (mut registry, _reg_id) = registry(opts.config, opts.token, opts.index, opts.registry)?;
+
+    // Upload build info to the specified destination
+    opts.config.shell().status("Uploading build info", pkg.package_id().to_string())?;
+
+    let target = opts.target;
+    let cfg_target = opts.config.build_target_triple()?;
+    let target = target.or(cfg_target);
+    let target = target.unwrap_or(opts.config.rustc()?.host.clone());
+
+    transmit_build_info(
+        opts.config, &pkg, &mut registry, opts.dry_run,
+        &opts.rust_version, &target, opts.passed)?;
+
+    Ok(())
+}
+
+fn transmit_build_info(config: &Config,
+            pkg: &Package,
+            registry: &mut Registry,
+            dry_run: bool,
+            rust_version: &str,
+            target: &str,
+            passed: bool) -> CargoResult<()> {
+
+    // Do not upload if performing a dry run
+    if dry_run {
+        config.shell().warn("aborting upload due to dry run")?;
+        return Ok(());
+    }
+
+    registry.publish_build_info(&NewVersionBuildInfo {
+        name: pkg.name().to_string(),
+        vers: pkg.version().to_string(),
+        rust_version: rust_version.to_string(),
+        target: target.to_string(),
+        passed: passed,
+    })
 }
 
 pub fn registry_configuration(config: &Config,
