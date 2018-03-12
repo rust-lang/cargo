@@ -470,13 +470,15 @@ fn resolving_with_constrained_sibling_backtrack_parent() {
 
 #[test]
 fn resolving_with_many_equivalent_backtracking() {
-    let mut reglist = vec![
-        pkg!(("level0", "1.0.0")),
-    ];
+    let mut reglist = Vec::new();
 
     const DEPTH: usize = 200;
     const BRANCHING_FACTOR: usize = 100;
 
+    // Each level depends on the next but the last level does not exist.
+    // Without cashing we need to test every path to the last level O(BRANCHING_FACTOR ^ DEPTH)
+    // and this test will time out. With cashing we need to discover that none of these
+    // can be activated O(BRANCHING_FACTOR * DEPTH)
     for l in 0..DEPTH {
         let name = format!("level{}", l);
         let next = format!("level{}", l + 1);
@@ -485,6 +487,18 @@ fn resolving_with_many_equivalent_backtracking() {
             reglist.push(pkg!((name.as_str(), vsn.as_str()) => [dep_req(next.as_str(), "*")]));
         }
     }
+
+    let reg = registry(reglist.clone());
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("level0", "*"),
+    ], &reg);
+
+    assert!(res.is_err());
+
+    // It is easy to write code that quickly returns an error.
+    // Lets make sure we can find a good answer if it is there.
+    reglist.push(pkg!(("level0", "1.0.0")));
 
     let reg = registry(reglist);
 
