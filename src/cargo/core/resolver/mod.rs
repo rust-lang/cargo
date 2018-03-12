@@ -455,6 +455,7 @@ fn activate(cx: &mut Context,
     let deps = cx.build_deps(registry, parent, &candidate, method)?;
     let frame = DepsFrame {
         parent: candidate,
+        just_for_error_messages: false,
         remaining_siblings: RcVecIter::new(Rc::new(deps)),
     };
     Ok(Some((frame, now.elapsed())))
@@ -501,6 +502,7 @@ impl<T> Iterator for RcVecIter<T> where T: Clone {
 #[derive(Clone)]
 struct DepsFrame {
     parent: Summary,
+    just_for_error_messages: bool,
     remaining_siblings: RcVecIter<DepInfo>,
 }
 
@@ -520,6 +522,7 @@ impl DepsFrame {
 
 impl PartialEq for DepsFrame {
     fn eq(&self, other: &DepsFrame) -> bool {
+        self.just_for_error_messages == other.just_for_error_messages &&
         self.min_candidates() == other.min_candidates()
     }
 }
@@ -534,10 +537,12 @@ impl PartialOrd for DepsFrame {
 
 impl Ord for DepsFrame {
     fn cmp(&self, other: &DepsFrame) -> Ordering {
-        // the frame with the sibling that has the least number of candidates
-        // needs to get the bubbled up to the top of the heap we use below, so
-        // reverse the order of the comparison here.
-        other.min_candidates().cmp(&self.min_candidates())
+        self.just_for_error_messages.cmp(&other.just_for_error_messages).then_with(||
+            // the frame with the sibling that has the least number of candidates
+            // needs to get bubbled up to the top of the heap we use below, so
+            // reverse comparison here.
+            self.min_candidates().cmp(&other.min_candidates()).reverse()
+        )
     }
 }
 
@@ -959,7 +964,7 @@ fn activate_deps_loop(
             successfully_activated = res.is_ok();
 
             match res {
-                Ok(Some((frame, dur))) => {
+                Ok(Some((mut frame, dur))) => {
                     let mut has_past_conflicting_dep = just_here_for_the_error_messages && !backtracked;
                     if !has_past_conflicting_dep {
                         if let Some(conflicting) = frame.remaining_siblings.clone().filter_map(|(_, (deb, _, _))| {
@@ -986,6 +991,7 @@ fn activate_deps_loop(
                         }
                     }
                     // if not has_another we we activate for the better error messages
+                    frame.just_for_error_messages = has_past_conflicting_dep;
                     if has_past_conflicting_dep && has_another {
                         trace!("{}[{}]>{} skipping {} ", parent.name(), cur, dep.name(), pid.version());
                         successfully_activated = false;
