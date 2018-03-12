@@ -1,5 +1,7 @@
 use cargo::ops;
-use cargo::core::{SourceId, GitReference};
+use cargo::core::{SourceId, GitReference, Workspace};
+use cargo::core::manifest::Target;
+use cargo::util::important_paths::{find_root_manifest_for_wd};
 use cargo::util::{CliResult, Config, ToUrl};
 
 #[derive(Deserialize)]
@@ -21,6 +23,7 @@ pub struct Options {
     flag_force: bool,
     flag_frozen: bool,
     flag_locked: bool,
+    flag_all: bool,
 
     arg_crate: Vec<String>,
     flag_vers: Option<String>,
@@ -54,6 +57,7 @@ Specifying what crate to install:
 
 Build and install options:
     -h, --help                Print this message
+    --all                     Install all crates from the workspace
     -j N, --jobs N            Number of parallel jobs, defaults to # of CPUs
     -f, --force               Force overwriting existing crates or binaries
     --features FEATURES       Space-separated list of features to activate
@@ -105,6 +109,9 @@ in a temporary target directory.  To avoid this, the target directory can be
 specified by setting the `CARGO_TARGET_DIR` environment variable to a relative
 path.  In particular, this can be useful for caching build artifacts on
 continuous integration systems.
+
+All packages in the workspace are built if the `--all` flag is supplied. The
+`--all` flag is automatically assumed for a virtual manifest.
 
 The `--list` option will list all installed packages (and their versions).
 ";
@@ -158,7 +165,19 @@ pub fn execute(options: Options, config: &mut Config) -> CliResult {
         SourceId::crates_io(config)?
     };
 
-    let krates = options.arg_crate.iter().map(|s| &s[..]).collect::<Vec<_>>();
+    let krates = if options.flag_all {
+        let root = find_root_manifest_for_wd(None, config.cwd())?;
+        let ws   = Workspace::new(&root, config)?;
+        ws.members()
+            .filter(|mem| mem.manifest().targets().iter().any(Target::is_bin))
+            .map(|p| String::from(p.name()))
+            .collect::<Vec<_>>()
+    } else {
+        options.arg_crate
+    };
+
+    let krates = krates.iter().map(|s| &s[..]).collect::<Vec<_>>();
+
     let vers = match (&options.flag_vers, &options.flag_version) {
         (&Some(_), &Some(_)) => return Err(format_err!("invalid arguments").into()),
         (&Some(ref v), _) | (_, &Some(ref v)) => Some(v.as_ref()),
