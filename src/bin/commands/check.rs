@@ -1,5 +1,7 @@
 use command_prelude::*;
 
+use cargo::ops::{self, CompileMode};
+
 pub fn cli() -> App {
     subcommand("check")
         .about("Check a local package and all of its dependencies for errors")
@@ -47,4 +49,21 @@ the --release flag will use the `release` profile instead.
 The `--profile test` flag can be used to check unit tests with the
 `#[cfg(test)]` attribute.
 ")
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(config)?;
+    let test = match args.value_of("profile") {
+        Some("test") => true,
+        None => false,
+        Some(profile) => {
+            let err = format_err!("unknown profile: `{}`, only `test` is \
+                                       currently supported", profile);
+            return Err(CliError::new(err, 101));
+        }
+    };
+    let mode = CompileMode::Check { test };
+    let compile_opts = args.compile_options(config, mode)?;
+    ops::compile(&ws, &compile_opts)?;
+    Ok(())
 }

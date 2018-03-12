@@ -34,33 +34,68 @@ pub fn builtin() -> Vec<App> {
     ]
 }
 
+pub fn builtin_exec(cmd: & str) -> Option<fn(&mut Config, &ArgMatches) -> CliResult> {
+    let f = match cmd {
+        "bench" => bench::exec,
+        "build" => build::exec,
+        "check" => check::exec,
+        "clean" => clean::exec,
+        "doc" => doc::exec,
+        "fetch" => fetch::exec,
+        "generate-lockfile" => generate_lockfile::exec,
+        "git-checkout" => git_checkout::exec,
+        "init" => init::exec,
+        "install" => install::exec,
+        "locate-project" => locate_project::exec,
+        "login" => login::exec,
+        "metadata" => metadata::exec,
+        "new" => new::exec,
+        "owner" => owner::exec,
+        "package" => package::exec,
+        "pkgid" => pkgid::exec,
+        "publish" => publish::exec,
+        "read-manifest" => read_manifest::exec,
+        "run" => run::exec,
+        "rustc" => rustc::exec,
+        "rustdoc" => rustdoc::exec,
+        "search" => search::exec,
+        "test" => test::exec,
+        "uninstall" => uninstall::exec,
+        "update" => update::exec,
+        "verify-project" => verify_project::exec,
+        "version" => version::exec,
+        "yank" => yank::exec,
+        _ => return None,
+    };
+    Some(f)
+}
 
-mod bench;
-mod build;
-mod check;
-mod clean;
-mod doc;
-mod fetch;
-mod generate_lockfile;
-mod git_checkout;
-mod init;
-mod install;
-mod locate_project;
-mod login;
-mod metadata;
-mod new;
-mod owner;
-mod package;
-mod pkgid;
-mod publish;
-mod read_manifest;
-mod run;
-mod rustc;
-mod rustdoc;
-mod search;
-mod test;
-mod uninstall;
-mod update;
-mod verify_project;
-mod version;
-mod yank;
+pub mod bench;
+pub mod build;
+pub mod check;
+pub mod clean;
+pub mod doc;
+pub mod fetch;
+pub mod generate_lockfile;
+pub mod git_checkout;
+pub mod init;
+pub mod install;
+pub mod locate_project;
+pub mod login;
+pub mod metadata;
+pub mod new;
+pub mod owner;
+pub mod package;
+pub mod pkgid;
+pub mod publish;
+pub mod read_manifest;
+pub mod run;
+pub mod rustc;
+pub mod rustdoc;
+pub mod search;
+pub mod test;
+pub mod uninstall;
+pub mod update;
+pub mod verify_project;
+pub mod version;
+pub mod yank;

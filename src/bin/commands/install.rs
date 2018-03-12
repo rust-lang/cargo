@@ -1,5 +1,9 @@
 use command_prelude::*;
 
+use cargo::core::{GitReference, SourceId};
+use cargo::ops::{self, CompileMode};
+use cargo::util::ToUrl;
+
 pub fn cli() -> App {
     subcommand("install")
         .about("Create a new cargo package in an existing directory")
@@ -83,4 +87,41 @@ in a temporary target directory.  To avoid this, the target directory can be
 specified by setting the `CARGO_TARGET_DIR` environment variable to a relative
 path.  In particular, this can be useful for caching build artifacts on
 continuous integration systems.")
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
+    compile_opts.release = !args.is_present("debug");
+
+    let krates = args.values_of("crate").unwrap_or_default().collect::<Vec<_>>();
+
+    let source = if let Some(url) = args.value_of("git") {
+        let url = url.to_url()?;
+        let gitref = if let Some(branch) = args.value_of("branch") {
+            GitReference::Branch(branch.to_string())
+        } else if let Some(tag) = args.value_of("tag") {
+            GitReference::Tag(tag.to_string())
+        } else if let Some(rev) = args.value_of("rev") {
+            GitReference::Rev(rev.to_string())
+        } else {
+            GitReference::Branch("master".to_string())
+        };
+        SourceId::for_git(&url, gitref)?
+    } else if let Some(path) = args.value_of("path") {
+        SourceId::for_path(&config.cwd().join(path))?
+    } else if krates.is_empty() {
+        SourceId::for_path(config.cwd())?
+    } else {
+        SourceId::crates_io(config)?
+    };
+
+    let version = args.value_of("version");
+    let root = args.value_of("root");
+
+    if args.is_present("list") {
+        ops::install_list(root, config)?;
+    } else {
+        ops::install(root, krates, &source, version, &compile_opts, args.is_present("force"))?;
+    }
+    Ok(())
 }

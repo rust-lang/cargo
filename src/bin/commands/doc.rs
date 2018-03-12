@@ -1,5 +1,7 @@
 use command_prelude::*;
 
+use cargo::ops::{self, CompileMode, DocOptions};
+
 pub fn cli() -> App {
     subcommand("doc")
         .about("Build a package's documentation")
@@ -38,4 +40,16 @@ which indicates which package should be documented. If it is not given, then the
 current package is documented. For more information on SPEC and its format, see
 the `cargo help pkgid` command.
 ")
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(config)?;
+    let mode = CompileMode::Doc { deps: !args.is_present("no-deps") };
+    let compile_opts = args.compile_options(config, mode)?;
+    let doc_opts = DocOptions {
+        open_result: args.is_present("open"),
+        compile_opts,
+    };
+    ops::doc(&ws, &doc_opts)?;
+    Ok(())
 }

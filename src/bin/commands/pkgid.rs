@@ -1,5 +1,7 @@
 use command_prelude::*;
 
+use cargo::ops;
+
 pub fn cli() -> App {
     subcommand("pkgid")
         .about("Print a fully qualified package specification")
@@ -26,4 +28,12 @@ Example Package IDs
      crates.io/bar#foo:1.2.3      | foo    | 1.2.3     | *://crates.io/bar
      http://crates.io/foo#1.2.3   | foo    | 1.2.3     | http://crates.io/foo
 ")
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(config)?;
+    let spec = args.value_of("spec").or(args.value_of("package"));
+    let spec = ops::pkgid(&ws, spec)?;
+    println!("{}", spec);
+    Ok(())
 }

@@ -1,5 +1,7 @@
 use command_prelude::*;
 
+use cargo::ops::{self, CompileMode};
+
 pub fn cli() -> App {
     subcommand("build").alias("b")
         .about("Compile a local package and all of its dependencies")
@@ -41,4 +43,11 @@ the manifest. The default profile for this command is `dev`, but passing
 the --release flag will use the `release` profile instead.
 ")
 
+}
+
+pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(config)?;
+    let compile_opts = args.compile_options(config, CompileMode::Build)?;
+    ops::compile(&ws, &compile_opts)?;
+    Ok(())
 }
