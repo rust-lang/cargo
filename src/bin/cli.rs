@@ -10,7 +10,7 @@ use clap::{AppSettings, Arg, ArgMatches};
 use toml;
 
 use cargo::{self, Config, CargoError, CliResult, CliError};
-use cargo::core::{Source, SourceId, GitReference, Package};
+use cargo::core::{Source, SourceId, GitReference, Package, Verbosity};
 use cargo::ops::{self, CompileMode, OutputMetadataOptions};
 use cargo::sources::{GitSource, RegistrySource};
 use cargo::util::{ToUrl, CargoResultExt};
@@ -73,7 +73,7 @@ pub fn main(config: &mut Config) -> CliResult {
 fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
     config.configure(
         args.occurrences_of("verbose") as u32,
-        if args.is_present("quite") { Some(true) } else { None },
+        if args.is_present("quiet") { Some(true) } else { None },
         &args.value_of("color").map(|s| s.to_string()),
         args.is_present("frozen"),
         args.is_present("locked"),
@@ -391,7 +391,8 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
                     // a failed process, we assume the process itself printed out enough
                     // information about why it failed so we don't do so as well
                     let exit_code = exit.code().unwrap_or(101);
-                    Err(if args.is_present("quite") {
+                    let is_quiet = config.shell().verbosity() == Verbosity::Quiet;
+                    Err(if is_quiet {
                         CliError::code(exit_code)
                     } else {
                         CliError::new(err.into(), exit_code)
@@ -612,7 +613,7 @@ See 'cargo help <command>' for more information on a specific command."
                 .short("v").multiple(true).global(true)
         )
         .arg(
-            opt("quite", "No output printed to stdout")
+            opt("quiet", "No output printed to stdout")
                 .short("q").global(true)
         )
         .arg(

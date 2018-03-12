@@ -43,9 +43,13 @@ fn simple_quiet() {
         .build();
 
     assert_that(p.cargo("run").arg("-q"),
-                execs().with_status(0).with_stdout("\
-hello
-")
+                execs().with_status(0)
+                       .with_stdout("hello")
+    );
+
+    assert_that(p.cargo("run").arg("--quiet"),
+                execs().with_status(0)
+                       .with_stdout("hello")
     );
 }
 
