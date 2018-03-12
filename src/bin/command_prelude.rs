@@ -190,7 +190,11 @@ pub trait ArgMatchesExt {
 
     fn workspace<'a>(&self, config: &'a Config) -> CargoResult<Workspace<'a>> {
         let root = self.root_manifest(config)?;
-        Workspace::new(&root, config)
+        let mut ws = Workspace::new(&root, config)?;
+        if config.cli_unstable().avoid_dev_deps {
+            ws.set_require_optional_deps(false);
+        }
+        Ok(ws)
     }
 
     fn jobs(&self) -> CargoResult<Option<u32>> {

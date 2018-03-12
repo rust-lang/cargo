@@ -110,9 +110,6 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
         }
         ("build", Some(args)) => {
             let mut ws = args.workspace(config)?;
-            if config.cli_unstable().avoid_dev_deps {
-                ws.set_require_optional_deps(false);
-            }
             let compile_opts = args.compile_options(config, CompileMode::Build)?;
             ops::compile(&ws, &compile_opts)?;
             Ok(())
