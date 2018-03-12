@@ -768,7 +768,6 @@ impl RemainingCandidates {
             .ok_or_else(|| self.conflicting_prev_active.clone())
     }
 }
-
 /// Recursively activates the dependencies for `top`, in depth-first order,
 /// backtracking across possible candidates for each dependency as necessary.
 ///
@@ -844,6 +843,8 @@ fn activate_deps_loop(
             }
         }
 
+        let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
+
         let frame = match deps_frame.remaining_siblings.next() {
             Some(sibling) => {
                 let parent = Summary::clone(&deps_frame.parent);
@@ -858,14 +859,18 @@ fn activate_deps_loop(
         trace!("{}[{}]>{} {} candidates", parent.name(), cur, dep.name(), candidates.len());
         trace!("{}[{}]>{} {} prev activations", parent.name(), cur, dep.name(), cx.prev_active(&dep).len());
 
-        let just_here_for_the_error_messages = past_conflicting_activations.get(&dep).and_then(|past_bad| {
-            past_bad.iter().find(|conflicting| {
-                conflicting
+        let just_here_for_the_error_messages = just_here_for_the_error_messages
+            && past_conflicting_activations
+                .get(&dep)
+                .and_then(|past_bad| {
+                    past_bad.iter().find(|conflicting| {
+                        conflicting
                     .iter()
                     // note: a lot of redundant work in is_active for similar debs
                     .all(|(con, _)| cx.is_active(con))
-            })
-        }).is_some();
+                    })
+                })
+                .is_some();
 
         let mut remaining_candidates = RemainingCandidates::new(&candidates);
         let mut successfully_activated = false;
@@ -965,7 +970,7 @@ fn activate_deps_loop(
 
             match res {
                 Ok(Some((mut frame, dur))) => {
-                    let mut has_past_conflicting_dep = just_here_for_the_error_messages && !backtracked;
+                    let mut has_past_conflicting_dep = just_here_for_the_error_messages;
                     if !has_past_conflicting_dep {
                         if let Some(conflicting) = frame.remaining_siblings.clone().filter_map(|(_, (deb, _, _))| {
                             past_conflicting_activations.get(&deb).and_then(|past_bad| {
