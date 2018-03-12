@@ -37,7 +37,9 @@ pub struct Options {
 }
 
 pub const USAGE: &'static str = "
-Install a Rust binary
+Install a Rust binary, for example, additional Cargo commands
+
+(If you're an npm user, please note this is completely unrelated to `npm install`. Please see `cargo build --help`.)
 
 Usage:
     cargo install [options] [<crate>...]
