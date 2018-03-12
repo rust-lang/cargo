@@ -142,10 +142,11 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
-        self.packages.get(id).map(|p| &p.0).cloned().ok_or_else(|| {
-            format_err!("failed to find package with id: {}", id)
-        })
+    fn download(&mut self, ids: &[&PackageId]) -> CargoResult<Vec<Package>> {
+        ids.iter().map(|id|
+            self.packages.get(id).map(|p| &p.0).cloned().ok_or_else(|| {
+                format_err!("failed to find package with id: {}", id)
+            })).collect()
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

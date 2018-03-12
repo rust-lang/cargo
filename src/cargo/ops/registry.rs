@@ -3,7 +3,8 @@ use std::fs::{self, File};
 use std::iter::repeat;
 use std::time::Duration;
 
-use curl::easy::{Easy, SslOpt};
+use curl::easy::{Easy, Easy2, Handler, SslOpt, HttpVersion};
+use curl::multi::Multi;
 use git2;
 use registry::{Registry, NewCrate, NewCrateDependency};
 
@@ -291,6 +292,60 @@ pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     Ok(handle)
 }
 
+pub fn http_multi_handle(config: &Config) -> CargoResult<Multi> {
+    if config.frozen() {
+        bail!("attempting to make an HTTP request, but --frozen was \
+               specified")
+    }
+    if !config.network_allowed() {
+        bail!("can't make HTTP request in the offline mode")
+    }
+
+    let mut handle = Multi::new();
+    let pipelining = config.get_bool("http.pipelining")?.map(|x| x.val).unwrap_or(true);
+    let multiplexing = config.get_bool("http.multiplexing")?.map(|x| x.val).unwrap_or(true);
+    handle.pipelining(pipelining, multiplexing)?;
+    Ok(handle)
+}
+
+/// Create a curl Easy2 handle with default options
+pub fn http_easy2_handle<H: Handler>(config: &Config, handler: H) -> CargoResult<Easy2<H>> {
+    let mut handle = Easy2::new(handler);
+    configure_http_easy2_handle(config, &mut handle)?;
+    Ok(handle)
+}
+
+pub fn configure_http_easy2_handle<H: Handler>(config: &Config, handle: &mut Easy2<H>) -> CargoResult<()> {
+    // This is a duplicate of configure_http_handle, due to Easy and Easy2
+    // being completely different types.
+    // The timeout option for libcurl by default times out the entire transfer,
+    // but we probably don't want this. Instead we only set timeouts for the
+    // connect phase as well as a "low speed" timeout so if we don't receive
+    // many bytes in a large-ish period of time then we time out.
+    handle.connect_timeout(Duration::new(30, 0))?;
+    handle.low_speed_limit(10 /* bytes per second */)?;
+    handle.low_speed_time(Duration::new(30, 0))?;
+    handle.useragent(&version().to_string())?;
+    // Not all cURL builds support HTTP/2, ignore any errors.
+    if config.get_bool("http.http2")?.map(|x| x.val).unwrap_or(true) {
+        let _ = handle.http_version(HttpVersion::V2TLS);
+    }
+    if let Some(proxy) = http_proxy(config)? {
+        handle.proxy(&proxy)?;
+    }
+    if let Some(cainfo) = config.get_path("http.cainfo")? {
+        handle.cainfo(&cainfo.val)?;
+    }
+    if let Some(check) = config.get_bool("http.check-revoke")? {
+        handle.ssl_options(SslOpt::new().no_revoke(!check.val))?;
+    }
+    if let Some(timeout) = http_timeout(config)? {
+        handle.connect_timeout(Duration::new(timeout as u64, 0))?;
+        handle.low_speed_time(Duration::new(timeout as u64, 0))?;
+    }
+    Ok(())
+}
+
 pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
     let proxy_exists = http_proxy_exists(config)?;
     let timeout = http_timeout(config)?;
@@ -310,6 +365,10 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
     handle.low_speed_limit(10 /* bytes per second */)?;
     handle.low_speed_time(Duration::new(30, 0))?;
     handle.useragent(&version().to_string())?;
+    // Not all cURL builds support HTTP/2, ignore any errors.
+    if config.get_bool("http.http2")?.map(|x| x.val).unwrap_or(true) {
+        let _ = handle.http_version(HttpVersion::V2TLS);
+    }
     if let Some(proxy) = http_proxy(config)? {
         handle.proxy(&proxy)?;
     }

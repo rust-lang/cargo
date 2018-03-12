@@ -45,11 +45,10 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
                                    profiles)?;
     let mut units = Vec::new();
 
-    for spec in opts.spec {
-        // Translate the spec to a Package
-        let pkgid = resolve.query(spec)?;
-        let pkg = packages.get(pkgid)?;
+    let pkg_ids: CargoResult<Vec<_>> = opts.spec.iter().map(|spec| resolve.query(spec)).collect();
+    let pkgs = packages.get(&*pkg_ids?)?;
 
+    for pkg in pkgs {
         // Generate all relevant `Unit` targets for this package
         for target in pkg.targets() {
             for kind in [Kind::Host, Kind::Target].iter() {

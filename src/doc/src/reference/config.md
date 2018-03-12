@@ -95,6 +95,14 @@ proxy = "host:port" # HTTP proxy to use for HTTP requests (defaults to none)
 timeout = 60000     # Timeout for each HTTP request, in milliseconds
 cainfo = "cert.pem" # Path to Certificate Authority (CA) bundle (optional)
 check-revoke = true # Indicates whether SSL certs are checked for revocation
+http2 = true        # Indicates whether HTTP/2 should be negotiated.
+pipelining = true   # Indicates whether HTTP/1.1 pipelining should be enabled.
+                    # Disable if the registry server doesn't implement the spec
+                    # correctly.
+multiplexing = true # Indicates whether HTTP/2 multiplexing should be enabled.
+                    # Disable if you want to use multiple TCP connections.
+concurrency = 16    # How many requests should be fired in parallel for crate
+                    # downloads.
 
 [build]
 jobs = 1                  # number of parallel jobs, defaults to # of CPUs

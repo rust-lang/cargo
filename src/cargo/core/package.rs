@@ -197,22 +197,32 @@ impl<'cfg> PackageSet<'cfg> {
         Box::new(self.packages.keys())
     }
 
-    pub fn get(&self, id: &PackageId) -> CargoResult<&Package> {
-        let slot = self.packages.get(id).ok_or_else(|| {
-            internal(format!("couldn't find `{}` in package set", id))
-        })?;
-        if let Some(pkg) = slot.borrow() {
-            return Ok(pkg)
+    pub fn get(&self, ids: &[&PackageId]) -> CargoResult<Vec<&Package>> {
+        let mut pending = BTreeMap::new();
+        for &id in ids {
+            let slot = self.packages.get(id).ok_or_else(|| {
+                internal(format!("couldn't find `{}` in package set", id))
+            })?;
+            if slot.borrow().is_none() {
+                let &mut (ref mut pending_ids, ref mut slots) = pending.entry(id.source_id()).or_insert_with(|| (Vec::new(), Vec::new()));
+                pending_ids.push(id);
+                slots.push(slot);
+            }
         }
         let mut sources = self.sources.borrow_mut();
-        let source = sources.get_mut(id.source_id()).ok_or_else(|| {
-            internal(format!("couldn't find source for `{}`", id))
-        })?;
-        let pkg = source.download(id).chain_err(|| {
-            format_err!("unable to get packages from source")
-        })?;
-        assert!(slot.fill(pkg).is_ok());
-        Ok(slot.borrow().unwrap())
+        for (source_id, &(ref pending_ids, ref slots)) in &pending {
+            let source = sources.get_mut(source_id).ok_or_else(|| {
+                internal(format!("couldn't find source `{}`", source_id))
+            })?;
+            let pkgs = source.download(&*pending_ids).chain_err(|| {
+                format_err!("unable to get packages from source")
+            })?;
+            for (pkg, slot) in pkgs.into_iter().zip(slots) {
+                assert!(slot.fill(pkg).is_ok());
+            }
+        }
+
+        Ok(ids.iter().map(|id| self.packages.get(id).unwrap().borrow().unwrap()).collect())
     }
 
     pub fn sources(&self) -> Ref<SourceMap<'cfg>> {

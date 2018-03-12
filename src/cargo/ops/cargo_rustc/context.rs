@@ -780,7 +780,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         let id = unit.pkg.package_id();
         let deps = self.resolve.deps(id);
-        let mut ret = deps.filter(|dep| {
+        let pkg_ids: Vec<_> = deps.filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name() && d.version_req().matches(dep.version())
             }).any(|d| {
@@ -814,22 +814,19 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 // actually used!
                 true
             })
-        }).filter_map(|id| {
-            match self.get_package(id) {
-                Ok(pkg) => {
-                    pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                        let unit = Unit {
-                            pkg,
-                            target: t,
-                            profile: self.lib_or_check_profile(unit, t),
-                            kind: unit.kind.for_target(t),
-                        };
-                        Ok(unit)
-                    })
+        }).collect();
+
+        let pkgs = self.get_packages(&*pkg_ids)?;
+        let mut ret: Vec<_> = pkgs.into_iter().filter_map(|pkg| {
+            pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
+                Unit {
+                    pkg,
+                    target: t,
+                    profile: self.lib_or_check_profile(unit, t),
+                    kind: unit.kind.for_target(t),
                 }
-                Err(e) => Some(Err(e))
-            }
-        }).collect::<CargoResult<Vec<_>>>()?;
+            })
+        }).collect();
 
         // If this target is a build script, then what we've collected so far is
         // all we need. If this isn't a build script, then it depends on the
@@ -913,7 +910,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Returns the dependencies necessary to document a package
     fn doc_deps(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
-        let deps = self.resolve.deps(unit.pkg.package_id()).filter(|dep| {
+        let dep_ids: Vec<_> = self.resolve.deps(unit.pkg.package_id()).filter(|dep| {
             unit.pkg.dependencies().iter().filter(|d| {
                 d.name() == dep.name()
             }).any(|dep| {
@@ -923,16 +920,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     _ => false,
                 }
             })
-        }).map(|dep| {
-            self.get_package(dep)
-        });
+        }).collect();
+
+        let deps = self.get_packages(&*dep_ids)?;
 
         // To document a library, we depend on dependencies actually being
         // built. If we're documenting *all* libraries, then we also depend on
         // the documentation of the library being built.
         let mut ret = Vec::new();
         for dep in deps {
-            let dep = dep?;
             let lib = match dep.targets().iter().find(|t| t.is_lib()) {
                 Some(lib) => lib,
                 None => continue,
@@ -1007,7 +1003,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Gets a package for the given package id.
-    pub fn get_package(&self, id: &PackageId) -> CargoResult<&'a Package> {
+    pub fn get_packages(&self, id: &[&PackageId]) -> CargoResult<Vec<&'a Package>> {
         self.packages.get(id)
     }
 

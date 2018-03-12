@@ -1,22 +1,21 @@
-use std::cell::{RefCell, Ref, Cell};
+use core::{PackageId, SourceId};
+use curl::easy::{Easy2, Handler, WriteError};
+use curl::multi::Easy2Handle;
+use git2;
+use hex;
+use lazycell::LazyCell;
+use serde_json;
+use sources::git;
+use sources::registry::{CRATE_TEMPLATE, INDEX_LOCK, RegistryConfig, RegistryData, VERSION_TEMPLATE};
+use std::cell::{Cell, Ref, RefCell};
 use std::fmt::Write as FmtWrite;
-use std::io::SeekFrom;
 use std::io::prelude::*;
+use std::io::SeekFrom;
 use std::mem;
 use std::path::Path;
 use std::str;
-
-use git2;
-use hex;
-use serde_json;
-use lazycell::LazyCell;
-
-use core::{PackageId, SourceId};
-use sources::git;
-use sources::registry::{RegistryData, RegistryConfig, INDEX_LOCK, CRATE_TEMPLATE, VERSION_TEMPLATE};
-use util::network;
 use util::{FileLock, Filesystem};
-use util::{Config, Sha256, ToUrl, Progress};
+use util::{Config, Sha256, ToUrl};
 use util::errors::{CargoResult, CargoResultExt, HttpNot200};
 
 pub struct RemoteRegistry<'cfg> {
@@ -187,84 +186,146 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         Ok(())
     }
 
-    fn download(&mut self, pkg: &PackageId, checksum: &str)
-                -> CargoResult<FileLock> {
-        let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
-        let path = Path::new(&filename);
+    fn download(&mut self, pkgs_with_checksum: &[(&PackageId, &str)])
+                -> CargoResult<Vec<FileLock>> {
+        let mut result = Vec::new();
+        let mut to_download = Vec::new();
+        for (idx, &(pkg, _)) in pkgs_with_checksum.iter().enumerate() {
+            let filename = format!("{}-{}.crate", pkg.name(), pkg.version());
+            let path = Path::new(&filename);
 
-        // Attempt to open an read-only copy first to avoid an exclusive write
-        // lock and also work with read-only filesystems. Note that we check the
-        // length of the file like below to handle interrupted downloads.
-        //
-        // If this fails then we fall through to the exclusive path where we may
-        // have to redownload the file.
-        if let Ok(dst) = self.cache_path.open_ro(path, self.config, &filename) {
+            // Attempt to open an read-only copy first to avoid an exclusive write
+            // lock and also work with read-only filesystems. Note that we check the
+            // length of the file like below to handle interrupted downloads.
+            //
+            // If this fails then we fall through to the exclusive path where we may
+            // have to redownload the file.
+            if let Ok(dst) = self.cache_path.open_ro(path, self.config, &filename) {
+                let meta = dst.file().metadata()?;
+                if meta.len() > 0 {
+                    result.push(dst);
+                    continue;
+                }
+            }
+            let mut dst = self.cache_path.open_rw(path, self.config, &filename)?;
             let meta = dst.file().metadata()?;
+            result.push(dst);
             if meta.len() > 0 {
-                return Ok(dst)
+                continue;
+            }
+
+            let config = self.config()?.unwrap();
+            let mut url = config.dl.clone();
+            if !url.contains(CRATE_TEMPLATE) && !url.contains(VERSION_TEMPLATE) {
+                write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
+            }
+            let url = url
+                .replace(CRATE_TEMPLATE, &*pkg.name())
+                .replace(VERSION_TEMPLATE, &pkg.version().to_string())
+                .to_url()?;
+
+            to_download.push((idx, url.to_string()));
+        }
+
+        // Offline-friendly fast path
+        if to_download.is_empty() { return Ok(result); }
+
+        struct MultiHandler {
+            body: Vec<u8>,
+            state: Sha256,
+        }
+
+        impl MultiHandler {
+            fn new() -> MultiHandler {
+                MultiHandler { body: Vec::new(), state: Sha256::new() }
             }
         }
-        let mut dst = self.cache_path.open_rw(path, self.config, &filename)?;
-        let meta = dst.file().metadata()?;
-        if meta.len() > 0 {
-            return Ok(dst)
-        }
-        self.config.shell().status("Downloading", pkg)?;
 
-        let config = self.config()?.unwrap();
-        let mut url = config.dl.clone();
-        if !url.contains(CRATE_TEMPLATE) && !url.contains(VERSION_TEMPLATE) {
-            write!(url, "/{}/{}/download", CRATE_TEMPLATE, VERSION_TEMPLATE).unwrap();
+        impl Handler for MultiHandler {
+            // TODO: progress
+            fn write(&mut self, data: &[u8]) -> Result<usize, WriteError> {
+                self.state.update(data);
+                self.body.extend_from_slice(data);
+                Ok(data.len())
+            }
         }
-        let url = url
-            .replace(CRATE_TEMPLATE, &*pkg.name())
-            .replace(VERSION_TEMPLATE, &pkg.version().to_string())
-            .to_url()?;
 
         // TODO: don't download into memory, but ensure that if we ctrl-c a
         //       download we should resume either from the start or the middle
         //       on the next time
-        let url = url.to_string();
-        let mut handle = self.config.http()?.borrow_mut();
-        handle.get(true)?;
-        handle.url(&url)?;
-        handle.follow_location(true)?;
-        let mut state = Sha256::new();
-        let mut body = Vec::new();
-        network::with_retry(self.config, || {
-            state = Sha256::new();
-            body = Vec::new();
-            let mut pb = Progress::new("Fetch", self.config);
-            {
-                handle.progress(true)?;
-                let mut handle = handle.transfer();
-                handle.progress_function(|dl_total, dl_cur, _, _| {
-                    pb.tick(dl_cur as usize, dl_total as usize).is_ok()
-                })?;
-                handle.write_function(|buf| {
-                    state.update(buf);
-                    body.extend_from_slice(buf);
-                    Ok(buf.len())
-                })?;
-                handle.perform()?;
-            }
-            let code = handle.response_code()?;
-            if code != 200 && code != 0 {
-                let url = handle.effective_url()?.unwrap_or(&url);
-                Err(HttpNot200 { code, url: url.to_string() }.into())
-            } else {
-                Ok(())
-            }
-        })?;
-
-        // Verify what we just downloaded
-        if hex::encode(state.finish()) != checksum {
-            bail!("failed to verify the checksum of `{}`", pkg)
+        let (multi, easy) = self.config.http_multi(to_download.len(), MultiHandler::new)?;
+        let mut running_handles: Vec<_> = (0..easy.len()).map(|_| None).collect();
+        let mut cur_index = 0;
+        // Take the next file in queue and push it into the Multi queue with
+        // the provided Easy. Returns Ok(true) if the handle is configured,
+        // Ok(false) if there's no more files, Err(e) if some error occurred
+        // during configuration. Assumes that the states are clean.
+        let mut configure_handle = |mut handle: Easy2<MultiHandler>, index: usize,
+                                    running_handles: &mut Vec<Option<(usize, Easy2Handle<MultiHandler>)>>| -> CargoResult<bool>{
+            if cur_index == to_download.len() { return Ok(false); }
+            let (pkg_idx, ref url) = to_download[cur_index];
+            let (pkg, _) = pkgs_with_checksum[pkg_idx];
+            cur_index += 1;
+            self.config.shell().status("Downloading", pkg)?;
+            handle.get(true)?;
+            handle.url(&url)?;
+            handle.follow_location(true)?;
+            let mut running_handle = multi.add2(handle)?;
+            running_handle.set_token(index)?;
+            running_handles[index] = Some((pkg_idx, running_handle));
+            Ok(true)
+        };
+        for (index, handle) in easy.into_iter().enumerate() {
+            assert!(configure_handle(handle, index, &mut running_handles)?);
         }
+        loop {
+            // If critical error occurred in multi interface, directly return.
+            let mut active = multi.perform()?;
+            // If there are multiple errors, take the first one.
+            let mut error: CargoResult<()> = Ok(());
+            multi.messages(|msg| match msg.result() {
+                Some(Ok(())) => {
+                    // try .. catch
+                    if let Err(e) = (|| {
+                        let index = msg.token()?;
+                        let (pkg_idx, done_handle) = running_handles[index].take().unwrap();
+                        let mut handle = multi.remove2(done_handle)?;
+                        let code = handle.response_code()?;
+                        if code != 200 && code != 0 {
+                            // FIXME: can this be None?
+                            let url = handle.effective_url()?.unwrap();
+                            return Err(HttpNot200 { code, url: url.to_string() }.into())
+                        }
+                        {
+                            let (pkg, checksum) = pkgs_with_checksum[pkg_idx];
+                            let &mut MultiHandler { ref mut body, ref mut state } = handle.get_mut();
+                            let dst = &mut result[pkg_idx];
+                            if hex::encode(state.finish()) != checksum {
+                                bail!("failed to verify the checksum of `{}`", pkg)
+                            }
 
-        dst.write_all(&body)?;
-        dst.seek(SeekFrom::Start(0))?;
-        Ok(dst)
+                            dst.write_all(&body)?;
+                            dst.seek(SeekFrom::Start(0))?;
+                            body.clear();
+                        }
+                        self.config.http_easy2_reset(&mut handle)?;
+                        if configure_handle(handle, index, &mut running_handles)? {
+                            // Avoid exiting too early
+                            active += 1;
+                        }
+                        Ok(())
+                    })() {
+                        if error.is_ok() { error = Err(e); }
+                    }
+                }
+                Some(Err(e)) => { if error.is_ok() { error = Err(e.into()); } }
+                None => {}
+            });
+            // TODO: retries
+            error?;
+            if active == 0 { break; }
+        }
+        Ok(result)
     }
 
 
