@@ -70,7 +70,15 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
     let mut deps = HashSet::new();
     let mut visited = HashSet::new();
     let success = add_deps_for_unit(&mut deps, context, unit, &mut visited).is_ok();
-    let basedir = None; // TODO
+    let basedir_config = context.config.get_string("dep-info-basedir");
+    let basedir_config_ok = basedir_config.is_ok();
+    let basedir_val = basedir_config.unwrap_or(None).map(|s| s.val);
+    let basedir_string = basedir_val.unwrap_or("".to_string());
+    let basedir = if basedir_config_ok {
+        Some(basedir_string.as_str())
+    } else {
+        None
+    };
     for &(_, ref link_dst, _) in context.target_filenames(unit)?.iter() {
         if let Some(ref link_dst) = *link_dst {
             let output_path = link_dst.with_extension("d");
