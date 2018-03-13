@@ -16,7 +16,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
     let specs = options.compile_opts.spec.into_package_id_specs(ws)?;
     let resolve = ops::resolve_ws_precisely(ws,
                                             None,
-                                            options.compile_opts.features,
+                                            &options.compile_opts.features,
                                             options.compile_opts.all_features,
                                             options.compile_opts.no_default_features,
                                             &specs)?;
@@ -68,7 +68,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
         // nothing we can do about it and otherwise if it's getting overwritten
         // then that's also ok!
         let mut target_dir = ws.target_dir();
-        if let Some(triple) = options.compile_opts.target {
+        if let Some(ref triple) = options.compile_opts.target {
             target_dir.push(Path::new(triple).file_stem().unwrap());
         }
         let path = target_dir.join("doc").join(&name).join("index.html");

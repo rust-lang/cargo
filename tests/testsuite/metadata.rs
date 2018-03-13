@@ -752,8 +752,11 @@ fn cargo_metadata_bad_version() {
     assert_that(p.cargo("metadata").arg("--no-deps")
                  .arg("--format-version").arg("2")
                  .cwd(p.root()),
-                execs().with_status(101)
-    .with_stderr("[ERROR] metadata version 2 not supported, only 1 is currently supported"));
+                execs().with_status(1)
+                       .with_stderr_contains("\
+error: '2' isn't a valid value for '--format-version <VERSION>'
+<tab>[possible values: 1]
+"));
 }
 
 #[test]

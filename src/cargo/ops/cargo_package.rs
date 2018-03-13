@@ -23,7 +23,7 @@ pub struct PackageOpts<'cfg> {
     pub allow_dirty: bool,
     pub verify: bool,
     pub jobs: Option<u32>,
-    pub target: Option<&'cfg str>,
+    pub target: Option<String>,
     pub registry: Option<String>,
 }
 
@@ -320,11 +320,11 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
     ops::compile_ws(&ws, None, &ops::CompileOptions {
         config,
         jobs: opts.jobs,
-        target: opts.target,
-        features: &[],
+        target: opts.target.clone(),
+        features: Vec::new(),
         no_default_features: false,
         all_features: false,
-        spec: ops::Packages::Packages(&[]),
+        spec: ops::Packages::Packages(Vec::new()),
         filter: ops::CompileFilter::Default { required_features_filterable: true },
         release: false,
         message_format: ops::MessageFormat::Human,
