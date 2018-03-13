@@ -6,6 +6,7 @@ pub fn builtin() -> Vec<App> {
         build::cli(),
         check::cli(),
         clean::cli(),
+        dirs::cli(),
         doc::cli(),
         fetch::cli(),
         generate_lockfile::cli(),
@@ -40,6 +41,7 @@ pub fn builtin_exec(cmd: &str) -> Option<fn(&mut Config, &ArgMatches) -> CliResu
         "build" => build::exec,
         "check" => check::exec,
         "clean" => clean::exec,
+        "dirs" => dirs::exec,
         "doc" => doc::exec,
         "fetch" => fetch::exec,
         "generate-lockfile" => generate_lockfile::exec,
@@ -74,6 +76,7 @@ pub mod bench;
 pub mod build;
 pub mod check;
 pub mod clean;
+pub mod dirs;
 pub mod doc;
 pub mod fetch;
 pub mod generate_lockfile;

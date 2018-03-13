@@ -53,6 +53,27 @@ impl Drop for Transaction {
     }
 }
 
+#[derive(Clone)]
+struct CargoInstallDirs {
+    config_dir: PathBuf,
+    bin_dir: PathBuf,
+}
+
+impl CargoInstallDirs {
+    fn from_root(root: PathBuf) -> CargoInstallDirs {
+        CargoInstallDirs {
+            bin_dir: root.join("bin"),
+            config_dir: root,
+        }
+    }
+    fn from_config(config: &Config) -> CargoInstallDirs {
+        CargoInstallDirs {
+            bin_dir: config.bin_path(),
+            config_dir: config.config_path().into_path_unlocked(),
+        }
+    }
+}
+
 pub fn install(
     root: Option<&str>,
     krates: Vec<&str>,
@@ -61,7 +82,7 @@ pub fn install(
     opts: &ops::CompileOptions,
     force: bool,
 ) -> CargoResult<()> {
-    let root = resolve_root(root, opts.config)?;
+    let root = resolve_install_dirs(root, opts.config)?;
     let map = SourceConfigMap::new(opts.config)?;
 
     let (installed_anything, scheduled_error) = if krates.len() <= 1 {
@@ -122,7 +143,7 @@ pub fn install(
     if installed_anything {
         // Print a warning that if this directory isn't in PATH that they won't be
         // able to run these commands.
-        let dst = metadata(opts.config, &root)?.parent().join("bin");
+        let dst = root.bin_dir;
         let path = env::var_os("PATH").unwrap_or_default();
         for path in env::split_paths(&path) {
             if path == dst {
@@ -145,7 +166,7 @@ pub fn install(
 }
 
 fn install_one(
-    root: &Filesystem,
+    dirs: &CargoInstallDirs,
     map: &SourceConfigMap,
     krate: Option<&str>,
     source_id: &SourceId,
@@ -235,9 +256,9 @@ fn install_one(
     // We have to check this again afterwards, but may as well avoid building
     // anything if we're gonna throw it away anyway.
     {
-        let metadata = metadata(config, root)?;
+        let metadata = metadata(config, &Filesystem::new(dirs.config_dir.clone()))?;
         let list = read_crate_list(&metadata)?;
-        let dst = metadata.parent().join("bin");
+        let dst = config.bin_path();
         check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
     }
 
@@ -274,7 +295,7 @@ fn install_one(
         );
     }
 
-    let metadata = metadata(config, root)?;
+    let metadata = metadata(config, &Filesystem::new(dirs.config_dir.clone()))?;
     let mut list = read_crate_list(&metadata)?;
     let dst = metadata.parent().join("bin");
     let duplicates = check_overwrites(&dst, pkg, &opts.filter, &list, force)?;
@@ -655,8 +676,8 @@ fn write_crate_list(file: &FileLock, listing: CrateListingV1) -> CargoResult<()>
 }
 
 pub fn install_list(dst: Option<&str>, config: &Config) -> CargoResult<()> {
-    let dst = resolve_root(dst, config)?;
-    let dst = metadata(config, &dst)?;
+    let dst = resolve_install_dirs(dst, config)?;
+    let dst = metadata(config, &Filesystem::new(dst.config_dir))?;
     let list = read_crate_list(&dst)?;
     for (k, v) in list.v1.iter() {
         println!("{}:", k);
@@ -677,7 +698,7 @@ pub fn uninstall(
         bail!("A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.");
     }
 
-    let root = resolve_root(root, config)?;
+    let root = resolve_install_dirs(root, config)?;
     let scheduled_error = if specs.len() == 1 {
         uninstall_one(&root, specs[0], bins, config)?;
         false
@@ -723,13 +744,13 @@ pub fn uninstall(
     Ok(())
 }
 
-pub fn uninstall_one(
-    root: &Filesystem,
+fn uninstall_one(
+    dirs: &CargoInstallDirs,
     spec: &str,
     bins: &[String],
     config: &Config,
 ) -> CargoResult<()> {
-    let crate_metadata = metadata(config, root)?;
+    let crate_metadata = metadata(config, &Filesystem::new(dirs.config_dir.clone()))?;
     let mut metadata = read_crate_list(&crate_metadata)?;
     let mut to_remove = Vec::new();
     {
@@ -738,7 +759,7 @@ pub fn uninstall_one(
             Entry::Occupied(e) => e,
             Entry::Vacant(..) => panic!("entry not found: {}", result),
         };
-        let dst = crate_metadata.parent().join("bin");
+        let dst = &dirs.bin_dir;
         for bin in installed.get() {
             let bin = dst.join(bin);
             if fs::metadata(&bin).is_err() {
@@ -787,15 +808,22 @@ pub fn uninstall_one(
     Ok(())
 }
 
+/// Return a file lock for the .crates.toml file at the given root.
+/// The config argument is only used for logging to the shell.
 fn metadata(config: &Config, root: &Filesystem) -> CargoResult<FileLock> {
     root.open_rw(Path::new(".crates.toml"), config, "crate metadata")
 }
 
-fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesystem> {
+// Determine cargo directories by first checking whether an argument was given
+// on the command line, if not checking whether the environment variable
+// CARGO_INSTALL_ROOT is set, and if not using the paths of the configuration.
+fn resolve_install_dirs(
+    root: Option<&str>,
+    config: &Config,
+) -> CargoResult<CargoInstallDirs> {
     let config_root = config.get_path("install.root")?;
-    Ok(flag.map(PathBuf::from)
+    Ok(root.map(PathBuf::from)
         .or_else(|| env::var_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
-        .or_else(move || config_root.map(|v| v.val))
-        .map(Filesystem::new)
-        .unwrap_or_else(|| config.home().clone()))
+        .or_else(move || config_root.map(|v| v.val)).map(CargoInstallDirs::from_root)
+        .unwrap_or_else(|| CargoInstallDirs::from_config(config)))
 }

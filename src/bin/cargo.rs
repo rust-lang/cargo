@@ -174,7 +174,7 @@ fn is_executable<P: AsRef<Path>>(path: P) -> bool {
 }
 
 fn search_directories(config: &Config) -> Vec<PathBuf> {
-    let mut dirs = vec![config.home().clone().into_path_unlocked().join("bin")];
+    let mut dirs = vec![config.bin_path()];
     if let Some(val) = env::var_os("PATH") {
         dirs.extend(env::split_paths(&val));
     }

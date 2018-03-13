@@ -1,5 +1,5 @@
 pub use self::cfg::{Cfg, CfgExpr};
-pub use self::config::{homedir, Config, ConfigValue};
+pub use self::config::{Config, ConfigValue};
 pub use self::dependency_queue::{DependencyQueue, Dirty, Fresh, Freshness};
 pub use self::errors::{CargoError, CargoResult, CargoResultExt, CliResult, Test};
 pub use self::errors::{CargoTestError, CliError, ProcessError};

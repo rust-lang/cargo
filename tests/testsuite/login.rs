@@ -1,3 +1,4 @@
+use std::env;
 use std::io::prelude::*;
 use std::fs::{self, File};
 
@@ -6,7 +7,7 @@ use cargotest::{cargo_process, ChannelChanger};
 use cargotest::support::execs;
 use cargotest::support::registry::registry;
 use cargotest::install::cargo_home;
-use cargo::util::config::Config;
+use cargo::util::config::{CargoDirs, Config};
 use cargo::core::Shell;
 use hamcrest::{assert_that, existing_file, is_not};
 
@@ -163,7 +164,8 @@ fn new_credentials_is_used_instead_old() {
         execs().with_status(0),
     );
 
-    let config = Config::new(Shell::new(), cargo_home(), cargo_home());
+    env::set_var("CARGO_HOME", cargo_home());
+    let config = Config::new(Shell::new(), CargoDirs::new().unwrap());
 
     let token = config.get_string("registry.token").unwrap().map(|p| p.val);
     assert_eq!(token.unwrap(), TOKEN);

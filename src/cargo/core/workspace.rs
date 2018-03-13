@@ -383,7 +383,7 @@ impl<'cfg> Workspace<'cfg> {
             // `CARGO_HOME` pointing inside of the workspace root or in the
             // current project, but we don't want to mistakenly try to put
             // crates.io crates into the workspace by accident.
-            if self.config.home() == path {
+            if &self.config.cache_path() == path {
                 break;
             }
         }

@@ -14,6 +14,7 @@ use std::sync::{Once, ONCE_INIT};
 use std::time::Instant;
 
 use curl::easy::Easy;
+use directories::ProjectDirs;
 use jobserver;
 use serde::{Serialize, Serializer};
 use toml;
@@ -32,22 +33,125 @@ use util::Filesystem;
 
 use self::ConfigValue as CV;
 
+#[derive(Clone, Debug)]
+pub struct CargoDirs {
+    pub current_dir: PathBuf,
+    pub cache_dir: Filesystem,
+    pub config_dir: Filesystem,
+    pub data_dir: PathBuf,
+    pub bin_dir: PathBuf,
+}
+
+impl CargoDirs {
+    /// Computes the paths to directories used by cargo to retrieve and store
+    /// cache, config, ... files.
+    // This is written in the most straight-forward way possible, because it is
+    // hard as-is to understand all the different options, without trying to
+    // save lines of code.
+    pub fn new() -> CargoResult<CargoDirs> {
+        let current_dir = env::current_dir().chain_err(|| {
+            "couldn't get the current directory of the process"
+        })?;
+
+        let mut cache_dir  = PathBuf::default();
+        let mut config_dir = PathBuf::default();
+        let mut data_dir   = PathBuf::default();
+        let mut bin_dir    = PathBuf::default();
+
+        // 1. CARGO_HOME set
+        let cargo_home_env = env::var_os("CARGO_HOME").map(|home| current_dir.join(home));
+        if let Some(cargo_home) = cargo_home_env.clone() {
+            cache_dir  = cargo_home.clone();
+            config_dir = cargo_home.clone();
+            data_dir   = cargo_home.clone();
+            bin_dir    = cargo_home.join("bin");
+        }
+        // 2. CARGO_CACHE_DIR, CARGO_CONFIG_DIR, CARGO_BIN_DIR, ... set
+        let cargo_cache_env  = env::var_os("CARGO_CACHE_DIR").map(|home| current_dir.join(home));
+        let cargo_config_env = env::var_os("CARGO_CONFIG_DIR").map(|home| current_dir.join(home));
+        let cargo_data_env   = env::var_os("CARGO_DATA_DIR").map(|home| current_dir.join(home));
+        let cargo_bin_env    = env::var_os("CARGO_BIN_DIR").map(|home| current_dir.join(home));
+        if let Some(cargo_cache) = cargo_cache_env.clone() {
+            cache_dir = cargo_cache.clone();
+        }
+        if let Some(cargo_config) = cargo_config_env.clone() {
+            config_dir = cargo_config.clone();
+        }
+        if let Some(cargo_data) = cargo_data_env.clone() {
+            data_dir = cargo_data.clone();
+        }
+        if let Some(cargo_bin) = cargo_bin_env.clone() {
+            bin_dir = cargo_bin.clone();
+        }
+
+        // no env vars are set ...
+        if cargo_home_env.is_none()
+              && cargo_cache_env.is_none()
+              && cargo_config_env.is_none()
+              && cargo_data_env.is_none()
+              && cargo_bin_env.is_none() {
+            let home_dir = ::home::home_dir().ok_or_else(|| {
+                format_err!("Cargo couldn't find your home directory. \
+                             This probably means that $HOME was not set.")
+            })?;
+            let legacy_cargo_dir = home_dir.join(".cargo");
+            // 3. ... and .cargo exist
+            if legacy_cargo_dir.exists() {
+                cache_dir  = legacy_cargo_dir.clone();
+                config_dir = legacy_cargo_dir.clone();
+                data_dir   = legacy_cargo_dir.clone();
+                bin_dir    = legacy_cargo_dir.join("bin");
+            // 4. ... otherwise follow platform conventions
+            } else {
+                let cargo_dirs = ProjectDirs::from("", "", "Cargo");
+                cache_dir  = cargo_dirs.cache_dir().to_path_buf();
+                config_dir = cargo_dirs.config_dir().to_path_buf();
+                data_dir   = cargo_dirs.data_dir().to_path_buf();
+                bin_dir    = CargoDirs::find_bin_dir(&cargo_dirs).ok_or_else(|| {
+                    format_err!("couldn't find the directory in which executables are placed")
+                })?.to_path_buf();
+            }
+        }
+
+        Ok(CargoDirs {
+            current_dir: current_dir,
+            cache_dir: Filesystem::new(cache_dir),
+            config_dir: Filesystem::new(config_dir),
+            data_dir: data_dir,
+            bin_dir: bin_dir,
+        })
+    }
+
+    #[cfg(target_os = "linux")]
+    fn find_bin_dir(_dirs: &ProjectDirs) -> Option<PathBuf> {
+        use directories::BaseDirs;
+        let base_dir = BaseDirs::new();
+        base_dir.executable_dir().map(|p| p.to_path_buf())
+    }
+    #[cfg(target_os = "macos")]
+    fn find_bin_dir(dirs: &ProjectDirs) -> Option<PathBuf> {
+        dirs.data_dir().parent().map(|p| p.join("bin")).map(|p| p.to_path_buf())
+    }
+    #[cfg(target_os = "windows")]
+    fn find_bin_dir(dirs: &ProjectDirs) -> Option<PathBuf> {
+        dirs.data_dir().parent().map(|p| p.join("bin")).map(|p| p.to_path_buf())
+    }
+}
+
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
 ///
 /// This struct implements `Default`: all fields can be inferred.
 #[derive(Debug)]
 pub struct Config {
-    /// The location of the users's 'home' directory. OS-dependent.
-    home_path: Filesystem,
+    /// The location of directories crucial for cargo. OS-dependent.
+    dirs: CargoDirs,
     /// Information about how to write messages to the shell
     shell: RefCell<Shell>,
     /// Information on how to invoke the compiler (rustc)
     rustc: LazyCell<Rustc>,
     /// A collection of configuration options
     values: LazyCell<HashMap<String, ConfigValue>>,
-    /// The current working directory of cargo
-    cwd: PathBuf,
     /// The location of the cargo executable (path to current process)
     cargo_exe: LazyCell<PathBuf>,
     /// The location of the rustdoc executable
@@ -70,7 +174,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(shell: Shell, cwd: PathBuf, homedir: PathBuf) -> Config {
+    pub fn new(shell: Shell, dirs: CargoDirs) -> Config {
         static mut GLOBAL_JOBSERVER: *mut jobserver::Client = 0 as *mut _;
         static INIT: Once = ONCE_INIT;
 
@@ -83,10 +187,9 @@ impl Config {
         });
 
         Config {
-            home_path: Filesystem::new(homedir),
+            dirs: dirs,
             shell: RefCell::new(shell),
             rustc: LazyCell::new(),
-            cwd,
             values: LazyCell::new(),
             cargo_exe: LazyCell::new(),
             rustdoc: LazyCell::new(),
@@ -109,40 +212,44 @@ impl Config {
 
     pub fn default() -> CargoResult<Config> {
         let shell = Shell::new();
-        let cwd =
-            env::current_dir().chain_err(|| "couldn't get the current directory of the process")?;
-        let homedir = homedir(&cwd).ok_or_else(|| {
-            format_err!(
-                "Cargo couldn't find your home directory. \
-                 This probably means that $HOME was not set."
-            )
-        })?;
-        Ok(Config::new(shell, cwd, homedir))
+        let cargo_dirs = CargoDirs::new()?;
+        Ok(Config::new(shell, cargo_dirs))
     }
 
-    /// The user's cargo home directory (OS-dependent)
-    pub fn home(&self) -> &Filesystem {
-        &self.home_path
+    pub fn cache_path(&self) -> Filesystem {
+        self.dirs.cache_dir.clone()
+    }
+
+    pub fn config_path(&self) -> Filesystem {
+        self.dirs.config_dir.clone()
+    }
+
+    pub fn data_path(&self) -> PathBuf {
+        self.dirs.data_dir.clone()
+    }
+
+    pub fn bin_path(&self) -> PathBuf {
+        self.dirs.bin_dir.clone()
     }
 
     /// The cargo git directory (`<cargo_home>/git`)
     pub fn git_path(&self) -> Filesystem {
-        self.home_path.join("git")
+        self.dirs.cache_dir.join("git")
     }
 
     /// The cargo registry index directory (`<cargo_home>/registry/index`)
     pub fn registry_index_path(&self) -> Filesystem {
-        self.home_path.join("registry").join("index")
+        self.dirs.cache_dir.join("registry").join("index")
     }
 
     /// The cargo registry cache directory (`<cargo_home>/registry/path`)
     pub fn registry_cache_path(&self) -> Filesystem {
-        self.home_path.join("registry").join("cache")
+        self.dirs.cache_dir.join("registry").join("cache")
     }
 
     /// The cargo registry source directory (`<cargo_home>/registry/src`)
     pub fn registry_source_path(&self) -> Filesystem {
-        self.home_path.join("registry").join("src")
+        self.dirs.cache_dir.join("registry").join("src")
     }
 
     /// Get a reference to the shell, for e.g. writing error messages
@@ -237,14 +344,14 @@ impl Config {
     }
 
     pub fn cwd(&self) -> &Path {
-        &self.cwd
+        &self.dirs.current_dir
     }
 
     pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
         if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
-            Ok(Some(Filesystem::new(self.cwd.join(dir))))
+            Ok(Some(Filesystem::new(self.dirs.current_dir.join(dir))))
         } else if let Some(val) = self.get_path("build.target-dir")? {
-            let val = self.cwd.join(val.val);
+            let val = self.cwd().join(val.val);
             Ok(Some(Filesystem::new(val)))
         } else {
             Ok(None)
@@ -529,7 +636,7 @@ impl Config {
     pub fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         let mut cfg = CV::Table(HashMap::new(), PathBuf::from("."));
 
-        walk_tree(&self.cwd, |path| {
+        walk_tree(&self.dirs, |path| {
             let mut contents = String::new();
             let mut file = File::open(&path)?;
             file.read_to_string(&mut contents)
@@ -573,8 +680,8 @@ impl Config {
 
     /// Loads credentials config from the credentials file into the ConfigValue object, if present.
     fn load_credentials(&self, cfg: &mut ConfigValue) -> CargoResult<()> {
-        let home_path = self.home_path.clone().into_path_unlocked();
-        let credentials = home_path.join("credentials");
+        let config_path = self.dirs.config_dir.clone().into_path_unlocked();
+        let credentials = config_path.join("credentials");
         if !fs::metadata(&credentials).is_ok() {
             return Ok(());
         }
@@ -589,10 +696,7 @@ impl Config {
         })?;
 
         let toml = cargo_toml::parse(&contents, &credentials, self).chain_err(|| {
-            format!(
-                "could not parse TOML configuration in `{}`",
-                credentials.display()
-            )
+            format!("could not parse TOML configuration in `{}`", credentials.display())
         })?;
 
         let mut value = CV::from_toml(&credentials, toml).chain_err(|| {
@@ -638,7 +742,7 @@ impl Config {
                 None => false,
             };
             let path = if maybe_relative {
-                self.cwd.join(tool_path)
+                self.cwd().join(tool_path)
             } else {
                 PathBuf::from(tool_path)
             };
@@ -924,17 +1028,13 @@ impl fmt::Display for Definition {
     }
 }
 
-pub fn homedir(cwd: &Path) -> Option<PathBuf> {
-    ::home::cargo_home_with_cwd(cwd).ok()
-}
-
-fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
+fn walk_tree<F>(dirs: &CargoDirs, mut walk: F) -> CargoResult<()>
 where
     F: FnMut(&Path) -> CargoResult<()>,
 {
     let mut stash: HashSet<PathBuf> = HashSet::new();
 
-    for current in paths::ancestors(pwd) {
+    for current in paths::ancestors(&dirs.current_dir) {
         let possible = current.join(".cargo").join("config");
         if fs::metadata(&possible).is_ok() {
             walk(&possible)?;
@@ -943,15 +1043,9 @@ where
     }
 
     // Once we're done, also be sure to walk the home directory even if it's not
-    // in our history to be sure we pick up that standard location for
+    // in our path to be sure we pick up that standard location for
     // information.
-    let home = homedir(pwd).ok_or_else(|| {
-        format_err!(
-            "Cargo couldn't find your home directory. \
-             This probably means that $HOME was not set."
-        )
-    })?;
-    let config = home.join("config");
+    let config = dirs.config_dir.clone().into_path_unlocked().join("config");
     if !stash.contains(&config) && fs::metadata(&config).is_ok() {
         walk(&config)?;
     }
@@ -961,9 +1055,8 @@ where
 
 pub fn save_credentials(cfg: &Config, token: String, registry: Option<String>) -> CargoResult<()> {
     let mut file = {
-        cfg.home_path.create_dir()?;
-        cfg.home_path
-            .open_rw(Path::new("credentials"), cfg, "credentials' config file")?
+        cfg.dirs.config_dir.create_dir()?;
+        cfg.dirs.config_dir.open_rw(Path::new("credentials"), cfg, "credentials' config file")?
     };
 
     let (key, value) = {
