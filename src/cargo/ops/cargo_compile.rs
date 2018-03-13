@@ -41,18 +41,18 @@ pub struct CompileOptions<'a> {
     /// Number of concurrent jobs to use.
     pub jobs: Option<u32>,
     /// The target platform to compile for (example: `i686-unknown-linux-gnu`).
-    pub target: Option<&'a str>,
+    pub target: Option<String>,
     /// Extra features to build for the root package
-    pub features: &'a [String],
+    pub features: Vec<String>,
     /// Flag whether all available features should be built for the root package
     pub all_features: bool,
     /// Flag if the default feature should be built for the root package
     pub no_default_features: bool,
     /// A set of packages to build.
-    pub spec: Packages<'a>,
+    pub spec: Packages,
     /// Filter to apply to the root package to select which targets will be
     /// built.
-    pub filter: CompileFilter<'a>,
+    pub filter: CompileFilter,
     /// Whether this is a release build or not
     pub release: bool,
     /// Mode for this compile.
@@ -60,10 +60,10 @@ pub struct CompileOptions<'a> {
     /// `--error_format` flag for the compiler.
     pub message_format: MessageFormat,
     /// Extra arguments to be passed to rustdoc (for main crate and dependencies)
-    pub target_rustdoc_args: Option<&'a [String]>,
+    pub target_rustdoc_args: Option<Vec<String>>,
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
-    pub target_rustc_args: Option<&'a [String]>,
+    pub target_rustc_args: Option<Vec<String>>,
 }
 
 impl<'a> CompileOptions<'a> {
@@ -73,10 +73,10 @@ impl<'a> CompileOptions<'a> {
             config,
             jobs: None,
             target: None,
-            features: &[],
+            features: Vec::new(),
             all_features: false,
             no_default_features: false,
-            spec: ops::Packages::Packages(&[]),
+            spec: ops::Packages::Packages(Vec::new()),
             mode,
             release: false,
             filter: CompileFilter::Default { required_features_filterable: false },
@@ -97,22 +97,22 @@ pub enum CompileMode {
     Doctest,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MessageFormat {
     Human,
     Json
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Packages<'a> {
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Packages {
     Default,
     All,
-    OptOut(&'a [String]),
-    Packages(&'a [String]),
+    OptOut(Vec<String>),
+    Packages(Vec<String>),
 }
 
-impl<'a> Packages<'a> {
-    pub fn from_flags(all: bool, exclude: &'a [String], package: &'a [String])
+impl Packages {
+    pub fn from_flags(all: bool, exclude: Vec<String>, package: Vec<String>)
         -> CargoResult<Self>
     {
         Ok(match (all, exclude.len(), package.len()) {
@@ -124,28 +124,28 @@ impl<'a> Packages<'a> {
         })
     }
 
-    pub fn into_package_id_specs(self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
-        let specs = match self {
+    pub fn into_package_id_specs(&self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
+        let specs = match *self {
             Packages::All => {
                 ws.members()
                     .map(Package::package_id)
                     .map(PackageIdSpec::from_package_id)
                     .collect()
             }
-            Packages::OptOut(opt_out) => {
+            Packages::OptOut(ref opt_out) => {
                 ws.members()
                     .map(Package::package_id)
                     .map(PackageIdSpec::from_package_id)
                     .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
                     .collect()
             }
-            Packages::Packages(packages) if packages.is_empty() => {
+            Packages::Packages(ref packages) if packages.is_empty() => {
                 ws.current_opt()
                     .map(Package::package_id)
                     .map(PackageIdSpec::from_package_id)
                     .into_iter().collect()
             }
-            Packages::Packages(packages) => {
+            Packages::Packages(ref packages) => {
                 packages.iter().map(|p| PackageIdSpec::parse(p)).collect::<CargoResult<Vec<_>>>()?
             }
             Packages::Default => {
@@ -166,14 +166,14 @@ impl<'a> Packages<'a> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum FilterRule<'a> {
+#[derive(Debug)]
+pub enum FilterRule {
     All,
-    Just (&'a [String]),
+    Just(Vec<String>),
 }
 
 #[derive(Debug)]
-pub enum CompileFilter<'a> {
+pub enum CompileFilter {
     Default {
         /// Flag whether targets can be safely skipped when required-features are not satisfied.
         required_features_filterable: bool,
@@ -181,10 +181,10 @@ pub enum CompileFilter<'a> {
     Only {
         all_targets: bool,
         lib: bool,
-        bins: FilterRule<'a>,
-        examples: FilterRule<'a>,
-        tests: FilterRule<'a>,
-        benches: FilterRule<'a>,
+        bins: FilterRule,
+        examples: FilterRule,
+        tests: FilterRule,
+        benches: FilterRule,
     }
 }
 
@@ -217,14 +217,14 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                       options: &CompileOptions<'a>,
                       exec: Arc<Executor>)
                       -> CargoResult<ops::Compilation<'a>> {
-    let CompileOptions { config, jobs, target, spec, features,
+    let CompileOptions { config, jobs, ref target, ref spec, ref features,
                          all_features, no_default_features,
                          release, mode, message_format,
                          ref filter,
                          ref target_rustdoc_args,
                          ref target_rustc_args } = *options;
 
-    let target = target.map(|s| s.to_string());
+    let target = target.clone();
 
     if jobs == Some(0) {
         bail!("jobs must be at least 1")
@@ -257,12 +257,12 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     let mut general_targets = Vec::new();
     let mut package_targets = Vec::new();
 
-    match (*target_rustc_args, *target_rustdoc_args) {
-        (Some(..), _) |
-        (_, Some(..)) if to_builds.len() != 1 => {
+    match (target_rustc_args, target_rustdoc_args) {
+        (&Some(..), _) |
+        (_, &Some(..)) if to_builds.len() != 1 => {
             panic!("`rustc` and `rustdoc` should not accept multiple `-p` flags")
         }
-        (Some(args), _) => {
+        (&Some(ref args), _) => {
             let all_features = resolve_all_features(&resolve_with_overrides,
                                                     to_builds[0].package_id());
             let targets = generate_targets(to_builds[0], profiles,
@@ -278,7 +278,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                        e.g. `--lib` or `--bin NAME` to specify a single target")
             }
         }
-        (None, Some(args)) => {
+        (&None, &Some(ref args)) => {
             let all_features = resolve_all_features(&resolve_with_overrides,
                                                     to_builds[0].package_id());
             let targets = generate_targets(to_builds[0], profiles,
@@ -294,7 +294,7 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
                        `--lib` or `--bin NAME` to specify a single target")
             }
         }
-        (None, None) => {
+        (&None, &None) => {
             for &to_build in to_builds.iter() {
                 let all_features = resolve_all_features(&resolve_with_overrides,
                                                         to_build.package_id());
@@ -353,8 +353,8 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
     }
 }
 
-impl<'a> FilterRule<'a> {
-    pub fn new(targets: &'a [String], all: bool) -> FilterRule<'a> {
+impl FilterRule {
+    pub fn new(targets: Vec<String>, all: bool) -> FilterRule {
         if all {
             FilterRule::All
         } else {
@@ -365,7 +365,7 @@ impl<'a> FilterRule<'a> {
     fn matches(&self, target: &Target) -> bool {
         match *self {
             FilterRule::All => true,
-            FilterRule::Just(targets) => {
+            FilterRule::Just(ref targets) => {
                 targets.iter().any(|x| *x == target.name())
             },
         }
@@ -374,25 +374,25 @@ impl<'a> FilterRule<'a> {
     fn is_specific(&self) -> bool {
         match *self {
             FilterRule::All => true,
-            FilterRule::Just(targets) => !targets.is_empty(),
+            FilterRule::Just(ref targets) => !targets.is_empty(),
         }
     }
 
     pub fn try_collect(&self) -> Option<Vec<String>> {
         match *self {
             FilterRule::All => None,
-            FilterRule::Just(targets) => Some(targets.to_vec()),
+            FilterRule::Just(ref targets) => Some(targets.clone()),
         }
     }
 }
 
-impl<'a> CompileFilter<'a> {
+impl CompileFilter {
     pub fn new(lib_only: bool,
-               bins: &'a [String], all_bins: bool,
-               tsts: &'a [String], all_tsts: bool,
-               exms: &'a [String], all_exms: bool,
-               bens: &'a [String], all_bens: bool,
-               all_targets: bool) -> CompileFilter<'a> {
+               bins: Vec<String>, all_bins: bool,
+               tsts: Vec<String>, all_tsts: bool,
+               exms: Vec<String>, all_exms: bool,
+               bens: Vec<String>, all_bens: bool,
+               all_targets: bool) -> CompileFilter {
         let rule_bins = FilterRule::new(bins, all_bins);
         let rule_tsts = FilterRule::new(tsts, all_tsts);
         let rule_exms = FilterRule::new(exms, all_exms);
@@ -423,7 +423,7 @@ impl<'a> CompileFilter<'a> {
     pub fn need_dev_deps(&self) -> bool {
         match *self {
             CompileFilter::Default { .. } => true,
-            CompileFilter::Only { examples, tests, benches, .. } =>
+            CompileFilter::Only { ref examples, ref tests, ref benches, .. } =>
                 examples.is_specific() || tests.is_specific() || benches.is_specific()
         }
     }
@@ -431,7 +431,7 @@ impl<'a> CompileFilter<'a> {
     pub fn matches(&self, target: &Target) -> bool {
         match *self {
             CompileFilter::Default { .. } => true,
-            CompileFilter::Only { lib, bins, examples, tests, benches, .. } => {
+            CompileFilter::Only { lib, ref bins, ref examples, ref tests, ref benches, .. } => {
                 let rule = match *target.kind() {
                     TargetKind::Bin => bins,
                     TargetKind::Test => tests,
@@ -538,11 +538,11 @@ fn generate_auto_targets<'a>(mode: CompileMode, targets: &'a [Target],
 
 /// Given a filter rule and some context, propose a list of targets
 fn propose_indicated_targets<'a>(pkg: &'a Package,
-                                 rule: FilterRule,
+                                 rule: &FilterRule,
                                  desc: &'static str,
                                  is_expected_kind: fn(&Target) -> bool,
                                  profile: &'a Profile) -> CargoResult<Vec<BuildProposal<'a>>> {
-    match rule {
+    match *rule {
         FilterRule::All => {
             let result = pkg.targets().iter().filter(|t| is_expected_kind(t)).map(|t| {
                 BuildProposal {
@@ -553,7 +553,7 @@ fn propose_indicated_targets<'a>(pkg: &'a Package,
             });
             Ok(result.collect())
         }
-        FilterRule::Just(names) => {
+        FilterRule::Just(ref names) => {
             let mut targets = Vec::new();
             for name in names {
                 let target = pkg.targets().iter().find(|t| {
@@ -658,7 +658,7 @@ fn generate_targets<'a>(pkg: &'a Package,
             };
             generate_auto_targets(mode, pkg.targets(), profile, deps, required_features_filterable)
         }
-        CompileFilter::Only { all_targets, lib, bins, examples, tests, benches } => {
+        CompileFilter::Only { all_targets, lib, ref bins, ref examples, ref tests, ref benches } => {
             let mut targets = Vec::new();
 
             if lib {
@@ -678,7 +678,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                 pkg, examples, "example", Target::is_example, profile)?);
             // If --tests was specified, add all targets that would be
             // generated by `cargo test`.
-            let test_filter = match tests {
+            let test_filter = match *tests {
                 FilterRule::All => Target::tested,
                 FilterRule::Just(_) => Target::is_test
             };
@@ -686,7 +686,7 @@ fn generate_targets<'a>(pkg: &'a Package,
                 pkg, tests, "test", test_filter, test_profile)?);
             // If --benches was specified, add all targets that would be
             // generated by `cargo bench`.
-            let bench_filter = match benches {
+            let bench_filter = match *benches {
                 FilterRule::All => Target::benched,
                 FilterRule::Just(_) => Target::is_bench
             };

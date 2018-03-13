@@ -101,11 +101,10 @@ fn find_closest_biuld_to_build() {
     pr.arg("biuld");
 
     assert_that(pr,
-                execs().with_status(101)
-                       .with_stderr("[ERROR] no such subcommand: `biuld`
-
-<tab>Did you mean `build`?
-
+                execs().with_status(1)
+                       .with_stderr_contains("\
+error: The subcommand 'biuld' wasn't recognized
+<tab>Did you mean 'build'?
 "));
 }
 
@@ -202,8 +201,6 @@ fn cargo_help() {
                 execs().with_status(0));
     assert_that(cargo_process().arg("build").arg("-h"),
                 execs().with_status(0));
-    assert_that(cargo_process().arg("help").arg("-h"),
-                execs().with_status(0));
     assert_that(cargo_process().arg("help").arg("help"),
                 execs().with_status(0));
 }
@@ -211,5 +208,6 @@ fn cargo_help() {
 #[test]
 fn explain() {
     assert_that(cargo_process().arg("--explain").arg("E0001"),
-                execs().with_status(0));
+                execs().with_status(0).with_stdout_contains("\
+This error suggests that the expression arm corresponding to the noted pattern"));
 }

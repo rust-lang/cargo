@@ -34,7 +34,7 @@ pub struct PublishOpts<'cfg> {
     pub verify: bool,
     pub allow_dirty: bool,
     pub jobs: Option<u32>,
-    pub target: Option<&'cfg str>,
+    pub target: Option<String>,
     pub dry_run: bool,
     pub registry: Option<String>,
 }
@@ -76,7 +76,7 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         list: false,
         check_metadata: true,
         allow_dirty: opts.allow_dirty,
-        target: opts.target,
+        target: opts.target.clone(),
         jobs: opts.jobs,
         registry: opts.registry.clone(),
     })?.unwrap();
@@ -486,7 +486,7 @@ pub fn yank(config: &Config,
 pub fn search(query: &str,
               config: &Config,
               index: Option<String>,
-              limit: u8,
+              limit: u32,
               reg: Option<String>) -> CargoResult<()> {
     fn truncate_with_ellipsis(s: &str, max_width: usize) -> String {
         // We should truncate at grapheme-boundary and compute character-widths,

@@ -22,7 +22,6 @@ crates-io = { path = "src/crates-io", version = "0.16" }
 crossbeam = "0.3"
 crypto-hash = "0.3"
 curl = "0.4.6"
-docopt = "0.8.1"
 env_logger = "0.5"
 failure = "0.1.1"
 filetime = "0.1"
@@ -54,6 +53,7 @@ tempdir = "0.3"
 termcolor = "0.3"
 toml = "0.4"
 url = "1.1"
+clap = "2.27.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { version = "0.5.1", features = ["mac_os_10_7_support"] }

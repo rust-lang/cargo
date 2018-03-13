@@ -11,10 +11,10 @@
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate serde_json;
 extern crate atty;
+extern crate clap;
 extern crate crates_io as registry;
 extern crate crossbeam;
 extern crate curl;
-extern crate docopt;
 extern crate filetime;
 extern crate flate2;
 extern crate fs2;
@@ -44,9 +44,7 @@ extern crate core_foundation;
 
 use std::fmt;
 
-use serde::de::DeserializeOwned;
 use serde::ser;
-use docopt::Docopt;
 use failure::Error;
 
 use core::Shell;
@@ -107,26 +105,6 @@ impl fmt::Display for VersionInfo {
     }
 }
 
-pub fn call_main_without_stdin<Flags: DeserializeOwned>(
-            exec: fn(Flags, &mut Config) -> CliResult,
-            config: &mut Config,
-            usage: &str,
-            args: &[String],
-            options_first: bool) -> CliResult
-{
-    let docopt = Docopt::new(usage).unwrap()
-        .options_first(options_first)
-        .argv(args.iter().map(|s| &s[..]))
-        .help(true);
-
-    let flags = docopt.deserialize().map_err(|e| {
-        let code = if e.fatal() {1} else {0};
-        CliError::new(e.into(), code)
-    })?;
-
-    exec(flags, config)
-}
-
 pub fn print_json<T: ser::Serialize>(obj: &T) {
     let encoded = serde_json::to_string(&obj).unwrap();
     println!("{}", encoded);
@@ -134,6 +112,11 @@ pub fn print_json<T: ser::Serialize>(obj: &T) {
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     debug!("exit_with_error; err={:?}", err);
+    if let Some(ref err) = err.error {
+        if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
+            clap_err.exit()
+        }
+    }
 
     let CliError { error, exit_code, unknown } = err;
     // exit_code == 0 is non-fatal error, e.g. docopt version info
