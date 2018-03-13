@@ -71,17 +71,12 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
     let mut visited = HashSet::new();
     let success = add_deps_for_unit(&mut deps, context, unit, &mut visited).is_ok();
     let basedir_string;
-    let basedir = match context.config.get_string("dep-info-basedir") {
-        Ok(config) => {
-            match config {
-                Some(value) => {
-                    basedir_string = value.val;
-                    Some(basedir_string.as_str())
-                }
-                None => None,
-            }
-        },
-        _ => None
+    let basedir = match context.config.get_string("dep-info-basedir")? {
+        Some(value) => {
+            basedir_string = value.val;
+            Some(basedir_string.as_str())
+        }
+        None => None,
     };
     for &(_, ref link_dst, _) in context.target_filenames(unit)?.iter() {
         if let Some(ref link_dst) = *link_dst {
