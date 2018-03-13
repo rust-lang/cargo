@@ -22,6 +22,7 @@ fn simple_lib() {
 [CREATED] library project
 "));
 
+    assert_that(&paths::root().join("examples"), existing_dir());
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
     assert_that(&paths::root().join("src/lib.rs"), existing_file());
     assert_that(&paths::root().join(".gitignore"), is_not(existing_file()));
