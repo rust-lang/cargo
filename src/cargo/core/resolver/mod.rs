@@ -899,10 +899,12 @@ fn activate_deps_loop(
                 // to activate that one.
                 trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
 
-                let past = past_conflicting_activations.entry(dep.clone()).or_insert_with(Vec::new);
-                if !just_here_for_the_error_messages && !past.contains(&conflicting_activations) {
-                    trace!("{}[{}]>{} adding a skip {:?}", parent.name(), cur, dep.name(), conflicting_activations);
-                    past.push(conflicting_activations.clone());
+                if !just_here_for_the_error_messages && !backtracked {
+                    let past = past_conflicting_activations.entry(dep.clone()).or_insert_with(Vec::new);
+                    if !past.contains(&conflicting_activations) {
+                        trace!("{}[{}]>{} adding a skip {:?}", parent.name(), cur, dep.name(), conflicting_activations);
+                        past.push(conflicting_activations.clone());
+                    }
                 }
 
                 find_candidate(
@@ -997,11 +999,15 @@ fn activate_deps_loop(
                     }
                     // if not has_another we we activate for the better error messages
                     frame.just_for_error_messages = has_past_conflicting_dep;
-                    if has_past_conflicting_dep && has_another {
+                    if !has_past_conflicting_dep || (!has_another && (just_here_for_the_error_messages || find_candidate(
+                        &mut backtrack_stack.clone(),
+                        &parent,
+                        &conflicting_activations,
+                    ).is_none())) {
+                        remaining_deps.push(frame);
+                    } else {
                         trace!("{}[{}]>{} skipping {} ", parent.name(), cur, dep.name(), pid.version());
                         successfully_activated = false;
-                    } else {
-                        remaining_deps.push(frame);
                     }
                     deps_time += dur;
                 }
