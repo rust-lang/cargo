@@ -71,7 +71,7 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
     let mut visited = HashSet::new();
     let success = add_deps_for_unit(&mut deps, context, unit, &mut visited).is_ok();
     let basedir_string;
-    let basedir = match context.config.get_string("dep-info-basedir")? {
+    let basedir = match context.config.get_string("build.dep-info-basedir")? {
         Some(value) => {
             basedir_string = value.val;
             Some(basedir_string.as_str())
