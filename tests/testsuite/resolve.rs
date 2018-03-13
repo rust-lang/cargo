@@ -500,7 +500,7 @@ fn resolving_with_many_equivalent_backtracking() {
     // Lets make sure we can find a good answer if it is there.
     reglist.push(pkg!(("level0", "1.0.0")));
 
-    let reg = registry(reglist);
+    let reg = registry(reglist.clone());
 
     let res = resolve(&pkg_id("root"), vec![
         dep_req("level0", "*"),
@@ -508,6 +508,42 @@ fn resolving_with_many_equivalent_backtracking() {
 
     assert_that(&res, contains(names(&[("root", "1.0.0"),
                                        ("level0", "1.0.0")])));
+
+    // Make sure we have not special case no candidates.
+    reglist.push(pkg!(("constrained", "1.1.0")));
+    reglist.push(pkg!(("constrained", "1.0.0")));
+    reglist.push(pkg!((format!("level{}", DEPTH).as_str(), "1.0.0") => [dep_req("constrained", "=1.0.0")]));
+
+    let reg = registry(reglist.clone());
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("level0", "*"),
+        dep_req("constrained", "*"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("level0", "1.0.0"),
+                                       ("constrained", "1.1.0")])));
+
+    let reg = registry(reglist.clone());
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("level0", "1.0.1"),
+        dep_req("constrained", "*"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       (format!("level{}", DEPTH).as_str(), "1.0.0"),
+                                       ("constrained", "1.0.0")])));
+
+    let reg = registry(reglist.clone());
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("level0", "1.0.1"),
+        dep_req("constrained", "1.1.0"),
+    ], &reg);
+
+    assert!(res.is_err());
 }
 
 #[test]
