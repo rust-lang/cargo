@@ -161,10 +161,9 @@ failed to select a version for `bar` which could resolve this conflict",
 
     assert_that(
         p.cargo("build").arg("--features").arg("test"),
-        execs().with_status(101).with_stderr(
-            "\
-             error: Package `foo v0.0.1 ([..])` does not have these features: `test`",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("error: Package `foo v0.0.1 ([..])` does not have these features: `test`"),
     );
 }
 
@@ -294,11 +293,9 @@ fn invalid8() {
 
     assert_that(
         p.cargo("build").arg("--features").arg("foo"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] feature names may not contain slashes: `foo/bar`
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] feature names may not contain slashes: `foo/bar`"),
     );
 }
 
@@ -459,11 +456,9 @@ fn no_transitive_dep_feature_requirement() {
         .build();
     assert_that(
         p.cargo("build"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] feature names may not contain slashes: `bar/qux`
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] feature names may not contain slashes: `bar/qux`"),
     );
 }
 
@@ -632,11 +627,9 @@ fn cyclic_feature() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] Cyclic feature dependency: feature `default` depends on itself
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] Cyclic feature dependency: feature `default` depends on itself"),
     );
 }
 
@@ -1399,10 +1392,9 @@ fn dep_feature_in_cmd_line() {
     // Trying to enable features of transitive dependencies is an error
     assert_that(
         p.cargo("build").arg("--features").arg("bar/some-feat"),
-        execs().with_status(101).with_stderr(
-            "\
-             error: Package `foo v0.0.1 ([..])` does not have these features: `bar`",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("error: Package `foo v0.0.1 ([..])` does not have these features: `bar`"),
     );
 
     // Hierarchical feature specification should still be disallowed
@@ -1410,11 +1402,9 @@ fn dep_feature_in_cmd_line() {
         p.cargo("build")
             .arg("--features")
             .arg("derived/bar/some-feat"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] feature names may not contain slashes: `bar/some-feat`
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] feature names may not contain slashes: `bar/some-feat`"),
     );
 }
 

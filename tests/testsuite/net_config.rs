@@ -70,9 +70,6 @@ fn net_retry_git_outputs_warning() {
                 "[WARNING] spurious network error \
                  (2 tries remaining): [..]",
             )
-            .with_stderr_contains(
-                "\
-                 [WARNING] spurious network error (1 tries remaining): [..]",
-            ),
+            .with_stderr_contains("[WARNING] spurious network error (1 tries remaining): [..]"),
     );
 }

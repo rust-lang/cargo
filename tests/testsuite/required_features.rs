@@ -354,8 +354,7 @@ fn test_default_features() {
         execs()
             .with_status(0)
             .with_stderr(format!(
-                "\
-                 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"
+                "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"
             ))
             .with_stdout(""),
     );
@@ -486,8 +485,7 @@ fn test_multiple_required_features() {
         execs()
             .with_status(0)
             .with_stderr(format!(
-                "\
-                 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"
+                "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"
             ))
             .with_stdout(""),
     );
@@ -547,10 +545,7 @@ fn bench_default_features() {
         p.cargo("bench").arg("--no-default-features"),
         execs()
             .with_status(0)
-            .with_stderr(format!(
-                "\
-                 [FINISHED] release [optimized] target(s) in [..]"
-            ))
+            .with_stderr(format!("[FINISHED] release [optimized] target(s) in [..]"))
             .with_stdout(""),
     );
 
@@ -714,10 +709,7 @@ fn bench_multiple_required_features() {
         p.cargo("bench").arg("--no-default-features"),
         execs()
             .with_status(0)
-            .with_stderr(format!(
-                "\
-                 [FINISHED] release [optimized] target(s) in [..]"
-            ))
+            .with_stderr(format!("[FINISHED] release [optimized] target(s) in [..]"))
             .with_stdout(""),
     );
 }
@@ -1121,8 +1113,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
         execs()
             .with_status(0)
             .with_stderr(format!(
-                "\
-                 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"
+                "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"
             ))
             .with_stdout(""),
     );
@@ -1150,10 +1141,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
             p.cargo("bench"),
             execs()
                 .with_status(0)
-                .with_stderr(format!(
-                    "\
-                     [FINISHED] release [optimized] target(s) in [..]"
-                ))
+                .with_stderr(format!("[FINISHED] release [optimized] target(s) in [..]"))
                 .with_stdout(""),
         );
 

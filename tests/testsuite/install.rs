@@ -56,9 +56,7 @@ warning: be sure to add `[..]` to your PATH to be able to run the installed bina
     assert_that(
         cargo_process("uninstall").arg("foo"),
         execs().with_status(0).with_stderr(&format!(
-            "\
-[REMOVING] {home}[..]bin[..]foo[..]
-",
+            "[REMOVING] {home}[..]bin[..]foo[..]",
             home = cargo_home().display()
         )),
     );
@@ -472,11 +470,9 @@ fn no_binaries_or_examples() {
 
     assert_that(
         cargo_process("install").arg("--path").arg(p.root()),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] no packages found with binaries or examples
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] no packages found with binaries or examples"),
     );
 }
 
@@ -905,11 +901,9 @@ Caused by:
 fn uninstall_pkg_does_not_exist() {
     assert_that(
         cargo_process("uninstall").arg("foo"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] package id specification `foo` matched no packages
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] package id specification `foo` matched no packages"),
     );
 }
 
@@ -920,11 +914,9 @@ fn uninstall_bin_does_not_exist() {
     assert_that(cargo_process("install").arg("foo"), execs().with_status(0));
     assert_that(
         cargo_process("uninstall").arg("foo").arg("--bin=bar"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] binary `bar[..]` not installed as part of `foo v0.0.1`
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] binary `bar[..]` not installed as part of `foo v0.0.1`"),
     );
 }
 
@@ -953,11 +945,7 @@ fn uninstall_piecemeal() {
 
     assert_that(
         cargo_process("uninstall").arg("foo").arg("--bin=bar"),
-        execs().with_status(0).with_stderr(
-            "\
-[REMOVING] [..]bar[..]
-",
-        ),
+        execs().with_status(0).with_stderr("[REMOVING] [..]bar[..]"),
     );
 
     assert_that(cargo_home(), has_installed_exe("foo"));
@@ -965,21 +953,15 @@ fn uninstall_piecemeal() {
 
     assert_that(
         cargo_process("uninstall").arg("foo").arg("--bin=foo"),
-        execs().with_status(0).with_stderr(
-            "\
-[REMOVING] [..]foo[..]
-",
-        ),
+        execs().with_status(0).with_stderr("[REMOVING] [..]foo[..]"),
     );
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
     assert_that(
         cargo_process("uninstall").arg("foo"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] package id specification `foo` matched no packages
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] package id specification `foo` matched no packages"),
     );
 }
 
@@ -1085,11 +1067,9 @@ fn reports_unsuccessful_subcommand_result() {
     );
     assert_that(
         cargo_process("fail"),
-        execs().with_status(101).with_stderr_contains(
-            "\
-thread '[..]' panicked at 'explicit panic', [..]
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr_contains("thread '[..]' panicked at 'explicit panic', [..]"),
     );
 }
 
@@ -1294,11 +1274,9 @@ fn vers_precise() {
             .arg("foo")
             .arg("--vers")
             .arg("0.1.1"),
-        execs().with_status(0).with_stderr_contains(
-            "\
-[DOWNLOADING] foo v0.1.1 (registry [..])
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[DOWNLOADING] foo v0.1.1 (registry [..])"),
     );
 }
 
@@ -1312,11 +1290,9 @@ fn version_too() {
             .arg("foo")
             .arg("--version")
             .arg("0.1.1"),
-        execs().with_status(0).with_stderr_contains(
-            "\
-                    [DOWNLOADING] foo v0.1.1 (registry [..])
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[DOWNLOADING] foo v0.1.1 (registry [..])"),
     );
 }
 
@@ -1361,17 +1337,13 @@ and will continue to do so, but this behavior will be removed eventually
 #[test]
 fn test_install_git_cannot_be_a_base_url() {
     assert_that(cargo_process("install").arg("--git").arg("github.com:rust-lang-nursery/rustfmt.git"),
-                execs().with_status(101).with_stderr("\
-error: invalid url `github.com:rust-lang-nursery/rustfmt.git`: cannot-be-a-base-URLs are not supported
-"));
+                execs().with_status(101).with_stderr("error: invalid url `github.com:rust-lang-nursery/rustfmt.git`: cannot-be-a-base-URLs are not supported"));
 }
 
 #[test]
 fn uninstall_multiple_and_specifying_bin() {
     assert_that(cargo_process("uninstall").args(&["foo", "bar"]).arg("--bin").arg("baz"),
-                execs().with_status(101).with_stderr("\
-error: A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.
-"));
+                execs().with_status(101).with_stderr("error: A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant."));
 }
 
 #[test]

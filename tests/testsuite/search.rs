@@ -102,8 +102,7 @@ fn simple() {
             .arg("--index")
             .arg(registry().to_string()),
         execs().with_status(0).with_stdout_contains(
-            "\
-             hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
+            "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
         ),
     );
 }
@@ -181,8 +180,7 @@ about this warning.
                 reg = registry()
             ))
             .with_stdout_contains(
-                "\
-                 hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
+                "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
             ),
     );
 }
@@ -262,8 +260,7 @@ about this warning.
                 reg = registry()
             ))
             .with_stdout_contains(
-                "\
-                 hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
+                "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
             ),
     );
 }
@@ -323,8 +320,7 @@ fn multiple_query_params() {
             .arg("--index")
             .arg(registry().to_string()),
         execs().with_status(0).with_stdout_contains(
-            "\
-             hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
+            "hoare = \"0.1.1\"    # Design by contract style assertions for Rust",
         ),
     );
 }

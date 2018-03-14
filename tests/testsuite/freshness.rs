@@ -239,22 +239,18 @@ fn changing_lib_features_caches_targets() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));
 
     assert_that(
         p.cargo("build").arg("--features").arg("foo"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 }
 
@@ -305,11 +301,9 @@ fn changing_profiles_caches_targets() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 
     assert_that(
@@ -854,11 +848,10 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stdout("").with_stderr(
-            "\
-[FINISHED] [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stdout("")
+            .with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -1009,10 +1002,8 @@ fn no_rebuild_when_rename_dir() {
 
     assert_that(
         p.cargo("build").cwd(&new),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 }

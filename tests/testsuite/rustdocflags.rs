@@ -18,11 +18,9 @@ fn parses_env() {
 
     assert_that(
         p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo").arg("-v"),
-        execs().with_status(0).with_stderr_contains(
-            "\
-[RUNNING] `rustdoc [..] --cfg=foo[..]`
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg=foo[..]`"),
     );
 }
 
@@ -50,11 +48,9 @@ fn parses_config() {
 
     assert_that(
         p.cargo("doc").arg("-v"),
-        execs().with_status(0).with_stderr_contains(
-            "\
-[RUNNING] `rustdoc [..] --cfg foo[..]`
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`"),
     );
 }
 
@@ -100,11 +96,9 @@ fn rerun() {
     );
     assert_that(
         p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
     assert_that(
         p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=bar"),

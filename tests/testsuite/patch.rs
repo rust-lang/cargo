@@ -564,11 +564,9 @@ fn add_ignored_patch() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
     assert_that(
         p.cargo("build"),
@@ -731,11 +729,9 @@ fn new_major() {
     assert_that(p.cargo("update"), execs().with_status(0));
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 
     t!(t!(File::create(p.root().join("Cargo.toml"))).write_all(
@@ -1046,11 +1042,7 @@ fn patch_in_virtual() {
     assert_that(p.cargo("build"), execs().with_status(0));
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] [..]
-",
-        ),
+        execs().with_status(0).with_stderr("[FINISHED] [..]"),
     );
 }
 
@@ -1114,10 +1106,6 @@ fn patch_depends_on_another_patch() {
     // Nothing should be rebuilt, no registry should be updated.
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] [..]
-",
-        ),
+        execs().with_status(0).with_stderr("[FINISHED] [..]"),
     );
 }

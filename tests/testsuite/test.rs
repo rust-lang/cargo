@@ -2174,11 +2174,7 @@ fn example_bin_same_name() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..]",
             )
-            .with_stdout(
-                "\
-bin
-",
-            ),
+            .with_stdout("bin"),
     );
     assert_that(&p.bin("foo"), existing_file());
 }
@@ -2300,19 +2296,15 @@ fn bad_example() {
 
     assert_that(
         p.cargo("run").arg("--example").arg("foo"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] no example target named `foo`
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] no example target named `foo`"),
     );
     assert_that(
         p.cargo("run").arg("--bin").arg("foo"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] no bin target named `foo`
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] no bin target named `foo`"),
     );
 }
 
@@ -2765,14 +2757,8 @@ fn test_multiple_packages() {
         p.cargo("test").arg("-p").arg("d1").arg("-p").arg("d2"),
         execs()
             .with_status(0)
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]debug[/]deps[/]d1-[..][EXE]",
-            )
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]debug[/]deps[/]d2-[..][EXE]",
-            )
+            .with_stderr_contains("[RUNNING] target[/]debug[/]deps[/]d1-[..][EXE]")
+            .with_stderr_contains("[RUNNING] target[/]debug[/]deps[/]d2-[..][EXE]")
             .with_stdout_contains_n("running 0 tests", 2),
     );
 }

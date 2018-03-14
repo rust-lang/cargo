@@ -67,11 +67,7 @@ fn simple() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] [..]
-",
-        ),
+        execs().with_status(0).with_stderr("[FINISHED] [..]"),
     );
     assert_that(p.cargo("test"), execs().with_status(0));
 }
@@ -129,11 +125,9 @@ fn multiple_versions() {
 
     assert_that(
         p.cargo("update").arg("-v"),
-        execs().with_status(0).with_stderr(
-            "\
-[UPDATING] foo v0.1.0 -> v0.2.0
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[UPDATING] foo v0.1.0 -> v0.2.0"),
     );
 }
 
@@ -491,11 +485,7 @@ fn crates_io_registry_url_is_optional() {
     );
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] [..]
-",
-        ),
+        execs().with_status(0).with_stderr("[FINISHED] [..]"),
     );
     assert_that(p.cargo("test"), execs().with_status(0));
 }

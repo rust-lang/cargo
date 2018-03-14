@@ -399,11 +399,9 @@ fn dylib_check_preserves_build_cache() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 }
 

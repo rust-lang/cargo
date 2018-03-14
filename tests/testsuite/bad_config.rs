@@ -207,11 +207,9 @@ fn bad_cargo_config_jobs() {
         .build();
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] build.jobs must be positive, but found -1 in [..]
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] build.jobs must be positive, but found -1 in [..]"),
     );
 }
 
@@ -531,9 +529,7 @@ fn bad_crate_type() {
     assert_that(
         p.cargo("build").arg("-v"),
         execs().with_status(101).with_stderr_contains(
-            "\
-error: failed to run `rustc` to learn about target-specific information
-",
+            "error: failed to run `rustc` to learn about target-specific information",
         ),
     );
 }
@@ -1032,11 +1028,9 @@ fn bad_source_config1() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(101).with_stderr(
-            "\
-error: no source URL specified for `source.foo`, need [..]
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("error: no source URL specified for `source.foo`, need [..]"),
     );
 }
 
@@ -1274,9 +1268,7 @@ fn bad_source_config6() {
     assert_that(
         p.cargo("build"),
         execs().with_status(101).with_stderr(
-            "\
-error: expected a string, but found a array for `source.crates-io.replace-with` in [..]
-",
+            "error: expected a string, but found a array for `source.crates-io.replace-with` in [..]",
         ),
     );
 }
@@ -1340,11 +1332,9 @@ fn bad_source_config7() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(101).with_stderr(
-            "\
-error: more than one source URL specified for `source.foo`
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("error: more than one source URL specified for `source.foo`"),
     );
 }
 

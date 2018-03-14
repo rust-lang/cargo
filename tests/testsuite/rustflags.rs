@@ -1616,10 +1616,6 @@ fn two_matching_in_config() {
     assert_that(p1.cargo("run"), execs().with_status(0));
     assert_that(
         p1.cargo("build"),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] [..]
-",
-        ),
+        execs().with_status(0).with_stderr("[FINISHED] [..]"),
     );
 }

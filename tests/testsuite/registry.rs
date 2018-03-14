@@ -810,10 +810,9 @@ fn bad_license_file() {
             .arg("-v")
             .arg("--index")
             .arg(registry().to_string()),
-        execs().with_status(101).with_stderr_contains(
-            "\
-             [ERROR] the license file `foo` does not exist",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr_contains("[ERROR] the license file `foo` does not exist"),
     );
 }
 
@@ -1150,11 +1149,9 @@ fn update_backtracking_ok() {
 
     assert_that(
         p.cargo("update").arg("-p").arg("hyper"),
-        execs().with_status(0).with_stderr(
-            "\
-[UPDATING] registry `[..]`
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[UPDATING] registry `[..]`"),
     );
 }
 
@@ -1213,34 +1210,13 @@ fn update_multiple_packages() {
         p.cargo("build"),
         execs()
             .with_status(0)
-            .with_stderr_contains(
-                "\
-                 [DOWNLOADING] a v0.1.1 (registry `file://[..]`)",
-            )
-            .with_stderr_contains(
-                "\
-                 [DOWNLOADING] b v0.1.1 (registry `file://[..]`)",
-            )
-            .with_stderr_contains(
-                "\
-                 [DOWNLOADING] c v0.1.1 (registry `file://[..]`)",
-            )
-            .with_stderr_contains(
-                "\
-                 [COMPILING] a v0.1.1",
-            )
-            .with_stderr_contains(
-                "\
-                 [COMPILING] b v0.1.1",
-            )
-            .with_stderr_contains(
-                "\
-                 [COMPILING] c v0.1.1",
-            )
-            .with_stderr_contains(
-                "\
-                 [COMPILING] foo v0.5.0 ([..])",
-            ),
+            .with_stderr_contains("[DOWNLOADING] a v0.1.1 (registry `file://[..]`)")
+            .with_stderr_contains("[DOWNLOADING] b v0.1.1 (registry `file://[..]`)")
+            .with_stderr_contains("[DOWNLOADING] c v0.1.1 (registry `file://[..]`)")
+            .with_stderr_contains("[COMPILING] a v0.1.1")
+            .with_stderr_contains("[COMPILING] b v0.1.1")
+            .with_stderr_contains("[COMPILING] c v0.1.1")
+            .with_stderr_contains("[COMPILING] foo v0.5.0 ([..])"),
     );
 }
 
@@ -1437,11 +1413,9 @@ fn upstream_warnings_on_extra_verbose() {
 
     assert_that(
         p.cargo("build").arg("-vv"),
-        execs().with_status(0).with_stderr_contains(
-            "\
-[..]warning: function is never used[..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..]warning: function is never used[..]"),
     );
 }
 
