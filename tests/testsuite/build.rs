@@ -4179,6 +4179,33 @@ fn uplift_dsym_of_bin_on_mac() {
     assert_that(&p.bin("d.dSYM"), is_not(existing_dir()));
 }
 
+#[test]
+fn uplift_pdb_of_bin_on_windows() {
+    if !cfg!(all(target_os = "windows", target_env = "msvc")) {
+        return
+    }
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("src/main.rs", "fn main() { panic!(); }")
+        .file("src/bin/b.rs", "fn main() { panic!(); }")
+        .file("examples/c.rs", "fn main() { panic!(); }")
+        .file("tests/d.rs", "fn main() { panic!(); }")
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("--bins").arg("--examples").arg("--tests"),
+        execs().with_status(0)
+    );
+    assert_that(&p.target_debug_dir().join("foo.pdb"), existing_file());
+    assert_that(&p.target_debug_dir().join("b.pdb"), existing_file());
+    assert_that(&p.target_debug_dir().join("c.pdb"), is_not(existing_file()));
+    assert_that(&p.target_debug_dir().join("d.pdb"), is_not(existing_file()));
+}
+
 // Make sure that `cargo build` chooses the correct profile for building
 // targets based on filters (assuming --profile is not specified).
 #[test]
