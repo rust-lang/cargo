@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use url::Url;
 
-use core::{Source, SourceId, GitReference};
+use core::{GitReference, Source, SourceId};
 use sources::ReplacedSource;
 use util::{Config, ToUrl};
 use util::config::ConfigValue;
@@ -58,10 +58,13 @@ impl<'cfg> SourceConfigMap<'cfg> {
             id2name: HashMap::new(),
             config,
         };
-        base.add("crates-io", SourceConfig {
-            id: SourceId::crates_io(config)?,
-            replace_with: None,
-        });
+        base.add(
+            "crates-io",
+            SourceConfig {
+                id: SourceId::crates_io(config)?,
+                replace_with: None,
+            },
+        );
         Ok(base)
     }
 
@@ -81,10 +84,14 @@ impl<'cfg> SourceConfigMap<'cfg> {
         loop {
             let cfg = match self.cfgs.get(name) {
                 Some(cfg) => cfg,
-                None => bail!("could not find a configured source with the \
-                               name `{}` when attempting to lookup `{}` \
-                               (configuration in `{}`)",
-                              name, orig_name, path.display()),
+                None => bail!(
+                    "could not find a configured source with the \
+                     name `{}` when attempting to lookup `{}` \
+                     (configuration in `{}`)",
+                    name,
+                    orig_name,
+                    path.display()
+                ),
             };
             match cfg.replace_with {
                 Some((ref s, ref p)) => {
@@ -93,37 +100,47 @@ impl<'cfg> SourceConfigMap<'cfg> {
                 }
                 None if *id == cfg.id => return Ok(id.load(self.config)?),
                 None => {
-                    new_id = cfg.id.with_precise(id.precise()
-                                                 .map(|s| s.to_string()));
-                    break
+                    new_id = cfg.id.with_precise(id.precise().map(|s| s.to_string()));
+                    break;
                 }
             }
             debug!("following pointer to {}", name);
             if name == orig_name {
-                bail!("detected a cycle of `replace-with` sources, the source \
-                       `{}` is eventually replaced with itself \
-                       (configuration in `{}`)", name, path.display())
+                bail!(
+                    "detected a cycle of `replace-with` sources, the source \
+                     `{}` is eventually replaced with itself \
+                     (configuration in `{}`)",
+                    name,
+                    path.display()
+                )
             }
         }
         let new_src = new_id.load(self.config)?;
         let old_src = id.load(self.config)?;
         if !new_src.supports_checksums() && old_src.supports_checksums() {
-            bail!("\
+            bail!(
+                "\
 cannot replace `{orig}` with `{name}`, the source `{orig}` supports \
 checksums, but `{name}` does not
 
 a lock file compatible with `{orig}` cannot be generated in this situation
-", orig = orig_name, name = name);
+",
+                orig = orig_name,
+                name = name
+            );
         }
 
         if old_src.requires_precise() && id.precise().is_none() {
-            bail!("\
+            bail!(
+                "\
 the source {orig} requires a lock file to be present first before it can be
 used against vendored source code
 
 remove the source replacement configuration, generate a lock file, and then
 restore the source replacement configuration to continue the build
-", orig = orig_name);
+",
+                orig = orig_name
+            );
         }
 
         Ok(Box::new(ReplacedSource::new(id, &new_id, new_src)))
@@ -142,8 +159,7 @@ restore the source replacement configuration to continue the build
             srcs.push(SourceId::for_registry(&url)?);
         }
         if let Some(val) = table.get("local-registry") {
-            let (s, path) = val.string(&format!("source.{}.local-registry",
-                                                     name))?;
+            let (s, path) = val.string(&format!("source.{}.local-registry", name))?;
             let mut path = path.to_path_buf();
             path.pop();
             path.pop();
@@ -151,8 +167,7 @@ restore the source replacement configuration to continue the build
             srcs.push(SourceId::for_local_registry(&path)?);
         }
         if let Some(val) = table.get("directory") {
-            let (s, path) = val.string(&format!("source.{}.directory",
-                                                     name))?;
+            let (s, path) = val.string(&format!("source.{}.directory", name))?;
             let mut path = path.to_path_buf();
             path.pop();
             path.pop();
@@ -171,17 +186,13 @@ restore the source replacement configuration to continue the build
             };
             let reference = match try("branch")? {
                 Some(b) => GitReference::Branch(b.0.to_string()),
-                None => {
-                    match try("tag")? {
-                        Some(b) => GitReference::Tag(b.0.to_string()),
-                        None => {
-                            match try("rev")? {
-                                Some(b) => GitReference::Rev(b.0.to_string()),
-                                None => GitReference::Branch("master".to_string()),
-                            }
-                        }
-                    }
-                }
+                None => match try("tag")? {
+                    Some(b) => GitReference::Tag(b.0.to_string()),
+                    None => match try("rev")? {
+                        Some(b) => GitReference::Rev(b.0.to_string()),
+                        None => GitReference::Branch("master".to_string()),
+                    },
+                },
             };
             srcs.push(SourceId::for_git(&url, reference)?);
         }
@@ -191,9 +202,11 @@ restore the source replacement configuration to continue the build
 
         let mut srcs = srcs.into_iter();
         let src = srcs.next().ok_or_else(|| {
-            format_err!("no source URL specified for `source.{}`, need \
-                         either `registry` or `local-registry` defined",
-                         name)
+            format_err!(
+                "no source URL specified for `source.{}`, need \
+                 either `registry` or `local-registry` defined",
+                name
+            )
         })?;
         if srcs.next().is_some() {
             bail!("more than one source URL specified for `source.{}`", name)
@@ -201,24 +214,29 @@ restore the source replacement configuration to continue the build
 
         let mut replace_with = None;
         if let Some(val) = table.get("replace-with") {
-            let (s, path) = val.string(&format!("source.{}.replace-with",
-                                                     name))?;
+            let (s, path) = val.string(&format!("source.{}.replace-with", name))?;
             replace_with = Some((s.to_string(), path.to_path_buf()));
         }
 
-        self.add(name, SourceConfig {
-            id: src,
-            replace_with,
-        });
+        self.add(
+            name,
+            SourceConfig {
+                id: src,
+                replace_with,
+            },
+        );
 
         return Ok(());
 
         fn url(cfg: &ConfigValue, key: &str) -> CargoResult<Url> {
             let (url, path) = cfg.string(key)?;
             let url = url.to_url().chain_err(|| {
-                format!("configuration key `{}` specified an invalid \
-                         URL (in {})", key, path.display())
-
+                format!(
+                    "configuration key `{}` specified an invalid \
+                     URL (in {})",
+                    key,
+                    path.display()
+                )
             })?;
             Ok(url)
         }

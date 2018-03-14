@@ -28,18 +28,22 @@ struct PackageIdInner {
 
 impl ser::Serialize for PackageId {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer
+    where
+        S: ser::Serializer,
     {
-        s.collect_str(&format_args!("{} {} ({})",
-                                    self.inner.name,
-                                    self.inner.version,
-                                    self.inner.source_id.to_url()))
+        s.collect_str(&format_args!(
+            "{} {} ({})",
+            self.inner.name,
+            self.inner.version,
+            self.inner.source_id.to_url()
+        ))
     }
 }
 
 impl<'de> de::Deserialize<'de> for PackageId {
     fn deserialize<D>(d: D) -> Result<PackageId, D::Error>
-        where D: de::Deserializer<'de>
+    where
+        D: de::Deserializer<'de>,
     {
         let string = String::deserialize(d)?;
         let mut s = string.splitn(3, ' ');
@@ -48,8 +52,7 @@ impl<'de> de::Deserialize<'de> for PackageId {
             Some(s) => s,
             None => return Err(de::Error::custom("invalid serialized PackageId")),
         };
-        let version = semver::Version::parse(version)
-                            .map_err(de::Error::custom)?;
+        let version = semver::Version::parse(version).map_err(de::Error::custom)?;
         let url = match s.next() {
             Some(s) => s,
             None => return Err(de::Error::custom("invalid serialized PackageId")),
@@ -57,8 +60,7 @@ impl<'de> de::Deserialize<'de> for PackageId {
         let url = if url.starts_with('(') && url.ends_with(')') {
             &url[1..url.len() - 1]
         } else {
-            return Err(de::Error::custom("invalid serialized PackageId"))
-
+            return Err(de::Error::custom("invalid serialized PackageId"));
         };
         let source_id = SourceId::from_url(url).map_err(de::Error::custom)?;
 
@@ -98,8 +100,7 @@ impl Ord for PackageId {
 }
 
 impl PackageId {
-    pub fn new<T: ToSemver>(name: &str, version: T,
-                             sid: &SourceId) -> CargoResult<PackageId> {
+    pub fn new<T: ToSemver>(name: &str, version: T, sid: &SourceId) -> CargoResult<PackageId> {
         let v = version.to_semver()?;
         Ok(PackageId {
             inner: Arc::new(PackageIdInner {
@@ -110,9 +111,15 @@ impl PackageId {
         })
     }
 
-    pub fn name(&self) -> InternedString { self.inner.name }
-    pub fn version(&self) -> &semver::Version { &self.inner.version }
-    pub fn source_id(&self) -> &SourceId { &self.inner.source_id }
+    pub fn name(&self) -> InternedString {
+        self.inner.name
+    }
+    pub fn version(&self) -> &semver::Version {
+        &self.inner.version
+    }
+    pub fn source_id(&self) -> &SourceId {
+        &self.inner.source_id
+    }
 
     pub fn with_precise(&self, precise: Option<String>) -> PackageId {
         PackageId {
@@ -164,10 +171,10 @@ impl fmt::Display for PackageId {
 impl fmt::Debug for PackageId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         f.debug_struct("PackageId")
-         .field("name", &self.inner.name)
-         .field("version", &self.inner.version.to_string())
-         .field("source", &self.inner.source_id.to_string())
-         .finish()
+            .field("name", &self.inner.name)
+            .field("version", &self.inner.version.to_string())
+            .field("source", &self.inner.source_id.to_string())
+            .finish()
     }
 }
 

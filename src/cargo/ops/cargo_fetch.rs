@@ -1,4 +1,4 @@
-use core::{Resolve, PackageSet, Workspace};
+use core::{PackageSet, Resolve, Workspace};
 use ops;
 use util::CargoResult;
 

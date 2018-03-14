@@ -3,15 +3,15 @@ use std::collections::hash_map::HashMap;
 use std::fmt;
 use std::io;
 use std::mem;
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{channel, Receiver, Sender};
 
 use crossbeam::{self, Scope};
 use jobserver::{Acquired, HelperThread};
 
-use core::{PackageId, Target, Profile};
-use util::{Config, DependencyQueue, Fresh, Dirty, Freshness};
-use util::{CargoResult, ProcessBuilder, profile, internal, CargoResultExt};
-use {handle_error};
+use core::{PackageId, Profile, Target};
+use util::{Config, DependencyQueue, Dirty, Fresh, Freshness};
+use util::{internal, profile, CargoResult, CargoResultExt, ProcessBuilder};
+use handle_error;
 
 use super::{Context, Kind, Unit};
 use super::job::Job;
@@ -92,14 +92,18 @@ impl<'a> JobQueue<'a> {
         }
     }
 
-    pub fn enqueue<'cfg>(&mut self,
-                         cx: &Context<'a, 'cfg>,
-                         unit: &Unit<'a>,
-                         job: Job,
-                         fresh: Freshness) -> CargoResult<()> {
+    pub fn enqueue<'cfg>(
+        &mut self,
+        cx: &Context<'a, 'cfg>,
+        unit: &Unit<'a>,
+        job: Job,
+        fresh: Freshness,
+    ) -> CargoResult<()> {
         let key = Key::new(unit);
         let deps = key.dependencies(cx)?;
-        self.queue.queue(Fresh, key, Vec::new(), &deps).push((job, fresh));
+        self.queue
+            .queue(Fresh, key, Vec::new(), &deps)
+            .push((job, fresh));
         *self.counts.entry(key.pkg).or_insert(0) += 1;
         Ok(())
     }
@@ -127,25 +131,23 @@ impl<'a> JobQueue<'a> {
         // As a result, this `transmute` to a longer lifetime should be safe in
         // practice.
         let tx = self.tx.clone();
-        let tx = unsafe {
-            mem::transmute::<Sender<Message<'a>>, Sender<Message<'static>>>(tx)
-        };
-        let helper = cx.jobserver.clone().into_helper_thread(move |token| {
-            drop(tx.send(Message::Token(token)));
-        }).chain_err(|| {
-            "failed to create helper thread for jobserver management"
-        })?;
+        let tx = unsafe { mem::transmute::<Sender<Message<'a>>, Sender<Message<'static>>>(tx) };
+        let helper = cx.jobserver
+            .clone()
+            .into_helper_thread(move |token| {
+                drop(tx.send(Message::Token(token)));
+            })
+            .chain_err(|| "failed to create helper thread for jobserver management")?;
 
-        crossbeam::scope(|scope| {
-            self.drain_the_queue(cx, scope, &helper)
-        })
+        crossbeam::scope(|scope| self.drain_the_queue(cx, scope, &helper))
     }
 
-    fn drain_the_queue(&mut self,
-                       cx: &mut Context,
-                       scope: &Scope<'a>,
-                       jobserver_helper: &HelperThread)
-                       -> CargoResult<()> {
+    fn drain_the_queue(
+        &mut self,
+        cx: &mut Context,
+        scope: &Scope<'a>,
+        jobserver_helper: &HelperThread,
+    ) -> CargoResult<()> {
         use std::time::Instant;
 
         let mut tokens = Vec::new();
@@ -170,13 +172,14 @@ impl<'a> JobQueue<'a> {
             // start requesting job tokens. Each job after the first needs to
             // request a token.
             while let Some((fresh, key, jobs)) = self.queue.dequeue() {
-                let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f)| {
-                    f.combine(fresh)
-                });
-                self.pending.insert(key, PendingBuild {
-                    amt: jobs.len(),
-                    fresh: total_fresh,
-                });
+                let total_fresh = jobs.iter().fold(fresh, |fresh, &(_, f)| f.combine(fresh));
+                self.pending.insert(
+                    key,
+                    PendingBuild {
+                        amt: jobs.len(),
+                        fresh: total_fresh,
+                    },
+                );
                 for (job, f) in jobs {
                     queue.push((key, job, f.combine(fresh)));
                     if self.active + queue.len() > 0 {
@@ -196,7 +199,7 @@ impl<'a> JobQueue<'a> {
             // If after all that we're not actually running anything then we're
             // done!
             if self.active == 0 {
-                break
+                break;
             }
 
             // And finally, before we block waiting for the next event, drop any
@@ -237,8 +240,9 @@ impl<'a> JobQueue<'a> {
                                 error = Some(format_err!("build failed"));
                                 handle_error(e, &mut *cx.config.shell());
                                 cx.config.shell().warn(
-                                            "build failed, waiting for other \
-                                             jobs to finish...")?;
+                                    "build failed, waiting for other \
+                                     jobs to finish...",
+                                )?;
                             } else {
                                 error = Some(e);
                             }
@@ -246,29 +250,32 @@ impl<'a> JobQueue<'a> {
                     }
                 }
                 Message::Token(acquired_token) => {
-                    tokens.push(acquired_token.chain_err(|| {
-                        "failed to acquire jobserver token"
-                    })?);
+                    tokens.push(acquired_token.chain_err(|| "failed to acquire jobserver token")?);
                 }
             }
         }
 
         let build_type = if self.is_release { "release" } else { "dev" };
         let profile = cx.lib_profile();
-        let mut opt_type = String::from(if profile.opt_level == "0" { "unoptimized" }
-                                        else { "optimized" });
+        let mut opt_type = String::from(if profile.opt_level == "0" {
+            "unoptimized"
+        } else {
+            "optimized"
+        });
         if profile.debuginfo.is_some() {
             opt_type += " + debuginfo";
         }
         let duration = start_time.elapsed();
-        let time_elapsed = format!("{}.{1:.2} secs",
-                                   duration.as_secs(),
-                                   duration.subsec_nanos() / 10_000_000);
+        let time_elapsed = format!(
+            "{}.{1:.2} secs",
+            duration.as_secs(),
+            duration.subsec_nanos() / 10_000_000
+        );
         if self.queue.is_empty() {
-            let message = format!("{} [{}] target(s) in {}",
-                                  build_type,
-                                  opt_type,
-                                  time_elapsed);
+            let message = format!(
+                "{} [{}] target(s) in {}",
+                build_type, opt_type, time_elapsed
+            );
             cx.config.shell().status("Finished", message)?;
             Ok(())
         } else if let Some(e) = error {
@@ -281,12 +288,14 @@ impl<'a> JobQueue<'a> {
 
     /// Executes a job in the `scope` given, pushing the spawned thread's
     /// handled onto `threads`.
-    fn run(&mut self,
-           key: Key<'a>,
-           fresh: Freshness,
-           job: Job,
-           config: &Config,
-           scope: &Scope<'a>) -> CargoResult<()> {
+    fn run(
+        &mut self,
+        key: Key<'a>,
+        fresh: Freshness,
+        job: Job,
+        config: &Config,
+        scope: &Scope<'a>,
+    ) -> CargoResult<()> {
         info!("start: {:?}", key);
 
         self.active += 1;
@@ -294,14 +303,14 @@ impl<'a> JobQueue<'a> {
 
         let my_tx = self.tx.clone();
         let doit = move || {
-            let res = job.run(fresh, &JobState {
-                tx: my_tx.clone(),
-            });
+            let res = job.run(fresh, &JobState { tx: my_tx.clone() });
             my_tx.send(Message::Finish(key, res)).unwrap();
         };
         match fresh {
             Freshness::Fresh => doit(),
-            Freshness::Dirty => { scope.spawn(doit); }
+            Freshness::Dirty => {
+                scope.spawn(doit);
+            }
         }
 
         // Print out some nice progress information
@@ -354,13 +363,16 @@ impl<'a> JobQueue<'a> {
     // In general, we try to print "Compiling" for the first nontrivial task
     // run for a package, regardless of when that is. We then don't print
     // out any more information for a package after we've printed it once.
-    fn note_working_on(&mut self,
-                       config: &Config,
-                       key: &Key<'a>,
-                       fresh: Freshness) -> CargoResult<()> {
-        if (self.compiled.contains(key.pkg) && !key.profile.doc) ||
-            (self.documented.contains(key.pkg) && key.profile.doc) {
-            return Ok(())
+    fn note_working_on(
+        &mut self,
+        config: &Config,
+        key: &Key<'a>,
+        fresh: Freshness,
+    ) -> CargoResult<()> {
+        if (self.compiled.contains(key.pkg) && !key.profile.doc)
+            || (self.documented.contains(key.pkg) && key.profile.doc)
+        {
+            return Ok(());
         }
 
         match fresh {
@@ -397,8 +409,7 @@ impl<'a> Key<'a> {
         }
     }
 
-    fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>)
-                          -> CargoResult<Vec<Key<'a>>> {
+    fn dependencies<'cfg>(&self, cx: &Context<'a, 'cfg>) -> CargoResult<Vec<Key<'a>>> {
         let unit = Unit {
             pkg: cx.get_package(self.pkg)?,
             target: self.target,
@@ -406,21 +417,27 @@ impl<'a> Key<'a> {
             kind: self.kind,
         };
         let targets = cx.dep_targets(&unit)?;
-        Ok(targets.iter().filter_map(|unit| {
-            // Binaries aren't actually needed to *compile* tests, just to run
-            // them, so we don't include this dependency edge in the job graph.
-            if self.target.is_test() && unit.target.is_bin() {
-                None
-            } else {
-                Some(Key::new(unit))
-            }
-        }).collect())
+        Ok(targets
+            .iter()
+            .filter_map(|unit| {
+                // Binaries aren't actually needed to *compile* tests, just to run
+                // them, so we don't include this dependency edge in the job graph.
+                if self.target.is_test() && unit.target.is_bin() {
+                    None
+                } else {
+                    Some(Key::new(unit))
+                }
+            })
+            .collect())
     }
 }
 
 impl<'a> fmt::Debug for Key<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} => {}/{} => {:?}", self.pkg, self.target, self.profile,
-               self.kind)
+        write!(
+            f,
+            "{} => {}/{} => {:?}",
+            self.pkg, self.target, self.profile, self.kind
+        )
     }
 }

@@ -3,7 +3,8 @@ use command_prelude::*;
 use cargo::ops::{self, CompileMode};
 
 pub fn cli() -> App {
-    subcommand("build").alias("b")
+    subcommand("build")
+        .alias("b")
         .about("Compile a local package and all of its dependencies")
         .arg_package(
             "Package to build",
@@ -28,7 +29,8 @@ pub fn cli() -> App {
         .arg_target_triple("Build for the target triple")
         .arg_manifest_path()
         .arg_message_format()
-        .after_help("\
+        .after_help(
+            "\
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be built. If it is not given, then the
 current package is built. For more information on SPEC and its format, see the
@@ -41,8 +43,8 @@ Note that `--exclude` has to be specified in conjunction with the `--all` flag.
 Compilation can be configured via the use of profiles which are configured in
 the manifest. The default profile for this command is `dev`, but passing
 the --release flag will use the `release` profile instead.
-")
-
+",
+        )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

@@ -5,17 +5,16 @@ use cargo::ops::{self, CompileMode, DocOptions};
 pub fn cli() -> App {
     subcommand("doc")
         .about("Build a package's documentation")
-        .arg(
-            opt("open", "Opens the docs in a browser after the operation")
-        )
+        .arg(opt(
+            "open",
+            "Opens the docs in a browser after the operation",
+        ))
         .arg_package(
             "Package to document",
             "Document all packages in the workspace",
             "Exclude packages from the build",
         )
-        .arg(
-            opt("no-deps", "Don't build documentation for dependencies")
-        )
+        .arg(opt("no-deps", "Don't build documentation for dependencies"))
         .arg_jobs()
         .arg_targets_lib_bin(
             "Document only this package's library",
@@ -27,7 +26,8 @@ pub fn cli() -> App {
         .arg_target_triple("Build for the target triple")
         .arg_manifest_path()
         .arg_message_format()
-        .after_help("\
+        .after_help(
+            "\
 By default the documentation for the local package and all dependencies is
 built. The output is all placed in `target/doc` in rustdoc's usual format.
 
@@ -39,12 +39,15 @@ If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be documented. If it is not given, then the
 current package is documented. For more information on SPEC and its format, see
 the `cargo help pkgid` command.
-")
+",
+        )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
-    let mode = CompileMode::Doc { deps: !args.is_present("no-deps") };
+    let mode = CompileMode::Doc {
+        deps: !args.is_present("no-deps"),
+    };
     let compile_opts = args.compile_options(config, mode)?;
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),

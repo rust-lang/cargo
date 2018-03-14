@@ -6,7 +6,9 @@ pub trait ToSemver {
 }
 
 impl ToSemver for Version {
-    fn to_semver(self) -> CargoResult<Version> { Ok(self) }
+    fn to_semver(self) -> CargoResult<Version> {
+        Ok(self)
+    }
 }
 
 impl<'a> ToSemver for &'a str {

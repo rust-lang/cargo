@@ -1,14 +1,14 @@
 extern crate cargo;
+extern crate clap;
 extern crate env_logger;
 #[macro_use]
 extern crate failure;
 extern crate git2_curl;
-extern crate toml;
 extern crate log;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
-extern crate clap;
+extern crate toml;
 
 use std::env;
 use std::fs;
@@ -16,13 +16,12 @@ use std::path::{Path, PathBuf};
 use std::collections::BTreeSet;
 
 use cargo::core::shell::Shell;
-use cargo::util::{self, CliResult, lev_distance, Config, CargoResult};
+use cargo::util::{self, lev_distance, CargoResult, CliResult, Config};
 use cargo::util::{CliError, ProcessError};
 
 mod cli;
 mod command_prelude;
 mod commands;
-
 
 fn main() {
     env_logger::init();
@@ -53,7 +52,8 @@ fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<Str
     match config.get_string(&alias_name) {
         Ok(value) => {
             if let Some(record) = value {
-                let alias_commands = record.val
+                let alias_commands = record
+                    .val
                     .split_whitespace()
                     .map(|s| s.to_string())
                     .collect();
@@ -63,10 +63,8 @@ fn aliased_command(config: &Config, command: &str) -> CargoResult<Option<Vec<Str
         Err(_) => {
             let value = config.get_list(&alias_name)?;
             if let Some(record) = value {
-                let alias_commands: Vec<String> = record.val
-                    .iter()
-                    .map(|s| s.0.to_string())
-                    .collect();
+                let alias_commands: Vec<String> =
+                    record.val.iter().map(|s| s.0.to_string()).collect();
                 result = Ok(Some(alias_commands));
             }
         }
@@ -95,10 +93,10 @@ fn list_commands(config: &Config) -> BTreeSet<(String, Option<String>)> {
             }
             if is_executable(entry.path()) {
                 let end = filename.len() - suffix.len();
-                commands.insert(
-                    (filename[prefix.len()..end].to_string(),
-                     Some(path.display().to_string()))
-                );
+                commands.insert((
+                    filename[prefix.len()..end].to_string(),
+                    Some(path.display().to_string()),
+                ));
             }
         }
     }
@@ -109,7 +107,6 @@ fn list_commands(config: &Config) -> BTreeSet<(String, Option<String>)> {
 
     commands
 }
-
 
 fn find_closest(config: &Config, cmd: &str) -> Option<String> {
     let cmds = list_commands(config);
@@ -133,14 +130,14 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
         Some(command) => command,
         None => {
             let err = match find_closest(config, cmd) {
-                Some(closest) => {
-                    format_err!("no such subcommand: `{}`\n\n\tDid you mean `{}`?\n",
-                                cmd,
-                                closest)
-                }
+                Some(closest) => format_err!(
+                    "no such subcommand: `{}`\n\n\tDid you mean `{}`?\n",
+                    cmd,
+                    closest
+                ),
                 None => format_err!("no such subcommand: `{}`", cmd),
             };
-            return Err(CliError::new(err, 101))
+            return Err(CliError::new(err, 101));
         }
     };
 
@@ -148,7 +145,8 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
     let err = match util::process(&command)
         .env(cargo::CARGO_ENV, cargo_exe)
         .args(&args[1..])
-        .exec_replace() {
+        .exec_replace()
+    {
         Ok(()) => return Ok(()),
         Err(e) => e,
     };
@@ -170,7 +168,9 @@ fn is_executable<P: AsRef<Path>>(path: P) -> bool {
 }
 #[cfg(windows)]
 fn is_executable<P: AsRef<Path>>(path: P) -> bool {
-    fs::metadata(path).map(|metadata| metadata.is_file()).unwrap_or(false)
+    fs::metadata(path)
+        .map(|metadata| metadata.is_file())
+        .unwrap_or(false)
 }
 
 fn search_directories(config: &Config) -> Vec<PathBuf> {

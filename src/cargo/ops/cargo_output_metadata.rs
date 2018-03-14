@@ -18,11 +18,13 @@ pub struct OutputMetadataOptions {
 /// Loads the manifest, resolves the dependencies of the project to the concrete
 /// used versions - considering overrides - and writes all dependencies in a JSON
 /// format to stdout.
-pub fn output_metadata(ws: &Workspace,
-                       opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+pub fn output_metadata(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     if opt.version != VERSION {
-        bail!("metadata version {} not supported, only {} is currently supported",
-              opt.version, VERSION);
+        bail!(
+            "metadata version {} not supported, only {} is currently supported",
+            opt.version,
+            VERSION
+        );
     }
     if opt.no_deps {
         metadata_no_deps(ws, opt)
@@ -31,8 +33,7 @@ pub fn output_metadata(ws: &Workspace,
     }
 }
 
-fn metadata_no_deps(ws: &Workspace,
-                    _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+fn metadata_no_deps(ws: &Workspace, _opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     Ok(ExportInfo {
         packages: ws.members().cloned().collect(),
         workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
@@ -43,25 +44,27 @@ fn metadata_no_deps(ws: &Workspace,
     })
 }
 
-fn metadata_full(ws: &Workspace,
-                 opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
+fn metadata_full(ws: &Workspace, opt: &OutputMetadataOptions) -> CargoResult<ExportInfo> {
     let specs = Packages::All.into_package_id_specs(ws)?;
-    let deps = ops::resolve_ws_precisely(ws,
-                                         None,
-                                         &opt.features,
-                                         opt.all_features,
-                                         opt.no_default_features,
-                                         &specs)?;
+    let deps = ops::resolve_ws_precisely(
+        ws,
+        None,
+        &opt.features,
+        opt.all_features,
+        opt.no_default_features,
+        &specs,
+    )?;
     let (packages, resolve) = deps;
 
-    let packages = packages.package_ids()
-                           .map(|i| packages.get(i).map(|p| p.clone()))
-                           .collect::<CargoResult<Vec<_>>>()?;
+    let packages = packages
+        .package_ids()
+        .map(|i| packages.get(i).map(|p| p.clone()))
+        .collect::<CargoResult<Vec<_>>>()?;
 
     Ok(ExportInfo {
         packages,
         workspace_members: ws.members().map(|pkg| pkg.package_id().clone()).collect(),
-        resolve: Some(MetadataResolve{
+        resolve: Some(MetadataResolve {
             resolve,
             root: ws.current_opt().map(|pkg| pkg.package_id().clone()),
         }),
@@ -86,13 +89,13 @@ pub struct ExportInfo {
 /// format for `PackageId`s
 #[derive(Serialize)]
 struct MetadataResolve {
-    #[serde(rename = "nodes", serialize_with = "serialize_resolve")]
-    resolve: Resolve,
+    #[serde(rename = "nodes", serialize_with = "serialize_resolve")] resolve: Resolve,
     root: Option<PackageId>,
 }
 
 fn serialize_resolve<S>(resolve: &Resolve, s: S) -> Result<S::Ok, S::Error>
-    where S: ser::Serializer,
+where
+    S: ser::Serializer,
 {
     #[derive(Serialize)]
     struct Node<'a> {
@@ -101,11 +104,13 @@ fn serialize_resolve<S>(resolve: &Resolve, s: S) -> Result<S::Ok, S::Error>
         features: Vec<&'a str>,
     }
 
-    resolve.iter().map(|id| {
-        Node {
+    resolve
+        .iter()
+        .map(|id| Node {
             id,
             dependencies: resolve.deps(id).collect(),
             features: resolve.features_sorted(id),
-        }
-    }).collect::<Vec<_>>().serialize(s)
+        })
+        .collect::<Vec<_>>()
+        .serialize(s)
 }

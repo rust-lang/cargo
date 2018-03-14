@@ -2,7 +2,7 @@ extern crate clap;
 
 use clap::{AppSettings, Arg, ArgMatches};
 
-use cargo::{self, Config, CliResult};
+use cargo::{self, CliResult, Config};
 
 use super::list_commands;
 use super::commands;
@@ -15,10 +15,10 @@ pub fn main(config: &mut Config) -> CliResult {
         let version = cargo::version();
         println!("{}", version);
         if is_verbose {
-            println!("release: {}.{}.{}",
-                     version.major,
-                     version.minor,
-                     version.patch);
+            println!(
+                "release: {}.{}.{}",
+                version.major, version.minor, version.patch
+            );
             if let Some(ref cfg) = version.cfg_info {
                 if let Some(ref ci) = cfg.commit_info {
                     println!("commit-hash: {}", ci.commit_hash);
@@ -51,8 +51,7 @@ pub fn main(config: &mut Config) -> CliResult {
         return Ok(());
     }
 
-    if args.subcommand_name().is_none() {
-    }
+    if args.subcommand_name().is_none() {}
 
     execute_subcommand(config, args)
 }
@@ -60,11 +59,16 @@ pub fn main(config: &mut Config) -> CliResult {
 fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
     config.configure(
         args.occurrences_of("verbose") as u32,
-        if args.is_present("quiet") { Some(true) } else { None },
+        if args.is_present("quiet") {
+            Some(true)
+        } else {
+            None
+        },
         &args.value_of("color").map(|s| s.to_string()),
         args.is_present("frozen"),
         args.is_present("locked"),
-        &args.values_of_lossy("unstable-features").unwrap_or_default(),
+        &args.values_of_lossy("unstable-features")
+            .unwrap_or_default(),
     )?;
 
     let (cmd, args) = match args.subcommand() {
@@ -80,7 +84,11 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
     }
 
     if let Some(mut alias) = super::aliased_command(config, cmd)? {
-        alias.extend(args.values_of("").unwrap_or_default().map(|s| s.to_string()));
+        alias.extend(
+            args.values_of("")
+                .unwrap_or_default()
+                .map(|s| s.to_string()),
+        );
         let args = cli()
             .setting(AppSettings::NoBinaryName)
             .get_matches_from_safe(alias)?;
@@ -91,7 +99,6 @@ fn execute_subcommand(config: &mut Config, args: ArgMatches) -> CliResult {
     super::execute_external_subcommand(config, cmd, &ext_args)
 }
 
-
 fn cli() -> App {
     let app = App::new("cargo")
         .settings(&[
@@ -101,7 +108,8 @@ fn cli() -> App {
             AppSettings::AllowExternalSubcommands,
         ])
         .about("")
-        .template("\
+        .template(
+            "\
 Rust's package manager
 
 USAGE:
@@ -126,44 +134,39 @@ Some common cargo commands are (see all commands with --list):
     install     Install a Rust binary
     uninstall   Uninstall a Rust binary
 
-See 'cargo help <command>' for more information on a specific command."
+See 'cargo help <command>' for more information on a specific command.",
         )
+        .arg(opt("version", "Print version info and exit").short("V"))
+        .arg(opt("list", "List installed commands"))
+        .arg(opt("explain", "Run `rustc --explain CODE`").value_name("CODE"))
         .arg(
-            opt("version", "Print version info and exit")
-                .short("V")
-        )
-        .arg(
-            opt("list", "List installed commands")
-        )
-        .arg(
-            opt("explain", "Run `rustc --explain CODE`")
-                .value_name("CODE")
-        )
-        .arg(
-            opt("verbose", "Use verbose output (-vv very verbose/build.rs output)")
-                .short("v").multiple(true).global(true)
+            opt(
+                "verbose",
+                "Use verbose output (-vv very verbose/build.rs output)",
+            ).short("v")
+                .multiple(true)
+                .global(true),
         )
         .arg(
             opt("quiet", "No output printed to stdout")
-                .short("q").global(true)
+                .short("q")
+                .global(true),
         )
         .arg(
             opt("color", "Coloring: auto, always, never")
-                .value_name("WHEN").global(true)
+                .value_name("WHEN")
+                .global(true),
         )
+        .arg(opt("frozen", "Require Cargo.lock and cache are up to date").global(true))
+        .arg(opt("locked", "Require Cargo.lock is up to date").global(true))
         .arg(
-            opt("frozen", "Require Cargo.lock and cache are up to date")
-                .global(true)
+            Arg::with_name("unstable-features")
+                .help("Unstable (nightly-only) flags to Cargo")
+                .short("Z")
+                .value_name("FLAG")
+                .multiple(true)
+                .global(true),
         )
-        .arg(
-            opt("locked", "Require Cargo.lock is up to date")
-                .global(true)
-        )
-        .arg(
-            Arg::with_name("unstable-features").help("Unstable (nightly-only) flags to Cargo")
-                .short("Z").value_name("FLAG").multiple(true).global(true)
-        )
-        .subcommands(commands::builtin())
-    ;
+        .subcommands(commands::builtin());
     app
 }

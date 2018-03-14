@@ -1,14 +1,14 @@
 pub use self::dependency::Dependency;
-pub use self::features::{Epoch, Features, Feature, CliUnstable};
+pub use self::features::{CliUnstable, Epoch, Feature, Features};
 pub use self::manifest::{EitherManifest, VirtualManifest};
-pub use self::manifest::{Manifest, Target, TargetKind, Profile, LibKind, Profiles};
+pub use self::manifest::{LibKind, Manifest, Profile, Profiles, Target, TargetKind};
 pub use self::package::{Package, PackageSet};
 pub use self::package_id::PackageId;
 pub use self::package_id_spec::PackageIdSpec;
 pub use self::registry::Registry;
 pub use self::resolver::Resolve;
 pub use self::shell::{Shell, Verbosity};
-pub use self::source::{Source, SourceId, SourceMap, GitReference};
+pub use self::source::{GitReference, Source, SourceId, SourceMap};
 pub use self::summary::Summary;
 pub use self::workspace::{Members, Workspace, WorkspaceConfig, WorkspaceRootConfig};
 

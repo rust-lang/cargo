@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use cargo::util::paths as cargopaths;
 use cargotest::support::paths;
-use cargotest::support::{git, project, execs};
+use cargotest::support::{execs, git, project};
 use hamcrest::assert_that;
 
 #[test]
@@ -11,17 +11,23 @@ fn deleting_database_files() {
     let project = project("foo");
     let git_project = git::new("bar", |project| {
         project
-            .file("Cargo.toml", r#"
+            .file(
+                "Cargo.toml",
+                r#"
                 [project]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
-            "#)
+            "#,
+            )
             .file("src/lib.rs", "")
     }).unwrap();
 
     let project = project
-        .file("Cargo.toml", &format!(r#"
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
             [project]
             name = "foo"
             version = "0.5.0"
@@ -29,7 +35,10 @@ fn deleting_database_files() {
 
             [dependencies]
             bar = {{ git = '{}' }}
-        "#, git_project.url()))
+        "#,
+                git_project.url()
+            ),
+        )
         .file("src/lib.rs", "")
         .build();
 
@@ -42,15 +51,17 @@ fn deleting_database_files() {
     let log = "cargo::sources::git=trace";
     for file in files {
         if !file.exists() {
-            continue
+            continue;
         }
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
-        assert_that(project.cargo("build").env("RUST_LOG", log).arg("-v"),
-                    execs().with_status(0));
+        assert_that(
+            project.cargo("build").env("RUST_LOG", log).arg("-v"),
+            execs().with_status(0),
+        );
 
         if !file.exists() {
-            continue
+            continue;
         }
         println!("truncating {}", file.display());
         make_writable(&file);
@@ -60,8 +71,10 @@ fn deleting_database_files() {
             .unwrap()
             .set_len(2)
             .unwrap();
-        assert_that(project.cargo("build").env("RUST_LOG", log).arg("-v"),
-                    execs().with_status(0));
+        assert_that(
+            project.cargo("build").env("RUST_LOG", log).arg("-v"),
+            execs().with_status(0),
+        );
     }
 }
 
@@ -70,17 +83,23 @@ fn deleting_checkout_files() {
     let project = project("foo");
     let git_project = git::new("bar", |project| {
         project
-            .file("Cargo.toml", r#"
+            .file(
+                "Cargo.toml",
+                r#"
                 [project]
                 name = "bar"
                 version = "0.5.0"
                 authors = []
-            "#)
+            "#,
+            )
             .file("src/lib.rs", "")
     }).unwrap();
 
     let project = project
-        .file("Cargo.toml", &format!(r#"
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
             [project]
             name = "foo"
             version = "0.5.0"
@@ -88,7 +107,10 @@ fn deleting_checkout_files() {
 
             [dependencies]
             bar = {{ git = '{}' }}
-        "#, git_project.url()))
+        "#,
+                git_project.url()
+            ),
+        )
         .file("src/lib.rs", "")
         .build();
 
@@ -119,15 +141,17 @@ fn deleting_checkout_files() {
     let log = "cargo::sources::git=trace";
     for file in files {
         if !file.exists() {
-            continue
+            continue;
         }
         println!("deleting {}", file.display());
         cargopaths::remove_file(&file).unwrap();
-        assert_that(project.cargo("build").env("RUST_LOG", log).arg("-v"),
-                    execs().with_status(0));
+        assert_that(
+            project.cargo("build").env("RUST_LOG", log).arg("-v"),
+            execs().with_status(0),
+        );
 
         if !file.exists() {
-            continue
+            continue;
         }
         println!("truncating {}", file.display());
         make_writable(&file);
@@ -137,8 +161,10 @@ fn deleting_checkout_files() {
             .unwrap()
             .set_len(2)
             .unwrap();
-        assert_that(project.cargo("build").env("RUST_LOG", log).arg("-v"),
-                    execs().with_status(0));
+        assert_that(
+            project.cargo("build").env("RUST_LOG", log).arg("-v"),
+            execs().with_status(0),
+        );
     }
 }
 

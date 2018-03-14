@@ -1,9 +1,9 @@
 use std::env;
 use std::process::Command;
 use std::sync::{Once, ONCE_INIT};
-use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
 
-use cargotest::support::{project, main_file, basic_bin_manifest};
+use cargotest::support::{basic_bin_manifest, main_file, project};
 
 pub fn disabled() -> bool {
     // First, disable if ./configure requested so
@@ -15,9 +15,7 @@ pub fn disabled() -> bool {
     // Right now the windows bots cannot cross compile due to the mingw setup,
     // so we disable ourselves on all but macos/linux setups where the rustc
     // install script ensures we have both architectures
-    if !(cfg!(target_os = "macos") ||
-         cfg!(target_os = "linux") ||
-         cfg!(target_env = "msvc")) {
+    if !(cfg!(target_os = "macos") || cfg!(target_os = "linux") || cfg!(target_env = "msvc")) {
         return true;
     }
 
@@ -36,7 +34,8 @@ pub fn disabled() -> bool {
             .build();
 
         let result = p.cargo("build")
-            .arg("--target").arg(&cross_target)
+            .arg("--target")
+            .arg(&cross_target)
             .exec_with_output();
 
         if result.is_ok() {
@@ -70,26 +69,33 @@ pub fn disabled() -> bool {
     let linux_help = if cfg!(target_os = "linux") {
         "
 
-You may need to install runtime libraries for your Linux distribution as well.".to_string()
+You may need to install runtime libraries for your Linux distribution as well."
+            .to_string()
     } else {
         "".to_string()
     };
 
     let rustup_help = if rustup_available {
-        format!("
+        format!(
+            "
 
 Alternatively, you can install the necessary libraries for cross-compilation with
 
-    rustup target add {}{}", cross_target, linux_help)
+    rustup target add {}{}",
+            cross_target, linux_help
+        )
     } else {
         "".to_string()
     };
 
-    panic!("Cannot cross compile to {}.
+    panic!(
+        "Cannot cross compile to {}.
 
 This failure can be safely ignored. If you would prefer to not see this
 failure, you can set the environment variable CFG_DISABLE_CROSS_TESTS to \"1\".{}
-", cross_target, rustup_help);
+",
+        cross_target, rustup_help
+    );
 }
 
 pub fn alternate() -> String {

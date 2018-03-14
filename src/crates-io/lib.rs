@@ -1,12 +1,12 @@
 #![allow(unknown_lints)]
 
 extern crate curl;
-extern crate url;
 #[macro_use]
 extern crate failure;
-extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
+extern crate serde_json;
+extern crate url;
 
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -55,8 +55,7 @@ pub struct NewCrate {
     pub license_file: Option<String>,
     pub repository: Option<String>,
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
-    #[serde(default)]
-    pub links: Option<String>,
+    #[serde(default)] pub links: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -68,8 +67,7 @@ pub struct NewCrateDependency {
     pub version_req: String,
     pub target: Option<String>,
     pub kind: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub registry: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")] pub registry: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -86,22 +84,46 @@ pub struct Warnings {
     pub invalid_badges: Vec<String>,
 }
 
-#[derive(Deserialize)] struct R { ok: bool }
-#[derive(Deserialize)] struct OwnerResponse { ok: bool, msg: String }
-#[derive(Deserialize)] struct ApiErrorList { errors: Vec<ApiError> }
-#[derive(Deserialize)] struct ApiError { detail: String }
-#[derive(Serialize)] struct OwnersReq<'a> { users: &'a [&'a str] }
-#[derive(Deserialize)] struct Users { users: Vec<User> }
-#[derive(Deserialize)] struct TotalCrates { total: u32 }
-#[derive(Deserialize)] struct Crates { crates: Vec<Crate>, meta: TotalCrates }
+#[derive(Deserialize)]
+struct R {
+    ok: bool,
+}
+#[derive(Deserialize)]
+struct OwnerResponse {
+    ok: bool,
+    msg: String,
+}
+#[derive(Deserialize)]
+struct ApiErrorList {
+    errors: Vec<ApiError>,
+}
+#[derive(Deserialize)]
+struct ApiError {
+    detail: String,
+}
+#[derive(Serialize)]
+struct OwnersReq<'a> {
+    users: &'a [&'a str],
+}
+#[derive(Deserialize)]
+struct Users {
+    users: Vec<User>,
+}
+#[derive(Deserialize)]
+struct TotalCrates {
+    total: u32,
+}
+#[derive(Deserialize)]
+struct Crates {
+    crates: Vec<Crate>,
+    meta: TotalCrates,
+}
 impl Registry {
     pub fn new(host: String, token: Option<String>) -> Registry {
         Registry::new_handle(host, token, Easy::new())
     }
 
-    pub fn new_handle(host: String,
-                      token: Option<String>,
-                      handle: Easy) -> Registry {
+    pub fn new_handle(host: String, token: Option<String>, handle: Easy) -> Registry {
         Registry {
             host,
             token,
@@ -111,16 +133,14 @@ impl Registry {
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
-        let body = self.put(format!("/crates/{}/owners", krate),
-                                 body.as_bytes())?;
+        let body = self.put(format!("/crates/{}/owners", krate), body.as_bytes())?;
         assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
         Ok(serde_json::from_str::<OwnerResponse>(&body)?.msg)
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
-        let body = self.delete(format!("/crates/{}/owners", krate),
-                                    Some(body.as_bytes()))?;
+        let body = self.delete(format!("/crates/{}/owners", krate), Some(body.as_bytes()))?;
         assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
         Ok(())
     }
@@ -130,8 +150,7 @@ impl Registry {
         Ok(serde_json::from_str::<Users>(&body)?.users)
     }
 
-    pub fn publish(&mut self, krate: &NewCrate, tarball: &File)
-                   -> Result<Warnings> {
+    pub fn publish(&mut self, krate: &NewCrate, tarball: &File) -> Result<Warnings> {
         let json = serde_json::to_string(krate)?;
         // Prepare the body. The format of the upload request is:
         //
@@ -142,19 +161,25 @@ impl Registry {
         let stat = tarball.metadata()?;
         let header = {
             let mut w = Vec::new();
-            w.extend([
-                (json.len() >>  0) as u8,
-                (json.len() >>  8) as u8,
-                (json.len() >> 16) as u8,
-                (json.len() >> 24) as u8,
-            ].iter().map(|x| *x));
+            w.extend(
+                [
+                    (json.len() >> 0) as u8,
+                    (json.len() >> 8) as u8,
+                    (json.len() >> 16) as u8,
+                    (json.len() >> 24) as u8,
+                ].iter()
+                    .map(|x| *x),
+            );
             w.extend(json.as_bytes().iter().map(|x| *x));
-            w.extend([
-                (stat.len() >>  0) as u8,
-                (stat.len() >>  8) as u8,
-                (stat.len() >> 16) as u8,
-                (stat.len() >> 24) as u8,
-            ].iter().map(|x| *x));
+            w.extend(
+                [
+                    (stat.len() >> 0) as u8,
+                    (stat.len() >> 8) as u8,
+                    (stat.len() >> 16) as u8,
+                    (stat.len() >> 24) as u8,
+                ].iter()
+                    .map(|x| *x),
+            );
             w
         };
         let size = stat.len() as usize + header.len();
@@ -206,7 +231,8 @@ impl Registry {
         let formatted_query = percent_encode(query.as_bytes(), QUERY_ENCODE_SET);
         let body = self.req(
             format!("/crates?q={}&per_page={}", formatted_query, limit),
-            None, Auth::Unauthorized
+            None,
+            Auth::Unauthorized,
         )?;
 
         let crates = serde_json::from_str::<Crates>(&body)?;
@@ -214,15 +240,13 @@ impl Registry {
     }
 
     pub fn yank(&mut self, krate: &str, version: &str) -> Result<()> {
-        let body = self.delete(format!("/crates/{}/{}/yank", krate, version),
-                                    None)?;
+        let body = self.delete(format!("/crates/{}/{}/yank", krate, version), None)?;
         assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
     }
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
-        let body = self.put(format!("/crates/{}/{}/unyank", krate, version),
-                                 &[])?;
+        let body = self.put(format!("/crates/{}/{}/unyank", krate, version), &[])?;
         assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
     }
@@ -242,10 +266,7 @@ impl Registry {
         self.req(path, b, Auth::Authorized)
     }
 
-    fn req(&mut self,
-           path: String,
-           body: Option<&[u8]>,
-           authorized: Auth) -> Result<String> {
+    fn req(&mut self, path: String, body: Option<&[u8]>, authorized: Auth) -> Result<String> {
         self.handle.url(&format!("{}/api/v1{}", self.host, path))?;
         let mut headers = List::new();
         headers.append("Accept: application/json")?;
@@ -270,8 +291,7 @@ impl Registry {
     }
 }
 
-fn handle(handle: &mut Easy,
-          read: &mut FnMut(&mut [u8]) -> usize) -> Result<String> {
+fn handle(handle: &mut Easy, read: &mut FnMut(&mut [u8]) -> usize) -> Result<String> {
     let mut headers = Vec::new();
     let mut body = Vec::new();
     {
@@ -293,16 +313,16 @@ fn handle(handle: &mut Easy,
         200 => {}
         403 => bail!("received 403 unauthorized response code"),
         404 => bail!("received 404 not found response code"),
-        code => {
-            bail!("failed to get a 200 OK response, got {}\n\
-                   headers:\n\
-                   \t{}\n\
-                   body:\n\
-                   {}",
-                  code,
-                  headers.join("\n\t"),
-                  String::from_utf8_lossy(&body))
-        }
+        code => bail!(
+            "failed to get a 200 OK response, got {}\n\
+             headers:\n\
+             \t{}\n\
+             body:\n\
+             {}",
+            code,
+            headers.join("\n\t"),
+            String::from_utf8_lossy(&body)
+        ),
     }
 
     let body = match String::from_utf8(body) {

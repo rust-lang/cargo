@@ -8,9 +8,9 @@ use glob::Pattern;
 use ignore::Match;
 use ignore::gitignore::GitignoreBuilder;
 
-use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
+use core::{Dependency, Package, PackageId, Registry, Source, SourceId, Summary};
 use ops;
-use util::{self, CargoResult, internal};
+use util::{self, internal, CargoResult};
 use util::Config;
 
 pub struct PathSource<'cfg> {
@@ -27,8 +27,7 @@ impl<'cfg> PathSource<'cfg> {
     ///
     /// This source will only return the package at precisely the `path`
     /// specified, and it will be an error if there's not a package at `path`.
-    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config)
-               -> PathSource<'cfg> {
+    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config) -> PathSource<'cfg> {
         PathSource {
             source_id: id.clone(),
             path: path.to_path_buf(),
@@ -47,11 +46,10 @@ impl<'cfg> PathSource<'cfg> {
     ///
     /// Note that this should be used with care and likely shouldn't be chosen
     /// by default!
-    pub fn new_recursive(root: &Path, id: &SourceId, config: &'cfg Config)
-                         -> PathSource<'cfg> {
+    pub fn new_recursive(root: &Path, id: &SourceId, config: &'cfg Config) -> PathSource<'cfg> {
         PathSource {
             recursive: true,
-            .. PathSource::new(root, id, config)
+            ..PathSource::new(root, id, config)
         }
     }
 
@@ -62,7 +60,7 @@ impl<'cfg> PathSource<'cfg> {
 
         match self.packages.iter().find(|p| p.root() == &*self.path) {
             Some(pkg) => Ok(pkg.clone()),
-            None => Err(internal("no package found in source"))
+            None => Err(internal("no package found in source")),
         }
     }
 
@@ -115,9 +113,8 @@ impl<'cfg> PathSource<'cfg> {
             } else {
                 p
             };
-            Pattern::new(pattern).map_err(|e| {
-                format_err!("could not parse glob pattern `{}`: {}", p, e)
-            })
+            Pattern::new(pattern)
+                .map_err(|e| format_err!("could not parse glob pattern `{}`: {}", p, e))
         };
 
         let glob_exclude = pkg.manifest()
@@ -134,7 +131,9 @@ impl<'cfg> PathSource<'cfg> {
 
         let glob_should_package = |relative_path: &Path| -> bool {
             fn glob_match(patterns: &Vec<Pattern>, relative_path: &Path) -> bool {
-                patterns.iter().any(|pattern| pattern.matches_path(relative_path))
+                patterns
+                    .iter()
+                    .any(|pattern| pattern.matches_path(relative_path))
             }
 
             // include and exclude options are mutually exclusive.
@@ -162,10 +161,9 @@ impl<'cfg> PathSource<'cfg> {
         let ignore_should_package = |relative_path: &Path| -> CargoResult<bool> {
             // include and exclude options are mutually exclusive.
             if no_include_option {
-                match ignore_exclude.matched_path_or_any_parents(
-                    relative_path,
-                    /* is_dir */ false,
-                ) {
+                match ignore_exclude
+                    .matched_path_or_any_parents(relative_path, /* is_dir */ false)
+                {
                     Match::None => Ok(true),
                     Match::Ignore(_) => Ok(false),
                     Match::Whitelist(pattern) => Err(format_err!(
@@ -174,10 +172,9 @@ impl<'cfg> PathSource<'cfg> {
                     )),
                 }
             } else {
-                match ignore_include.matched_path_or_any_parents(
-                    relative_path,
-                    /* is_dir */ false,
-                ) {
+                match ignore_include
+                    .matched_path_or_any_parents(relative_path, /* is_dir */ false)
+                {
                     Match::None => Ok(false),
                     Match::Ignore(_) => Ok(true),
                     Match::Whitelist(pattern) => Err(format_err!(
@@ -198,42 +195,34 @@ impl<'cfg> PathSource<'cfg> {
             if glob_should_package != ignore_should_package {
                 if glob_should_package {
                     if no_include_option {
-                        self.config
-                            .shell()
-                            .warn(format!(
-                                "Pattern matching for Cargo's include/exclude fields is changing and \
-                                file `{}` WILL be excluded in a future Cargo version.\n\
-                                See https://github.com/rust-lang/cargo/issues/4268 for more info",
-                                relative_path.display()
-                            ))?;
+                        self.config.shell().warn(format!(
+                            "Pattern matching for Cargo's include/exclude fields is changing and \
+                             file `{}` WILL be excluded in a future Cargo version.\n\
+                             See https://github.com/rust-lang/cargo/issues/4268 for more info",
+                            relative_path.display()
+                        ))?;
                     } else {
-                        self.config
-                            .shell()
-                            .warn(format!(
-                                "Pattern matching for Cargo's include/exclude fields is changing and \
-                                file `{}` WILL NOT be included in a future Cargo version.\n\
-                                See https://github.com/rust-lang/cargo/issues/4268 for more info",
-                                relative_path.display()
-                            ))?;
+                        self.config.shell().warn(format!(
+                            "Pattern matching for Cargo's include/exclude fields is changing and \
+                             file `{}` WILL NOT be included in a future Cargo version.\n\
+                             See https://github.com/rust-lang/cargo/issues/4268 for more info",
+                            relative_path.display()
+                        ))?;
                     }
                 } else if no_include_option {
-                    self.config
-                        .shell()
-                        .warn(format!(
-                            "Pattern matching for Cargo's include/exclude fields is changing and \
-                            file `{}` WILL NOT be excluded in a future Cargo version.\n\
-                            See https://github.com/rust-lang/cargo/issues/4268 for more info",
-                            relative_path.display()
-                        ))?;
+                    self.config.shell().warn(format!(
+                        "Pattern matching for Cargo's include/exclude fields is changing and \
+                         file `{}` WILL NOT be excluded in a future Cargo version.\n\
+                         See https://github.com/rust-lang/cargo/issues/4268 for more info",
+                        relative_path.display()
+                    ))?;
                 } else {
-                    self.config
-                        .shell()
-                        .warn(format!(
-                            "Pattern matching for Cargo's include/exclude fields is changing and \
-                            file `{}` WILL be included in a future Cargo version.\n\
-                            See https://github.com/rust-lang/cargo/issues/4268 for more info",
-                            relative_path.display()
-                        ))?;
+                    self.config.shell().warn(format!(
+                        "Pattern matching for Cargo's include/exclude fields is changing and \
+                         file `{}` WILL be included in a future Cargo version.\n\
+                         See https://github.com/rust-lang/cargo/issues/4268 for more info",
+                        relative_path.display()
+                    ))?;
                 }
             }
 
@@ -252,11 +241,12 @@ impl<'cfg> PathSource<'cfg> {
 
     // Returns Some(_) if found sibling Cargo.toml and .git folder;
     // otherwise caller should fall back on full file list.
-    fn discover_git_and_list_files(&self,
-                                   pkg: &Package,
-                                   root: &Path,
-                                   filter: &mut FnMut(&Path) -> CargoResult<bool>)
-                                   -> Option<CargoResult<Vec<PathBuf>>> {
+    fn discover_git_and_list_files(
+        &self,
+        pkg: &Package,
+        root: &Path,
+        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+    ) -> Option<CargoResult<Vec<PathBuf>>> {
         // If this package is in a git repository, then we really do want to
         // query the git repository as it takes into account items such as
         // .gitignore. We're not quite sure where the git repository is,
@@ -276,8 +266,7 @@ impl<'cfg> PathSource<'cfg> {
                         Ok(index) => index,
                         Err(err) => return Some(Err(err.into())),
                     };
-                    let path = util::without_prefix(root, cur)
-                                    .unwrap().join("Cargo.toml");
+                    let path = util::without_prefix(root, cur).unwrap().join("Cargo.toml");
                     if index.get_path(&path, 0).is_some() {
                         return Some(self.list_files_git(pkg, repo, filter));
                     }
@@ -285,7 +274,7 @@ impl<'cfg> PathSource<'cfg> {
             }
             // don't cross submodule boundaries
             if cur.join(".git").is_dir() {
-                break
+                break;
             }
             match cur.parent() {
                 Some(parent) => cur = parent,
@@ -295,14 +284,16 @@ impl<'cfg> PathSource<'cfg> {
         None
     }
 
-    fn list_files_git(&self, pkg: &Package, repo: git2::Repository,
-                      filter: &mut FnMut(&Path) -> CargoResult<bool>)
-                      -> CargoResult<Vec<PathBuf>> {
+    fn list_files_git(
+        &self,
+        pkg: &Package,
+        repo: git2::Repository,
+        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+    ) -> CargoResult<Vec<PathBuf>> {
         warn!("list_files_git {}", pkg.package_id());
         let index = repo.index()?;
-        let root = repo.workdir().ok_or_else(|| {
-            internal("Can't list files on a bare repository.")
-        })?;
+        let root = repo.workdir()
+            .ok_or_else(|| internal("Can't list files on a bare repository."))?;
         let pkg_path = pkg.root();
 
         let mut ret = Vec::<PathBuf>::new();
@@ -325,11 +316,9 @@ impl<'cfg> PathSource<'cfg> {
             opts.pathspec(suffix);
         }
         let statuses = repo.statuses(Some(&mut opts))?;
-        let untracked = statuses.iter().filter_map(|entry| {
-            match entry.status() {
-                git2::Status::WT_NEW => Some((join(root, entry.path_bytes()), None)),
-                _ => None,
-            }
+        let untracked = statuses.iter().filter_map(|entry| match entry.status() {
+            git2::Status::WT_NEW => Some((join(root, entry.path_bytes()), None)),
+            _ => None,
         });
 
         let mut subpackages_found = Vec::new();
@@ -341,15 +330,14 @@ impl<'cfg> PathSource<'cfg> {
             // bit obove via the `pathspec` function call, but we need to filter
             // the entries in the index as well.
             if !file_path.starts_with(pkg_path) {
-                continue
+                continue;
             }
 
             match file_path.file_name().and_then(|s| s.to_str()) {
                 // Filter out Cargo.lock and target always, we don't want to
                 // package a lock file no one will ever read and we also avoid
                 // build artifacts
-                Some("Cargo.lock") |
-                Some("target") => continue,
+                Some("Cargo.lock") | Some("target") => continue,
 
                 // Keep track of all sub-packages found and also strip out all
                 // matches we've found so far. Note, though, that if we find
@@ -360,7 +348,7 @@ impl<'cfg> PathSource<'cfg> {
                         warn!("subpackage found: {}", path.display());
                         ret.retain(|p| !p.starts_with(path));
                         subpackages_found.push(path.to_path_buf());
-                        continue
+                        continue;
                     }
                 }
 
@@ -370,15 +358,14 @@ impl<'cfg> PathSource<'cfg> {
             // If this file is part of any other sub-package we've found so far,
             // skip it.
             if subpackages_found.iter().any(|p| file_path.starts_with(p)) {
-                continue
+                continue;
             }
 
             if is_dir.unwrap_or_else(|| file_path.is_dir()) {
                 warn!("  found submodule {}", file_path.display());
                 let rel = util::without_prefix(&file_path, root).unwrap();
-                let rel = rel.to_str().ok_or_else(|| {
-                    format_err!("invalid utf-8 filename: {}", rel.display())
-                })?;
+                let rel = rel.to_str()
+                    .ok_or_else(|| format_err!("invalid utf-8 filename: {}", rel.display()))?;
                 // Git submodules are currently only named through `/` path
                 // separators, explicitly not `\` which windows uses. Who knew?
                 let rel = rel.replace(r"\", "/");
@@ -410,32 +397,39 @@ impl<'cfg> PathSource<'cfg> {
             use std::str;
             match str::from_utf8(data) {
                 Ok(s) => Ok(path.join(s)),
-                Err(..) => Err(internal("cannot process path in git with a non \
-                                         unicode filename")),
+                Err(..) => Err(internal(
+                    "cannot process path in git with a non \
+                     unicode filename",
+                )),
             }
         }
     }
 
-    fn list_files_walk(&self, pkg: &Package, filter: &mut FnMut(&Path) -> CargoResult<bool>)
-                       -> CargoResult<Vec<PathBuf>> {
+    fn list_files_walk(
+        &self,
+        pkg: &Package,
+        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+    ) -> CargoResult<Vec<PathBuf>> {
         let mut ret = Vec::new();
         PathSource::walk(pkg.root(), &mut ret, true, filter)?;
         Ok(ret)
     }
 
-    fn walk(path: &Path, ret: &mut Vec<PathBuf>,
-            is_root: bool, filter: &mut FnMut(&Path) -> CargoResult<bool>)
-            -> CargoResult<()>
-    {
+    fn walk(
+        path: &Path,
+        ret: &mut Vec<PathBuf>,
+        is_root: bool,
+        filter: &mut FnMut(&Path) -> CargoResult<bool>,
+    ) -> CargoResult<()> {
         if !fs::metadata(&path).map(|m| m.is_dir()).unwrap_or(false) {
             if (*filter)(path)? {
                 ret.push(path.to_path_buf());
             }
-            return Ok(())
+            return Ok(());
         }
         // Don't recurse into any sub-packages that we have
         if !is_root && fs::metadata(&path.join("Cargo.toml")).is_ok() {
-            return Ok(())
+            return Ok(());
         }
 
         // For package integration tests, we need to sort the paths in a deterministic order to
@@ -451,7 +445,7 @@ impl<'cfg> PathSource<'cfg> {
             let name = path.file_name().and_then(|s| s.to_str());
             // Skip dotfile directories
             if name.map(|s| s.starts_with('.')) == Some(true) {
-                continue
+                continue;
             }
             if is_root {
                 // Skip cargo artifacts
@@ -473,9 +467,7 @@ impl<'cfg> Debug for PathSource<'cfg> {
 }
 
 impl<'cfg> Registry for PathSource<'cfg> {
-    fn query(&mut self,
-             dep: &Dependency,
-             f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         for s in self.packages.iter().map(|p| p.summary()) {
             if dep.matches(s) {
                 f(s.clone())
@@ -512,9 +504,8 @@ impl<'cfg> Source for PathSource<'cfg> {
         trace!("getting packages; id={}", id);
 
         let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
-        pkg.cloned().ok_or_else(|| {
-            internal(format!("failed to find {} in path source", id))
-        })
+        pkg.cloned()
+            .ok_or_else(|| internal(format!("failed to find {} in path source", id)))
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
@@ -530,9 +521,9 @@ impl<'cfg> Source for PathSource<'cfg> {
             // condition where this path was rm'ed - either way,
             // we can ignore the error and treat the path's mtime
             // as 0.
-            let mtime = fs::metadata(&file).map(|meta| {
-                FileTime::from_last_modification_time(&meta)
-            }).unwrap_or(FileTime::zero());
+            let mtime = fs::metadata(&file)
+                .map(|meta| FileTime::from_last_modification_time(&meta))
+                .unwrap_or(FileTime::zero());
             warn!("{} {}", mtime, file.display());
             if mtime > max {
                 max = mtime;

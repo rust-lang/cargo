@@ -11,12 +11,12 @@ use serde_json;
 
 use core::{Epoch, Package, TargetKind};
 use util;
-use util::{Fresh, Dirty, Freshness, internal, profile};
+use util::{internal, profile, Dirty, Fresh, Freshness};
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 
 use super::job::Work;
-use super::context::{Context, Unit, TargetFileType};
+use super::context::{Context, TargetFileType, Unit};
 use super::custom_build::BuildDeps;
 
 /// A tuple result of the `prepare_foo` functions in this module.
@@ -47,10 +47,15 @@ pub type Preparation = (Freshness, Work, Work);
 /// This function will calculate the fingerprint for a target and prepare the
 /// work necessary to either write the fingerprint or copy over all fresh files
 /// from the old directories to their new locations.
-pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
-                                unit: &Unit<'a>) -> CargoResult<Preparation> {
-    let _p = profile::start(format!("fingerprint: {} / {}",
-                                    unit.pkg.package_id(), unit.target.name()));
+pub fn prepare_target<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+) -> CargoResult<Preparation> {
+    let _p = profile::start(format!(
+        "fingerprint: {} / {}",
+        unit.pkg.package_id(),
+        unit.target.name()
+    ));
     let new = cx.fingerprint_dir(unit);
     let loc = new.join(&filename(cx, unit));
 
@@ -73,9 +78,9 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     if compare.is_err() {
         let source_id = unit.pkg.package_id().source_id();
         let sources = cx.packages.sources();
-        let source = sources.get(source_id).ok_or_else(|| {
-            internal("missing package source")
-        })?;
+        let source = sources
+            .get(source_id)
+            .ok_or_else(|| internal("missing package source"))?;
         source.verify(unit.pkg.package_id())?;
     }
 
@@ -83,7 +88,8 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     let mut missing_outputs = false;
     if unit.profile.doc {
         missing_outputs = !root.join(unit.target.crate_name())
-                               .join("index.html").exists();
+            .join("index.html")
+            .exists();
     } else {
         for &(ref src, ref link_dst, file_type) in cx.target_filenames(unit)?.iter() {
             if file_type == TargetFileType::DebugInfo {
@@ -102,13 +108,17 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         match fingerprint.update_local(&target_root) {
             Ok(()) => {}
             Err(..) if allow_failure => return Ok(()),
-            Err(e) => return Err(e)
+            Err(e) => return Err(e),
         }
         write_fingerprint(&loc, &*fingerprint)
     });
 
     let fresh = compare.is_ok() && !missing_outputs;
-    Ok((if fresh {Fresh} else {Dirty}, write_fingerprint, Work::noop()))
+    Ok((
+        if fresh { Fresh } else { Dirty },
+        write_fingerprint,
+        Work::noop(),
+    ))
 }
 
 /// A fingerprint can be considered to be a "short string" representing the
@@ -142,39 +152,46 @@ pub struct Fingerprint {
     #[serde(serialize_with = "serialize_deps", deserialize_with = "deserialize_deps")]
     deps: Vec<(String, Arc<Fingerprint>)>,
     local: Vec<LocalFingerprint>,
-    #[serde(skip_serializing, skip_deserializing)]
-    memoized_hash: Mutex<Option<u64>>,
+    #[serde(skip_serializing, skip_deserializing)] memoized_hash: Mutex<Option<u64>>,
     rustflags: Vec<String>,
     epoch: Epoch,
 }
 
-fn serialize_deps<S>(deps: &[(String, Arc<Fingerprint>)], ser: S)
-                     -> Result<S::Ok, S::Error>
-    where S: ser::Serializer,
+fn serialize_deps<S>(deps: &[(String, Arc<Fingerprint>)], ser: S) -> Result<S::Ok, S::Error>
+where
+    S: ser::Serializer,
 {
-    deps.iter().map(|&(ref a, ref b)| {
-        (a, b.hash())
-    }).collect::<Vec<_>>().serialize(ser)
+    deps.iter()
+        .map(|&(ref a, ref b)| (a, b.hash()))
+        .collect::<Vec<_>>()
+        .serialize(ser)
 }
 
 fn deserialize_deps<'de, D>(d: D) -> Result<Vec<(String, Arc<Fingerprint>)>, D::Error>
-    where D: de::Deserializer<'de>,
+where
+    D: de::Deserializer<'de>,
 {
     let decoded = <Vec<(String, u64)>>::deserialize(d)?;
-    Ok(decoded.into_iter().map(|(name, hash)| {
-        (name, Arc::new(Fingerprint {
-            rustc: 0,
-            target: 0,
-            profile: 0,
-            path: 0,
-            local: vec![LocalFingerprint::Precalculated(String::new())],
-            features: String::new(),
-            deps: Vec::new(),
-            memoized_hash: Mutex::new(Some(hash)),
-            epoch: Epoch::Epoch2015,
-            rustflags: Vec::new(),
-        }))
-    }).collect())
+    Ok(decoded
+        .into_iter()
+        .map(|(name, hash)| {
+            (
+                name,
+                Arc::new(Fingerprint {
+                    rustc: 0,
+                    target: 0,
+                    profile: 0,
+                    path: 0,
+                    local: vec![LocalFingerprint::Precalculated(String::new())],
+                    features: String::new(),
+                    deps: Vec::new(),
+                    memoized_hash: Mutex::new(Some(hash)),
+                    epoch: Epoch::Epoch2015,
+                    rustflags: Vec::new(),
+                }),
+            )
+        })
+        .collect())
 }
 
 #[derive(Serialize, Deserialize, Hash)]
@@ -185,9 +202,7 @@ enum LocalFingerprint {
 }
 
 impl LocalFingerprint {
-    fn mtime(root: &Path, mtime: Option<FileTime>, path: &Path)
-        -> LocalFingerprint
-    {
+    fn mtime(root: &Path, mtime: Option<FileTime>, path: &Path) -> LocalFingerprint {
         let mtime = MtimeSlot(Mutex::new(mtime));
         assert!(path.is_absolute());
         let path = path.strip_prefix(root).unwrap_or(path);
@@ -205,14 +220,11 @@ impl Fingerprint {
                 LocalFingerprint::MtimeBased(ref slot, ref path) => {
                     let path = root.join(path);
                     let meta = fs::metadata(&path)
-                        .chain_err(|| {
-                            internal(format!("failed to stat `{}`", path.display()))
-                        })?;
+                        .chain_err(|| internal(format!("failed to stat `{}`", path.display())))?;
                     let mtime = FileTime::from_last_modification_time(&meta);
                     *slot.0.lock().unwrap() = Some(mtime);
                 }
-                LocalFingerprint::EnvBased(..) |
-                LocalFingerprint::Precalculated(..) => continue,
+                LocalFingerprint::EnvBased(..) | LocalFingerprint::Precalculated(..) => continue,
             }
             hash_busted = true;
         }
@@ -225,7 +237,7 @@ impl Fingerprint {
 
     fn hash(&self) -> u64 {
         if let Some(s) = *self.memoized_hash.lock().unwrap() {
-            return s
+            return s;
         }
         let ret = util::hash_u64(self);
         *self.memoized_hash.lock().unwrap() = Some(ret);
@@ -237,7 +249,11 @@ impl Fingerprint {
             bail!("rust compiler has changed")
         }
         if self.features != old.features {
-            bail!("features have changed: {} != {}", self.features, old.features)
+            bail!(
+                "features have changed: {} != {}",
+                self.features,
+                old.features
+            )
         }
         if self.target != old.target {
             bail!("target configuration has changed")
@@ -259,15 +275,18 @@ impl Fingerprint {
         }
         for (new, old) in self.local.iter().zip(&old.local) {
             match (new, old) {
-                (&LocalFingerprint::Precalculated(ref a),
-                 &LocalFingerprint::Precalculated(ref b)) => {
+                (
+                    &LocalFingerprint::Precalculated(ref a),
+                    &LocalFingerprint::Precalculated(ref b),
+                ) => {
                     if a != b {
-                        bail!("precalculated components have changed: {} != {}",
-                              a, b)
+                        bail!("precalculated components have changed: {} != {}", a, b)
                     }
                 }
-                (&LocalFingerprint::MtimeBased(ref on_disk_mtime, ref ap),
-                 &LocalFingerprint::MtimeBased(ref previously_built_mtime, ref bp)) => {
+                (
+                    &LocalFingerprint::MtimeBased(ref on_disk_mtime, ref ap),
+                    &LocalFingerprint::MtimeBased(ref previously_built_mtime, ref bp),
+                ) => {
                     let on_disk_mtime = on_disk_mtime.0.lock().unwrap();
                     let previously_built_mtime = previously_built_mtime.0.lock().unwrap();
 
@@ -278,19 +297,30 @@ impl Fingerprint {
                     };
 
                     if should_rebuild {
-                        bail!("mtime based components have changed: previously {:?} now {:?}, \
-                               paths are {:?} and {:?}",
-                              *previously_built_mtime, *on_disk_mtime, ap, bp)
+                        bail!(
+                            "mtime based components have changed: previously {:?} now {:?}, \
+                             paths are {:?} and {:?}",
+                            *previously_built_mtime,
+                            *on_disk_mtime,
+                            ap,
+                            bp
+                        )
                     }
                 }
-                (&LocalFingerprint::EnvBased(ref akey, ref avalue),
-                 &LocalFingerprint::EnvBased(ref bkey, ref bvalue)) => {
+                (
+                    &LocalFingerprint::EnvBased(ref akey, ref avalue),
+                    &LocalFingerprint::EnvBased(ref bkey, ref bvalue),
+                ) => {
                     if *akey != *bkey {
                         bail!("env vars changed: {} != {}", akey, bkey);
                     }
                     if *avalue != *bvalue {
-                        bail!("env var `{}` changed: previously {:?} now {:?}",
-                              akey, bvalue, avalue)
+                        bail!(
+                            "env var `{}` changed: previously {:?} now {:?}",
+                            akey,
+                            bvalue,
+                            avalue
+                        )
                     }
                 }
                 _ => bail!("local fingerprint type has changed"),
@@ -323,7 +353,16 @@ impl hash::Hash for Fingerprint {
             ref rustflags,
             ..
         } = *self;
-        (rustc, features, target, path, profile, local, epoch, rustflags).hash(h);
+        (
+            rustc,
+            features,
+            target,
+            path,
+            profile,
+            local,
+            epoch,
+            rustflags,
+        ).hash(h);
 
         h.write_usize(deps.len());
         for &(ref name, ref fingerprint) in deps {
@@ -342,17 +381,21 @@ impl hash::Hash for MtimeSlot {
 
 impl ser::Serialize for MtimeSlot {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer,
+    where
+        S: ser::Serializer,
     {
-        self.0.lock().unwrap().map(|ft| {
-            (ft.seconds_relative_to_1970(), ft.nanoseconds())
-        }).serialize(s)
+        self.0
+            .lock()
+            .unwrap()
+            .map(|ft| (ft.seconds_relative_to_1970(), ft.nanoseconds()))
+            .serialize(s)
     }
 }
 
 impl<'de> de::Deserialize<'de> for MtimeSlot {
     fn deserialize<D>(d: D) -> Result<MtimeSlot, D::Error>
-        where D: de::Deserializer<'de>,
+    where
+        D: de::Deserializer<'de>,
     {
         let kind: Option<(u64, u32)> = de::Deserialize::deserialize(d)?;
         Ok(MtimeSlot(Mutex::new(kind.map(|(s, n)| {
@@ -373,10 +416,12 @@ impl<'de> de::Deserialize<'de> for MtimeSlot {
 ///
 /// Information like file modification time is only calculated for path
 /// dependencies and is calculated in `calculate_target_fresh`.
-fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
-                       -> CargoResult<Arc<Fingerprint>> {
+fn calculate<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+) -> CargoResult<Arc<Fingerprint>> {
     if let Some(s) = cx.fingerprints.get(unit) {
-        return Ok(Arc::clone(s))
+        return Ok(Arc::clone(s));
     }
 
     // Next, recursively calculate the fingerprint for all of our dependencies.
@@ -387,13 +432,12 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // induce a recompile, they're just dependencies in the sense that they need
     // to be built.
     let deps = cx.dep_targets(unit)?;
-    let deps = deps.iter().filter(|u| {
-        !u.target.is_custom_build() && !u.target.is_bin()
-    }).map(|unit| {
-        calculate(cx, unit).map(|fingerprint| {
-            (unit.pkg.package_id().to_string(), fingerprint)
+    let deps = deps.iter()
+        .filter(|u| !u.target.is_custom_build() && !u.target.is_bin())
+        .map(|unit| {
+            calculate(cx, unit).map(|fingerprint| (unit.pkg.package_id().to_string(), fingerprint))
         })
-    }).collect::<CargoResult<Vec<_>>>()?;
+        .collect::<CargoResult<Vec<_>>>()?;
 
     // And finally, calculate what our own local fingerprint is
     let local = if use_dep_info(unit) {
@@ -429,7 +473,6 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     Ok(fingerprint)
 }
 
-
 // We want to use the mtime for files if we're a path source, but if we're a
 // git/registry source, then the mtime of files may fluctuate, but they won't
 // change so long as the source itself remains constant (which is the
@@ -456,10 +499,11 @@ fn use_dep_info(unit: &Unit) -> bool {
 ///
 /// The currently implemented solution is option (1), although it is planned to
 /// migrate to option (2) in the near future.
-pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
-                                   -> CargoResult<Preparation> {
-    let _p = profile::start(format!("fingerprint build cmd: {}",
-                                    unit.pkg.package_id()));
+pub fn prepare_build_cmd<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+) -> CargoResult<Preparation> {
+    let _p = profile::start(format!("fingerprint build cmd: {}", unit.pkg.package_id()));
     let new = cx.fingerprint_dir(unit);
     let loc = new.join("build");
 
@@ -499,8 +543,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         if let Some(output_path) = output_path {
             let outputs = state.outputs.lock().unwrap();
             let outputs = &outputs[&key];
-            if !outputs.rerun_if_changed.is_empty() ||
-               !outputs.rerun_if_env_changed.is_empty() {
+            if !outputs.rerun_if_changed.is_empty() || !outputs.rerun_if_env_changed.is_empty() {
                 let deps = BuildDeps::new(&output_path, Some(outputs));
                 fingerprint.local = local_fingerprints_deps(&deps, &target_root, &pkg_root);
                 fingerprint.update_local(&target_root)?;
@@ -509,13 +552,17 @@ pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         write_fingerprint(&loc, &fingerprint)
     });
 
-    Ok((if compare.is_ok() {Fresh} else {Dirty}, write_fingerprint, Work::noop()))
+    Ok((
+        if compare.is_ok() { Fresh } else { Dirty },
+        write_fingerprint,
+        Work::noop(),
+    ))
 }
 
-fn build_script_local_fingerprints<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
-                                             unit: &Unit<'a>)
-    -> CargoResult<(Vec<LocalFingerprint>, Option<PathBuf>)>
-{
+fn build_script_local_fingerprints<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+) -> CargoResult<(Vec<LocalFingerprint>, Option<PathBuf>)> {
     let state = cx.build_state.outputs.lock().unwrap();
     // First up, if this build script is entirely overridden, then we just
     // return the hash of what we overrode it with.
@@ -524,9 +571,11 @@ fn build_script_local_fingerprints<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     // fingerprint afterwards because this is all just overridden.
     if let Some(output) = state.get(&(unit.pkg.package_id().clone(), unit.kind)) {
         debug!("override local fingerprints deps");
-        let s = format!("overridden build state with hash: {}",
-                        util::hash_u64(output));
-        return Ok((vec![LocalFingerprint::Precalculated(s)], None))
+        let s = format!(
+            "overridden build state with hash: {}",
+            util::hash_u64(output)
+        );
+        return Ok((vec![LocalFingerprint::Precalculated(s)], None));
     }
 
     // Next up we look at the previously listed dependencies for the build
@@ -540,18 +589,23 @@ fn build_script_local_fingerprints<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     if deps.rerun_if_changed.is_empty() && deps.rerun_if_env_changed.is_empty() {
         debug!("old local fingerprints deps");
         let s = pkg_fingerprint(cx, unit.pkg)?;
-        return Ok((vec![LocalFingerprint::Precalculated(s)], Some(output)))
+        return Ok((vec![LocalFingerprint::Precalculated(s)], Some(output)));
     }
 
     // Ok so now we're in "new mode" where we can have files listed as
     // dependencies as well as env vars listed as dependencies. Process them all
     // here.
-    Ok((local_fingerprints_deps(deps, cx.target_root(), unit.pkg.root()), Some(output)))
+    Ok((
+        local_fingerprints_deps(deps, cx.target_root(), unit.pkg.root()),
+        Some(output),
+    ))
 }
 
-fn local_fingerprints_deps(deps: &BuildDeps, target_root: &Path, pkg_root: &Path)
-    -> Vec<LocalFingerprint>
-{
+fn local_fingerprints_deps(
+    deps: &BuildDeps,
+    target_root: &Path,
+    pkg_root: &Path,
+) -> Vec<LocalFingerprint> {
     debug!("new local fingerprints deps");
     let mut local = Vec::new();
     if !deps.rerun_if_changed.is_empty() {
@@ -573,8 +627,10 @@ fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
     let hash = fingerprint.hash();
     debug!("write fingerprint: {}", loc.display());
     paths::write(loc, util::to_hex(hash).as_bytes())?;
-    paths::write(&loc.with_extension("json"),
-                 &serde_json::to_vec(&fingerprint).unwrap())?;
+    paths::write(
+        &loc.with_extension("json"),
+        &serde_json::to_vec(&fingerprint).unwrap(),
+    )?;
     Ok(())
 }
 
@@ -590,16 +646,16 @@ pub fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Ca
 }
 
 pub fn dep_info_loc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> PathBuf {
-    cx.fingerprint_dir(unit).join(&format!("dep-{}", filename(cx, unit)))
+    cx.fingerprint_dir(unit)
+        .join(&format!("dep-{}", filename(cx, unit)))
 }
 
-fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint)
-                           -> CargoResult<()> {
+fn compare_old_fingerprint(loc: &Path, new_fingerprint: &Fingerprint) -> CargoResult<()> {
     let old_fingerprint_short = paths::read(loc)?;
     let new_hash = new_fingerprint.hash();
 
     if util::to_hex(new_hash) == old_fingerprint_short {
-        return Ok(())
+        return Ok(());
     }
 
     let old_fingerprint_json = paths::read(&loc.with_extension("json"))?;
@@ -621,9 +677,7 @@ fn log_compare(unit: &Unit, compare: &CargoResult<()>) {
 }
 
 // Parse the dep-info into a list of paths
-pub fn parse_dep_info(pkg: &Package, dep_info: &Path)
-    -> CargoResult<Option<Vec<PathBuf>>>
-{
+pub fn parse_dep_info(pkg: &Package, dep_info: &Path) -> CargoResult<Option<Vec<PathBuf>>> {
     let data = match paths::read_bytes(dep_info) {
         Ok(data) => data,
         Err(_) => return Ok(None),
@@ -639,9 +693,7 @@ pub fn parse_dep_info(pkg: &Package, dep_info: &Path)
     }
 }
 
-fn dep_info_mtime_if_fresh(pkg: &Package, dep_info: &Path)
-    -> CargoResult<Option<FileTime>>
-{
+fn dep_info_mtime_if_fresh(pkg: &Package, dep_info: &Path) -> CargoResult<Option<FileTime>> {
     if let Some(paths) = parse_dep_info(pkg, dep_info)? {
         Ok(mtime_if_fresh(dep_info, paths.iter()))
     } else {
@@ -653,15 +705,16 @@ fn pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String> {
     let source_id = pkg.package_id().source_id();
     let sources = cx.packages.sources();
 
-    let source = sources.get(source_id).ok_or_else(|| {
-        internal("missing package source")
-    })?;
+    let source = sources
+        .get(source_id)
+        .ok_or_else(|| internal("missing package source"))?;
     source.fingerprint(pkg)
 }
 
 fn mtime_if_fresh<I>(output: &Path, paths: I) -> Option<FileTime>
-    where I: IntoIterator,
-          I::Item: AsRef<Path>,
+where
+    I: IntoIterator,
+    I::Item: AsRef<Path>,
 {
     let meta = match fs::metadata(output) {
         Ok(meta) => meta,
@@ -675,7 +728,7 @@ fn mtime_if_fresh<I>(output: &Path, paths: I) -> Option<FileTime>
             Ok(meta) => meta,
             Err(..) => {
                 info!("stale: {} -- missing", path.display());
-                return true
+                return true;
             }
         };
         let mtime2 = FileTime::from_last_modification_time(&meta);
@@ -703,8 +756,7 @@ fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
         TargetKind::Lib(..) => "lib",
         TargetKind::Bin => "bin",
         TargetKind::Test => "integration-test",
-        TargetKind::ExampleBin |
-        TargetKind::ExampleLib(..) => "example",
+        TargetKind::ExampleBin | TargetKind::ExampleLib(..) => "example",
         TargetKind::Bench => "bench",
         TargetKind::CustomBuild => "build-script",
     };
@@ -734,14 +786,17 @@ fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
 ///
 /// The serialized Cargo format will contain a list of files, all of which are
 /// relative if they're under `root`. or absolute if they're elsewehre.
-pub fn translate_dep_info(rustc_dep_info: &Path,
-                          cargo_dep_info: &Path,
-                          pkg_root: &Path,
-                          rustc_cwd: &Path) -> CargoResult<()> {
+pub fn translate_dep_info(
+    rustc_dep_info: &Path,
+    cargo_dep_info: &Path,
+    pkg_root: &Path,
+    rustc_cwd: &Path,
+) -> CargoResult<()> {
     let target = parse_rustc_dep_info(rustc_dep_info)?;
-    let deps = &target.get(0).ok_or_else(|| {
-        internal("malformed dep-info format, no targets".to_string())
-    })?.1;
+    let deps = &target
+        .get(0)
+        .ok_or_else(|| internal("malformed dep-info format, no targets".to_string()))?
+        .1;
 
     let mut new_contents = Vec::new();
     for file in deps {
@@ -754,11 +809,10 @@ pub fn translate_dep_info(rustc_dep_info: &Path,
     Ok(())
 }
 
-pub fn parse_rustc_dep_info(rustc_dep_info: &Path)
-    -> CargoResult<Vec<(String, Vec<String>)>>
-{
+pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<Vec<(String, Vec<String>)>> {
     let contents = paths::read(rustc_dep_info)?;
-    contents.lines()
+    contents
+        .lines()
         .filter_map(|l| l.find(": ").map(|i| (l, i)))
         .map(|(line, pos)| {
             let target = &line[..pos];

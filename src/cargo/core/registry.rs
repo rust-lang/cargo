@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use semver::VersionReq;
 use url::Url;
 
-use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId};
+use core::{Dependency, PackageId, Source, SourceId, SourceMap, Summary};
 use core::PackageSet;
-use util::{Config, profile};
+use util::{profile, Config};
 use util::errors::{CargoResult, CargoResultExt};
 use sources::config::SourceConfigMap;
 
@@ -14,9 +14,7 @@ use sources::config::SourceConfigMap;
 /// See also `core::Source`.
 pub trait Registry {
     /// Attempt to find the packages that match a dependency request.
-    fn query(&mut self,
-             dep: &Dependency,
-             f: &mut FnMut(Summary)) -> CargoResult<()>;
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()>;
 
     fn query_vec(&mut self, dep: &Dependency) -> CargoResult<Vec<Summary>> {
         let mut ret = Vec::new();
@@ -34,9 +32,7 @@ pub trait Registry {
 }
 
 impl<'a, T: ?Sized + Registry + 'a> Registry for Box<T> {
-    fn query(&mut self,
-             dep: &Dependency,
-             f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         (**self).query(dep, f)
     }
 
@@ -130,14 +126,14 @@ impl<'cfg> PackageRegistry<'cfg> {
             // slightly different precise version listed.
             Some(&(_, Kind::Locked)) => {
                 debug!("load/locked   {}", namespace);
-                return Ok(())
+                return Ok(());
             }
 
             // If the previous source was not a precise source, then we can be
             // sure that it's already been updated if we've already loaded it.
             Some(&(ref previous, _)) if previous.precise().is_none() => {
                 debug!("load/precise  {}", namespace);
-                return Ok(())
+                return Ok(());
             }
 
             // If the previous source has the same precise version as we do,
@@ -146,7 +142,7 @@ impl<'cfg> PackageRegistry<'cfg> {
             Some(&(ref previous, _)) => {
                 if previous.precise() == namespace.precise() {
                     debug!("load/match    {}", namespace);
-                    return Ok(())
+                    return Ok(());
                 }
                 debug!("load/mismatch {}", namespace);
             }
@@ -186,10 +182,12 @@ impl<'cfg> PackageRegistry<'cfg> {
         for dep in deps.iter() {
             trace!("\t-> {}", dep);
         }
-        let sub_map = self.locked.entry(id.source_id().clone())
-                                 .or_insert_with(HashMap::new);
-        let sub_vec = sub_map.entry(id.name().to_string())
-                             .or_insert_with(Vec::new);
+        let sub_map = self.locked
+            .entry(id.source_id().clone())
+            .or_insert_with(HashMap::new);
+        let sub_vec = sub_map
+            .entry(id.name().to_string())
+            .or_insert_with(Vec::new);
         sub_vec.push((id, deps));
     }
 
@@ -219,53 +217,65 @@ impl<'cfg> PackageRegistry<'cfg> {
         // Remember that each dependency listed in `[patch]` has to resolve to
         // precisely one package, so that's why we're just creating a flat list
         // of summaries which should be the same length as `deps` above.
-        let unlocked_summaries = deps.iter().map(|dep| {
-            debug!("registring a patch for `{}` with `{}`",
-                   url,
-                   dep.name());
+        let unlocked_summaries = deps.iter()
+            .map(|dep| {
+                debug!("registring a patch for `{}` with `{}`", url, dep.name());
 
-            // Go straight to the source for resolving `dep`. Load it as we
-            // normally would and then ask it directly for the list of summaries
-            // corresponding to this `dep`.
-            self.ensure_loaded(dep.source_id(), Kind::Normal).chain_err(|| {
-                format_err!("failed to load source for a dependency \
-                             on `{}`", dep.name())
-            })?;
+                // Go straight to the source for resolving `dep`. Load it as we
+                // normally would and then ask it directly for the list of summaries
+                // corresponding to this `dep`.
+                self.ensure_loaded(dep.source_id(), Kind::Normal)
+                    .chain_err(|| {
+                        format_err!(
+                            "failed to load source for a dependency \
+                             on `{}`",
+                            dep.name()
+                        )
+                    })?;
 
-            let mut summaries = self.sources.get_mut(dep.source_id())
-                .expect("loaded source not present")
-                .query_vec(dep)?
-                .into_iter();
+                let mut summaries = self.sources
+                    .get_mut(dep.source_id())
+                    .expect("loaded source not present")
+                    .query_vec(dep)?
+                    .into_iter();
 
-            let summary = match summaries.next() {
-                Some(summary) => summary,
-                None => {
-                    bail!("patch for `{}` in `{}` did not resolve to any crates. If this is \
-                           unexpected, you may wish to consult: \
-                           https://github.com/rust-lang/cargo/issues/4678",
-                          dep.name(), url)
+                let summary = match summaries.next() {
+                    Some(summary) => summary,
+                    None => bail!(
+                        "patch for `{}` in `{}` did not resolve to any crates. If this is \
+                         unexpected, you may wish to consult: \
+                         https://github.com/rust-lang/cargo/issues/4678",
+                        dep.name(),
+                        url
+                    ),
+                };
+                if summaries.next().is_some() {
+                    bail!(
+                        "patch for `{}` in `{}` resolved to more than one candidate",
+                        dep.name(),
+                        url
+                    )
                 }
-            };
-            if summaries.next().is_some() {
-                bail!("patch for `{}` in `{}` resolved to more than one candidate",
-                      dep.name(), url)
-            }
-            if summary.package_id().source_id().url() == url {
-                bail!("patch for `{}` in `{}` points to the same source, but \
-                       patches must point to different sources",
-                      dep.name(), url);
-            }
-            Ok(summary)
-        }).collect::<CargoResult<Vec<_>>>().chain_err(|| {
-            format_err!("failed to resolve patches for `{}`", url)
-        })?;
+                if summary.package_id().source_id().url() == url {
+                    bail!(
+                        "patch for `{}` in `{}` points to the same source, but \
+                         patches must point to different sources",
+                        dep.name(),
+                        url
+                    );
+                }
+                Ok(summary)
+            })
+            .collect::<CargoResult<Vec<_>>>()
+            .chain_err(|| format_err!("failed to resolve patches for `{}`", url))?;
 
         // Note that we do not use `lock` here to lock summaries! That step
         // happens later once `lock_patches` is invoked. In the meantime though
         // we want to fill in the `patches_available` map (later used in the
         // `lock` method) and otherwise store the unlocked summaries in
         // `patches` to get locked in a future call to `lock_patches`.
-        let ids = unlocked_summaries.iter()
+        let ids = unlocked_summaries
+            .iter()
             .map(|s| s.package_id())
             .cloned()
             .collect();
@@ -309,18 +319,18 @@ impl<'cfg> PackageRegistry<'cfg> {
             // Ensure the source has fetched all necessary remote data.
             let _p = profile::start(format!("updating: {}", source_id));
             self.sources.get_mut(source_id).unwrap().update()
-        })().chain_err(|| format_err!("Unable to update {}", source_id))?;
+        })()
+            .chain_err(|| format_err!("Unable to update {}", source_id))?;
         Ok(())
     }
 
-    fn query_overrides(&mut self, dep: &Dependency)
-                       -> CargoResult<Option<Summary>> {
+    fn query_overrides(&mut self, dep: &Dependency) -> CargoResult<Option<Summary>> {
         for s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(&*dep.name(), s);
             let mut results = src.query_vec(&dep)?;
             if !results.is_empty() {
-                return Ok(Some(results.remove(0)))
+                return Ok(Some(results.remove(0)));
             }
         }
         Ok(None)
@@ -348,9 +358,11 @@ impl<'cfg> PackageRegistry<'cfg> {
         lock(&self.locked, &self.patches_available, summary)
     }
 
-    fn warn_bad_override(&self,
-                         override_summary: &Summary,
-                         real_summary: &Summary) -> CargoResult<()> {
+    fn warn_bad_override(
+        &self,
+        override_summary: &Summary,
+        real_summary: &Summary,
+    ) -> CargoResult<()> {
         let mut real_deps = real_summary.dependencies().iter().collect::<Vec<_>>();
 
         let boilerplate = "\
@@ -369,24 +381,34 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
         for dep in override_summary.dependencies() {
             if let Some(i) = real_deps.iter().position(|d| dep == *d) {
                 real_deps.remove(i);
-                continue
+                continue;
             }
-            let msg = format!("\
-                path override for crate `{}` has altered the original list of\n\
-                dependencies; the dependency on `{}` was either added or\n\
-                modified to not match the previously resolved version\n\n\
-                {}", override_summary.package_id().name(), dep.name(), boilerplate);
+            let msg = format!(
+                "\
+                 path override for crate `{}` has altered the original list of\n\
+                 dependencies; the dependency on `{}` was either added or\n\
+                 modified to not match the previously resolved version\n\n\
+                 {}",
+                override_summary.package_id().name(),
+                dep.name(),
+                boilerplate
+            );
             self.source_config.config().shell().warn(&msg)?;
-            return Ok(())
+            return Ok(());
         }
 
         if let Some(id) = real_deps.get(0) {
-            let msg = format!("\
+            let msg = format!(
+                "\
                 path override for crate `{}` has altered the original list of
                 dependencies; the dependency on `{}` was removed\n\n
-                {}", override_summary.package_id().name(), id.name(), boilerplate);
+                {}",
+                override_summary.package_id().name(),
+                id.name(),
+                boilerplate
+            );
             self.source_config.config().shell().warn(&msg)?;
-            return Ok(())
+            return Ok(());
         }
 
         Ok(())
@@ -394,9 +416,7 @@ http://doc.crates.io/specifying-dependencies.html#overriding-dependencies
 }
 
 impl<'cfg> Registry for PackageRegistry<'cfg> {
-    fn query(&mut self,
-             dep: &Dependency,
-             f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         assert!(self.patches_locked);
         let (override_summary, n, to_warn) = {
             // Look for an override and get ready to query the real source.
@@ -411,9 +431,12 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
             // what we really care about is the name/version match.
             let mut patches = Vec::<Summary>::new();
             if let Some(extra) = self.patches.get(dep.source_id().url()) {
-                patches.extend(extra.iter().filter(|s| {
-                    dep.matches_ignoring_source(s)
-                }).cloned());
+                patches.extend(
+                    extra
+                        .iter()
+                        .filter(|s| dep.matches_ignoring_source(s))
+                        .cloned(),
+                );
             }
 
             // A crucial feature of the `[patch]` feature is that we *don't*
@@ -427,24 +450,31 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                     Some(summary) => (summary, 1, Some(patch)),
                     None => {
                         f(patch);
-                        return Ok(())
+                        return Ok(());
                     }
                 }
             } else {
                 if !patches.is_empty() {
-                    debug!("found {} patches with an unlocked dep on `{}` at {} \
-                            with `{}`, \
-                            looking at sources", patches.len(),
-                            dep.name(),
-                            dep.source_id(),
-                            dep.version_req());
+                    debug!(
+                        "found {} patches with an unlocked dep on `{}` at {} \
+                         with `{}`, \
+                         looking at sources",
+                        patches.len(),
+                        dep.name(),
+                        dep.source_id(),
+                        dep.version_req()
+                    );
                 }
 
                 // Ensure the requested source_id is loaded
-                self.ensure_loaded(dep.source_id(), Kind::Normal).chain_err(|| {
-                    format_err!("failed to load source for a dependency \
-                                 on `{}`", dep.name())
-                })?;
+                self.ensure_loaded(dep.source_id(), Kind::Normal)
+                    .chain_err(|| {
+                        format_err!(
+                            "failed to load source for a dependency \
+                             on `{}`",
+                            dep.name()
+                        )
+                    })?;
 
                 let source = self.sources.get_mut(dep.source_id());
                 match (override_summary, source) {
@@ -471,11 +501,11 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                             for patch in patches.iter() {
                                 let patch = patch.package_id().version();
                                 if summary.package_id().version() == patch {
-                                    return
+                                    return;
                                 }
                             }
                             f(lock(locked, all_patches, summary))
-                        })
+                        });
                     }
 
                     // If we have an override summary then we query the source
@@ -515,14 +545,11 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
     }
 }
 
-fn lock(locked: &LockedMap,
-        patches: &HashMap<Url, Vec<PackageId>>,
-        summary: Summary) -> Summary {
-    let pair = locked.get(summary.source_id()).and_then(|map| {
-        map.get(&*summary.name())
-    }).and_then(|vec| {
-        vec.iter().find(|&&(ref id, _)| id == summary.package_id())
-    });
+fn lock(locked: &LockedMap, patches: &HashMap<Url, Vec<PackageId>>, summary: Summary) -> Summary {
+    let pair = locked
+        .get(summary.source_id())
+        .and_then(|map| map.get(&*summary.name()))
+        .and_then(|vec| vec.iter().find(|&&(ref id, _)| id == summary.package_id()));
 
     trace!("locking summary of {}", summary.package_id());
 
@@ -532,8 +559,7 @@ fn lock(locked: &LockedMap,
         None => summary,
     };
     summary.map_dependencies(|dep| {
-        trace!("\t{}/{}/{}", dep.name(), dep.version_req(),
-               dep.source_id());
+        trace!("\t{}/{}/{}", dep.name(), dep.version_req(), dep.source_id());
 
         // If we've got a known set of overrides for this summary, then
         // one of a few cases can arise:
@@ -560,23 +586,22 @@ fn lock(locked: &LockedMap,
                 trace!("\tfirst hit on {}", locked);
                 let mut dep = dep.clone();
                 dep.lock_to(locked);
-                return dep
+                return dep;
             }
         }
 
         // If this dependency did not have a locked version, then we query
         // all known locked packages to see if they match this dependency.
         // If anything does then we lock it to that and move on.
-        let v = locked.get(dep.source_id()).and_then(|map| {
-            map.get(&*dep.name())
-        }).and_then(|vec| {
-            vec.iter().find(|&&(ref id, _)| dep.matches_id(id))
-        });
+        let v = locked
+            .get(dep.source_id())
+            .and_then(|map| map.get(&*dep.name()))
+            .and_then(|vec| vec.iter().find(|&&(ref id, _)| dep.matches_id(id)));
         if let Some(&(ref id, _)) = v {
             trace!("\tsecond hit on {}", id);
             let mut dep = dep.clone();
             dep.lock_to(id);
-            return dep
+            return dep;
         }
 
         // Finally we check to see if any registered patches correspond to
@@ -584,26 +609,25 @@ fn lock(locked: &LockedMap,
         let v = patches.get(dep.source_id().url()).map(|vec| {
             let dep2 = dep.clone();
             let mut iter = vec.iter().filter(move |p| {
-                dep2.name() == p.name() &&
-                    dep2.version_req().matches(p.version())
+                dep2.name() == p.name() && dep2.version_req().matches(p.version())
             });
             (iter.next(), iter)
         });
         if let Some((Some(patch_id), mut remaining)) = v {
             assert!(remaining.next().is_none());
             let patch_source = patch_id.source_id();
-            let patch_locked = locked.get(patch_source).and_then(|m| {
-                m.get(&*patch_id.name())
-            }).map(|list| {
-                list.iter().any(|&(ref id, _)| id == patch_id)
-            }).unwrap_or(false);
+            let patch_locked = locked
+                .get(patch_source)
+                .and_then(|m| m.get(&*patch_id.name()))
+                .map(|list| list.iter().any(|&(ref id, _)| id == patch_id))
+                .unwrap_or(false);
 
             if patch_locked {
                 trace!("\tthird hit on {}", patch_id);
                 let req = VersionReq::exact(patch_id.version());
                 let mut dep = dep.clone();
                 dep.set_version_req(req);
-                return dep
+                return dep;
             }
         }
 
@@ -614,17 +638,20 @@ fn lock(locked: &LockedMap,
 
 #[cfg(test)]
 pub mod test {
-    use core::{Summary, Registry, Dependency};
+    use core::{Dependency, Registry, Summary};
     use util::CargoResult;
 
     pub struct RegistryBuilder {
         summaries: Vec<Summary>,
-        overrides: Vec<Summary>
+        overrides: Vec<Summary>,
     }
 
     impl RegistryBuilder {
         pub fn new() -> RegistryBuilder {
-            RegistryBuilder { summaries: vec![], overrides: vec![] }
+            RegistryBuilder {
+                summaries: vec![],
+                overrides: vec![],
+            }
         }
 
         pub fn summary(mut self, summary: Summary) -> RegistryBuilder {
@@ -648,7 +675,8 @@ pub mod test {
         }
 
         fn query_overrides(&self, dep: &Dependency) -> Vec<Summary> {
-            self.overrides.iter()
+            self.overrides
+                .iter()
                 .filter(|s| s.name() == dep.name())
                 .map(|s| s.clone())
                 .collect()
@@ -656,9 +684,7 @@ pub mod test {
     }
 
     impl Registry for RegistryBuilder {
-        fn query(&mut self,
-                 dep: &Dependency,
-                 f: &mut FnMut(Summary)) -> CargoResult<()> {
+        fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
             debug!("querying; dep={:?}", dep);
 
             let overrides = self.query_overrides(dep);

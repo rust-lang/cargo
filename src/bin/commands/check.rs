@@ -24,15 +24,13 @@ pub fn cli() -> App {
             "Check all targets (lib and bin targets by default)",
         )
         .arg_release("Check artifacts in release mode, with optimizations")
-        .arg(
-            opt("profile", "Profile to build the selected target for")
-                .value_name("PROFILE")
-        )
+        .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
         .arg_features()
         .arg_target_triple("Check for the target triple")
         .arg_manifest_path()
         .arg_message_format()
-        .after_help("\
+        .after_help(
+            "\
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be built. If it is not given, then the
 current package is built. For more information on SPEC and its format, see the
@@ -48,7 +46,8 @@ the --release flag will use the `release` profile instead.
 
 The `--profile test` flag can be used to check unit tests with the
 `#[cfg(test)]` attribute.
-")
+",
+        )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
@@ -57,8 +56,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         Some("test") => true,
         None => false,
         Some(profile) => {
-            let err = format_err!("unknown profile: `{}`, only `test` is \
-                                       currently supported", profile);
+            let err = format_err!(
+                "unknown profile: `{}`, only `test` is \
+                 currently supported",
+                profile
+            );
             return Err(CliError::new(err, 101));
         }
     };

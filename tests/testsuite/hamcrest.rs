@@ -21,7 +21,10 @@ pub fn existing_file() -> ExistingFile {
 #[derive(Debug)]
 pub struct ExistingFile;
 
-impl<P> Matcher<P> for ExistingFile where P: AsRef<Path> {
+impl<P> Matcher<P> for ExistingFile
+where
+    P: AsRef<Path>,
+{
     fn matches(&self, actual: P) -> Result<(), String> {
         if actual.as_ref().is_file() {
             Ok(())
@@ -38,7 +41,10 @@ pub fn existing_dir() -> ExistingDir {
 #[derive(Debug)]
 pub struct ExistingDir;
 
-impl<P> Matcher<P> for ExistingDir where P: AsRef<Path> {
+impl<P> Matcher<P> for ExistingDir
+where
+    P: AsRef<Path>,
+{
     fn matches(&self, actual: P) -> Result<(), String> {
         if actual.as_ref().is_dir() {
             Ok(())
@@ -49,7 +55,10 @@ impl<P> Matcher<P> for ExistingDir where P: AsRef<Path> {
 }
 
 pub fn is_not<T, M: Matcher<T>>(matcher: M) -> IsNot<T, M> {
-    IsNot { matcher, _marker: marker::PhantomData }
+    IsNot {
+        matcher,
+        _marker: marker::PhantomData,
+    }
 }
 
 #[derive(Debug)]
@@ -58,7 +67,10 @@ pub struct IsNot<T, M> {
     _marker: marker::PhantomData<T>,
 }
 
-impl<T, M: Matcher<T>> Matcher<T> for IsNot<T, M> where T: fmt::Debug {
+impl<T, M: Matcher<T>> Matcher<T> for IsNot<T, M>
+where
+    T: fmt::Debug,
+{
     fn matches(&self, actual: T) -> Result<(), String> {
         match self.matcher.matches(actual) {
             Ok(_) => Err("matched".to_string()),
@@ -74,11 +86,14 @@ pub fn contains<T>(item: Vec<T>) -> Contains<T> {
 #[derive(Debug)]
 pub struct Contains<T>(Vec<T>);
 
-impl<'a, T> Matcher<&'a Vec<T>> for Contains<T> where T: fmt::Debug + PartialEq {
+impl<'a, T> Matcher<&'a Vec<T>> for Contains<T>
+where
+    T: fmt::Debug + PartialEq,
+{
     fn matches(&self, actual: &'a Vec<T>) -> Result<(), String> {
         for item in self.0.iter() {
             if !actual.contains(item) {
-                return Err(format!("failed to find {:?}", item))
+                return Err(format!("failed to find {:?}", item));
             }
         }
         Ok(())

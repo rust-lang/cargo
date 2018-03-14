@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use git2;
 use cargotest;
-use cargotest::install::{has_installed_exe, cargo_home};
+use cargotest::install::{cargo_home, has_installed_exe};
 use cargotest::support::git;
 use cargotest::support::registry::Package;
 use cargotest::support::{execs, project};
@@ -24,19 +24,25 @@ fn pkg(name: &str, vers: &str) {
 #[test]
 fn multiple_installs() {
     let p = project("foo")
-        .file("a/Cargo.toml", r#"
+        .file(
+            "a/Cargo.toml",
+            r#"
             [package]
             name = "foo"
             authors = []
             version = "0.0.0"
-        "#)
+        "#,
+        )
         .file("a/src/main.rs", "fn main() {}")
-        .file("b/Cargo.toml", r#"
+        .file(
+            "b/Cargo.toml",
+            r#"
             [package]
             name = "bar"
             authors = []
             version = "0.0.0"
-        "#)
+        "#,
+        )
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -66,8 +72,14 @@ fn concurrent_installs() {
     pkg("foo", "0.0.1");
     pkg("bar", "0.0.1");
 
-    let mut a = cargotest::cargo_process().arg("install").arg("foo").build_command();
-    let mut b = cargotest::cargo_process().arg("install").arg("bar").build_command();
+    let mut a = cargotest::cargo_process()
+        .arg("install")
+        .arg("foo")
+        .build_command();
+    let mut b = cargotest::cargo_process()
+        .arg("install")
+        .arg("bar")
+        .build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -91,19 +103,25 @@ fn concurrent_installs() {
 #[test]
 fn one_install_should_be_bad() {
     let p = project("foo")
-        .file("a/Cargo.toml", r#"
+        .file(
+            "a/Cargo.toml",
+            r#"
             [package]
             name = "foo"
             authors = []
             version = "0.0.0"
-        "#)
+        "#,
+        )
         .file("a/src/main.rs", "fn main() {}")
-        .file("b/Cargo.toml", r#"
+        .file(
+            "b/Cargo.toml",
+            r#"
             [package]
             name = "foo"
             authors = []
             version = "0.0.0"
-        "#)
+        "#,
+        )
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -119,13 +137,27 @@ fn one_install_should_be_bad() {
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
 
-    let (bad, good) = if a.status.code() == Some(101) {(a, b)} else {(b, a)};
-    assert_that(bad, execs().with_status(101).with_stderr_contains("\
+    let (bad, good) = if a.status.code() == Some(101) {
+        (a, b)
+    } else {
+        (b, a)
+    };
+    assert_that(
+        bad,
+        execs().with_status(101).with_stderr_contains(
+            "\
 [ERROR] binary `foo[..]` already exists in destination as part of `[..]`
-"));
-    assert_that(good, execs().with_status(0).with_stderr_contains("\
+",
+        ),
+    );
+    assert_that(
+        good,
+        execs().with_status(0).with_stderr_contains(
+            "\
 warning: be sure to add `[..]` to your PATH [..]
-"));
+",
+        ),
+    );
 
     assert_that(cargo_home(), has_installed_exe("foo"));
 }
@@ -141,7 +173,9 @@ fn multiple_registry_fetches() {
     pkg.publish();
 
     let p = project("foo")
-        .file("a/Cargo.toml", r#"
+        .file(
+            "a/Cargo.toml",
+            r#"
             [package]
             name = "foo"
             authors = []
@@ -149,9 +183,12 @@ fn multiple_registry_fetches() {
 
             [dependencies]
             bar = "*"
-        "#)
+        "#,
+        )
         .file("a/src/main.rs", "fn main() {}")
-        .file("b/Cargo.toml", r#"
+        .file(
+            "b/Cargo.toml",
+            r#"
             [package]
             name = "bar"
             authors = []
@@ -159,7 +196,8 @@ fn multiple_registry_fetches() {
 
             [dependencies]
             bar = "*"
-        "#)
+        "#,
+        )
         .file("b/src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -179,34 +217,52 @@ fn multiple_registry_fetches() {
     assert_that(b, execs().with_status(0));
 
     let suffix = env::consts::EXE_SUFFIX;
-    assert_that(&p.root().join("a/target/debug").join(format!("foo{}", suffix)),
-                existing_file());
-    assert_that(&p.root().join("b/target/debug").join(format!("bar{}", suffix)),
-                existing_file());
+    assert_that(
+        &p.root()
+            .join("a/target/debug")
+            .join(format!("foo{}", suffix)),
+        existing_file(),
+    );
+    assert_that(
+        &p.root()
+            .join("b/target/debug")
+            .join(format!("bar{}", suffix)),
+        existing_file(),
+    );
 }
 
 #[test]
 fn git_same_repo_different_tags() {
     let a = git::new("dep", |project| {
-        project.file("Cargo.toml", r#"
+        project
+            .file(
+                "Cargo.toml",
+                r#"
             [project]
             name = "dep"
             version = "0.5.0"
             authors = []
-        "#).file("src/lib.rs", "pub fn tag1() {}")
+        "#,
+            )
+            .file("src/lib.rs", "pub fn tag1() {}")
     }).unwrap();
 
     let repo = git2::Repository::open(&a.root()).unwrap();
     git::tag(&repo, "tag1");
 
-    File::create(a.root().join("src/lib.rs")).unwrap()
-         .write_all(b"pub fn tag2() {}").unwrap();
+    File::create(a.root().join("src/lib.rs"))
+        .unwrap()
+        .write_all(b"pub fn tag2() {}")
+        .unwrap();
     git::add(&repo);
     git::commit(&repo);
     git::tag(&repo, "tag2");
 
     let p = project("foo")
-        .file("a/Cargo.toml", &format!(r#"
+        .file(
+            "a/Cargo.toml",
+            &format!(
+                r#"
             [package]
             name = "foo"
             authors = []
@@ -214,9 +270,18 @@ fn git_same_repo_different_tags() {
 
             [dependencies]
             dep = {{ git = '{}', tag = 'tag1' }}
-        "#, a.url()))
-        .file("a/src/main.rs", "extern crate dep; fn main() { dep::tag1(); }")
-        .file("b/Cargo.toml", &format!(r#"
+        "#,
+                a.url()
+            ),
+        )
+        .file(
+            "a/src/main.rs",
+            "extern crate dep; fn main() { dep::tag1(); }",
+        )
+        .file(
+            "b/Cargo.toml",
+            &format!(
+                r#"
             [package]
             name = "bar"
             authors = []
@@ -224,12 +289,24 @@ fn git_same_repo_different_tags() {
 
             [dependencies]
             dep = {{ git = '{}', tag = 'tag2' }}
-        "#, a.url()))
-        .file("b/src/main.rs", "extern crate dep; fn main() { dep::tag2(); }");
+        "#,
+                a.url()
+            ),
+        )
+        .file(
+            "b/src/main.rs",
+            "extern crate dep; fn main() { dep::tag2(); }",
+        );
     let p = p.build();
 
-    let mut a = p.cargo("build").arg("-v").cwd(p.root().join("a")).build_command();
-    let mut b = p.cargo("build").arg("-v").cwd(p.root().join("b")).build_command();
+    let mut a = p.cargo("build")
+        .arg("-v")
+        .cwd(p.root().join("a"))
+        .build_command();
+    let mut b = p.cargo("build")
+        .arg("-v")
+        .cwd(p.root().join("b"))
+        .build_command();
 
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -247,16 +324,24 @@ fn git_same_repo_different_tags() {
 #[test]
 fn git_same_branch_different_revs() {
     let a = git::new("dep", |project| {
-        project.file("Cargo.toml", r#"
+        project
+            .file(
+                "Cargo.toml",
+                r#"
             [project]
             name = "dep"
             version = "0.5.0"
             authors = []
-        "#).file("src/lib.rs", "pub fn f1() {}")
+        "#,
+            )
+            .file("src/lib.rs", "pub fn f1() {}")
     }).unwrap();
 
     let p = project("foo")
-        .file("a/Cargo.toml", &format!(r#"
+        .file(
+            "a/Cargo.toml",
+            &format!(
+                r#"
             [package]
             name = "foo"
             authors = []
@@ -264,9 +349,18 @@ fn git_same_branch_different_revs() {
 
             [dependencies]
             dep = {{ git = '{}' }}
-        "#, a.url()))
-        .file("a/src/main.rs", "extern crate dep; fn main() { dep::f1(); }")
-        .file("b/Cargo.toml", &format!(r#"
+        "#,
+                a.url()
+            ),
+        )
+        .file(
+            "a/src/main.rs",
+            "extern crate dep; fn main() { dep::f1(); }",
+        )
+        .file(
+            "b/Cargo.toml",
+            &format!(
+                r#"
             [package]
             name = "bar"
             authors = []
@@ -274,20 +368,30 @@ fn git_same_branch_different_revs() {
 
             [dependencies]
             dep = {{ git = '{}' }}
-        "#, a.url()))
-        .file("b/src/main.rs", "extern crate dep; fn main() { dep::f2(); }");
+        "#,
+                a.url()
+            ),
+        )
+        .file(
+            "b/src/main.rs",
+            "extern crate dep; fn main() { dep::f2(); }",
+        );
     let p = p.build();
 
     // Generate a Cargo.lock pointing at the current rev, then clear out the
     // target directory
-    assert_that(p.cargo("build").cwd(p.root().join("a")),
-                execs().with_status(0));
+    assert_that(
+        p.cargo("build").cwd(p.root().join("a")),
+        execs().with_status(0),
+    );
     fs::remove_dir_all(p.root().join("a/target")).unwrap();
 
     // Make a new commit on the master branch
     let repo = git2::Repository::open(&a.root()).unwrap();
-    File::create(a.root().join("src/lib.rs")).unwrap()
-         .write_all(b"pub fn f2() {}").unwrap();
+    File::create(a.root().join("src/lib.rs"))
+        .unwrap()
+        .write_all(b"pub fn f2() {}")
+        .unwrap();
     git::add(&repo);
     git::commit(&repo);
 
@@ -312,12 +416,15 @@ fn git_same_branch_different_revs() {
 #[test]
 fn same_project() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             authors = []
             version = "0.0.0"
-        "#)
+        "#,
+        )
         .file("src/main.rs", "fn main() {}")
         .file("src/lib.rs", "");
     let p = p.build();
@@ -345,15 +452,20 @@ fn same_project() {
 #[cfg_attr(target_os = "windows", ignore)]
 fn killing_cargo_releases_the_lock() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             authors = []
             version = "0.0.0"
             build = "build.rs"
-        "#)
+        "#,
+        )
         .file("src/main.rs", "fn main() {}")
-        .file("build.rs", r#"
+        .file(
+            "build.rs",
+            r#"
             use std::net::TcpStream;
 
             fn main() {
@@ -363,7 +475,8 @@ fn killing_cargo_releases_the_lock() {
                     std::thread::sleep(std::time::Duration::new(10, 0));
                 }
             }
-        "#);
+        "#,
+        );
     let p = p.build();
 
     // Our build script will connect to our local TCP socket to inform us that
@@ -374,8 +487,10 @@ fn killing_cargo_releases_the_lock() {
     let mut b = p.cargo("build").build_command();
     a.stdout(Stdio::piped()).stderr(Stdio::piped());
     b.stdout(Stdio::piped()).stderr(Stdio::piped());
-    a.env("ADDR", l.local_addr().unwrap().to_string()).env("A", "a");
-    b.env("ADDR", l.local_addr().unwrap().to_string()).env_remove("A");
+    a.env("ADDR", l.local_addr().unwrap().to_string())
+        .env("A", "a");
+    b.env("ADDR", l.local_addr().unwrap().to_string())
+        .env_remove("A");
 
     // Spawn `a`, wait for it to get to the build script (at which point the
     // lock is held), then kill it.
@@ -398,12 +513,15 @@ fn killing_cargo_releases_the_lock() {
 #[test]
 fn debug_release_ok() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             authors = []
             version = "0.0.0"
-        "#)
+        "#,
+        )
         .file("src/main.rs", "fn main() {}");
     let p = p.build();
 
@@ -420,38 +538,61 @@ fn debug_release_ok() {
     let b = b.wait_with_output().unwrap();
     let a = a.join().unwrap();
 
-    assert_that(a, execs().with_status(0).with_stderr("\
+    assert_that(
+        a,
+        execs().with_status(0).with_stderr(
+            "\
 [COMPILING] foo v0.0.0 [..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-"));
-    assert_that(b, execs().with_status(0).with_stderr("\
+",
+        ),
+    );
+    assert_that(
+        b,
+        execs().with_status(0).with_stderr(
+            "\
 [COMPILING] foo v0.0.0 [..]
 [FINISHED] release [optimized] target(s) in [..]
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn no_deadlock_with_git_dependencies() {
     let dep1 = git::new("dep1", |project| {
-        project.file("Cargo.toml", r#"
+        project
+            .file(
+                "Cargo.toml",
+                r#"
             [project]
             name = "dep1"
             version = "0.5.0"
             authors = []
-        "#).file("src/lib.rs", "")
+        "#,
+            )
+            .file("src/lib.rs", "")
     }).unwrap();
 
     let dep2 = git::new("dep2", |project| {
-        project.file("Cargo.toml", r#"
+        project
+            .file(
+                "Cargo.toml",
+                r#"
             [project]
             name = "dep2"
             version = "0.5.0"
             authors = []
-        "#).file("src/lib.rs", "")
+        "#,
+            )
+            .file("src/lib.rs", "")
     }).unwrap();
 
     let p = project("foo")
-        .file("Cargo.toml", &format!(r#"
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
             [package]
             name = "foo"
             authors = []
@@ -460,7 +601,11 @@ fn no_deadlock_with_git_dependencies() {
             [dependencies]
             dep1 = {{ git = '{}' }}
             dep2 = {{ git = '{}' }}
-        "#, dep1.url(), dep2.url()))
+        "#,
+                dep1.url(),
+                dep2.url()
+            ),
+        )
         .file("src/main.rs", "fn main() { }");
     let p = p.build();
 
@@ -468,7 +613,8 @@ fn no_deadlock_with_git_dependencies() {
 
     let (tx, rx) = channel();
     for _ in 0..n_concurrent_builds {
-        let cmd = p.cargo("build").build_command()
+        let cmd = p.cargo("build")
+            .build_command()
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn();
@@ -483,7 +629,7 @@ fn no_deadlock_with_git_dependencies() {
     let recv_timeout = |chan: &::std::sync::mpsc::Receiver<_>| {
         for _ in 0..3000 {
             if let Ok(x) = chan.try_recv() {
-                return x
+                return x;
             }
             thread::sleep(Duration::from_millis(10));
         }
@@ -494,5 +640,4 @@ fn no_deadlock_with_git_dependencies() {
         let result = recv_timeout(&rx);
         assert_that(result, execs().with_status(0))
     }
-
 }

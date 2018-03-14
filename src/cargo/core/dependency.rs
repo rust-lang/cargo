@@ -6,10 +6,10 @@ use semver::VersionReq;
 use semver::ReqParseError;
 use serde::ser;
 
-use core::{SourceId, Summary, PackageId};
+use core::{PackageId, SourceId, Summary};
 use core::interning::InternedString;
 use util::{Cfg, CfgExpr, Config};
-use util::errors::{CargoResult, CargoResultExt, CargoError};
+use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.
@@ -61,7 +61,8 @@ struct SerializedDependency<'a> {
 
 impl ser::Serialize for Dependency {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer,
+    where
+        S: ser::Serializer,
     {
         SerializedDependency {
             name: &*self.name(),
@@ -84,9 +85,10 @@ pub enum Kind {
     Build,
 }
 
-fn parse_req_with_deprecated(req: &str,
-                             extra: Option<(&PackageId, &Config)>)
-                             -> CargoResult<VersionReq> {
+fn parse_req_with_deprecated(
+    req: &str,
+    extra: Option<(&PackageId, &Config)>,
+) -> CargoResult<VersionReq> {
     match VersionReq::parse(req) {
         Err(e) => {
             let (inside, config) = match extra {
@@ -95,7 +97,8 @@ fn parse_req_with_deprecated(req: &str,
             };
             match e {
                 ReqParseError::DeprecatedVersionRequirement(requirement) => {
-                    let msg = format!("\
+                    let msg = format!(
+                        "\
 parsed version requirement `{}` is no longer valid
 
 Previous versions of Cargo accepted this malformed requirement,
@@ -106,21 +109,26 @@ This will soon become a hard error, so it's either recommended to
 update to a fixed version or contact the upstream maintainer about
 this warning.
 ",
-req, inside.name(), inside.version(), requirement);
+                        req,
+                        inside.name(),
+                        inside.version(),
+                        requirement
+                    );
                     config.shell().warn(&msg)?;
 
                     Ok(requirement)
                 }
                 e => Err(e.into()),
             }
-        },
+        }
         Ok(v) => Ok(v),
     }
 }
 
 impl ser::Serialize for Kind {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer,
+    where
+        S: ser::Serializer,
     {
         match *self {
             Kind::Normal => None,
@@ -132,15 +140,17 @@ impl ser::Serialize for Kind {
 
 impl Dependency {
     /// Attempt to create a `Dependency` from an entry in the manifest.
-    pub fn parse(name: &str,
-                 version: Option<&str>,
-                 source_id: &SourceId,
-                 inside: &PackageId,
-                 config: &Config) -> CargoResult<Dependency> {
+    pub fn parse(
+        name: &str,
+        version: Option<&str>,
+        source_id: &SourceId,
+        inside: &PackageId,
+        config: &Config,
+    ) -> CargoResult<Dependency> {
         let arg = Some((inside, config));
         let (specified_req, version_req) = match version {
             Some(v) => (true, parse_req_with_deprecated(v, arg)?),
-            None => (false, VersionReq::any())
+            None => (false, VersionReq::any()),
         };
 
         let mut ret = Dependency::new_override(name, source_id);
@@ -154,12 +164,14 @@ impl Dependency {
     }
 
     /// Attempt to create a `Dependency` from an entry in the manifest.
-    pub fn parse_no_deprecated(name: &str,
-                               version: Option<&str>,
-                               source_id: &SourceId) -> CargoResult<Dependency> {
+    pub fn parse_no_deprecated(
+        name: &str,
+        version: Option<&str>,
+        source_id: &SourceId,
+    ) -> CargoResult<Dependency> {
         let (specified_req, version_req) = match version {
             Some(v) => (true, parse_req_with_deprecated(v, None)?),
-            None => (false, VersionReq::any())
+            None => (false, VersionReq::any()),
         };
 
         let mut ret = Dependency::new_override(name, source_id);
@@ -279,11 +291,13 @@ impl Dependency {
     pub fn lock_to(&mut self, id: &PackageId) -> &mut Dependency {
         assert_eq!(self.inner.source_id, *id.source_id());
         assert!(self.inner.req.matches(id.version()));
-        trace!("locking dep from `{}` with `{}` at {} to {}",
-               self.name(),
-               self.version_req(),
-               self.source_id(),
-               id);
+        trace!(
+            "locking dep from `{}` with `{}` at {} to {}",
+            self.name(),
+            self.version_req(),
+            self.source_id(),
+            id
+        );
         self.set_version_req(VersionReq::exact(id.version()))
             .set_source_id(id.source_id().clone())
     }
@@ -330,19 +344,19 @@ impl Dependency {
 
     /// Returns true if the package (`sum`) can fulfill this dependency request.
     pub fn matches_ignoring_source(&self, sum: &Summary) -> bool {
-        self.name() == sum.package_id().name() &&
-            self.version_req().matches(sum.package_id().version())
+        self.name() == sum.package_id().name()
+            && self.version_req().matches(sum.package_id().version())
     }
 
     /// Returns true if the package (`id`) can fulfill this dependency request.
     pub fn matches_id(&self, id: &PackageId) -> bool {
-        self.inner.name == id.name() &&
-            (self.inner.only_match_name || (self.inner.req.matches(id.version()) &&
-                                      &self.inner.source_id == id.source_id()))
+        self.inner.name == id.name()
+            && (self.inner.only_match_name
+                || (self.inner.req.matches(id.version())
+                    && &self.inner.source_id == id.source_id()))
     }
 
-    pub fn map_source(mut self, to_replace: &SourceId, replace_with: &SourceId)
-                      -> Dependency {
+    pub fn map_source(mut self, to_replace: &SourceId, replace_with: &SourceId) -> Dependency {
         if self.source_id() != to_replace {
             self
         } else {
@@ -356,19 +370,18 @@ impl Platform {
     pub fn matches(&self, name: &str, cfg: Option<&[Cfg]>) -> bool {
         match *self {
             Platform::Name(ref p) => p == name,
-            Platform::Cfg(ref p) => {
-                match cfg {
-                    Some(cfg) => p.matches(cfg),
-                    None => false,
-                }
-            }
+            Platform::Cfg(ref p) => match cfg {
+                Some(cfg) => p.matches(cfg),
+                None => false,
+            },
         }
     }
 }
 
 impl ser::Serialize for Platform {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer,
+    where
+        S: ser::Serializer,
     {
         self.to_string().serialize(s)
     }
@@ -379,10 +392,10 @@ impl FromStr for Platform {
 
     fn from_str(s: &str) -> CargoResult<Platform> {
         if s.starts_with("cfg(") && s.ends_with(')') {
-            let s = &s[4..s.len()-1];
-            let p = s.parse().map(Platform::Cfg).chain_err(|| {
-                format_err!("failed to parse `{}` as a cfg expression", s)
-            })?;
+            let s = &s[4..s.len() - 1];
+            let p = s.parse()
+                .map(Platform::Cfg)
+                .chain_err(|| format_err!("failed to parse `{}` as a cfg expression", s))?;
             Ok(p)
         } else {
             Ok(Platform::Name(s.to_string()))

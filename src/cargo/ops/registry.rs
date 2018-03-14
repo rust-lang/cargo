@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use curl::easy::{Easy, SslOpt};
 use git2;
-use registry::{Registry, NewCrate, NewCrateDependency};
+use registry::{NewCrate, NewCrateDependency, Registry};
 
 use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
@@ -15,7 +15,7 @@ use core::{Package, SourceId, Workspace};
 use core::dependency::Kind;
 use core::manifest::ManifestMetadata;
 use ops;
-use sources::{RegistrySource};
+use sources::RegistrySource;
 use util::config::{self, Config};
 use util::paths;
 use util::ToUrl;
@@ -53,8 +53,11 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
             Some(ref registry) => allowed_registries.contains(registry),
             None => false,
         } {
-            bail!("some crates cannot be published.\n\
-                   `{}` is marked as unpublishable", pkg.name());
+            bail!(
+                "some crates cannot be published.\n\
+                 `{}` is marked as unpublishable",
+                pkg.name()
+            );
         }
     }
 
@@ -62,40 +65,56 @@ pub fn publish(ws: &Workspace, opts: &PublishOpts) -> CargoResult<()> {
         bail!("published crates cannot contain [patch] sections");
     }
 
-    let (mut registry, reg_id) = registry(opts.config,
-                                          opts.token.clone(),
-                                          opts.index.clone(),
-                                          opts.registry.clone())?;
+    let (mut registry, reg_id) = registry(
+        opts.config,
+        opts.token.clone(),
+        opts.index.clone(),
+        opts.registry.clone(),
+    )?;
     verify_dependencies(pkg, &reg_id)?;
 
     // Prepare a tarball, with a non-surpressable warning if metadata
     // is missing since this is being put online.
-    let tarball = ops::package(ws, &ops::PackageOpts {
-        config: opts.config,
-        verify: opts.verify,
-        list: false,
-        check_metadata: true,
-        allow_dirty: opts.allow_dirty,
-        target: opts.target.clone(),
-        jobs: opts.jobs,
-        registry: opts.registry.clone(),
-    })?.unwrap();
+    let tarball = ops::package(
+        ws,
+        &ops::PackageOpts {
+            config: opts.config,
+            verify: opts.verify,
+            list: false,
+            check_metadata: true,
+            allow_dirty: opts.allow_dirty,
+            target: opts.target.clone(),
+            jobs: opts.jobs,
+            registry: opts.registry.clone(),
+        },
+    )?.unwrap();
 
     // Upload said tarball to the specified destination
-    opts.config.shell().status("Uploading", pkg.package_id().to_string())?;
-    transmit(opts.config, pkg, tarball.file(), &mut registry, &reg_id, opts.dry_run)?;
+    opts.config
+        .shell()
+        .status("Uploading", pkg.package_id().to_string())?;
+    transmit(
+        opts.config,
+        pkg,
+        tarball.file(),
+        &mut registry,
+        &reg_id,
+        opts.dry_run,
+    )?;
 
     Ok(())
 }
 
-fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
-                       -> CargoResult<()> {
+fn verify_dependencies(pkg: &Package, registry_src: &SourceId) -> CargoResult<()> {
     for dep in pkg.dependencies().iter() {
         if dep.source_id().is_path() {
             if !dep.specified_req() {
-                bail!("all path dependencies must have a version specified \
-                       when publishing.\ndependency `{}` does not specify \
-                       a version", dep.name())
+                bail!(
+                    "all path dependencies must have a version specified \
+                     when publishing.\ndependency `{}` does not specify \
+                     a version",
+                    dep.name()
+                )
             }
         } else if dep.source_id() != registry_src {
             if dep.source_id().is_registry() {
@@ -108,58 +127,75 @@ fn verify_dependencies(pkg: &Package, registry_src: &SourceId)
                            (crate `{}` is pulled from {})", dep.name(), dep.name(), dep.source_id());
                 }
             } else {
-                bail!("crates cannot be published to crates.io with dependencies sourced from \
-                       a repository\neither publish `{}` as its own crate on crates.io and \
-                       specify a crates.io version as a dependency or pull it into this \
-                       repository and specify it with a path and version\n(crate `{}` has \
-                       repository path `{}`)", dep.name(), dep.name(),  dep.source_id());
+                bail!(
+                    "crates cannot be published to crates.io with dependencies sourced from \
+                     a repository\neither publish `{}` as its own crate on crates.io and \
+                     specify a crates.io version as a dependency or pull it into this \
+                     repository and specify it with a path and version\n(crate `{}` has \
+                     repository path `{}`)",
+                    dep.name(),
+                    dep.name(),
+                    dep.source_id()
+                );
             }
         }
     }
     Ok(())
 }
 
-fn transmit(config: &Config,
-            pkg: &Package,
-            tarball: &File,
-            registry: &mut Registry,
-            registry_id: &SourceId,
-            dry_run: bool) -> CargoResult<()> {
+fn transmit(
+    config: &Config,
+    pkg: &Package,
+    tarball: &File,
+    registry: &mut Registry,
+    registry_id: &SourceId,
+    dry_run: bool,
+) -> CargoResult<()> {
+    let deps = pkg.dependencies()
+        .iter()
+        .map(|dep| {
+            // If the dependency is from a different registry, then include the
+            // registry in the dependency.
+            let dep_registry_id = match dep.registry_id() {
+                Some(id) => id,
+                None => bail!("dependency missing registry ID"),
+            };
+            let dep_registry = if dep_registry_id != registry_id {
+                Some(dep_registry_id.url().to_string())
+            } else {
+                None
+            };
 
-    let deps = pkg.dependencies().iter().map(|dep| {
-
-        // If the dependency is from a different registry, then include the
-        // registry in the dependency.
-        let dep_registry_id = match dep.registry_id() {
-            Some(id) => id,
-            None => bail!("dependency missing registry ID"),
-        };
-        let dep_registry = if dep_registry_id != registry_id {
-            Some(dep_registry_id.url().to_string())
-        } else {
-            None
-        };
-
-        Ok(NewCrateDependency {
-            optional: dep.is_optional(),
-            default_features: dep.uses_default_features(),
-            name: dep.name().to_string(),
-            features: dep.features().to_vec(),
-            version_req: dep.version_req().to_string(),
-            target: dep.platform().map(|s| s.to_string()),
-            kind: match dep.kind() {
-                Kind::Normal => "normal",
-                Kind::Build => "build",
-                Kind::Development => "dev",
-            }.to_string(),
-            registry: dep_registry,
+            Ok(NewCrateDependency {
+                optional: dep.is_optional(),
+                default_features: dep.uses_default_features(),
+                name: dep.name().to_string(),
+                features: dep.features().to_vec(),
+                version_req: dep.version_req().to_string(),
+                target: dep.platform().map(|s| s.to_string()),
+                kind: match dep.kind() {
+                    Kind::Normal => "normal",
+                    Kind::Build => "build",
+                    Kind::Development => "dev",
+                }.to_string(),
+                registry: dep_registry,
+            })
         })
-    }).collect::<CargoResult<Vec<NewCrateDependency>>>()?;
+        .collect::<CargoResult<Vec<NewCrateDependency>>>()?;
     let manifest = pkg.manifest();
     let ManifestMetadata {
-        ref authors, ref description, ref homepage, ref documentation,
-        ref keywords, ref readme, ref repository, ref license, ref license_file,
-        ref categories, ref badges, ref links,
+        ref authors,
+        ref description,
+        ref homepage,
+        ref documentation,
+        ref keywords,
+        ref readme,
+        ref repository,
+        ref license,
+        ref license_file,
+        ref categories,
+        ref badges,
+        ref links,
     } = *manifest.metadata();
     let readme_content = match *readme {
         Some(ref readme) => Some(paths::read(&pkg.root().join(readme))?),
@@ -177,79 +213,91 @@ fn transmit(config: &Config,
         return Ok(());
     }
 
-    let publish = registry.publish(&NewCrate {
-        name: pkg.name().to_string(),
-        vers: pkg.version().to_string(),
-        deps,
-        features: pkg.summary().features().clone(),
-        authors: authors.clone(),
-        description: description.clone(),
-        homepage: homepage.clone(),
-        documentation: documentation.clone(),
-        keywords: keywords.clone(),
-        categories: categories.clone(),
-        readme: readme_content,
-        readme_file: readme.clone(),
-        repository: repository.clone(),
-        license: license.clone(),
-        license_file: license_file.clone(),
-        badges: badges.clone(),
-        links: links.clone(),
-    }, tarball);
+    let publish = registry.publish(
+        &NewCrate {
+            name: pkg.name().to_string(),
+            vers: pkg.version().to_string(),
+            deps,
+            features: pkg.summary().features().clone(),
+            authors: authors.clone(),
+            description: description.clone(),
+            homepage: homepage.clone(),
+            documentation: documentation.clone(),
+            keywords: keywords.clone(),
+            categories: categories.clone(),
+            readme: readme_content,
+            readme_file: readme.clone(),
+            repository: repository.clone(),
+            license: license.clone(),
+            license_file: license_file.clone(),
+            badges: badges.clone(),
+            links: links.clone(),
+        },
+        tarball,
+    );
 
     match publish {
         Ok(warnings) => {
             if !warnings.invalid_categories.is_empty() {
-                let msg = format!("\
-                    the following are not valid category slugs and were \
-                    ignored: {}. Please see https://crates.io/category_slugs \
-                    for the list of all category slugs. \
-                    ", warnings.invalid_categories.join(", "));
+                let msg = format!(
+                    "\
+                     the following are not valid category slugs and were \
+                     ignored: {}. Please see https://crates.io/category_slugs \
+                     for the list of all category slugs. \
+                     ",
+                    warnings.invalid_categories.join(", ")
+                );
                 config.shell().warn(&msg)?;
             }
 
             if !warnings.invalid_badges.is_empty() {
-                let msg = format!("\
-                    the following are not valid badges and were ignored: {}. \
-                    Either the badge type specified is unknown or a required \
-                    attribute is missing. Please see \
-                    http://doc.crates.io/manifest.html#package-metadata \
-                    for valid badge types and their required attributes.",
-                    warnings.invalid_badges.join(", "));
+                let msg = format!(
+                    "\
+                     the following are not valid badges and were ignored: {}. \
+                     Either the badge type specified is unknown or a required \
+                     attribute is missing. Please see \
+                     http://doc.crates.io/manifest.html#package-metadata \
+                     for valid badge types and their required attributes.",
+                    warnings.invalid_badges.join(", ")
+                );
                 config.shell().warn(&msg)?;
             }
 
             Ok(())
-        },
+        }
         Err(e) => Err(e),
     }
 }
 
-pub fn registry_configuration(config: &Config,
-                              registry: Option<String>) -> CargoResult<RegistryConfig> {
-
+pub fn registry_configuration(
+    config: &Config,
+    registry: Option<String>,
+) -> CargoResult<RegistryConfig> {
     let (index, token) = match registry {
-        Some(registry) => {
-            (Some(config.get_registry_index(&registry)?.to_string()),
-             config.get_string(&format!("registries.{}.token", registry))?.map(|p| p.val))
-        }
+        Some(registry) => (
+            Some(config.get_registry_index(&registry)?.to_string()),
+            config
+                .get_string(&format!("registries.{}.token", registry))?
+                .map(|p| p.val),
+        ),
         None => {
             // Checking out for default index and token
-            (config.get_string("registry.index")?.map(|p| p.val),
-             config.get_string("registry.token")?.map(|p| p.val))
+            (
+                config.get_string("registry.index")?.map(|p| p.val),
+                config.get_string("registry.token")?.map(|p| p.val),
+            )
         }
     };
 
-    Ok(RegistryConfig {
-        index,
-        token
-    })
+    Ok(RegistryConfig { index, token })
 }
 
-pub fn registry(config: &Config,
-                token: Option<String>,
-                index: Option<String>,
-                registry: Option<String>) -> CargoResult<(Registry, SourceId)> {
+pub fn registry(
+    config: &Config,
+    token: Option<String>,
+    index: Option<String>,
+    registry: Option<String>,
+) -> CargoResult<(Registry, SourceId)> {
     // Parse all configuration options
     let RegistryConfig {
         token: token_config,
@@ -263,9 +311,8 @@ pub fn registry(config: &Config,
     };
     let api_host = {
         let mut src = RegistrySource::remote(&sid, config);
-        src.update().chain_err(|| {
-            format!("failed to update {}", sid)
-        })?;
+        src.update()
+            .chain_err(|| format!("failed to update {}", sid))?;
         (src.config()?).unwrap().api.unwrap()
     };
     let handle = http_handle(config)?;
@@ -275,8 +322,10 @@ pub fn registry(config: &Config,
 /// Create a new HTTP handle with appropriate global configuration for cargo.
 pub fn http_handle(config: &Config) -> CargoResult<Easy> {
     if config.frozen() {
-        bail!("attempting to make an HTTP request, but --frozen was \
-               specified")
+        bail!(
+            "attempting to make an HTTP request, but --frozen was \
+             specified"
+        )
     }
     if !config.network_allowed() {
         bail!("can't make HTTP request in the offline mode")
@@ -332,11 +381,11 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
 /// via environment variables are picked up by libcurl.
 fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
     if let Some(s) = config.get_string("http.proxy")? {
-        return Ok(Some(s.val))
+        return Ok(Some(s.val));
     }
     if let Ok(cfg) = git2::Config::open_default() {
         if let Ok(s) = cfg.get_str("http.proxy") {
-            return Ok(Some(s.to_string()))
+            return Ok(Some(s.to_string()));
         }
     }
     Ok(None)
@@ -356,24 +405,22 @@ fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
     if http_proxy(config)?.is_some() {
         Ok(true)
     } else {
-        Ok(["http_proxy", "HTTP_PROXY",
-           "https_proxy", "HTTPS_PROXY"].iter().any(|v| env::var(v).is_ok()))
+        Ok(["http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"]
+            .iter()
+            .any(|v| env::var(v).is_ok()))
     }
 }
 
 fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
     if let Some(s) = config.get_i64("http.timeout")? {
-        return Ok(Some(s.val))
+        return Ok(Some(s.val));
     }
     Ok(env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
 }
 
-pub fn registry_login(config: &Config,
-                      token: String,
-                      registry: Option<String>) -> CargoResult<()> {
+pub fn registry_login(config: &Config, token: String, registry: Option<String>) -> CargoResult<()> {
     let RegistryConfig {
-        token: old_token,
-        ..
+        token: old_token, ..
     } = registry_configuration(config, registry.clone())?;
 
     if let Some(old_token) = old_token {
@@ -405,39 +452,41 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
         }
     };
 
-    let (mut registry, _) = registry(config,
-                                     opts.token.clone(),
-                                     opts.index.clone(),
-                                     opts.registry.clone())?;
+    let (mut registry, _) = registry(
+        config,
+        opts.token.clone(),
+        opts.index.clone(),
+        opts.registry.clone(),
+    )?;
 
     if let Some(ref v) = opts.to_add {
         let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-        let msg = registry.add_owners(&name, &v).map_err(|e| {
-            format_err!("failed to invite owners to crate {}: {}", name, e)
-        })?;
+        let msg = registry
+            .add_owners(&name, &v)
+            .map_err(|e| format_err!("failed to invite owners to crate {}: {}", name, e))?;
 
         config.shell().status("Owner", msg)?;
     }
 
     if let Some(ref v) = opts.to_remove {
         let v = v.iter().map(|s| &s[..]).collect::<Vec<_>>();
-        config.shell().status("Owner", format!("removing {:?} from crate {}",
-                                                    v, name))?;
-        registry.remove_owners(&name, &v).chain_err(|| {
-            format!("failed to remove owners from crate {}", name)
-        })?;
+        config
+            .shell()
+            .status("Owner", format!("removing {:?} from crate {}", v, name))?;
+        registry
+            .remove_owners(&name, &v)
+            .chain_err(|| format!("failed to remove owners from crate {}", name))?;
     }
 
     if opts.list {
-        let owners = registry.list_owners(&name).chain_err(|| {
-            format!("failed to list owners of crate {}", name)
-        })?;
+        let owners = registry
+            .list_owners(&name)
+            .chain_err(|| format!("failed to list owners of crate {}", name))?;
         for owner in owners.iter() {
             print!("{}", owner.login);
             match (owner.name.as_ref(), owner.email.as_ref()) {
                 (Some(name), Some(email)) => println!(" ({} <{}>)", name, email),
-                (Some(s), None) |
-                (None, Some(s)) => println!(" ({})", s),
+                (Some(s), None) | (None, Some(s)) => println!(" ({})", s),
                 (None, None) => println!(),
             }
         }
@@ -446,13 +495,15 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     Ok(())
 }
 
-pub fn yank(config: &Config,
-            krate: Option<String>,
-            version: Option<String>,
-            token: Option<String>,
-            index: Option<String>,
-            undo: bool,
-            reg: Option<String>) -> CargoResult<()> {
+pub fn yank(
+    config: &Config,
+    krate: Option<String>,
+    version: Option<String>,
+    token: Option<String>,
+    index: Option<String>,
+    undo: bool,
+    reg: Option<String>,
+) -> CargoResult<()> {
     let name = match krate {
         Some(name) => name,
         None => {
@@ -463,31 +514,37 @@ pub fn yank(config: &Config,
     };
     let version = match version {
         Some(v) => v,
-        None => bail!("a version must be specified to yank")
+        None => bail!("a version must be specified to yank"),
     };
 
     let (mut registry, _) = registry(config, token, index, reg)?;
 
     if undo {
-        config.shell().status("Unyank", format!("{}:{}", name, version))?;
-        registry.unyank(&name, &version).chain_err(|| {
-            "failed to undo a yank"
-        })?;
+        config
+            .shell()
+            .status("Unyank", format!("{}:{}", name, version))?;
+        registry
+            .unyank(&name, &version)
+            .chain_err(|| "failed to undo a yank")?;
     } else {
-        config.shell().status("Yank", format!("{}:{}", name, version))?;
-        registry.yank(&name, &version).chain_err(|| {
-            "failed to yank"
-        })?;
+        config
+            .shell()
+            .status("Yank", format!("{}:{}", name, version))?;
+        registry
+            .yank(&name, &version)
+            .chain_err(|| "failed to yank")?;
     }
 
     Ok(())
 }
 
-pub fn search(query: &str,
-              config: &Config,
-              index: Option<String>,
-              limit: u32,
-              reg: Option<String>) -> CargoResult<()> {
+pub fn search(
+    query: &str,
+    config: &Config,
+    index: Option<String>,
+    limit: u32,
+    reg: Option<String>,
+) -> CargoResult<()> {
     fn truncate_with_ellipsis(s: &str, max_width: usize) -> String {
         // We should truncate at grapheme-boundary and compute character-widths,
         // yet the dependencies on unicode-segmentation and unicode-width are
@@ -501,46 +558,51 @@ pub fn search(query: &str,
     }
 
     let (mut registry, _) = registry(config, None, index, reg)?;
-    let (crates, total_crates) = registry.search(query, limit).chain_err(|| {
-        "failed to retrieve search results from the registry"
-    })?;
+    let (crates, total_crates) = registry
+        .search(query, limit)
+        .chain_err(|| "failed to retrieve search results from the registry")?;
 
-    let names = crates.iter()
+    let names = crates
+        .iter()
         .map(|krate| format!("{} = \"{}\"", krate.name, krate.max_version))
         .collect::<Vec<String>>();
 
-    let description_margin = names.iter()
-        .map(|s| s.len() + 4)
-        .max()
-        .unwrap_or_default();
+    let description_margin = names.iter().map(|s| s.len() + 4).max().unwrap_or_default();
 
     let description_length = cmp::max(80, 128 - description_margin);
 
-    let descriptions = crates.iter()
-        .map(|krate|
-            krate.description.as_ref().map(|desc|
-                truncate_with_ellipsis(&desc.replace("\n", " "), description_length)));
+    let descriptions = crates.iter().map(|krate| {
+        krate
+            .description
+            .as_ref()
+            .map(|desc| truncate_with_ellipsis(&desc.replace("\n", " "), description_length))
+    });
 
     for (name, description) in names.into_iter().zip(descriptions) {
         let line = match description {
             Some(desc) => {
-                let space = repeat(' ').take(description_margin - name.len())
-                                       .collect::<String>();
+                let space = repeat(' ')
+                    .take(description_margin - name.len())
+                    .collect::<String>();
                 name + &space + "# " + &desc
             }
-            None => name
+            None => name,
         };
         println!("{}", line);
     }
 
     let search_max_limit = 100;
     if total_crates > u32::from(limit) && limit < search_max_limit {
-        println!("... and {} crates more (use --limit N to see more)",
-                 total_crates - u32::from(limit));
+        println!(
+            "... and {} crates more (use --limit N to see more)",
+            total_crates - u32::from(limit)
+        );
     } else if total_crates > u32::from(limit) && limit >= search_max_limit {
-        println!("... and {} crates more (go to http://crates.io/search?q={} to see more)",
-                 total_crates - u32::from(limit),
-                 percent_encode(query.as_bytes(), QUERY_ENCODE_SET));
+        println!(
+            "... and {} crates more (go to http://crates.io/search?q={} to see more)",
+            total_crates - u32::from(limit),
+            percent_encode(query.as_bytes(), QUERY_ENCODE_SET)
+        );
     }
 
     Ok(())

@@ -1,6 +1,6 @@
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::hash::{Hash, Hasher};
 
@@ -8,8 +8,8 @@ use semver::Version;
 use serde::ser;
 use url::Url;
 
-use core::{Dependency, PackageId, Summary, SourceId, PackageIdSpec};
-use core::{WorkspaceConfig, Epoch, Features, Feature};
+use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
+use core::{Epoch, Feature, Features, WorkspaceConfig};
 use core::interning::InternedString;
 use util::Config;
 use util::toml::TomlManifest;
@@ -48,7 +48,7 @@ pub struct Manifest {
 #[derive(Clone, Debug)]
 pub struct DelayedWarning {
     pub message: String,
-    pub is_critical: bool
+    pub is_critical: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -74,11 +74,11 @@ pub struct ManifestMetadata {
     pub categories: Vec<String>,
     pub license: Option<String>,
     pub license_file: Option<String>,
-    pub description: Option<String>,    // not markdown
-    pub readme: Option<String>,         // file, not contents
-    pub homepage: Option<String>,       // url
-    pub repository: Option<String>,     // url
-    pub documentation: Option<String>,  // url
+    pub description: Option<String>,   // not markdown
+    pub readme: Option<String>,        // file, not contents
+    pub homepage: Option<String>,      // url
+    pub repository: Option<String>,    // url
+    pub documentation: Option<String>, // url
     pub badges: BTreeMap<String, BTreeMap<String, String>>,
     pub links: Option<String>,
 }
@@ -116,10 +116,7 @@ impl LibKind {
 
     pub fn linkable(&self) -> bool {
         match *self {
-            LibKind::Lib |
-            LibKind::Rlib |
-            LibKind::Dylib |
-            LibKind::ProcMacro => true,
+            LibKind::Lib | LibKind::Rlib | LibKind::Dylib | LibKind::ProcMacro => true,
             LibKind::Other(..) => false,
         }
     }
@@ -138,7 +135,8 @@ pub enum TargetKind {
 
 impl ser::Serialize for TargetKind {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer,
+    where
+        S: ser::Serializer,
     {
         use self::TargetKind::*;
         match *self {
@@ -147,11 +145,10 @@ impl ser::Serialize for TargetKind {
             ExampleBin | ExampleLib(_) => vec!["example"],
             Test => vec!["test"],
             CustomBuild => vec!["custom-build"],
-            Bench => vec!["bench"]
+            Bench => vec!["bench"],
         }.serialize(s)
     }
 }
-
 
 // Note that most of the fields here are skipped when serializing because we
 // don't want to export them just yet (becomes a public API of Cargo). Others
@@ -159,30 +156,20 @@ impl ser::Serialize for TargetKind {
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Serialize)]
 pub struct Profile {
     pub opt_level: String,
-    #[serde(skip_serializing)]
-    pub lto: Lto,
-    #[serde(skip_serializing)]
-    pub codegen_units: Option<u32>,    // None = use rustc default
-    #[serde(skip_serializing)]
-    pub rustc_args: Option<Vec<String>>,
-    #[serde(skip_serializing)]
-    pub rustdoc_args: Option<Vec<String>>,
+    #[serde(skip_serializing)] pub lto: Lto,
+    #[serde(skip_serializing)] pub codegen_units: Option<u32>, // None = use rustc default
+    #[serde(skip_serializing)] pub rustc_args: Option<Vec<String>>,
+    #[serde(skip_serializing)] pub rustdoc_args: Option<Vec<String>>,
     pub debuginfo: Option<u32>,
     pub debug_assertions: bool,
     pub overflow_checks: bool,
-    #[serde(skip_serializing)]
-    pub rpath: bool,
+    #[serde(skip_serializing)] pub rpath: bool,
     pub test: bool,
-    #[serde(skip_serializing)]
-    pub doc: bool,
-    #[serde(skip_serializing)]
-    pub run_custom_build: bool,
-    #[serde(skip_serializing)]
-    pub check: bool,
-    #[serde(skip_serializing)]
-    pub panic: Option<String>,
-    #[serde(skip_serializing)]
-    pub incremental: bool,
+    #[serde(skip_serializing)] pub doc: bool,
+    #[serde(skip_serializing)] pub run_custom_build: bool,
+    #[serde(skip_serializing)] pub check: bool,
+    #[serde(skip_serializing)] pub panic: Option<String>,
+    #[serde(skip_serializing)] pub incremental: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
@@ -261,22 +248,24 @@ impl ser::Serialize for Target {
 }
 
 impl Manifest {
-    pub fn new(summary: Summary,
-               targets: Vec<Target>,
-               exclude: Vec<String>,
-               include: Vec<String>,
-               links: Option<String>,
-               metadata: ManifestMetadata,
-               profiles: Profiles,
-               publish: Option<Vec<String>>,
-               publish_lockfile: bool,
-               replace: Vec<(PackageIdSpec, Dependency)>,
-               patch: HashMap<Url, Vec<Dependency>>,
-               workspace: WorkspaceConfig,
-               features: Features,
-               epoch: Epoch,
-               im_a_teapot: Option<bool>,
-               original: Rc<TomlManifest>) -> Manifest {
+    pub fn new(
+        summary: Summary,
+        targets: Vec<Target>,
+        exclude: Vec<String>,
+        include: Vec<String>,
+        links: Option<String>,
+        metadata: ManifestMetadata,
+        profiles: Profiles,
+        publish: Option<Vec<String>>,
+        publish_lockfile: bool,
+        replace: Vec<(PackageIdSpec, Dependency)>,
+        patch: HashMap<Url, Vec<Dependency>>,
+        workspace: WorkspaceConfig,
+        features: Features,
+        epoch: Epoch,
+        im_a_teapot: Option<bool>,
+        original: Rc<TomlManifest>,
+    ) -> Manifest {
         Manifest {
             summary,
             targets,
@@ -298,22 +287,54 @@ impl Manifest {
         }
     }
 
-    pub fn dependencies(&self) -> &[Dependency] { self.summary.dependencies() }
-    pub fn exclude(&self) -> &[String] { &self.exclude }
-    pub fn include(&self) -> &[String] { &self.include }
-    pub fn metadata(&self) -> &ManifestMetadata { &self.metadata }
-    pub fn name(&self) -> InternedString { self.package_id().name() }
-    pub fn package_id(&self) -> &PackageId { self.summary.package_id() }
-    pub fn summary(&self) -> &Summary { &self.summary }
-    pub fn targets(&self) -> &[Target] { &self.targets }
-    pub fn version(&self) -> &Version { self.package_id().version() }
-    pub fn warnings(&self) -> &[DelayedWarning] { &self.warnings }
-    pub fn profiles(&self) -> &Profiles { &self.profiles }
-    pub fn publish(&self) -> &Option<Vec<String>> { &self.publish }
-    pub fn publish_lockfile(&self) -> bool { self.publish_lockfile }
-    pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] { &self.replace }
-    pub fn original(&self) -> &TomlManifest { &self.original }
-    pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> { &self.patch }
+    pub fn dependencies(&self) -> &[Dependency] {
+        self.summary.dependencies()
+    }
+    pub fn exclude(&self) -> &[String] {
+        &self.exclude
+    }
+    pub fn include(&self) -> &[String] {
+        &self.include
+    }
+    pub fn metadata(&self) -> &ManifestMetadata {
+        &self.metadata
+    }
+    pub fn name(&self) -> InternedString {
+        self.package_id().name()
+    }
+    pub fn package_id(&self) -> &PackageId {
+        self.summary.package_id()
+    }
+    pub fn summary(&self) -> &Summary {
+        &self.summary
+    }
+    pub fn targets(&self) -> &[Target] {
+        &self.targets
+    }
+    pub fn version(&self) -> &Version {
+        self.package_id().version()
+    }
+    pub fn warnings(&self) -> &[DelayedWarning] {
+        &self.warnings
+    }
+    pub fn profiles(&self) -> &Profiles {
+        &self.profiles
+    }
+    pub fn publish(&self) -> &Option<Vec<String>> {
+        &self.publish
+    }
+    pub fn publish_lockfile(&self) -> bool {
+        self.publish_lockfile
+    }
+    pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
+        &self.replace
+    }
+    pub fn original(&self) -> &TomlManifest {
+        &self.original
+    }
+    pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> {
+        &self.patch
+    }
     pub fn links(&self) -> Option<&str> {
         self.links.as_ref().map(|s| &s[..])
     }
@@ -327,19 +348,24 @@ impl Manifest {
     }
 
     pub fn add_warning(&mut self, s: String) {
-        self.warnings.push(DelayedWarning { message: s, is_critical: false })
+        self.warnings.push(DelayedWarning {
+            message: s,
+            is_critical: false,
+        })
     }
 
     pub fn add_critical_warning(&mut self, s: String) {
-        self.warnings.push(DelayedWarning { message: s, is_critical: true })
+        self.warnings.push(DelayedWarning {
+            message: s,
+            is_critical: true,
+        })
     }
 
     pub fn set_summary(&mut self, summary: Summary) {
         self.summary = summary;
     }
 
-    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
-                      -> Manifest {
+    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId) -> Manifest {
         Manifest {
             summary: self.summary.map_source(to_replace, replace_with),
             ..self
@@ -348,10 +374,14 @@ impl Manifest {
 
     pub fn feature_gate(&self) -> CargoResult<()> {
         if self.im_a_teapot.is_some() {
-            self.features.require(Feature::test_dummy_unstable()).chain_err(|| {
-                format_err!("the `im-a-teapot` manifest key is unstable and may \
-                             not work properly in England")
-            })?;
+            self.features
+                .require(Feature::test_dummy_unstable())
+                .chain_err(|| {
+                    format_err!(
+                        "the `im-a-teapot` manifest key is unstable and may \
+                         not work properly in England"
+                    )
+                })?;
         }
 
         Ok(())
@@ -372,10 +402,12 @@ impl Manifest {
 }
 
 impl VirtualManifest {
-    pub fn new(replace: Vec<(PackageIdSpec, Dependency)>,
-               patch: HashMap<Url, Vec<Dependency>>,
-               workspace: WorkspaceConfig,
-               profiles: Profiles) -> VirtualManifest {
+    pub fn new(
+        replace: Vec<(PackageIdSpec, Dependency)>,
+        patch: HashMap<Url, Vec<Dependency>>,
+        workspace: WorkspaceConfig,
+        profiles: Profiles,
+    ) -> VirtualManifest {
         VirtualManifest {
             replace,
             patch,
@@ -418,9 +450,7 @@ impl Target {
         }
     }
 
-    pub fn lib_target(name: &str,
-                      crate_targets: Vec<LibKind>,
-                      src_path: PathBuf) -> Target {
+    pub fn lib_target(name: &str, crate_targets: Vec<LibKind>, src_path: PathBuf) -> Target {
         Target {
             kind: TargetKind::Lib(crate_targets),
             name: name.to_string(),
@@ -430,8 +460,11 @@ impl Target {
         }
     }
 
-    pub fn bin_target(name: &str, src_path: PathBuf,
-                      required_features: Option<Vec<String>>) -> Target {
+    pub fn bin_target(
+        name: &str,
+        src_path: PathBuf,
+        required_features: Option<Vec<String>>,
+    ) -> Target {
         Target {
             kind: TargetKind::Bin,
             name: name.to_string(),
@@ -453,10 +486,12 @@ impl Target {
         }
     }
 
-    pub fn example_target(name: &str,
-                          crate_targets: Vec<LibKind>,
-                          src_path: PathBuf,
-                          required_features: Option<Vec<String>>) -> Target {
+    pub fn example_target(
+        name: &str,
+        crate_targets: Vec<LibKind>,
+        src_path: PathBuf,
+        required_features: Option<Vec<String>>,
+    ) -> Target {
         let kind = if crate_targets.is_empty() {
             TargetKind::ExampleBin
         } else {
@@ -472,8 +507,11 @@ impl Target {
         }
     }
 
-    pub fn test_target(name: &str, src_path: PathBuf,
-                       required_features: Option<Vec<String>>) -> Target {
+    pub fn test_target(
+        name: &str,
+        src_path: PathBuf,
+        required_features: Option<Vec<String>>,
+    ) -> Target {
         Target {
             kind: TargetKind::Test,
             name: name.to_string(),
@@ -483,8 +521,11 @@ impl Target {
         }
     }
 
-    pub fn bench_target(name: &str, src_path: PathBuf,
-                        required_features: Option<Vec<String>>) -> Target {
+    pub fn bench_target(
+        name: &str,
+        src_path: PathBuf,
+        required_features: Option<Vec<String>>,
+    ) -> Target {
         Target {
             kind: TargetKind::Bench,
             name: name.to_string(),
@@ -494,26 +535,42 @@ impl Target {
         }
     }
 
-    pub fn name(&self) -> &str { &self.name }
-    pub fn crate_name(&self) -> String { self.name.replace("-", "_") }
-    pub fn src_path(&self) -> &Path { &self.src_path.path }
-    pub fn required_features(&self) -> Option<&Vec<String>> { self.required_features.as_ref() }
-    pub fn kind(&self) -> &TargetKind { &self.kind }
-    pub fn tested(&self) -> bool { self.tested }
-    pub fn harness(&self) -> bool { self.harness }
-    pub fn documented(&self) -> bool { self.doc }
-    pub fn for_host(&self) -> bool { self.for_host }
-    pub fn benched(&self) -> bool { self.benched }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn crate_name(&self) -> String {
+        self.name.replace("-", "_")
+    }
+    pub fn src_path(&self) -> &Path {
+        &self.src_path.path
+    }
+    pub fn required_features(&self) -> Option<&Vec<String>> {
+        self.required_features.as_ref()
+    }
+    pub fn kind(&self) -> &TargetKind {
+        &self.kind
+    }
+    pub fn tested(&self) -> bool {
+        self.tested
+    }
+    pub fn harness(&self) -> bool {
+        self.harness
+    }
+    pub fn documented(&self) -> bool {
+        self.doc
+    }
+    pub fn for_host(&self) -> bool {
+        self.for_host
+    }
+    pub fn benched(&self) -> bool {
+        self.benched
+    }
 
     pub fn doctested(&self) -> bool {
         self.doctest && match self.kind {
-            TargetKind::Lib(ref kinds) => {
-                kinds.iter().any(|k| {
-                  *k == LibKind::Rlib ||
-                  *k == LibKind::Lib ||
-                  *k == LibKind::ProcMacro
-                })
-            }
+            TargetKind::Lib(ref kinds) => kinds
+                .iter()
+                .any(|k| *k == LibKind::Rlib || *k == LibKind::Lib || *k == LibKind::ProcMacro),
             _ => false,
         }
     }
@@ -525,46 +582,43 @@ impl Target {
     pub fn is_lib(&self) -> bool {
         match self.kind {
             TargetKind::Lib(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_dylib(&self) -> bool {
         match self.kind {
             TargetKind::Lib(ref libs) => libs.iter().any(|l| *l == LibKind::Dylib),
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_cdylib(&self) -> bool {
         let libs = match self.kind {
             TargetKind::Lib(ref libs) => libs,
-            _ => return false
+            _ => return false,
         };
-        libs.iter().any(|l| {
-            match *l {
-                LibKind::Other(ref s) => s == "cdylib",
-                _ => false,
-            }
+        libs.iter().any(|l| match *l {
+            LibKind::Other(ref s) => s == "cdylib",
+            _ => false,
         })
     }
 
     pub fn linkable(&self) -> bool {
         match self.kind {
-            TargetKind::Lib(ref kinds) => {
-                kinds.iter().any(|k| k.linkable())
-            }
-            _ => false
+            TargetKind::Lib(ref kinds) => kinds.iter().any(|k| k.linkable()),
+            _ => false,
         }
     }
 
-    pub fn is_bin(&self) -> bool { self.kind == TargetKind::Bin }
+    pub fn is_bin(&self) -> bool {
+        self.kind == TargetKind::Bin
+    }
 
     pub fn is_example(&self) -> bool {
         match self.kind {
-            TargetKind::ExampleBin |
-            TargetKind::ExampleLib(..) => true,
-            _ => false
+            TargetKind::ExampleBin | TargetKind::ExampleLib(..) => true,
+            _ => false,
         }
     }
 
@@ -572,35 +626,39 @@ impl Target {
         // Needed for --all-examples in contexts where only runnable examples make sense
         match self.kind {
             TargetKind::ExampleBin => true,
-            _ => false
+            _ => false,
         }
     }
 
-    pub fn is_test(&self) -> bool { self.kind == TargetKind::Test }
-    pub fn is_bench(&self) -> bool { self.kind == TargetKind::Bench }
-    pub fn is_custom_build(&self) -> bool { self.kind == TargetKind::CustomBuild }
+    pub fn is_test(&self) -> bool {
+        self.kind == TargetKind::Test
+    }
+    pub fn is_bench(&self) -> bool {
+        self.kind == TargetKind::Bench
+    }
+    pub fn is_custom_build(&self) -> bool {
+        self.kind == TargetKind::CustomBuild
+    }
 
     /// Returns the arguments suitable for `--crate-type` to pass to rustc.
     pub fn rustc_crate_types(&self) -> Vec<&str> {
         match self.kind {
-            TargetKind::Lib(ref kinds) |
-            TargetKind::ExampleLib(ref kinds) => {
+            TargetKind::Lib(ref kinds) | TargetKind::ExampleLib(ref kinds) => {
                 kinds.iter().map(LibKind::crate_type).collect()
             }
-            TargetKind::CustomBuild |
-            TargetKind::Bench |
-            TargetKind::Test |
-            TargetKind::ExampleBin |
-            TargetKind::Bin => vec!["bin"],
+            TargetKind::CustomBuild
+            | TargetKind::Bench
+            | TargetKind::Test
+            | TargetKind::ExampleBin
+            | TargetKind::Bin => vec!["bin"],
         }
     }
 
     pub fn can_lto(&self) -> bool {
         match self.kind {
             TargetKind::Lib(ref v) => {
-                !v.contains(&LibKind::Rlib) &&
-                    !v.contains(&LibKind::Dylib) &&
-                    !v.contains(&LibKind::Lib)
+                !v.contains(&LibKind::Rlib) && !v.contains(&LibKind::Dylib)
+                    && !v.contains(&LibKind::Lib)
             }
             _ => true,
         }
@@ -639,8 +697,9 @@ impl fmt::Display for Target {
             TargetKind::Bin => write!(f, "Target(bin: {})", self.name),
             TargetKind::Test => write!(f, "Target(test: {})", self.name),
             TargetKind::Bench => write!(f, "Target(bench: {})", self.name),
-            TargetKind::ExampleBin |
-            TargetKind::ExampleLib(..) => write!(f, "Target(example: {})", self.name),
+            TargetKind::ExampleBin | TargetKind::ExampleLib(..) => {
+                write!(f, "Target(example: {})", self.name)
+            }
             TargetKind::CustomBuild => write!(f, "Target(script)"),
         }
     }
@@ -752,6 +811,5 @@ impl fmt::Display for Profile {
         } else {
             write!(f, "Profile(build)")
         }
-
     }
 }

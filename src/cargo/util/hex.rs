@@ -1,12 +1,12 @@
 #![allow(deprecated)]
 
 use hex;
-use std::hash::{Hasher, Hash, SipHasher};
+use std::hash::{Hash, Hasher, SipHasher};
 
 pub fn to_hex(num: u64) -> String {
     hex::encode(&[
-        (num >>  0) as u8,
-        (num >>  8) as u8,
+        (num >> 0) as u8,
+        (num >> 8) as u8,
         (num >> 16) as u8,
         (num >> 24) as u8,
         (num >> 32) as u8,

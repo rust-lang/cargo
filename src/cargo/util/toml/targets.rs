@@ -17,17 +17,17 @@ use std::collections::HashSet;
 use core::Target;
 use ops::is_bad_artifact_name;
 use util::errors::CargoResult;
-use super::{TomlTarget, LibKind, PathValue, TomlManifest, StringOrBool,
-            TomlLibTarget, TomlBinTarget, TomlBenchTarget, TomlExampleTarget, TomlTestTarget};
+use super::{LibKind, PathValue, StringOrBool, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
+            TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget};
 
-
-pub fn targets(manifest: &TomlManifest,
-               package_name: &str,
-               package_root: &Path,
-               custom_build: &Option<StringOrBool>,
-               warnings: &mut Vec<String>,
-               errors: &mut Vec<String>)
-               -> CargoResult<Vec<Target>> {
+pub fn targets(
+    manifest: &TomlManifest,
+    package_name: &str,
+    package_root: &Path,
+    custom_build: &Option<StringOrBool>,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) -> CargoResult<Vec<Target>> {
     let mut targets = Vec::new();
 
     let has_lib;
@@ -39,37 +39,53 @@ pub fn targets(manifest: &TomlManifest,
         has_lib = false;
     }
 
-    targets.extend(
-        clean_bins(manifest.bin.as_ref(), package_root, package_name, warnings, has_lib)?
-    );
+    targets.extend(clean_bins(
+        manifest.bin.as_ref(),
+        package_root,
+        package_name,
+        warnings,
+        has_lib,
+    )?);
 
-    targets.extend(
-        clean_examples(manifest.example.as_ref(), package_root, errors)?
-    );
+    targets.extend(clean_examples(
+        manifest.example.as_ref(),
+        package_root,
+        errors,
+    )?);
 
-    targets.extend(
-        clean_tests(manifest.test.as_ref(), package_root, errors)?
-    );
+    targets.extend(clean_tests(manifest.test.as_ref(), package_root, errors)?);
 
-    targets.extend(
-        clean_benches(manifest.bench.as_ref(), package_root, warnings, errors)?
-    );
+    targets.extend(clean_benches(
+        manifest.bench.as_ref(),
+        package_root,
+        warnings,
+        errors,
+    )?);
 
     // processing the custom build script
     if let Some(custom_build) = manifest.maybe_custom_build(custom_build, package_root) {
-        let name = format!("build-script-{}",
-                           custom_build.file_stem().and_then(|s| s.to_str()).unwrap_or(""));
-        targets.push(Target::custom_build_target(&name, package_root.join(custom_build)));
+        let name = format!(
+            "build-script-{}",
+            custom_build
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+        );
+        targets.push(Target::custom_build_target(
+            &name,
+            package_root.join(custom_build),
+        ));
     }
 
     Ok(targets)
 }
 
-
-fn clean_lib(toml_lib: Option<&TomlLibTarget>,
-             package_root: &Path,
-             package_name: &str,
-             warnings: &mut Vec<String>) -> CargoResult<Option<Target>> {
+fn clean_lib(
+    toml_lib: Option<&TomlLibTarget>,
+    package_root: &Path,
+    package_name: &str,
+    warnings: &mut Vec<String>,
+) -> CargoResult<Option<Target>> {
     let inferred = inferred_lib(package_root);
     let lib = match toml_lib {
         Some(lib) => {
@@ -84,18 +100,16 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
                 ..lib.clone()
             })
         }
-        None => inferred.as_ref().map(|lib| {
-            TomlTarget {
-                name: Some(package_name.to_string()),
-                path: Some(PathValue(lib.clone())),
-                ..TomlTarget::new()
-            }
-        })
+        None => inferred.as_ref().map(|lib| TomlTarget {
+            name: Some(package_name.to_string()),
+            path: Some(PathValue(lib.clone())),
+            ..TomlTarget::new()
+        }),
     };
 
     let lib = match lib {
         Some(ref lib) => lib,
-        None => return Ok(None)
+        None => return Ok(None),
     };
 
     validate_has_name(lib, "library", "lib")?;
@@ -109,12 +123,16 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
                 warnings.push(format!(
                     "path `{}` was erroneously implicitly accepted for library `{}`,\n\
                      please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
-                    legacy_path.display(), lib.name()
+                    legacy_path.display(),
+                    lib.name()
                 ));
                 legacy_path
             } else {
-                bail!("can't find library `{}`, \
-                       rename file to `src/lib.rs` or specify lib.path", lib.name())
+                bail!(
+                    "can't find library `{}`, \
+                     rename file to `src/lib.rs` or specify lib.path",
+                    lib.name()
+                )
             }
         }
     };
@@ -141,21 +159,24 @@ fn clean_lib(toml_lib: Option<&TomlLibTarget>,
     Ok(Some(target))
 }
 
-fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
-              package_root: &Path,
-              package_name: &str,
-              warnings: &mut Vec<String>,
-              has_lib: bool) -> CargoResult<Vec<Target>> {
+fn clean_bins(
+    toml_bins: Option<&Vec<TomlBinTarget>>,
+    package_root: &Path,
+    package_name: &str,
+    warnings: &mut Vec<String>,
+    has_lib: bool,
+) -> CargoResult<Vec<Target>> {
     let inferred = inferred_bins(package_root, package_name);
     let bins = match toml_bins {
         Some(bins) => bins.clone(),
-        None => inferred.iter().map(|&(ref name, ref path)| {
-            TomlTarget {
+        None => inferred
+            .iter()
+            .map(|&(ref name, ref path)| TomlTarget {
                 name: Some(name.clone()),
                 path: Some(PathValue(path.clone())),
                 ..TomlTarget::new()
-            }
-        }).collect()
+            })
+            .collect(),
     };
 
     for bin in &bins {
@@ -176,7 +197,8 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
                 warnings.push(format!(
                     "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
                      please set bin.path in Cargo.toml",
-                    legacy_path.display(), bin.name()
+                    legacy_path.display(),
+                    bin.name()
                 ));
                 Some(legacy_path)
             } else {
@@ -188,8 +210,7 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
             Err(e) => bail!("{}", e),
         };
 
-        let mut target = Target::bin_target(&bin.name(), path,
-                                            bin.required_features.clone());
+        let mut target = Target::bin_target(&bin.name(), path, bin.required_features.clone());
         configure(bin, &mut target);
         result.push(target);
     }
@@ -215,26 +236,35 @@ fn clean_bins(toml_bins: Option<&Vec<TomlBinTarget>>,
     }
 }
 
-fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
-                  package_root: &Path,
-                  errors: &mut Vec<String>)
-                  -> CargoResult<Vec<Target>> {
-
+fn clean_examples(
+    toml_examples: Option<&Vec<TomlExampleTarget>>,
+    package_root: &Path,
+    errors: &mut Vec<String>,
+) -> CargoResult<Vec<Target>> {
     let inferred = infer_from_directory(&package_root.join("examples"));
 
-    let targets = clean_targets("example", "example",
-                                toml_examples, &inferred,
-                                package_root, errors)?;
+    let targets = clean_targets(
+        "example",
+        "example",
+        toml_examples,
+        &inferred,
+        package_root,
+        errors,
+    )?;
 
     let mut result = Vec::new();
     for (path, toml) in targets {
         let crate_types = match toml.crate_types() {
             Some(kinds) => kinds.iter().map(|s| LibKind::from_str(s)).collect(),
-            None => Vec::new()
+            None => Vec::new(),
         };
 
-        let mut target = Target::example_target(&toml.name(), crate_types, path,
-                                                toml.required_features.clone());
+        let mut target = Target::example_target(
+            &toml.name(),
+            crate_types,
+            path,
+            toml.required_features.clone(),
+        );
         configure(&toml, &mut target);
         result.push(target);
     }
@@ -242,30 +272,30 @@ fn clean_examples(toml_examples: Option<&Vec<TomlExampleTarget>>,
     Ok(result)
 }
 
-fn clean_tests(toml_tests: Option<&Vec<TomlTestTarget>>,
-               package_root: &Path,
-               errors: &mut Vec<String>) -> CargoResult<Vec<Target>> {
-
+fn clean_tests(
+    toml_tests: Option<&Vec<TomlTestTarget>>,
+    package_root: &Path,
+    errors: &mut Vec<String>,
+) -> CargoResult<Vec<Target>> {
     let inferred = infer_from_directory(&package_root.join("tests"));
 
-    let targets = clean_targets("test", "test",
-                                toml_tests, &inferred,
-                                package_root, errors)?;
+    let targets = clean_targets("test", "test", toml_tests, &inferred, package_root, errors)?;
 
     let mut result = Vec::new();
     for (path, toml) in targets {
-        let mut target = Target::test_target(&toml.name(), path,
-                                             toml.required_features.clone());
+        let mut target = Target::test_target(&toml.name(), path, toml.required_features.clone());
         configure(&toml, &mut target);
         result.push(target);
     }
     Ok(result)
 }
 
-fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
-                 package_root: &Path,
-                 warnings: &mut Vec<String>,
-                 errors: &mut Vec<String>) -> CargoResult<Vec<Target>> {
+fn clean_benches(
+    toml_benches: Option<&Vec<TomlBenchTarget>>,
+    package_root: &Path,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) -> CargoResult<Vec<Target>> {
     let mut legacy_bench_path = |bench: &TomlTarget| {
         let legacy_path = package_root.join("src").join("bench.rs");
         if !(bench.name() == "bench" && legacy_path.exists()) {
@@ -274,23 +304,27 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
         warnings.push(format!(
             "path `{}` was erroneously implicitly accepted for benchmark `{}`,\n\
              please set bench.path in Cargo.toml",
-            legacy_path.display(), bench.name()
+            legacy_path.display(),
+            bench.name()
         ));
         Some(legacy_path)
     };
 
     let inferred = infer_from_directory(&package_root.join("benches"));
 
-    let targets = clean_targets_with_legacy_path("benchmark", "bench",
-                                                 toml_benches, &inferred,
-                                                 package_root,
-                                                 errors,
-                                                 &mut legacy_bench_path)?;
+    let targets = clean_targets_with_legacy_path(
+        "benchmark",
+        "bench",
+        toml_benches,
+        &inferred,
+        package_root,
+        errors,
+        &mut legacy_bench_path,
+    )?;
 
     let mut result = Vec::new();
     for (path, toml) in targets {
-        let mut target = Target::bench_target(&toml.name(), path,
-                                              toml.required_features.clone());
+        let mut target = Target::bench_target(&toml.name(), path, toml.required_features.clone());
         configure(&toml, &mut target);
         result.push(target);
     }
@@ -298,36 +332,44 @@ fn clean_benches(toml_benches: Option<&Vec<TomlBenchTarget>>,
     Ok(result)
 }
 
-fn clean_targets(target_kind_human: &str, target_kind: &str,
-                 toml_targets: Option<&Vec<TomlTarget>>,
-                 inferred: &[(String, PathBuf)],
-                 package_root: &Path,
-                 errors: &mut Vec<String>)
-                 -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
-    clean_targets_with_legacy_path(target_kind_human, target_kind,
-                                   toml_targets,
-                                   inferred,
-                                   package_root,
-                                   errors,
-                                   &mut |_| None)
+fn clean_targets(
+    target_kind_human: &str,
+    target_kind: &str,
+    toml_targets: Option<&Vec<TomlTarget>>,
+    inferred: &[(String, PathBuf)],
+    package_root: &Path,
+    errors: &mut Vec<String>,
+) -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
+    clean_targets_with_legacy_path(
+        target_kind_human,
+        target_kind,
+        toml_targets,
+        inferred,
+        package_root,
+        errors,
+        &mut |_| None,
+    )
 }
 
-fn clean_targets_with_legacy_path(target_kind_human: &str, target_kind: &str,
-                                  toml_targets: Option<&Vec<TomlTarget>>,
-                                  inferred: &[(String, PathBuf)],
-                                  package_root: &Path,
-                                  errors: &mut Vec<String>,
-                                  legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>)
-                                  -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
+fn clean_targets_with_legacy_path(
+    target_kind_human: &str,
+    target_kind: &str,
+    toml_targets: Option<&Vec<TomlTarget>>,
+    inferred: &[(String, PathBuf)],
+    package_root: &Path,
+    errors: &mut Vec<String>,
+    legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>,
+) -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
     let toml_targets = match toml_targets {
         Some(targets) => targets.clone(),
-        None => inferred.iter().map(|&(ref name, ref path)| {
-            TomlTarget {
+        None => inferred
+            .iter()
+            .map(|&(ref name, ref path)| TomlTarget {
                 name: Some(name.clone()),
                 path: Some(PathValue(path.clone())),
                 ..TomlTarget::new()
-            }
-        }).collect()
+            })
+            .collect(),
     };
 
     for target in &toml_targets {
@@ -342,14 +384,13 @@ fn clean_targets_with_legacy_path(target_kind_human: &str, target_kind: &str,
             Ok(path) => path,
             Err(e) => {
                 errors.push(e);
-                continue
-            },
+                continue;
+            }
         };
         result.push((path, target));
     }
     Ok(result)
 }
-
 
 fn inferred_lib(package_root: &Path) -> Option<PathBuf> {
     let lib = package_root.join("src").join("lib.rs");
@@ -374,7 +415,7 @@ fn inferred_bins(package_root: &Path, package_name: &str) -> Vec<(String, PathBu
 fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
     let entries = match fs::read_dir(directory) {
         Err(_) => return Vec::new(),
-        Ok(dir) => dir
+        Ok(dir) => dir,
     };
 
     entries
@@ -383,7 +424,6 @@ fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
         .filter_map(|d| infer_any(&d))
         .collect()
 }
-
 
 fn infer_any(entry: &DirEntry) -> Option<(String, PathBuf)> {
     if entry.path().extension().and_then(|p| p.to_str()) == Some("rs") {
@@ -395,15 +435,12 @@ fn infer_any(entry: &DirEntry) -> Option<(String, PathBuf)> {
     }
 }
 
-
 fn infer_file(entry: &DirEntry) -> Option<(String, PathBuf)> {
     let path = entry.path();
-    path
-        .file_stem()
+    path.file_stem()
         .and_then(|p| p.to_str())
         .map(|p| (p.to_owned(), path.clone()))
 }
-
 
 fn infer_subdirectory(entry: &DirEntry) -> Option<(String, PathBuf)> {
     let path = entry.path();
@@ -411,24 +448,28 @@ fn infer_subdirectory(entry: &DirEntry) -> Option<(String, PathBuf)> {
     let name = path.file_name().and_then(|n| n.to_str());
     match (name, main.exists()) {
         (Some(name), true) => Some((name.to_owned(), main)),
-        _ => None
+        _ => None,
     }
 }
-
 
 fn is_not_dotfile(entry: &DirEntry) -> bool {
     entry.file_name().to_str().map(|s| s.starts_with('.')) == Some(false)
 }
 
-
-fn validate_has_name(target: &TomlTarget,
-                     target_kind_human: &str,
-                     target_kind: &str) -> CargoResult<()> {
+fn validate_has_name(
+    target: &TomlTarget,
+    target_kind_human: &str,
+    target_kind: &str,
+) -> CargoResult<()> {
     match target.name {
         Some(ref name) => if name.trim().is_empty() {
             bail!("{} target names cannot be empty", target_kind_human)
         },
-        None => bail!("{} target {}.name is required", target_kind_human, target_kind)
+        None => bail!(
+            "{} target {}.name is required",
+            target_kind_human,
+            target_kind
+        ),
     }
 
     Ok(())
@@ -439,18 +480,21 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
     let mut seen = HashSet::new();
     for name in targets.iter().map(|e| e.name()) {
         if !seen.insert(name.clone()) {
-            bail!("found duplicate {target_kind} name {name}, \
-                   but all {target_kind} targets must have a unique name",
-                   target_kind = target_kind, name = name);
+            bail!(
+                "found duplicate {target_kind} name {name}, \
+                 but all {target_kind} targets must have a unique name",
+                target_kind = target_kind,
+                name = name
+            );
         }
     }
     Ok(())
 }
 
-
 fn configure(toml: &TomlTarget, target: &mut Target) {
     let t2 = target.clone();
-    target.set_tested(toml.test.unwrap_or_else(|| t2.tested()))
+    target
+        .set_tested(toml.test.unwrap_or_else(|| t2.tested()))
         .set_doc(toml.doc.unwrap_or_else(|| t2.documented()))
         .set_doctest(toml.doctest.unwrap_or_else(|| t2.doctested()))
         .set_benched(toml.bench.unwrap_or_else(|| t2.benched()))
@@ -462,18 +506,21 @@ fn configure(toml: &TomlTarget, target: &mut Target) {
         });
 }
 
-fn target_path(target: &TomlTarget,
-               inferred: &[(String, PathBuf)],
-               target_kind: &str,
-               package_root: &Path,
-               legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>) -> Result<PathBuf, String> {
+fn target_path(
+    target: &TomlTarget,
+    inferred: &[(String, PathBuf)],
+    target_kind: &str,
+    package_root: &Path,
+    legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>,
+) -> Result<PathBuf, String> {
     if let Some(ref path) = target.path {
         // Should we verify that this path exists here?
         return Ok(package_root.join(&path.0));
     }
     let name = target.name();
 
-    let mut matching = inferred.iter()
+    let mut matching = inferred
+        .iter()
         .filter(|&&(ref n, _)| n == &name)
         .map(|&(_, ref p)| p.clone());
 
@@ -485,9 +532,12 @@ fn target_path(target: &TomlTarget,
             if let Some(path) = legacy_path(target) {
                 return Ok(path);
             }
-            Err(format!("can't find `{name}` {target_kind}, specify {target_kind}.path",
-                        name = name, target_kind = target_kind))
+            Err(format!(
+                "can't find `{name}` {target_kind}, specify {target_kind}.path",
+                name = name,
+                target_kind = target_kind
+            ))
         }
-        (None, Some(_)) => unreachable!()
+        (None, Some(_)) => unreachable!(),
     }
 }

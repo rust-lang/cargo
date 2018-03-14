@@ -6,7 +6,7 @@ use core::{Profiles, Workspace};
 use util::Config;
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
-use ops::{self, Context, BuildConfig, Kind, Unit};
+use ops::{self, BuildConfig, Context, Kind, Unit};
 
 pub struct CleanOptions<'a> {
     pub config: &'a Config,
@@ -34,15 +34,20 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
 
     let profiles = ws.profiles();
     let host_triple = opts.config.rustc()?.host.clone();
-    let mut cx = Context::new(ws, &resolve, &packages, opts.config,
-                                   BuildConfig {
-                                       host_triple,
-                                       requested_target: opts.target.clone(),
-                                       release: opts.release,
-                                       jobs: 1,
-                                       ..BuildConfig::default()
-                                   },
-                                   profiles)?;
+    let mut cx = Context::new(
+        ws,
+        &resolve,
+        &packages,
+        opts.config,
+        BuildConfig {
+            host_triple,
+            requested_target: opts.target.clone(),
+            release: opts.release,
+            jobs: 1,
+            ..BuildConfig::default()
+        },
+        profiles,
+    )?;
     let mut units = Vec::new();
 
     for spec in opts.spec.iter() {
@@ -54,12 +59,31 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         for target in pkg.targets() {
             for kind in [Kind::Host, Kind::Target].iter() {
                 let Profiles {
-                    ref release, ref dev, ref test, ref bench, ref doc,
-                    ref custom_build, ref test_deps, ref bench_deps, ref check,
-                    ref check_test, ref doctest,
+                    ref release,
+                    ref dev,
+                    ref test,
+                    ref bench,
+                    ref doc,
+                    ref custom_build,
+                    ref test_deps,
+                    ref bench_deps,
+                    ref check,
+                    ref check_test,
+                    ref doctest,
                 } = *profiles;
-                let profiles = [release, dev, test, bench, doc, custom_build,
-                                test_deps, bench_deps, check, check_test, doctest];
+                let profiles = [
+                    release,
+                    dev,
+                    test,
+                    bench,
+                    doc,
+                    custom_build,
+                    test_deps,
+                    bench_deps,
+                    check,
+                    check_test,
+                    doctest,
+                ];
                 for profile in profiles.iter() {
                     units.push(Unit {
                         pkg,
@@ -82,7 +106,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
             } else {
                 rm_rf(&cx.build_script_dir(unit), config)?;
             }
-            continue
+            continue;
         }
 
         for &(ref src, ref link_dst, _) in cx.target_filenames(unit)?.iter() {
@@ -99,15 +123,15 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
 fn rm_rf(path: &Path, config: &Config) -> CargoResult<()> {
     let m = fs::metadata(path);
     if m.as_ref().map(|s| s.is_dir()).unwrap_or(false) {
-        config.shell().verbose(|shell| {shell.status("Removing", path.display())})?;
-        paths::remove_dir_all(path).chain_err(|| {
-            format_err!("could not remove build directory")
-        })?;
+        config
+            .shell()
+            .verbose(|shell| shell.status("Removing", path.display()))?;
+        paths::remove_dir_all(path).chain_err(|| format_err!("could not remove build directory"))?;
     } else if m.is_ok() {
-        config.shell().verbose(|shell| {shell.status("Removing", path.display())})?;
-        paths::remove_file(path).chain_err(|| {
-            format_err!("failed to remove build artifact")
-        })?;
+        config
+            .shell()
+            .verbose(|shell| shell.status("Removing", path.display()))?;
+        paths::remove_file(path).chain_err(|| format_err!("failed to remove build artifact"))?;
     }
     Ok(())
 }

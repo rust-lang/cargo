@@ -21,7 +21,9 @@ fn run_test(path_env: Option<&OsStr>) {
     const N: usize = 50;
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -29,13 +31,13 @@ fn run_test(path_env: Option<&OsStr>) {
 
             [dependencies]
             bar = "*"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .build();
     Package::new("bar", "0.1.0").publish();
 
-    assert_that(foo.cargo("build"),
-                execs().with_status(0));
+    assert_that(foo.cargo("build"), execs().with_status(0));
 
     let index = find_index();
     let path = paths::home().join("tmp");
@@ -51,17 +53,20 @@ fn run_test(path_env: Option<&OsStr>) {
 
     for _ in 0..N {
         git::commit(&repo);
-        index.remote_anonymous(&url).unwrap()
-             .fetch(&["refs/heads/master:refs/remotes/foo/master"],
-                    None,
-                    None).unwrap();
+        index
+            .remote_anonymous(&url)
+            .unwrap()
+            .fetch(&["refs/heads/master:refs/remotes/foo/master"], None, None)
+            .unwrap();
     }
     drop((repo, index));
     Package::new("bar", "0.1.1").publish();
 
-    let before = find_index().join(".git/objects/pack")
-                    .read_dir().unwrap()
-                    .count();
+    let before = find_index()
+        .join(".git/objects/pack")
+        .read_dir()
+        .unwrap()
+        .count();
     assert!(before > N);
 
     let mut cmd = foo.cargo("update");
@@ -71,18 +76,24 @@ fn run_test(path_env: Option<&OsStr>) {
     }
     cmd.env("RUST_LOG", "trace");
     assert_that(cmd, execs().with_status(0));
-    let after = find_index().join(".git/objects/pack")
-                    .read_dir().unwrap()
-                    .count();
-    assert!(after < before,
-            "packfiles before: {}\n\
-             packfiles after:  {}", before, after);
+    let after = find_index()
+        .join(".git/objects/pack")
+        .read_dir()
+        .unwrap()
+        .count();
+    assert!(
+        after < before,
+        "packfiles before: {}\n\
+         packfiles after:  {}",
+        before,
+        after
+    );
 }
 
 #[test]
 fn use_git_gc() {
     if Command::new("git").arg("--version").output().is_err() {
-        return
+        return;
     }
     run_test(None);
 }
@@ -94,11 +105,13 @@ fn use_git_gc() {
 fn avoid_using_git() {
     let path = env::var_os("PATH").unwrap_or_default();
     let mut paths = env::split_paths(&path).collect::<Vec<_>>();
-    let idx = paths.iter().position(|p| {
-        p.join("git").exists() || p.join("git.exe").exists()
-    });
+    let idx = paths
+        .iter()
+        .position(|p| p.join("git").exists() || p.join("git.exe").exists());
     match idx {
-        Some(i) => { paths.remove(i); }
+        Some(i) => {
+            paths.remove(i);
+        }
         None => return,
     }
     run_test(Some(&env::join_paths(&paths).unwrap()));
