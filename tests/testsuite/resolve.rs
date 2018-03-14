@@ -469,6 +469,84 @@ fn resolving_with_constrained_sibling_backtrack_parent() {
 }
 
 #[test]
+fn resolving_with_many_equivalent_backtracking() {
+    let mut reglist = Vec::new();
+
+    const DEPTH: usize = 200;
+    const BRANCHING_FACTOR: usize = 100;
+
+    // Each level depends on the next but the last level does not exist.
+    // Without cashing we need to test every path to the last level O(BRANCHING_FACTOR ^ DEPTH)
+    // and this test will time out. With cashing we need to discover that none of these
+    // can be activated O(BRANCHING_FACTOR * DEPTH)
+    for l in 0..DEPTH {
+        let name = format!("level{}", l);
+        let next = format!("level{}", l + 1);
+        for i in 1..BRANCHING_FACTOR {
+            let vsn = format!("1.0.{}", i);
+            reglist.push(pkg!((name.as_str(), vsn.as_str()) => [dep_req(next.as_str(), "*")]));
+        }
+    }
+
+    let reg = registry(reglist.clone());
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("level0", "*"),
+    ], &reg);
+
+    assert!(res.is_err());
+
+    // It is easy to write code that quickly returns an error.
+    // Lets make sure we can find a good answer if it is there.
+    reglist.push(pkg!(("level0", "1.0.0")));
+
+    let reg = registry(reglist.clone());
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("level0", "*"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("level0", "1.0.0")])));
+
+    // Make sure we have not special case no candidates.
+    reglist.push(pkg!(("constrained", "1.1.0")));
+    reglist.push(pkg!(("constrained", "1.0.0")));
+    reglist.push(pkg!((format!("level{}", DEPTH).as_str(), "1.0.0") => [dep_req("constrained", "=1.0.0")]));
+
+    let reg = registry(reglist.clone());
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("level0", "*"),
+        dep_req("constrained", "*"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       ("level0", "1.0.0"),
+                                       ("constrained", "1.1.0")])));
+
+    let reg = registry(reglist.clone());
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("level0", "1.0.1"),
+        dep_req("constrained", "*"),
+    ], &reg).unwrap();
+
+    assert_that(&res, contains(names(&[("root", "1.0.0"),
+                                       (format!("level{}", DEPTH).as_str(), "1.0.0"),
+                                       ("constrained", "1.0.0")])));
+
+    let reg = registry(reglist.clone());
+
+    let res = resolve(&pkg_id("root"), vec![
+        dep_req("level0", "1.0.1"),
+        dep_req("constrained", "1.1.0"),
+    ], &reg);
+
+    assert!(res.is_err());
+}
+
+#[test]
 fn resolving_with_constrained_sibling_backtrack_activation() {
     // It makes sense to resolve most-constrained deps first, but
     // with that logic the backtrack traps here come between the two
