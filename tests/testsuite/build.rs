@@ -3106,9 +3106,6 @@ fn compiler_json_error_format() {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [profile.dev]
-            debug = false   # prevent the *.dSYM from affecting the test result
-
             [dependencies.bar]
             path = "bar"
         "#)
@@ -3142,7 +3139,7 @@ fn compiler_json_error_format() {
         "reason":"compiler-artifact",
         "profile": {
             "debug_assertions": true,
-            "debuginfo": null,
+            "debuginfo": 2,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
@@ -3182,13 +3179,13 @@ fn compiler_json_error_format() {
         },
         "profile": {
             "debug_assertions": true,
-            "debuginfo": null,
+            "debuginfo": 2,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
         },
         "features": [],
-        "filenames": ["[..]"],
+        "filenames": "{...}",
         "fresh": false
     }
 "#));
@@ -3202,7 +3199,7 @@ fn compiler_json_error_format() {
         "reason":"compiler-artifact",
         "profile": {
             "debug_assertions": true,
-            "debuginfo": null,
+            "debuginfo": 2,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
@@ -3230,13 +3227,13 @@ fn compiler_json_error_format() {
         },
         "profile": {
             "debug_assertions": true,
-            "debuginfo": null,
+            "debuginfo": 2,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
         },
         "features": [],
-        "filenames": ["[..]"],
+        "filenames": "{...}",
         "fresh": true
     }
 "#));
@@ -3297,7 +3294,7 @@ fn message_format_json_forward_stderr() {
             "test":false
         },
         "features":[],
-        "filenames":["[..]"],
+        "filenames": "{...}",
         "fresh": false
     }
 "#));
@@ -4177,6 +4174,33 @@ fn uplift_dsym_of_bin_on_mac() {
     );
     assert_that(&p.bin("c.dSYM"), is_not(existing_dir()));
     assert_that(&p.bin("d.dSYM"), is_not(existing_dir()));
+}
+
+#[test]
+fn uplift_pdb_of_bin_on_windows() {
+    if !cfg!(all(target_os = "windows", target_env = "msvc")) {
+        return
+    }
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.1.0"
+        "#)
+        .file("src/main.rs", "fn main() { panic!(); }")
+        .file("src/bin/b.rs", "fn main() { panic!(); }")
+        .file("examples/c.rs", "fn main() { panic!(); }")
+        .file("tests/d.rs", "fn main() { panic!(); }")
+        .build();
+
+    assert_that(
+        p.cargo("build").arg("--bins").arg("--examples").arg("--tests"),
+        execs().with_status(0)
+    );
+    assert_that(&p.target_debug_dir().join("foo.pdb"), existing_file());
+    assert_that(&p.target_debug_dir().join("b.pdb"), existing_file());
+    assert_that(&p.target_debug_dir().join("c.pdb"), is_not(existing_file()));
+    assert_that(&p.target_debug_dir().join("d.pdb"), is_not(existing_file()));
 }
 
 // Make sure that `cargo build` chooses the correct profile for building

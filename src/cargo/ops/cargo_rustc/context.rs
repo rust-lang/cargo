@@ -1326,13 +1326,17 @@ fn add_target_specific_suffixes(
         ret.push((".wasm".to_string(), TargetFileType::Normal, true));
     }
 
-    // rust-lang/cargo#4490
-    //  - only uplift *.dSYM for binaries.
+    // rust-lang/cargo#4490, rust-lang/cargo#4960
+    //  - only uplift debuginfo for binaries.
     //    tests are run directly from target/debug/deps/
-    //    and examples are inside target/debug/examples/ which already have *.dSYM next to them
+    //    and examples are inside target/debug/examples/ which already have symbols next to them
     //    so no need to do anything.
-    if target_triple.contains("-apple-") && *target_kind == TargetKind::Bin {
-        ret.push((".dSYM".to_string(), TargetFileType::DebugInfo, false));
+    if *target_kind == TargetKind::Bin {
+        if target_triple.contains("-apple-") {
+            ret.push((".dSYM".to_string(), TargetFileType::DebugInfo, false));
+        } else if target_triple.ends_with("-msvc") {
+            ret.push((".pdb".to_string(), TargetFileType::DebugInfo, false));
+        }
     }
 
     ret
