@@ -33,11 +33,7 @@ fn simple() {
 [RUNNING] `target[/]debug[/]foo[EXE]`",
                 dir = path2url(p.root())
             ))
-            .with_stdout(
-                "\
-hello
-",
-            ),
+            .with_stdout("hello"),
     );
     assert_that(&p.bin("foo"), existing_file());
 }
@@ -95,11 +91,9 @@ fn simple_quiet_and_verbose() {
 
     assert_that(
         p.cargo("run").arg("-q").arg("-v"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] cannot set both --verbose and --quiet
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] cannot set both --verbose and --quiet"),
     );
 }
 
@@ -191,9 +185,7 @@ fn exit_code() {
     );
     if !cfg!(unix) {
         output.push_str(
-            "\
-[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
-",
+            "[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)",
         );
     }
     assert_that(p.cargo("run"), execs().with_status(2).with_stderr(output));
@@ -229,9 +221,7 @@ fn exit_code_verbose() {
     );
     if !cfg!(unix) {
         output.push_str(
-            "\
-[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)
-",
+            "[ERROR] process didn't exit successfully: `target[..]foo[..]` (exit code: 2)",
         );
     }
 
@@ -336,11 +326,7 @@ fn specify_name() {
 [RUNNING] `target[/]debug[/]a[EXE]`",
                 dir = path2url(p.root())
             ))
-            .with_stdout(
-                "\
-hello a.rs
-",
-            ),
+            .with_stdout("hello a.rs"),
     );
 
     assert_that(
@@ -354,11 +340,7 @@ hello a.rs
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]b[EXE]`",
             )
-            .with_stdout(
-                "\
-hello b.rs
-",
-            ),
+            .with_stdout("hello b.rs"),
     );
 }
 
@@ -400,11 +382,7 @@ fn run_example() {
 [RUNNING] `target[/]debug[/]examples[/]a[EXE]`",
                 dir = path2url(p.root())
             ))
-            .with_stdout(
-                "\
-example
-",
-            ),
+            .with_stdout("example"),
     );
 }
 
@@ -438,8 +416,7 @@ fn run_bins() {
     assert_that(
         p.cargo("run").arg("--bins"),
         execs().with_status(1).with_stderr_contains(
-            "\
-             error: Found argument '--bins' which wasn't expected, or isn't valid in this context",
+            "error: Found argument '--bins' which wasn't expected, or isn't valid in this context",
         ),
     );
 }
@@ -474,10 +451,9 @@ fn run_with_filename() {
 
     assert_that(
         p.cargo("run").arg("--bin").arg("bin.rs"),
-        execs().with_status(101).with_stderr(
-            "\
-             [ERROR] no bin target named `bin.rs`",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] no bin target named `bin.rs`"),
     );
 
     assert_that(
@@ -492,10 +468,9 @@ Did you mean `a`?",
 
     assert_that(
         p.cargo("run").arg("--example").arg("example.rs"),
-        execs().with_status(101).with_stderr(
-            "\
-             [ERROR] no example target named `example.rs`",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] no example target named `example.rs`"),
     );
 
     assert_that(
@@ -593,11 +568,7 @@ fn one_bin_multiple_examples() {
 [RUNNING] `target[/]debug[/]main[EXE]`",
                 dir = path2url(p.root())
             ))
-            .with_stdout(
-                "\
-hello main.rs
-",
-            ),
+            .with_stdout("hello main.rs"),
     );
 }
 
@@ -901,11 +872,7 @@ fn run_from_executable_folder() {
                  [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
                  [RUNNING] `.[/]foo[EXE]`",
             )
-            .with_stdout(
-                "\
-hello
-",
-            ),
+            .with_stdout("hello"),
     );
 }
 
@@ -1133,9 +1100,7 @@ fn run_multiple_packages() {
     assert_that(cargo().arg("-p").arg("d1").arg("-p").arg("d2"),
                 execs()
                     .with_status(1)
-                    .with_stderr_contains("\
-error: The argument '--package <SPEC>' was provided more than once, but cannot be used multiple times
-"));
+                    .with_stderr_contains("error: The argument '--package <SPEC>' was provided more than once, but cannot be used multiple times"));
 
     assert_that(
         cargo().arg("-p").arg("d3"),

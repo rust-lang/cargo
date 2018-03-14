@@ -2067,9 +2067,7 @@ fn fetch_downloads() {
     assert_that(
         p.cargo("fetch"),
         execs().with_status(0).with_stderr(&format!(
-            "\
-[UPDATING] git repository `{url}`
-",
+            "[UPDATING] git repository `{url}`",
             url = bar.url()
         )),
     );
@@ -2260,12 +2258,9 @@ fn update_one_dep_in_repo_with_many_deps() {
     assert_that(p.cargo("generate-lockfile"), execs().with_status(0));
     assert_that(
         p.cargo("update").arg("-p").arg("foo"),
-        execs().with_status(0).with_stderr(&format!(
-            "\
-[UPDATING] git repository `{}`
-",
-            foo.url()
-        )),
+        execs()
+            .with_status(0)
+            .with_stderr(&format!("[UPDATING] git repository `{}`", foo.url())),
     );
 }
 

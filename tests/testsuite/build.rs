@@ -486,11 +486,9 @@ fn cargo_compile_without_manifest() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] could not find `Cargo.toml` in `[..]` or any parent directory
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] could not find `Cargo.toml` in `[..]` or any parent directory"),
     );
 }
 
@@ -552,11 +550,9 @@ fn cargo_compile_with_warnings_in_the_root_package() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr_contains(
-            "\
-[..]function is never used: `dead`[..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..]function is never used: `dead`[..]"),
     );
 }
 
@@ -609,11 +605,9 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(0).with_stderr_contains(
-            "\
-[..]function is never used: `dead`[..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..]function is never used: `dead`[..]"),
     );
 
     assert_that(&p.bin("foo"), existing_file());
@@ -1010,10 +1004,9 @@ fn cargo_compile_with_filename() {
 
     assert_that(
         p.cargo("build").arg("--bin").arg("bin.rs"),
-        execs().with_status(101).with_stderr(
-            "\
-             [ERROR] no bin target named `bin.rs`",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] no bin target named `bin.rs`"),
     );
 
     assert_that(
@@ -1028,10 +1021,9 @@ Did you mean `a`?",
 
     assert_that(
         p.cargo("build").arg("--example").arg("example.rs"),
-        execs().with_status(101).with_stderr(
-            "\
-             [ERROR] no example target named `example.rs`",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] no example target named `example.rs`"),
     );
 
     assert_that(
@@ -3283,11 +3275,9 @@ fn transitive_dependencies_not_available() {
 
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(101).with_stderr_contains(
-            "\
-[..] can't find crate for `bbbbb`[..]
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr_contains("[..] can't find crate for `bbbbb`[..]"),
     );
 }
 
@@ -3783,11 +3773,9 @@ fn invalid_spec() {
 
     assert_that(
         p.cargo("build").arg("-p").arg("notAValidDep"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] package id specification `notAValidDep` matched no packages
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] package id specification `notAValidDep` matched no packages"),
     );
 
     assert_that(
@@ -3796,11 +3784,9 @@ fn invalid_spec() {
             .arg("d1")
             .arg("-p")
             .arg("notAValidDep"),
-        execs().with_status(101).with_stderr(
-            "\
-[ERROR] package id specification `notAValidDep` matched no packages
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("[ERROR] package id specification `notAValidDep` matched no packages"),
     );
 }
 
@@ -5032,9 +5018,7 @@ fn inferred_bins_duplicate_name() {
     assert_that(
         p.cargo("build"),
         execs().with_status(101).with_stderr_contains(
-            "\
-[..]found duplicate binary name foo, but all binary targets must have a unique name[..]
-",
+            "[..]found duplicate binary name foo, but all binary targets must have a unique name[..]",
         ),
     );
 }
@@ -5320,8 +5304,7 @@ fn build_filter_infer_profile() {
                  --emit=dep-info,link[..]",
             )
             .with_stderr_contains(
-                "\
-                 [RUNNING] `rustc --crate-name t1 tests[/]t1.rs --emit=dep-info,link[..]",
+                "[RUNNING] `rustc --crate-name t1 tests[/]t1.rs --emit=dep-info,link[..]",
             )
             .with_stderr_contains(
                 "\
@@ -5463,10 +5446,8 @@ fn invalid_jobs() {
 
     assert_that(
         p.cargo("build").arg("--jobs").arg("over9000"),
-        execs().with_status(1).with_stderr(
-            "\
-error: Invalid value: could not parse `over9000` as a number
-",
-        ),
+        execs()
+            .with_status(1)
+            .with_stderr("error: Invalid value: could not parse `over9000` as a number"),
     );
 }

@@ -872,25 +872,20 @@ fn build_script_needed_for_host_and_target() {
         execs()
             .with_status(0)
             .with_stderr_contains(&format!(
-                "\
-                 [COMPILING] d1 v0.0.0 ({url}/d1)",
+                "[COMPILING] d1 v0.0.0 ({url}/d1)",
                 url = p.url()
             ))
-            .with_stderr_contains(&format!("\
-[RUNNING] `rustc [..] d1[/]build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]d1-[..]`",
+            .with_stderr_contains(&format!("[RUNNING] `rustc [..] d1[/]build.rs [..] --out-dir {dir}[/]target[/]debug[/]build[/]d1-[..]`",
     dir = p.root().display()))
             .with_stderr_contains(&format!(
-                "\
-                 [RUNNING] `{dir}[/]target[/]debug[/]build[/]d1-[..][/]build-script-build`",
+                "[RUNNING] `{dir}[/]target[/]debug[/]build[/]d1-[..][/]build-script-build`",
                 dir = p.root().display()
             ))
             .with_stderr_contains(
-                "\
-                 [RUNNING] `rustc [..] d1[/]src[/]lib.rs [..]`",
+                "[RUNNING] `rustc [..] d1[/]src[/]lib.rs [..]`",
             )
             .with_stderr_contains(&format!(
-                "\
-                 [COMPILING] d2 v0.0.0 ({url}/d2)",
+                "[COMPILING] d2 v0.0.0 ({url}/d2)",
                 url = p.url()
             ))
             .with_stderr_contains(&format!(
@@ -900,8 +895,7 @@ fn build_script_needed_for_host_and_target() {
                 host = host
             ))
             .with_stderr_contains(&format!(
-                "\
-                 [COMPILING] foo v0.0.0 ({url})",
+                "[COMPILING] foo v0.0.0 ({url})",
                 url = p.url()
             ))
             .with_stderr_contains(&format!("\
@@ -1217,10 +1211,9 @@ fn platform_specific_dependencies_do_not_leak() {
 
     assert_that(
         p.cargo("build").arg("-v").arg("--target").arg(&target),
-        execs().with_status(101).with_stderr_contains(
-            "\
-             [..] can't find crate for `d2`[..]",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr_contains("[..] can't find crate for `d2`[..]"),
     );
 }
 

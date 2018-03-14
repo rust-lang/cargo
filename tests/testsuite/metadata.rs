@@ -67,8 +67,7 @@ fn cargo_metadata_warns_on_implicit_version() {
         .build();
 
     assert_that(p.cargo("metadata"),
-                execs().with_stderr("\
-[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems"));
+                execs().with_stderr("[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems"));
 
     assert_that(
         p.cargo("metadata").arg("--format-version").arg("1"),

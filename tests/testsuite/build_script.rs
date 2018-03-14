@@ -985,11 +985,7 @@ fn build_deps_not_for_normal() {
         p.cargo("build").arg("-v").arg("--target").arg(&target),
         execs()
             .with_status(101)
-            .with_stderr_contains(
-                "\
-[..]can't find crate for `aaaaa`[..]
-",
-            )
+            .with_stderr_contains("[..]can't find crate for `aaaaa`[..]")
             .with_stderr_contains(
                 "\
 [ERROR] Could not compile `foo`.
@@ -1276,11 +1272,7 @@ fn code_generation() {
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[/]debug[/]foo`",
             )
-            .with_stdout(
-                "\
-Hello, World!
-",
-            ),
+            .with_stdout("Hello, World!"),
     );
 
     assert_that(p.cargo("test"), execs().with_status(0));
@@ -2806,9 +2798,7 @@ fn doctest_recieves_build_link_args() {
     assert_that(
         p.cargo("test").arg("-v"),
         execs().with_status(0).with_stderr_contains(
-            "\
-[RUNNING] `rustdoc --test [..] --crate-name foo [..]-L native=bar[..]`
-",
+            "[RUNNING] `rustdoc --test [..] --crate-name foo [..]-L native=bar[..]`",
         ),
     );
 }
@@ -2862,11 +2852,9 @@ fn please_respect_the_dag() {
 
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr_contains(
-            "\
-[RUNNING] `rustc [..] -L native=foo -L native=bar[..]`
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustc [..] -L native=foo -L native=bar[..]`"),
     );
 }
 
@@ -3201,15 +3189,8 @@ fn output_shows_on_vv() {
 
     assert_that(
         p.cargo("build").arg("-vv"),
-        execs()
-            .with_status(0)
-            .with_stdout(
-                "\
-stdout
-",
-            )
-            .with_stderr(
-                "\
+        execs().with_status(0).with_stdout("stdout").with_stderr(
+            "\
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `rustc [..]`
 [RUNNING] `[..]`
@@ -3217,7 +3198,7 @@ stderr
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
-            ),
+        ),
     );
 }
 
@@ -3260,11 +3241,9 @@ fn links_with_dots() {
 
     assert_that(
         p.cargo("build").arg("-v"),
-        execs().with_status(0).with_stderr_contains(
-            "\
-[RUNNING] `rustc --crate-name foo [..] [..] -L foo[..]`
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..] [..] -L foo[..]`"),
     );
 }
 

@@ -274,20 +274,16 @@ fn z_flags_rejected() {
         .build();
     assert_that(
         p.cargo("build").arg("-Zprint-im-a-teapot"),
-        execs().with_status(101).with_stderr(
-            "\
-error: the `-Z` flag is only accepted on the nightly channel of Cargo
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("error: the `-Z` flag is only accepted on the nightly channel of Cargo"),
     );
 
     assert_that(
         p.cargo("build").masquerade_as_nightly_cargo().arg("-Zarg"),
-        execs().with_status(101).with_stderr(
-            "\
-error: unknown `-Z` flag specified: arg
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("error: unknown `-Z` flag specified: arg"),
     );
 
     assert_that(
@@ -325,9 +321,7 @@ fn publish_rejected() {
     assert_that(
         p.cargo("publish").masquerade_as_nightly_cargo(),
         execs().with_status(101).with_stderr(
-            "\
-error: cannot publish crates which activate nightly-only cargo features to crates.io
-",
+            "error: cannot publish crates which activate nightly-only cargo features to crates.io",
         ),
     );
 }

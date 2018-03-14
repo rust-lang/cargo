@@ -523,11 +523,9 @@ fn workspace_isnt_root() {
 
     assert_that(
         p.cargo("build"),
-        execs().with_status(101).with_stderr(
-            "\
-error: root of a workspace inferred but wasn't a root: [..]
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("error: root of a workspace inferred but wasn't a root: [..]"),
     );
 }
 
@@ -747,11 +745,9 @@ fn lock_works_for_everyone() {
 
     assert_that(
         p.cargo("generate-lockfile"),
-        execs().with_status(0).with_stderr(
-            "\
-[UPDATING] registry `[..]`
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[UPDATING] registry `[..]`"),
     );
 
     Package::new("dep1", "0.1.1").publish();
@@ -1370,11 +1366,9 @@ fn you_cannot_generate_lockfile_for_empty_workspaces() {
 
     assert_that(
         p.cargo("update"),
-        execs().with_status(101).with_stderr(
-            "\
-error: you can't generate a lockfile for an empty workspace.
-",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr("error: you can't generate a lockfile for an empty workspace."),
     );
 }
 
@@ -1455,10 +1449,9 @@ fn error_if_parent_cargo_toml_is_invalid() {
 
     assert_that(
         p.cargo("build").cwd(p.root().join("bar")),
-        execs().with_status(101).with_stderr_contains(
-            "\
-             [ERROR] failed to parse manifest at `[..]`",
-        ),
+        execs()
+            .with_status(101)
+            .with_stderr_contains("[ERROR] failed to parse manifest at `[..]`"),
     );
 }
 
@@ -2142,27 +2135,21 @@ fn dep_used_with_separate_features() {
     // features are being built separately.  Should not rebuild anything
     assert_that(
         p.cargo("build").cwd(p.root().join("caller2")),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
     assert_that(
         p.cargo("build").cwd(p.root().join("caller1")),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
     assert_that(
         p.cargo("build").cwd(p.root().join("caller2")),
-        execs().with_status(0).with_stderr(
-            "\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
     );
 }
 

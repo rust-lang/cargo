@@ -1379,15 +1379,9 @@ fn test_bench_no_fail_fast() {
             .arg("--test-threads=1"),
         execs()
             .with_status(101)
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
-            )
+            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
             .with_stdout_contains("running 2 tests")
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
-            )
+            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
             .with_stdout_contains("test bench_hello [..]")
             .with_stdout_contains("test bench_nope [..]"),
     );
@@ -1480,15 +1474,9 @@ fn test_bench_multiple_packages() {
         p.cargo("bench").arg("-p").arg("bar").arg("-p").arg("baz"),
         execs()
             .with_status(0)
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]release[/]deps[/]bbaz-[..][EXE]",
-            )
+            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]bbaz-[..][EXE]")
             .with_stdout_contains("test bench_baz ... bench: [..]")
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]release[/]deps[/]bbar-[..][EXE]",
-            )
+            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]bbar-[..][EXE]")
             .with_stdout_contains("test bench_bar ... bench: [..]"),
     );
 }
@@ -1563,15 +1551,9 @@ fn bench_all_workspace() {
         p.cargo("bench").arg("--all"),
         execs()
             .with_status(0)
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]release[/]deps[/]bar-[..][EXE]",
-            )
+            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]bar-[..][EXE]")
             .with_stdout_contains("test bench_bar ... bench: [..]")
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
-            )
+            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
             .with_stdout_contains("test bench_foo ... bench: [..]"),
     );
 }
@@ -1723,15 +1705,9 @@ fn bench_all_virtual_manifest() {
         p.cargo("bench").arg("--all"),
         execs()
             .with_status(0)
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]release[/]deps[/]bar-[..][EXE]",
-            )
+            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]bar-[..][EXE]")
             .with_stdout_contains("test bench_bar ... bench: [..]")
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
-            )
+            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
             .with_stdout_contains("test bench_foo ... bench: [..]"),
     );
 }
@@ -1855,15 +1831,9 @@ fn bench_virtual_manifest_all_implied() {
         p.cargo("bench"),
         execs()
             .with_status(0)
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]release[/]deps[/]bar-[..][EXE]",
-            )
+            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]bar-[..][EXE]")
             .with_stdout_contains("test bench_bar ... bench: [..]")
-            .with_stderr_contains(
-                "\
-                 [RUNNING] target[/]release[/]deps[/]foo-[..][EXE]",
-            )
+            .with_stderr_contains("[RUNNING] target[/]release[/]deps[/]foo-[..][EXE]")
             .with_stdout_contains("test bench_foo ... bench: [..]"),
     );
 }

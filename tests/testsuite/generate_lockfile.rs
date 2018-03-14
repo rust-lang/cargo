@@ -112,11 +112,7 @@ fn no_index_update() {
 
     assert_that(
         p.cargo("generate-lockfile"),
-        execs().with_stderr(
-            "\
-[UPDATING] registry `[..]`
-",
-        ),
+        execs().with_stderr("[UPDATING] registry `[..]`"),
     );
 
     assert_that(

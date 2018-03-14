@@ -31,11 +31,9 @@ fn simple_lib() {
             .arg("--vcs")
             .arg("none")
             .env("USER", "foo"),
-        execs().with_status(0).with_stderr(
-            "\
-[CREATED] library `foo` project
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[CREATED] library `foo` project"),
     );
 
     assert_that(&paths::root().join("foo"), existing_dir());
@@ -77,11 +75,9 @@ fn simple_bin() {
             .arg("--bin")
             .arg("foo")
             .env("USER", "foo"),
-        execs().with_status(0).with_stderr(
-            "\
-[CREATED] binary (application) `foo` project
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[CREATED] binary (application) `foo` project"),
     );
 
     assert_that(&paths::root().join("foo"), existing_dir());
@@ -532,9 +528,7 @@ fn unknown_flags() {
     assert_that(
         cargo_process("new").arg("foo").arg("--flag"),
         execs().with_status(1).with_stderr_contains(
-            "\
-error: Found argument '--flag' which wasn't expected, or isn't valid in this context
-",
+            "error: Found argument '--flag' which wasn't expected, or isn't valid in this context",
         ),
     );
 }
@@ -547,8 +541,7 @@ fn explicit_invalid_name_not_suggested() {
             .arg("10-invalid")
             .arg("a"),
         execs().with_status(101).with_stderr(
-            "\
-             [ERROR] Package names starting with a digit cannot be used as a crate name",
+            "[ERROR] Package names starting with a digit cannot be used as a crate name",
         ),
     );
 }

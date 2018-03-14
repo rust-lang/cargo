@@ -198,9 +198,7 @@ fn https_something_happens() {
         execs()
             .with_status(101)
             .with_stderr_contains(&format!(
-                "\
-[UPDATING] git repository `https://{addr}/foo/bar`
-",
+                "[UPDATING] git repository `https://{addr}/foo/bar`",
                 addr = addr
             ))
             .with_stderr_contains(&format!(
@@ -257,9 +255,7 @@ fn ssh_something_happens() {
         execs()
             .with_status(101)
             .with_stderr_contains(&format!(
-                "\
-[UPDATING] git repository `ssh://{addr}/foo/bar`
-",
+                "[UPDATING] git repository `ssh://{addr}/foo/bar`",
                 addr = addr
             ))
             .with_stderr_contains(

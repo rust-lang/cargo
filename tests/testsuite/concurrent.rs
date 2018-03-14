@@ -145,18 +145,14 @@ fn one_install_should_be_bad() {
     assert_that(
         bad,
         execs().with_status(101).with_stderr_contains(
-            "\
-[ERROR] binary `foo[..]` already exists in destination as part of `[..]`
-",
+            "[ERROR] binary `foo[..]` already exists in destination as part of `[..]`",
         ),
     );
     assert_that(
         good,
-        execs().with_status(0).with_stderr_contains(
-            "\
-warning: be sure to add `[..]` to your PATH [..]
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("warning: be sure to add `[..]` to your PATH [..]"),
     );
 
     assert_that(cargo_home(), has_installed_exe("foo"));

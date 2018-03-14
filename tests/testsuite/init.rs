@@ -22,11 +22,9 @@ fn simple_lib() {
             .arg("--vcs")
             .arg("none")
             .env("USER", "foo"),
-        execs().with_status(0).with_stderr(
-            "\
-[CREATED] library project
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[CREATED] library project"),
     );
 
     assert_that(&paths::root().join("Cargo.toml"), existing_file());
@@ -47,11 +45,9 @@ fn simple_bin() {
             .arg("none")
             .env("USER", "foo")
             .cwd(&path),
-        execs().with_status(0).with_stderr(
-            "\
-[CREATED] binary (application) project
-",
-        ),
+        execs()
+            .with_status(0)
+            .with_stderr("[CREATED] binary (application) project"),
     );
 
     assert_that(&paths::root().join("foo/Cargo.toml"), existing_file());
@@ -200,9 +196,7 @@ fn confused_by_multiple_lib_files() {
             .env("USER", "foo")
             .cwd(&path),
         execs().with_status(101).with_stderr(
-            "\
-[ERROR] cannot have a project with multiple libraries, found both `src/lib.rs` and `lib.rs`
-",
+            "[ERROR] cannot have a project with multiple libraries, found both `src/lib.rs` and `lib.rs`",
         ),
     );
 
@@ -608,9 +602,7 @@ fn unknown_flags() {
     assert_that(
         cargo_process("init").arg("foo").arg("--flag"),
         execs().with_status(1).with_stderr_contains(
-            "\
-error: Found argument '--flag' which wasn't expected, or isn't valid in this context
-",
+            "error: Found argument '--flag' which wasn't expected, or isn't valid in this context",
         ),
     );
 }
@@ -621,9 +613,7 @@ fn no_filename() {
     assert_that(
         cargo_process("init").arg("/"),
         execs().with_status(101).with_stderr(
-            "\
-[ERROR] cannot auto-detect project name from path \"/\" ; use --name to override
-"
+            "[ERROR] cannot auto-detect project name from path \"/\" ; use --name to override"
                 .to_string(),
         ),
     );
