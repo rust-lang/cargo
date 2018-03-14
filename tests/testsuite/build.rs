@@ -3106,9 +3106,6 @@ fn compiler_json_error_format() {
             version = "0.5.0"
             authors = ["wycats@example.com"]
 
-            [profile.dev]
-            debug = false   # prevent the *.dSYM from affecting the test result
-
             [dependencies.bar]
             path = "bar"
         "#)
@@ -3142,7 +3139,7 @@ fn compiler_json_error_format() {
         "reason":"compiler-artifact",
         "profile": {
             "debug_assertions": true,
-            "debuginfo": null,
+            "debuginfo": 2,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
@@ -3182,13 +3179,13 @@ fn compiler_json_error_format() {
         },
         "profile": {
             "debug_assertions": true,
-            "debuginfo": null,
+            "debuginfo": 2,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
         },
         "features": [],
-        "filenames": ["[..]"],
+        "filenames": "{...}",
         "fresh": false
     }
 "#));
@@ -3202,7 +3199,7 @@ fn compiler_json_error_format() {
         "reason":"compiler-artifact",
         "profile": {
             "debug_assertions": true,
-            "debuginfo": null,
+            "debuginfo": 2,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
@@ -3230,13 +3227,13 @@ fn compiler_json_error_format() {
         },
         "profile": {
             "debug_assertions": true,
-            "debuginfo": null,
+            "debuginfo": 2,
             "opt_level": "0",
             "overflow_checks": true,
             "test": false
         },
         "features": [],
-        "filenames": ["[..]"],
+        "filenames": "{...}",
         "fresh": true
     }
 "#));
@@ -3297,7 +3294,7 @@ fn message_format_json_forward_stderr() {
             "test":false
         },
         "features":[],
-        "filenames":["[..]"],
+        "filenames": "{...}",
         "fresh": false
     }
 "#));
