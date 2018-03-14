@@ -101,6 +101,7 @@ pub struct Context<'a, 'cfg: 'a> {
     host_info: TargetInfo,
     profiles: &'a Profiles,
     incremental_env: Option<bool>,
+    looks_like_ci: bool,
 
     /// For each Unit, a list all files produced as a triple of
     ///
@@ -158,6 +159,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Ok(v) => Some(v == "1"),
             Err(_) => None,
         };
+        let looks_like_ci = env::var("CI").is_ok();
 
         // Load up the jobserver that we'll use to manage our parallelism. This
         // is the same as the GNU make implementation of a jobserver, and
@@ -194,6 +196,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             links: Links::new(),
             used_in_plugin: HashSet::new(),
             incremental_env,
+            looks_like_ci,
             jobserver,
             build_script_overridden: HashSet::new(),
 
@@ -1069,35 +1072,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn incremental_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        // There's a number of ways to configure incremental compilation right
-        // now. In order of descending priority (first is highest priority) we
-        // have:
-        //
-        // * `CARGO_INCREMENTAL` - this is blanket used unconditionally to turn
-        //   on/off incremental compilation for any cargo subcommand. We'll
-        //   respect this if set.
-        // * `build.incremental` - in `.cargo/config` this blanket key can
-        //   globally for a system configure whether incremental compilation is
-        //   enabled. Note that setting this to `true` will not actually affect
-        //   all builds though. For example a `true` value doesn't enable
-        //   release incremental builds, only dev incremental builds. This can
-        //   be useful to globally disable incremental compilation like
-        //   `CARGO_INCREMENTAL`.
-        // * `profile.dev.incremental` - in `Cargo.toml` specific profiles can
-        //   be configured to enable/disable incremental compilation. This can
-        //   be primarily used to disable incremental when buggy for a project.
-        // * Finally, each profile has a default for whether it will enable
-        //   incremental compilation or not. Primarily development profiles
-        //   have it enabled by default while release profiles have it disabled
-        //   by default.
-        let global_cfg = self.config.get_bool("build.incremental")?.map(|c| c.val);
-        let incremental = match (self.incremental_env, global_cfg, unit.profile.incremental) {
-            (Some(v), _, _) => v,
-            (None, Some(false), _) => false,
-            (None, _, other) => other,
-        };
-
-        if !incremental {
+        if !self.incremental_enabled()? {
             return Ok(Vec::new())
         }
 
@@ -1116,6 +1091,47 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             "-C".to_string(),
             format!("incremental={}", dir),
         ])
+    }
+
+    pub fn incremental_enabled(&self) -> CargoResult<bool> {
+        // There's a number of ways to configure incremental compilation right
+        // now. In order of descending priority (first is highest priority) we
+        // have:
+        //
+        // * `CARGO_INCREMENTAL` - this is blanket used unconditionally to turn
+        //   on/off incremental compilation for any cargo subcommand. We'll
+        //   respect this if set.
+        // * `build.incremental` - in `.cargo/config` this blanket key can
+        //   globally for a system configure whether incremental compilation is
+        //   enabled. Note that setting this to `true` will not actually affect
+        //   all builds though. For example a `true` value doesn't enable
+        //   release incremental builds, only dev incremental builds. This can
+        //   be useful to globally disable incremental compilation like
+        //   `CARGO_INCREMENTAL`.
+        // * `CI` - if Cargo looks like it's running in a CI environment like
+        //   Travis or AppVeyor it'll auto-disable incremental compilation for
+        //   profiles that would otherwise have it enabled due to the fact that
+        //   artifacts are pretty unlikely to be cached and incremental is known
+        //   to make build times slower.
+        // * `profile.dev.incremental` - in `Cargo.toml` specific profiles can
+        //   be configured to enable/disable incremental compilation. This can
+        //   be primarily used to disable incremental when buggy for a project.
+        // * Finally, each profile has a default for whether it will enable
+        //   incremental compilation or not. Primarily development profiles
+        //   have it enabled by default while release profiles have it disabled
+        //   by default.
+        if let Some(pref) = self.incremental_env {
+            return Ok(pref)
+        }
+        let global_cfg = self.config.get_bool("build.incremental")?.map(|c| c.val);
+        if global_cfg == Some(false) {
+            return Ok(false)
+        }
+        if self.looks_like_ci {
+            Ok(false)
+        } else {
+            Ok(self.lib_profile().incremental)
+        }
     }
 
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {

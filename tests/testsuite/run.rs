@@ -461,6 +461,7 @@ fn example_with_release_flag() {
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
+        -C extra-filename=[..] \
         --out-dir {dir}[/]target[/]release[/]deps \
         -L dependency={dir}[/]target[/]release[/]deps`
 [COMPILING] foo v0.0.1 ({url})
@@ -468,6 +469,7 @@ fn example_with_release_flag() {
         --emit=dep-info,link \
         -C opt-level=3 \
         -C metadata=[..] \
+        -C extra-filename=[..] \
         --out-dir {dir}[/]target[/]release[/]examples \
         -L dependency={dir}[/]target[/]release[/]deps \
          --extern bar={dir}[/]target[/]release[/]deps[/]libbar-[..].rlib`
@@ -490,6 +492,7 @@ fast2"));
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]debug[/]deps \
+        -C incremental=[..] \
         -L dependency={dir}[/]target[/]debug[/]deps`
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc --crate-name a examples[/]a.rs --crate-type bin \
@@ -497,6 +500,7 @@ fast2"));
         -C debuginfo=2 \
         -C metadata=[..] \
         --out-dir {dir}[/]target[/]debug[/]examples \
+        -C incremental=[..] \
         -L dependency={dir}[/]target[/]debug[/]deps \
          --extern bar={dir}[/]target[/]debug[/]deps[/]libbar-[..].rlib`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
