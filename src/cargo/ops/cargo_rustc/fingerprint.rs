@@ -738,29 +738,13 @@ pub fn translate_dep_info(rustc_dep_info: &Path,
                           cargo_dep_info: &Path,
                           pkg_root: &Path,
                           rustc_cwd: &Path) -> CargoResult<()> {
-    let contents = paths::read(rustc_dep_info)?;
-    let line = match contents.lines().next() {
-        Some(line) => line,
-        None => return Ok(()),
-    };
-    let pos = line.find(": ").ok_or_else(|| {
-        internal(format!("dep-info not in an understood format: {}",
-                         rustc_dep_info.display()))
-    })?;
-    let deps = &line[pos + 2..];
+    let target = parse_rustc_dep_info(rustc_dep_info)?;
+    let deps = &target.get(0).ok_or_else(|| {
+        internal("malformed dep-info format, no targets".to_string())
+    })?.1;
 
     let mut new_contents = Vec::new();
-    let mut deps = deps.split(' ').map(|s| s.trim()).filter(|s| !s.is_empty());
-    while let Some(s) = deps.next() {
-        let mut file = s.to_string();
-        while file.ends_with('\\') {
-            file.pop();
-            file.push(' ');
-            file.push_str(deps.next().ok_or_else(|| {
-                internal("malformed dep-info format, trailing \\".to_string())
-            })?);
-        }
-
+    for file in deps {
         let absolute = rustc_cwd.join(file);
         let path = absolute.strip_prefix(pkg_root).unwrap_or(&absolute);
         new_contents.extend(util::path2bytes(path)?);
@@ -770,3 +754,29 @@ pub fn translate_dep_info(rustc_dep_info: &Path,
     Ok(())
 }
 
+pub fn parse_rustc_dep_info(rustc_dep_info: &Path)
+    -> CargoResult<Vec<(String, Vec<String>)>>
+{
+    let contents = paths::read(rustc_dep_info)?;
+    contents.lines()
+        .filter_map(|l| l.find(": ").map(|i| (l, i)))
+        .map(|(line, pos)| {
+            let target = &line[..pos];
+            let mut deps = line[pos + 2..].split_whitespace();
+
+            let mut ret = Vec::new();
+            while let Some(s) = deps.next() {
+                let mut file = s.to_string();
+                while file.ends_with('\\') {
+                    file.pop();
+                    file.push(' ');
+                    file.push_str(deps.next().ok_or_else(|| {
+                        internal("malformed dep-info format, trailing \\".to_string())
+                    })?);
+                }
+                ret.push(file);
+            }
+            Ok((target.to_string(), ret))
+        })
+        .collect()
+}
