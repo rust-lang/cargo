@@ -20,7 +20,7 @@ pub fn cli() -> App {
             "Build all tests",
             "Build only the specified bench target",
             "Build all benches",
-            "Build all targets (default)",
+            "Build all targets (lib and bin targets by default)",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_manifest_path()
@@ -45,7 +45,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let mut compile_opts = args.compile_options_for_single_package(
         config, CompileMode::Doc { deps: false },
     )?;
-    compile_opts.target_rustdoc_args = Some(values(args, "args"));
+    let target_args = values(args, "args");
+    compile_opts.target_rustdoc_args = if target_args.is_empty() { None } else { Some(target_args) };
     let doc_opts = DocOptions {
         open_result: args.is_present("open"),
         compile_opts,

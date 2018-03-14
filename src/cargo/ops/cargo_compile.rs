@@ -97,6 +97,15 @@ pub enum CompileMode {
     Doctest,
 }
 
+impl CompileMode {
+    pub fn all_targets_by_default(&self) -> bool {
+        match self {
+            &CompileMode::Test | &CompileMode::Bench => true,
+            _ => false
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MessageFormat {
     Human,
@@ -422,7 +431,7 @@ impl CompileFilter {
 
     pub fn need_dev_deps(&self) -> bool {
         match *self {
-            CompileFilter::Default { .. } => true,
+            CompileFilter::Default { .. } => false,
             CompileFilter::Only { ref examples, ref tests, ref benches, .. } =>
                 examples.is_specific() || tests.is_specific() || benches.is_specific()
         }
@@ -430,7 +439,11 @@ impl CompileFilter {
 
     pub fn matches(&self, target: &Target) -> bool {
         match *self {
-            CompileFilter::Default { .. } => true,
+            CompileFilter::Default { .. } => match *target.kind() {
+                TargetKind::Bin => true,
+                TargetKind::Lib(..) => true,
+                _ => false,
+            },
             CompileFilter::Only { lib, ref bins, ref examples, ref tests, ref benches, .. } => {
                 let rule = match *target.kind() {
                     TargetKind::Bin => bins,

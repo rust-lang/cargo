@@ -230,6 +230,11 @@ pub trait ArgMatchesExt {
             }
         };
 
+        let all_targets = if mode.all_targets_by_default() {
+            true
+        } else {
+            self._is_present("all-targets")
+        };
         let opts = CompileOptions {
             config,
             jobs: self.jobs()?,
@@ -245,7 +250,7 @@ pub trait ArgMatchesExt {
                                        self._values_of("test"), self._is_present("tests"),
                                        self._values_of("example"), self._is_present("examples"),
                                        self._values_of("bench"), self._is_present("benches"),
-                                       self._is_present("all-targets")),
+                                       all_targets),
             message_format,
             target_rustdoc_args: None,
             target_rustc_args: None,
