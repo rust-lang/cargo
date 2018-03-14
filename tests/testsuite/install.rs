@@ -3,7 +3,6 @@ use std::fs::{self, File, OpenOptions};
 use std::io::prelude::*;
 
 use cargo::util::ProcessBuilder;
-use cargotest::ChannelChanger;
 use cargotest::install::{cargo_home, has_installed_exe};
 use cargotest::support::git;
 use cargotest::support::paths;
@@ -983,8 +982,9 @@ fn not_both_vers_and_version() {
     pkg("foo", "0.1.2");
 
     assert_that(cargo_process("install").arg("foo").arg("--version").arg("0.1.1").arg("--vers").arg("0.1.2"),
-                execs().with_status(101).with_stderr_contains("\
-error: invalid arguments
+                execs().with_status(1).with_stderr_contains("\
+error: The argument '--version <VERSION>' was provided more than once, \
+but cannot be used multiple times
 "));
 }
 

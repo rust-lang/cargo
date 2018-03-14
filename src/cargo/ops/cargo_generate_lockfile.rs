@@ -12,7 +12,7 @@ use util::CargoResult;
 
 pub struct UpdateOptions<'a> {
     pub config: &'a Config,
-    pub to_update: &'a [String],
+    pub to_update: Vec<String>,
     pub precise: Option<&'a str>,
     pub aggressive: bool,
 }
@@ -57,7 +57,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
         to_avoid.extend(previous_resolve.iter());
     } else {
         let mut sources = Vec::new();
-        for name in opts.to_update {
+        for name in opts.to_update.iter() {
             let dep = previous_resolve.query(name)?;
             if opts.aggressive {
                 fill_with_deps(&previous_resolve, dep, &mut to_avoid,
@@ -136,7 +136,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions)
                                      resolve: &'a Resolve) ->
                                      Vec<(Vec<&'a PackageId>, Vec<&'a PackageId>)> {
         fn key(dep: &PackageId) -> (&str, &SourceId) {
-            (dep.name(), dep.source_id())
+            (dep.name().to_inner(), dep.source_id())
         }
 
         // Removes all package ids in `b` from `a`. Note that this is somewhat

@@ -35,7 +35,7 @@ pub fn find_project_manifest(pwd: &Path, file: &str) -> CargoResult<PathBuf> {
 }
 
 /// Find the root Cargo.toml
-pub fn find_root_manifest_for_wd(manifest_path: Option<String>, cwd: &Path)
+pub fn find_root_manifest_for_wd(manifest_path: Option<&str>, cwd: &Path)
                                   -> CargoResult<PathBuf> {
     match manifest_path {
         Some(path) => {

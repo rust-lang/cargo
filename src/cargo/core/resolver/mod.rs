@@ -60,6 +60,7 @@ use url::Url;
 
 use core::{PackageId, Registry, SourceId, Summary, Dependency};
 use core::PackageIdSpec;
+use core::interning::InternedString;
 use util::config::Config;
 use util::Graph;
 use util::errors::{CargoResult, CargoError};
@@ -343,8 +344,8 @@ struct Context {
     //       switch to persistent hash maps if we can at some point or otherwise
     //       make these much cheaper to clone in general.
     activations: Activations,
-    resolve_features: HashMap<PackageId, HashSet<String>>,
-    links: HashMap<String, PackageId>,
+    resolve_features: HashMap<PackageId, HashSet<InternedString>>,
+    links: HashMap<InternedString, PackageId>,
 
     // These are two cheaply-cloneable lists (O(1) clone) which are effectively
     // hash maps but are built up as "construction lists". We'll iterate these
@@ -356,7 +357,7 @@ struct Context {
     warnings: RcList<String>,
 }
 
-type Activations = HashMap<String, HashMap<SourceId, Rc<Vec<Summary>>>>;
+type Activations = HashMap<(InternedString, SourceId), Rc<Vec<Summary>>>;
 
 /// Builds the list of all packages required to build the first argument.
 pub fn resolve(summaries: &[(Summary, Method)],
@@ -382,13 +383,12 @@ pub fn resolve(summaries: &[(Summary, Method)],
         metadata: BTreeMap::new(),
         replacements: cx.resolve_replacements(),
         features: cx.resolve_features.iter().map(|(k, v)| {
-            (k.clone(), v.clone())
+            (k.clone(), v.iter().map(|x| x.to_string()).collect())
         }).collect(),
         unused_patches: Vec::new(),
     };
 
     for summary in cx.activations.values()
-                                 .flat_map(|v| v.values())
                                  .flat_map(|v| v.iter()) {
         let cksum = summary.checksum().map(|s| s.to_string());
         resolve.checksums.insert(summary.package_id().clone(), cksum);
@@ -717,7 +717,7 @@ impl RemainingCandidates {
     fn next(
         &mut self,
         prev_active: &[Summary],
-        links: &HashMap<String, PackageId>,
+        links: &HashMap<InternedString, PackageId>,
     ) -> Result<(Candidate, bool), HashMap<PackageId, ConflictReason>> {
         // Filter the set of candidates based on the previously activated
         // versions for this dependency. We can actually use a version if it
@@ -734,11 +734,11 @@ impl RemainingCandidates {
         use std::mem::replace;
         for (_, b) in self.remaining.by_ref() {
             if let Some(link) = b.summary.links() {
-                if let Some(a) = links.get(link) {
+                if let Some(a) = links.get(&link) {
                     if a != b.summary.package_id() {
                         self.conflicting_prev_active
                             .entry(a.clone())
-                            .or_insert_with(|| ConflictReason::Links(link.to_owned()));
+                            .or_insert_with(|| ConflictReason::Links(link.to_string()));
                         continue;
                     }
                 }
@@ -1004,6 +1004,19 @@ fn find_candidate(
     None
 }
 
+/// Returns String representation of dependency chain for a particular `pkgid`.
+fn describe_path(graph: &Graph<PackageId>, pkgid: &PackageId) -> String {
+    use std::fmt::Write;
+    let dep_path = graph.path_to_top(pkgid);
+    let mut dep_path_desc = format!("package `{}`", dep_path[0]);
+    for dep in dep_path.iter().skip(1) {
+        write!(dep_path_desc,
+               "\n    ... which is depended on by `{}`",
+               dep).unwrap();
+    }
+    dep_path_desc
+}
+
 fn activation_error(cx: &Context,
                     registry: &mut Registry,
                     parent: &Summary,
@@ -1012,21 +1025,10 @@ fn activation_error(cx: &Context,
                     candidates: &[Candidate],
                     config: Option<&Config>) -> CargoError {
     let graph = cx.graph();
-    let describe_path = |pkgid: &PackageId| -> String {
-        use std::fmt::Write;
-        let dep_path = graph.path_to_top(pkgid);
-        let mut dep_path_desc = format!("package `{}`", dep_path[0]);
-        for dep in dep_path.iter().skip(1) {
-            write!(dep_path_desc,
-                   "\n    ... which is depended on by `{}`",
-                   dep).unwrap();
-        }
-        dep_path_desc
-    };
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.name());
         msg.push_str("\n    ... required by ");
-        msg.push_str(&describe_path(parent.package_id()));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
@@ -1044,14 +1046,14 @@ fn activation_error(cx: &Context,
         for &(p, r) in links_errors.iter() {
             if let ConflictReason::Links(ref link) = *r {
                 msg.push_str("\n\nthe package `");
-                msg.push_str(dep.name());
+                msg.push_str(&*dep.name());
                 msg.push_str("` links to the native library `");
                 msg.push_str(link);
                 msg.push_str("`, but it conflicts with a previous package which links to `");
                 msg.push_str(link);
                 msg.push_str("` as well:\n");
             }
-            msg.push_str(&describe_path(p));
+            msg.push_str(&describe_path(&graph, p));
         }
 
         let (features_errors, other_errors): (Vec<_>, Vec<_>) = other_errors.drain(..).partition(|&(_, r)| r.is_missing_features());
@@ -1059,13 +1061,13 @@ fn activation_error(cx: &Context,
         for &(p, r) in features_errors.iter() {
             if let ConflictReason::MissingFeatures(ref features) = *r {
                 msg.push_str("\n\nthe package `");
-                msg.push_str(p.name());
+                msg.push_str(&*p.name());
                 msg.push_str("` depends on `");
-                msg.push_str(dep.name());
+                msg.push_str(&*dep.name());
                 msg.push_str("`, with features: `");
                 msg.push_str(features);
                 msg.push_str("` but `");
-                msg.push_str(dep.name());
+                msg.push_str(&*dep.name());
                 msg.push_str("` does not have these features.\n");
             }
             // p == parent so the full path is redundant.
@@ -1078,11 +1080,11 @@ fn activation_error(cx: &Context,
 
         for &(p, _) in other_errors.iter() {
             msg.push_str("\n\n  previously selected ");
-            msg.push_str(&describe_path(p));
+            msg.push_str(&describe_path(&graph, p));
         }
 
         msg.push_str("\n\nfailed to select a version for `");
-        msg.push_str(dep.name());
+        msg.push_str(&*dep.name());
         msg.push_str("` which could resolve this conflict");
 
         return format_err!("{}", msg)
@@ -1127,7 +1129,7 @@ fn activation_error(cx: &Context,
                               dep.source_id(),
                               versions);
         msg.push_str("required by ");
-        msg.push_str(&describe_path(parent.package_id()));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         // If we have a path dependency with a locked version, then this may
         // indicate that we updated a sub-package and forgot to run `cargo
@@ -1144,7 +1146,7 @@ fn activation_error(cx: &Context,
                  location searched: {}\n",
                 dep.name(), dep.source_id());
         msg.push_str("required by ");
-        msg.push_str(&describe_path(parent.package_id()));
+        msg.push_str(&describe_path(&graph, parent.package_id()));
 
         msg
     };
@@ -1274,7 +1276,7 @@ fn build_requirements<'a, 'b: 'a>(s: &'a Summary, method: &'b Method)
                 reqs.require_feature(key)?;
             }
             for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-                reqs.require_dependency(dep.name());
+                reqs.require_dependency(dep.name().to_inner());
             }
         }
         Method::Required { features: requested_features, .. } =>  {
@@ -1304,16 +1306,14 @@ impl Context {
                       method: &Method) -> CargoResult<bool> {
         let id = summary.package_id();
         let prev = self.activations
-                       .entry(id.name().to_string())
-                       .or_insert_with(HashMap::new)
-                       .entry(id.source_id().clone())
+                       .entry((id.name(), id.source_id().clone()))
                        .or_insert_with(||Rc::new(Vec::new()));
         if !prev.iter().any(|c| c == summary) {
             self.resolve_graph.push(GraphNode::Add(id.clone()));
             if let Some(link) = summary.links() {
-                ensure!(self.links.insert(link.to_owned(), id.clone()).is_none(),
+                ensure!(self.links.insert(link, id.clone()).is_none(),
                 "Attempting to resolve a with more then one crate with the links={}. \n\
-                 This will not build as is. Consider rebuilding the .lock file.", link);
+                 This will not build as is. Consider rebuilding the .lock file.", &*link);
             }
             let mut inner: Vec<_> = (**prev).clone();
             inner.push(summary.clone());
@@ -1332,8 +1332,8 @@ impl Context {
         let has_default_feature = summary.features().contains_key("default");
         Ok(match self.resolve_features.get(id) {
             Some(prev) => {
-                features.iter().all(|f| prev.contains(f)) &&
-                    (!use_default || prev.contains("default") ||
+                features.iter().all(|f| prev.contains(&InternedString::new(f))) &&
+                    (!use_default || prev.contains(&InternedString::new("default")) ||
                      !has_default_feature)
             }
             None => features.is_empty() && (!use_default || !has_default_feature)
@@ -1367,15 +1367,13 @@ impl Context {
     }
 
     fn prev_active(&self, dep: &Dependency) -> &[Summary] {
-        self.activations.get(dep.name())
-            .and_then(|v| v.get(dep.source_id()))
+        self.activations.get(&(dep.name(), dep.source_id().clone()))
             .map(|v| &v[..])
             .unwrap_or(&[])
     }
 
     fn is_active(&self, id: &PackageId) -> bool {
-        self.activations.get(id.name())
-            .and_then(|v| v.get(id.source_id()))
+        self.activations.get(&(id.name(), id.source_id().clone()))
             .map(|v| v.iter().any(|s| s.package_id() == id))
             .unwrap_or(false)
     }
@@ -1401,12 +1399,12 @@ impl Context {
         // Next, collect all actually enabled dependencies and their features.
         for dep in deps {
             // Skip optional dependencies, but not those enabled through a feature
-            if dep.is_optional() && !reqs.deps.contains_key(dep.name()) {
+            if dep.is_optional() && !reqs.deps.contains_key(&*dep.name()) {
                 continue
             }
             // So we want this dependency.  Move the features we want from `feature_deps`
             // to `ret`.
-            let base = reqs.deps.remove(dep.name()).unwrap_or((false, vec![]));
+            let base = reqs.deps.remove(&*dep.name()).unwrap_or((false, vec![]));
             if !dep.is_optional() && base.0 {
                 self.warnings.push(
                     format!("Package `{}` does not have feature `{}`. It has a required dependency \
@@ -1448,9 +1446,7 @@ impl Context {
             let set = self.resolve_features.entry(pkgid.clone())
                               .or_insert_with(HashSet::new);
             for feature in reqs.used {
-                if !set.contains(feature) {
-                    set.insert(feature.to_string());
-                }
+                set.insert(InternedString::new(feature));
             }
         }
 
@@ -1485,7 +1481,6 @@ impl Context {
 fn check_cycles(resolve: &Resolve, activations: &Activations)
                 -> CargoResult<()> {
     let summaries: HashMap<&PackageId, &Summary> = activations.values()
-        .flat_map(|v| v.values())
         .flat_map(|v| v.iter())
         .map(|s| (s.package_id(), s))
         .collect();
@@ -1512,8 +1507,8 @@ fn check_cycles(resolve: &Resolve, activations: &Activations)
                  -> CargoResult<()> {
         // See if we visited ourselves
         if !visited.insert(id) {
-            bail!("cyclic package dependency: package `{}` depends on itself",
-                  id);
+            bail!("cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
+                  id, describe_path(&resolve.graph, id));
         }
 
         // If we've already checked this node no need to recurse again as we'll

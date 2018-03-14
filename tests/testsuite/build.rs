@@ -1532,8 +1532,8 @@ fn self_dependency() {
     assert_that(p.cargo("build"),
                 execs().with_status(101)
                        .with_stderr("\
-[ERROR] cyclic package dependency: package `test v0.0.0 ([..])` depends on itself
-"));
+[ERROR] cyclic package dependency: package `test v0.0.0 ([..])` depends on itself. Cycle:
+package `test v0.0.0 ([..]foo)`"));
 }
 
 #[test]
@@ -2652,9 +2652,10 @@ fn cyclic_deps_rejected() {
 
     assert_that(p.cargo("build").arg("-v"),
                 execs().with_status(101)
-                       .with_stderr("\
-[ERROR] cyclic package dependency: package `a v0.0.1 ([..])` depends on itself
-"));
+                       .with_stderr(
+r#"[ERROR] cyclic package dependency: package `a v0.0.1 ([..])` depends on itself. Cycle:
+package `a v0.0.1 ([..]a)`
+    ... which is depended on by `foo v0.0.1 ([..]foo)`[..]"#));
 }
 
 #[test]
@@ -3250,8 +3251,10 @@ fn wrong_message_format_option() {
 
     assert_that(p.cargo("build").arg("--message-format").arg("XML"),
                 execs().with_status(1)
-                       .with_stderr_contains(
-r#"[ERROR] Could not match 'xml' with any of the allowed variants: ["Human", "Json"]"#));
+                       .with_stderr_contains("\
+error: 'XML' isn't a valid value for '--message-format <FMT>'
+<tab>[possible values: human, json]
+"));
 }
 
 #[test]
@@ -4354,4 +4357,17 @@ fn avoid_dev_deps() {
     assert_that(p.cargo("build"), execs().with_status(101));
     assert_that(p.cargo("build").masquerade_as_nightly_cargo()
                 .arg("-Zavoid-dev-deps"), execs().with_status(0));
+}
+
+#[test]
+fn invalid_jobs() {
+    let p = project("foo")
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    assert_that(p.cargo("build").arg("--jobs").arg("over9000"),
+                execs().with_status(1).with_stderr("\
+error: Invalid value: could not parse `over9000` as a number
+"));
 }

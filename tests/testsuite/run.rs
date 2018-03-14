@@ -43,9 +43,13 @@ fn simple_quiet() {
         .build();
 
     assert_that(p.cargo("run").arg("-q"),
-                execs().with_status(0).with_stdout("\
-hello
-")
+                execs().with_status(0)
+                       .with_stdout("hello")
+    );
+
+    assert_that(p.cargo("run").arg("--quiet"),
+                execs().with_status(0)
+                       .with_stdout("hello")
     );
 }
 
@@ -305,7 +309,7 @@ fn run_bins() {
     assert_that(p.cargo("run").arg("--bins"),
                 execs().with_status(1)
                        .with_stderr_contains("\
-[ERROR] Unknown flag: '--bins'. Did you mean '--bin'?"));
+error: Found argument '--bins' which wasn't expected, or isn't valid in this context"));
 }
 
 #[test]
@@ -809,7 +813,9 @@ fn run_multiple_packages() {
     assert_that(cargo().arg("-p").arg("d1").arg("-p").arg("d2"),
                 execs()
                     .with_status(1)
-                    .with_stderr_contains("[ERROR] Invalid arguments."));
+                    .with_stderr_contains("\
+error: The argument '--package <SPEC>' was provided more than once, but cannot be used multiple times
+"));
 
     assert_that(cargo().arg("-p").arg("d3"),
                 execs()

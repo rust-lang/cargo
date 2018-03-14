@@ -429,9 +429,9 @@ fn select_pkg<'a, T>(mut source: T,
             return Ok((pkg.clone(), Box::new(source)));
 
             fn multi_err(kind: &str, mut pkgs: Vec<&Package>) -> String {
-                pkgs.sort_by(|a, b| a.name().cmp(b.name()));
+                pkgs.sort_by(|a, b| a.name().cmp(&b.name()));
                 format!("multiple packages with {} found: {}", kind,
-                        pkgs.iter().map(|p| p.name()).collect::<Vec<_>>()
+                        pkgs.iter().map(|p| p.name().to_inner()).collect::<Vec<_>>()
                             .join(", "))
             }
         }
@@ -504,7 +504,7 @@ fn find_duplicates(dst: &Path,
                          .filter_map(|t| check(t.name().to_string()))
                          .collect()
         }
-        CompileFilter::Only { bins, examples, .. } => {
+        CompileFilter::Only { ref bins, ref examples, .. } => {
             let all_bins: Vec<String> = bins.try_collect().unwrap_or_else(|| {
                 pkg.targets().iter().filter(|t| t.is_bin())
                                     .map(|t| t.name().to_string())
