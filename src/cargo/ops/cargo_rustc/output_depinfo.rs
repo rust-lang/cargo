@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, BTreeSet};
 use std::io::{Write, BufWriter};
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -21,7 +21,7 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
 }
 
 fn add_deps_for_unit<'a, 'b>(
-    deps: &mut HashSet<PathBuf>,
+    deps: &mut BTreeSet<PathBuf>,
     context: &mut Context<'a, 'b>,
     unit: &Unit<'a>,
     visited: &mut HashSet<Unit<'a>>,
@@ -67,7 +67,7 @@ fn add_deps_for_unit<'a, 'b>(
 }
 
 pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) -> CargoResult<()> {
-    let mut deps = HashSet::new();
+    let mut deps = BTreeSet::new();
     let mut visited = HashSet::new();
     let success = add_deps_for_unit(&mut deps, context, unit, &mut visited).is_ok();
     let basedir_string;
@@ -79,15 +79,31 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
         }
         None => None,
     };
+    let deps = deps.iter()
+        .map(|f| render_filename(f, basedir))
+        .collect::<CargoResult<Vec<_>>>()?;
+
     for &(_, ref link_dst, _) in context.target_filenames(unit)?.iter() {
         if let Some(ref link_dst) = *link_dst {
             let output_path = link_dst.with_extension("d");
             if success {
-                let mut outfile = BufWriter::new(File::create(output_path)?);
                 let target_fn = render_filename(link_dst, basedir)?;
+
+                // If nothing changed don't recreate the file which could alter
+                // its mtime
+                if let Ok(previous) = fingerprint::parse_rustc_dep_info(&output_path) {
+                    if previous.len() == 1 &&
+                        previous[0].0 == target_fn &&
+                        previous[0].1 == deps {
+                        continue
+                    }
+                }
+
+                // Otherwise write it all out
+                let mut outfile = BufWriter::new(File::create(output_path)?);
                 write!(outfile, "{}:", target_fn)?;
                 for dep in &deps {
-                    write!(outfile, " {}", render_filename(dep, basedir)?)?;
+                    write!(outfile, " {}", dep)?;
                 }
                 writeln!(outfile, "")?;
 
