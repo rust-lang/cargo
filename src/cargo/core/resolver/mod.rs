@@ -788,6 +788,17 @@ fn activate_deps_loop(
     // use (those with more candidates).
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = BinaryHeap::new();
+    // `past_conflicting_activations`is a cache of the reasons for each time we backtrack.
+    // for example after several backtracks we may have:
+    // past_conflicting_activations[`foo = "^1.0.2"`] = vac![map!{`foo=1.0.1`: Semver}, map!{`foo=1.0.1`: Semver}];
+    // This can be read as "we cannot find a candidate for dep `foo = "^1.0.2"` if either
+    // `foo=1.0.1` OR `foo=1.0.0` are activated"
+    // for another example after several backtracks we may have:
+    // past_conflicting_activations[`foo = ">=0.8.2, <=0.9.3"`] = vac![map!{`foo=0.8.1`: Semver, `foo=0.9.4`: Semver}];
+    // This can be read as "we cannot find a candidate for dep `foo = ">=0.8.2, <=0.9.3"` if both
+    // `foo=0.8.1` AND `foo=0.9.4` are activated" (better data structures are welcome but this works for now.)
+    // This is used to make sure we don't queue work we know will fail.
+    // See the discussion in https://github.com/rust-lang/cargo/pull/5168 for why this is so important
     let mut past_conflicting_activations: HashMap<Dependency, Vec<HashMap<PackageId, ConflictReason>>> = HashMap::new();
     for &(ref summary, ref method) in summaries {
         debug!("initial activation: {}", summary.package_id());
@@ -874,8 +885,15 @@ fn activate_deps_loop(
 
         let mut remaining_candidates = RemainingCandidates::new(&candidates);
         let mut successfully_activated = false;
-        let mut backtracked = false;
+        // `conflicting_activations` stores all the reasons we were unable to activate candidates.
+        // One of these reasons will have to go away for backtracking to find a place to restart.
+        // It is also the list of things to explain in the error message if we fail to resolve.
         let mut conflicting_activations = HashMap::new();
+        // When backtracking we don't fully update `conflicting_activations` especially for the
+        // cases that we didn't make a backtrack frame in the first place.
+        // This `backtracked` var stores whether we are continuing from a restored backtrack frame
+        // so that we can skip caching `conflicting_activations` in `past_conflicting_activations`
+        let mut backtracked = false;
 
         while !successfully_activated {
             let next = remaining_candidates.next(cx.prev_active(&dep), &cx.links);
@@ -900,6 +918,8 @@ fn activate_deps_loop(
                 trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
 
                 if !just_here_for_the_error_messages && !backtracked {
+                    // if `just_here_for_the_error_messages` then skip as it is already known to be bad.
+                    // if `backtracked` then `conflicting_activations` may not be complete so skip.
                     let past = past_conflicting_activations.entry(dep.clone()).or_insert_with(Vec::new);
                     if !past.contains(&conflicting_activations) {
                         trace!("{}[{}]>{} adding a skip {:?}", parent.name(), cur, dep.name(), conflicting_activations);
@@ -972,25 +992,31 @@ fn activate_deps_loop(
 
             match res {
                 Ok(Some((mut frame, dur))) => {
+                    // at this point we have technical already activated
+                    // but we may want to scrap it if it is not going to end well
                     let mut has_past_conflicting_dep = just_here_for_the_error_messages;
                     if !has_past_conflicting_dep {
                         if let Some(conflicting) = frame.remaining_siblings.clone().filter_map(|(_, (deb, _, _))| {
                             past_conflicting_activations.get(&deb).and_then(|past_bad| {
+                                // for each dependency check all of its cashed conflicts
                                 past_bad.iter().find(|conflicting| {
                                     conflicting
                                         .iter()
                                         // note: a lot of redundant work in is_active for similar debs
-                                        .all(|(con, _)| cx.is_active(con) || *con == pid)
+                                        .all(|(con, _)| cx.is_active(con))
                                 })
                             })
                         }).next() {
+                            // if any of them match than it will just backtrack to us
+                            // so let's save the effort.
                             conflicting_activations.extend(conflicting.clone());
                             has_past_conflicting_dep = true;
                         }
                     }
                     if !has_another && has_past_conflicting_dep && !backtracked {
                         // we have not activated ANY candidates and
-                        // we are out of choices
+                        // we are out of choices so add it to the cache
+                        // so our parent will know that we don't work
                         let past = past_conflicting_activations.entry(dep.clone()).or_insert_with(Vec::new);
                         if !past.contains(&conflicting_activations) {
                             trace!("{}[{}]>{} adding a meta-skip {:?}", parent.name(), cur, dep.name(), conflicting_activations);
