@@ -86,7 +86,3 @@ bufstream = "0.1"
 name = "cargo"
 test = false
 doc = false
-
-[[test]]
-name = "testsuite"
-path = "tests/testsuite/lib.rs"
