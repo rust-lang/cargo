@@ -2,19 +2,24 @@ use std::net::TcpListener;
 use std::thread;
 use std::process::Command;
 
-use cargotest::support::{project, execs, cargo_exe};
+use cargotest::support::{cargo_exe, execs, project};
 use hamcrest::assert_that;
 
 #[test]
 fn jobserver_exists() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             version = "0.0.1"
             authors = []
-        "#)
-        .file("build.rs", r#"
+        "#,
+        )
+        .file(
+            "build.rs",
+            r#"
             use std::env;
 
             fn main() {
@@ -49,23 +54,29 @@ fn jobserver_exists() {
             fn validate(_: &str) {
                 // a little too complicated for a test...
             }
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
-                execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
 }
 
 #[test]
 fn makes_jobserver_used() {
-    let make = if cfg!(windows) {"mingw32-make"} else {"make"};
+    let make = if cfg!(windows) {
+        "mingw32-make"
+    } else {
+        "make"
+    };
     if Command::new(make).arg("--version").output().is_err() {
-        return
+        return;
     }
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -75,33 +86,45 @@ fn makes_jobserver_used() {
             d1 = { path = "d1" }
             d2 = { path = "d2" }
             d3 = { path = "d3" }
-        "#)
-       .file("src/lib.rs", "")
-       .file("d1/Cargo.toml", r#"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "d1/Cargo.toml",
+            r#"
             [package]
             name = "d1"
             version = "0.0.1"
             authors = []
             build = "../dbuild.rs"
-        "#)
-       .file("d1/src/lib.rs", "")
-       .file("d2/Cargo.toml", r#"
+        "#,
+        )
+        .file("d1/src/lib.rs", "")
+        .file(
+            "d2/Cargo.toml",
+            r#"
             [package]
             name = "d2"
             version = "0.0.1"
             authors = []
             build = "../dbuild.rs"
-        "#)
-       .file("d2/src/lib.rs", "")
-       .file("d3/Cargo.toml", r#"
+        "#,
+        )
+        .file("d2/src/lib.rs", "")
+        .file(
+            "d3/Cargo.toml",
+            r#"
             [package]
             name = "d3"
             version = "0.0.1"
             authors = []
             build = "../dbuild.rs"
-        "#)
-       .file("d3/src/lib.rs", "")
-       .file("dbuild.rs", r#"
+        "#,
+        )
+        .file("d3/src/lib.rs", "")
+        .file(
+            "dbuild.rs",
+            r#"
             use std::net::TcpStream;
             use std::env;
             use std::io::Read;
@@ -112,11 +135,15 @@ fn makes_jobserver_used() {
                 let mut v = Vec::new();
                 stream.read_to_end(&mut v).unwrap();
             }
-        "#)
-        .file("Makefile", "\
+        "#,
+        )
+        .file(
+            "Makefile",
+            "\
 all:
 \t+$(CARGO) build
-")
+",
+        )
         .build();
 
     let l = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -139,42 +166,56 @@ all:
         drop((a2, a3));
     });
 
-    assert_that(p.process(make)
-                 .env("CARGO", cargo_exe())
-                 .env("ADDR", addr.to_string())
-                 .arg("-j2"),
-                execs().with_status(0));
+    assert_that(
+        p.process(make)
+            .env("CARGO", cargo_exe())
+            .env("ADDR", addr.to_string())
+            .arg("-j2"),
+        execs().with_status(0),
+    );
     child.join().unwrap();
 }
 
 #[test]
 fn jobserver_and_j() {
-    let make = if cfg!(windows) {"mingw32-make"} else {"make"};
+    let make = if cfg!(windows) {
+        "mingw32-make"
+    } else {
+        "make"
+    };
     if Command::new(make).arg("--version").output().is_err() {
-        return
+        return;
     }
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             version = "0.0.1"
             authors = []
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
-        .file("Makefile", "\
+        .file(
+            "Makefile",
+            "\
 all:
 \t+$(CARGO) build -j2
-")
+",
+        )
         .build();
 
-    assert_that(p.process(make)
-                 .env("CARGO", cargo_exe())
-                 .arg("-j2"),
-                execs().with_status(0).with_stderr("\
+    assert_that(
+        p.process(make).env("CARGO", cargo_exe()).arg("-j2"),
+        execs().with_status(0).with_stderr(
+            "\
 warning: a `-j` argument was passed to Cargo but Cargo is also configured \
 with an external jobserver in its environment, ignoring the `-j` parameter
 [COMPILING] [..]
 [FINISHED] [..]
-"));
+",
+        ),
+    );
 }

@@ -6,10 +6,10 @@ use serde_json;
 use semver::Version;
 
 use core::dependency::Dependency;
-use core::{SourceId, Summary, PackageId};
+use core::{PackageId, SourceId, Summary};
 use sources::registry::{RegistryPackage, INDEX_LOCK};
 use sources::registry::RegistryData;
-use util::{CargoResult, internal, Filesystem, Config};
+use util::{internal, CargoResult, Config, Filesystem};
 
 pub struct RegistryIndex<'cfg> {
     source_id: SourceId,
@@ -21,11 +21,12 @@ pub struct RegistryIndex<'cfg> {
 }
 
 impl<'cfg> RegistryIndex<'cfg> {
-    pub fn new(id: &SourceId,
-               path: &Filesystem,
-               config: &'cfg Config,
-               locked: bool)
-               -> RegistryIndex<'cfg> {
+    pub fn new(
+        id: &SourceId,
+        path: &Filesystem,
+        config: &'cfg Config,
+        locked: bool,
+    ) -> RegistryIndex<'cfg> {
         RegistryIndex {
             source_id: id.clone(),
             path: path.clone(),
@@ -37,30 +38,30 @@ impl<'cfg> RegistryIndex<'cfg> {
     }
 
     /// Return the hash listed for a specified PackageId.
-    pub fn hash(&mut self,
-                pkg: &PackageId,
-                load: &mut RegistryData)
-                -> CargoResult<String> {
+    pub fn hash(&mut self, pkg: &PackageId, load: &mut RegistryData) -> CargoResult<String> {
         let name = &*pkg.name();
         let version = pkg.version();
         if let Some(s) = self.hashes.get(name).and_then(|v| v.get(version)) {
-            return Ok(s.clone())
+            return Ok(s.clone());
         }
         // Ok, we're missing the key, so parse the index file to load it.
         self.summaries(name, load)?;
-        self.hashes.get(name).and_then(|v| v.get(version)).ok_or_else(|| {
-            internal(format!("no hash listed for {}", pkg))
-        }).map(|s| s.clone())
+        self.hashes
+            .get(name)
+            .and_then(|v| v.get(version))
+            .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))
+            .map(|s| s.clone())
     }
 
     /// Parse the on-disk metadata for the package provided
     ///
     /// Returns a list of pairs of (summary, yanked) for the package name
     /// specified.
-    pub fn summaries(&mut self,
-                     name: &str,
-                     load: &mut RegistryData)
-                     -> CargoResult<&Vec<(Summary, bool)>> {
+    pub fn summaries(
+        &mut self,
+        name: &str,
+        load: &mut RegistryData,
+    ) -> CargoResult<&Vec<(Summary, bool)>> {
         if self.cache.contains_key(name) {
             return Ok(&self.cache[name]);
         }
@@ -69,27 +70,25 @@ impl<'cfg> RegistryIndex<'cfg> {
         Ok(&self.cache[name])
     }
 
-    fn load_summaries(&mut self,
-                      name: &str,
-                      load: &mut RegistryData)
-                      -> CargoResult<Vec<(Summary, bool)>> {
+    fn load_summaries(
+        &mut self,
+        name: &str,
+        load: &mut RegistryData,
+    ) -> CargoResult<Vec<(Summary, bool)>> {
         let (root, _lock) = if self.locked {
-            let lock = self.path.open_ro(Path::new(INDEX_LOCK),
-                                         self.config,
-                                         "the registry index");
+            let lock = self.path
+                .open_ro(Path::new(INDEX_LOCK), self.config, "the registry index");
             match lock {
-                Ok(lock) => {
-                    (lock.path().parent().unwrap().to_path_buf(), Some(lock))
-                }
+                Ok(lock) => (lock.path().parent().unwrap().to_path_buf(), Some(lock)),
                 Err(_) => return Ok(Vec::new()),
             }
         } else {
             (self.path.clone().into_path_unlocked(), None)
         };
 
-        let fs_name = name.chars().flat_map(|c| {
-            c.to_lowercase()
-        }).collect::<String>();
+        let fs_name = name.chars()
+            .flat_map(|c| c.to_lowercase())
+            .collect::<String>();
 
         // see module comment for why this is structured the way it is
         let path = match fs_name.len() {
@@ -102,13 +101,10 @@ impl<'cfg> RegistryIndex<'cfg> {
         let mut hit_closure = false;
         let err = load.load(&root, Path::new(&path), &mut |contents| {
             hit_closure = true;
-            let contents = str::from_utf8(contents).map_err(|_| {
-                format_err!("registry index file was not valid utf-8")
-            })?;
+            let contents = str::from_utf8(contents)
+                .map_err(|_| format_err!("registry index file was not valid utf-8"))?;
             ret.reserve(contents.lines().count());
-            let lines = contents.lines()
-                                .map(|s| s.trim())
-                                .filter(|l| !l.is_empty());
+            let lines = contents.lines().map(|s| s.trim()).filter(|l| !l.is_empty());
 
             let online = !self.config.cli_unstable().offline;
             // Attempt forwards-compatibility on the index by ignoring
@@ -117,7 +113,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             // interpretation of each line here and older cargo will simply
             // ignore the new lines.
             ret.extend(lines.filter_map(|line| {
-                self.parse_registry_package(line).ok().and_then(|v|{
+                self.parse_registry_package(line).ok().and_then(|v| {
                     if online || load.is_crate_downloaded(v.0.package_id()) {
                         Some(v)
                     } else {
@@ -143,10 +139,15 @@ impl<'cfg> RegistryIndex<'cfg> {
     /// package.
     ///
     /// The returned boolean is whether or not the summary has been yanked.
-    fn parse_registry_package(&mut self, line: &str)
-                              -> CargoResult<(Summary, bool)> {
+    fn parse_registry_package(&mut self, line: &str) -> CargoResult<(Summary, bool)> {
         let RegistryPackage {
-            name, vers, cksum, deps, features, yanked, links
+            name,
+            vers,
+            cksum,
+            deps,
+            features,
+            yanked,
+            links,
         } = super::DEFAULT_ID.set(&self.source_id, || {
             serde_json::from_str::<RegistryPackage>(line)
         })?;
@@ -156,37 +157,37 @@ impl<'cfg> RegistryIndex<'cfg> {
         if self.hashes.contains_key(&name[..]) {
             self.hashes.get_mut(&name[..]).unwrap().insert(vers, cksum);
         } else {
-            self.hashes.entry(name.into_owned())
+            self.hashes
+                .entry(name.into_owned())
                 .or_insert_with(HashMap::new)
                 .insert(vers, cksum);
         }
         Ok((summary, yanked.unwrap_or(false)))
     }
 
-    pub fn query(&mut self,
-                 dep: &Dependency,
-                 load: &mut RegistryData,
-                 f: &mut FnMut(Summary))
-                 -> CargoResult<()> {
+    pub fn query(
+        &mut self,
+        dep: &Dependency,
+        load: &mut RegistryData,
+        f: &mut FnMut(Summary),
+    ) -> CargoResult<()> {
         let source_id = self.source_id.clone();
         let summaries = self.summaries(&*dep.name(), load)?;
-        let summaries = summaries.iter().filter(|&&(_, yanked)| {
-            dep.source_id().precise().is_some() || !yanked
-        }).map(|s| s.0.clone());
+        let summaries = summaries
+            .iter()
+            .filter(|&&(_, yanked)| dep.source_id().precise().is_some() || !yanked)
+            .map(|s| s.0.clone());
 
         // Handle `cargo update --precise` here. If specified, our own source
         // will have a precise version listed of the form `<pkg>=<req>` where
         // `<pkg>` is the name of a crate on this source and `<req>` is the
         // version requested (argument to `--precise`).
-        let summaries = summaries.filter(|s| {
-            match source_id.precise() {
-                Some(p) if p.starts_with(&*dep.name()) &&
-                           p[dep.name().len()..].starts_with('=') => {
-                    let vers = &p[dep.name().len() + 1..];
-                    s.version().to_string() == vers
-                }
-                _ => true,
+        let summaries = summaries.filter(|s| match source_id.precise() {
+            Some(p) if p.starts_with(&*dep.name()) && p[dep.name().len()..].starts_with('=') => {
+                let vers = &p[dep.name().len() + 1..];
+                s.version().to_string() == vers
             }
+            _ => true,
         });
 
         for summary in summaries {

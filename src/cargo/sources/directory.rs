@@ -8,7 +8,7 @@ use hex;
 
 use serde_json;
 
-use core::{Package, PackageId, Summary, SourceId, Source, Dependency, Registry};
+use core::{Dependency, Package, PackageId, Registry, Source, SourceId, Summary};
 use sources::PathSource;
 use util::{Config, Sha256};
 use util::errors::{CargoResult, CargoResultExt};
@@ -28,8 +28,7 @@ struct Checksum {
 }
 
 impl<'cfg> DirectorySource<'cfg> {
-    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config)
-               -> DirectorySource<'cfg> {
+    pub fn new(path: &Path, id: &SourceId, config: &'cfg Config) -> DirectorySource<'cfg> {
         DirectorySource {
             source_id: id.clone(),
             root: path.to_path_buf(),
@@ -46,9 +45,7 @@ impl<'cfg> Debug for DirectorySource<'cfg> {
 }
 
 impl<'cfg> Registry for DirectorySource<'cfg> {
-    fn query(&mut self,
-             dep: &Dependency,
-             f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         let packages = self.packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| dep.matches(pkg.summary()));
         for summary in matches.map(|pkg| pkg.summary().clone()) {
@@ -74,8 +71,10 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     fn update(&mut self) -> CargoResult<()> {
         self.packages.clear();
         let entries = self.root.read_dir().chain_err(|| {
-            format!("failed to read root of directory source: {}",
-                    self.root.display())
+            format!(
+                "failed to read root of directory source: {}",
+                self.root.display()
+            )
         })?;
 
         for entry in entries {
@@ -87,7 +86,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             // (rust-lang/cargo#3414).
             if let Some(s) = path.file_name().and_then(|s| s.to_str()) {
                 if s.starts_with('.') {
-                    continue
+                    continue;
                 }
             }
 
@@ -107,7 +106,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
             // downside of accidentally misconfigured vendor directories
             // silently returning less crates.
             if !path.join("Cargo.toml").exists() {
-                continue
+                continue;
             }
 
             let mut src = PathSource::new(&path, &self.source_id, self.config);
@@ -116,17 +115,20 @@ impl<'cfg> Source for DirectorySource<'cfg> {
 
             let cksum_file = path.join(".cargo-checksum.json");
             let cksum = paths::read(&path.join(cksum_file)).chain_err(|| {
-                format!("failed to load checksum `.cargo-checksum.json` \
-                         of {} v{}",
-                        pkg.package_id().name(),
-                        pkg.package_id().version())
-
+                format!(
+                    "failed to load checksum `.cargo-checksum.json` \
+                     of {} v{}",
+                    pkg.package_id().name(),
+                    pkg.package_id().version()
+                )
             })?;
             let cksum: Checksum = serde_json::from_str(&cksum).chain_err(|| {
-                format!("failed to decode `.cargo-checksum.json` of \
-                         {} v{}",
-                        pkg.package_id().name(),
-                        pkg.package_id().version())
+                format!(
+                    "failed to decode `.cargo-checksum.json` of \
+                     {} v{}",
+                    pkg.package_id().name(),
+                    pkg.package_id().version()
+                )
             })?;
 
             let mut manifest = pkg.manifest().clone();
@@ -143,9 +145,11 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     }
 
     fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
-        self.packages.get(id).map(|p| &p.0).cloned().ok_or_else(|| {
-            format_err!("failed to find package with id: {}", id)
-        })
+        self.packages
+            .get(id)
+            .map(|p| &p.0)
+            .cloned()
+            .ok_or_else(|| format_err!("failed to find package with id: {}", id))
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
@@ -155,8 +159,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
     fn verify(&self, id: &PackageId) -> CargoResult<()> {
         let (pkg, cksum) = match self.packages.get(id) {
             Some(&(ref pkg, ref cksum)) => (pkg, cksum),
-            None => bail!("failed to find entry for `{}` in directory source",
-                          id),
+            None => bail!("failed to find entry for `{}` in directory source", id),
         };
 
         let mut buf = [0; 16 * 1024];
@@ -172,23 +175,26 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                         n => h.update(&buf[..n]),
                     }
                 }
-            })().chain_err(|| {
-                format!("failed to calculate checksum of: {}",
-                        file.display())
-            })?;
+            })()
+                .chain_err(|| format!("failed to calculate checksum of: {}", file.display()))?;
 
             let actual = hex::encode(h.finish());
             if &*actual != cksum {
-                bail!("\
-                    the listed checksum of `{}` has changed:\n\
-                    expected: {}\n\
-                    actual:   {}\n\
-                    \n\
-                    directory sources are not intended to be edited, if \
-                    modifications are required then it is recommended \
-                    that [replace] is used with a forked copy of the \
-                    source\
-                ", file.display(), cksum, actual);
+                bail!(
+                    "\
+                     the listed checksum of `{}` has changed:\n\
+                     expected: {}\n\
+                     actual:   {}\n\
+                     \n\
+                     directory sources are not intended to be edited, if \
+                     modifications are required then it is recommended \
+                     that [replace] is used with a forked copy of the \
+                     source\
+                     ",
+                    file.display(),
+                    cksum,
+                    actual
+                );
             }
         }
 

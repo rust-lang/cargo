@@ -51,10 +51,10 @@
 
 use std::fs;
 use std::io;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
 use core::Workspace;
-use util::{Config, FileLock, CargoResult, Filesystem};
+use util::{CargoResult, Config, FileLock, Filesystem};
 
 /// Contains the paths of all target output locations.
 ///
@@ -84,17 +84,15 @@ impl Layout {
     ///
     /// Differs from `at` in that this calculates the root path from the workspace target directory,
     /// adding the target triple and the profile (debug, release, ...).
-    pub fn new(ws: &Workspace,
-               triple: Option<&str>,
-               dest: &str) -> CargoResult<Layout> {
+    pub fn new(ws: &Workspace, triple: Option<&str>, dest: &str) -> CargoResult<Layout> {
         let mut path = ws.target_dir();
         // Flexible target specifications often point at filenames, so interpret
         // the target triple as a Path and then just use the file stem as the
         // component for the directory name.
         if let Some(triple) = triple {
-            path.push(Path::new(triple).file_stem().ok_or_else(|| {
-                format_err!("target was empty")
-            })?);
+            path.push(Path::new(triple)
+                .file_stem()
+                .ok_or_else(|| format_err!("target was empty"))?);
         }
         path.push(dest);
         Layout::at(ws.config(), path)
@@ -131,7 +129,7 @@ impl Layout {
     /// This is recommended to prevent derived/temporary files from bloating backups.
     fn exclude_from_backups(&self, path: &Path) {
         use std::ptr;
-        use core_foundation::{url, number, string};
+        use core_foundation::{number, string, url};
         use core_foundation::base::TCFType;
 
         // For compatibility with 10.7 a string is used instead of global kCFURLIsExcludedFromBackupKey
@@ -177,17 +175,31 @@ impl Layout {
     }
 
     /// Fetch the root path.
-    pub fn dest(&self) -> &Path { &self.root }
+    pub fn dest(&self) -> &Path {
+        &self.root
+    }
     /// Fetch the deps path.
-    pub fn deps(&self) -> &Path { &self.deps }
+    pub fn deps(&self) -> &Path {
+        &self.deps
+    }
     /// Fetch the examples path.
-    pub fn examples(&self) -> &Path { &self.examples }
+    pub fn examples(&self) -> &Path {
+        &self.examples
+    }
     /// Fetch the root path.
-    pub fn root(&self) -> &Path { &self.root }
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
     /// Fetch the incremental path.
-    pub fn incremental(&self) -> &Path { &self.incremental }
+    pub fn incremental(&self) -> &Path {
+        &self.incremental
+    }
     /// Fetch the fingerprint path.
-    pub fn fingerprint(&self) -> &Path { &self.fingerprint }
+    pub fn fingerprint(&self) -> &Path {
+        &self.fingerprint
+    }
     /// Fetch the build path.
-    pub fn build(&self) -> &Path { &self.build }
+    pub fn build(&self) -> &Path {
+        &self.build
+    }
 }

@@ -27,18 +27,25 @@ struct Inner {
 }
 
 impl Summary {
-    pub fn new(pkg_id: PackageId,
-               dependencies: Vec<Dependency>,
-               features: BTreeMap<String, Vec<String>>,
-               links: Option<String>) -> CargoResult<Summary> {
+    pub fn new(
+        pkg_id: PackageId,
+        dependencies: Vec<Dependency>,
+        features: BTreeMap<String, Vec<String>>,
+        links: Option<String>,
+    ) -> CargoResult<Summary> {
         for dep in dependencies.iter() {
             if features.get(&*dep.name()).is_some() {
-                bail!("Features and dependencies cannot have the \
-                       same name: `{}`", dep.name())
+                bail!(
+                    "Features and dependencies cannot have the \
+                     same name: `{}`",
+                    dep.name()
+                )
             }
             if dep.is_optional() && !dep.is_transitive() {
-                bail!("Dev-dependencies are not allowed to be optional: `{}`",
-                      dep.name())
+                bail!(
+                    "Dev-dependencies are not allowed to be optional: `{}`",
+                    dep.name()
+                )
             }
         }
         for (feature, list) in features.iter() {
@@ -46,23 +53,34 @@ impl Summary {
                 let mut parts = dep.splitn(2, '/');
                 let dep = parts.next().unwrap();
                 let is_reexport = parts.next().is_some();
-                if !is_reexport && features.get(dep).is_some() { continue }
+                if !is_reexport && features.get(dep).is_some() {
+                    continue;
+                }
                 match dependencies.iter().find(|d| &*d.name() == dep) {
                     Some(d) => {
-                        if d.is_optional() || is_reexport { continue }
-                        bail!("Feature `{}` depends on `{}` which is not an \
-                               optional dependency.\nConsider adding \
-                               `optional = true` to the dependency",
-                               feature, dep)
+                        if d.is_optional() || is_reexport {
+                            continue;
+                        }
+                        bail!(
+                            "Feature `{}` depends on `{}` which is not an \
+                             optional dependency.\nConsider adding \
+                             `optional = true` to the dependency",
+                            feature,
+                            dep
+                        )
                     }
-                    None if is_reexport => {
-                        bail!("Feature `{}` requires a feature of `{}` which is not a \
-                               dependency", feature, dep)
-                    }
-                    None => {
-                        bail!("Feature `{}` includes `{}` which is neither \
-                               a dependency nor another feature", feature, dep)
-                    }
+                    None if is_reexport => bail!(
+                        "Feature `{}` requires a feature of `{}` which is not a \
+                         dependency",
+                        feature,
+                        dep
+                    ),
+                    None => bail!(
+                        "Feature `{}` includes `{}` which is neither \
+                         a dependency nor another feature",
+                        feature,
+                        dep
+                    ),
                 }
             }
         }
@@ -77,12 +95,24 @@ impl Summary {
         })
     }
 
-    pub fn package_id(&self) -> &PackageId { &self.inner.package_id }
-    pub fn name(&self) -> InternedString { self.package_id().name() }
-    pub fn version(&self) -> &Version { self.package_id().version() }
-    pub fn source_id(&self) -> &SourceId { self.package_id().source_id() }
-    pub fn dependencies(&self) -> &[Dependency] { &self.inner.dependencies }
-    pub fn features(&self) -> &BTreeMap<String, Vec<String>> { &self.inner.features }
+    pub fn package_id(&self) -> &PackageId {
+        &self.inner.package_id
+    }
+    pub fn name(&self) -> InternedString {
+        self.package_id().name()
+    }
+    pub fn version(&self) -> &Version {
+        self.package_id().version()
+    }
+    pub fn source_id(&self) -> &SourceId {
+        self.package_id().source_id()
+    }
+    pub fn dependencies(&self) -> &[Dependency] {
+        &self.inner.dependencies
+    }
+    pub fn features(&self) -> &BTreeMap<String, Vec<String>> {
+        &self.inner.features
+    }
     pub fn checksum(&self) -> Option<&str> {
         self.inner.checksum.as_ref().map(|s| &s[..])
     }
@@ -101,7 +131,9 @@ impl Summary {
     }
 
     pub fn map_dependencies<F>(mut self, f: F) -> Summary
-        where F: FnMut(Dependency) -> Dependency {
+    where
+        F: FnMut(Dependency) -> Dependency,
+    {
         {
             let slot = &mut Rc::make_mut(&mut self.inner).dependencies;
             let deps = mem::replace(slot, Vec::new());
@@ -110,17 +142,14 @@ impl Summary {
         self
     }
 
-    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId)
-                      -> Summary {
+    pub fn map_source(self, to_replace: &SourceId, replace_with: &SourceId) -> Summary {
         let me = if self.package_id().source_id() == to_replace {
             let new_id = self.package_id().with_source_id(replace_with);
             self.override_id(new_id)
         } else {
             self
         };
-        me.map_dependencies(|dep| {
-            dep.map_source(to_replace, replace_with)
-        })
+        me.map_dependencies(|dep| dep.map_source(to_replace, replace_with))
     }
 }
 

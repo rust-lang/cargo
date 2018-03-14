@@ -4,7 +4,7 @@ use std::fmt;
 use cargo::util::{Cfg, CfgExpr};
 use cargotest::rustc_host;
 use cargotest::support::registry::Package;
-use cargotest::support::{project, execs};
+use cargotest::support::{execs, project};
 use hamcrest::assert_that;
 
 macro_rules! c {
@@ -25,8 +25,9 @@ macro_rules! e {
 }
 
 fn good<T>(s: &str, expected: T)
-    where T: FromStr + PartialEq + fmt::Debug,
-          T::Err: fmt::Display
+where
+    T: FromStr + PartialEq + fmt::Debug,
+    T::Err: fmt::Display,
 {
     let c = match T::from_str(s) {
         Ok(c) => c,
@@ -36,14 +37,22 @@ fn good<T>(s: &str, expected: T)
 }
 
 fn bad<T>(s: &str, err: &str)
-    where T: FromStr + fmt::Display, T::Err: fmt::Display
+where
+    T: FromStr + fmt::Display,
+    T::Err: fmt::Display,
 {
     let e = match T::from_str(s) {
         Ok(cfg) => panic!("expected `{}` to not parse but got {}", s, cfg),
         Err(e) => e.to_string(),
     };
-    assert!(e.contains(err), "when parsing `{}`,\n\"{}\" not contained \
-                              inside: {}", s, err, e);
+    assert!(
+        e.contains(err),
+        "when parsing `{}`,\n\"{}\" not contained \
+         inside: {}",
+        s,
+        err,
+        e
+    );
 }
 
 #[test]
@@ -135,7 +144,9 @@ fn cfg_matches() {
 #[test]
 fn cfg_easy() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "a"
             version = "0.0.1"
@@ -145,25 +156,31 @@ fn cfg_easy() {
             b = { path = 'b' }
             [target."cfg(windows)".dependencies]
             b = { path = 'b' }
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "extern crate b;")
-        .file("b/Cargo.toml", r#"
+        .file(
+            "b/Cargo.toml",
+            r#"
             [package]
             name = "b"
             version = "0.0.1"
             authors = []
-        "#)
+        "#,
+        )
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
 }
 
 #[test]
 fn dont_include() {
-    let other_family = if cfg!(unix) {"windows"} else {"unix"};
+    let other_family = if cfg!(unix) { "windows" } else { "unix" };
     let p = project("foo")
-        .file("Cargo.toml", &format!(r#"
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
             [package]
             name = "a"
             version = "0.0.1"
@@ -171,33 +188,45 @@ fn dont_include() {
 
             [target.'cfg({})'.dependencies]
             b = {{ path = 'b' }}
-        "#, other_family))
+        "#,
+                other_family
+            ),
+        )
         .file("src/lib.rs", "")
-        .file("b/Cargo.toml", r#"
+        .file(
+            "b/Cargo.toml",
+            r#"
             [package]
             name = "b"
             version = "0.0.1"
             authors = []
-        "#)
+        "#,
+        )
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build"),
-                execs().with_status(0).with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0).with_stderr(
+            "\
 [COMPILING] a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn works_through_the_registry() {
     Package::new("foo", "0.1.0").publish();
     Package::new("bar", "0.1.0")
-            .target_dep("foo", "0.1.0", "cfg(unix)")
-            .target_dep("foo", "0.1.0", "cfg(windows)")
-            .publish();
+        .target_dep("foo", "0.1.0", "cfg(unix)")
+        .target_dep("foo", "0.1.0", "cfg(windows)")
+        .publish();
 
     let p = project("a")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "a"
             version = "0.0.1"
@@ -205,12 +234,18 @@ fn works_through_the_registry() {
 
             [dependencies]
             bar = "0.1.0"
-        "#)
-        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate bar;")
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "#[allow(unused_extern_crates)] extern crate bar;",
+        )
         .build();
 
-    assert_that(p.cargo("build"),
-                execs().with_status(0).with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0).with_stderr(
+            "\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
 [DOWNLOADING] [..]
@@ -218,18 +253,23 @@ fn works_through_the_registry() {
 [COMPILING] bar v0.1.0
 [COMPILING] a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn ignore_version_from_other_platform() {
-    let this_family = if cfg!(unix) {"unix"} else {"windows"};
-    let other_family = if cfg!(unix) {"windows"} else {"unix"};
+    let this_family = if cfg!(unix) { "unix" } else { "windows" };
+    let other_family = if cfg!(unix) { "windows" } else { "unix" };
     Package::new("foo", "0.1.0").publish();
     Package::new("foo", "0.2.0").publish();
 
     let p = project("a")
-        .file("Cargo.toml", &format!(r#"
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
             [package]
             name = "a"
             version = "0.0.1"
@@ -240,24 +280,36 @@ fn ignore_version_from_other_platform() {
 
             [target.'cfg({})'.dependencies]
             foo = "0.2.0"
-        "#, this_family, other_family))
-        .file("src/lib.rs", "#[allow(unused_extern_crates)] extern crate foo;")
+        "#,
+                this_family, other_family
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "#[allow(unused_extern_crates)] extern crate foo;",
+        )
         .build();
 
-    assert_that(p.cargo("build"),
-                execs().with_status(0).with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0).with_stderr(
+            "\
 [UPDATING] registry [..]
 [DOWNLOADING] [..]
 [COMPILING] foo v0.1.0
 [COMPILING] a v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn bad_target_spec() {
     let p = project("a")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "a"
             version = "0.0.1"
@@ -265,12 +317,15 @@ fn bad_target_spec() {
 
             [target.'cfg(4)'.dependencies]
             bar = "0.1.0"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
-                execs().with_status(101).with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
@@ -278,13 +333,17 @@ Caused by:
 
 Caused by:
   unexpected character in cfg `4`, [..]
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn bad_target_spec2() {
     let p = project("a")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "a"
             version = "0.0.1"
@@ -292,12 +351,15 @@ fn bad_target_spec2() {
 
             [target.'cfg(foo =)'.dependencies]
             bar = "0.1.0"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .build();
 
-    assert_that(p.cargo("build"),
-                execs().with_status(101).with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
@@ -305,13 +367,18 @@ Caused by:
 
 Caused by:
   expected a string, found nothing
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn multiple_match_ok() {
     let p = project("foo")
-        .file("Cargo.toml", &format!(r#"
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
             [package]
             name = "a"
             version = "0.0.1"
@@ -330,24 +397,31 @@ fn multiple_match_ok() {
 
             [target.{}.dependencies]
             b = {{ path = 'b' }}
-        "#, rustc_host()))
+        "#,
+                rustc_host()
+            ),
+        )
         .file("src/lib.rs", "extern crate b;")
-        .file("b/Cargo.toml", r#"
+        .file(
+            "b/Cargo.toml",
+            r#"
             [package]
             name = "b"
             version = "0.0.1"
             authors = []
-        "#)
+        "#,
+        )
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
 }
 
 #[test]
 fn any_ok() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "a"
             version = "0.0.1"
@@ -355,16 +429,19 @@ fn any_ok() {
 
             [target."cfg(any(windows, unix))".dependencies]
             b = { path = 'b' }
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "extern crate b;")
-        .file("b/Cargo.toml", r#"
+        .file(
+            "b/Cargo.toml",
+            r#"
             [package]
             name = "b"
             version = "0.0.1"
             authors = []
-        "#)
+        "#,
+        )
         .file("b/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build").arg("-v"),
-                execs().with_status(0));
+    assert_that(p.cargo("build").arg("-v"), execs().with_status(0));
 }

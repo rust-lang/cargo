@@ -4,7 +4,7 @@ use url::Url;
 
 use core::source::{Source, SourceId};
 use core::GitReference;
-use core::{Package, PackageId, Summary, Registry, Dependency};
+use core::{Dependency, Package, PackageId, Registry, Summary};
 use util::Config;
 use util::errors::CargoResult;
 use util::hex::short_hash;
@@ -24,8 +24,7 @@ pub struct GitSource<'cfg> {
 }
 
 impl<'cfg> GitSource<'cfg> {
-    pub fn new(source_id: &SourceId,
-               config: &'cfg Config) -> CargoResult<GitSource<'cfg>> {
+    pub fn new(source_id: &SourceId, config: &'cfg Config) -> CargoResult<GitSource<'cfg>> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let remote = GitRemote::new(source_id.url());
@@ -49,7 +48,9 @@ impl<'cfg> GitSource<'cfg> {
         Ok(source)
     }
 
-    pub fn url(&self) -> &Url { self.remote.url() }
+    pub fn url(&self) -> &Url {
+        self.remote.url()
+    }
 
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         if self.path_source.is_none() {
@@ -61,13 +62,11 @@ impl<'cfg> GitSource<'cfg> {
 
 fn ident(url: &Url) -> CargoResult<String> {
     let url = canonicalize_url(url)?;
-    let ident = url.path_segments().and_then(|mut s| s.next_back()).unwrap_or("");
+    let ident = url.path_segments()
+        .and_then(|mut s| s.next_back())
+        .unwrap_or("");
 
-    let ident = if ident == "" {
-        "_empty"
-    } else {
-        ident
-    };
+    let ident = if ident == "" { "_empty" } else { ident };
 
     Ok(format!("{}-{}", ident, short_hash(&url)))
 }
@@ -79,7 +78,10 @@ pub fn canonicalize_url(url: &Url) -> CargoResult<Url> {
     // cannot-be-a-base-urls are not supported
     // eg. github.com:rust-lang-nursery/rustfmt.git
     if url.cannot_be_a_base() {
-        bail!("invalid url `{}`: cannot-be-a-base-URLs are not supported", url)
+        bail!(
+            "invalid url `{}`: cannot-be-a-base-URLs are not supported",
+            url
+        )
     }
 
     // Strip a trailing slash
@@ -117,17 +119,16 @@ impl<'cfg> Debug for GitSource<'cfg> {
 
         match self.reference.pretty_ref() {
             Some(s) => write!(f, " ({})", s),
-            None => Ok(())
+            None => Ok(()),
         }
     }
 }
 
 impl<'cfg> Registry for GitSource<'cfg> {
-    fn query(&mut self,
-             dep: &Dependency,
-             f: &mut FnMut(Summary)) -> CargoResult<()> {
-        let src = self.path_source.as_mut()
-                      .expect("BUG: update() must be called before query()");
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+        let src = self.path_source
+            .as_mut()
+            .expect("BUG: update() must be called before query()");
         src.query(dep, f)
     }
 
@@ -146,14 +147,18 @@ impl<'cfg> Source for GitSource<'cfg> {
     }
 
     fn update(&mut self) -> CargoResult<()> {
-        let lock = self.config.git_path()
-            .open_rw(".cargo-lock-git", self.config, "the git checkouts")?;
+        let lock =
+            self.config
+                .git_path()
+                .open_rw(".cargo-lock-git", self.config, "the git checkouts")?;
 
         let db_path = lock.parent().join("db").join(&self.ident);
 
         if self.config.cli_unstable().offline && !db_path.exists() {
-            bail!("can't checkout from '{}': you are in the offline mode (-Z offline)",
-                self.remote.url());
+            bail!(
+                "can't checkout from '{}': you are in the offline mode (-Z offline)",
+                self.remote.url()
+            );
         }
 
         // Resolve our reference to an actual revision, and check if the
@@ -161,16 +166,18 @@ impl<'cfg> Source for GitSource<'cfg> {
         // database pinned at that revision, and if we don't we issue an update
         // to try to find the revision.
         let actual_rev = self.remote.rev_for(&db_path, &self.reference);
-        let should_update = actual_rev.is_err() ||
-                            self.source_id.precise().is_none();
+        let should_update = actual_rev.is_err() || self.source_id.precise().is_none();
 
         let (db, actual_rev) = if should_update && !self.config.cli_unstable().offline {
-            self.config.shell().status("Updating",
-                format!("git repository `{}`", self.remote.url()))?;
+            self.config.shell().status(
+                "Updating",
+                format!("git repository `{}`", self.remote.url()),
+            )?;
 
             trace!("updating git source `{:?}`", self.remote);
 
-            self.remote.checkout(&db_path, &self.reference, self.config)?
+            self.remote
+                .checkout(&db_path, &self.reference, self.config)?
         } else {
             (self.remote.db_at(&db_path)?, actual_rev.unwrap())
         };
@@ -180,8 +187,10 @@ impl<'cfg> Source for GitSource<'cfg> {
         // https://github.com/servo/servo/pull/14397
         let short_id = db.to_short_id(actual_rev.clone()).unwrap();
 
-        let checkout_path = lock.parent().join("checkouts")
-            .join(&self.ident).join(short_id.as_str());
+        let checkout_path = lock.parent()
+            .join("checkouts")
+            .join(&self.ident)
+            .join(short_id.as_str());
 
         // Copy the database to the checkout location. After this we could drop
         // the lock on the database as we no longer needed it, but we leave it
@@ -191,9 +200,7 @@ impl<'cfg> Source for GitSource<'cfg> {
         db.copy_to(actual_rev.clone(), &checkout_path, self.config)?;
 
         let source_id = self.source_id.with_precise(Some(actual_rev.to_string()));
-        let path_source = PathSource::new_recursive(&checkout_path,
-                                                    &source_id,
-                                                    self.config);
+        let path_source = PathSource::new_recursive(&checkout_path, &source_id, self.config);
 
         self.path_source = Some(path_source);
         self.rev = Some(actual_rev);
@@ -201,11 +208,15 @@ impl<'cfg> Source for GitSource<'cfg> {
     }
 
     fn download(&mut self, id: &PackageId) -> CargoResult<Package> {
-        trace!("getting packages for package id `{}` from `{:?}`", id,
-               self.remote);
-        self.path_source.as_mut()
-                        .expect("BUG: update() must be called before get()")
-                        .download(id)
+        trace!(
+            "getting packages for package id `{}` from `{:?}`",
+            id,
+            self.remote
+        );
+        self.path_source
+            .as_mut()
+            .expect("BUG: update() must be called before get()")
+            .download(id)
     }
 
     fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {

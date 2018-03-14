@@ -8,7 +8,8 @@ pub fn cli() -> App {
         .arg(Arg::with_name("spec"))
         .arg_single_package("Argument to get the package id specifier for")
         .arg_manifest_path()
-        .after_help("\
+        .after_help(
+            "\
 Given a <spec> argument, print out the fully qualified package id specifier.
 This command will generate an error if <spec> is ambiguous as to which package
 it refers to in the dependency graph. If no <spec> is given, then the pkgid for
@@ -27,7 +28,8 @@ Example Package IDs
      crates.io/foo#1.2.3          | foo    | 1.2.3     | *://crates.io/foo
      crates.io/bar#foo:1.2.3      | foo    | 1.2.3     | *://crates.io/bar
      http://crates.io/foo#1.2.3   | foo    | 1.2.3     | http://crates.io/foo
-")
+",
+        )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

@@ -1,20 +1,18 @@
 #![cfg_attr(test, deny(warnings))]
-
 // Currently, Cargo does not use clippy for its source code.
 // But if someone runs it they should know that
 // @alexcrichton disagree with clippy on some style things
 #![cfg_attr(feature = "cargo-clippy", allow(explicit_iter_loop))]
 
-#[macro_use] extern crate failure;
-#[macro_use] extern crate log;
-#[macro_use] extern crate scoped_tls;
-#[macro_use] extern crate serde_derive;
-#[macro_use] extern crate serde_json;
 extern crate atty;
 extern crate clap;
+#[cfg(target_os = "macos")]
+extern crate core_foundation;
 extern crate crates_io as registry;
 extern crate crossbeam;
 extern crate curl;
+#[macro_use]
+extern crate failure;
 extern crate filetime;
 extern crate flate2;
 extern crate fs2;
@@ -24,23 +22,30 @@ extern crate hex;
 extern crate home;
 extern crate ignore;
 extern crate jobserver;
+#[macro_use]
+extern crate lazy_static;
 extern crate lazycell;
-#[macro_use] extern crate lazy_static;
 extern crate libc;
 extern crate libgit2_sys;
+#[macro_use]
+extern crate log;
 extern crate num_cpus;
 extern crate same_file;
+#[macro_use]
+extern crate scoped_tls;
 extern crate semver;
 extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 extern crate serde_ignored;
+#[macro_use]
+extern crate serde_json;
 extern crate shell_escape;
 extern crate tar;
 extern crate tempdir;
 extern crate termcolor;
 extern crate toml;
 extern crate url;
-#[cfg(target_os = "macos")]
-extern crate core_foundation;
 
 use std::fmt;
 
@@ -85,8 +90,7 @@ pub struct VersionInfo {
 
 impl fmt::Display for VersionInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "cargo {}.{}.{}",
-               self.major, self.minor, self.patch)?;
+        write!(f, "cargo {}.{}.{}", self.major, self.minor, self.patch)?;
         if let Some(channel) = self.cfg_info.as_ref().map(|ci| &ci.release_channel) {
             if channel != "stable" {
                 write!(f, "-{}", channel)?;
@@ -97,8 +101,7 @@ impl fmt::Display for VersionInfo {
 
         if let Some(ref cfg) = self.cfg_info {
             if let Some(ref ci) = cfg.commit_info {
-                write!(f, " ({} {})",
-                       ci.short_commit_hash, ci.commit_date)?;
+                write!(f, " ({} {})", ci.short_commit_hash, ci.commit_date)?;
             }
         };
         Ok(())
@@ -118,7 +121,11 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
         }
     }
 
-    let CliError { error, exit_code, unknown } = err;
+    let CliError {
+        error,
+        exit_code,
+        unknown,
+    } = err;
     // exit_code == 0 is non-fatal error, e.g. docopt version info
     let fatal = exit_code != 0;
 
@@ -134,8 +141,11 @@ pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
         }
 
         if !handle_cause(&error, shell) || hide {
-            drop(writeln!(shell.err(), "\nTo learn more, run the command again \
-                                        with --verbose."));
+            drop(writeln!(
+                shell.err(),
+                "\nTo learn more, run the command again \
+                 with --verbose."
+            ));
         }
     }
 
@@ -204,14 +214,11 @@ pub fn version() -> VersionInfo {
     match option_env!("CFG_RELEASE_CHANNEL") {
         // We have environment variables set up from configure/make.
         Some(_) => {
-            let commit_info =
-                option_env!("CFG_COMMIT_HASH").map(|s| {
-                    CommitInfo {
-                        commit_hash: s.to_string(),
-                        short_commit_hash: option_env_str!("CFG_SHORT_COMMIT_HASH").unwrap(),
-                        commit_date: option_env_str!("CFG_COMMIT_DATE").unwrap(),
-                    }
-                });
+            let commit_info = option_env!("CFG_COMMIT_HASH").map(|s| CommitInfo {
+                commit_hash: s.to_string(),
+                short_commit_hash: option_env_str!("CFG_SHORT_COMMIT_HASH").unwrap(),
+                commit_date: option_env_str!("CFG_COMMIT_DATE").unwrap(),
+            });
             VersionInfo {
                 major,
                 minor,
@@ -222,16 +229,14 @@ pub fn version() -> VersionInfo {
                     commit_info,
                 }),
             }
-        },
-        // We are being compiled by Cargo itself.
-        None => {
-            VersionInfo {
-                major,
-                minor,
-                patch,
-                pre_release: option_env_str!("CARGO_PKG_VERSION_PRE"),
-                cfg_info: None,
-            }
         }
+        // We are being compiled by Cargo itself.
+        None => VersionInfo {
+            major,
+            minor,
+            patch,
+            pre_release: option_env_str!("CARGO_PKG_VERSION_PRE"),
+            cfg_info: None,
+        },
     }
 }

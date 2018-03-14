@@ -1,7 +1,7 @@
 use std::fmt;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
-use hamcrest::{Matcher, MatchResult, existing_file};
+use hamcrest::{existing_file, MatchResult, Matcher};
 
 use cargotest::support::paths;
 
@@ -14,7 +14,11 @@ pub fn cargo_home() -> PathBuf {
 pub struct InstalledExe(pub &'static str);
 
 pub fn exe(name: &str) -> String {
-    if cfg!(windows) {format!("{}.exe", name)} else {name.to_string()}
+    if cfg!(windows) {
+        format!("{}.exe", name)
+    } else {
+        name.to_string()
+    }
 }
 
 impl<P: AsRef<Path>> Matcher<P> for InstalledExe {

@@ -12,9 +12,9 @@ use url::Url;
 
 use ops;
 use sources::git;
-use sources::{PathSource, GitSource, RegistrySource, CRATES_IO};
+use sources::{GitSource, PathSource, RegistrySource, CRATES_IO};
 use sources::DirectorySource;
-use util::{Config, CargoResult, ToUrl};
+use util::{CargoResult, Config, ToUrl};
 
 /// Unique identifier for a source of packages.
 #[derive(Clone, Eq, Debug)]
@@ -93,7 +93,9 @@ impl SourceId {
     pub fn from_url(string: &str) -> CargoResult<SourceId> {
         let mut parts = string.splitn(2, '+');
         let kind = parts.next().unwrap();
-        let url = parts.next().ok_or_else(|| format_err!("invalid source `{}`", string))?;
+        let url = parts
+            .next()
+            .ok_or_else(|| format_err!("invalid source `{}`", string))?;
 
         match kind {
             "git" => {
@@ -102,8 +104,7 @@ impl SourceId {
                 for (k, v) in url.query_pairs() {
                     match &k[..] {
                         // map older 'ref' to branch
-                        "branch" |
-                        "ref" => reference = GitReference::Branch(v.into_owned()),
+                        "branch" | "ref" => reference = GitReference::Branch(v.into_owned()),
 
                         "rev" => reference = GitReference::Rev(v.into_owned()),
                         "tag" => reference = GitReference::Tag(v.into_owned()),
@@ -114,23 +115,24 @@ impl SourceId {
                 url.set_fragment(None);
                 url.set_query(None);
                 Ok(SourceId::for_git(&url, reference)?.with_precise(precise))
-            },
+            }
             "registry" => {
                 let url = url.to_url()?;
-                Ok(SourceId::new(Kind::Registry, url)?
-                            .with_precise(Some("locked".to_string())))
+                Ok(SourceId::new(Kind::Registry, url)?.with_precise(Some("locked".to_string())))
             }
             "path" => {
                 let url = url.to_url()?;
                 SourceId::new(Kind::Path, url)
             }
-            kind => Err(format_err!("unsupported source protocol: {}", kind))
+            kind => Err(format_err!("unsupported source protocol: {}", kind)),
         }
     }
 
     /// A view of the `SourceId` that can be `Display`ed as a URL
     pub fn to_url(&self) -> SourceIdToUrl {
-        SourceIdToUrl { inner: &*self.inner }
+        SourceIdToUrl {
+            inner: &*self.inner,
+        }
     }
 
     /// Create a SourceId from a filesystem path.
@@ -173,10 +175,12 @@ impl SourceId {
             let url = if let Some(ref index) = cfg.index {
                 static WARNED: AtomicBool = ATOMIC_BOOL_INIT;
                 if !WARNED.swap(true, SeqCst) {
-                    config.shell().warn("custom registry support via \
-                                         the `registry.index` configuration is \
-                                         being removed, this functionality \
-                                         will not work in the future")?;
+                    config.shell().warn(
+                        "custom registry support via \
+                         the `registry.index` configuration is \
+                         being removed, this functionality \
+                         will not work in the future",
+                    )?;
                 }
                 &index[..]
             } else {
@@ -218,7 +222,7 @@ impl SourceId {
     pub fn is_registry(&self) -> bool {
         match self.inner.kind {
             Kind::Registry | Kind::LocalRegistry => true,
-            _                                    => false,
+            _ => false,
         }
     }
 
@@ -284,7 +288,7 @@ impl SourceId {
             inner: Arc::new(SourceIdInner {
                 precise: v,
                 ..(*self.inner).clone()
-            })
+            }),
         }
     }
 
@@ -303,10 +307,15 @@ impl SourceId {
     /// same hash in different locations.
     pub fn stable_hash<S: hash::Hasher>(&self, workspace: &Path, into: &mut S) {
         if self.is_path() {
-            if let Ok(p) = self.inner.url.to_file_path().unwrap().strip_prefix(workspace) {
+            if let Ok(p) = self.inner
+                .url
+                .to_file_path()
+                .unwrap()
+                .strip_prefix(workspace)
+            {
                 self.inner.kind.hash(into);
                 p.to_str().unwrap().hash(into);
-                return
+                return;
             }
         }
         self.hash(into)
@@ -333,7 +342,8 @@ impl Ord for SourceId {
 
 impl ser::Serialize for SourceId {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer,
+    where
+        S: ser::Serializer,
     {
         if self.is_path() {
             None::<String>.serialize(s)
@@ -345,7 +355,8 @@ impl ser::Serialize for SourceId {
 
 impl<'de> de::Deserialize<'de> for SourceId {
     fn deserialize<D>(d: D) -> Result<SourceId, D::Error>
-        where D: de::Deserializer<'de>,
+    where
+        D: de::Deserializer<'de>,
     {
         let string = String::deserialize(d)?;
         SourceId::from_url(&string).map_err(de::Error::custom)
@@ -355,11 +366,17 @@ impl<'de> de::Deserialize<'de> for SourceId {
 impl fmt::Display for SourceId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match *self.inner {
-            SourceIdInner { kind: Kind::Path, ref url, .. } => {
-                fmt::Display::fmt(url, f)
-            }
-            SourceIdInner { kind: Kind::Git(ref reference), ref url,
-                            ref precise, .. } => {
+            SourceIdInner {
+                kind: Kind::Path,
+                ref url,
+                ..
+            } => fmt::Display::fmt(url, f),
+            SourceIdInner {
+                kind: Kind::Git(ref reference),
+                ref url,
+                ref precise,
+                ..
+            } => {
                 write!(f, "{}", url)?;
                 if let Some(pretty) = reference.pretty_ref() {
                     write!(f, "?{}", pretty)?;
@@ -371,13 +388,21 @@ impl fmt::Display for SourceId {
                 }
                 Ok(())
             }
-            SourceIdInner { kind: Kind::Registry, ref url, .. } |
-            SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
-                write!(f, "registry `{}`", url)
+            SourceIdInner {
+                kind: Kind::Registry,
+                ref url,
+                ..
             }
-            SourceIdInner { kind: Kind::Directory, ref url, .. } => {
-                write!(f, "dir {}", url)
-            }
+            | SourceIdInner {
+                kind: Kind::LocalRegistry,
+                ref url,
+                ..
+            } => write!(f, "registry `{}`", url),
+            SourceIdInner {
+                kind: Kind::Directory,
+                ref url,
+                ..
+            } => write!(f, "dir {}", url),
         }
     }
 }
@@ -438,9 +463,11 @@ impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
         match *self.inner {
-            SourceIdInner { kind: Kind::Git(..), ref canonical_url, .. } => {
-                canonical_url.as_str().hash(into)
-            }
+            SourceIdInner {
+                kind: Kind::Git(..),
+                ref canonical_url,
+                ..
+            } => canonical_url.as_str().hash(into),
             _ => self.inner.url.as_str().hash(into),
         }
     }
@@ -454,11 +481,16 @@ pub struct SourceIdToUrl<'a> {
 impl<'a> fmt::Display for SourceIdToUrl<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self.inner {
-            SourceIdInner { kind: Kind::Path, ref url, .. } => {
-                write!(f, "path+{}", url)
-            }
             SourceIdInner {
-                kind: Kind::Git(ref reference), ref url, ref precise, ..
+                kind: Kind::Path,
+                ref url,
+                ..
+            } => write!(f, "path+{}", url),
+            SourceIdInner {
+                kind: Kind::Git(ref reference),
+                ref url,
+                ref precise,
+                ..
             } => {
                 write!(f, "git+{}", url)?;
                 if let Some(pretty) = reference.pretty_ref() {
@@ -469,15 +501,21 @@ impl<'a> fmt::Display for SourceIdToUrl<'a> {
                 }
                 Ok(())
             }
-            SourceIdInner { kind: Kind::Registry, ref url, .. } => {
-                write!(f, "registry+{}", url)
-            }
-            SourceIdInner { kind: Kind::LocalRegistry, ref url, .. } => {
-                write!(f, "local-registry+{}", url)
-            }
-            SourceIdInner { kind: Kind::Directory, ref url, .. } => {
-                write!(f, "directory+{}", url)
-            }
+            SourceIdInner {
+                kind: Kind::Registry,
+                ref url,
+                ..
+            } => write!(f, "registry+{}", url),
+            SourceIdInner {
+                kind: Kind::LocalRegistry,
+                ref url,
+                ..
+            } => write!(f, "local-registry+{}", url),
+            SourceIdInner {
+                kind: Kind::Directory,
+                ref url,
+                ..
+            } => write!(f, "directory+{}", url),
         }
     }
 }
@@ -510,7 +548,7 @@ impl<'a> fmt::Display for PrettyRef<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{SourceId, Kind, GitReference};
+    use super::{GitReference, Kind, SourceId};
     use util::ToUrl;
 
     #[test]

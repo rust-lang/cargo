@@ -22,15 +22,13 @@ pub fn cli() -> App {
             "Build all targets (lib and bin targets by default)",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
-        .arg(
-            opt("profile", "Profile to build the selected target for")
-                .value_name("PROFILE")
-        )
+        .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
         .arg_features()
         .arg_target_triple("Target triple which compiles will be for")
         .arg_manifest_path()
         .arg_message_format()
-        .after_help("\
+        .after_help(
+            "\
 The specified target for the current package (or package specified by SPEC if
 provided) will be compiled along with all of its dependencies. The specified
 <args>... will all be passed to the final compiler invocation, not any of the
@@ -43,7 +41,8 @@ target is available for the current package the filters of --lib, --bin, etc,
 must be used to select which target is compiled. To pass flags to all compiler
 processes spawned by Cargo, use the $RUSTFLAGS environment variable or the
 `build.rustflags` configuration option.
-")
+",
+        )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
@@ -54,14 +53,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         Some("bench") => CompileMode::Bench,
         Some("check") => CompileMode::Check { test: false },
         Some(mode) => {
-            let err = format_err!("unknown profile: `{}`, use dev,
-                                   test, or bench", mode);
+            let err = format_err!(
+                "unknown profile: `{}`, use dev,
+                                   test, or bench",
+                mode
+            );
             return Err(CliError::new(err, 101));
         }
     };
-    let mut compile_opts = args.compile_options_for_single_package(
-        config, mode,
-    )?;
+    let mut compile_opts = args.compile_options_for_single_package(config, mode)?;
     compile_opts.target_rustc_args = Some(values(args, "args"));
     ops::compile(&ws, &compile_opts)?;
     Ok(())

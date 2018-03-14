@@ -6,7 +6,7 @@ use cargo::util::ProcessError;
 use git2;
 use url::Url;
 
-use cargotest::support::{ProjectBuilder, Project, project, path2url};
+use cargotest::support::{project, Project, ProjectBuilder, path2url};
 
 #[must_use]
 pub struct RepoBuilder {
@@ -16,7 +16,9 @@ pub struct RepoBuilder {
 
 pub struct Repository(git2::Repository);
 
-pub fn repo(p: &Path) -> RepoBuilder { RepoBuilder::init(p) }
+pub fn repo(p: &Path) -> RepoBuilder {
+    RepoBuilder::init(p)
+}
 
 impl RepoBuilder {
     pub fn init(p: &Path) -> RepoBuilder {
@@ -27,7 +29,10 @@ impl RepoBuilder {
             t!(config.set_str("user.name", "name"));
             t!(config.set_str("user.email", "email"));
         }
-        RepoBuilder { repo, files: Vec::new() }
+        RepoBuilder {
+            repo,
+            files: Vec::new(),
+        }
     }
 
     pub fn file(self, path: &str, contents: &str) -> RepoBuilder {
@@ -53,10 +58,10 @@ impl RepoBuilder {
             let id = t!(index.write_tree());
             let tree = t!(self.repo.find_tree(id));
             let sig = t!(self.repo.signature());
-            t!(self.repo.commit(Some("HEAD"), &sig, &sig,
-                                "Initial commit", &tree, &[]));
+            t!(self.repo
+                .commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[]));
         }
-        let RepoBuilder{ repo, .. } = self;
+        let RepoBuilder { repo, .. } = self;
         Repository(repo)
     }
 }
@@ -72,7 +77,8 @@ impl Repository {
 }
 
 pub fn new<F>(name: &str, callback: F) -> Result<Project, ProcessError>
-    where F: FnOnce(ProjectBuilder) -> ProjectBuilder
+where
+    F: FnOnce(ProjectBuilder) -> ProjectBuilder,
 {
     let mut git_project = project(name);
     git_project = callback(git_project);
@@ -97,16 +103,25 @@ pub fn add(repo: &git2::Repository) {
         t!(submodule.add_to_index(false));
     }
     let mut index = t!(repo.index());
-    t!(index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT,
-                  Some(&mut (|a, _b| {
-        if s.iter().any(|s| a.starts_with(s.path())) {1} else {0}
-    }))));
+    t!(index.add_all(
+        ["*"].iter(),
+        git2::IndexAddOption::DEFAULT,
+        Some(
+            &mut (|a, _b| if s.iter().any(|s| a.starts_with(s.path())) {
+                1
+            } else {
+                0
+            })
+        )
+    ));
     t!(index.write());
 }
 
-pub fn add_submodule<'a>(repo: &'a git2::Repository, url: &str,
-                         path: &Path) -> git2::Submodule<'a>
-{
+pub fn add_submodule<'a>(
+    repo: &'a git2::Repository,
+    url: &str,
+    path: &Path,
+) -> git2::Submodule<'a> {
     let path = path.to_str().unwrap().replace(r"\", "/");
     let mut s = t!(repo.submodule(url, Path::new(&path), false));
     let subrepo = t!(s.open());
@@ -127,16 +142,23 @@ pub fn commit(repo: &git2::Repository) -> git2::Oid {
         None => {}
     }
     let parents = parents.iter().collect::<Vec<_>>();
-    t!(repo.commit(Some("HEAD"), &sig, &sig, "test",
-                   &t!(repo.find_tree(tree_id)),
-                   &parents))
+    t!(repo.commit(
+        Some("HEAD"),
+        &sig,
+        &sig,
+        "test",
+        &t!(repo.find_tree(tree_id)),
+        &parents
+    ))
 }
 
 pub fn tag(repo: &git2::Repository, name: &str) {
     let head = repo.head().unwrap().target().unwrap();
-    t!(repo.tag(name,
-                &t!(repo.find_object(head, None)),
-                &t!(repo.signature()),
-                "make a new tag",
-                false));
+    t!(repo.tag(
+        name,
+        &t!(repo.find_object(head, None)),
+        &t!(repo.signature()),
+        "make a new tag",
+        false
+    ));
 }

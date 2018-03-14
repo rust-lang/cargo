@@ -1,5 +1,5 @@
 use cargotest::is_nightly;
-use cargotest::support::{project, execs};
+use cargotest::support::{execs, project};
 use hamcrest::assert_that;
 
 #[test]
@@ -9,7 +9,9 @@ fn probe_cfg_before_crate_type_discovery() {
     }
 
     let client = project("client")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "client"
             version = "0.0.1"
@@ -17,8 +19,11 @@ fn probe_cfg_before_crate_type_discovery() {
 
             [target.'cfg(not(stage300))'.dependencies.noop]
             path = "../noop"
-        "#)
-        .file("src/main.rs", r#"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
             #![feature(proc_macro)]
 
             #[macro_use]
@@ -28,10 +33,13 @@ fn probe_cfg_before_crate_type_discovery() {
             struct X;
 
             fn main() {}
-        "#)
+        "#,
+        )
         .build();
     let _noop = project("noop")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "noop"
             version = "0.0.1"
@@ -39,8 +47,11 @@ fn probe_cfg_before_crate_type_discovery() {
 
             [lib]
             proc-macro = true
-        "#)
-        .file("src/lib.rs", r#"
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
             #![feature(proc_macro, proc_macro_lib)]
 
             extern crate proc_macro;
@@ -50,11 +61,11 @@ fn probe_cfg_before_crate_type_discovery() {
             pub fn noop(_input: TokenStream) -> TokenStream {
                 "".parse().unwrap()
             }
-        "#)
+        "#,
+        )
         .build();
 
-    assert_that(client.cargo("build"),
-                execs().with_status(0));
+    assert_that(client.cargo("build"), execs().with_status(0));
 }
 
 #[test]
@@ -64,7 +75,9 @@ fn noop() {
     }
 
     let client = project("client")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "client"
             version = "0.0.1"
@@ -72,8 +85,11 @@ fn noop() {
 
             [dependencies.noop]
             path = "../noop"
-        "#)
-        .file("src/main.rs", r#"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
             #![feature(proc_macro)]
 
             #[macro_use]
@@ -83,10 +99,13 @@ fn noop() {
             struct X;
 
             fn main() {}
-        "#)
+        "#,
+        )
         .build();
     let _noop = project("noop")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "noop"
             version = "0.0.1"
@@ -94,8 +113,11 @@ fn noop() {
 
             [lib]
             proc-macro = true
-        "#)
-        .file("src/lib.rs", r#"
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
             #![feature(proc_macro, proc_macro_lib)]
 
             extern crate proc_macro;
@@ -105,13 +127,12 @@ fn noop() {
             pub fn noop(_input: TokenStream) -> TokenStream {
                 "".parse().unwrap()
             }
-        "#)
+        "#,
+        )
         .build();
 
-    assert_that(client.cargo("build"),
-                execs().with_status(0));
-    assert_that(client.cargo("build"),
-                execs().with_status(0));
+    assert_that(client.cargo("build"), execs().with_status(0));
+    assert_that(client.cargo("build"), execs().with_status(0));
 }
 
 #[test]
@@ -121,7 +142,9 @@ fn impl_and_derive() {
     }
 
     let client = project("client")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "client"
             version = "0.0.1"
@@ -129,8 +152,11 @@ fn impl_and_derive() {
 
             [dependencies.transmogrify]
             path = "../transmogrify"
-        "#)
-        .file("src/main.rs", r#"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
             #![feature(proc_macro)]
 
             #[macro_use]
@@ -148,10 +174,13 @@ fn impl_and_derive() {
                 assert!(x.impl_by_transmogrify());
                 println!("{:?}", x);
             }
-        "#)
+        "#,
+        )
         .build();
     let _transmogrify = project("transmogrify")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "transmogrify"
             version = "0.0.1"
@@ -159,8 +188,11 @@ fn impl_and_derive() {
 
             [lib]
             proc-macro = true
-        "#)
-        .file("src/lib.rs", r#"
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
             #![feature(proc_macro, proc_macro_lib)]
 
             extern crate proc_macro;
@@ -183,13 +215,15 @@ fn impl_and_derive() {
                     }
                 ".parse().unwrap()
             }
-        "#)
+        "#,
+        )
         .build();
 
-    assert_that(client.cargo("build"),
-                execs().with_status(0));
-    assert_that(client.cargo("run"),
-                execs().with_status(0).with_stdout("X { success: true }"));
+    assert_that(client.cargo("build"), execs().with_status(0));
+    assert_that(
+        client.cargo("run"),
+        execs().with_status(0).with_stdout("X { success: true }"),
+    );
 }
 
 #[test]
@@ -199,7 +233,9 @@ fn plugin_and_proc_macro() {
     }
 
     let questionable = project("questionable")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "questionable"
             version = "0.0.1"
@@ -208,8 +244,11 @@ fn plugin_and_proc_macro() {
             [lib]
             plugin = true
             proc-macro = true
-        "#)
-        .file("src/lib.rs", r#"
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
             #![feature(plugin_registrar, rustc_private)]
             #![feature(proc_macro, proc_macro_lib)]
 
@@ -226,29 +265,37 @@ fn plugin_and_proc_macro() {
             pub fn questionable(input: TokenStream) -> TokenStream {
                 input
             }
-        "#)
+        "#,
+        )
         .build();
 
     let msg = "  lib.plugin and lib.proc-macro cannot both be true";
-    assert_that(questionable.cargo("build"),
-                execs().with_status(101).with_stderr_contains(msg));
+    assert_that(
+        questionable.cargo("build"),
+        execs().with_status(101).with_stderr_contains(msg),
+    );
 }
 
 #[test]
 fn proc_macro_doctest() {
     if !is_nightly() {
-        return
+        return;
     }
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             version = "0.1.0"
             authors = []
             [lib]
             proc-macro = true
-        "#)
-        .file("src/lib.rs", r#"
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
 #![feature(proc_macro, proc_macro_lib)]
 #![crate_type = "proc-macro"]
 
@@ -268,11 +315,15 @@ pub fn derive(_input: TokenStream) -> TokenStream {
 fn a() {
   assert!(true);
 }
-"#)
+"#,
+        )
         .build();
 
-    assert_that(foo.cargo("test"),
-                execs().with_status(0)
-                       .with_stdout_contains("test a ... ok")
-                       .with_stdout_contains_n("test [..] ... ok", 2));
+    assert_that(
+        foo.cargo("test"),
+        execs()
+            .with_status(0)
+            .with_stdout_contains("test a ... ok")
+            .with_stdout_contains_n("test [..] ... ok", 2),
+    );
 }

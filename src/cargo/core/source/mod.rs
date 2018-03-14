@@ -1,11 +1,11 @@
-use std::collections::hash_map::{HashMap, Values, IterMut};
+use std::collections::hash_map::{HashMap, IterMut, Values};
 
 use core::{Package, PackageId, Registry};
 use util::CargoResult;
 
 mod source_id;
 
-pub use self::source_id::{SourceId, GitReference};
+pub use self::source_id::{GitReference, SourceId};
 
 /// A Source finds and downloads remote packages based on names and
 /// versions.
@@ -89,7 +89,9 @@ pub struct SourcesMut<'a, 'src: 'a> {
 impl<'src> SourceMap<'src> {
     /// Create an empty map
     pub fn new() -> SourceMap<'src> {
-        SourceMap { map: HashMap::new() }
+        SourceMap {
+            map: HashMap::new(),
+        }
     }
 
     /// Like `HashMap::contains_key`
@@ -144,7 +146,9 @@ impl<'src> SourceMap<'src> {
 
     /// Like `HashMap::iter_mut`
     pub fn sources_mut<'a>(&'a mut self) -> SourcesMut<'a, 'src> {
-        SourcesMut { inner: self.map.iter_mut() }
+        SourcesMut {
+            inner: self.map.iter_mut(),
+        }
     }
 }
 
@@ -154,4 +158,3 @@ impl<'a, 'src> Iterator for SourcesMut<'a, 'src> {
         self.inner.next().map(|(a, b)| (a, &mut **b))
     }
 }
-

@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::env;
-use std::ffi::{OsString, OsStr};
+use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::Path;
-use std::process::{Command, Stdio, Output};
+use std::process::{Command, Output, Stdio};
 
 use jobserver::Client;
 use shell_escape::escape;
 
-use util::{CargoResult, CargoResultExt, CargoError, process_error, read2};
+use util::{process_error, CargoError, CargoResult, CargoResultExt, read2};
 
 /// A builder object for an external process, similar to `std::process::Command`.
 #[derive(Clone, Debug)]
@@ -55,17 +55,17 @@ impl ProcessBuilder {
 
     /// (chainable) Add many args to the args list.
     pub fn args<T: AsRef<OsStr>>(&mut self, arguments: &[T]) -> &mut ProcessBuilder {
-        self.args.extend(arguments.iter().map(|t| {
-            t.as_ref().to_os_string()
-        }));
+        self.args
+            .extend(arguments.iter().map(|t| t.as_ref().to_os_string()));
         self
     }
 
     /// (chainable) Replace args with new args list
     pub fn args_replace<T: AsRef<OsStr>>(&mut self, arguments: &[T]) -> &mut ProcessBuilder {
-        self.args = arguments.iter().map(|t| {
-            t.as_ref().to_os_string()
-        }).collect();
+        self.args = arguments
+            .iter()
+            .map(|t| t.as_ref().to_os_string())
+            .collect();
         self
     }
 
@@ -76,9 +76,9 @@ impl ProcessBuilder {
     }
 
     /// (chainable) Set an environment variable for the process.
-    pub fn env<T: AsRef<OsStr>>(&mut self, key: &str,
-                                val: T) -> &mut ProcessBuilder {
-        self.env.insert(key.to_string(), Some(val.as_ref().to_os_string()));
+    pub fn env<T: AsRef<OsStr>>(&mut self, key: &str, val: T) -> &mut ProcessBuilder {
+        self.env
+            .insert(key.to_string(), Some(val.as_ref().to_os_string()));
         self
     }
 
@@ -106,13 +106,18 @@ impl ProcessBuilder {
     /// Get an environment variable as the process will see it (will inherit from environment
     /// unless explicitally unset).
     pub fn get_env(&self, var: &str) -> Option<OsString> {
-        self.env.get(var).cloned().or_else(|| Some(env::var_os(var)))
+        self.env
+            .get(var)
+            .cloned()
+            .or_else(|| Some(env::var_os(var)))
             .and_then(|s| s)
     }
 
     /// Get all environment variables explicitally set or unset for the process (not inherited
     /// vars).
-    pub fn get_envs(&self) -> &HashMap<String, Option<OsString>> { &self.env }
+    pub fn get_envs(&self) -> &HashMap<String, Option<OsString>> {
+        &self.env
+    }
 
     /// Set the `make` jobserver. See the [jobserver crate][jobserver_docs] for
     /// more information.
@@ -127,16 +132,24 @@ impl ProcessBuilder {
     pub fn exec(&self) -> CargoResult<()> {
         let mut command = self.build_command();
         let exit = command.status().chain_err(|| {
-            process_error(&format!("could not execute process `{}`",
-                               self.debug_string()), None, None)
+            process_error(
+                &format!("could not execute process `{}`", self.debug_string()),
+                None,
+                None,
+            )
         })?;
 
         if exit.success() {
             Ok(())
         } else {
             Err(process_error(
-                &format!("process didn't exit successfully: `{}`", self.debug_string()),
-                Some(&exit), None).into())
+                &format!(
+                    "process didn't exit successfully: `{}`",
+                    self.debug_string()
+                ),
+                Some(&exit),
+                None,
+            ).into())
         }
     }
 
@@ -149,13 +162,13 @@ impl ProcessBuilder {
 
         let mut command = self.build_command();
         let error = command.exec();
-        Err(CargoError::from(error).context(
-            process_error(
+        Err(CargoError::from(error)
+            .context(process_error(
                 &format!("could not execute process `{}`", self.debug_string()),
                 None,
                 None,
-            ),
-        ).into())
+            ))
+            .into())
     }
 
     /// On unix, executes the process using the unix syscall `execvp`, which will block this
@@ -174,15 +187,21 @@ impl ProcessBuilder {
             process_error(
                 &format!("could not execute process `{}`", self.debug_string()),
                 None,
-                None)
+                None,
+            )
         })?;
 
         if output.status.success() {
             Ok(output)
         } else {
             Err(process_error(
-                &format!("process didn't exit successfully: `{}`", self.debug_string()),
-                Some(&output.status), Some(&output)).into())
+                &format!(
+                    "process didn't exit successfully: `{}`",
+                    self.debug_string()
+                ),
+                Some(&output.status),
+                Some(&output),
+            ).into())
         }
     }
 
@@ -192,11 +211,12 @@ impl ProcessBuilder {
     /// If any invocations of these function return an error, it will be propagated.
     ///
     /// Optionally, output can be passed to errors using `print_output`
-    pub fn exec_with_streaming(&self,
-                               on_stdout_line: &mut FnMut(&str) -> CargoResult<()>,
-                               on_stderr_line: &mut FnMut(&str) -> CargoResult<()>,
-                               print_output: bool)
-                               -> CargoResult<Output> {
+    pub fn exec_with_streaming(
+        &self,
+        on_stdout_line: &mut FnMut(&str) -> CargoResult<()>,
+        on_stderr_line: &mut FnMut(&str) -> CargoResult<()>,
+        print_output: bool,
+    ) -> CargoResult<Output> {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
 
@@ -220,11 +240,13 @@ impl ProcessBuilder {
                     }
                 };
                 let data = data.drain(..idx);
-                let dst = if is_out {&mut stdout} else {&mut stderr};
+                let dst = if is_out { &mut stdout } else { &mut stderr };
                 let start = dst.len();
                 dst.extend(data);
                 for line in String::from_utf8_lossy(&dst[start..]).lines() {
-                    if callback_error.is_some() { break }
+                    if callback_error.is_some() {
+                        break;
+                    }
                     let callback_result = if is_out {
                         on_stdout_line(line)
                     } else {
@@ -236,12 +258,13 @@ impl ProcessBuilder {
                 }
             })?;
             child.wait()
-        })().chain_err(|| {
+        })()
+            .chain_err(|| {
             process_error(
-                &format!("could not execute process `{}`",
-                         self.debug_string()),
+                &format!("could not execute process `{}`", self.debug_string()),
                 None,
-                None)
+                None,
+            )
         })?;
         let output = Output {
             stdout,
@@ -250,22 +273,23 @@ impl ProcessBuilder {
         };
 
         {
-            let to_print = if print_output {
-                Some(&output)
-            } else {
-                None
-            };
+            let to_print = if print_output { Some(&output) } else { None };
             if !output.status.success() {
                 return Err(process_error(
-                            &format!("process didn't exit successfully: `{}`", self.debug_string()),
-                            Some(&output.status), to_print).into())
+                    &format!(
+                        "process didn't exit successfully: `{}`",
+                        self.debug_string()
+                    ),
+                    Some(&output.status),
+                    to_print,
+                ).into());
             } else if let Some(e) = callback_error {
                 let cx = process_error(
                     &format!("failed to parse process output: `{}`", self.debug_string()),
                     Some(&output.status),
                     to_print,
                 );
-                return Err(CargoError::from(e).context(cx).into())
+                return Err(CargoError::from(e).context(cx).into());
             }
         }
 
@@ -284,8 +308,12 @@ impl ProcessBuilder {
         }
         for (k, v) in &self.env {
             match *v {
-                Some(ref v) => { command.env(k, v); }
-                None => { command.env_remove(k); }
+                Some(ref v) => {
+                    command.env(k, v);
+                }
+                None => {
+                    command.env_remove(k);
+                }
             }
         }
         if let Some(ref c) = self.jobserver {

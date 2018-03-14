@@ -8,39 +8,22 @@ pub fn cli() -> App {
     subcommand("install")
         .about("Create a new cargo package in an existing directory")
         .arg(Arg::with_name("crate").multiple(true))
-
         .arg(
             opt("version", "Specify a version to install from crates.io")
-                .alias("vers").value_name("VERSION")
+                .alias("vers")
+                .value_name("VERSION"),
         )
-        .arg(
-            opt("git", "Git URL to install the specified crate from")
-                .value_name("URL")
-        )
-        .arg(
-            opt("branch", "Branch to use when installing from git")
-                .value_name("BRANCH")
-        )
-        .arg(
-            opt("tag", "Tag to use when installing from git")
-                .value_name("TAG")
-        )
-        .arg(
-            opt("rev", "Specific commit to use when installing from git")
-                .value_name("SHA")
-        )
-        .arg(
-            opt("path", "Filesystem path to local crate to install")
-                .value_name("PATH")
-        )
-
-        .arg(opt("list", "list all installed packages and their versions"))
-
+        .arg(opt("git", "Git URL to install the specified crate from").value_name("URL"))
+        .arg(opt("branch", "Branch to use when installing from git").value_name("BRANCH"))
+        .arg(opt("tag", "Tag to use when installing from git").value_name("TAG"))
+        .arg(opt("rev", "Specific commit to use when installing from git").value_name("SHA"))
+        .arg(opt("path", "Filesystem path to local crate to install").value_name("PATH"))
+        .arg(opt(
+            "list",
+            "list all installed packages and their versions",
+        ))
         .arg_jobs()
-        .arg(
-            opt("force", "Force overwriting existing crates or binaries")
-                .short("f")
-        )
+        .arg(opt("force", "Force overwriting existing crates or binaries").short("f"))
         .arg_features()
         .arg(opt("debug", "Build in debug mode instead of release mode"))
         .arg_targets_bins_examples(
@@ -49,11 +32,9 @@ pub fn cli() -> App {
             "Install only the specified example",
             "Install all examples",
         )
-        .arg(
-            opt("root", "Directory to install packages into")
-                .value_name("DIR")
-        )
-        .after_help("\
+        .arg(opt("root", "Directory to install packages into").value_name("DIR"))
+        .after_help(
+            "\
 This command manages Cargo's local set of installed binary crates. Only packages
 which have [[bin]] targets can be installed, and all binaries are installed into
 the installation root's `bin` folder. The installation root is determined, in
@@ -86,14 +67,17 @@ If the source is crates.io or `--git` then by default the crate will be built
 in a temporary target directory.  To avoid this, the target directory can be
 specified by setting the `CARGO_TARGET_DIR` environment variable to a relative
 path.  In particular, this can be useful for caching build artifacts on
-continuous integration systems.")
+continuous integration systems.",
+        )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
     compile_opts.release = !args.is_present("debug");
 
-    let krates = args.values_of("crate").unwrap_or_default().collect::<Vec<_>>();
+    let krates = args.values_of("crate")
+        .unwrap_or_default()
+        .collect::<Vec<_>>();
 
     let source = if let Some(url) = args.value_of("git") {
         let url = url.to_url()?;
@@ -121,7 +105,14 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     if args.is_present("list") {
         ops::install_list(root, config)?;
     } else {
-        ops::install(root, krates, &source, version, &compile_opts, args.is_present("force"))?;
+        ops::install(
+            root,
+            krates,
+            &source,
+            version,
+            &compile_opts,
+            args.is_present("force"),
+        )?;
     }
     Ok(())
 }
