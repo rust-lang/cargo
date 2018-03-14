@@ -27,7 +27,7 @@ pub fn cli() -> App {
             "Benchmark all tests",
             "Benchmark only the specified bench target",
             "Benchmark all benches",
-            "Benchmark all targets (lib and bin targets by default)",
+            "Benchmark all targets (default)",
         )
 
         .arg(

@@ -97,6 +97,15 @@ pub enum CompileMode {
     Doctest,
 }
 
+impl CompileMode {
+    pub fn all_targets_by_default(&self) -> bool {
+        match self {
+            &CompileMode::Test | &CompileMode::Bench => true,
+            _ => false
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MessageFormat {
     Human,

@@ -26,7 +26,7 @@ pub fn cli() -> App {
             "Test all tests",
             "Test only the specified bench target",
             "Test all benches",
-            "Test all targets (lib and bin targets by default)",
+            "Test all targets (default)",
         )
         .arg(opt("doc", "Test only this library's documentation"))
         .arg(
