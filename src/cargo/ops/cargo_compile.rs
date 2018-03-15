@@ -458,7 +458,9 @@ impl CompileFilter {
         }
     }
 
-    pub fn matches(&self, target: &Target) -> bool {
+    // this selects targets for "cargo run". for logic to select targets for
+    // other subcommands, see generate_targets and generate_default_targets
+    pub fn target_run(&self, target: &Target) -> bool {
         match *self {
             CompileFilter::Default { .. } => true,
             CompileFilter::Only {
@@ -497,7 +499,7 @@ struct BuildProposal<'a> {
     required: bool,
 }
 
-fn generate_auto_targets<'a>(
+fn generate_default_targets<'a>(
     mode: CompileMode,
     targets: &'a [Target],
     profile: &'a Profile,
@@ -719,7 +721,7 @@ fn generate_targets<'a>(
             } else {
                 &profiles.test_deps
             };
-            generate_auto_targets(
+            generate_default_targets(
                 mode,
                 pkg.targets(),
                 profile,
