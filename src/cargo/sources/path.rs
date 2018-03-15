@@ -53,6 +53,14 @@ impl<'cfg> PathSource<'cfg> {
         }
     }
 
+    pub fn preload_with(&mut self, pkg: Package) {
+        assert!(!self.updated);
+        assert!(!self.recursive);
+        assert!(self.packages.is_empty());
+        self.updated = true;
+        self.packages.push(pkg);
+    }
+
     pub fn root_package(&mut self) -> CargoResult<Package> {
         trace!("root_package; source={:?}", self);
 

@@ -1,17 +1,21 @@
-use std::collections::hash_map::{Entry, HashMap};
+use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::collections::hash_map::{Entry, HashMap};
 use std::path::{Path, PathBuf};
 use std::slice;
 
 use glob::glob;
 use url::Url;
 
+use core::registry::PackageRegistry;
 use core::{EitherManifest, Package, SourceId, VirtualManifest};
 use core::{Dependency, PackageIdSpec, Profile, Profiles};
-use util::{Config, Filesystem};
+use ops;
+use sources::PathSource;
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
 use util::toml::read_manifest;
+use util::{Config, Filesystem};
 
 /// The core abstraction in Cargo for working with a workspace of crates.
 ///
@@ -67,6 +71,10 @@ pub struct Workspace<'cfg> {
     // needed by the current configuration (such as in cargo install). In some
     // cases `false` also results in the non-enforcement of dev-dependencies.
     require_optional_deps: bool,
+
+    // A cache of lodaed packages for particular paths which is disjoint from
+    // `packages` up above, used in the `load` method down below.
+    loaded_packages: RefCell<HashMap<PathBuf, Package>>,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -137,6 +145,7 @@ impl<'cfg> Workspace<'cfg> {
             default_members: Vec::new(),
             is_ephemeral: false,
             require_optional_deps: true,
+            loaded_packages: RefCell::new(HashMap::new()),
         };
         ws.root_manifest = ws.find_root(manifest_path)?;
         ws.find_members()?;
@@ -172,6 +181,7 @@ impl<'cfg> Workspace<'cfg> {
             default_members: Vec::new(),
             is_ephemeral: true,
             require_optional_deps,
+            loaded_packages: RefCell::new(HashMap::new()),
         };
         {
             let key = ws.current_manifest.parent().unwrap();
@@ -669,11 +679,63 @@ impl<'cfg> Workspace<'cfg> {
 
         Ok(())
     }
+
+    pub fn load(&self, manifest_path: &Path) -> CargoResult<Package> {
+        match self.packages.maybe_get(manifest_path) {
+            Some(&MaybePackage::Package(ref p)) => return Ok(p.clone()),
+            Some(&MaybePackage::Virtual(_)) => bail!("cannot load workspace root"),
+            None => {}
+        }
+
+        let mut loaded = self.loaded_packages.borrow_mut();
+        if let Some(p) = loaded.get(manifest_path).cloned() {
+            return Ok(p);
+        }
+        let source_id = SourceId::for_path(manifest_path.parent().unwrap())?;
+        let (package, _nested_paths) = ops::read_package(manifest_path, &source_id, self.config)?;
+        loaded.insert(manifest_path.to_path_buf(), package.clone());
+        Ok(package)
+    }
+
+    /// Preload the provided registry with already loaded packages.
+    ///
+    /// A workspace may load packages during construction/parsing/early phases
+    /// for various operations, and this preload step avoids doubly-loading and
+    /// parsing crates on the filesystem by inserting them all into the registry
+    /// with their in-memory formats.
+    pub fn preload(&self, registry: &mut PackageRegistry<'cfg>) {
+        // These can get weird as this generally represents a workspace during
+        // `cargo install`. Things like git repositories will actually have a
+        // `PathSource` with multiple entries in it, so the logic below is
+        // mostly just an optimization for normal `cargo build` in workspaces
+        // during development.
+        if self.is_ephemeral {
+            return;
+        }
+
+        for pkg in self.packages.packages.values() {
+            let pkg = match *pkg {
+                MaybePackage::Package(ref p) => p.clone(),
+                MaybePackage::Virtual(_) => continue,
+            };
+            let mut src = PathSource::new(
+                pkg.manifest_path(),
+                pkg.package_id().source_id(),
+                self.config,
+            );
+            src.preload_with(pkg);
+            registry.add_preloaded(Box::new(src));
+        }
+    }
 }
 
 impl<'cfg> Packages<'cfg> {
     fn get(&self, manifest_path: &Path) -> &MaybePackage {
-        &self.packages[manifest_path.parent().unwrap()]
+        self.maybe_get(manifest_path).unwrap()
+    }
+
+    fn maybe_get(&self, manifest_path: &Path) -> Option<&MaybePackage> {
+        self.packages.get(manifest_path.parent().unwrap())
     }
 
     fn load(&mut self, manifest_path: &Path) -> CargoResult<&MaybePackage> {

@@ -498,17 +498,22 @@ fn override_adds_some_deps() {
         p.cargo("update")
             .arg("-p")
             .arg(&format!("{}#bar", foo.url())),
-        execs()
-            .with_status(0)
-            .with_stderr("[UPDATING] git repository `file://[..]`"),
+        execs().with_status(0).with_stderr(
+            "\
+[UPDATING] git repository `file://[..]`
+[UPDATING] registry `file://[..]`
+",
+        ),
     );
     assert_that(
         p.cargo("update")
             .arg("-p")
             .arg("https://github.com/rust-lang/crates.io-index#bar"),
-        execs()
-            .with_status(0)
-            .with_stderr("[UPDATING] registry `file://[..]`"),
+        execs().with_status(0).with_stderr(
+            "\
+[UPDATING] registry `file://[..]`
+",
+        ),
     );
 
     assert_that(p.cargo("build"), execs().with_status(0).with_stdout(""));

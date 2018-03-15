@@ -1082,7 +1082,7 @@ fn build_deps_args<'a, 'cfg>(
                 .pkg
                 .dependencies()
                 .iter()
-                .filter(|d| d.matches_ignoring_source(dep.pkg.summary()))
+                .filter(|d| d.matches_ignoring_source(dep.pkg.package_id()))
                 .filter_map(|d| d.rename())
                 .next();
 
