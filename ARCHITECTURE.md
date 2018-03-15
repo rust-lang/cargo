@@ -7,13 +7,10 @@ interested in the inner workings of Cargo.
 
 ## Subcommands
 
-Cargo is organized as a set of subcommands. All subcommands live in
-`src/bin` directory. However, only `src/bin/cargo.rs` file produces an
-executable, other files inside the `bin` directory are submodules. See
-`src/bin/cargo.rs` for how these subcommands get wired up with the
-main executable.
+Cargo is organized as a set of `clap` subcommands. All subcommands live in
+`src/bin/commands` directory. `src/bin/cargo.rs` is the entry point.
 
-A typical subcommand, such as `src/bin/build.rs`, parses command line
+A typical subcommand, such as `src/bin/commands/build.rs`, parses command line
 options, reads the configuration files, discovers the Cargo project in
 the current directory and delegates the actual implementation to one
 of the functions in `src/cargo/ops/mod.rs`. This short file is a good
@@ -88,3 +85,21 @@ verified against the expected output. To simplify testing, several
 macros of the form `[MACRO]` are used in the expected output. For
 example, `[..]` matches any string and `[/]` matches `/` on Unixes and
 `\` on windows.
+
+To see stdout and stderr streams of the subordinate process, add `.stream()` 
+call to `execs()`:
+
+```rust
+// Before
+assert_that(
+    p.cargo("run"),
+    execs().with_status(0)
+);
+
+// After
+assert_that(
+    p.cargo("run"),
+    execs().stream().with_status(0)
+);
+
+```
