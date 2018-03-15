@@ -1,23 +1,26 @@
 use cargotest::ChannelChanger;
-use cargotest::support::{project, execs};
+use cargotest::support::{execs, project};
 use hamcrest::assert_that;
 
 #[test]
 fn feature_required() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "a"
             version = "0.0.1"
             authors = []
             im-a-teapot = true
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build")
-                 .masquerade_as_nightly_cargo(),
-                execs().with_status(101)
-                       .with_stderr("\
+    assert_that(
+        p.cargo("build").masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr(
+            "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
@@ -27,11 +30,14 @@ Caused by:
   feature `test-dummy-unstable` is required
 
 consider adding `cargo-features = [\"test-dummy-unstable\"]` to the manifest
-"));
+",
+        ),
+    );
 
-    assert_that(p.cargo("build"),
-                execs().with_status(101)
-                       .with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
@@ -43,59 +49,75 @@ Caused by:
 this Cargo does not support nightly features, but if you
 switch to nightly channel you can add
 `cargo-features = [\"test-dummy-unstable\"]` to enable this feature
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn unknown_feature() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             cargo-features = ["foo"]
 
             [package]
             name = "a"
             version = "0.0.1"
             authors = []
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build"),
-                execs().with_status(101)
-                       .with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   unknown cargo feature `foo`
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn stable_feature_warns() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             cargo-features = ["test-dummy-stable"]
 
             [package]
             name = "a"
             version = "0.0.1"
             authors = []
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build"),
-                execs().with_status(0)
-                       .with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0).with_stderr(
+            "\
 warning: the cargo feature `test-dummy-stable` is now stable and is no longer \
 necessary to be listed in the manifest
 [COMPILING] a [..]
 [FINISHED] [..]
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn nightly_feature_requires_nightly() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             cargo-features = ["test-dummy-unstable"]
 
             [package]
@@ -103,32 +125,40 @@ fn nightly_feature_requires_nightly() {
             version = "0.0.1"
             authors = []
             im-a-teapot = true
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build")
-                 .masquerade_as_nightly_cargo(),
-                execs().with_status(0)
-                       .with_stderr("\
+    assert_that(
+        p.cargo("build").masquerade_as_nightly_cargo(),
+        execs().with_status(0).with_stderr(
+            "\
 [COMPILING] a [..]
 [FINISHED] [..]
-"));
+",
+        ),
+    );
 
-    assert_that(p.cargo("build"),
-                execs().with_status(101)
-                       .with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn nightly_feature_requires_nightly_in_dep() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "b"
             version = "0.0.1"
@@ -136,9 +166,12 @@ fn nightly_feature_requires_nightly_in_dep() {
 
             [dependencies]
             a = { path = "a" }
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
-        .file("a/Cargo.toml", r#"
+        .file(
+            "a/Cargo.toml",
+            r#"
             cargo-features = ["test-dummy-unstable"]
 
             [package]
@@ -146,21 +179,25 @@ fn nightly_feature_requires_nightly_in_dep() {
             version = "0.0.1"
             authors = []
             im-a-teapot = true
-        "#)
+        "#,
+        )
         .file("a/src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build")
-                 .masquerade_as_nightly_cargo(),
-                execs().with_status(0)
-                       .with_stderr("\
+    assert_that(
+        p.cargo("build").masquerade_as_nightly_cargo(),
+        execs().with_status(0).with_stderr(
+            "\
 [COMPILING] a [..]
 [COMPILING] b [..]
 [FINISHED] [..]
-"));
+",
+        ),
+    );
 
-    assert_that(p.cargo("build"),
-                execs().with_status(101)
-                       .with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
 error: failed to load source for a dependency on `a`
 
 Caused by:
@@ -172,13 +209,17 @@ Caused by:
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn cant_publish() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             cargo-features = ["test-dummy-unstable"]
 
             [package]
@@ -186,32 +227,40 @@ fn cant_publish() {
             version = "0.0.1"
             authors = []
             im-a-teapot = true
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build")
-                 .masquerade_as_nightly_cargo(),
-                execs().with_status(0)
-                       .with_stderr("\
+    assert_that(
+        p.cargo("build").masquerade_as_nightly_cargo(),
+        execs().with_status(0).with_stderr(
+            "\
 [COMPILING] a [..]
 [FINISHED] [..]
-"));
+",
+        ),
+    );
 
-    assert_that(p.cargo("build"),
-                execs().with_status(101)
-                       .with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
 error: failed to parse manifest at `[..]`
 
 Caused by:
   the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
   but this is the `stable` channel
-"));
+",
+        ),
+    );
 }
 
 #[test]
 fn z_flags_rejected() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             cargo-features = ["test-dummy-unstable"]
 
             [package]
@@ -219,52 +268,60 @@ fn z_flags_rejected() {
             version = "0.0.1"
             authors = []
             im-a-teapot = true
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("build")
-                 .arg("-Zprint-im-a-teapot"),
-                execs().with_status(101)
-                       .with_stderr("\
-error: the `-Z` flag is only accepted on the nightly channel of Cargo
-"));
+    assert_that(
+        p.cargo("build").arg("-Zprint-im-a-teapot"),
+        execs()
+            .with_status(101)
+            .with_stderr("error: the `-Z` flag is only accepted on the nightly channel of Cargo"),
+    );
 
-    assert_that(p.cargo("build")
-                 .masquerade_as_nightly_cargo()
-                 .arg("-Zarg"),
-                execs().with_status(101)
-                       .with_stderr("\
-error: unknown `-Z` flag specified: arg
-"));
+    assert_that(
+        p.cargo("build").masquerade_as_nightly_cargo().arg("-Zarg"),
+        execs()
+            .with_status(101)
+            .with_stderr("error: unknown `-Z` flag specified: arg"),
+    );
 
-    assert_that(p.cargo("build")
-                 .masquerade_as_nightly_cargo()
-                 .arg("-Zprint-im-a-teapot"),
-                execs().with_status(0)
-                       .with_stdout("im-a-teapot = true\n")
-                       .with_stderr("\
+    assert_that(
+        p.cargo("build")
+            .masquerade_as_nightly_cargo()
+            .arg("-Zprint-im-a-teapot"),
+        execs()
+            .with_status(0)
+            .with_stdout("im-a-teapot = true\n")
+            .with_stderr(
+                "\
 [COMPILING] a [..]
 [FINISHED] [..]
-"));
+",
+            ),
+    );
 }
 
 #[test]
 fn publish_rejected() {
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             cargo-features = ["test-dummy-unstable"]
 
             [package]
             name = "a"
             version = "0.0.1"
             authors = []
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .build();
-    assert_that(p.cargo("publish")
-                 .masquerade_as_nightly_cargo(),
-                execs().with_status(101)
-                       .with_stderr("\
-error: cannot publish crates which activate nightly-only cargo features to crates.io
-"));
+    assert_that(
+        p.cargo("publish").masquerade_as_nightly_cargo(),
+        execs().with_status(101).with_stderr(
+            "error: cannot publish crates which activate nightly-only cargo features to crates.io",
+        ),
+    );
 }

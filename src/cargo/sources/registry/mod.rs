@@ -162,17 +162,17 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fs::File;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use semver::Version;
 use serde::de;
 use tar::Archive;
 
-use core::{Source, SourceId, PackageId, Package, Summary, Registry};
+use core::{Package, PackageId, Registry, Source, SourceId, Summary};
 use core::dependency::{Dependency, Kind};
 use sources::PathSource;
-use util::{CargoResult, Config, internal, FileLock, Filesystem};
+use util::{internal, CargoResult, Config, FileLock, Filesystem};
 use util::errors::CargoResultExt;
 use util::hex;
 use util::to_url::ToUrl;
@@ -220,8 +220,7 @@ struct RegistryPackage<'a> {
     features: BTreeMap<String, Vec<String>>,
     cksum: String,
     yanked: Option<bool>,
-    #[serde(default)]
-    links: Option<String>,
+    #[serde(default)] links: Option<String>,
 }
 
 struct DependencyList {
@@ -242,17 +241,19 @@ struct RegistryDependency<'a> {
 
 pub trait RegistryData {
     fn index_path(&self) -> &Filesystem;
-    fn load(&self,
-            _root: &Path,
-            path: &Path,
-            data: &mut FnMut(&[u8]) -> CargoResult<()>) -> CargoResult<()>;
+    fn load(
+        &self,
+        _root: &Path,
+        path: &Path,
+        data: &mut FnMut(&[u8]) -> CargoResult<()>,
+    ) -> CargoResult<()>;
     fn config(&mut self) -> CargoResult<Option<RegistryConfig>>;
     fn update_index(&mut self) -> CargoResult<()>;
-    fn download(&mut self,
-                pkg: &PackageId,
-                checksum: &str) -> CargoResult<FileLock>;
+    fn download(&mut self, pkg: &PackageId, checksum: &str) -> CargoResult<FileLock>;
 
-    fn is_crate_downloaded(&self, _pkg: &PackageId) -> bool { true }
+    fn is_crate_downloaded(&self, _pkg: &PackageId) -> bool {
+        true
+    }
 }
 
 mod index;
@@ -266,35 +267,31 @@ fn short_name(id: &SourceId) -> String {
 }
 
 impl<'cfg> RegistrySource<'cfg> {
-    pub fn remote(source_id: &SourceId,
-                  config: &'cfg Config) -> RegistrySource<'cfg> {
+    pub fn remote(source_id: &SourceId, config: &'cfg Config) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = remote::RemoteRegistry::new(source_id, config, &name);
         RegistrySource::new(source_id, config, &name, Box::new(ops), true)
     }
 
-    pub fn local(source_id: &SourceId,
-                 path: &Path,
-                 config: &'cfg Config) -> RegistrySource<'cfg> {
+    pub fn local(source_id: &SourceId, path: &Path, config: &'cfg Config) -> RegistrySource<'cfg> {
         let name = short_name(source_id);
         let ops = local::LocalRegistry::new(path, config, &name);
         RegistrySource::new(source_id, config, &name, Box::new(ops), false)
     }
 
-    fn new(source_id: &SourceId,
-           config: &'cfg Config,
-           name: &str,
-           ops: Box<RegistryData + 'cfg>,
-           index_locked: bool) -> RegistrySource<'cfg> {
+    fn new(
+        source_id: &SourceId,
+        config: &'cfg Config,
+        name: &str,
+        ops: Box<RegistryData + 'cfg>,
+        index_locked: bool,
+    ) -> RegistrySource<'cfg> {
         RegistrySource {
             src_path: config.registry_source_path().join(name),
             config,
             source_id: source_id.clone(),
             updated: false,
-            index: index::RegistryIndex::new(source_id,
-                                             ops.index_path(),
-                                             config,
-                                             index_locked),
+            index: index::RegistryIndex::new(source_id, ops.index_path(), config, index_locked),
             index_locked,
             ops,
         }
@@ -311,12 +308,9 @@ impl<'cfg> RegistrySource<'cfg> {
     /// compiled.
     ///
     /// No action is taken if the source looks like it's already unpacked.
-    fn unpack_package(&self,
-                      pkg: &PackageId,
-                      tarball: &FileLock)
-                      -> CargoResult<PathBuf> {
-        let dst = self.src_path.join(&format!("{}-{}", pkg.name(),
-                                              pkg.version()));
+    fn unpack_package(&self, pkg: &PackageId, tarball: &FileLock) -> CargoResult<PathBuf> {
+        let dst = self.src_path
+            .join(&format!("{}-{}", pkg.name(), pkg.version()));
         dst.create_dir()?;
         // Note that we've already got the `tarball` locked above, and that
         // implies a lock on the unpacked destination as well, so this access
@@ -324,7 +318,7 @@ impl<'cfg> RegistrySource<'cfg> {
         let dst = dst.into_path_unlocked();
         let ok = dst.join(".cargo-ok");
         if ok.exists() {
-            return Ok(dst)
+            return Ok(dst);
         }
 
         let gz = GzDecoder::new(tarball.file());
@@ -333,7 +327,8 @@ impl<'cfg> RegistrySource<'cfg> {
         let parent = dst.parent().unwrap();
         for entry in tar.entries()? {
             let mut entry = entry.chain_err(|| "failed to iterate over archive")?;
-            let entry_path = entry.path()
+            let entry_path = entry
+                .path()
                 .chain_err(|| "failed to read entry path")?
                 .into_owned();
 
@@ -344,15 +339,18 @@ impl<'cfg> RegistrySource<'cfg> {
             // crates.io should also block uploads with these sorts of tarballs,
             // but be extra sure by adding a check here as well.
             if !entry_path.starts_with(prefix) {
-                bail!("invalid tarball downloaded, contains \
-                       a file at {:?} which isn't under {:?}",
-                      entry_path, prefix)
+                bail!(
+                    "invalid tarball downloaded, contains \
+                     a file at {:?} which isn't under {:?}",
+                    entry_path,
+                    prefix
+                )
             }
 
             // Once that's verified, unpack the entry as usual.
-            entry.unpack_in(parent).chain_err(|| {
-                format!("failed to unpack entry at `{}`", entry_path.display())
-            })?;
+            entry
+                .unpack_in(parent)
+                .chain_err(|| format!("failed to unpack entry at `{}`", entry_path.display()))?;
         }
         File::create(&ok)?;
         Ok(dst.clone())
@@ -361,18 +359,14 @@ impl<'cfg> RegistrySource<'cfg> {
     fn do_update(&mut self) -> CargoResult<()> {
         self.ops.update_index()?;
         let path = self.ops.index_path();
-        self.index = index::RegistryIndex::new(&self.source_id,
-                                               path,
-                                               self.config,
-                                               self.index_locked);
+        self.index =
+            index::RegistryIndex::new(&self.source_id, path, self.config, self.index_locked);
         Ok(())
     }
 }
 
 impl<'cfg> Registry for RegistrySource<'cfg> {
-    fn query(&mut self,
-             dep: &Dependency,
-             f: &mut FnMut(Summary)) -> CargoResult<()> {
+    fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
         // If this is a precise dependency, then it came from a lockfile and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
@@ -384,7 +378,7 @@ impl<'cfg> Registry for RegistrySource<'cfg> {
                 f(s);
             })?;
             if called {
-                return Ok(())
+                return Ok(());
             } else {
                 self.do_update()?;
             }
@@ -424,9 +418,8 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     fn download(&mut self, package: &PackageId) -> CargoResult<Package> {
         let hash = self.index.hash(package, &mut *self.ops)?;
         let path = self.ops.download(package, &hash)?;
-        let path = self.unpack_package(package, &path).chain_err(|| {
-            internal(format!("failed to unpack package `{}`", package))
-        })?;
+        let path = self.unpack_package(package, &path)
+            .chain_err(|| internal(format!("failed to unpack package `{}`", package)))?;
         let mut src = PathSource::new(&path, &self.source_id, self.config);
         src.update()?;
         let pkg = src.download(package)?;
@@ -436,9 +429,11 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // *summary* loaded from the Cargo.toml we just downloaded with the one
         // we loaded from the index.
         let summaries = self.index.summaries(&*package.name(), &mut *self.ops)?;
-        let summary = summaries.iter().map(|s| &s.0).find(|s| {
-            s.package_id() == package
-        }).expect("summary not found");
+        let summary = summaries
+            .iter()
+            .map(|s| &s.0)
+            .find(|s| s.package_id() == package)
+            .expect("summary not found");
         let mut manifest = pkg.manifest().clone();
         manifest.set_summary(summary.clone());
         Ok(Package::new(manifest, pkg.manifest_path()))
@@ -463,7 +458,8 @@ scoped_thread_local!(static DEFAULT_ID: SourceId);
 
 impl<'de> de::Deserialize<'de> for DependencyList {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer<'de>,
+    where
+        D: de::Deserializer<'de>,
     {
         return deserializer.deserialize_seq(Visitor);
 
@@ -477,16 +473,15 @@ impl<'de> de::Deserialize<'de> for DependencyList {
             }
 
             fn visit_seq<A>(self, mut seq: A) -> Result<DependencyList, A::Error>
-                where A: de::SeqAccess<'de>,
+            where
+                A: de::SeqAccess<'de>,
             {
                 let mut ret = Vec::new();
                 if let Some(size) = seq.size_hint() {
                     ret.reserve(size);
                 }
                 while let Some(element) = seq.next_element::<RegistryDependency>()? {
-                    ret.push(parse_registry_dependency(element).map_err(|e| {
-                        de::Error::custom(e)
-                    })?);
+                    ret.push(parse_registry_dependency(element).map_err(|e| de::Error::custom(e))?);
                 }
 
                 Ok(DependencyList { inner: ret })
@@ -496,18 +491,22 @@ impl<'de> de::Deserialize<'de> for DependencyList {
 }
 
 /// Converts an encoded dependency in the registry to a cargo dependency
-fn parse_registry_dependency(dep: RegistryDependency)
-                             -> CargoResult<Dependency> {
+fn parse_registry_dependency(dep: RegistryDependency) -> CargoResult<Dependency> {
     let RegistryDependency {
-        name, req, mut features, optional, default_features, target, kind, registry
+        name,
+        req,
+        mut features,
+        optional,
+        default_features,
+        target,
+        kind,
+        registry,
     } = dep;
 
     let id = if let Some(registry) = registry {
         SourceId::for_registry(&registry.to_url()?)?
     } else {
-        DEFAULT_ID.with(|id| {
-            id.clone()
-        })
+        DEFAULT_ID.with(|id| id.clone())
     };
 
     let mut dep = Dependency::parse_no_deprecated(&name, Some(&req), &id)?;
@@ -530,10 +529,10 @@ fn parse_registry_dependency(dep: RegistryDependency)
     features.retain(|s| !s.is_empty());
 
     dep.set_optional(optional)
-       .set_default_features(default_features)
-       .set_features(features)
-       .set_platform(platform)
-       .set_kind(kind);
+        .set_default_features(default_features)
+        .set_features(features)
+        .set_platform(platform)
+        .set_kind(kind);
 
     Ok(dep)
 }

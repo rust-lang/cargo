@@ -2,7 +2,7 @@ use std::io::prelude::*;
 use std::fs::{self, File};
 
 use toml;
-use cargotest::{ChannelChanger, cargo_process};
+use cargotest::{cargo_process, ChannelChanger};
 use cargotest::support::execs;
 use cargotest::support::registry::registry;
 use cargotest::install::cargo_home;
@@ -29,46 +29,46 @@ fn setup_old_credentials() {
 fn setup_new_credentials() {
     let config = cargo_home().join("credentials");
     t!(fs::create_dir_all(config.parent().unwrap()));
-    t!(t!(File::create(&config)).write_all(format!(r#"
+    t!(t!(File::create(&config)).write_all(
+        format!(
+            r#"
         token = "{token}"
-    "#, token = ORIGINAL_TOKEN)
-    .as_bytes()));
+    "#,
+            token = ORIGINAL_TOKEN
+        ).as_bytes()
+    ));
 }
 
 fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
-
     let credentials = cargo_home().join("credentials");
     assert_that(&credentials, existing_file());
 
     let mut contents = String::new();
-    File::open(&credentials).unwrap().read_to_string(&mut contents).unwrap();
+    File::open(&credentials)
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
     let toml: toml::Value = contents.parse().unwrap();
 
     let token = match (registry, toml) {
         // A registry has been provided, so check that the token exists in a
         // table for the registry.
-        (Some(registry), toml::Value::Table(table)) => {
-            table.get("registries")
-                    .and_then(|registries_table| registries_table.get(registry))
-                    .and_then(|registry_table| {
-                match registry_table.get("token") {
-                    Some(&toml::Value::String(ref token)) => Some(token.as_str().to_string()),
-                    _ => None,
-                }
-            })
-        },
+        (Some(registry), toml::Value::Table(table)) => table
+            .get("registries")
+            .and_then(|registries_table| registries_table.get(registry))
+            .and_then(|registry_table| match registry_table.get("token") {
+                Some(&toml::Value::String(ref token)) => Some(token.as_str().to_string()),
+                _ => None,
+            }),
         // There is no registry provided, so check the global token instead.
-        (None, toml::Value::Table(table)) => {
-            table.get("registry")
-                    .and_then(|registry_table| registry_table.get("token"))
-                    .and_then(|v| {
-                match v {
-                    &toml::Value::String(ref token) => Some(token.as_str().to_string()),
-                    _ => None,
-                }
-            })
-        }
-        _ => None
+        (None, toml::Value::Table(table)) => table
+            .get("registry")
+            .and_then(|registry_table| registry_table.get("token"))
+            .and_then(|v| match v {
+                &toml::Value::String(ref token) => Some(token.as_str().to_string()),
+                _ => None,
+            }),
+        _ => None,
     };
 
     if let Some(token_val) = token {
@@ -82,15 +82,23 @@ fn check_token(expected_token: &str, registry: Option<&str>) -> bool {
 fn login_with_old_credentials() {
     setup_old_credentials();
 
-    assert_that(cargo_process().arg("login")
-                .arg("--host").arg(registry().to_string()).arg(TOKEN),
-                execs().with_status(0));
+    assert_that(
+        cargo_process()
+            .arg("login")
+            .arg("--host")
+            .arg(registry().to_string())
+            .arg(TOKEN),
+        execs().with_status(0),
+    );
 
     let config = cargo_home().join("config");
     assert_that(&config, existing_file());
 
     let mut contents = String::new();
-    File::open(&config).unwrap().read_to_string(&mut contents).unwrap();
+    File::open(&config)
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
     assert_eq!(CONFIG_FILE, contents);
 
     // Ensure that we get the new token for the registry
@@ -101,9 +109,14 @@ fn login_with_old_credentials() {
 fn login_with_new_credentials() {
     setup_new_credentials();
 
-    assert_that(cargo_process().arg("login")
-                .arg("--host").arg(registry().to_string()).arg(TOKEN),
-                execs().with_status(0));
+    assert_that(
+        cargo_process()
+            .arg("login")
+            .arg("--host")
+            .arg(registry().to_string())
+            .arg(TOKEN),
+        execs().with_status(0),
+    );
 
     let config = cargo_home().join("config");
     assert_that(&config, is_not(existing_file()));
@@ -120,9 +133,14 @@ fn login_with_old_and_new_credentials() {
 
 #[test]
 fn login_without_credentials() {
-    assert_that(cargo_process().arg("login")
-                .arg("--host").arg(registry().to_string()).arg(TOKEN),
-                execs().with_status(0));
+    assert_that(
+        cargo_process()
+            .arg("login")
+            .arg("--host")
+            .arg(registry().to_string())
+            .arg(TOKEN),
+        execs().with_status(0),
+    );
 
     let config = cargo_home().join("config");
     assert_that(&config, is_not(existing_file()));
@@ -136,9 +154,14 @@ fn new_credentials_is_used_instead_old() {
     setup_old_credentials();
     setup_new_credentials();
 
-    assert_that(cargo_process().arg("login")
-                .arg("--host").arg(registry().to_string()).arg(TOKEN),
-                execs().with_status(0));
+    assert_that(
+        cargo_process()
+            .arg("login")
+            .arg("--host")
+            .arg(registry().to_string())
+            .arg(TOKEN),
+        execs().with_status(0),
+    );
 
     let config = Config::new(Shell::new(), cargo_home(), cargo_home());
 
@@ -153,9 +176,16 @@ fn registry_credentials() {
 
     let reg = "test-reg";
 
-    assert_that(cargo_process().arg("login").masquerade_as_nightly_cargo()
-                .arg("--registry").arg(reg).arg(TOKEN).arg("-Zunstable-options"),
-                execs().with_status(0));
+    assert_that(
+        cargo_process()
+            .arg("login")
+            .masquerade_as_nightly_cargo()
+            .arg("--registry")
+            .arg(reg)
+            .arg(TOKEN)
+            .arg("-Zunstable-options"),
+        execs().with_status(0),
+    );
 
     // Ensure that we have not updated the default token
     assert!(check_token(ORIGINAL_TOKEN, None));

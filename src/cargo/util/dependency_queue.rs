@@ -8,7 +8,7 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
-pub use self::Freshness::{Fresh, Dirty};
+pub use self::Freshness::{Dirty, Fresh};
 
 #[derive(Debug)]
 pub struct DependencyQueue<K: Eq + Hash, V> {
@@ -51,7 +51,10 @@ pub enum Freshness {
 
 impl Freshness {
     pub fn combine(&self, other: Freshness) -> Freshness {
-        match *self { Fresh => other, Dirty => Dirty }
+        match *self {
+            Fresh => other,
+            Dirty => Dirty,
+        }
     }
 }
 
@@ -77,11 +80,7 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
     ///
     /// It is assumed that any dependencies of this package will eventually also
     /// be added to the dependency queue.
-    pub fn queue(&mut self,
-                 fresh: Freshness,
-                 key: K,
-                 value: V,
-                 dependencies: &[K]) -> &mut V {
+    pub fn queue(&mut self, fresh: Freshness, key: K, value: V, dependencies: &[K]) -> &mut V {
         let slot = match self.dep_map.entry(key.clone()) {
             Occupied(v) => return &mut v.into_mut().1,
             Vacant(v) => v,
@@ -94,8 +93,9 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
         let mut my_dependencies = HashSet::new();
         for dep in dependencies {
             my_dependencies.insert(dep.clone());
-            let rev = self.reverse_dep_map.entry(dep.clone())
-                                          .or_insert_with(HashSet::new);
+            let rev = self.reverse_dep_map
+                .entry(dep.clone())
+                .or_insert_with(HashSet::new);
             rev.insert(key.clone());
         }
         &mut slot.insert((my_dependencies, value)).1
@@ -122,12 +122,13 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
 
             results.insert(key.clone(), IN_PROGRESS);
 
-            let depth = 1 + map.get(&key)
-                .into_iter()
-                .flat_map(|it| it)
-                .map(|dep| depth(dep, map, results))
-                .max()
-                .unwrap_or(0);
+            let depth = 1
+                + map.get(&key)
+                    .into_iter()
+                    .flat_map(|it| it)
+                    .map(|dep| depth(dep, map, results))
+                    .max()
+                    .unwrap_or(0);
 
             *results.get_mut(key).unwrap() = depth;
 
@@ -150,16 +151,21 @@ impl<K: Hash + Eq + Clone, V> DependencyQueue<K, V> {
         // TODO: it'd be best here to throw in a heuristic of crate size as
         //       well. For example how long did this crate historically take to
         //       compile? How large is its source code? etc.
-        let next = self.dep_map.iter()
+        let next = self.dep_map
+            .iter()
             .filter(|&(_, &(ref deps, _))| deps.is_empty())
             .map(|(key, _)| key.clone())
             .max_by_key(|k| self.depth[k]);
         let key = match next {
             Some(key) => key,
-            None => return None
+            None => return None,
         };
         let (_, data) = self.dep_map.remove(&key).unwrap();
-        let fresh = if self.dirty.contains(&key) {Dirty} else {Fresh};
+        let fresh = if self.dirty.contains(&key) {
+            Dirty
+        } else {
+            Fresh
+        };
         self.pending.insert(key.clone());
         Some((fresh, key, data))
     }

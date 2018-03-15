@@ -1,5 +1,5 @@
-use cargotest::support::{project, execs, main_file, basic_bin_manifest};
-use hamcrest::{assert_that};
+use cargotest::support::{basic_bin_manifest, execs, main_file, project};
+use hamcrest::assert_that;
 
 fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
     let p = project("foo")
@@ -7,28 +7,35 @@ fn assert_not_a_cargo_toml(command: &str, manifest_path_argument: &str) {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo(command)
-                 .arg("--manifest-path").arg(manifest_path_argument)
-                 .cwd(p.root().parent().unwrap()),
-                execs().with_status(101)
-                       .with_stderr("[ERROR] the manifest-path must be a path \
-                                             to a Cargo.toml file"));
+    assert_that(
+        p.cargo(command)
+            .arg("--manifest-path")
+            .arg(manifest_path_argument)
+            .cwd(p.root().parent().unwrap()),
+        execs().with_status(101).with_stderr(
+            "[ERROR] the manifest-path must be a path \
+             to a Cargo.toml file",
+        ),
+    );
 }
-
 
 fn assert_cargo_toml_doesnt_exist(command: &str, manifest_path_argument: &str) {
     let p = project("foo").build();
     let expected_path = manifest_path_argument
-        .split('/').collect::<Vec<_>>().join("[..]");
+        .split('/')
+        .collect::<Vec<_>>()
+        .join("[..]");
 
-    assert_that(p.cargo(command)
-                 .arg("--manifest-path").arg(manifest_path_argument)
-                 .cwd(p.root().parent().unwrap()),
-                execs().with_status(101)
-                       .with_stderr(
-                           format!("[ERROR] manifest path `{}` does not exist",
-                                   expected_path)
-                       ));
+    assert_that(
+        p.cargo(command)
+            .arg("--manifest-path")
+            .arg(manifest_path_argument)
+            .cwd(p.root().parent().unwrap()),
+        execs().with_status(101).with_stderr(format!(
+            "[ERROR] manifest path `{}` does not exist",
+            expected_path
+        )),
+    );
 }
 
 #[test]
@@ -318,13 +325,16 @@ fn verify_project_dir_containing_cargo_toml() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("verify-project")
-                 .arg("--manifest-path").arg("foo")
-                 .cwd(p.root().parent().unwrap()),
-                execs().with_status(1)
-                       .with_stdout("\
-{\"invalid\":\"the manifest-path must be a path to a Cargo.toml file\"}\
-                        "));
+    assert_that(
+        p.cargo("verify-project")
+            .arg("--manifest-path")
+            .arg("foo")
+            .cwd(p.root().parent().unwrap()),
+        execs().with_status(1).with_stdout(
+            "{\"invalid\":\"the manifest-path must be a path to a Cargo.toml file\"}\
+             ",
+        ),
+    );
 }
 
 #[test]
@@ -334,13 +344,16 @@ fn verify_project_dir_plus_file() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("verify-project")
-                 .arg("--manifest-path").arg("foo/bar")
-                 .cwd(p.root().parent().unwrap()),
-                execs().with_status(1)
-                       .with_stdout("\
-{\"invalid\":\"the manifest-path must be a path to a Cargo.toml file\"}\
-                        "));
+    assert_that(
+        p.cargo("verify-project")
+            .arg("--manifest-path")
+            .arg("foo/bar")
+            .cwd(p.root().parent().unwrap()),
+        execs().with_status(1).with_stdout(
+            "{\"invalid\":\"the manifest-path must be a path to a Cargo.toml file\"}\
+             ",
+        ),
+    );
 }
 
 #[test]
@@ -350,23 +363,29 @@ fn verify_project_dir_plus_path() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    assert_that(p.cargo("verify-project")
-                 .arg("--manifest-path").arg("foo/bar/baz")
-                 .cwd(p.root().parent().unwrap()),
-                execs().with_status(1)
-                       .with_stdout("\
-{\"invalid\":\"the manifest-path must be a path to a Cargo.toml file\"}\
-                        "));
+    assert_that(
+        p.cargo("verify-project")
+            .arg("--manifest-path")
+            .arg("foo/bar/baz")
+            .cwd(p.root().parent().unwrap()),
+        execs().with_status(1).with_stdout(
+            "{\"invalid\":\"the manifest-path must be a path to a Cargo.toml file\"}\
+             ",
+        ),
+    );
 }
 
 #[test]
 fn verify_project_dir_to_nonexistent_cargo_toml() {
     let p = project("foo").build();
-    assert_that(p.cargo("verify-project")
-                 .arg("--manifest-path").arg("foo/bar/baz/Cargo.toml")
-                 .cwd(p.root().parent().unwrap()),
-                execs().with_status(1)
-                       .with_stdout("\
-{\"invalid\":\"manifest path `foo[..]bar[..]baz[..]Cargo.toml` does not exist\"}\
-                        "));
+    assert_that(
+        p.cargo("verify-project")
+            .arg("--manifest-path")
+            .arg("foo/bar/baz/Cargo.toml")
+            .cwd(p.root().parent().unwrap()),
+        execs().with_status(1).with_stdout(
+            "{\"invalid\":\"manifest path `foo[..]bar[..]baz[..]Cargo.toml` does not exist\"}\
+             ",
+        ),
+    );
 }

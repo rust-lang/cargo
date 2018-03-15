@@ -2,8 +2,8 @@ use std::fmt;
 use std::io::prelude::*;
 
 use atty;
-use termcolor::Color::{Green, Red, Yellow, Cyan};
-use termcolor::{self, StandardStream, Color, ColorSpec, WriteColor};
+use termcolor::Color::{Cyan, Green, Red, Yellow};
+use termcolor::{self, Color, ColorSpec, StandardStream, WriteColor};
 
 use util::errors::CargoResult;
 
@@ -12,7 +12,7 @@ use util::errors::CargoResult;
 pub enum Verbosity {
     Verbose,
     Normal,
-    Quiet
+    Quiet,
 }
 
 /// An abstraction around a `Write`able object that remembers preferences for output verbosity and
@@ -28,17 +28,13 @@ pub struct Shell {
 impl fmt::Debug for Shell {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.err {
-            ShellOut::Write(_) => {
-                f.debug_struct("Shell")
-                    .field("verbosity", &self.verbosity)
-                    .finish()
-            }
-            ShellOut::Stream { color_choice, .. } => {
-                f.debug_struct("Shell")
-                    .field("verbosity", &self.verbosity)
-                    .field("color_choice", &color_choice)
-                    .finish()
-            }
+            ShellOut::Write(_) => f.debug_struct("Shell")
+                .field("verbosity", &self.verbosity)
+                .finish(),
+            ShellOut::Stream { color_choice, .. } => f.debug_struct("Shell")
+                .field("verbosity", &self.verbosity)
+                .field("color_choice", &color_choice)
+                .finish(),
         }
     }
 }
@@ -90,16 +86,16 @@ impl Shell {
 
     /// Print a message, where the status will have `color` color, and can be justified. The
     /// messages follows without color.
-    fn print(&mut self,
-             status: &fmt::Display,
-             message: Option<&fmt::Display>,
-             color: Color,
-             justified: bool) -> CargoResult<()> {
+    fn print(
+        &mut self,
+        status: &fmt::Display,
+        message: Option<&fmt::Display>,
+        color: Color,
+        justified: bool,
+    ) -> CargoResult<()> {
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
-            _ => {
-                self.err.print(status, message, color, justified)
-            }
+            _ => self.err.print(status, message, color, justified),
         }
     }
 
@@ -126,44 +122,53 @@ impl Shell {
 
     /// Shortcut to right-align and color green a status message.
     pub fn status<T, U>(&mut self, status: T, message: U) -> CargoResult<()>
-        where T: fmt::Display, U: fmt::Display
+    where
+        T: fmt::Display,
+        U: fmt::Display,
     {
         self.print(&status, Some(&message), Green, true)
     }
 
     pub fn status_header<T>(&mut self, status: T) -> CargoResult<()>
-        where T: fmt::Display,
+    where
+        T: fmt::Display,
     {
         self.print(&status, None, Cyan, true)
     }
 
     /// Shortcut to right-align a status message.
-    pub fn status_with_color<T, U>(&mut self,
-                                   status: T,
-                                   message: U,
-                                   color: Color) -> CargoResult<()>
-        where T: fmt::Display, U: fmt::Display
+    pub fn status_with_color<T, U>(
+        &mut self,
+        status: T,
+        message: U,
+        color: Color,
+    ) -> CargoResult<()>
+    where
+        T: fmt::Display,
+        U: fmt::Display,
     {
         self.print(&status, Some(&message), color, true)
     }
 
     /// Run the callback only if we are in verbose mode
     pub fn verbose<F>(&mut self, mut callback: F) -> CargoResult<()>
-        where F: FnMut(&mut Shell) -> CargoResult<()>
+    where
+        F: FnMut(&mut Shell) -> CargoResult<()>,
     {
         match self.verbosity {
             Verbosity::Verbose => callback(self),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 
     /// Run the callback if we are not in verbose mode.
     pub fn concise<F>(&mut self, mut callback: F) -> CargoResult<()>
-        where F: FnMut(&mut Shell) -> CargoResult<()>
+    where
+        F: FnMut(&mut Shell) -> CargoResult<()>,
     {
         match self.verbosity {
             Verbosity::Verbose => Ok(()),
-            _ => callback(self)
+            _ => callback(self),
         }
     }
 
@@ -192,16 +197,23 @@ impl Shell {
 
     /// Update the color choice (always, never, or auto) from a string.
     pub fn set_color_choice(&mut self, color: Option<&str>) -> CargoResult<()> {
-        if let ShellOut::Stream { ref mut stream, ref mut color_choice, .. } =  self.err {
+        if let ShellOut::Stream {
+            ref mut stream,
+            ref mut color_choice,
+            ..
+        } = self.err
+        {
             let cfg = match color {
                 Some("always") => ColorChoice::Always,
                 Some("never") => ColorChoice::Never,
 
-                Some("auto") |
-                None => ColorChoice::CargoAuto,
+                Some("auto") | None => ColorChoice::CargoAuto,
 
-                Some(arg) => bail!("argument for --color must be auto, always, or \
-                                    never, but found `{}`", arg),
+                Some(arg) => bail!(
+                    "argument for --color must be auto, always, or \
+                     never, but found `{}`",
+                    arg
+                ),
             };
             *color_choice = cfg;
             *stream = StandardStream::stderr(cfg.to_termcolor_color_choice());
@@ -230,17 +242,17 @@ impl Default for Shell {
 impl ShellOut {
     /// Print out a message with a status. The status comes first and is bold + the given color.
     /// The status can be justified, in which case the max width that will right align is 12 chars.
-    fn print(&mut self,
-             status: &fmt::Display,
-             message: Option<&fmt::Display>,
-             color: Color,
-             justified: bool) -> CargoResult<()> {
+    fn print(
+        &mut self,
+        status: &fmt::Display,
+        message: Option<&fmt::Display>,
+        color: Color,
+        justified: bool,
+    ) -> CargoResult<()> {
         match *self {
             ShellOut::Stream { ref mut stream, .. } => {
                 stream.reset()?;
-                stream.set_color(ColorSpec::new()
-                                    .set_bold(true)
-                                    .set_fg(Some(color)))?;
+                stream.set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)))?;
                 if justified {
                     write!(stream, "{:>12}", status)?;
                 } else {
@@ -303,7 +315,7 @@ mod imp {
         unsafe {
             let mut winsize: libc::winsize = mem::zeroed();
             if libc::ioctl(libc::STDERR_FILENO, libc::TIOCGWINSZ, &mut winsize) < 0 {
-                return None
+                return None;
             }
             if winsize.ws_col > 0 {
                 Some(winsize.ws_col as usize)
@@ -335,7 +347,7 @@ mod imp {
             let stdout = GetStdHandle(STD_ERROR_HANDLE);
             let mut csbi: CONSOLE_SCREEN_BUFFER_INFO = mem::zeroed();
             if GetConsoleScreenBufferInfo(stdout, &mut csbi) == 0 {
-                return None
+                return None;
             }
             Some((csbi.srWindow.Right - csbi.srWindow.Left) as usize)
         }

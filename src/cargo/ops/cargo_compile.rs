@@ -27,12 +27,12 @@ use std::default::Default;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use core::{Source, Package, Target};
-use core::{Profile, TargetKind, Profiles, Workspace, PackageId, PackageIdSpec};
-use core::resolver::{Resolve, Method};
-use ops::{self, BuildOutput, Executor, DefaultExecutor};
+use core::{Package, Source, Target};
+use core::{PackageId, PackageIdSpec, Profile, Profiles, TargetKind, Workspace};
+use core::resolver::{Method, Resolve};
+use ops::{self, BuildOutput, DefaultExecutor, Executor};
 use util::config::Config;
-use util::{CargoResult, profile};
+use util::{profile, CargoResult};
 
 /// Contains information about how a package should be compiled.
 #[derive(Debug)]
@@ -67,8 +67,7 @@ pub struct CompileOptions<'a> {
 }
 
 impl<'a> CompileOptions<'a> {
-    pub fn default(config: &'a Config, mode: CompileMode) -> CompileOptions<'a>
-    {
+    pub fn default(config: &'a Config, mode: CompileMode) -> CompileOptions<'a> {
         CompileOptions {
             config,
             jobs: None,
@@ -79,7 +78,9 @@ impl<'a> CompileOptions<'a> {
             spec: ops::Packages::Packages(Vec::new()),
             mode,
             release: false,
-            filter: CompileFilter::Default { required_features_filterable: false },
+            filter: CompileFilter::Default {
+                required_features_filterable: false,
+            },
             message_format: MessageFormat::Human,
             target_rustdoc_args: None,
             target_rustc_args: None,
@@ -100,7 +101,7 @@ pub enum CompileMode {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MessageFormat {
     Human,
-    Json
+    Json,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -112,9 +113,7 @@ pub enum Packages {
 }
 
 impl Packages {
-    pub fn from_flags(all: bool, exclude: Vec<String>, package: Vec<String>)
-        -> CargoResult<Self>
-    {
+    pub fn from_flags(all: bool, exclude: Vec<String>, package: Vec<String>) -> CargoResult<Self> {
         Ok(match (all, exclude.len(), package.len()) {
             (false, 0, 0) => Packages::Default,
             (false, 0, _) => Packages::Packages(package),
@@ -126,39 +125,36 @@ impl Packages {
 
     pub fn into_package_id_specs(&self, ws: &Workspace) -> CargoResult<Vec<PackageIdSpec>> {
         let specs = match *self {
-            Packages::All => {
-                ws.members()
-                    .map(Package::package_id)
-                    .map(PackageIdSpec::from_package_id)
-                    .collect()
-            }
-            Packages::OptOut(ref opt_out) => {
-                ws.members()
-                    .map(Package::package_id)
-                    .map(PackageIdSpec::from_package_id)
-                    .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
-                    .collect()
-            }
-            Packages::Packages(ref packages) if packages.is_empty() => {
-                ws.current_opt()
-                    .map(Package::package_id)
-                    .map(PackageIdSpec::from_package_id)
-                    .into_iter().collect()
-            }
-            Packages::Packages(ref packages) => {
-                packages.iter().map(|p| PackageIdSpec::parse(p)).collect::<CargoResult<Vec<_>>>()?
-            }
-            Packages::Default => {
-                ws.default_members()
-                    .map(Package::package_id)
-                    .map(PackageIdSpec::from_package_id)
-                    .collect()
-            }
+            Packages::All => ws.members()
+                .map(Package::package_id)
+                .map(PackageIdSpec::from_package_id)
+                .collect(),
+            Packages::OptOut(ref opt_out) => ws.members()
+                .map(Package::package_id)
+                .map(PackageIdSpec::from_package_id)
+                .filter(|p| opt_out.iter().position(|x| *x == p.name()).is_none())
+                .collect(),
+            Packages::Packages(ref packages) if packages.is_empty() => ws.current_opt()
+                .map(Package::package_id)
+                .map(PackageIdSpec::from_package_id)
+                .into_iter()
+                .collect(),
+            Packages::Packages(ref packages) => packages
+                .iter()
+                .map(|p| PackageIdSpec::parse(p))
+                .collect::<CargoResult<Vec<_>>>()?,
+            Packages::Default => ws.default_members()
+                .map(Package::package_id)
+                .map(PackageIdSpec::from_package_id)
+                .collect(),
         };
         if specs.is_empty() {
             if ws.is_virtual() {
-                bail!("manifest path `{}` contains no package: The manifest is virtual, \
-                       and the workspace has no members.", ws.root().display())
+                bail!(
+                    "manifest path `{}` contains no package: The manifest is virtual, \
+                     and the workspace has no members.",
+                    ws.root().display()
+                )
             }
             bail!("no packages to compile")
         }
@@ -185,25 +181,30 @@ pub enum CompileFilter {
         examples: FilterRule,
         tests: FilterRule,
         benches: FilterRule,
-    }
+    },
 }
 
-pub fn compile<'a>(ws: &Workspace<'a>, options: &CompileOptions<'a>)
-                   -> CargoResult<ops::Compilation<'a>> {
+pub fn compile<'a>(
+    ws: &Workspace<'a>,
+    options: &CompileOptions<'a>,
+) -> CargoResult<ops::Compilation<'a>> {
     compile_with_exec(ws, options, Arc::new(DefaultExecutor))
 }
 
-pub fn compile_with_exec<'a>(ws: &Workspace<'a>,
-                             options: &CompileOptions<'a>,
-                             exec: Arc<Executor>)
-                             -> CargoResult<ops::Compilation<'a>> {
+pub fn compile_with_exec<'a>(
+    ws: &Workspace<'a>,
+    options: &CompileOptions<'a>,
+    exec: Arc<Executor>,
+) -> CargoResult<ops::Compilation<'a>> {
     for member in ws.members() {
         for warning in member.manifest().warnings().iter() {
             if warning.is_critical {
                 let err = format_err!("{}", warning.message);
-                let cx = format_err!("failed to parse manifest at `{}`",
-                                     member.manifest_path().display());
-                return Err(err.context(cx).into())
+                let cx = format_err!(
+                    "failed to parse manifest at `{}`",
+                    member.manifest_path().display()
+                );
+                return Err(err.context(cx).into());
             } else {
                 options.config.shell().warn(&warning.message)?
             }
@@ -212,17 +213,27 @@ pub fn compile_with_exec<'a>(ws: &Workspace<'a>,
     compile_ws(ws, None, options, exec)
 }
 
-pub fn compile_ws<'a>(ws: &Workspace<'a>,
-                      source: Option<Box<Source + 'a>>,
-                      options: &CompileOptions<'a>,
-                      exec: Arc<Executor>)
-                      -> CargoResult<ops::Compilation<'a>> {
-    let CompileOptions { config, jobs, ref target, ref spec, ref features,
-                         all_features, no_default_features,
-                         release, mode, message_format,
-                         ref filter,
-                         ref target_rustdoc_args,
-                         ref target_rustc_args } = *options;
+pub fn compile_ws<'a>(
+    ws: &Workspace<'a>,
+    source: Option<Box<Source + 'a>>,
+    options: &CompileOptions<'a>,
+    exec: Arc<Executor>,
+) -> CargoResult<ops::Compilation<'a>> {
+    let CompileOptions {
+        config,
+        jobs,
+        ref target,
+        ref spec,
+        ref features,
+        all_features,
+        no_default_features,
+        release,
+        mode,
+        message_format,
+        ref filter,
+        ref target_rustdoc_args,
+        ref target_rustc_args,
+    } = *options;
 
     let target = target.clone();
 
@@ -240,69 +251,68 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
         all_features,
         uses_default_features: !no_default_features,
     };
-    let resolve = ops::resolve_ws_with_method(ws,
-                                              source,
-                                              method,
-                                              &specs,
-                                              )?;
+    let resolve = ops::resolve_ws_with_method(ws, source, method, &specs)?;
     let (packages, resolve_with_overrides) = resolve;
 
-    let to_builds = specs.iter().map(|p| {
-        let pkgid = p.query(resolve_with_overrides.iter())?;
-        let p = packages.get(pkgid)?;
-        p.manifest().print_teapot(ws.config());
-        Ok(p)
-    }).collect::<CargoResult<Vec<_>>>()?;
+    let to_builds = specs
+        .iter()
+        .map(|p| {
+            let pkgid = p.query(resolve_with_overrides.iter())?;
+            let p = packages.get(pkgid)?;
+            p.manifest().print_teapot(ws.config());
+            Ok(p)
+        })
+        .collect::<CargoResult<Vec<_>>>()?;
 
     let mut general_targets = Vec::new();
     let mut package_targets = Vec::new();
 
     match (target_rustc_args, target_rustdoc_args) {
-        (&Some(..), _) |
-        (_, &Some(..)) if to_builds.len() != 1 => {
+        (&Some(..), _) | (_, &Some(..)) if to_builds.len() != 1 => {
             panic!("`rustc` and `rustdoc` should not accept multiple `-p` flags")
         }
         (&Some(ref args), _) => {
-            let all_features = resolve_all_features(&resolve_with_overrides,
-                                                    to_builds[0].package_id());
-            let targets = generate_targets(to_builds[0], profiles,
-                                           mode, filter, &all_features, release)?;
+            let all_features =
+                resolve_all_features(&resolve_with_overrides, to_builds[0].package_id());
+            let targets =
+                generate_targets(to_builds[0], profiles, mode, filter, &all_features, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
                 profile.rustc_args = Some(args.to_vec());
                 general_targets.push((target, profile));
             } else {
-                bail!("extra arguments to `rustc` can only be passed to one \
-                       target, consider filtering\nthe package by passing \
-                       e.g. `--lib` or `--bin NAME` to specify a single target")
+                bail!(
+                    "extra arguments to `rustc` can only be passed to one \
+                     target, consider filtering\nthe package by passing \
+                     e.g. `--lib` or `--bin NAME` to specify a single target"
+                )
             }
         }
         (&None, &Some(ref args)) => {
-            let all_features = resolve_all_features(&resolve_with_overrides,
-                                                    to_builds[0].package_id());
-            let targets = generate_targets(to_builds[0], profiles,
-                                           mode, filter, &all_features, release)?;
+            let all_features =
+                resolve_all_features(&resolve_with_overrides, to_builds[0].package_id());
+            let targets =
+                generate_targets(to_builds[0], profiles, mode, filter, &all_features, release)?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
                 profile.rustdoc_args = Some(args.to_vec());
                 general_targets.push((target, profile));
             } else {
-                bail!("extra arguments to `rustdoc` can only be passed to one \
-                       target, consider filtering\nthe package by passing e.g. \
-                       `--lib` or `--bin NAME` to specify a single target")
+                bail!(
+                    "extra arguments to `rustdoc` can only be passed to one \
+                     target, consider filtering\nthe package by passing e.g. \
+                     `--lib` or `--bin NAME` to specify a single target"
+                )
             }
         }
-        (&None, &None) => {
-            for &to_build in to_builds.iter() {
-                let all_features = resolve_all_features(&resolve_with_overrides,
-                                                        to_build.package_id());
-                let targets = generate_targets(to_build, profiles, mode,
-                                               filter, &all_features, release)?;
-                package_targets.push((to_build, targets));
-            }
-        }
+        (&None, &None) => for &to_build in to_builds.iter() {
+            let all_features = resolve_all_features(&resolve_with_overrides, to_build.package_id());
+            let targets =
+                generate_targets(to_build, profiles, mode, filter, &all_features, release)?;
+            package_targets.push((to_build, targets));
+        },
     };
 
     for &(target, ref profile) in &general_targets {
@@ -321,23 +331,26 @@ pub fn compile_ws<'a>(ws: &Workspace<'a>,
             build_config.doc_all = deps;
         }
 
-        ops::compile_targets(ws,
-                             &package_targets,
-                             &packages,
-                             &resolve_with_overrides,
-                             config,
-                             build_config,
-                             profiles,
-                             &exec)?
+        ops::compile_targets(
+            ws,
+            &package_targets,
+            &packages,
+            &resolve_with_overrides,
+            config,
+            build_config,
+            profiles,
+            &exec,
+        )?
     };
 
     ret.to_doc_test = to_builds.into_iter().cloned().collect();
 
     return Ok(ret);
 
-    fn resolve_all_features(resolve_with_overrides: &Resolve,
-                            package_id: &PackageId)
-                            -> HashSet<String> {
+    fn resolve_all_features(
+        resolve_with_overrides: &Resolve,
+        package_id: &PackageId,
+    ) -> HashSet<String> {
         let mut features = resolve_with_overrides.features(package_id).clone();
 
         // Include features enabled for use by dependencies so targets can also use them with the
@@ -365,9 +378,7 @@ impl FilterRule {
     fn matches(&self, target: &Target) -> bool {
         match *self {
             FilterRule::All => true,
-            FilterRule::Just(ref targets) => {
-                targets.iter().any(|x| *x == target.name())
-            },
+            FilterRule::Just(ref targets) => targets.iter().any(|x| *x == target.name()),
         }
     }
 
@@ -387,12 +398,18 @@ impl FilterRule {
 }
 
 impl CompileFilter {
-    pub fn new(lib_only: bool,
-               bins: Vec<String>, all_bins: bool,
-               tsts: Vec<String>, all_tsts: bool,
-               exms: Vec<String>, all_exms: bool,
-               bens: Vec<String>, all_bens: bool,
-               all_targets: bool) -> CompileFilter {
+    pub fn new(
+        lib_only: bool,
+        bins: Vec<String>,
+        all_bins: bool,
+        tsts: Vec<String>,
+        all_tsts: bool,
+        exms: Vec<String>,
+        all_exms: bool,
+        bens: Vec<String>,
+        all_bens: bool,
+        all_targets: bool,
+    ) -> CompileFilter {
         let rule_bins = FilterRule::new(bins, all_bins);
         let rule_tsts = FilterRule::new(tsts, all_tsts);
         let rule_exms = FilterRule::new(exms, all_exms);
@@ -401,16 +418,21 @@ impl CompileFilter {
         if all_targets {
             CompileFilter::Only {
                 all_targets: true,
-                lib: true, bins: FilterRule::All,
-                examples: FilterRule::All, benches: FilterRule::All,
+                lib: true,
+                bins: FilterRule::All,
+                examples: FilterRule::All,
+                benches: FilterRule::All,
                 tests: FilterRule::All,
             }
         } else if lib_only || rule_bins.is_specific() || rule_tsts.is_specific()
-                    || rule_exms.is_specific() || rule_bens.is_specific() {
+            || rule_exms.is_specific() || rule_bens.is_specific()
+        {
             CompileFilter::Only {
                 all_targets: false,
-                lib: lib_only, bins: rule_bins,
-                examples: rule_exms, benches: rule_bens,
+                lib: lib_only,
+                bins: rule_bins,
+                examples: rule_exms,
+                benches: rule_bens,
                 tests: rule_tsts,
             }
         } else {
@@ -423,21 +445,31 @@ impl CompileFilter {
     pub fn need_dev_deps(&self) -> bool {
         match *self {
             CompileFilter::Default { .. } => true,
-            CompileFilter::Only { ref examples, ref tests, ref benches, .. } =>
-                examples.is_specific() || tests.is_specific() || benches.is_specific()
+            CompileFilter::Only {
+                ref examples,
+                ref tests,
+                ref benches,
+                ..
+            } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
         }
     }
 
     pub fn matches(&self, target: &Target) -> bool {
         match *self {
             CompileFilter::Default { .. } => true,
-            CompileFilter::Only { lib, ref bins, ref examples, ref tests, ref benches, .. } => {
+            CompileFilter::Only {
+                lib,
+                ref bins,
+                ref examples,
+                ref tests,
+                ref benches,
+                ..
+            } => {
                 let rule = match *target.kind() {
                     TargetKind::Bin => bins,
                     TargetKind::Test => tests,
                     TargetKind::Bench => benches,
-                    TargetKind::ExampleBin |
-                    TargetKind::ExampleLib(..) => examples,
+                    TargetKind::ExampleBin | TargetKind::ExampleLib(..) => examples,
                     TargetKind::Lib(..) => return lib,
                     TargetKind::CustomBuild => return false,
                 };
@@ -461,30 +493,33 @@ struct BuildProposal<'a> {
     required: bool,
 }
 
-fn generate_auto_targets<'a>(mode: CompileMode, targets: &'a [Target],
-                             profile: &'a Profile,
-                             dep: &'a Profile,
-                             required_features_filterable: bool) -> Vec<BuildProposal<'a>> {
+fn generate_auto_targets<'a>(
+    mode: CompileMode,
+    targets: &'a [Target],
+    profile: &'a Profile,
+    dep: &'a Profile,
+    required_features_filterable: bool,
+) -> Vec<BuildProposal<'a>> {
     match mode {
-        CompileMode::Bench => {
-            targets.iter().filter(|t| t.benched()).map(|t| {
-                BuildProposal {
-                    target: t,
-                    profile,
-                    required: !required_features_filterable,
-                }
-            }).collect::<Vec<_>>()
-        }
+        CompileMode::Bench => targets
+            .iter()
+            .filter(|t| t.benched())
+            .map(|t| BuildProposal {
+                target: t,
+                profile,
+                required: !required_features_filterable,
+            })
+            .collect::<Vec<_>>(),
         CompileMode::Test => {
-            let mut base = targets.iter().filter(|t| {
-                t.tested()
-            }).map(|t| {
-                BuildProposal {
+            let mut base = targets
+                .iter()
+                .filter(|t| t.tested())
+                .map(|t| BuildProposal {
                     target: t,
-                    profile: if t.is_example() {dep} else {profile},
+                    profile: if t.is_example() { dep } else { profile },
                     required: !required_features_filterable,
-                }
-            }).collect::<Vec<_>>();
+                })
+                .collect::<Vec<_>>();
 
             // Always compile the library if we're testing everything as
             // it'll be needed for doctests
@@ -499,35 +534,37 @@ fn generate_auto_targets<'a>(mode: CompileMode, targets: &'a [Target],
             }
             base
         }
-        CompileMode::Build | CompileMode::Check{..} => {
-            targets.iter().filter(|t| {
-                t.is_bin() || t.is_lib()
-            }).map(|t| BuildProposal {
+        CompileMode::Build | CompileMode::Check { .. } => targets
+            .iter()
+            .filter(|t| t.is_bin() || t.is_lib())
+            .map(|t| BuildProposal {
                 target: t,
                 profile,
                 required: !required_features_filterable,
-            }).collect()
-        }
-        CompileMode::Doc { .. } => {
-            targets.iter().filter(|t| {
-                t.documented() && (
-                    !t.is_bin() ||
-                    !targets.iter().any(|l| l.is_lib() && l.name() == t.name())
-                )
-            }).map(|t| BuildProposal {
+            })
+            .collect(),
+        CompileMode::Doc { .. } => targets
+            .iter()
+            .filter(|t| {
+                t.documented()
+                    && (!t.is_bin() || !targets.iter().any(|l| l.is_lib() && l.name() == t.name()))
+            })
+            .map(|t| BuildProposal {
                 target: t,
                 profile,
                 required: !required_features_filterable,
-            }).collect()
-        }
+            })
+            .collect(),
         CompileMode::Doctest => {
             if let Some(t) = targets.iter().find(|t| t.is_lib()) {
                 if t.doctested() {
-                    return vec![BuildProposal {
-                        target: t,
-                        profile,
-                        required: !required_features_filterable,
-                    }];
+                    return vec![
+                        BuildProposal {
+                            target: t,
+                            profile,
+                            required: !required_features_filterable,
+                        },
+                    ];
                 }
             }
 
@@ -537,28 +574,31 @@ fn generate_auto_targets<'a>(mode: CompileMode, targets: &'a [Target],
 }
 
 /// Given a filter rule and some context, propose a list of targets
-fn propose_indicated_targets<'a>(pkg: &'a Package,
-                                 rule: &FilterRule,
-                                 desc: &'static str,
-                                 is_expected_kind: fn(&Target) -> bool,
-                                 profile: &'a Profile) -> CargoResult<Vec<BuildProposal<'a>>> {
+fn propose_indicated_targets<'a>(
+    pkg: &'a Package,
+    rule: &FilterRule,
+    desc: &'static str,
+    is_expected_kind: fn(&Target) -> bool,
+    profile: &'a Profile,
+) -> CargoResult<Vec<BuildProposal<'a>>> {
     match *rule {
         FilterRule::All => {
-            let result = pkg.targets().iter().filter(|t| is_expected_kind(t)).map(|t| {
-                BuildProposal {
+            let result = pkg.targets()
+                .iter()
+                .filter(|t| is_expected_kind(t))
+                .map(|t| BuildProposal {
                     target: t,
                     profile,
                     required: false,
-                }
-            });
+                });
             Ok(result.collect())
         }
         FilterRule::Just(ref names) => {
             let mut targets = Vec::new();
             for name in names {
-                let target = pkg.targets().iter().find(|t| {
-                    t.name() == *name && is_expected_kind(t)
-                });
+                let target = pkg.targets()
+                    .iter()
+                    .find(|t| t.name() == *name && is_expected_kind(t));
                 let t = match target {
                     Some(t) => t,
                     None => {
@@ -566,8 +606,12 @@ fn propose_indicated_targets<'a>(pkg: &'a Package,
                         match suggestion {
                             Some(s) => {
                                 let suggested_name = s.name();
-                                bail!("no {} target named `{}`\n\nDid you mean `{}`?",
-                                      desc, name, suggested_name)
+                                bail!(
+                                    "no {} target named `{}`\n\nDid you mean `{}`?",
+                                    desc,
+                                    name,
+                                    suggested_name
+                                )
                             }
                             None => bail!("no {} target named `{}`", desc, name),
                         }
@@ -586,9 +630,10 @@ fn propose_indicated_targets<'a>(pkg: &'a Package,
 }
 
 /// Collect the targets that are libraries or have all required features available.
-fn filter_compatible_targets<'a>(mut proposals: Vec<BuildProposal<'a>>,
-                                 features: &HashSet<String>)
-        -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
+fn filter_compatible_targets<'a>(
+    mut proposals: Vec<BuildProposal<'a>>,
+    features: &HashSet<String>,
+) -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
     let mut compatible = Vec::with_capacity(proposals.len());
     for proposal in proposals.drain(..) {
         let unavailable_features = match proposal.target.required_features() {
@@ -599,14 +644,17 @@ fn filter_compatible_targets<'a>(mut proposals: Vec<BuildProposal<'a>>,
             compatible.push((proposal.target, proposal.profile));
         } else if proposal.required {
             let required_features = proposal.target.required_features().unwrap();
-            let quoted_required_features: Vec<String> = required_features.iter()
-                                                                         .map(|s| format!("`{}`",s))
-                                                                         .collect();
-            bail!("target `{}` requires the features: {}\n\
-                  Consider enabling them by passing e.g. `--features=\"{}\"`",
-                  proposal.target.name(),
-                  quoted_required_features.join(", "),
-                  required_features.join(" "));
+            let quoted_required_features: Vec<String> = required_features
+                .iter()
+                .map(|s| format!("`{}`", s))
+                .collect();
+            bail!(
+                "target `{}` requires the features: {}\n\
+                 Consider enabling them by passing e.g. `--features=\"{}\"`",
+                proposal.target.name(),
+                quoted_required_features.join(", "),
+                required_features.join(" ")
+            );
         }
     }
     Ok(compatible)
@@ -614,21 +662,30 @@ fn filter_compatible_targets<'a>(mut proposals: Vec<BuildProposal<'a>>,
 
 /// Given the configuration for a build, this function will generate all
 /// target/profile combinations needed to be built.
-fn generate_targets<'a>(pkg: &'a Package,
-                        profiles: &'a Profiles,
-                        mode: CompileMode,
-                        filter: &CompileFilter,
-                        features: &HashSet<String>,
-                        release: bool)
-                        -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
-    let build = if release {&profiles.release} else {&profiles.dev};
-    let test = if release {&profiles.bench} else {&profiles.test};
+fn generate_targets<'a>(
+    pkg: &'a Package,
+    profiles: &'a Profiles,
+    mode: CompileMode,
+    filter: &CompileFilter,
+    features: &HashSet<String>,
+    release: bool,
+) -> CargoResult<Vec<(&'a Target, &'a Profile)>> {
+    let build = if release {
+        &profiles.release
+    } else {
+        &profiles.dev
+    };
+    let test = if release {
+        &profiles.bench
+    } else {
+        &profiles.test
+    };
     let profile = match mode {
         CompileMode::Test => test,
         CompileMode::Bench => &profiles.bench,
         CompileMode::Build => build,
-        CompileMode::Check {test: false} => &profiles.check,
-        CompileMode::Check {test: true} => &profiles.check_test,
+        CompileMode::Check { test: false } => &profiles.check,
+        CompileMode::Check { test: true } => &profiles.check_test,
         CompileMode::Doc { .. } => &profiles.doc,
         CompileMode::Doctest => &profiles.doctest,
     };
@@ -650,15 +707,30 @@ fn generate_targets<'a>(pkg: &'a Package,
     };
 
     let targets = match *filter {
-        CompileFilter::Default { required_features_filterable } => {
+        CompileFilter::Default {
+            required_features_filterable,
+        } => {
             let deps = if release {
                 &profiles.bench_deps
             } else {
                 &profiles.test_deps
             };
-            generate_auto_targets(mode, pkg.targets(), profile, deps, required_features_filterable)
+            generate_auto_targets(
+                mode,
+                pkg.targets(),
+                profile,
+                deps,
+                required_features_filterable,
+            )
         }
-        CompileFilter::Only { all_targets, lib, ref bins, ref examples, ref tests, ref benches } => {
+        CompileFilter::Only {
+            all_targets,
+            lib,
+            ref bins,
+            ref examples,
+            ref tests,
+            ref benches,
+        } => {
             let mut targets = Vec::new();
 
             if lib {
@@ -673,25 +745,45 @@ fn generate_targets<'a>(pkg: &'a Package,
                 }
             }
             targets.append(&mut propose_indicated_targets(
-                pkg, bins, "bin", Target::is_bin, profile)?);
+                pkg,
+                bins,
+                "bin",
+                Target::is_bin,
+                profile,
+            )?);
             targets.append(&mut propose_indicated_targets(
-                pkg, examples, "example", Target::is_example, profile)?);
+                pkg,
+                examples,
+                "example",
+                Target::is_example,
+                profile,
+            )?);
             // If --tests was specified, add all targets that would be
             // generated by `cargo test`.
             let test_filter = match *tests {
                 FilterRule::All => Target::tested,
-                FilterRule::Just(_) => Target::is_test
+                FilterRule::Just(_) => Target::is_test,
             };
             targets.append(&mut propose_indicated_targets(
-                pkg, tests, "test", test_filter, test_profile)?);
+                pkg,
+                tests,
+                "test",
+                test_filter,
+                test_profile,
+            )?);
             // If --benches was specified, add all targets that would be
             // generated by `cargo bench`.
             let bench_filter = match *benches {
                 FilterRule::All => Target::benched,
-                FilterRule::Just(_) => Target::is_bench
+                FilterRule::Just(_) => Target::is_bench,
             };
             targets.append(&mut propose_indicated_targets(
-                pkg, benches, "bench", bench_filter, bench_profile)?);
+                pkg,
+                benches,
+                "bench",
+                bench_filter,
+                bench_profile,
+            )?);
             targets
         }
     };
@@ -707,23 +799,32 @@ fn generate_targets<'a>(pkg: &'a Package,
 /// * target.$target.ar
 /// * target.$target.linker
 /// * target.$target.libfoo.metadata
-fn scrape_build_config(config: &Config,
-                       jobs: Option<u32>,
-                       target: Option<String>)
-                       -> CargoResult<ops::BuildConfig> {
+fn scrape_build_config(
+    config: &Config,
+    jobs: Option<u32>,
+    target: Option<String>,
+) -> CargoResult<ops::BuildConfig> {
     if jobs.is_some() && config.jobserver_from_env().is_some() {
-        config.shell().warn("a `-j` argument was passed to Cargo but Cargo is \
-                             also configured with an external jobserver in \
-                             its environment, ignoring the `-j` parameter")?;
+        config.shell().warn(
+            "a `-j` argument was passed to Cargo but Cargo is \
+             also configured with an external jobserver in \
+             its environment, ignoring the `-j` parameter",
+        )?;
     }
     let cfg_jobs = match config.get_i64("build.jobs")? {
         Some(v) => {
             if v.val <= 0 {
-                bail!("build.jobs must be positive, but found {} in {}",
-                      v.val, v.definition)
+                bail!(
+                    "build.jobs must be positive, but found {} in {}",
+                    v.val,
+                    v.definition
+                )
             } else if v.val >= i64::from(u32::max_value()) {
-                bail!("build.jobs is too large: found {} in {}", v.val,
-                      v.definition)
+                bail!(
+                    "build.jobs is too large: found {} in {}",
+                    v.val,
+                    v.definition
+                )
             } else {
                 Some(v.val as u32)
             }
@@ -747,9 +848,7 @@ fn scrape_build_config(config: &Config,
     Ok(base)
 }
 
-fn scrape_target_config(config: &Config, triple: &str)
-                        -> CargoResult<ops::TargetConfig> {
-
+fn scrape_target_config(config: &Config, triple: &str) -> CargoResult<ops::TargetConfig> {
     let key = format!("target.{}", triple);
     let mut ret = ops::TargetConfig {
         ar: config.get_path(&format!("{}.ar", key))?.map(|v| v.val),
@@ -762,9 +861,7 @@ fn scrape_target_config(config: &Config, triple: &str)
     };
     for (lib_name, value) in table {
         match lib_name.as_str() {
-            "ar" | "linker" | "runner" | "rustflags" => {
-                continue
-            },
+            "ar" | "linker" | "runner" | "rustflags" => continue,
             _ => {}
         }
 
@@ -781,46 +878,40 @@ fn scrape_target_config(config: &Config, triple: &str)
         // We require deterministic order of evaluation, so we must sort the pairs by key first.
         let mut pairs = Vec::new();
         for (k, value) in value.table(&lib_name)?.0 {
-            pairs.push((k,value));
+            pairs.push((k, value));
         }
-        pairs.sort_by_key( |p| p.0 );
-        for (k,value) in pairs{
+        pairs.sort_by_key(|p| p.0);
+        for (k, value) in pairs {
             let key = format!("{}.{}", key, k);
             match &k[..] {
                 "rustc-flags" => {
                     let (flags, definition) = value.string(k)?;
-                    let whence = format!("in `{}` (in {})", key,
-                                         definition.display());
-                    let (paths, links) =
-                        BuildOutput::parse_rustc_flags(flags, &whence)
-                    ?;
+                    let whence = format!("in `{}` (in {})", key, definition.display());
+                    let (paths, links) = BuildOutput::parse_rustc_flags(flags, &whence)?;
                     output.library_paths.extend(paths);
                     output.library_links.extend(links);
                 }
                 "rustc-link-lib" => {
                     let list = value.list(k)?;
-                    output.library_links.extend(list.iter()
-                                                    .map(|v| v.0.clone()));
+                    output
+                        .library_links
+                        .extend(list.iter().map(|v| v.0.clone()));
                 }
                 "rustc-link-search" => {
                     let list = value.list(k)?;
-                    output.library_paths.extend(list.iter().map(|v| {
-                        PathBuf::from(&v.0)
-                    }));
+                    output
+                        .library_paths
+                        .extend(list.iter().map(|v| PathBuf::from(&v.0)));
                 }
                 "rustc-cfg" => {
                     let list = value.list(k)?;
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
-                "rustc-env" => {
-                    for (name, val) in value.table(k)?.0 {
-                        let val = val.string(name)?.0;
-                        output.env.push((name.clone(), val.to_string()));
-                    }
-                }
-                "warning" |
-                "rerun-if-changed" |
-                "rerun-if-env-changed" => {
+                "rustc-env" => for (name, val) in value.table(k)?.0 {
+                    let val = val.string(name)?.0;
+                    output.env.push((name.clone(), val.to_string()));
+                },
+                "warning" | "rerun-if-changed" | "rerun-if-env-changed" => {
                     bail!("`{}` is not supported in build script overrides", k);
                 }
                 _ => {

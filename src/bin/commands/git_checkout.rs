@@ -1,14 +1,24 @@
 use command_prelude::*;
 
-use cargo::core::{GitReference, SourceId, Source};
+use cargo::core::{GitReference, Source, SourceId};
 use cargo::sources::GitSource;
 use cargo::util::ToUrl;
 
 pub fn cli() -> App {
     subcommand("git-checkout")
         .about("Checkout a copy of a Git repository")
-        .arg(Arg::with_name("url").long("url").value_name("URL").required(true))
-        .arg(Arg::with_name("reference").long("reference").value_name("REF").required(true))
+        .arg(
+            Arg::with_name("url")
+                .long("url")
+                .value_name("URL")
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("reference")
+                .long("reference")
+                .value_name("REF")
+                .required(true),
+        )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {

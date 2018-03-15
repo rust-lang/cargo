@@ -4,12 +4,12 @@ use std::collections::hash_set::{HashSet, Iter};
 use std::collections::hash_map::{HashMap, Keys};
 
 pub struct Graph<N> {
-    nodes: HashMap<N, HashSet<N>>
+    nodes: HashMap<N, HashSet<N>>,
 }
 
 enum Mark {
     InProgress,
-    Done
+    Done,
 }
 
 pub type Nodes<'a, N> = Keys<'a, N, HashSet<N>>;
@@ -17,17 +17,23 @@ pub type Edges<'a, N> = Iter<'a, N>;
 
 impl<N: Eq + Hash + Clone> Graph<N> {
     pub fn new() -> Graph<N> {
-        Graph { nodes: HashMap::new() }
+        Graph {
+            nodes: HashMap::new(),
+        }
     }
 
     pub fn add(&mut self, node: N, children: &[N]) {
-        self.nodes.entry(node)
+        self.nodes
+            .entry(node)
             .or_insert_with(HashSet::new)
             .extend(children.iter().cloned());
     }
 
     pub fn link(&mut self, node: N, child: N) {
-        self.nodes.entry(node).or_insert_with(HashSet::new).insert(child);
+        self.nodes
+            .entry(node)
+            .or_insert_with(HashSet::new)
+            .insert(child);
     }
 
     pub fn get_nodes(&self) -> &HashMap<N, HashSet<N>> {
@@ -118,12 +124,16 @@ impl<N: fmt::Display + Eq + Hash> fmt::Debug for Graph<N> {
 }
 
 impl<N: Eq + Hash> PartialEq for Graph<N> {
-    fn eq(&self, other: &Graph<N>) -> bool { self.nodes.eq(&other.nodes) }
+    fn eq(&self, other: &Graph<N>) -> bool {
+        self.nodes.eq(&other.nodes)
+    }
 }
 impl<N: Eq + Hash> Eq for Graph<N> {}
 
 impl<N: Eq + Hash + Clone> Clone for Graph<N> {
     fn clone(&self) -> Graph<N> {
-        Graph { nodes: self.nodes.clone() }
+        Graph {
+            nodes: self.nodes.clone(),
+        }
     }
 }

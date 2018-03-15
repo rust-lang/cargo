@@ -3,27 +3,28 @@ pub use self::cargo_compile::{compile, compile_with_exec, compile_ws, CompileOpt
 pub use self::cargo_compile::{CompileFilter, CompileMode, FilterRule, MessageFormat, Packages};
 pub use self::cargo_read_manifest::{read_package, read_packages};
 pub use self::cargo_rustc::{compile_targets, Compilation, Kind, Unit};
-pub use self::cargo_rustc::{Context, is_bad_artifact_name};
-pub use self::cargo_rustc::{BuildOutput, BuildConfig, TargetConfig};
-pub use self::cargo_rustc::{Executor, DefaultExecutor};
+pub use self::cargo_rustc::{is_bad_artifact_name, Context};
+pub use self::cargo_rustc::{BuildConfig, BuildOutput, TargetConfig};
+pub use self::cargo_rustc::{DefaultExecutor, Executor};
 pub use self::cargo_run::run;
 pub use self::cargo_install::{install, install_list, uninstall};
-pub use self::cargo_new::{new, init, NewOptions, VersionControl};
+pub use self::cargo_new::{init, new, NewOptions, VersionControl};
 pub use self::cargo_doc::{doc, DocOptions};
-pub use self::cargo_generate_lockfile::{generate_lockfile};
-pub use self::cargo_generate_lockfile::{update_lockfile};
+pub use self::cargo_generate_lockfile::generate_lockfile;
+pub use self::cargo_generate_lockfile::update_lockfile;
 pub use self::cargo_generate_lockfile::UpdateOptions;
 pub use self::lockfile::{load_pkg_lockfile, write_pkg_lockfile};
-pub use self::cargo_test::{run_tests, run_benches, TestOptions};
+pub use self::cargo_test::{run_benches, run_tests, TestOptions};
 pub use self::cargo_package::{package, PackageOpts};
 pub use self::registry::{publish, registry_configuration, RegistryConfig};
-pub use self::registry::{registry_login, search, needs_custom_http_transport, http_handle};
+pub use self::registry::{http_handle, needs_custom_http_transport, registry_login, search};
 pub use self::registry::{modify_owners, yank, OwnersOptions, PublishOpts};
 pub use self::registry::configure_http_handle;
 pub use self::cargo_fetch::fetch;
 pub use self::cargo_pkgid::pkgid;
-pub use self::resolve::{resolve_ws, resolve_ws_precisely, resolve_ws_with_method, resolve_with_previous};
-pub use self::cargo_output_metadata::{output_metadata, OutputMetadataOptions, ExportInfo};
+pub use self::resolve::{resolve_with_previous, resolve_ws, resolve_ws_precisely,
+                        resolve_ws_with_method};
+pub use self::cargo_output_metadata::{output_metadata, ExportInfo, OutputMetadataOptions};
 
 mod cargo_clean;
 mod cargo_compile;

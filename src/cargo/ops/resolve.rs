@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use core::{PackageId, PackageIdSpec, PackageSet, Source, SourceId, Workspace};
 use core::registry::PackageRegistry;
-use core::resolver::{self, Resolve, Method};
+use core::resolver::{self, Method, Resolve};
 use sources::PathSource;
 use ops;
 use util::profile;
@@ -22,13 +22,14 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 
 /// Resolves dependencies for some packages of the workspace,
 /// taking into account `paths` overrides and activated features.
-pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
-                                source: Option<Box<Source + 'a>>,
-                                features: &[String],
-                                all_features: bool,
-                                no_default_features: bool,
-                                specs: &[PackageIdSpec])
-                                -> CargoResult<(PackageSet<'a>, Resolve)> {
+pub fn resolve_ws_precisely<'a>(
+    ws: &Workspace<'a>,
+    source: Option<Box<Source + 'a>>,
+    features: &[String],
+    all_features: bool,
+    no_default_features: bool,
+    specs: &[PackageIdSpec],
+) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let features = Method::split_features(features);
     let method = if all_features {
         Method::Everything
@@ -43,11 +44,12 @@ pub fn resolve_ws_precisely<'a>(ws: &Workspace<'a>,
     resolve_ws_with_method(ws, source, method, specs)
 }
 
-pub fn resolve_ws_with_method<'a>(ws: &Workspace<'a>,
-                                  source: Option<Box<Source + 'a>>,
-                                  method: Method,
-                                  specs: &[PackageIdSpec])
-                                  -> CargoResult<(PackageSet<'a>, Resolve)> {
+pub fn resolve_ws_with_method<'a>(
+    ws: &Workspace<'a>,
+    source: Option<Box<Source + 'a>>,
+    method: Method,
+    specs: &[PackageIdSpec],
+) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = PackageRegistry::new(ws.config())?;
     if let Some(source) = source {
         registry.add_preloaded(source);
@@ -68,10 +70,13 @@ pub fn resolve_ws_with_method<'a>(ws: &Workspace<'a>,
         add_overrides(&mut registry, ws)?;
 
         for &(ref replace_spec, ref dep) in ws.root_replace() {
-            if !resolve.iter().any(|r| replace_spec.matches(r) && !dep.matches_id(r)) {
-                ws.config().shell().warn(
-                    format!("package replacement is not used: {}", replace_spec)
-                )?
+            if !resolve
+                .iter()
+                .any(|r| replace_spec.matches(r) && !dep.matches_id(r))
+            {
+                ws.config()
+                    .shell()
+                    .warn(format!("package replacement is not used: {}", replace_spec))?
             }
         }
 
@@ -80,39 +85,44 @@ pub fn resolve_ws_with_method<'a>(ws: &Workspace<'a>,
         ops::load_pkg_lockfile(ws)?
     };
 
-    let resolved_with_overrides =
-    ops::resolve_with_previous(&mut registry,
-                               ws,
-                               method,
-                               resolve.as_ref(),
-                               None,
-                               specs,
-                               add_patches,
-                               true)?;
+    let resolved_with_overrides = ops::resolve_with_previous(
+        &mut registry,
+        ws,
+        method,
+        resolve.as_ref(),
+        None,
+        specs,
+        add_patches,
+        true,
+    )?;
 
     let packages = get_resolved_packages(&resolved_with_overrides, registry);
 
     Ok((packages, resolved_with_overrides))
 }
 
-fn resolve_with_registry(ws: &Workspace, registry: &mut PackageRegistry, warn: bool)
-                         -> CargoResult<Resolve> {
+fn resolve_with_registry(
+    ws: &Workspace,
+    registry: &mut PackageRegistry,
+    warn: bool,
+) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
-    let resolve = resolve_with_previous(registry,
-                                        ws,
-                                        Method::Everything,
-                                        prev.as_ref(),
-                                        None,
-                                        &[],
-                                        true,
-                                        warn)?;
+    let resolve = resolve_with_previous(
+        registry,
+        ws,
+        Method::Everything,
+        prev.as_ref(),
+        None,
+        &[],
+        true,
+        warn,
+    )?;
 
     if !ws.is_ephemeral() {
         ops::write_pkg_lockfile(ws, &resolve)?;
     }
     Ok(resolve)
 }
-
 
 /// Resolve all dependencies for a package using an optional previous instance
 /// of resolve to guide the resolution process.
@@ -123,15 +133,16 @@ fn resolve_with_registry(ws: &Workspace, registry: &mut PackageRegistry, warn: b
 ///
 /// The previous resolve normally comes from a lockfile. This function does not
 /// read or write lockfiles from the filesystem.
-pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
-                                 ws: &Workspace,
-                                 method: Method,
-                                 previous: Option<&'a Resolve>,
-                                 to_avoid: Option<&HashSet<&'a PackageId>>,
-                                 specs: &[PackageIdSpec],
-                                 register_patches: bool,
-                                 warn: bool)
-                                 -> CargoResult<Resolve> {
+pub fn resolve_with_previous<'a>(
+    registry: &mut PackageRegistry,
+    ws: &Workspace,
+    method: Method,
+    previous: Option<&'a Resolve>,
+    to_avoid: Option<&HashSet<&'a PackageId>>,
+    specs: &[PackageIdSpec],
+    register_patches: bool,
+    warn: bool,
+) -> CargoResult<Resolve> {
     // Here we place an artificial limitation that all non-registry sources
     // cannot be locked at more than one revision. This means that if a git
     // repository provides more than one package, they must all be updated in
@@ -141,9 +152,12 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     //       different
     let mut to_avoid_sources = HashSet::new();
     if let Some(to_avoid) = to_avoid {
-        to_avoid_sources.extend(to_avoid.iter()
-                                        .map(|p| p.source_id())
-                                        .filter(|s| !s.is_registry()));
+        to_avoid_sources.extend(
+            to_avoid
+                .iter()
+                .map(|p| p.source_id())
+                .filter(|s| !s.is_registry()),
+        );
     }
 
     let ref keep = |p: &&'a PackageId| {
@@ -177,9 +191,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
         for node in r.iter().filter(keep) {
-            let deps = r.deps_not_replaced(node)
-                        .filter(keep)
-                        .cloned().collect();
+            let deps = r.deps_not_replaced(node).filter(keep).cloned().collect();
             registry.register_lock(node.clone(), deps);
         }
     }
@@ -190,21 +202,24 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                 Some(r) => r,
                 None => {
                     registry.patch(url, patches)?;
-                    continue
+                    continue;
                 }
             };
-            let patches = patches.iter().map(|dep| {
-                let unused = previous.unused_patches();
-                let candidates = previous.iter().chain(unused);
-                match candidates.filter(keep).find(|id| dep.matches_id(id)) {
-                    Some(id) => {
-                        let mut dep = dep.clone();
-                        dep.lock_to(id);
-                        dep
+            let patches = patches
+                .iter()
+                .map(|dep| {
+                    let unused = previous.unused_patches();
+                    let candidates = previous.iter().chain(unused);
+                    match candidates.filter(keep).find(|id| dep.matches_id(id)) {
+                        Some(id) => {
+                            let mut dep = dep.clone();
+                            dep.lock_to(id);
+                            dep
+                        }
+                        None => dep.clone(),
                     }
-                    None => dep.clone(),
-                }
-            }).collect::<Vec<_>>();
+                })
+                .collect::<Vec<_>>();
             registry.patch(url, &patches)?;
         }
 
@@ -248,7 +263,7 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
                         if specs.iter().any(|spec| spec.matches(member_id)) {
                             base
                         } else {
-                            continue
+                            continue;
                         }
                     }
                 }
@@ -262,26 +277,23 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
     let root_replace = ws.root_replace();
 
     let replace = match previous {
-        Some(r) => {
-            root_replace.iter().map(|&(ref spec, ref dep)| {
+        Some(r) => root_replace
+            .iter()
+            .map(|&(ref spec, ref dep)| {
                 for (key, val) in r.replacements().iter() {
                     if spec.matches(key) && dep.matches_id(val) && keep(&val) {
                         let mut dep = dep.clone();
                         dep.lock_to(val);
-                        return (spec.clone(), dep)
+                        return (spec.clone(), dep);
                     }
                 }
                 (spec.clone(), dep.clone())
-            }).collect::<Vec<_>>()
-        }
+            })
+            .collect::<Vec<_>>(),
         None => root_replace.to_vec(),
     };
 
-    let mut resolved = resolver::resolve(&summaries,
-                                         &replace,
-                                         registry,
-                                         Some(ws.config()),
-                                         warn)?;
+    let mut resolved = resolver::resolve(&summaries, &replace, registry, Some(ws.config()), warn)?;
     resolved.register_used_patches(registry.patches());
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;
@@ -291,11 +303,10 @@ pub fn resolve_with_previous<'a>(registry: &mut PackageRegistry,
 
 /// Read the `paths` configuration variable to discover all path overrides that
 /// have been configured.
-fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
-                     ws: &Workspace<'a>) -> CargoResult<()> {
+fn add_overrides<'a>(registry: &mut PackageRegistry<'a>, ws: &Workspace<'a>) -> CargoResult<()> {
     let paths = match ws.config().get_list("paths")? {
         Some(list) => list,
-        None => return Ok(())
+        None => return Ok(()),
     };
 
     let paths = paths.val.iter().map(|&(ref s, ref p)| {
@@ -309,19 +320,19 @@ fn add_overrides<'a>(registry: &mut PackageRegistry<'a>,
         let id = SourceId::for_path(&path)?;
         let mut source = PathSource::new_recursive(&path, &id, ws.config());
         source.update().chain_err(|| {
-            format!("failed to update path override `{}` \
-                           (defined in `{}`)", path.display(),
-                          definition.display())
+            format!(
+                "failed to update path override `{}` \
+                 (defined in `{}`)",
+                path.display(),
+                definition.display()
+            )
         })?;
         registry.add_override(Box::new(source));
     }
     Ok(())
 }
 
-fn get_resolved_packages<'a>(resolve: &Resolve,
-                             registry: PackageRegistry<'a>)
-                             -> PackageSet<'a> {
+fn get_resolved_packages<'a>(resolve: &Resolve, registry: PackageRegistry<'a>) -> PackageSet<'a> {
     let ids: Vec<PackageId> = resolve.iter().cloned().collect();
     registry.get(&ids)
 }
-

@@ -1,10 +1,10 @@
-use std::collections::{HashSet, BTreeSet};
-use std::io::{Write, BufWriter};
+use std::collections::{BTreeSet, HashSet};
+use std::io::{BufWriter, Write};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use ops::{Context, Unit};
-use util::{CargoResult, internal};
+use util::{internal, CargoResult};
 use util::paths;
 use ops::cargo_rustc::fingerprint;
 
@@ -15,9 +15,12 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
         Some(base) => match path.strip_prefix(base) {
             Ok(relpath) => relpath,
             _ => path,
-        }
+        },
     };
-    relpath.to_str().ok_or_else(|| internal("path not utf-8")).map(|f| f.replace(" ", "\\ "))
+    relpath
+        .to_str()
+        .ok_or_else(|| internal("path not utf-8"))
+        .map(|f| f.replace(" ", "\\ "))
 }
 
 fn add_deps_for_unit<'a, 'b>(
@@ -25,9 +28,7 @@ fn add_deps_for_unit<'a, 'b>(
     context: &mut Context<'a, 'b>,
     unit: &Unit<'a>,
     visited: &mut HashSet<Unit<'a>>,
-)
-    -> CargoResult<()>
-{
+) -> CargoResult<()> {
     if !visited.insert(*unit) {
         return Ok(());
     }
@@ -42,8 +43,11 @@ fn add_deps_for_unit<'a, 'b>(
                 deps.insert(path);
             }
         } else {
-            debug!("can't find dep_info for {:?} {:?}",
-                unit.pkg.package_id(), unit.profile);
+            debug!(
+                "can't find dep_info for {:?} {:?}",
+                unit.pkg.package_id(),
+                unit.profile
+            );
             return Err(internal("dep_info missing"));
         }
     }
@@ -73,8 +77,12 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
     let basedir_string;
     let basedir = match context.config.get_path("build.dep-info-basedir")? {
         Some(value) => {
-            basedir_string = value.val.as_os_str().to_str().
-              ok_or_else(|| internal("build.dep-info-basedir path not utf-8"))?.to_string();
+            basedir_string = value
+                .val
+                .as_os_str()
+                .to_str()
+                .ok_or_else(|| internal("build.dep-info-basedir path not utf-8"))?
+                .to_string();
             Some(basedir_string.as_str())
         }
         None => None,
@@ -92,10 +100,8 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
                 // If nothing changed don't recreate the file which could alter
                 // its mtime
                 if let Ok(previous) = fingerprint::parse_rustc_dep_info(&output_path) {
-                    if previous.len() == 1 &&
-                        previous[0].0 == target_fn &&
-                        previous[0].1 == deps {
-                        continue
+                    if previous.len() == 1 && previous[0].0 == target_fn && previous[0].1 == deps {
+                        continue;
                     }
                 }
 

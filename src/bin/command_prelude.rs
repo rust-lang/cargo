@@ -3,12 +3,12 @@ use std::path::PathBuf;
 use clap::{self, SubCommand};
 use cargo::CargoResult;
 use cargo::core::Workspace;
-use cargo::ops::{CompileMode, CompileOptions, CompileFilter, Packages, MessageFormat,
-                 VersionControl, NewOptions};
+use cargo::ops::{CompileFilter, CompileMode, CompileOptions, MessageFormat, NewOptions, Packages,
+                 VersionControl};
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
-pub use clap::{Arg, ArgMatches, AppSettings};
-pub use cargo::{Config, CliResult, CliError};
+pub use clap::{AppSettings, Arg, ArgMatches};
+pub use cargo::{CliError, CliResult, Config};
 
 pub type App = clap::App<'static, 'static>;
 
@@ -16,8 +16,12 @@ pub trait AppExt: Sized {
     fn _arg(self, arg: Arg<'static, 'static>) -> Self;
 
     fn arg_package(self, package: &'static str, all: &'static str, exclude: &'static str) -> Self {
-        self._arg(opt("package", package).short("p").value_name("SPEC").multiple(true))
-            ._arg(opt("all", all))
+        self._arg(
+            opt("package", package)
+                .short("p")
+                .value_name("SPEC")
+                .multiple(true),
+        )._arg(opt("all", all))
             ._arg(opt("exclude", exclude).value_name("SPEC").multiple(true))
     }
 
@@ -28,7 +32,8 @@ pub trait AppExt: Sized {
     fn arg_jobs(self) -> Self {
         self._arg(
             opt("jobs", "Number of parallel jobs, defaults to # of CPUs")
-                .short("j").value_name("N")
+                .short("j")
+                .value_name("N"),
         )
     }
 
@@ -55,12 +60,7 @@ pub trait AppExt: Sized {
             ._arg(opt("all-targets", all))
     }
 
-    fn arg_targets_lib_bin(
-        self,
-        lib: &'static str,
-        bin: &'static str,
-        bins: &'static str,
-    ) -> Self {
+    fn arg_targets_lib_bin(self, lib: &'static str, bin: &'static str, bins: &'static str) -> Self {
         self._arg(opt("lib", lib))
             ._arg(opt("bin", bin).value_name("NAME").multiple(true))
             ._arg(opt("bins", bins))
@@ -79,23 +79,19 @@ pub trait AppExt: Sized {
             ._arg(opt("examples", examples))
     }
 
-    fn arg_targets_bin_example(
-        self,
-        bin: &'static str,
-        example: &'static str,
-    ) -> Self {
+    fn arg_targets_bin_example(self, bin: &'static str, example: &'static str) -> Self {
         self._arg(opt("bin", bin).value_name("NAME").multiple(true))
             ._arg(opt("example", example).value_name("NAME").multiple(true))
     }
 
     fn arg_features(self) -> Self {
-        self
-            ._arg(
-                opt("features", "Space-separated list of features to activate")
-                    .value_name("FEATURES")
-            )
-            ._arg(opt("all-features", "Activate all available features"))
-            ._arg(opt("no-default-features", "Do not activate the `default` feature"))
+        self._arg(
+            opt("features", "Space-separated list of features to activate").value_name("FEATURES"),
+        )._arg(opt("all-features", "Activate all available features"))
+            ._arg(opt(
+                "no-default-features",
+                "Do not activate the `default` feature",
+            ))
     }
 
     fn arg_release(self, release: &'static str) -> Self {
@@ -115,38 +111,38 @@ pub trait AppExt: Sized {
             opt("message-format", "Error format")
                 .value_name("FMT")
                 .case_insensitive(true)
-                .possible_values(&["human", "json"]).default_value("human")
+                .possible_values(&["human", "json"])
+                .default_value("human"),
         )
     }
 
     fn arg_new_opts(self) -> Self {
         self._arg(
-            opt("vcs", "\
-Initialize a new repository for the given version \
-control system (git, hg, pijul, or fossil) or do not \
-initialize any version control at all (none), overriding \
-a global configuration.")
-                .value_name("VCS")
-                .possible_values(&["git", "hg", "pijul", "fossil", "none"])
-        )
-            ._arg(opt("bin", "Use a binary (application) template [default]"))
+            opt(
+                "vcs",
+                "\
+                 Initialize a new repository for the given version \
+                 control system (git, hg, pijul, or fossil) or do not \
+                 initialize any version control at all (none), overriding \
+                 a global configuration.",
+            ).value_name("VCS")
+                .possible_values(&["git", "hg", "pijul", "fossil", "none"]),
+        )._arg(opt("bin", "Use a binary (application) template [default]"))
             ._arg(opt("lib", "Use a library template"))
             ._arg(
-                opt("name", "Set the resulting package name, defaults to the directory name")
-                    .value_name("NAME")
+                opt(
+                    "name",
+                    "Set the resulting package name, defaults to the directory name",
+                ).value_name("NAME"),
             )
     }
 
     fn arg_index(self) -> Self {
-        self
-            ._arg(
-                opt("index", "Registry index to upload the package to")
-                    .value_name("INDEX")
-            )
+        self._arg(opt("index", "Registry index to upload the package to").value_name("INDEX"))
             ._arg(
                 opt("host", "DEPRECATED, renamed to '--index'")
                     .value_name("HOST")
-                    .hidden(true)
+                    .hidden(true),
             )
     }
 }
@@ -162,24 +158,20 @@ pub fn opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
 }
 
 pub fn subcommand(name: &'static str) -> App {
-    SubCommand::with_name(name)
-        .settings(&[
-            AppSettings::UnifiedHelpMessage,
-            AppSettings::DeriveDisplayOrder,
-            AppSettings::DontCollapseArgsInUsage,
-        ])
+    SubCommand::with_name(name).settings(&[
+        AppSettings::UnifiedHelpMessage,
+        AppSettings::DeriveDisplayOrder,
+        AppSettings::DontCollapseArgsInUsage,
+    ])
 }
-
 
 pub trait ArgMatchesExt {
     fn value_of_u32(&self, name: &str) -> CargoResult<Option<u32>> {
         let arg = match self._value_of(name) {
             None => None,
             Some(arg) => Some(arg.parse::<u32>().map_err(|_| {
-                clap::Error::value_validation_auto(
-                    format!("could not parse `{}` as a number", arg)
-                )
-            })?)
+                clap::Error::value_validation_auto(format!("could not parse `{}` as a number", arg))
+            })?),
         };
         Ok(arg)
     }
@@ -209,7 +201,7 @@ pub trait ArgMatchesExt {
     fn compile_options<'a>(
         &self,
         config: &'a Config,
-        mode: CompileMode
+        mode: CompileMode,
     ) -> CargoResult<CompileOptions<'a>> {
         let spec = Packages::from_flags(
             self._is_present("all"),
@@ -240,12 +232,18 @@ pub trait ArgMatchesExt {
             spec,
             mode,
             release: self._is_present("release"),
-            filter: CompileFilter::new(self._is_present("lib"),
-                                       self._values_of("bin"), self._is_present("bins"),
-                                       self._values_of("test"), self._is_present("tests"),
-                                       self._values_of("example"), self._is_present("examples"),
-                                       self._values_of("bench"), self._is_present("benches"),
-                                       self._is_present("all-targets")),
+            filter: CompileFilter::new(
+                self._is_present("lib"),
+                self._values_of("bin"),
+                self._is_present("bins"),
+                self._values_of("test"),
+                self._is_present("tests"),
+                self._values_of("example"),
+                self._is_present("examples"),
+                self._values_of("bench"),
+                self._is_present("benches"),
+                self._is_present("all-targets"),
+            ),
             message_format,
             target_rustdoc_args: None,
             target_rustc_args: None,
@@ -256,7 +254,7 @@ pub trait ArgMatchesExt {
     fn compile_options_for_single_package<'a>(
         &self,
         config: &'a Config,
-        mode: CompileMode
+        mode: CompileMode,
     ) -> CargoResult<CompileOptions<'a>> {
         let mut compile_opts = self.compile_options(config, mode)?;
         compile_opts.spec = Packages::Packages(self._values_of("package"));
@@ -272,19 +270,23 @@ pub trait ArgMatchesExt {
             "none" => VersionControl::NoVcs,
             vcs => panic!("Impossible vcs: {:?}", vcs),
         });
-        NewOptions::new(vcs,
-                        self._is_present("bin"),
-                        self._is_present("lib"),
-                        self._value_of("path").unwrap().to_string(),
-                        self._value_of("name").map(|s| s.to_string()))
+        NewOptions::new(
+            vcs,
+            self._is_present("bin"),
+            self._is_present("lib"),
+            self._value_of("path").unwrap().to_string(),
+            self._value_of("name").map(|s| s.to_string()),
+        )
     }
 
     fn registry(&self, config: &Config) -> CargoResult<Option<String>> {
         match self._value_of("registry") {
             Some(registry) => {
                 if !config.cli_unstable().unstable_options {
-                    return Err(format_err!("registry option is an unstable feature and \
-                            requires -Zunstable-options to use.").into());
+                    return Err(format_err!(
+                        "registry option is an unstable feature and \
+                         requires -Zunstable-options to use."
+                    ).into());
                 }
                 Ok(Some(registry.to_string()))
             }
@@ -313,7 +315,7 @@ about this warning.";
                 config.shell().warn(&msg)?;
                 Some(host.to_string())
             }
-            None => self._value_of("index").map(|s| s.to_string())
+            None => self._value_of("index").map(|s| s.to_string()),
         };
         Ok(index)
     }
@@ -331,7 +333,8 @@ impl<'a> ArgMatchesExt for ArgMatches<'a> {
     }
 
     fn _values_of(&self, name: &str) -> Vec<String> {
-        self.values_of(name).unwrap_or_default()
+        self.values_of(name)
+            .unwrap_or_default()
             .map(|s| s.to_string())
             .collect()
     }
@@ -342,7 +345,8 @@ impl<'a> ArgMatchesExt for ArgMatches<'a> {
 }
 
 pub fn values(args: &ArgMatches, name: &str) -> Vec<String> {
-    args.values_of(name).unwrap_or_default()
+    args.values_of(name)
+        .unwrap_or_default()
         .map(|s| s.to_string())
         .collect()
 }

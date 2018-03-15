@@ -12,16 +12,12 @@ pub trait ToUrl {
 
 impl<'a> ToUrl for &'a str {
     fn to_url(self) -> CargoResult<Url> {
-        Url::parse(self).map_err(|s| {
-            format_err!("invalid url `{}`: {}", self, s)
-        })
+        Url::parse(self).map_err(|s| format_err!("invalid url `{}`: {}", self, s))
     }
 }
 
 impl<'a> ToUrl for &'a Path {
     fn to_url(self) -> CargoResult<Url> {
-        Url::from_file_path(self).map_err(|()| {
-            format_err!("invalid path url `{}`", self.display())
-        })
+        Url::from_file_path(self).map_err(|()| format_err!("invalid path url `{}`", self.display()))
     }
 }

@@ -77,8 +77,10 @@ impl FromStr for CfgExpr {
         let mut p = Parser::new(s);
         let e = p.expr()?;
         if p.t.next().is_some() {
-            bail!("can only have one cfg-expression, consider using all() or \
-                   any() explicitly")
+            bail!(
+                "can only have one cfg-expression, consider using all() or \
+                 any() explicitly"
+            )
         }
         Ok(e)
     }
@@ -121,8 +123,7 @@ impl<'a> Parser<'a> {
 
     fn expr(&mut self) -> CargoResult<CfgExpr> {
         match self.t.peek() {
-            Some(&Ok(Token::Ident(op @ "all"))) |
-            Some(&Ok(Token::Ident(op @ "any"))) => {
+            Some(&Ok(Token::Ident(op @ "all"))) | Some(&Ok(Token::Ident(op @ "any"))) => {
                 self.t.next();
                 let mut e = Vec::new();
                 self.eat(Token::LeftParen)?;
@@ -130,7 +131,7 @@ impl<'a> Parser<'a> {
                     e.push(self.expr()?);
                     if !self.try(Token::Comma) {
                         self.eat(Token::RightParen)?;
-                        break
+                        break;
                     }
                 }
                 if op == "all" {
@@ -147,11 +148,11 @@ impl<'a> Parser<'a> {
                 Ok(CfgExpr::Not(Box::new(e)))
             }
             Some(&Ok(..)) => self.cfg().map(CfgExpr::Value),
-            Some(&Err(..)) => {
-                Err(self.t.next().unwrap().err().unwrap())
-            }
-            None => bail!("expected start of a cfg expression, \
-                           found nothing"),
+            Some(&Err(..)) => Err(self.t.next().unwrap().err().unwrap()),
+            None => bail!(
+                "expected start of a cfg expression, \
+                 found nothing"
+            ),
         }
     }
 
@@ -161,8 +162,7 @@ impl<'a> Parser<'a> {
                 let e = if self.try(Token::Equals) {
                     let val = match self.t.next() {
                         Some(Ok(Token::String(s))) => s,
-                        Some(Ok(t)) => bail!("expected a string, found {}",
-                                             t.classify()),
+                        Some(Ok(t)) => bail!("expected a string, found {}", t.classify()),
                         Some(Err(e)) => return Err(e),
                         None => bail!("expected a string, found nothing"),
                     };
@@ -190,8 +190,7 @@ impl<'a> Parser<'a> {
     fn eat(&mut self, token: Token<'a>) -> CargoResult<()> {
         match self.t.next() {
             Some(Ok(ref t)) if token == *t => Ok(()),
-            Some(Ok(t)) => bail!("expected {}, found {}", token.classify(),
-                                 t.classify()),
+            Some(Ok(t)) => bail!("expected {}, found {}", token.classify(), t.classify()),
             Some(Err(e)) => Err(e),
             None => bail!("expected {}, but cfg expr ended", token.classify()),
         }
@@ -212,28 +211,31 @@ impl<'a> Iterator for Tokenizer<'a> {
                 Some((start, '"')) => {
                     while let Some((end, ch)) = self.s.next() {
                         if ch == '"' {
-                            return Some(Ok(Token::String(&self.orig[start+1..end])))
+                            return Some(Ok(Token::String(&self.orig[start + 1..end])));
                         }
                     }
-                    return Some(Err(format_err!("unterminated string in cfg")))
+                    return Some(Err(format_err!("unterminated string in cfg")));
                 }
                 Some((start, ch)) if is_ident_start(ch) => {
                     while let Some(&(end, ch)) = self.s.peek() {
                         if !is_ident_rest(ch) {
-                            return Some(Ok(Token::Ident(&self.orig[start..end])))
+                            return Some(Ok(Token::Ident(&self.orig[start..end])));
                         } else {
                             self.s.next();
                         }
                     }
-                    return Some(Ok(Token::Ident(&self.orig[start..])))
+                    return Some(Ok(Token::Ident(&self.orig[start..])));
                 }
                 Some((_, ch)) => {
-                    return Some(Err(format_err!("unexpected character in \
-                                                   cfg `{}`, expected parens, \
-                                                   a comma, an identifier, or \
-                                                   a string", ch)))
+                    return Some(Err(format_err!(
+                        "unexpected character in \
+                         cfg `{}`, expected parens, \
+                         a comma, an identifier, or \
+                         a string",
+                        ch
+                    )))
                 }
-                None => return None
+                None => return None,
             }
         }
     }

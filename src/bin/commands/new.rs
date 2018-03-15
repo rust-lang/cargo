@@ -13,6 +13,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let opts = args.new_options()?;
     ops::new(&opts, config)?;
     let path = args.value_of("path").unwrap();
-    config.shell().status("Created", format!("{} `{}` project", opts.kind, path))?;
+    config
+        .shell()
+        .status("Created", format!("{} `{}` project", opts.kind, path))?;
     Ok(())
 }

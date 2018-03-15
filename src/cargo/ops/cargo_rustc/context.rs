@@ -1,10 +1,10 @@
 #![allow(deprecated)]
 
-use std::collections::{HashSet, HashMap, BTreeSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::collections::hash_map::Entry;
 use std::env;
 use std::fmt;
-use std::hash::{Hasher, Hash, SipHasher};
+use std::hash::{Hash, Hasher, SipHasher};
 use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 use std::sync::Arc;
@@ -12,18 +12,18 @@ use std::cell::RefCell;
 
 use jobserver::Client;
 
-use core::{Package, PackageId, PackageSet, Resolve, Target, Profile};
-use core::{TargetKind, Profiles, Dependency, Workspace};
+use core::{Package, PackageId, PackageSet, Profile, Resolve, Target};
+use core::{Dependency, Profiles, TargetKind, Workspace};
 use core::dependency::Kind as DepKind;
-use util::{self, ProcessBuilder, internal, Config, profile, Cfg, CfgExpr};
+use util::{self, internal, profile, Cfg, CfgExpr, Config, ProcessBuilder};
 use util::errors::{CargoResult, CargoResultExt};
 
 use super::TargetConfig;
-use super::custom_build::{BuildState, BuildScripts, BuildDeps};
+use super::custom_build::{BuildDeps, BuildScripts, BuildState};
 use super::fingerprint::Fingerprint;
 use super::layout::Layout;
 use super::links::Links;
-use super::{Kind, Compilation, BuildConfig};
+use super::{BuildConfig, Compilation, Kind};
 
 /// All information needed to define a Unit.
 ///
@@ -126,8 +126,11 @@ impl TargetInfo {
         process.arg("--crate-type").arg(crate_type);
 
         let output = process.exec_with_output().chain_err(|| {
-            format!("failed to run `rustc` to learn about \
-                     crate-type {} information", crate_type)
+            format!(
+                "failed to run `rustc` to learn about \
+                 crate-type {} information",
+                crate_type
+            )
         })?;
 
         let error = str::from_utf8(&output.stderr).unwrap();
@@ -140,14 +143,19 @@ impl TargetInfo {
 pub struct Metadata(u64);
 
 impl<'a, 'cfg> Context<'a, 'cfg> {
-    pub fn new(ws: &'a Workspace<'cfg>,
-               resolve: &'a Resolve,
-               packages: &'a PackageSet<'cfg>,
-               config: &'cfg Config,
-               build_config: BuildConfig,
-               profiles: &'a Profiles) -> CargoResult<Context<'a, 'cfg>> {
-
-        let dest = if build_config.release { "release" } else { "debug" };
+    pub fn new(
+        ws: &'a Workspace<'cfg>,
+        resolve: &'a Resolve,
+        packages: &'a PackageSet<'cfg>,
+        config: &'cfg Config,
+        build_config: BuildConfig,
+        profiles: &'a Profiles,
+    ) -> CargoResult<Context<'a, 'cfg>> {
+        let dest = if build_config.release {
+            "release"
+        } else {
+            "debug"
+        };
         let host_layout = Layout::new(ws, None, dest)?;
         let target_layout = match build_config.requested_target.as_ref() {
             Some(target) => Some(Layout::new(ws, Some(target), dest)?),
@@ -169,9 +177,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // is ourself, a running process.
         let jobserver = match config.jobserver_from_env() {
             Some(c) => c.clone(),
-            None => Client::new(build_config.jobs as usize - 1).chain_err(|| {
-                "failed to create jobserver"
-            })?,
+            None => Client::new(build_config.jobs as usize - 1)
+                .chain_err(|| "failed to create jobserver")?,
         };
 
         Ok(Context {
@@ -208,13 +215,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn prepare(&mut self) -> CargoResult<()> {
         let _p = profile::start("preparing layout");
 
-        self.host.prepare().chain_err(|| {
-            internal("couldn't prepare build directories")
-        })?;
+        self.host
+            .prepare()
+            .chain_err(|| internal("couldn't prepare build directories"))?;
         if let Some(ref mut target) = self.target {
-            target.prepare().chain_err(|| {
-                internal("couldn't prepare build directories")
-            })?;
+            target
+                .prepare()
+                .chain_err(|| internal("couldn't prepare build directories"))?;
         }
 
         self.compilation.host_deps_output = self.host.deps().to_path_buf();
@@ -252,11 +259,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// for this unit and its dependencies.
     ///
     /// Tracks visited units to avoid unnecessary work.
-    fn visit_crate_type(&self,
-                        unit: &Unit<'a>,
-                        crate_types: &mut BTreeSet<String>,
-                        visited_units: &mut HashSet<Unit<'a>>)
-                        -> CargoResult<()> {
+    fn visit_crate_type(
+        &self,
+        unit: &Unit<'a>,
+        crate_types: &mut BTreeSet<String>,
+        visited_units: &mut HashSet<Unit<'a>>,
+    ) -> CargoResult<()> {
         if !visited_units.insert(*unit) {
             return Ok(());
         }
@@ -275,21 +283,26 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         Ok(())
     }
 
-    fn probe_target_info_kind(&mut self,
-                              crate_types: &BTreeSet<String>,
-                              kind: Kind)
-                              -> CargoResult<()> {
-        let rustflags = env_args(self.config,
-                                 &self.build_config,
-                                 self.info(&kind),
-                                 kind,
-                                 "RUSTFLAGS")?;
+    fn probe_target_info_kind(
+        &mut self,
+        crate_types: &BTreeSet<String>,
+        kind: Kind,
+    ) -> CargoResult<()> {
+        let rustflags = env_args(
+            self.config,
+            &self.build_config,
+            self.info(&kind),
+            kind,
+            "RUSTFLAGS",
+        )?;
         let mut process = self.config.rustc()?.process();
-        process.arg("-")
-               .arg("--crate-name").arg("___")
-               .arg("--print=file-names")
-               .args(&rustflags)
-               .env_remove("RUST_LOG");
+        process
+            .arg("-")
+            .arg("--crate-name")
+            .arg("___")
+            .arg("--print=file-names")
+            .args(&rustflags)
+            .env_remove("RUST_LOG");
 
         if kind == Kind::Target {
             process.arg("--target").arg(&self.target_triple());
@@ -306,12 +319,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         with_cfg.arg("--print=cfg");
 
         let mut has_cfg_and_sysroot = true;
-        let output = with_cfg.exec_with_output().or_else(|_| {
-            has_cfg_and_sysroot = false;
-            process.exec_with_output()
-        }).chain_err(|| {
-            "failed to run `rustc` to learn about target-specific information"
-        })?;
+        let output = with_cfg
+            .exec_with_output()
+            .or_else(|_| {
+                has_cfg_and_sysroot = false;
+                process.exec_with_output()
+            })
+            .chain_err(|| "failed to run `rustc` to learn about target-specific information")?;
 
         let error = str::from_utf8(&output.stderr).unwrap();
         let output = str::from_utf8(&output.stdout).unwrap();
@@ -325,8 +339,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         if has_cfg_and_sysroot {
             let line = match lines.next() {
                 Some(line) => line,
-                None => bail!("output of --print=sysroot missing when learning about \
-                               target-specific information from rustc"),
+                None => bail!(
+                    "output of --print=sysroot missing when learning about \
+                     target-specific information from rustc"
+                ),
             };
             let mut rustlib = PathBuf::from(line);
             if kind == Kind::Host {
@@ -366,32 +382,28 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     ///
     /// This will recursively walk `units` and all of their dependencies to
     /// determine which crate are going to be used in plugins or not.
-    pub fn build_used_in_plugin_map(&mut self, units: &[Unit<'a>])
-                                    -> CargoResult<()> {
+    pub fn build_used_in_plugin_map(&mut self, units: &[Unit<'a>]) -> CargoResult<()> {
         let mut visited = HashSet::new();
         for unit in units {
-            self.walk_used_in_plugin_map(unit,
-                                         unit.target.for_host(),
-                                         &mut visited)?;
+            self.walk_used_in_plugin_map(unit, unit.target.for_host(), &mut visited)?;
         }
         Ok(())
     }
 
-    fn walk_used_in_plugin_map(&mut self,
-                               unit: &Unit<'a>,
-                               is_plugin: bool,
-                               visited: &mut HashSet<(Unit<'a>, bool)>)
-                               -> CargoResult<()> {
+    fn walk_used_in_plugin_map(
+        &mut self,
+        unit: &Unit<'a>,
+        is_plugin: bool,
+        visited: &mut HashSet<(Unit<'a>, bool)>,
+    ) -> CargoResult<()> {
         if !visited.insert((*unit, is_plugin)) {
-            return Ok(())
+            return Ok(());
         }
         if is_plugin {
             self.used_in_plugin.insert(*unit);
         }
         for unit in self.dep_targets(unit)? {
-            self.walk_used_in_plugin_map(&unit,
-                                         is_plugin || unit.target.for_host(),
-                                         visited)?;
+            self.walk_used_in_plugin_map(&unit, is_plugin || unit.target.for_host(), visited)?;
         }
         Ok(())
     }
@@ -400,7 +412,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     fn layout(&self, kind: Kind) -> &Layout {
         match kind {
             Kind::Host => &self.host,
-            Kind::Target => self.target.as_ref().unwrap_or(&self.host)
+            Kind::Target => self.target.as_ref().unwrap_or(&self.host),
         }
     }
 
@@ -471,7 +483,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Return the target triple which this context is targeting.
     pub fn target_triple(&self) -> &str {
-        self.requested_target().unwrap_or_else(|| self.host_triple())
+        self.requested_target()
+            .unwrap_or_else(|| self.host_triple())
     }
 
     /// Requested (not actual) target for the build
@@ -492,7 +505,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// like `target/debug/libfoo.{a,so,rlib}` and such.
     pub fn target_metadata(&mut self, unit: &Unit<'a>) -> Option<Metadata> {
         if let Some(cache) = self.target_metadatas.get(unit) {
-            return cache.clone()
+            return cache.clone();
         }
 
         let metadata = self.calc_target_metadata(unit);
@@ -522,11 +535,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // just here for rustbuild. We need a more principled method
         // doing this eventually.
         let __cargo_default_lib_metadata = env::var("__CARGO_DEFAULT_LIB_METADATA");
-        if !(unit.profile.test || unit.profile.check) &&
-            (unit.target.is_dylib() || unit.target.is_cdylib() ||
-                 (unit.target.is_bin() && self.target_triple().starts_with("wasm32-"))) &&
-            unit.pkg.package_id().source_id().is_path() &&
-            !__cargo_default_lib_metadata.is_ok()
+        if !(unit.profile.test || unit.profile.check)
+            && (unit.target.is_dylib() || unit.target.is_cdylib()
+                || (unit.target.is_bin() && self.target_triple().starts_with("wasm32-")))
+            && unit.pkg.package_id().source_id().is_path()
+            && !__cargo_default_lib_metadata.is_ok()
         {
             return None;
         }
@@ -535,7 +548,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         // Unique metadata per (name, source, version) triple. This'll allow us
         // to pull crates from anywhere w/o worrying about conflicts
-        unit.pkg.package_id().stable_hash(self.ws.root()).hash(&mut hasher);
+        unit.pkg
+            .package_id()
+            .stable_hash(self.ws.root())
+            .hash(&mut hasher);
 
         // Add package properties which map to environment variables
         // exposed by Cargo
@@ -546,13 +562,15 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
         // Also mix in enabled features to our metadata. This'll ensure that
         // when changing feature sets each lib is separately cached.
-        self.resolve.features_sorted(unit.pkg.package_id()).hash(&mut hasher);
+        self.resolve
+            .features_sorted(unit.pkg.package_id())
+            .hash(&mut hasher);
 
         // Mix in the target-metadata of all the dependencies of this target
         if let Ok(deps) = self.dep_targets(unit) {
-            let mut deps_metadata = deps.into_iter().map(|dep_unit| {
-                self.target_metadata(&dep_unit)
-            }).collect::<Vec<_>>();
+            let mut deps_metadata = deps.into_iter()
+                .map(|dep_unit| self.target_metadata(&dep_unit))
+                .collect::<Vec<_>>();
             deps_metadata.sort();
             deps_metadata.hash(&mut hasher);
         }
@@ -588,8 +606,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Returns the file stem for a given target/profile combo (with metadata)
     pub fn file_stem(&mut self, unit: &Unit<'a>) -> String {
         match self.target_metadata(unit) {
-            Some(ref metadata) => format!("{}-{}", unit.target.crate_name(),
-                                          metadata),
+            Some(ref metadata) => format!("{}-{}", unit.target.crate_name(), metadata),
             None => self.bin_stem(unit),
         }
     }
@@ -621,19 +638,21 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // we don't want to link it up.
         if src_dir.ends_with("deps") {
             // Don't lift up library dependencies
-            if self.ws.members().find(|&p| p == unit.pkg).is_none() &&
-               !unit.target.is_bin() {
+            if self.ws.members().find(|&p| p == unit.pkg).is_none() && !unit.target.is_bin() {
                 None
             } else {
                 Some((
                     src_dir.parent().unwrap().to_owned(),
-                    if unit.profile.test {file_stem} else {bin_stem},
+                    if unit.profile.test {
+                        file_stem
+                    } else {
+                        bin_stem
+                    },
                 ))
             }
         } else if bin_stem == file_stem {
             None
-        } else if src_dir.ends_with("examples")
-               || src_dir.parent().unwrap().ends_with("build") {
+        } else if src_dir.ends_with("examples") || src_dir.parent().unwrap().ends_with("build") {
             Some((src_dir, bin_stem))
         } else {
             None
@@ -646,10 +665,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     ///  - filename: filename rustc compiles to. (Often has metadata suffix).
     ///  - link_dst: Optional file to link/copy the result to (without metadata suffix)
     ///  - linkable: Whether possible to link against file (eg it's a library)
-    pub fn target_filenames(&mut self, unit: &Unit<'a>)
-                            -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>> {
+    pub fn target_filenames(
+        &mut self,
+        unit: &Unit<'a>,
+    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>> {
         if let Some(cache) = self.target_filenames.get(unit) {
-            return Ok(Arc::clone(cache))
+            return Ok(Arc::clone(cache));
         }
 
         let result = self.calc_target_filenames(unit);
@@ -659,8 +680,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         result
     }
 
-    fn calc_target_filenames(&mut self, unit: &Unit<'a>)
-                            -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>> {
+    fn calc_target_filenames(
+        &mut self,
+        unit: &Unit<'a>,
+    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>> {
         let out_dir = self.out_dir(unit);
         let stem = self.file_stem(unit);
         let link_stem = self.link_stem(unit);
@@ -675,13 +698,17 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         {
             if unit.profile.check {
                 let filename = out_dir.join(format!("lib{}.rmeta", stem));
-                let link_dst = link_stem.clone().map(|(ld, ls)| {
-                    ld.join(format!("lib{}.rmeta", ls))
-                });
+                let link_dst = link_stem
+                    .clone()
+                    .map(|(ld, ls)| ld.join(format!("lib{}.rmeta", ls)));
                 ret.push((filename, link_dst, TargetFileType::Linkable));
             } else {
                 let mut add = |crate_type: &str, file_type: TargetFileType| -> CargoResult<()> {
-                    let crate_type = if crate_type == "lib" {"rlib"} else {crate_type};
+                    let crate_type = if crate_type == "lib" {
+                        "rlib"
+                    } else {
+                        crate_type
+                    };
                     let mut crate_types = info.crate_types.borrow_mut();
                     let entry = crate_types.entry(crate_type.to_string());
                     let crate_type_info = match entry {
@@ -706,13 +733,19 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                                 // "-" and "_". should_replace_hyphens is a flag to indicate that
                                 // we need to convert the stem "web-stuff" to "web_stuff", so we
                                 // won't miss "web_stuff.wasm".
-                                let conv = |s: String| if should_replace_hyphens {
-                                    s.replace("-", "_")
-                                } else {
-                                    s
+                                let conv = |s: String| {
+                                    if should_replace_hyphens {
+                                        s.replace("-", "_")
+                                    } else {
+                                        s
+                                    }
                                 };
-                                let filename =
-                                    out_dir.join(format!("{}{}{}", prefix, conv(stem.clone()), suffix));
+                                let filename = out_dir.join(format!(
+                                    "{}{}{}",
+                                    prefix,
+                                    conv(stem.clone()),
+                                    suffix
+                                ));
                                 let link_dst = link_stem.clone().map(|(ld, ls)| {
                                     ld.join(format!("{}{}{}", prefix, conv(ls), suffix))
                                 });
@@ -729,26 +762,26 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 };
                 //info!("{:?}", unit);
                 match *unit.target.kind() {
-                    TargetKind::Bin |
-                    TargetKind::CustomBuild |
-                    TargetKind::ExampleBin |
-                    TargetKind::Bench |
-                    TargetKind::Test => {
+                    TargetKind::Bin
+                    | TargetKind::CustomBuild
+                    | TargetKind::ExampleBin
+                    | TargetKind::Bench
+                    | TargetKind::Test => {
                         add("bin", TargetFileType::Normal)?;
                     }
-                    TargetKind::Lib(..) |
-                    TargetKind::ExampleLib(..)
-                    if unit.profile.test => {
+                    TargetKind::Lib(..) | TargetKind::ExampleLib(..) if unit.profile.test => {
                         add("bin", TargetFileType::Normal)?;
                     }
-                    TargetKind::ExampleLib(ref kinds) |
-                    TargetKind::Lib(ref kinds) => {
+                    TargetKind::ExampleLib(ref kinds) | TargetKind::Lib(ref kinds) => {
                         for kind in kinds {
-                            add(kind.crate_type(), if kind.linkable() {
-                                TargetFileType::Linkable
-                            } else {
-                                TargetFileType::Normal
-                            })?;
+                            add(
+                                kind.crate_type(),
+                                if kind.linkable() {
+                                    TargetFileType::Linkable
+                                } else {
+                                    TargetFileType::Normal
+                                },
+                            )?;
                         }
                     }
                 }
@@ -756,13 +789,20 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
         if ret.is_empty() {
             if !unsupported.is_empty() {
-                bail!("cannot produce {} for `{}` as the target `{}` \
-                       does not support these crate types",
-                      unsupported.join(", "), unit.pkg, self.target_triple())
+                bail!(
+                    "cannot produce {} for `{}` as the target `{}` \
+                     does not support these crate types",
+                    unsupported.join(", "),
+                    unit.pkg,
+                    self.target_triple()
+                )
             }
-            bail!("cannot compile `{}` as the target `{}` does not \
-                   support any of the output crate types",
-                  unit.pkg, self.target_triple());
+            bail!(
+                "cannot compile `{}` as the target `{}` does not \
+                 support any of the output crate types",
+                unit.pkg,
+                self.target_triple()
+            );
         }
         info!("Target filenames: {:?}", ret);
 
@@ -773,7 +813,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// for that package.
     pub fn dep_targets(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
         if unit.profile.run_custom_build {
-            return self.dep_run_custom_build(unit)
+            return self.dep_run_custom_build(unit);
         } else if unit.profile.doc && !unit.profile.test {
             return self.doc_deps(unit);
         }
@@ -781,61 +821,61 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let id = unit.pkg.package_id();
         let deps = self.resolve.deps(id);
         let mut ret = deps.filter(|dep| {
-            unit.pkg.dependencies().iter().filter(|d| {
-                d.name() == dep.name() && d.version_req().matches(dep.version())
-            }).any(|d| {
-                // If this target is a build command, then we only want build
-                // dependencies, otherwise we want everything *other than* build
-                // dependencies.
-                if unit.target.is_custom_build() != d.is_build() {
-                    return false
-                }
+            unit.pkg
+                .dependencies()
+                .iter()
+                .filter(|d| d.name() == dep.name() && d.version_req().matches(dep.version()))
+                .any(|d| {
+                    // If this target is a build command, then we only want build
+                    // dependencies, otherwise we want everything *other than* build
+                    // dependencies.
+                    if unit.target.is_custom_build() != d.is_build() {
+                        return false;
+                    }
 
-                // If this dependency is *not* a transitive dependency, then it
-                // only applies to test/example targets
-                if !d.is_transitive() && !unit.target.is_test() &&
-                   !unit.target.is_example() && !unit.profile.test {
-                    return false
-                }
+                    // If this dependency is *not* a transitive dependency, then it
+                    // only applies to test/example targets
+                    if !d.is_transitive() && !unit.target.is_test() && !unit.target.is_example()
+                        && !unit.profile.test
+                    {
+                        return false;
+                    }
 
-                // If this dependency is only available for certain platforms,
-                // make sure we're only enabling it for that platform.
-                if !self.dep_platform_activated(d, unit.kind) {
-                    return false
-                }
+                    // If this dependency is only available for certain platforms,
+                    // make sure we're only enabling it for that platform.
+                    if !self.dep_platform_activated(d, unit.kind) {
+                        return false;
+                    }
 
-                // If the dependency is optional, then we're only activating it
-                // if the corresponding feature was activated
-                if d.is_optional() && !self.resolve.features(id).contains(&*d.name()) {
-                    return false;
-                }
+                    // If the dependency is optional, then we're only activating it
+                    // if the corresponding feature was activated
+                    if d.is_optional() && !self.resolve.features(id).contains(&*d.name()) {
+                        return false;
+                    }
 
-                // If we've gotten past all that, then this dependency is
-                // actually used!
-                true
+                    // If we've gotten past all that, then this dependency is
+                    // actually used!
+                    true
+                })
+        }).filter_map(|id| match self.get_package(id) {
+                Ok(pkg) => pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
+                    let unit = Unit {
+                        pkg,
+                        target: t,
+                        profile: self.lib_or_check_profile(unit, t),
+                        kind: unit.kind.for_target(t),
+                    };
+                    Ok(unit)
+                }),
+                Err(e) => Some(Err(e)),
             })
-        }).filter_map(|id| {
-            match self.get_package(id) {
-                Ok(pkg) => {
-                    pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                        let unit = Unit {
-                            pkg,
-                            target: t,
-                            profile: self.lib_or_check_profile(unit, t),
-                            kind: unit.kind.for_target(t),
-                        };
-                        Ok(unit)
-                    })
-                }
-                Err(e) => Some(Err(e))
-            }
-        }).collect::<CargoResult<Vec<_>>>()?;
+            .collect::<CargoResult<Vec<_>>>()?;
 
         // If this target is a build script, then what we've collected so far is
         // all we need. If this isn't a build script, then it depends on the
         // build script if there is one.
         if unit.target.is_custom_build() {
-            return Ok(ret)
+            return Ok(ret);
         }
         ret.extend(self.dep_build_script(unit));
 
@@ -844,29 +884,32 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // didn't include `pkg` in the return values, so we need to special case
         // it here and see if we need to push `(pkg, pkg_lib_target)`.
         if unit.target.is_lib() && !unit.profile.doc {
-            return Ok(ret)
+            return Ok(ret);
         }
         ret.extend(self.maybe_lib(unit));
 
         // Integration tests/benchmarks require binaries to be built
-        if unit.profile.test &&
-           (unit.target.is_test() || unit.target.is_bench()) {
-            ret.extend(unit.pkg.targets().iter().filter(|t| {
-                let no_required_features = Vec::new();
+        if unit.profile.test && (unit.target.is_test() || unit.target.is_bench()) {
+            ret.extend(
+                unit.pkg
+                    .targets()
+                    .iter()
+                    .filter(|t| {
+                        let no_required_features = Vec::new();
 
-                t.is_bin() &&
+                        t.is_bin() &&
                 // Skip binaries with required features that have not been selected.
                 t.required_features().unwrap_or(&no_required_features).iter().all(|f| {
                     self.resolve.features(id).contains(f)
                 })
-            }).map(|t| {
-                Unit {
-                    pkg: unit.pkg,
-                    target: t,
-                    profile: self.lib_or_check_profile(unit, t),
-                    kind: unit.kind.for_target(t),
-                }
-            }));
+                    })
+                    .map(|t| Unit {
+                        pkg: unit.pkg,
+                        target: t,
+                        profile: self.lib_or_check_profile(unit, t),
+                        kind: unit.kind.for_target(t),
+                    }),
+            );
         }
         Ok(ret)
     }
@@ -875,14 +918,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     ///
     /// The `unit` provided must represent an execution of a build script, and
     /// the returned set of units must all be run before `unit` is run.
-    pub fn dep_run_custom_build(&self, unit: &Unit<'a>)
-                                -> CargoResult<Vec<Unit<'a>>> {
+    pub fn dep_run_custom_build(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
         // If this build script's execution has been overridden then we don't
         // actually depend on anything, we've reached the end of the dependency
         // chain as we've got all the info we're gonna get.
         let key = (unit.pkg.package_id().clone(), unit.kind);
         if self.build_script_overridden.contains(&key) {
-            return Ok(Vec::new())
+            return Ok(Vec::new());
         }
 
         // When not overridden, then the dependencies to run a build script are:
@@ -890,42 +932,47 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         // 1. Compiling the build script itself
         // 2. For each immediate dependency of our package which has a `links`
         //    key, the execution of that build script.
-        let not_custom_build = unit.pkg.targets().iter().find(|t| {
-            !t.is_custom_build()
-        }).unwrap();
+        let not_custom_build = unit.pkg
+            .targets()
+            .iter()
+            .find(|t| !t.is_custom_build())
+            .unwrap();
         let tmp = Unit {
             target: not_custom_build,
             profile: &self.profiles.dev,
             ..*unit
         };
         let deps = self.dep_targets(&tmp)?;
-        Ok(deps.iter().filter_map(|unit| {
-            if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
-                return None
-            }
-            self.dep_build_script(unit)
-        }).chain(Some(Unit {
-            profile: self.build_script_profile(unit.pkg.package_id()),
-            kind: Kind::Host, // build scripts always compiled for the host
-            ..*unit
-        })).collect())
+        Ok(deps.iter()
+            .filter_map(|unit| {
+                if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
+                    return None;
+                }
+                self.dep_build_script(unit)
+            })
+            .chain(Some(Unit {
+                profile: self.build_script_profile(unit.pkg.package_id()),
+                kind: Kind::Host, // build scripts always compiled for the host
+                ..*unit
+            }))
+            .collect())
     }
 
     /// Returns the dependencies necessary to document a package
     fn doc_deps(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
-        let deps = self.resolve.deps(unit.pkg.package_id()).filter(|dep| {
-            unit.pkg.dependencies().iter().filter(|d| {
-                d.name() == dep.name()
-            }).any(|dep| {
-                match dep.kind() {
-                    DepKind::Normal => self.dep_platform_activated(dep,
-                                                                   unit.kind),
-                    _ => false,
-                }
+        let deps = self.resolve
+            .deps(unit.pkg.package_id())
+            .filter(|dep| {
+                unit.pkg
+                    .dependencies()
+                    .iter()
+                    .filter(|d| d.name() == dep.name())
+                    .any(|dep| match dep.kind() {
+                        DepKind::Normal => self.dep_platform_activated(dep, unit.kind),
+                        _ => false,
+                    })
             })
-        }).map(|dep| {
-            self.get_package(dep)
-        });
+            .map(|dep| self.get_package(dep));
 
         // To document a library, we depend on dependencies actually being
         // built. If we're documenting *all* libraries, then we also depend on
@@ -971,25 +1018,29 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// of work is still returned. `None` is only returned if the package has no
     /// build script.
     fn dep_build_script(&self, unit: &Unit<'a>) -> Option<Unit<'a>> {
-        unit.pkg.targets().iter().find(|t| t.is_custom_build()).map(|t| {
-            Unit {
+        unit.pkg
+            .targets()
+            .iter()
+            .find(|t| t.is_custom_build())
+            .map(|t| Unit {
                 pkg: unit.pkg,
                 target: t,
                 profile: &self.profiles.custom_build,
                 kind: unit.kind,
-            }
-        })
+            })
     }
 
     fn maybe_lib(&self, unit: &Unit<'a>) -> Option<Unit<'a>> {
-        unit.pkg.targets().iter().find(|t| t.linkable()).map(|t| {
-            Unit {
+        unit.pkg
+            .targets()
+            .iter()
+            .find(|t| t.linkable())
+            .map(|t| Unit {
                 pkg: unit.pkg,
                 target: t,
                 profile: self.lib_or_check_profile(unit, t),
                 kind: unit.kind.for_target(t),
-            }
-        })
+            })
     }
 
     fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
@@ -1039,7 +1090,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     /// Number of jobs specified for this build
-    pub fn jobs(&self) -> u32 { self.build_config.jobs }
+    pub fn jobs(&self) -> u32 {
+        self.build_config.jobs
+    }
 
     pub fn lib_profile(&self) -> &'a Profile {
         let (normal, test) = if self.build_config.release {
@@ -1056,8 +1109,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     pub fn lib_or_check_profile(&self, unit: &Unit, target: &Target) -> &'a Profile {
         if !target.is_custom_build() && !target.for_host()
-            && (unit.profile.check || (unit.profile.doc && !unit.profile.test)) {
-                return &self.profiles.check
+            && (unit.profile.check || (unit.profile.doc && !unit.profile.test))
+        {
+            return &self.profiles.check;
         }
         self.lib_profile()
     }
@@ -1098,7 +1152,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
 
         if !incremental {
-            return Ok(Vec::new())
+            return Ok(Vec::new());
         }
 
         // Only enable incremental compilation for sources the user can
@@ -1108,22 +1162,31 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         //
         // (see also https://github.com/rust-lang/cargo/issues/3972)
         if !unit.pkg.package_id().source_id().is_path() {
-            return Ok(Vec::new())
+            return Ok(Vec::new());
         }
 
         let dir = self.layout(unit.kind).incremental().display();
-        Ok(vec![
-            "-C".to_string(),
-            format!("incremental={}", dir),
-        ])
+        Ok(vec!["-C".to_string(), format!("incremental={}", dir)])
     }
 
     pub fn rustflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        env_args(self.config, &self.build_config, self.info(&unit.kind), unit.kind, "RUSTFLAGS")
+        env_args(
+            self.config,
+            &self.build_config,
+            self.info(&unit.kind),
+            unit.kind,
+            "RUSTFLAGS",
+        )
     }
 
     pub fn rustdocflags_args(&self, unit: &Unit) -> CargoResult<Vec<String>> {
-        env_args(self.config, &self.build_config, self.info(&unit.kind), unit.kind, "RUSTDOCFLAGS")
+        env_args(
+            self.config,
+            &self.build_config,
+            self.info(&unit.kind),
+            unit.kind,
+            "RUSTDOCFLAGS",
+        )
     }
 
     pub fn show_warnings(&self, pkg: &PackageId) -> bool {
@@ -1155,11 +1218,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 ///
 /// Note that if a `target` is specified, no args will be passed to host code (plugins, build
 /// scripts, ...), even if it is the same as the target.
-fn env_args(config: &Config,
-            build_config: &BuildConfig,
-            target_info: &TargetInfo,
-            kind: Kind,
-            name: &str) -> CargoResult<Vec<String>> {
+fn env_args(
+    config: &Config,
+    build_config: &BuildConfig,
+    target_info: &TargetInfo,
+    kind: Kind,
+    name: &str,
+) -> CargoResult<Vec<String>> {
     // We *want* to apply RUSTFLAGS only to builds for the
     // requested target architecture, and not to things like build
     // scripts and plugins, which may be for an entirely different
@@ -1200,9 +1265,14 @@ fn env_args(config: &Config,
 
     let mut rustflags = Vec::new();
 
-    let name = name.chars().flat_map(|c| c.to_lowercase()).collect::<String>();
+    let name = name.chars()
+        .flat_map(|c| c.to_lowercase())
+        .collect::<String>();
     // Then the target.*.rustflags value...
-    let target = build_config.requested_target.as_ref().unwrap_or(&build_config.host_triple);
+    let target = build_config
+        .requested_target
+        .as_ref()
+        .unwrap_or(&build_config.host_triple);
     let key = format!("target.{}.{}", target, name);
     if let Some(args) = config.get_list_or_split_string(&key)? {
         let args = args.val.into_iter();
@@ -1214,9 +1284,13 @@ fn env_args(config: &Config,
             let cfgs = table.val.keys().filter_map(|t| {
                 if t.starts_with("cfg(") && t.ends_with(')') {
                     let cfg = &t[4..t.len() - 1];
-                    CfgExpr::from_str(cfg)
-                        .ok()
-                        .and_then(|c| if c.matches(target_cfg) { Some(t) } else { None })
+                    CfgExpr::from_str(cfg).ok().and_then(|c| {
+                        if c.matches(target_cfg) {
+                            Some(t)
+                        } else {
+                            None
+                        }
+                    })
                 } else {
                     None
                 }
@@ -1275,24 +1349,28 @@ fn parse_crate_type(
     lines: &mut str::Lines,
 ) -> CargoResult<Option<(String, String)>> {
     let not_supported = error.lines().any(|line| {
-        (line.contains("unsupported crate type") ||
-         line.contains("unknown crate type")) &&
-        line.contains(crate_type)
+        (line.contains("unsupported crate type") || line.contains("unknown crate type"))
+            && line.contains(crate_type)
     });
     if not_supported {
         return Ok(None);
     }
     let line = match lines.next() {
         Some(line) => line,
-        None => bail!("malformed output when learning about \
-            crate-type {} information", crate_type),
+        None => bail!(
+            "malformed output when learning about \
+             crate-type {} information",
+            crate_type
+        ),
     };
     let mut parts = line.trim().split("___");
     let prefix = parts.next().unwrap();
     let suffix = match parts.next() {
         Some(part) => part,
-        None => bail!("output of --print=file-names has changed in \
-            the compiler, cannot parse"),
+        None => bail!(
+            "output of --print=file-names has changed in \
+             the compiler, cannot parse"
+        ),
     };
 
     Ok(Some((prefix.to_string(), suffix.to_string())))
@@ -1313,16 +1391,14 @@ fn add_target_specific_suffixes(
     let mut ret = vec![(suffix.to_string(), file_type, false)];
 
     // rust-lang/cargo#4500
-    if target_triple.ends_with("pc-windows-msvc") && crate_type.ends_with("dylib") &&
-        suffix == ".dll"
+    if target_triple.ends_with("pc-windows-msvc") && crate_type.ends_with("dylib")
+        && suffix == ".dll"
     {
         ret.push((".dll.lib".to_string(), TargetFileType::Normal, false));
     }
 
     // rust-lang/cargo#4535
-    if target_triple.starts_with("wasm32-") && crate_type == "bin" &&
-        suffix == ".js"
-    {
+    if target_triple.starts_with("wasm32-") && crate_type == "bin" && suffix == ".js" {
         ret.push((".wasm".to_string(), TargetFileType::Normal, true));
     }
 

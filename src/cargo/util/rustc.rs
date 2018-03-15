@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use util::{self, CargoResult, internal, ProcessBuilder};
+use util::{self, internal, CargoResult, ProcessBuilder};
 
 /// Information on the `rustc` executable
 #[derive(Debug)]
@@ -28,14 +28,15 @@ impl Rustc {
 
         let output = cmd.exec_with_output()?;
 
-        let verbose_version = String::from_utf8(output.stdout).map_err(|_| {
-            internal("rustc -v didn't return utf8 output")
-        })?;
+        let verbose_version = String::from_utf8(output.stdout)
+            .map_err(|_| internal("rustc -v didn't return utf8 output"))?;
 
         let host = {
-            let triple = verbose_version.lines().find(|l| {
-                l.starts_with("host: ")
-            }).map(|l| &l[6..]).ok_or_else(|| internal("rustc -v didn't have a line for `host:`"))?;
+            let triple = verbose_version
+                .lines()
+                .find(|l| l.starts_with("host: "))
+                .map(|l| &l[6..])
+                .ok_or_else(|| internal("rustc -v didn't have a line for `host:`"))?;
             triple.to_string()
         };
 

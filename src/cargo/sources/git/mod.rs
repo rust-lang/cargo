@@ -1,4 +1,4 @@
-pub use self::utils::{GitRemote, GitDatabase, GitCheckout, GitRevision, fetch};
-pub use self::source::{GitSource, canonicalize_url};
+pub use self::utils::{fetch, GitCheckout, GitDatabase, GitRemote, GitRevision};
+pub use self::source::{canonicalize_url, GitSource};
 mod utils;
 mod source;
