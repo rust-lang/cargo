@@ -951,9 +951,9 @@ fn activate_deps_loop(
             && past_conflicting_activations
                 .get(&dep)
                 .and_then(|past_bad| {
-                    past_bad.iter().find(|conflicting| {
-                        cx.is_conflicting(None, conflicting)
-                    })
+                    past_bad
+                        .iter()
+                        .find(|conflicting| cx.is_conflicting(None, conflicting))
                 })
                 .is_some();
 
@@ -1082,14 +1082,18 @@ fn activate_deps_loop(
                     // but we may want to scrap it if it is not going to end well
                     let mut has_past_conflicting_dep = just_here_for_the_error_messages;
                     if !has_past_conflicting_dep {
-                        if let Some(conflicting) = frame.remaining_siblings.clone().filter_map(|(_, (deb, _, _))| {
-                            past_conflicting_activations.get(&deb).and_then(|past_bad| {
-                                // for each dependency check all of its cashed conflicts
-                                past_bad.iter().find(|conflicting| {
-                                    cx.is_conflicting(None, conflicting)
+                        if let Some(conflicting) = frame
+                            .remaining_siblings
+                            .clone()
+                            .filter_map(|(_, (deb, _, _))| {
+                                past_conflicting_activations.get(&deb).and_then(|past_bad| {
+                                    // for each dependency check all of its cashed conflicts
+                                    past_bad
+                                        .iter()
+                                        .find(|conflicting| cx.is_conflicting(None, conflicting))
                                 })
                             })
-                        }).next()
+                            .next()
                         {
                             // if any of them match than it will just backtrack to us
                             // so let's save the effort.
@@ -1115,7 +1119,12 @@ fn activate_deps_loop(
                             past.push(conflicting_activations.clone());
                             // also clean the `backtrack_stack` so we don't
                             // backtrack to a place where we will try this again.
-                            backtrack_stack.retain(|bframe| !bframe.context_backup.is_conflicting(Some(parent.package_id()), &conflicting_activations));
+                            backtrack_stack.retain(|bframe| {
+                                !bframe.context_backup.is_conflicting(
+                                    Some(parent.package_id()),
+                                    &conflicting_activations,
+                                )
+                            });
                         }
                     }
                     // if not has_another we we activate for the better error messages
@@ -1184,10 +1193,13 @@ fn find_candidate<'a>(
     conflicting_activations: &HashMap<PackageId, ConflictReason>,
 ) -> Option<(Candidate, bool, BacktrackFrame)> {
     while let Some(mut frame) = backtrack_stack.pop() {
-        let next= frame.remaining_candidates.next(frame.context_backup.prev_active(&frame.dep), &frame.context_backup.links,);
-        if frame.context_backup.is_conflicting(Some(parent.package_id())
-           , conflicting_activations
-           )
+        let next = frame.remaining_candidates.next(
+            frame.context_backup.prev_active(&frame.dep),
+            &frame.context_backup.links,
+        );
+        if frame
+            .context_backup
+            .is_conflicting(Some(parent.package_id()), conflicting_activations)
         {
             continue;
         }
@@ -1638,8 +1650,8 @@ impl Context {
         parent: Option<&PackageId>,
         conflicting_activations: &HashMap<PackageId, ConflictReason>,
     ) -> bool {
-        parent.map(|p| self.is_active(p)).unwrap_or(true) &&
-            conflicting_activations
+        parent.map(|p| self.is_active(p)).unwrap_or(true)
+            && conflicting_activations
                 .keys()
                 // note: a lot of redundant work in is_active for similar debs
                 .all(|con| self.is_active(con))

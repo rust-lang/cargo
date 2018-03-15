@@ -642,7 +642,11 @@ fn resolving_with_deep_traps() {
 
     let reg = registry(reglist.clone());
 
-    let res = resolve(&pkg_id("root"), vec![dep_req("backtrack_trap0", "*"), dep_req("cloaking", "*")], &reg);
+    let res = resolve(
+        &pkg_id("root"),
+        vec![dep_req("backtrack_trap0", "*"), dep_req("cloaking", "*")],
+        &reg,
+    );
 
     assert!(res.is_err());
 }
