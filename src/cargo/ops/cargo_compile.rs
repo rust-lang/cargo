@@ -246,7 +246,7 @@ pub fn compile_ws<'a>(
     let specs = spec.into_package_id_specs(ws)?;
     let features = Method::split_features(features);
     let method = Method::Required {
-        dev_deps: ws.require_optional_deps() || filter.need_dev_deps(),
+        dev_deps: ws.require_optional_deps() || filter.need_dev_deps(mode),
         features: &features,
         all_features,
         uses_default_features: !no_default_features,
@@ -442,15 +442,19 @@ impl CompileFilter {
         }
     }
 
-    pub fn need_dev_deps(&self) -> bool {
-        match *self {
-            CompileFilter::Default { .. } => true,
-            CompileFilter::Only {
-                ref examples,
-                ref tests,
-                ref benches,
-                ..
-            } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
+    pub fn need_dev_deps(&self, mode: CompileMode) -> bool {
+        match mode {
+            CompileMode::Test | CompileMode::Doctest | CompileMode::Bench => true,
+            CompileMode::Build | CompileMode::Doc { .. } | CompileMode::Check { .. } => match *self
+            {
+                CompileFilter::Default { .. } => false,
+                CompileFilter::Only {
+                    ref examples,
+                    ref tests,
+                    ref benches,
+                    ..
+                } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
+            },
         }
     }
 
