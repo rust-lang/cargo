@@ -70,7 +70,6 @@ fn try_main() -> Result<(), ProgramError> {
             .use_delimiter(true))
         .arg(Arg::with_name("file")
             .long("file")
-            .short("f")
             .takes_value(true)
             .help("Load errors from the given JSON file (produced by `cargo build --message-format=json`)"))
         .get_matches();
