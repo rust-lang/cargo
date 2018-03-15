@@ -365,6 +365,7 @@ pub struct Execs {
     expect_stderr_not_contains: Vec<String>,
     expect_neither_contains: Vec<String>,
     expect_json: Option<Vec<Value>>,
+    stream_output: bool,
 }
 
 impl Execs {
@@ -425,6 +426,14 @@ impl Execs {
                 .map(|obj| obj.parse().unwrap())
                 .collect(),
         );
+        self
+    }
+
+    /// Forward subordinate process stdout/stderr to the terminal.
+    /// Useful for prtintf debugging of the tests.
+    #[allow(unused)]
+    pub fn stream(mut self) -> Execs {
+        self.stream_output = true;
         self
     }
 
@@ -855,7 +864,18 @@ impl ham::Matcher<ProcessBuilder> for Execs {
 impl<'a> ham::Matcher<&'a mut ProcessBuilder> for Execs {
     fn matches(&self, process: &'a mut ProcessBuilder) -> ham::MatchResult {
         println!("running {}", process);
-        let res = process.exec_with_output();
+        let res = if self.stream_output {
+            if env::var("CI").is_ok() {
+                panic!("`.stream()` is for local debugging")
+            }
+            process.exec_with_streaming(
+                &mut |out| Ok(println!("{}", out)),
+                &mut |err| Ok(eprintln!("{}", err)),
+                false,
+            )
+        } else {
+            process.exec_with_output()
+        };
 
         match res {
             Ok(out) => self.match_output(&out),
@@ -898,6 +918,7 @@ pub fn execs() -> Execs {
         expect_stderr_not_contains: Vec::new(),
         expect_neither_contains: Vec::new(),
         expect_json: None,
+        stream_output: false,
     }
 }
 
