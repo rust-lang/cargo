@@ -6,7 +6,7 @@ use serde::ser;
 use serde::de;
 
 use core::{Dependency, Package, PackageId, SourceId, Workspace};
-use util::{internal, Config, Graph};
+use util::{internal, Graph};
 use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 use super::Resolve;
@@ -207,33 +207,33 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
         visited.insert(member.package_id().source_id().clone());
     }
     for member in members.iter() {
-        build_pkg(member, ws.config(), &mut ret, &mut visited);
+        build_pkg(member, ws, &mut ret, &mut visited);
     }
     for deps in ws.root_patch().values() {
         for dep in deps {
-            build_dep(dep, ws.config(), &mut ret, &mut visited);
+            build_dep(dep, ws, &mut ret, &mut visited);
         }
     }
     for &(_, ref dep) in ws.root_replace() {
-        build_dep(dep, ws.config(), &mut ret, &mut visited);
+        build_dep(dep, ws, &mut ret, &mut visited);
     }
 
     return ret;
 
     fn build_pkg(
         pkg: &Package,
-        config: &Config,
+        ws: &Workspace,
         ret: &mut HashMap<String, SourceId>,
         visited: &mut HashSet<SourceId>,
     ) {
         for dep in pkg.dependencies() {
-            build_dep(dep, config, ret, visited);
+            build_dep(dep, ws, ret, visited);
         }
     }
 
     fn build_dep(
         dep: &Dependency,
-        config: &Config,
+        ws: &Workspace,
         ret: &mut HashMap<String, SourceId>,
         visited: &mut HashSet<SourceId>,
     ) {
@@ -245,13 +245,13 @@ fn build_path_deps(ws: &Workspace) -> HashMap<String, SourceId> {
             Ok(p) => p.join("Cargo.toml"),
             Err(_) => return,
         };
-        let pkg = match Package::for_path(&path, config) {
+        let pkg = match ws.load(&path) {
             Ok(p) => p,
             Err(_) => return,
         };
         ret.insert(pkg.name().to_string(), pkg.package_id().source_id().clone());
         visited.insert(pkg.package_id().source_id().clone());
-        build_pkg(&pkg, config, ret, visited);
+        build_pkg(&pkg, ws, ret, visited);
     }
 }
 
