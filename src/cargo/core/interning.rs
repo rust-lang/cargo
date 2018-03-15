@@ -70,13 +70,13 @@ impl Hash for InternedString {
 
 impl fmt::Debug for InternedString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "InternedString {{ {} }}", self.to_inner())
+        fmt::Debug::fmt(self.to_inner(), f)
     }
 }
 
 impl fmt::Display for InternedString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_inner())
+        fmt::Display::fmt(self.to_inner(), f)
     }
 }
 
