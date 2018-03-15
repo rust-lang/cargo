@@ -606,7 +606,7 @@ fn check_virtual_all_implied() {
 }
 
 #[test]
-fn check_all_targets() {
+fn all_targets_with_and_without() {
     let foo = project("foo")
         .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/main.rs", "fn main() {}")
@@ -625,6 +625,17 @@ fn check_all_targets() {
             .with_stderr_contains("[..] --crate-name example1 examples[/]example1.rs [..]")
             .with_stderr_contains("[..] --crate-name test2 tests[/]test2.rs [..]")
             .with_stderr_contains("[..] --crate-name bench3 benches[/]bench3.rs [..]"),
+    );
+    assert_that(foo.cargo("clean"), execs().with_status(0));
+    assert_that(
+        foo.cargo("check").arg("-v"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..]")
+            .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..]")
+            .with_stderr_does_not_contain("[..] --crate-name example1 examples[/]example1.rs [..]")
+            .with_stderr_does_not_contain("[..] --crate-name test2 tests[/]test2.rs [..]")
+            .with_stderr_does_not_contain("[..] --crate-name bench3 benches[/]bench3.rs [..]"),
     );
 }
 

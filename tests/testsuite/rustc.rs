@@ -438,6 +438,55 @@ fn build_only_bar_dependency() {
 }
 
 #[test]
+fn all_targets_with_and_without() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    assert_that(
+        p.cargo("rustc").arg("-v").arg("--all-targets"),
+        execs().with_status(0)
+        // bin
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
+            --emit=dep-info,link[..]")
+        // bench
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            -C opt-level=3 --test [..]")
+        // unit test
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            -C debuginfo=2 --test [..]"),
+    );
+    assert_that(p.cargo("clean"), execs().with_status(0));
+    assert_that(
+        p.cargo("rustc").arg("-v"),
+        execs().with_status(0)
+        // bin
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
+            --emit=dep-info,link[..]")
+        // bench
+        .with_stderr_does_not_contain("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            -C opt-level=3 --test [..]")
+        // unit test
+        .with_stderr_does_not_contain("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            -C debuginfo=2 --test [..]"),
+    );
+}
+
+#[test]
 fn fail_with_multiple_packages() {
     let foo = project("foo")
         .file(
