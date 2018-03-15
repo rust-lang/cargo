@@ -55,6 +55,10 @@ toml = "0.4"
 url = "1.1"
 clap = "2.27.0"
 
+# Not actually needed right now but required to make sure that rls/cargo build
+# with the same set of features in rust-lang/rust
+num-traits = "0.2" # enable the default feature
+
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { version = "0.5.1", features = ["mac_os_10_7_support"] }
 
