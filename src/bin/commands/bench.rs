@@ -7,16 +7,15 @@ pub fn cli() -> App {
         .setting(AppSettings::TrailingVarArg)
         .about("Execute all benchmarks of a local package")
         .arg(
-            Arg::with_name("BENCHNAME").help(
-                "If specified, only run benches containing this string in their names"
-            )
+            Arg::with_name("BENCHNAME")
+                .help("If specified, only run benches containing this string in their names"),
         )
         .arg(
-            Arg::with_name("args").help(
-                "Arguments for the bench binary"
-            ).multiple(true).last(true)
+            Arg::with_name("args")
+                .help("Arguments for the bench binary")
+                .multiple(true)
+                .last(true),
         )
-
         .arg_targets_all(
             "Benchmark only this package's library",
             "Benchmark only the specified binary",
@@ -29,10 +28,7 @@ pub fn cli() -> App {
             "Benchmark all benches",
             "Benchmark all targets (default)",
         )
-
-        .arg(
-            opt("no-run", "Compile, but don't run benchmarks")
-        )
+        .arg(opt("no-run", "Compile, but don't run benchmarks"))
         .arg_package(
             "Package to run benchmarks for",
             "Benchmark all packages in the workspace",
@@ -43,10 +39,12 @@ pub fn cli() -> App {
         .arg_target_triple("Build for the target triple")
         .arg_manifest_path()
         .arg_message_format()
-        .arg(
-            opt("no-fail-fast", "Run all benchmarks regardless of failure")
-        )
-        .after_help("\
+        .arg(opt(
+            "no-fail-fast",
+            "Run all benchmarks regardless of failure",
+        ))
+        .after_help(
+            "\
 All of the trailing arguments are passed to the benchmark binaries generated
 for filtering benchmarks and generally providing options configuring how they
 run.
@@ -64,7 +62,8 @@ The --jobs argument affects the building of the benchmark executable but does
 not affect how many jobs are used when running the benchmarks.
 
 Compilation can be customized with the `bench` profile in the manifest.
-")
+",
+        )
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
@@ -80,17 +79,23 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     };
 
     let mut bench_args = vec![];
-    bench_args.extend(args.value_of("BENCHNAME").into_iter().map(|s| s.to_string()));
-    bench_args.extend(args.values_of("args").unwrap_or_default().map(|s| s.to_string()));
+    bench_args.extend(
+        args.value_of("BENCHNAME")
+            .into_iter()
+            .map(|s| s.to_string()),
+    );
+    bench_args.extend(
+        args.values_of("args")
+            .unwrap_or_default()
+            .map(|s| s.to_string()),
+    );
 
     let err = ops::run_benches(&ws, &ops, &bench_args)?;
     match err {
         None => Ok(()),
-        Some(err) => {
-            Err(match err.exit.as_ref().and_then(|e| e.code()) {
-                Some(i) => CliError::new(format_err!("bench failed"), i),
-                None => CliError::new(err.into(), 101)
-            })
-        }
+        Some(err) => Err(match err.exit.as_ref().and_then(|e| e.code()) {
+            Some(i) => CliError::new(format_err!("bench failed"), i),
+            None => CliError::new(err.into(), 101),
+        }),
     }
 }

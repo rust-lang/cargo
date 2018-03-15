@@ -1,14 +1,11 @@
 use cargotest::support::git;
 use cargotest::support::registry::Package;
-use cargotest::support::{execs, project, lines_match};
+use cargotest::support::{execs, lines_match, project};
 use hamcrest::assert_that;
 
 #[test]
 fn oldest_lockfile_still_works() {
-    let cargo_commands = vec![
-        "build",
-        "update"
-    ];
+    let cargo_commands = vec!["build", "update"];
     for cargo_command in cargo_commands {
         oldest_lockfile_still_works_with_command(cargo_command);
     }
@@ -17,8 +14,7 @@ fn oldest_lockfile_still_works() {
 fn oldest_lockfile_still_works_with_command(cargo_command: &str) {
     Package::new("foo", "0.1.0").publish();
 
-    let expected_lockfile =
-r#"[[package]]
+    let expected_lockfile = r#"[[package]]
 name = "foo"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -34,8 +30,7 @@ dependencies = [
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "[..]"
 "#;
 
-    let old_lockfile =
-r#"[root]
+    let old_lockfile = r#"[root]
 name = "zzz"
 version = "0.0.1"
 dependencies = [
@@ -49,7 +44,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "#;
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "zzz"
             version = "0.0.1"
@@ -57,13 +54,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
             [dependencies]
             foo = "0.1.0"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .file("Cargo.lock", old_lockfile)
         .build();
 
-    assert_that(p.cargo(cargo_command),
-                execs().with_status(0));
+    assert_that(p.cargo(cargo_command), execs().with_status(0));
 
     let lock = p.read_lockfile();
     for (l, r) in expected_lockfile.lines().zip(lock.lines()) {
@@ -72,7 +69,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
     assert_eq!(lock.lines().count(), expected_lockfile.lines().count());
 }
-
 
 #[test]
 fn frozen_flag_preserves_old_lockfile() {
@@ -94,11 +90,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [metadata]
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "{}"
 "#,
-    cksum,
+        cksum,
     );
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "zzz"
             version = "0.0.1"
@@ -106,13 +104,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
             [dependencies]
             foo = "0.1.0"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .file("Cargo.lock", &old_lockfile)
         .build();
 
-    assert_that(p.cargo("build").arg("--locked"),
-                execs().with_status(0));
+    assert_that(p.cargo("build").arg("--locked"), execs().with_status(0));
 
     let lock = p.read_lockfile();
     for (l, r) in old_lockfile.lines().zip(lock.lines()) {
@@ -122,13 +120,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
     assert_eq!(lock.lines().count(), old_lockfile.lines().count());
 }
 
-
 #[test]
 fn totally_wild_checksums_works() {
     Package::new("foo", "0.1.0").publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -136,9 +135,12 @@ fn totally_wild_checksums_works() {
 
             [dependencies]
             foo = "0.1.0"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
-        .file("Cargo.lock", r#"
+        .file(
+            "Cargo.lock",
+            r#"
 [[package]]
 name = "bar"
 version = "0.0.1"
@@ -154,15 +156,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [metadata]
 "checksum baz 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "checksum"
 "checksum foo 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "checksum"
-"#);
+"#,
+        );
 
     let p = p.build();
 
-    assert_that(p.cargo("build"),
-                execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
 
     let lock = p.read_lockfile();
-    assert!(lock.starts_with(r#"
+    assert!(
+        lock.starts_with(
+            r#"
 [[package]]
 name = "bar"
 version = "0.0.1"
@@ -176,7 +180,9 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
-"#.trim()));
+"#.trim()
+        )
+    );
 }
 
 #[test]
@@ -184,7 +190,9 @@ fn wrong_checksum_is_an_error() {
     Package::new("foo", "0.1.0").publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -192,9 +200,12 @@ fn wrong_checksum_is_an_error() {
 
             [dependencies]
             foo = "0.1.0"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
-        .file("Cargo.lock", r#"
+        .file(
+            "Cargo.lock",
+            r#"
 [[package]]
 name = "bar"
 version = "0.0.1"
@@ -209,12 +220,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "checksum"
-"#);
+"#,
+        );
 
     let p = p.build();
 
-    assert_that(p.cargo("build"),
-                execs().with_status(101).with_stderr("\
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
 [UPDATING] registry `[..]`
 error: checksum for `foo v0.1.0` changed between lock files
 
@@ -226,7 +240,9 @@ this could be indicative of a few possible errors:
 
 unable to verify that `foo v0.1.0` is the same as when the lockfile was generated
 
-"));
+",
+        ),
+    );
 }
 
 // If the checksum is unlisted in the lockfile (e.g. <none>) yet we can
@@ -237,7 +253,9 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
     Package::new("foo", "0.1.0").publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -245,9 +263,12 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
 
             [dependencies]
             foo = "0.1.0"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
-        .file("Cargo.lock", r#"
+        .file(
+            "Cargo.lock",
+            r#"
 [[package]]
 name = "bar"
 version = "0.0.1"
@@ -262,11 +283,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
 "checksum foo 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "<none>"
-"#);
+"#,
+        );
     let p = p.build();
 
-    assert_that(p.cargo("fetch"),
-                execs().with_status(101).with_stderr("\
+    assert_that(
+        p.cargo("fetch"),
+        execs().with_status(101).with_stderr(
+            "\
 [UPDATING] registry `[..]`
 error: checksum for `foo v0.1.0` was not previously calculated, but a checksum \
 could now be calculated
@@ -279,7 +303,9 @@ this could be indicative of a few possible situations:
       older implementation does not
     * the lock file is corrupt
 
-"));
+",
+        ),
+    );
 }
 
 // If the checksum is listed in the lockfile yet we cannot calculate it (e.g.
@@ -287,17 +313,22 @@ this could be indicative of a few possible situations:
 #[test]
 fn listed_checksum_bad_if_we_cannot_compute() {
     let git = git::new("foo", |p| {
-        p.file("Cargo.toml", r#"
+        p.file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "foo"
             version = "0.1.0"
             authors = []
-        "#)
-        .file("src/lib.rs", "")
+        "#,
+        ).file("src/lib.rs", "")
     }).unwrap();
 
     let p = project("bar")
-        .file("Cargo.toml", &format!(r#"
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -305,9 +336,15 @@ fn listed_checksum_bad_if_we_cannot_compute() {
 
             [dependencies]
             foo = {{ git = '{}' }}
-        "#, git.url()))
+        "#,
+                git.url()
+            ),
+        )
         .file("src/lib.rs", "")
-        .file("Cargo.lock", &format!(r#"
+        .file(
+            "Cargo.lock",
+            &format!(
+                r#"
 [[package]]
 name = "bar"
 version = "0.0.1"
@@ -322,12 +359,17 @@ source = "git+{0}"
 
 [metadata]
 "checksum foo 0.1.0 (git+{0})" = "checksum"
-"#, git.url()));
+"#,
+                git.url()
+            ),
+        );
 
     let p = p.build();
 
-    assert_that(p.cargo("fetch"),
-                execs().with_status(101).with_stderr("\
+    assert_that(
+        p.cargo("fetch"),
+        execs().with_status(101).with_stderr(
+            "\
 [UPDATING] git repository `[..]`
 error: checksum for `foo v0.1.0 ([..])` could not be calculated, but a \
 checksum is listed in the existing lock file[..]
@@ -340,7 +382,9 @@ this could be indicative of a few possible situations:
 
 unable to verify that `foo v0.1.0 ([..])` is the same as when the lockfile was generated
 
-"));
+",
+        ),
+    );
 }
 
 #[test]
@@ -348,7 +392,9 @@ fn current_lockfile_format() {
     Package::new("foo", "0.1.0").publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "bar"
             version = "0.0.1"
@@ -356,7 +402,8 @@ fn current_lockfile_format() {
 
             [dependencies]
             foo = "0.1.0"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "");
     let p = p.build();
 
@@ -405,7 +452,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "#;
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "bar"
             version = "0.0.1"
@@ -413,7 +462,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
             [dependencies]
             foo = "0.1.0"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
         .file("Cargo.lock", lockfile);
 
@@ -430,7 +480,9 @@ fn locked_correct_error() {
     Package::new("foo", "0.1.0").publish();
 
     let p = project("bar")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [project]
             name = "bar"
             version = "0.0.1"
@@ -438,13 +490,18 @@ fn locked_correct_error() {
 
             [dependencies]
             foo = "0.1.0"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "");
     let p = p.build();
 
-    assert_that(p.cargo("build").arg("--locked"),
-                execs().with_status(101).with_stderr("\
+    assert_that(
+        p.cargo("build").arg("--locked"),
+        execs().with_status(101).with_stderr(
+            "\
 [UPDATING] registry `[..]`
 error: the lock file needs to be updated but --locked was passed to prevent this
-"));
+",
+        ),
+    );
 }

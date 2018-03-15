@@ -9,12 +9,12 @@ use std::sync::Arc;
 use same_file::is_same_file;
 use serde_json;
 
-use core::{Feature, Package, PackageId, PackageSet, Target, Resolve};
+use core::{Feature, Package, PackageId, PackageSet, Resolve, Target};
 use core::{Profile, Profiles, Workspace};
 use core::manifest::Lto;
 use core::shell::ColorChoice;
-use util::{self, ProcessBuilder, machine_message};
-use util::{Config, internal, profile, join_paths};
+use util::{self, machine_message, ProcessBuilder};
+use util::{internal, join_paths, profile, Config};
 use util::paths;
 use util::errors::{CargoResult, CargoResultExt, Internal};
 use util::Freshness;
@@ -25,8 +25,8 @@ use self::job_queue::JobQueue;
 use self::output_depinfo::output_depinfo;
 
 pub use self::compilation::Compilation;
-pub use self::context::{Context, Unit, TargetFileType};
-pub use self::custom_build::{BuildOutput, BuildMap, BuildScripts};
+pub use self::context::{Context, TargetFileType, Unit};
+pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
 pub use self::layout::is_bad_artifact_name;
 
 mod compilation;
@@ -43,7 +43,10 @@ mod output_depinfo;
 ///
 /// These will be the same unless cross-compiling.
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
-pub enum Kind { Host, Target }
+pub enum Kind {
+    Host,
+    Target,
+}
 
 /// Configuration information for a rustc build.
 #[derive(Default, Clone)]
@@ -97,22 +100,19 @@ pub trait Executor: Send + Sync + 'static {
 
     /// In case of an `Err`, Cargo will not continue with the build process for
     /// this package.
-    fn exec(&self,
-            cmd: ProcessBuilder,
-            _id: &PackageId,
-            _target: &Target)
-            -> CargoResult<()> {
+    fn exec(&self, cmd: ProcessBuilder, _id: &PackageId, _target: &Target) -> CargoResult<()> {
         cmd.exec()?;
         Ok(())
     }
 
-    fn exec_json(&self,
-                 cmd: ProcessBuilder,
-                 _id: &PackageId,
-                 _target: &Target,
-                 handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
-                 handle_stderr: &mut FnMut(&str) -> CargoResult<()>)
-                 -> CargoResult<()> {
+    fn exec_json(
+        &self,
+        cmd: ProcessBuilder,
+        _id: &PackageId,
+        _target: &Target,
+        handle_stdout: &mut FnMut(&str) -> CargoResult<()>,
+        handle_stderr: &mut FnMut(&str) -> CargoResult<()>,
+    ) -> CargoResult<()> {
         cmd.exec_with_streaming(handle_stdout, handle_stderr, false)?;
         Ok(())
     }
@@ -133,33 +133,38 @@ impl Executor for DefaultExecutor {}
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
-pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
-                                     pkg_targets: &'a PackagesToBuild<'a>,
-                                     packages: &'a PackageSet<'cfg>,
-                                     resolve: &'a Resolve,
-                                     config: &'cfg Config,
-                                     build_config: BuildConfig,
-                                     profiles: &'a Profiles,
-                                     exec: &Arc<Executor>)
-                                     -> CargoResult<Compilation<'cfg>> {
-    let units = pkg_targets.iter().flat_map(|&(pkg, ref targets)| {
-        let default_kind = if build_config.requested_target.is_some() {
-            Kind::Target
-        } else {
-            Kind::Host
-        };
-        targets.iter().map(move |&(target, profile)| {
-            Unit {
+pub fn compile_targets<'a, 'cfg: 'a>(
+    ws: &Workspace<'cfg>,
+    pkg_targets: &'a PackagesToBuild<'a>,
+    packages: &'a PackageSet<'cfg>,
+    resolve: &'a Resolve,
+    config: &'cfg Config,
+    build_config: BuildConfig,
+    profiles: &'a Profiles,
+    exec: &Arc<Executor>,
+) -> CargoResult<Compilation<'cfg>> {
+    let units = pkg_targets
+        .iter()
+        .flat_map(|&(pkg, ref targets)| {
+            let default_kind = if build_config.requested_target.is_some() {
+                Kind::Target
+            } else {
+                Kind::Host
+            };
+            targets.iter().map(move |&(target, profile)| Unit {
                 pkg,
                 target,
                 profile,
-                kind: if target.for_host() {Kind::Host} else {default_kind},
-            }
+                kind: if target.for_host() {
+                    Kind::Host
+                } else {
+                    default_kind
+                },
+            })
         })
-    }).collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
-    let mut cx = Context::new(ws, resolve, packages, config,
-                                   build_config, profiles)?;
+    let mut cx = Context::new(ws, resolve, packages, config, build_config, profiles)?;
 
     let mut queue = JobQueue::new(&cx);
 
@@ -192,50 +197,73 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
             };
 
             if unit.profile.test {
-                cx.compilation.tests.push((unit.pkg.clone(),
-                                           unit.target.kind().clone(),
-                                           unit.target.name().to_string(),
-                                           dst.clone()));
+                cx.compilation.tests.push((
+                    unit.pkg.clone(),
+                    unit.target.kind().clone(),
+                    unit.target.name().to_string(),
+                    dst.clone(),
+                ));
             } else if unit.target.is_bin() || unit.target.is_example() {
                 cx.compilation.binaries.push(bindst.clone());
             } else if unit.target.is_lib() {
                 let pkgid = unit.pkg.package_id().clone();
-                cx.compilation.libraries.entry(pkgid).or_insert_with(HashSet::new)
-                  .insert((unit.target.clone(), dst.clone()));
+                cx.compilation
+                    .libraries
+                    .entry(pkgid)
+                    .or_insert_with(HashSet::new)
+                    .insert((unit.target.clone(), dst.clone()));
             }
         }
 
         for dep in cx.dep_targets(unit)?.iter() {
-            if !unit.target.is_lib() { continue }
+            if !unit.target.is_lib() {
+                continue;
+            }
 
             if dep.profile.run_custom_build {
                 let out_dir = cx.build_script_out_dir(dep).display().to_string();
-                cx.compilation.extra_env.entry(dep.pkg.package_id().clone())
-                  .or_insert_with(Vec::new)
-                  .push(("OUT_DIR".to_string(), out_dir));
+                cx.compilation
+                    .extra_env
+                    .entry(dep.pkg.package_id().clone())
+                    .or_insert_with(Vec::new)
+                    .push(("OUT_DIR".to_string(), out_dir));
             }
 
-            if !dep.target.is_lib() { continue }
-            if dep.profile.doc { continue }
+            if !dep.target.is_lib() {
+                continue;
+            }
+            if dep.profile.doc {
+                continue;
+            }
 
             let v = cx.target_filenames(dep)?;
-            cx.compilation.libraries
+            cx.compilation
+                .libraries
                 .entry(unit.pkg.package_id().clone())
                 .or_insert_with(HashSet::new)
-                .extend(v.iter().map(|&(ref f, _, _)| {
-                    (dep.target.clone(), f.clone())
-                }));
+                .extend(
+                    v.iter()
+                        .map(|&(ref f, _, _)| (dep.target.clone(), f.clone())),
+                );
         }
 
         let feats = cx.resolve.features(unit.pkg.package_id());
         if !feats.is_empty() {
-            cx.compilation.cfgs.entry(unit.pkg.package_id().clone()).or_insert_with(|| {
-                feats.iter().map(|feat| format!("feature=\"{}\"", feat)).collect()
-            });
+            cx.compilation
+                .cfgs
+                .entry(unit.pkg.package_id().clone())
+                .or_insert_with(|| {
+                    feats
+                        .iter()
+                        .map(|feat| format!("feature=\"{}\"", feat))
+                        .collect()
+                });
         }
         let rustdocflags = cx.rustdocflags_args(unit)?;
         if !rustdocflags.is_empty() {
-            cx.compilation.rustdocflags.entry(unit.pkg.package_id().clone())
+            cx.compilation
+                .rustdocflags
+                .entry(unit.pkg.package_id().clone())
                 .or_insert(rustdocflags);
         }
 
@@ -243,11 +271,15 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
     }
 
     for (&(ref pkg, _), output) in cx.build_state.outputs.lock().unwrap().iter() {
-        cx.compilation.cfgs.entry(pkg.clone())
+        cx.compilation
+            .cfgs
+            .entry(pkg.clone())
             .or_insert_with(HashSet::new)
             .extend(output.cfgs.iter().cloned());
 
-        cx.compilation.extra_env.entry(pkg.clone())
+        cx.compilation
+            .extra_env
+            .entry(pkg.clone())
             .or_insert_with(Vec::new)
             .extend(output.env.iter().cloned());
 
@@ -259,18 +291,19 @@ pub fn compile_targets<'a, 'cfg: 'a>(ws: &Workspace<'cfg>,
     Ok(cx.compilation)
 }
 
-fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
-                         jobs: &mut JobQueue<'a>,
-                         unit: &Unit<'a>,
-                         exec: &Arc<Executor>) -> CargoResult<()> {
+fn compile<'a, 'cfg: 'a>(
+    cx: &mut Context<'a, 'cfg>,
+    jobs: &mut JobQueue<'a>,
+    unit: &Unit<'a>,
+    exec: &Arc<Executor>,
+) -> CargoResult<()> {
     if !cx.compiled.insert(*unit) {
-        return Ok(())
+        return Ok(());
     }
 
     // Build up the work to be done to compile this unit, enqueuing it once
     // we've got everything constructed.
-    let p = profile::start(format!("preparing: {}/{}", unit.pkg,
-                                   unit.target.name()));
+    let p = profile::start(format!("preparing: {}/{}", unit.pkg, unit.target.name()));
     fingerprint::prepare_init(cx, unit)?;
     cx.links.validate(cx.resolve, unit)?;
 
@@ -307,9 +340,11 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     Ok(())
 }
 
-fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
-                   unit: &Unit<'a>,
-                   exec: &Arc<Executor>) -> CargoResult<Work> {
+fn rustc<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+    exec: &Arc<Executor>,
+) -> CargoResult<Work> {
     let mut rustc = prepare_rustc(cx, &unit.target.rustc_crate_types(), unit)?;
 
     let name = unit.pkg.name().to_string();
@@ -336,8 +371,7 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
     // If we are a binary and the package also contains a library, then we
     // don't pass the `-l` flags.
-    let pass_l_flag = unit.target.is_lib() ||
-                      !unit.pkg.targets().iter().any(|t| t.is_lib());
+    let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
     let do_rename = unit.target.allows_underscores() && !unit.profile.test;
     let real_name = unit.target.name().to_string();
     let crate_name = unit.target.crate_name();
@@ -360,7 +394,10 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
     let root_output = cx.target_root().to_path_buf();
     let pkg_root = unit.pkg.root().to_path_buf();
-    let cwd = rustc.get_cwd().unwrap_or_else(|| cx.config.cwd()).to_path_buf();
+    let cwd = rustc
+        .get_cwd()
+        .unwrap_or_else(|| cx.config.cwd())
+        .to_path_buf();
 
     return Ok(Work::new(move |state| {
         // Only at runtime have we discovered what the extra -L and -l
@@ -372,10 +409,14 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         // previous build scripts, we include them in the rustc invocation.
         if let Some(build_deps) = build_deps {
             let build_state = build_state.outputs.lock().unwrap();
-            add_native_deps(&mut rustc, &build_state, &build_deps,
-                                 pass_l_flag, &current_id)?;
-            add_plugin_deps(&mut rustc, &build_state, &build_deps,
-                                 &root_output)?;
+            add_native_deps(
+                &mut rustc,
+                &build_state,
+                &build_deps,
+                pass_l_flag,
+                &current_id,
+            )?;
+            add_plugin_deps(&mut rustc, &build_state, &build_deps, &root_output)?;
             add_custom_env(&mut rustc, &build_state, &current_id, kind)?;
         }
 
@@ -393,11 +434,19 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
         state.running(&rustc);
         if json_messages {
-            exec.exec_json(rustc, &package_id, &target,
-                &mut |line| if !line.is_empty() {
-                    Err(internal(&format!("compiler stdout is not empty: `{}`", line)))
-                } else {
-                    Ok(())
+            exec.exec_json(
+                rustc,
+                &package_id,
+                &target,
+                &mut |line| {
+                    if !line.is_empty() {
+                        Err(internal(&format!(
+                            "compiler stdout is not empty: `{}`",
+                            line
+                        )))
+                    } else {
+                        Ok(())
+                    }
                 },
                 &mut |line| {
                     // stderr from rustc can have a mix of JSON and non-JSON output
@@ -417,38 +466,36 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                         writeln!(io::stderr(), "{}", line)?;
                     }
                     Ok(())
-                }
-            ).chain_err(|| {
-                format!("Could not compile `{}`.", name)
-            })?;
+                },
+            ).chain_err(|| format!("Could not compile `{}`.", name))?;
         } else {
             exec.exec(rustc, &package_id, &target)
                 .map_err(Internal::new)
-                .chain_err(|| {
-                    format!("Could not compile `{}`.", name)
-                })?;
+                .chain_err(|| format!("Could not compile `{}`.", name))?;
         }
 
         if do_rename && real_name != crate_name {
             let dst = &filenames[0].0;
-            let src = dst.with_file_name(dst.file_name().unwrap()
-                                            .to_str().unwrap()
-                                            .replace(&real_name, &crate_name));
+            let src = dst.with_file_name(
+                dst.file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .replace(&real_name, &crate_name),
+            );
             if src.exists() && src.file_name() != dst.file_name() {
-                fs::rename(&src, &dst).chain_err(|| {
-                    internal(format!("could not rename crate {:?}", src))
-                })?;
+                fs::rename(&src, &dst)
+                    .chain_err(|| internal(format!("could not rename crate {:?}", src)))?;
             }
         }
 
         if rustc_dep_info_loc.exists() {
-            fingerprint::translate_dep_info(&rustc_dep_info_loc,
-                                            &dep_info_loc,
-                                            &pkg_root,
-                                            &cwd)
+            fingerprint::translate_dep_info(&rustc_dep_info_loc, &dep_info_loc, &pkg_root, &cwd)
                 .chain_err(|| {
-                    internal(format!("could not parse/generate dep info at: {}",
-                                     rustc_dep_info_loc.display()))
+                    internal(format!(
+                        "could not parse/generate dep info at: {}",
+                        rustc_dep_info_loc.display()
+                    ))
                 })?;
         }
 
@@ -457,15 +504,19 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
     // Add all relevant -L and -l flags from dependencies (now calculated and
     // present in `state`) to the command provided
-    fn add_native_deps(rustc: &mut ProcessBuilder,
-                       build_state: &BuildMap,
-                       build_scripts: &BuildScripts,
-                       pass_l_flag: bool,
-                       current_id: &PackageId) -> CargoResult<()> {
+    fn add_native_deps(
+        rustc: &mut ProcessBuilder,
+        build_state: &BuildMap,
+        build_scripts: &BuildScripts,
+        pass_l_flag: bool,
+        current_id: &PackageId,
+    ) -> CargoResult<()> {
         for key in build_scripts.to_link.iter() {
             let output = build_state.get(key).ok_or_else(|| {
-                internal(format!("couldn't find build state for {}/{:?}",
-                                 key.0, key.1))
+                internal(format!(
+                    "couldn't find build state for {}/{:?}",
+                    key.0, key.1
+                ))
             })?;
             for path in output.library_paths.iter() {
                 rustc.arg("-L").arg(path);
@@ -486,10 +537,12 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
     // Add all custom environment variables present in `state` (after they've
     // been put there by one of the `build_scripts`) to the command provided.
-    fn add_custom_env(rustc: &mut ProcessBuilder,
-                      build_state: &BuildMap,
-                      current_id: &PackageId,
-                      kind: Kind) -> CargoResult<()> {
+    fn add_custom_env(
+        rustc: &mut ProcessBuilder,
+        build_state: &BuildMap,
+        current_id: &PackageId,
+        kind: Kind,
+    ) -> CargoResult<()> {
         let key = (current_id.clone(), kind);
         if let Some(output) = build_state.get(&key) {
             for &(ref name, ref value) in output.env.iter() {
@@ -502,14 +555,18 @@ fn rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
 /// Link the compiled target (often of form `foo-{metadata_hash}`) to the
 /// final target. This must happen during both "Fresh" and "Compile"
-fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
-                          unit: &Unit<'a>,
-                          fresh: bool) -> CargoResult<Work> {
+fn link_targets<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+    fresh: bool,
+) -> CargoResult<Work> {
     let filenames = cx.target_filenames(unit)?;
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
     let profile = unit.profile.clone();
-    let features = cx.resolve.features_sorted(&package_id).into_iter()
+    let features = cx.resolve
+        .features_sorted(&package_id)
+        .into_iter()
         .map(|s| s.to_owned())
         .collect();
     let json_messages = cx.build_config.json_messages;
@@ -524,7 +581,7 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             // This may have been a `cargo rustc` command which changes the
             // output, so the source may not actually exist.
             if !src.exists() {
-                continue
+                continue;
             }
             let dst = match link_dst.as_ref() {
                 Some(dst) => dst,
@@ -537,7 +594,7 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
             debug!("linking {} to {}", src.display(), dst.display());
             if is_same_file(src, dst).unwrap_or(false) {
-                continue
+                continue;
             }
             if dst.exists() {
                 paths::remove_file(&dst)?;
@@ -563,8 +620,11 @@ fn link_targets<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
                     fs::copy(src, dst).map(|_| ())
                 })
                 .chain_err(|| {
-                     format!("failed to link or copy `{}` to `{}`",
-                             src.display(), dst.display())
+                    format!(
+                        "failed to link or copy `{}` to `{}`",
+                        src.display(),
+                        dst.display()
+                    )
                 })?;
         }
 
@@ -589,21 +649,24 @@ fn load_build_deps(cx: &Context, unit: &Unit) -> Option<Arc<BuildScripts>> {
 // For all plugin dependencies, add their -L paths (now calculated and
 // present in `state`) to the dynamic library load path for the command to
 // execute.
-fn add_plugin_deps(rustc: &mut ProcessBuilder,
-                   build_state: &BuildMap,
-                   build_scripts: &BuildScripts,
-                   root_output: &PathBuf)
-                   -> CargoResult<()> {
+fn add_plugin_deps(
+    rustc: &mut ProcessBuilder,
+    build_state: &BuildMap,
+    build_scripts: &BuildScripts,
+    root_output: &PathBuf,
+) -> CargoResult<()> {
     let var = util::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or_default();
     let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
     for id in build_scripts.plugins.iter() {
         let key = (id.clone(), Kind::Host);
-        let output = build_state.get(&key).ok_or_else(|| {
-            internal(format!("couldn't find libs for plugin dep {}", id))
-        })?;
-        search_path.append(&mut filter_dynamic_search_path(output.library_paths.iter(),
-                                                           root_output));
+        let output = build_state
+            .get(&key)
+            .ok_or_else(|| internal(format!("couldn't find libs for plugin dep {}", id)))?;
+        search_path.append(&mut filter_dynamic_search_path(
+            output.library_paths.iter(),
+            root_output,
+        ));
     }
     let search_path = join_paths(&search_path, var)?;
     rustc.env(var, &search_path);
@@ -615,19 +678,21 @@ fn add_plugin_deps(rustc: &mut ProcessBuilder,
 // Strip off prefixes like "native=" or "framework=" and filter out directories
 // *not* inside our output directory since they are likely spurious and can cause
 // clashes with system shared libraries (issue #3366).
-fn filter_dynamic_search_path<'a, I>(paths :I, root_output: &PathBuf) -> Vec<PathBuf>
-        where I: Iterator<Item=&'a PathBuf> {
+fn filter_dynamic_search_path<'a, I>(paths: I, root_output: &PathBuf) -> Vec<PathBuf>
+where
+    I: Iterator<Item = &'a PathBuf>,
+{
     let mut search_path = vec![];
     for dir in paths {
         let dir = match dir.to_str() {
             Some(s) => {
                 let mut parts = s.splitn(2, '=');
                 match (parts.next(), parts.next()) {
-                    (Some("native"), Some(path)) |
-                    (Some("crate"), Some(path)) |
-                    (Some("dependency"), Some(path)) |
-                    (Some("framework"), Some(path)) |
-                    (Some("all"), Some(path)) => path.into(),
+                    (Some("native"), Some(path))
+                    | (Some("crate"), Some(path))
+                    | (Some("dependency"), Some(path))
+                    | (Some("framework"), Some(path))
+                    | (Some("all"), Some(path)) => path.into(),
                     _ => dir.clone(),
                 }
             }
@@ -636,16 +701,22 @@ fn filter_dynamic_search_path<'a, I>(paths :I, root_output: &PathBuf) -> Vec<Pat
         if dir.starts_with(&root_output) {
             search_path.push(dir);
         } else {
-            debug!("Not including path {} in runtime library search path because it is \
-                    outside target root {}", dir.display(), root_output.display());
+            debug!(
+                "Not including path {} in runtime library search path because it is \
+                 outside target root {}",
+                dir.display(),
+                root_output.display()
+            );
         }
     }
     search_path
 }
 
-fn prepare_rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
-                           crate_types: &[&str],
-                           unit: &Unit<'a>) -> CargoResult<ProcessBuilder> {
+fn prepare_rustc<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    crate_types: &[&str],
+    unit: &Unit<'a>,
+) -> CargoResult<ProcessBuilder> {
     let mut base = cx.compilation.rustc_process(unit.pkg)?;
     base.inherit_jobserver(&cx.jobserver);
     build_base_args(cx, &mut base, unit, crate_types)?;
@@ -653,9 +724,7 @@ fn prepare_rustc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     Ok(base)
 }
 
-
-fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
-                     unit: &Unit<'a>) -> CargoResult<Work> {
+fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<Work> {
     let mut rustdoc = cx.compilation.rustdoc_process(unit.pkg)?;
     rustdoc.inherit_jobserver(&cx.jobserver);
     rustdoc.arg("--crate-name").arg(&unit.target.crate_name());
@@ -702,7 +771,9 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             }
         }
         state.running(&rustdoc);
-        rustdoc.exec().chain_err(|| format!("Could not document `{}`.", name))?;
+        rustdoc
+            .exec()
+            .chain_err(|| format!("Could not document `{}`.", name))?;
         Ok(())
     }))
 }
@@ -737,14 +808,27 @@ fn add_path_args(cx: &Context, unit: &Unit, cmd: &mut ProcessBuilder) {
     cmd.cwd(cwd);
 }
 
-fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
-                             cmd: &mut ProcessBuilder,
-                             unit: &Unit<'a>,
-                             crate_types: &[&str]) -> CargoResult<()> {
+fn build_base_args<'a, 'cfg>(
+    cx: &mut Context<'a, 'cfg>,
+    cmd: &mut ProcessBuilder,
+    unit: &Unit<'a>,
+    crate_types: &[&str],
+) -> CargoResult<()> {
     let Profile {
-        ref opt_level, ref lto, codegen_units, ref rustc_args, debuginfo,
-        debug_assertions, overflow_checks, rpath, test, doc: _doc,
-        run_custom_build, ref panic, check, ..
+        ref opt_level,
+        ref lto,
+        codegen_units,
+        ref rustc_args,
+        debuginfo,
+        debug_assertions,
+        overflow_checks,
+        rpath,
+        test,
+        doc: _doc,
+        run_custom_build,
+        ref panic,
+        check,
+        ..
     } = *unit.profile;
     assert!(!run_custom_build);
 
@@ -753,8 +837,12 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     add_path_args(cx, unit, cmd);
 
     match cx.config.shell().color_choice() {
-        ColorChoice::Always => { cmd.arg("--color").arg("always"); }
-        ColorChoice::Never => { cmd.arg("--color").arg("never"); }
+        ColorChoice::Always => {
+            cmd.arg("--color").arg("always");
+        }
+        ColorChoice::Never => {
+            cmd.arg("--color").arg("never");
+        }
         ColorChoice::CargoAuto => {}
     }
 
@@ -774,10 +862,8 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
         cmd.arg("--emit=dep-info,link");
     }
 
-    let prefer_dynamic = (unit.target.for_host() &&
-                          !unit.target.is_custom_build()) ||
-                         (crate_types.contains(&"dylib") &&
-                          cx.ws.members().any(|p| p != unit.pkg));
+    let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
+        || (crate_types.contains(&"dylib") && cx.ws.members().any(|p| p != unit.pkg));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
@@ -875,7 +961,8 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
             cmd.arg("-C").arg(&format!("extra-filename=-{}", m));
         }
         None => {
-            cmd.arg("-C").arg(&format!("metadata={}", cx.target_short_hash(unit)));
+            cmd.arg("-C")
+                .arg(&format!("metadata={}", cx.target_short_hash(unit)));
         }
     }
 
@@ -885,8 +972,7 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
     cmd.arg("--out-dir").arg(&cx.out_dir(unit));
 
-    fn opt(cmd: &mut ProcessBuilder, key: &str, prefix: &str,
-           val: Option<&OsStr>)  {
+    fn opt(cmd: &mut ProcessBuilder, key: &str, prefix: &str, val: Option<&OsStr>) {
         if let Some(val) = val {
             let mut joined = OsString::from(prefix);
             joined.push(val);
@@ -895,20 +981,31 @@ fn build_base_args<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
     }
 
     if unit.kind == Kind::Target {
-        opt(cmd, "--target", "", cx.requested_target().map(|s| s.as_ref()));
+        opt(
+            cmd,
+            "--target",
+            "",
+            cx.requested_target().map(|s| s.as_ref()),
+        );
     }
 
     opt(cmd, "-C", "ar=", cx.ar(unit.kind).map(|s| s.as_ref()));
-    opt(cmd, "-C", "linker=", cx.linker(unit.kind).map(|s| s.as_ref()));
+    opt(
+        cmd,
+        "-C",
+        "linker=",
+        cx.linker(unit.kind).map(|s| s.as_ref()),
+    );
     cmd.args(&cx.incremental_args(unit)?);
 
     Ok(())
 }
 
-
-fn build_deps_args<'a, 'cfg>(cmd: &mut ProcessBuilder,
-                             cx: &mut Context<'a, 'cfg>,
-                             unit: &Unit<'a>) -> CargoResult<()> {
+fn build_deps_args<'a, 'cfg>(
+    cmd: &mut ProcessBuilder,
+    cx: &mut Context<'a, 'cfg>,
+    unit: &Unit<'a>,
+) -> CargoResult<()> {
     cmd.arg("-L").arg(&{
         let mut deps = OsString::from("dependency=");
         deps.push(cx.deps_dir(unit));
@@ -930,17 +1027,24 @@ fn build_deps_args<'a, 'cfg>(cmd: &mut ProcessBuilder,
     // If there is not one linkable target but should, rustc fails later
     // on if there is an `extern crate` for it. This may turn into a hard
     // error in the future, see PR #4797
-    if !dep_targets.iter().any(|u| !u.profile.doc && u.target.linkable()) {
-        if let Some(u) = dep_targets.iter()
-                         .find(|u| !u.profile.doc && u.target.is_lib()) {
-                cx.config.shell().warn(format!("The package `{}` \
-provides no linkable target. The compiler might raise an error while compiling \
-`{}`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `{}`'s \
-Cargo.toml. This warning might turn into a hard error in the future.",
-                                       u.target.crate_name(),
-                                       unit.target.crate_name(),
-                                       u.target.crate_name()))?;
-            }
+    if !dep_targets
+        .iter()
+        .any(|u| !u.profile.doc && u.target.linkable())
+    {
+        if let Some(u) = dep_targets
+            .iter()
+            .find(|u| !u.profile.doc && u.target.is_lib())
+        {
+            cx.config.shell().warn(format!(
+                "The package `{}` \
+                 provides no linkable target. The compiler might raise an error while compiling \
+                 `{}`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `{}`'s \
+                 Cargo.toml. This warning might turn into a hard error in the future.",
+                u.target.crate_name(),
+                unit.target.crate_name(),
+                u.target.crate_name()
+            ))?;
+        }
     }
 
     for dep in dep_targets {
@@ -954,13 +1058,15 @@ Cargo.toml. This warning might turn into a hard error in the future.",
 
     return Ok(());
 
-    fn link_to<'a, 'cfg>(cmd: &mut ProcessBuilder,
-                         cx: &mut Context<'a, 'cfg>,
-                         current: &Unit<'a>,
-                         dep: &Unit<'a>) -> CargoResult<()> {
+    fn link_to<'a, 'cfg>(
+        cmd: &mut ProcessBuilder,
+        cx: &mut Context<'a, 'cfg>,
+        current: &Unit<'a>,
+        dep: &Unit<'a>,
+    ) -> CargoResult<()> {
         for &(ref dst, _, file_type) in cx.target_filenames(dep)?.iter() {
             if file_type != TargetFileType::Linkable {
-                continue
+                continue;
             }
             let mut v = OsString::new();
 
@@ -972,7 +1078,9 @@ Cargo.toml. This warning might turn into a hard error in the future.",
             //
             // This I believe mostly works out for now, but we'll likely want
             // to tighten up this in the future.
-            let name = current.pkg.dependencies()
+            let name = current
+                .pkg
+                .dependencies()
                 .iter()
                 .filter(|d| d.matches_ignoring_source(dep.pkg.summary()))
                 .filter_map(|d| d.rename())
@@ -991,9 +1099,9 @@ Cargo.toml. This warning might turn into a hard error in the future.",
 
 fn envify(s: &str) -> String {
     s.chars()
-     .flat_map(|c| c.to_uppercase())
-     .map(|c| if c == '-' {'_'} else {c})
-     .collect()
+        .flat_map(|c| c.to_uppercase())
+        .map(|c| if c == '-' { '_' } else { c })
+        .collect()
 }
 
 impl Kind {

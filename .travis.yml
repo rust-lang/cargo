@@ -28,13 +28,16 @@ matrix:
 
     - env: TARGET=x86_64-unknown-linux-gnu
            ALT=i686-unknown-linux-gnu
-      rust: nightly
+      rust: nightly-2018-03-07
       install:
         - mdbook --help || cargo install mdbook --force
       script:
         - cargo test
         - cargo doc --no-deps
         - (cd src/doc && mdbook build --dest-dir ../../target/doc)
+
+    - before_script: rustup component add rustfmt-preview
+      script: cargo fmt -- --write-mode diff
 
   exclude:
     - rust: stable

@@ -1,10 +1,10 @@
 use std::cmp;
 use std::env;
 use std::iter;
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 use core::shell::Verbosity;
-use util::{Config, CargoResult};
+use util::{CargoResult, Config};
 
 pub struct Progress<'cfg> {
     state: Option<State<'cfg>>,
@@ -27,19 +27,17 @@ impl<'cfg> Progress<'cfg> {
             Err(_) => false,
         };
         if cfg.shell().verbosity() == Verbosity::Quiet || dumb {
-            return Progress { state: None }
+            return Progress { state: None };
         }
 
         Progress {
-            state: cfg.shell().err_width().map(|n| {
-                State {
-                    config: cfg,
-                    width: cmp::min(n, 80),
-                    first: true,
-                    last_update: Instant::now(),
-                    name: name.to_string(),
-                    done: false,
-                }
+            state: cfg.shell().err_width().map(|n| State {
+                config: cfg,
+                width: cmp::min(n, 80),
+                first: true,
+                last_update: Instant::now(),
+                name: name.to_string(),
+                done: false,
             }),
         }
     }
@@ -47,7 +45,7 @@ impl<'cfg> Progress<'cfg> {
     pub fn tick(&mut self, cur: usize, max: usize) -> CargoResult<()> {
         match self.state {
             Some(ref mut s) => s.tick(cur, max),
-            None => Ok(())
+            None => Ok(()),
         }
     }
 }
@@ -55,7 +53,7 @@ impl<'cfg> Progress<'cfg> {
 impl<'cfg> State<'cfg> {
     fn tick(&mut self, cur: usize, max: usize) -> CargoResult<()> {
         if self.done {
-            return Ok(())
+            return Ok(());
         }
 
         // Don't update too often as it can cause excessive performance loss
@@ -73,13 +71,13 @@ impl<'cfg> State<'cfg> {
         if self.first {
             let delay = Duration::from_millis(500);
             if self.last_update.elapsed() < delay {
-                return Ok(())
+                return Ok(());
             }
             self.first = false;
         } else {
             let interval = Duration::from_millis(100);
             if self.last_update.elapsed() < interval {
-                return Ok(())
+                return Ok(());
             }
         }
         self.last_update = Instant::now();
@@ -100,7 +98,7 @@ impl<'cfg> State<'cfg> {
 
         // Draw the `===>`
         if hashes > 0 {
-            for _ in 0..hashes-1 {
+            for _ in 0..hashes - 1 {
                 string.push_str("=");
             }
             if cur == max {

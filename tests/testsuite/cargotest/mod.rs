@@ -17,10 +17,7 @@ pub fn rustc_host() -> String {
 }
 
 pub fn is_nightly() -> bool {
-    RUSTC.with(|r| {
-        r.verbose_version.contains("-nightly") ||
-            r.verbose_version.contains("-dev")
-    })
+    RUSTC.with(|r| r.verbose_version.contains("-nightly") || r.verbose_version.contains("-dev"))
 }
 
 pub fn process<T: AsRef<OsStr>>(t: T) -> cargo::util::ProcessBuilder {
@@ -66,8 +63,8 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
      .env_remove("GIT_COMMITTER_NAME")
      .env_remove("GIT_COMMITTER_EMAIL")
      .env_remove("CARGO_TARGET_DIR")     // we assume 'target'
-     .env_remove("MSYSTEM");             // assume cmd.exe everywhere on windows
-    return p
+     .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
+    return p;
 }
 
 pub trait ChannelChanger: Sized {

@@ -1,7 +1,7 @@
 use std::fs;
 use std::io::{self, Read};
 use std::net::TcpListener;
-use std::process::{Stdio, Child};
+use std::process::{Child, Stdio};
 use std::thread;
 use std::time::Duration;
 
@@ -20,7 +20,7 @@ fn enabled() -> bool {
 // can succeed or not.
 #[cfg(windows)]
 fn enabled() -> bool {
-    use winapi::um::{handleapi, jobapi, jobapi2, processthreadsapi};
+    use winapi::um::{handleapi, jobapi, processthreadsapi, jobapi2};
 
     unsafe {
         // If we're not currently in a job, then we can definitely run these
@@ -30,7 +30,7 @@ fn enabled() -> bool {
         let r = jobapi::IsProcessInJob(me, 0 as *mut _, &mut ret);
         assert_ne!(r, 0);
         if ret == ::winapi::shared::minwindef::FALSE {
-            return true
+            return true;
         }
 
         // If we are in a job, then we can run these tests if we can be added to
@@ -50,22 +50,28 @@ fn enabled() -> bool {
 #[test]
 fn ctrl_c_kills_everyone() {
     if !enabled() {
-        return
+        return;
     }
 
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             version = "0.0.1"
             authors = []
             build = "build.rs"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
-        .file("build.rs", &format!(r#"
+        .file(
+            "build.rs",
+            &format!(
+                r#"
             use std::net::TcpStream;
             use std::io::Read;
 
@@ -74,14 +80,18 @@ fn ctrl_c_kills_everyone() {
                 let _ = socket.read(&mut [0; 10]);
                 panic!("that read should never return");
             }}
-        "#, addr))
+        "#,
+                addr
+            ),
+        )
         .build();
 
     let mut cargo = p.cargo("build").build_command();
-    cargo.stdin(Stdio::piped())
-         .stdout(Stdio::piped())
-         .stderr(Stdio::piped())
-         .env("__CARGO_TEST_SETSID_PLEASE_DONT_USE_ELSEWHERE", "1");
+    cargo
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .env("__CARGO_TEST_SETSID_PLEASE_DONT_USE_ELSEWHERE", "1");
     let mut child = cargo.spawn().unwrap();
 
     let mut sock = listener.accept().unwrap().0;
@@ -114,8 +124,10 @@ fn ctrl_c_kills_everyone() {
         thread::sleep(Duration::from_millis(100));
     }
 
-    panic!("couldn't remove build directory after a few tries, seems like \
-            we won't be able to!");
+    panic!(
+        "couldn't remove build directory after a few tries, seems like \
+         we won't be able to!"
+    );
 }
 
 #[cfg(unix)]

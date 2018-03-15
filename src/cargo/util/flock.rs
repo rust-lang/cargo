@@ -1,16 +1,16 @@
 use std::fs::{self, File, OpenOptions};
-use std::io::{Seek, Read, Write, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::io;
-use std::path::{Path, PathBuf, Display};
+use std::path::{Display, Path, PathBuf};
 
 use termcolor::Color::Cyan;
-use fs2::{FileExt, lock_contended_error};
+use fs2::{lock_contended_error, FileExt};
 #[allow(unused_imports)]
 use libc;
 
 use util::Config;
 use util::paths;
-use util::errors::{CargoResult, CargoResultExt, CargoError};
+use util::errors::{CargoError, CargoResult, CargoResultExt};
 
 pub struct FileLock {
     f: Option<File>,
@@ -55,7 +55,7 @@ impl FileLock {
         for entry in path.parent().unwrap().read_dir()? {
             let entry = entry?;
             if Some(&entry.file_name()[..]) == path.file_name() {
-                continue
+                continue;
             }
             let kind = entry.file_type()?;
             if kind.is_dir() {
@@ -160,17 +160,17 @@ impl Filesystem {
     ///
     /// The returned file can be accessed to look at the path and also has
     /// read/write access to the underlying file.
-    pub fn open_rw<P>(&self,
-                      path: P,
-                      config: &Config,
-                      msg: &str) -> CargoResult<FileLock>
-        where P: AsRef<Path>
+    pub fn open_rw<P>(&self, path: P, config: &Config, msg: &str) -> CargoResult<FileLock>
+    where
+        P: AsRef<Path>,
     {
-        self.open(path.as_ref(),
-                  OpenOptions::new().read(true).write(true).create(true),
-                  State::Exclusive,
-                  config,
-                  msg)
+        self.open(
+            path.as_ref(),
+            OpenOptions::new().read(true).write(true).create(true),
+            State::Exclusive,
+            config,
+            msg,
+        )
     }
 
     /// Opens shared access to a file, returning the locked version of a file.
@@ -182,55 +182,60 @@ impl Filesystem {
     /// The returned file can be accessed to look at the path and also has read
     /// access to the underlying file. Any writes to the file will return an
     /// error.
-    pub fn open_ro<P>(&self,
-                      path: P,
-                      config: &Config,
-                      msg: &str) -> CargoResult<FileLock>
-        where P: AsRef<Path>
+    pub fn open_ro<P>(&self, path: P, config: &Config, msg: &str) -> CargoResult<FileLock>
+    where
+        P: AsRef<Path>,
     {
-        self.open(path.as_ref(),
-                  OpenOptions::new().read(true),
-                  State::Shared,
-                  config,
-                  msg)
+        self.open(
+            path.as_ref(),
+            OpenOptions::new().read(true),
+            State::Shared,
+            config,
+            msg,
+        )
     }
 
-    fn open(&self,
-            path: &Path,
-            opts: &OpenOptions,
-            state: State,
-            config: &Config,
-            msg: &str) -> CargoResult<FileLock> {
+    fn open(
+        &self,
+        path: &Path,
+        opts: &OpenOptions,
+        state: State,
+        config: &Config,
+        msg: &str,
+    ) -> CargoResult<FileLock> {
         let path = self.root.join(path);
 
         // If we want an exclusive lock then if we fail because of NotFound it's
         // likely because an intermediate directory didn't exist, so try to
         // create the directory and then continue.
-        let f = opts.open(&path).or_else(|e| {
-            if e.kind() == io::ErrorKind::NotFound && state == State::Exclusive {
-                create_dir_all(path.parent().unwrap())?;
-                opts.open(&path)
-            } else {
-                Err(e)
-            }
-        }).chain_err(|| {
-            format!("failed to open: {}", path.display())
-        })?;
+        let f = opts.open(&path)
+            .or_else(|e| {
+                if e.kind() == io::ErrorKind::NotFound && state == State::Exclusive {
+                    create_dir_all(path.parent().unwrap())?;
+                    opts.open(&path)
+                } else {
+                    Err(e)
+                }
+            })
+            .chain_err(|| format!("failed to open: {}", path.display()))?;
         match state {
             State::Exclusive => {
-                acquire(config, msg, &path,
-                        &|| f.try_lock_exclusive(),
-                        &|| f.lock_exclusive())?;
+                acquire(config, msg, &path, &|| f.try_lock_exclusive(), &|| {
+                    f.lock_exclusive()
+                })?;
             }
             State::Shared => {
-                acquire(config, msg, &path,
-                        &|| f.try_lock_shared(),
-                        &|| f.lock_shared())?;
+                acquire(config, msg, &path, &|| f.try_lock_shared(), &|| {
+                    f.lock_shared()
+                })?;
             }
             State::Unlocked => {}
-
         }
-        Ok(FileLock { f: Some(f), path, state })
+        Ok(FileLock {
+            f: Some(f),
+            path,
+            state,
+        })
     }
 }
 
@@ -261,12 +266,13 @@ impl PartialEq<Filesystem> for Path {
 ///
 /// Returns an error if the lock could not be acquired or if any error other
 /// than a contention error happens.
-fn acquire(config: &Config,
-           msg: &str,
-           path: &Path,
-           try: &Fn() -> io::Result<()>,
-           block: &Fn() -> io::Result<()>) -> CargoResult<()> {
-
+fn acquire(
+    config: &Config,
+    msg: &str,
+    path: &Path,
+    try: &Fn() -> io::Result<()>,
+    block: &Fn() -> io::Result<()>,
+) -> CargoResult<()> {
     // File locking on Unix is currently implemented via `flock`, which is known
     // to be broken on NFS. We could in theory just ignore errors that happen on
     // NFS, but apparently the failure mode [1] for `flock` on NFS is **blocking
@@ -278,7 +284,7 @@ fn acquire(config: &Config,
     //
     // [1]: https://github.com/rust-lang/cargo/issues/2615
     if is_on_nfs_mount(path) {
-        return Ok(())
+        return Ok(());
     }
 
     match try() {
@@ -289,25 +295,29 @@ fn acquire(config: &Config,
         // implement file locking. We detect that here via the return value of
         // locking (e.g. inspecting errno).
         #[cfg(unix)]
-        Err(ref e) if e.raw_os_error() == Some(libc::ENOTSUP) => return Ok(()),
+        Err(ref e) if e.raw_os_error() == Some(libc::ENOTSUP) =>
+        {
+            return Ok(())
+        }
 
         #[cfg(target_os = "linux")]
-        Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => return Ok(()),
+        Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) =>
+        {
+            return Ok(())
+        }
 
         Err(e) => {
             if e.raw_os_error() != lock_contended_error().raw_os_error() {
                 let e = CargoError::from(e);
                 let cx = format!("failed to lock file: {}", path.display());
-                return Err(e.context(cx).into())
+                return Err(e.context(cx).into());
             }
         }
     }
     let msg = format!("waiting for file lock on {}", msg);
     config.shell().status_with_color("Blocking", &msg, Cyan)?;
 
-    block().chain_err(|| {
-        format!("failed to lock file: {}", path.display())
-    })?;
+    block().chain_err(|| format!("failed to lock file: {}", path.display()))?;
     return Ok(());
 
     #[cfg(all(target_os = "linux", not(target_env = "musl")))]
@@ -341,7 +351,7 @@ fn create_dir_all(path: &Path) -> io::Result<()> {
         Err(e) => {
             if e.kind() == io::ErrorKind::NotFound {
                 if let Some(p) = path.parent() {
-                    return create_dir_all(p).and_then(|()| create_dir(path))
+                    return create_dir_all(p).and_then(|()| create_dir(path));
                 }
             }
             Err(e)

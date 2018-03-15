@@ -1,12 +1,12 @@
-use std::collections::{HashMap, HashSet, BTreeSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ffi::OsStr;
 use std::path::PathBuf;
 
 use semver::Version;
 use lazycell::LazyCell;
 
-use core::{PackageId, Package, Target, TargetKind};
-use util::{self, CargoResult, Config, ProcessBuilder, process, join_paths};
+use core::{Package, PackageId, Target, TargetKind};
+use util::{self, join_paths, process, CargoResult, Config, ProcessBuilder};
 
 /// A structure returning the result of a compilation.
 pub struct Compilation<'cfg> {
@@ -68,7 +68,7 @@ impl<'cfg> Compilation<'cfg> {
     pub fn new(config: &'cfg Config) -> Compilation<'cfg> {
         Compilation {
             libraries: HashMap::new(),
-            native_dirs: BTreeSet::new(),  // TODO: deprecated, remove
+            native_dirs: BTreeSet::new(), // TODO: deprecated, remove
             root_output: PathBuf::from("/"),
             deps_output: PathBuf::from("/"),
             host_deps_output: PathBuf::from("/"),
@@ -97,8 +97,11 @@ impl<'cfg> Compilation<'cfg> {
     }
 
     /// See `process`.
-    pub fn host_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
-                                         -> CargoResult<ProcessBuilder> {
+    pub fn host_process<T: AsRef<OsStr>>(
+        &self,
+        cmd: T,
+        pkg: &Package,
+    ) -> CargoResult<ProcessBuilder> {
         self.fill_env(process(cmd), pkg, true)
     }
 
@@ -110,8 +113,11 @@ impl<'cfg> Compilation<'cfg> {
     }
 
     /// See `process`.
-    pub fn target_process<T: AsRef<OsStr>>(&self, cmd: T, pkg: &Package)
-                                           -> CargoResult<ProcessBuilder> {
+    pub fn target_process<T: AsRef<OsStr>>(
+        &self,
+        cmd: T,
+        pkg: &Package,
+    ) -> CargoResult<ProcessBuilder> {
         let builder = if let Some((ref runner, ref args)) = *self.target_runner()? {
             let mut builder = process(runner);
             builder.args(args);
@@ -128,17 +134,19 @@ impl<'cfg> Compilation<'cfg> {
     ///
     /// The package argument is also used to configure environment variables as
     /// well as the working directory of the child process.
-    fn fill_env(&self, mut cmd: ProcessBuilder, pkg: &Package, is_host: bool)
-                -> CargoResult<ProcessBuilder> {
-
+    fn fill_env(
+        &self,
+        mut cmd: ProcessBuilder,
+        pkg: &Package,
+        is_host: bool,
+    ) -> CargoResult<ProcessBuilder> {
         let mut search_path = if is_host {
             let mut search_path = vec![self.host_deps_output.clone()];
             search_path.extend(self.host_dylib_path.clone());
             search_path
         } else {
             let mut search_path =
-                super::filter_dynamic_search_path(self.native_dirs.iter(),
-                                                  &self.root_output);
+                super::filter_dynamic_search_path(self.native_dirs.iter(), &self.root_output);
             search_path.push(self.root_output.clone());
             search_path.push(self.deps_output.clone());
             search_path.extend(self.target_dylib_path.clone());
@@ -165,16 +173,25 @@ impl<'cfg> Compilation<'cfg> {
         // consider adding the corresponding properties to the hash
         // in Context::target_metadata()
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
-           .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
-           .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
-           .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
-           .env("CARGO_PKG_VERSION_PRE", &pre_version_component(pkg.version()))
-           .env("CARGO_PKG_VERSION", &pkg.version().to_string())
-           .env("CARGO_PKG_NAME", &*pkg.name())
-           .env("CARGO_PKG_DESCRIPTION", metadata.description.as_ref().unwrap_or(&String::new()))
-           .env("CARGO_PKG_HOMEPAGE", metadata.homepage.as_ref().unwrap_or(&String::new()))
-           .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
-           .cwd(pkg.root());
+            .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
+            .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
+            .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
+            .env(
+                "CARGO_PKG_VERSION_PRE",
+                &pre_version_component(pkg.version()),
+            )
+            .env("CARGO_PKG_VERSION", &pkg.version().to_string())
+            .env("CARGO_PKG_NAME", &*pkg.name())
+            .env(
+                "CARGO_PKG_DESCRIPTION",
+                metadata.description.as_ref().unwrap_or(&String::new()),
+            )
+            .env(
+                "CARGO_PKG_HOMEPAGE",
+                metadata.homepage.as_ref().unwrap_or(&String::new()),
+            )
+            .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
+            .cwd(pkg.root());
         Ok(cmd)
     }
 }
@@ -187,7 +204,9 @@ fn pre_version_component(v: &Version) -> String {
     let mut ret = String::new();
 
     for (i, x) in v.pre.iter().enumerate() {
-        if i != 0 { ret.push('.') };
+        if i != 0 {
+            ret.push('.')
+        };
         ret.push_str(&x.to_string());
     }
 

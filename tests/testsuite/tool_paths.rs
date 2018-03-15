@@ -1,5 +1,5 @@
 use cargotest::rustc_host;
-use cargotest::support::{path2url, project, execs};
+use cargotest::support::{execs, project, path2url};
 use hamcrest::assert_that;
 
 #[test]
@@ -7,7 +7,9 @@ fn pathless_tools() {
     let target = rustc_host();
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -15,21 +17,33 @@ fn pathless_tools() {
 
             [lib]
             name = "foo"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
-        .file(".cargo/config", &format!(r#"
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
             [target.{}]
             ar = "nonexistent-ar"
             linker = "nonexistent-linker"
-        "#, target))
+        "#,
+                target
+            ),
+        )
         .build();
 
-    assert_that(foo.cargo("build").arg("--verbose"),
-                execs().with_stderr(&format!("\
+    assert_that(
+        foo.cargo("build").arg("--verbose"),
+        execs().with_stderr(&format!(
+            "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar=nonexistent-ar -C linker=nonexistent-linker [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", url = foo.url())))
+",
+            url = foo.url()
+        )),
+    )
 }
 
 #[test]
@@ -38,13 +52,18 @@ fn absolute_tools() {
 
     // Escaped as they appear within a TOML config file
     let config = if cfg!(windows) {
-        (r#"C:\\bogus\\nonexistent-ar"#, r#"C:\\bogus\\nonexistent-linker"#)
+        (
+            r#"C:\\bogus\\nonexistent-ar"#,
+            r#"C:\\bogus\\nonexistent-linker"#,
+        )
     } else {
         (r#"/bogus/nonexistent-ar"#, r#"/bogus/nonexistent-linker"#)
     };
 
     let foo = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -52,27 +71,46 @@ fn absolute_tools() {
 
             [lib]
             name = "foo"
-        "#)
+        "#,
+        )
         .file("src/lib.rs", "")
-        .file(".cargo/config", &format!(r#"
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
             [target.{target}]
             ar = "{ar}"
             linker = "{linker}"
-        "#, target = target, ar = config.0, linker = config.1))
+        "#,
+                target = target,
+                ar = config.0,
+                linker = config.1
+            ),
+        )
         .build();
 
     let output = if cfg!(windows) {
-        (r#"C:\bogus\nonexistent-ar"#, r#"C:\bogus\nonexistent-linker"#)
+        (
+            r#"C:\bogus\nonexistent-ar"#,
+            r#"C:\bogus\nonexistent-linker"#,
+        )
     } else {
         (r#"/bogus/nonexistent-ar"#, r#"/bogus/nonexistent-linker"#)
     };
 
-    assert_that(foo.cargo("build").arg("--verbose"),
-                execs().with_stderr(&format!("\
+    assert_that(
+        foo.cargo("build").arg("--verbose"),
+        execs().with_stderr(&format!(
+            "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", url = foo.url(), ar = output.0, linker = output.1)))
+",
+            url = foo.url(),
+            ar = output.0,
+            linker = output.1
+        )),
+    )
 }
 
 #[test]
@@ -89,7 +127,9 @@ fn relative_tools() {
     // Funky directory structure to test that relative tool paths are made absolute
     // by reference to the `.cargo/..` directory and not to (for example) the CWD.
     let origin = project("origin")
-        .file("foo/Cargo.toml", r#"
+        .file(
+            "foo/Cargo.toml",
+            r#"
             [package]
             name = "foo"
             version = "0.0.1"
@@ -97,32 +137,52 @@ fn relative_tools() {
 
             [lib]
             name = "foo"
-        "#)
+        "#,
+        )
         .file("foo/src/lib.rs", "")
-        .file(".cargo/config", &format!(r#"
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
             [target.{target}]
             ar = "{ar}"
             linker = "{linker}"
-        "#, target = target, ar = config.0, linker = config.1))
+        "#,
+                target = target,
+                ar = config.0,
+                linker = config.1
+            ),
+        )
         .build();
 
     let foo_path = origin.root().join("foo");
     let foo_url = path2url(foo_path.clone());
     let prefix = origin.root().into_os_string().into_string().unwrap();
     let output = if cfg!(windows) {
-        (format!(r#"{}\.\nonexistent-ar"#, prefix),
-         format!(r#"{}\.\tools\nonexistent-linker"#, prefix))
+        (
+            format!(r#"{}\.\nonexistent-ar"#, prefix),
+            format!(r#"{}\.\tools\nonexistent-linker"#, prefix),
+        )
     } else {
-        (format!(r#"{}/./nonexistent-ar"#, prefix),
-         format!(r#"{}/./tools/nonexistent-linker"#, prefix))
+        (
+            format!(r#"{}/./nonexistent-ar"#, prefix),
+            format!(r#"{}/./tools/nonexistent-linker"#, prefix),
+        )
     };
 
-    assert_that(origin.cargo("build").cwd(foo_path).arg("--verbose"),
-                execs().with_stderr(&format!("\
+    assert_that(
+        origin.cargo("build").cwd(foo_path).arg("--verbose"),
+        execs().with_stderr(&format!(
+            "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..] -C ar={ar} -C linker={linker} [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
-", url = foo_url, ar = output.0, linker = output.1)))
+",
+            url = foo_url,
+            ar = output.0,
+            linker = output.1
+        )),
+    )
 }
 
 #[test]
@@ -130,41 +190,67 @@ fn custom_runner() {
     let target = rustc_host();
 
     let p = project("foo")
-        .file("Cargo.toml", r#"
+        .file(
+            "Cargo.toml",
+            r#"
             [package]
             name = "foo"
             version = "0.0.1"
-        "#)
+        "#,
+        )
         .file("src/main.rs", "fn main() {}")
         .file("tests/test.rs", "")
         .file("benches/bench.rs", "")
-        .file(".cargo/config", &format!(r#"
+        .file(
+            ".cargo/config",
+            &format!(
+                r#"
             [target.{}]
             runner = "nonexistent-runner -r"
-        "#, target))
+        "#,
+                target
+            ),
+        )
         .build();
 
-    assert_that(p.cargo("run").args(&["--", "--param"]),
-                execs().with_stderr_contains(&format!("\
+    assert_that(
+        p.cargo("run").args(&["--", "--param"]),
+        execs().with_stderr_contains(&format!(
+            "\
 [COMPILING] foo v0.0.1 ({url})
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target[/]debug[/]foo[EXE] --param`
-", url = p.url())));
+",
+            url = p.url()
+        )),
+    );
 
-    assert_that(p.cargo("test").args(&["--test", "test", "--verbose", "--", "--param"]),
-                execs().with_stderr_contains(&format!("\
+    assert_that(
+        p.cargo("test")
+            .args(&["--test", "test", "--verbose", "--", "--param"]),
+        execs().with_stderr_contains(&format!(
+            "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..]`
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..][/]target[/]debug[/]deps[/]test-[..][EXE] --param`
-", url = p.url())));
+",
+            url = p.url()
+        )),
+    );
 
-    assert_that(p.cargo("bench").args(&["--bench", "bench", "--verbose", "--", "--param"]),
-                execs().with_stderr_contains(&format!("\
+    assert_that(
+        p.cargo("bench")
+            .args(&["--bench", "bench", "--verbose", "--", "--param"]),
+        execs().with_stderr_contains(&format!(
+            "\
 [COMPILING] foo v0.0.1 ({url})
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] release [optimized] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..][/]target[/]release[/]deps[/]bench-[..][EXE] --param --bench`
-", url = p.url())));
+",
+            url = p.url()
+        )),
+    );
 }

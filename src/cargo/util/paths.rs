@@ -3,10 +3,10 @@ use std::ffi::{OsStr, OsString};
 use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::io::prelude::*;
-use std::path::{Path, PathBuf, Component};
+use std::path::{Component, Path, PathBuf};
 
 use util::{internal, CargoResult};
-use util::errors::{CargoResultExt, Internal, CargoError};
+use util::errors::{CargoError, CargoResultExt, Internal};
 
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsString> {
     let err = match env::join_paths(paths.iter()) {
@@ -17,16 +17,22 @@ pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> CargoResult<OsStri
     let err = CargoError::from(err);
     let explain = Internal::new(format_err!("failed to join path array: {:?}", paths));
     let err = CargoError::from(err.context(explain));
-    let more_explain = format!("failed to join search paths together\n\
-                                Does ${} have an unterminated quote character?",
-                               env);
+    let more_explain = format!(
+        "failed to join search paths together\n\
+         Does ${} have an unterminated quote character?",
+        env
+    );
     Err(err.context(more_explain).into())
 }
 
 pub fn dylib_path_envvar() -> &'static str {
-    if cfg!(windows) {"PATH"}
-    else if cfg!(target_os = "macos") {"DYLD_LIBRARY_PATH"}
-    else {"LD_LIBRARY_PATH"}
+    if cfg!(windows) {
+        "PATH"
+    } else if cfg!(target_os = "macos") {
+        "DYLD_LIBRARY_PATH"
+    } else {
+        "LD_LIBRARY_PATH"
+    }
 }
 
 pub fn dylib_path() -> Vec<PathBuf> {
@@ -38,8 +44,7 @@ pub fn dylib_path() -> Vec<PathBuf> {
 
 pub fn normalize_path(path: &Path) -> PathBuf {
     let mut components = path.components().peekable();
-    let mut ret = if let Some(c @ Component::Prefix(..)) = components.peek()
-                                                                     .cloned() {
+    let mut ret = if let Some(c @ Component::Prefix(..)) = components.peek().cloned() {
         components.next();
         PathBuf::from(c.as_os_str())
     } else {
@@ -49,10 +54,16 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     for component in components {
         match component {
             Component::Prefix(..) => unreachable!(),
-            Component::RootDir => { ret.push(component.as_os_str()); }
+            Component::RootDir => {
+                ret.push(component.as_os_str());
+            }
             Component::CurDir => {}
-            Component::ParentDir => { ret.pop(); }
-            Component::Normal(c) => { ret.push(c); }
+            Component::ParentDir => {
+                ret.pop();
+            }
+            Component::Normal(c) => {
+                ret.push(c);
+            }
         }
     }
     ret
@@ -88,9 +99,8 @@ pub fn read_bytes(path: &Path) -> CargoResult<Vec<u8>> {
         }
         f.read_to_end(&mut ret)?;
         Ok(ret)
-    })().chain_err(|| {
-        format!("failed to read `{}`", path.display())
-    })?;
+    })()
+        .chain_err(|| format!("failed to read `{}`", path.display()))?;
     Ok(res)
 }
 
@@ -99,25 +109,23 @@ pub fn write(path: &Path, contents: &[u8]) -> CargoResult<()> {
         let mut f = File::create(path)?;
         f.write_all(contents)?;
         Ok(())
-    })().chain_err(|| {
-        format!("failed to write `{}`", path.display())
-    })?;
+    })()
+        .chain_err(|| format!("failed to write `{}`", path.display()))?;
     Ok(())
 }
 
 pub fn append(path: &Path, contents: &[u8]) -> CargoResult<()> {
     (|| -> CargoResult<()> {
         let mut f = OpenOptions::new()
-                                 .write(true)
-                                 .append(true)
-                                 .create(true)
-                                 .open(path)?;
+            .write(true)
+            .append(true)
+            .create(true)
+            .open(path)?;
 
         f.write_all(contents)?;
         Ok(())
-    })().chain_err(|| {
-        internal(format!("failed to write `{}`", path.display()))
-    })?;
+    })()
+        .chain_err(|| internal(format!("failed to write `{}`", path.display())))?;
     Ok(())
 }
 
@@ -130,8 +138,7 @@ pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
 pub fn path2bytes(path: &Path) -> CargoResult<&[u8]> {
     match path.as_os_str().to_str() {
         Some(s) => Ok(s.as_bytes()),
-        None => Err(format_err!("invalid non-unicode path: {}",
-                                path.display())),
+        None => Err(format_err!("invalid non-unicode path: {}", path.display())),
     }
 }
 
@@ -156,7 +163,7 @@ pub fn ancestors(path: &Path) -> PathAncestors {
 
 pub struct PathAncestors<'a> {
     current: Option<&'a Path>,
-    stop_at: Option<PathBuf>
+    stop_at: Option<PathBuf>,
 }
 
 impl<'a> PathAncestors<'a> {
@@ -195,11 +202,10 @@ pub fn remove_dir_all<P: AsRef<Path>>(p: P) -> CargoResult<()> {
 
 fn _remove_dir_all(p: &Path) -> CargoResult<()> {
     if p.symlink_metadata()?.file_type().is_symlink() {
-        return remove_file(p)
+        return remove_file(p);
     }
-    let entries = p.read_dir().chain_err(|| {
-        format!("failed to read directory `{}`", p.display())
-    })?;
+    let entries = p.read_dir()
+        .chain_err(|| format!("failed to read directory `{}`", p.display()))?;
     for entry in entries {
         let entry = entry?;
         let path = entry.path();
@@ -217,9 +223,7 @@ pub fn remove_dir<P: AsRef<Path>>(p: P) -> CargoResult<()> {
 }
 
 fn _remove_dir(p: &Path) -> CargoResult<()> {
-    fs::remove_dir(p).chain_err(|| {
-        format!("failed to remove directory `{}`", p.display())
-    })?;
+    fs::remove_dir(p).chain_err(|| format!("failed to remove directory `{}`", p.display()))?;
     Ok(())
 }
 
@@ -242,16 +246,14 @@ fn _remove_file(p: &Path) -> CargoResult<()> {
         }
     }
 
-    Err(err).chain_err(|| {
-        format!("failed to remove file `{}`", p.display())
-    })?;
+    Err(err).chain_err(|| format!("failed to remove file `{}`", p.display()))?;
     Ok(())
 }
 
 fn set_not_readonly(p: &Path) -> io::Result<bool> {
     let mut perms = p.metadata()?.permissions();
     if !perms.readonly() {
-        return Ok(false)
+        return Ok(false);
     }
     perms.set_readonly(false);
     fs::set_permissions(p, perms)?;

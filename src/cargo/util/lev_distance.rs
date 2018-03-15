@@ -1,19 +1,21 @@
 use std::cmp;
 
 pub fn lev_distance(me: &str, t: &str) -> usize {
-    if me.is_empty() { return t.chars().count(); }
-    if t.is_empty() { return me.chars().count(); }
+    if me.is_empty() {
+        return t.chars().count();
+    }
+    if t.is_empty() {
+        return me.chars().count();
+    }
 
     let mut dcol = (0..t.len() + 1).collect::<Vec<_>>();
     let mut t_last = 0;
 
     for (i, sc) in me.chars().enumerate() {
-
         let mut current = i;
         dcol[0] = current + 1;
 
         for (j, tc) in t.chars().enumerate() {
-
             let next = dcol[j + 1];
 
             if sc == tc {
@@ -33,11 +35,12 @@ pub fn lev_distance(me: &str, t: &str) -> usize {
 
 #[test]
 fn test_lev_distance() {
-    use std::char::{ from_u32, MAX };
+    use std::char::{from_u32, MAX};
     // Test bytelength agnosticity
     for c in (0u32..MAX as u32)
-             .filter_map(|i| from_u32(i))
-             .map(|i| i.to_string()) {
+        .filter_map(|i| from_u32(i))
+        .map(|i| i.to_string())
+    {
         assert_eq!(lev_distance(&c, &c), 0);
     }
 

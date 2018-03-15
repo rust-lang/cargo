@@ -1,7 +1,7 @@
-use std::ffi::{OsString, OsStr};
+use std::ffi::{OsStr, OsString};
 
 use ops::{self, Compilation};
-use util::{self, CargoTestError, Test, ProcessError};
+use util::{self, CargoTestError, ProcessError, Test};
 use util::errors::CargoResult;
 use core::Workspace;
 
@@ -12,13 +12,15 @@ pub struct TestOptions<'a> {
     pub only_doc: bool,
 }
 
-pub fn run_tests(ws: &Workspace,
-                 options: &TestOptions,
-                 test_args: &[String]) -> CargoResult<Option<CargoTestError>> {
+pub fn run_tests(
+    ws: &Workspace,
+    options: &TestOptions,
+    test_args: &[String],
+) -> CargoResult<Option<CargoTestError>> {
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
-        return Ok(None)
+        return Ok(None);
     }
     let (test, mut errors) = if options.only_doc {
         assert!(options.compile_opts.filter.is_specific());
@@ -29,7 +31,7 @@ pub fn run_tests(ws: &Workspace,
 
     // If we have an error and want to fail fast, return
     if !errors.is_empty() && !options.no_fail_fast {
-        return Ok(Some(CargoTestError::new(test, errors)))
+        return Ok(Some(CargoTestError::new(test, errors)));
     }
 
     // If a specific test was requested or we're not running any tests at all,
@@ -37,7 +39,7 @@ pub fn run_tests(ws: &Workspace,
     if options.compile_opts.filter.is_specific() {
         match errors.len() {
             0 => return Ok(None),
-            _ => return Ok(Some(CargoTestError::new(test, errors)))
+            _ => return Ok(Some(CargoTestError::new(test, errors))),
         }
     }
 
@@ -51,15 +53,17 @@ pub fn run_tests(ws: &Workspace,
     }
 }
 
-pub fn run_benches(ws: &Workspace,
-                   options: &TestOptions,
-                   args: &[String]) -> CargoResult<Option<CargoTestError>> {
+pub fn run_benches(
+    ws: &Workspace,
+    options: &TestOptions,
+    args: &[String],
+) -> CargoResult<Option<CargoTestError>> {
     let mut args = args.to_vec();
     args.push("--bench".to_string());
     let compilation = compile_tests(ws, options)?;
 
     if options.no_run {
-        return Ok(None)
+        return Ok(None);
     }
     let (test, errors) = run_unit_tests(options, &args, &compilation)?;
     match errors.len() {
@@ -68,21 +72,23 @@ pub fn run_benches(ws: &Workspace,
     }
 }
 
-fn compile_tests<'a>(ws: &Workspace<'a>,
-                     options: &TestOptions<'a>)
-                     -> CargoResult<Compilation<'a>> {
+fn compile_tests<'a>(
+    ws: &Workspace<'a>,
+    options: &TestOptions<'a>,
+) -> CargoResult<Compilation<'a>> {
     let mut compilation = ops::compile(ws, &options.compile_opts)?;
-    compilation.tests.sort_by(|a, b| {
-        (a.0.package_id(), &a.1, &a.2).cmp(&(b.0.package_id(), &b.1, &b.2))
-    });
+    compilation
+        .tests
+        .sort_by(|a, b| (a.0.package_id(), &a.1, &a.2).cmp(&(b.0.package_id(), &b.1, &b.2)));
     Ok(compilation)
 }
 
 /// Run the unit and integration tests of a project.
-fn run_unit_tests(options: &TestOptions,
-                  test_args: &[String],
-                  compilation: &Compilation)
-                  -> CargoResult<(Test, Vec<ProcessError>)> {
+fn run_unit_tests(
+    options: &TestOptions,
+    test_args: &[String],
+    compilation: &Compilation,
+) -> CargoResult<(Test, Vec<ProcessError>)> {
     let config = options.compile_opts.config;
     let cwd = options.compile_opts.config.cwd();
 
@@ -95,12 +101,12 @@ fn run_unit_tests(options: &TestOptions,
         };
         let mut cmd = compilation.target_process(exe, pkg)?;
         cmd.args(test_args);
-        config.shell().concise(|shell| {
-            shell.status("Running", to_display.display().to_string())
-        })?;
-        config.shell().verbose(|shell| {
-            shell.status("Running", cmd.to_string())
-        })?;
+        config
+            .shell()
+            .concise(|shell| shell.status("Running", to_display.display().to_string()))?;
+        config
+            .shell()
+            .verbose(|shell| shell.status("Running", cmd.to_string()))?;
 
         let result = cmd.exec();
 
@@ -118,16 +124,27 @@ fn run_unit_tests(options: &TestOptions,
 
     if errors.len() == 1 {
         let (kind, name, pkg_name, e) = errors.pop().unwrap();
-        Ok((Test::UnitTest{kind, name, pkg_name}, vec![e]))
+        Ok((
+            Test::UnitTest {
+                kind,
+                name,
+                pkg_name,
+            },
+            vec![e],
+        ))
     } else {
-        Ok((Test::Multiple, errors.into_iter().map(|(_, _, _, e)| e).collect()))
+        Ok((
+            Test::Multiple,
+            errors.into_iter().map(|(_, _, _, e)| e).collect(),
+        ))
     }
 }
 
-fn run_doc_tests(options: &TestOptions,
-                 test_args: &[String],
-                 compilation: &Compilation)
-                 -> CargoResult<(Test, Vec<ProcessError>)> {
+fn run_doc_tests(
+    options: &TestOptions,
+    test_args: &[String],
+    compilation: &Compilation,
+) -> CargoResult<(Test, Vec<ProcessError>)> {
     let mut errors = Vec::new();
     let config = options.compile_opts.config;
 
@@ -137,16 +154,24 @@ fn run_doc_tests(options: &TestOptions,
     }
 
     let libs = compilation.to_doc_test.iter().map(|package| {
-        (package, package.targets().iter().filter(|t| t.doctested())
-                         .map(|t| (t.src_path(), t.name(), t.crate_name())))
+        (
+            package,
+            package
+                .targets()
+                .iter()
+                .filter(|t| t.doctested())
+                .map(|t| (t.src_path(), t.name(), t.crate_name())),
+        )
     });
 
     for (package, tests) in libs {
         for (lib, name, crate_name) in tests {
             config.shell().status("Doc-tests", name)?;
             let mut p = compilation.rustdoc_process(package)?;
-            p.arg("--test").arg(lib)
-             .arg("--crate-name").arg(&crate_name);
+            p.arg("--test")
+                .arg(lib)
+                .arg("--crate-name")
+                .arg(&crate_name);
 
             for &rust_dep in &[&compilation.deps_output] {
                 let mut arg = OsString::from("dependency=");
@@ -186,9 +211,8 @@ fn run_doc_tests(options: &TestOptions,
                 // dynamically as well, causing problems. As a result we only
                 // pass `--extern` for rlib deps and skip out on all other
                 // artifacts.
-                if lib.extension() != Some(OsStr::new("rlib")) &&
-                   !target.for_host() {
-                    continue
+                if lib.extension() != Some(OsStr::new("rlib")) && !target.for_host() {
+                    continue;
                 }
                 let mut arg = OsString::from(target.crate_name());
                 arg.push("=");
@@ -200,9 +224,9 @@ fn run_doc_tests(options: &TestOptions,
                 p.args(flags);
             }
 
-            config.shell().verbose(|shell| {
-                shell.status("Running", p.to_string())
-            })?;
+            config
+                .shell()
+                .verbose(|shell| shell.status("Running", p.to_string()))?;
             if let Err(e) = p.exec() {
                 let e = e.downcast::<ProcessError>()?;
                 errors.push(e);

@@ -1,7 +1,7 @@
 use serde::ser;
 use serde_json::{self, Value};
 
-use core::{PackageId, Target, Profile};
+use core::{PackageId, Profile, Target};
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;

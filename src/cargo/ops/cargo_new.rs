@@ -9,14 +9,20 @@ use git2::Repository as GitRepository;
 
 use core::Workspace;
 use ops::is_bad_artifact_name;
-use util::{GitRepo, HgRepo, PijulRepo, FossilRepo, internal};
-use util::{Config, paths};
+use util::{internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
+use util::{paths, Config};
 use util::errors::{CargoResult, CargoResultExt};
 
 use toml;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum VersionControl { Git, Hg, Pijul, Fossil, NoVcs }
+pub enum VersionControl {
+    Git,
+    Hg,
+    Pijul,
+    Fossil,
+    NoVcs,
+}
 
 #[derive(Debug)]
 pub struct NewOptions {
@@ -62,12 +68,13 @@ struct MkOptions<'a> {
 }
 
 impl NewOptions {
-    pub fn new(version_control: Option<VersionControl>,
-               bin: bool,
-               lib: bool,
-               path: String,
-               name: Option<String>) -> CargoResult<NewOptions> {
-
+    pub fn new(
+        version_control: Option<VersionControl>,
+        bin: bool,
+        lib: bool,
+        path: String,
+        name: Option<String>,
+    ) -> CargoResult<NewOptions> {
         let kind = match (bin, lib) {
             (true, true) => bail!("can't specify both lib and binary outputs"),
             (false, true) => NewProjectKind::Lib,
@@ -75,7 +82,12 @@ impl NewOptions {
             (_, false) => NewProjectKind::Bin,
         };
 
-        let opts = NewOptions { version_control, kind, path, name };
+        let opts = NewOptions {
+            version_control,
+            kind,
+            path,
+            name,
+        };
         Ok(opts)
     }
 }
@@ -92,16 +104,21 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
     }
 
     let file_name = path.file_name().ok_or_else(|| {
-        format_err!("cannot auto-detect project name from path {:?} ; use --name to override", path.as_os_str())
+        format_err!(
+            "cannot auto-detect project name from path {:?} ; use --name to override",
+            path.as_os_str()
+        )
     })?;
 
     file_name.to_str().ok_or_else(|| {
-        format_err!("cannot create project with a non-unicode name: {:?}", file_name)
+        format_err!(
+            "cannot create project with a non-unicode name: {:?}",
+            file_name
+        )
     })
 }
 
 fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
-
     // If --name is already used to override, no point in suggesting it
     // again as a fix.
     let name_help = match opts.name {
@@ -111,45 +128,52 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
 
     // Ban keywords + test list found at
     // https://doc.rust-lang.org/grammar.html#keywords
-    let blacklist = ["abstract", "alignof", "as", "become", "box",
-        "break", "const", "continue", "crate", "do",
-        "else", "enum", "extern", "false", "final",
-        "fn", "for", "if", "impl", "in",
-        "let", "loop", "macro", "match", "mod",
-        "move", "mut", "offsetof", "override", "priv",
-        "proc", "pub", "pure", "ref", "return",
-        "self", "sizeof", "static", "struct",
-        "super", "test", "trait", "true", "type", "typeof",
-        "unsafe", "unsized", "use", "virtual", "where",
-        "while", "yield"];
+    let blacklist = [
+        "abstract", "alignof", "as", "become", "box", "break", "const", "continue", "crate", "do",
+        "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl", "in", "let", "loop",
+        "macro", "match", "mod", "move", "mut", "offsetof", "override", "priv", "proc", "pub",
+        "pure", "ref", "return", "self", "sizeof", "static", "struct", "super", "test", "trait",
+        "true", "type", "typeof", "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
+    ];
     if blacklist.contains(&name) || (opts.kind.is_bin() && is_bad_artifact_name(name)) {
-        bail!("The name `{}` cannot be used as a crate name{}",
+        bail!(
+            "The name `{}` cannot be used as a crate name{}",
             name,
-            name_help)
+            name_help
+        )
     }
 
     if let Some(ref c) = name.chars().nth(0) {
         if c.is_digit(10) {
-            bail!("Package names starting with a digit cannot be used as a crate name{}",
-                name_help)
+            bail!(
+                "Package names starting with a digit cannot be used as a crate name{}",
+                name_help
+            )
         }
     }
 
     for c in name.chars() {
-        if c.is_alphanumeric() { continue }
-        if c == '_' || c == '-' { continue }
-        bail!("Invalid character `{}` in crate name: `{}`{}",
+        if c.is_alphanumeric() {
+            continue;
+        }
+        if c == '_' || c == '-' {
+            continue;
+        }
+        bail!(
+            "Invalid character `{}` in crate name: `{}`{}",
             c,
             name,
-            name_help)
+            name_help
+        )
     }
     Ok(())
 }
 
-fn detect_source_paths_and_types(project_path : &Path,
-                                 project_name: &str,
-                                 detected_files: &mut Vec<SourceFileInformation>,
-                                 ) -> CargoResult<()> {
+fn detect_source_paths_and_types(
+    project_path: &Path,
+    project_name: &str,
+    detected_files: &mut Vec<SourceFileInformation>,
+) -> CargoResult<()> {
     let path = project_path;
     let name = project_name;
 
@@ -165,44 +189,61 @@ fn detect_source_paths_and_types(project_path : &Path,
     }
 
     let tests = vec![
-        Test { proposed_path: format!("src/main.rs"),     handling: H::Bin },
-        Test { proposed_path: format!("main.rs"),         handling: H::Bin },
-        Test { proposed_path: format!("src/{}.rs", name), handling: H::Detect },
-        Test { proposed_path: format!("{}.rs", name),     handling: H::Detect },
-        Test { proposed_path: format!("src/lib.rs"),      handling: H::Lib },
-        Test { proposed_path: format!("lib.rs"),          handling: H::Lib },
+        Test {
+            proposed_path: format!("src/main.rs"),
+            handling: H::Bin,
+        },
+        Test {
+            proposed_path: format!("main.rs"),
+            handling: H::Bin,
+        },
+        Test {
+            proposed_path: format!("src/{}.rs", name),
+            handling: H::Detect,
+        },
+        Test {
+            proposed_path: format!("{}.rs", name),
+            handling: H::Detect,
+        },
+        Test {
+            proposed_path: format!("src/lib.rs"),
+            handling: H::Lib,
+        },
+        Test {
+            proposed_path: format!("lib.rs"),
+            handling: H::Lib,
+        },
     ];
 
     for i in tests {
         let pp = i.proposed_path;
 
         // path/pp does not exist or is not a file
-        if !fs::metadata(&path.join(&pp)).map(|x| x.is_file()).unwrap_or(false) {
+        if !fs::metadata(&path.join(&pp))
+            .map(|x| x.is_file())
+            .unwrap_or(false)
+        {
             continue;
         }
 
         let sfi = match i.handling {
-            H::Bin => {
-                SourceFileInformation {
-                    relative_path: pp,
-                    target_name: project_name.to_string(),
-                    bin: true
-                }
-            }
-            H::Lib => {
-                SourceFileInformation {
-                    relative_path: pp,
-                    target_name: project_name.to_string(),
-                    bin: false
-                }
-            }
+            H::Bin => SourceFileInformation {
+                relative_path: pp,
+                target_name: project_name.to_string(),
+                bin: true,
+            },
+            H::Lib => SourceFileInformation {
+                relative_path: pp,
+                target_name: project_name.to_string(),
+                bin: false,
+            },
             H::Detect => {
                 let content = paths::read(&path.join(pp.clone()))?;
                 let isbin = content.contains("fn main");
                 SourceFileInformation {
                     relative_path: pp,
                     target_name: project_name.to_string(),
-                    bin: isbin
+                    bin: isbin,
                 }
             }
         };
@@ -211,26 +252,32 @@ fn detect_source_paths_and_types(project_path : &Path,
 
     // Check for duplicate lib attempt
 
-    let mut previous_lib_relpath : Option<&str> = None;
-    let mut duplicates_checker : BTreeMap<&str, &SourceFileInformation> = BTreeMap::new();
+    let mut previous_lib_relpath: Option<&str> = None;
+    let mut duplicates_checker: BTreeMap<&str, &SourceFileInformation> = BTreeMap::new();
 
     for i in detected_files {
         if i.bin {
             if let Some(x) = BTreeMap::get::<str>(&duplicates_checker, i.target_name.as_ref()) {
-                bail!("\
+                bail!(
+                    "\
 multiple possible binary sources found:
   {}
   {}
 cannot automatically generate Cargo.toml as the main target would be ambiguous",
-                      &x.relative_path, &i.relative_path);
+                    &x.relative_path,
+                    &i.relative_path
+                );
             }
             duplicates_checker.insert(i.target_name.as_ref(), i);
         } else {
             if let Some(plp) = previous_lib_relpath {
-                bail!("cannot have a project with \
-                       multiple libraries, \
-                       found both `{}` and `{}`",
-                      plp, i.relative_path)
+                bail!(
+                    "cannot have a project with \
+                     multiple libraries, \
+                     found both `{}` and `{}`",
+                    plp,
+                    i.relative_path
+                )
             }
             previous_lib_relpath = Some(&i.relative_path);
         }
@@ -242,15 +289,15 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
 fn plan_new_source_file(bin: bool, project_name: String) -> SourceFileInformation {
     if bin {
         SourceFileInformation {
-             relative_path: "src/main.rs".to_string(),
-             target_name: project_name,
-             bin: true,
+            relative_path: "src/main.rs".to_string(),
+            target_name: project_name,
+            bin: true,
         }
     } else {
         SourceFileInformation {
-             relative_path: "src/lib.rs".to_string(),
-             target_name: project_name,
-             bin: false,
+            relative_path: "src/lib.rs".to_string(),
+            target_name: project_name,
+            bin: false,
         }
     }
 }
@@ -258,9 +305,11 @@ fn plan_new_source_file(bin: bool, project_name: String) -> SourceFileInformatio
 pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = config.cwd().join(&opts.path);
     if fs::metadata(&path).is_ok() {
-        bail!("destination `{}` already exists\n\n\
-            Use `cargo init` to initialize the directory\
-            ", path.display()
+        bail!(
+            "destination `{}` already exists\n\n\
+             Use `cargo init` to initialize the directory\
+             ",
+            path.display()
         )
     }
 
@@ -276,8 +325,11 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     };
 
     mk(config, &mkopts).chain_err(|| {
-        format_err!("Failed to create project `{}` at `{}`",
-                    name, path.display())
+        format_err!(
+            "Failed to create project `{}` at `{}`",
+            name,
+            path.display()
+        )
     })?;
     Ok(())
 }
@@ -333,9 +385,11 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         // if none exists, maybe create git, like in `cargo new`
 
         if num_detected_vsces > 1 {
-            bail!("more than one of .hg, .git, .pijul, .fossil configurations \
-                              found and the ignore file can't be filled in as \
-                              a result. specify --vcs to override detection");
+            bail!(
+                "more than one of .hg, .git, .pijul, .fossil configurations \
+                 found and the ignore file can't be filled in as \
+                 a result. specify --vcs to override detection"
+            );
         }
     }
 
@@ -343,13 +397,16 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         version_control,
         path: &path,
         name,
-        bin: src_paths_types.iter().any(|x|x.bin),
+        bin: src_paths_types.iter().any(|x| x.bin),
         source_files: src_paths_types,
     };
 
     mk(config, &mkopts).chain_err(|| {
-        format_err!("Failed to create project `{}` at `{}`",
-                    name, path.display())
+        format_err!(
+            "Failed to create project `{}` at `{}`",
+            name,
+            path.display()
+        )
     })?;
     Ok(())
 }
@@ -363,26 +420,30 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let name = opts.name;
     let cfg = global_config(config)?;
     // Please ensure that ignore and hgignore are in sync.
-    let ignore = ["\n", "/target\n", "**/*.rs.bk\n",
-        if !opts.bin { "Cargo.lock\n" } else { "" }]
-        .concat();
+    let ignore = [
+        "\n",
+        "/target\n",
+        "**/*.rs.bk\n",
+        if !opts.bin { "Cargo.lock\n" } else { "" },
+    ].concat();
     // Mercurial glob ignores can't be rooted, so just sticking a 'syntax: glob' at the top of the
     // file will exclude too much. Instead, use regexp-based ignores. See 'hg help ignore' for
     // more.
-    let hgignore = ["\n", "^target/\n", "glob:*.rs.bk\n",
-        if !opts.bin { "glob:Cargo.lock\n" } else { "" }]
-        .concat();
+    let hgignore = [
+        "\n",
+        "^target/\n",
+        "glob:*.rs.bk\n",
+        if !opts.bin { "glob:Cargo.lock\n" } else { "" },
+    ].concat();
 
-    let vcs = opts.version_control
-              .unwrap_or_else(|| {
-                  let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path),
-                                                          config.cwd());
-                  match (cfg.version_control, in_existing_vcs) {
-                      (None, false) => VersionControl::Git,
-                      (Some(opt), false) => opt,
-                      (_, true) => VersionControl::NoVcs,
-                  }
-              });
+    let vcs = opts.version_control.unwrap_or_else(|| {
+        let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
+        match (cfg.version_control, in_existing_vcs) {
+            (None, false) => VersionControl::Git,
+            (Some(opt), false) => opt,
+            (_, true) => VersionControl::NoVcs,
+        }
+    });
 
     match vcs {
         VersionControl::Git => {
@@ -390,38 +451,37 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
                 GitRepo::init(path, config.cwd())?;
             }
             paths::append(&path.join(".gitignore"), ignore.as_bytes())?;
-        },
+        }
         VersionControl::Hg => {
             if !fs::metadata(&path.join(".hg")).is_ok() {
                 HgRepo::init(path, config.cwd())?;
             }
             paths::append(&path.join(".hgignore"), hgignore.as_bytes())?;
-        },
+        }
         VersionControl::Pijul => {
             if !fs::metadata(&path.join(".pijul")).is_ok() {
                 PijulRepo::init(path, config.cwd())?;
             }
             paths::append(&path.join(".ignore"), ignore.as_bytes())?;
-        },
+        }
         VersionControl::Fossil => {
             if !fs::metadata(&path.join(".fossil")).is_ok() {
                 FossilRepo::init(path, config.cwd())?;
             }
-        },
+        }
         VersionControl::NoVcs => {
             fs::create_dir_all(path)?;
-        },
+        }
     };
 
     let (author_name, email) = discover_author()?;
     // Hoo boy, sure glad we've got exhaustiveness checking behind us.
     let author = match (cfg.name, cfg.email, author_name, email) {
-        (Some(name), Some(email), _, _) |
-        (Some(name), None, _, Some(email)) |
-        (None, Some(email), name, _) |
-        (None, None, name, Some(email)) => format!("{} <{}>", name, email),
-        (Some(name), None, _, None) |
-        (None, None, name, None) => name,
+        (Some(name), Some(email), _, _)
+        | (Some(name), None, _, Some(email))
+        | (None, Some(email), name, _)
+        | (None, None, name, Some(email)) => format!("{} <{}>", name, email),
+        (Some(name), None, _, None) | (None, None, name, None) => name,
     };
 
     let mut cargotoml_path_specifier = String::new();
@@ -431,32 +491,46 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     for i in &opts.source_files {
         if i.bin {
             if i.relative_path != "src/main.rs" {
-                cargotoml_path_specifier.push_str(&format!(r#"
+                cargotoml_path_specifier.push_str(&format!(
+                    r#"
 [[bin]]
 name = "{}"
 path = {}
-"#, i.target_name, toml::Value::String(i.relative_path.clone())));
+"#,
+                    i.target_name,
+                    toml::Value::String(i.relative_path.clone())
+                ));
             }
         } else if i.relative_path != "src/lib.rs" {
-            cargotoml_path_specifier.push_str(&format!(r#"
+            cargotoml_path_specifier.push_str(&format!(
+                r#"
 [lib]
 name = "{}"
 path = {}
-"#, i.target_name, toml::Value::String(i.relative_path.clone())));
+"#,
+                i.target_name,
+                toml::Value::String(i.relative_path.clone())
+            ));
         }
     }
 
     // Create Cargo.toml file with necessary [lib] and [[bin]] sections, if needed
 
-    paths::write(&path.join("Cargo.toml"), format!(
-r#"[package]
+    paths::write(
+        &path.join("Cargo.toml"),
+        format!(
+            r#"[package]
 name = "{}"
 version = "0.1.0"
 authors = [{}]
 
 [dependencies]
-{}"#, name, toml::Value::String(author), cargotoml_path_specifier).as_bytes())?;
-
+{}"#,
+            name,
+            toml::Value::String(author),
+            cargotoml_path_specifier
+        ).as_bytes(),
+    )?;
 
     // Create all specified source files
     // (with respective parent directories)
@@ -469,7 +543,7 @@ authors = [{}]
             fs::create_dir_all(src_dir)?;
         }
 
-        let default_file_content : &[u8] = if i.bin {
+        let default_file_content: &[u8] = if i.bin {
             b"\
 fn main() {
     println!(\"Hello, world!\");
@@ -487,53 +561,71 @@ mod tests {
 "
         };
 
-        if !fs::metadata(&path_of_source_file).map(|x| x.is_file()).unwrap_or(false) {
+        if !fs::metadata(&path_of_source_file)
+            .map(|x| x.is_file())
+            .unwrap_or(false)
+        {
             paths::write(&path_of_source_file, default_file_content)?;
         }
     }
 
     if let Err(e) = Workspace::new(&path.join("Cargo.toml"), config) {
-        let msg = format!("compiling this new crate may not work due to invalid \
-                           workspace configuration\n\n{}", e);
+        let msg = format!(
+            "compiling this new crate may not work due to invalid \
+             workspace configuration\n\n{}",
+            e
+        );
         config.shell().warn(msg)?;
     }
 
     Ok(())
 }
 
-fn get_environment_variable(variables: &[&str] ) -> Option<String>{
-    variables.iter()
-             .filter_map(|var| env::var(var).ok())
-             .next()
+fn get_environment_variable(variables: &[&str]) -> Option<String> {
+    variables.iter().filter_map(|var| env::var(var).ok()).next()
 }
 
 fn discover_author() -> CargoResult<(String, Option<String>)> {
     let cwd = env::current_dir()?;
     let git_config = if let Ok(repo) = GitRepository::discover(&cwd) {
-        repo.config().ok().or_else(|| GitConfig::open_default().ok())
+        repo.config()
+            .ok()
+            .or_else(|| GitConfig::open_default().ok())
     } else {
         GitConfig::open_default().ok()
     };
     let git_config = git_config.as_ref();
-    let name_variables = ["CARGO_NAME", "GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME",
-                         "USER", "USERNAME", "NAME"];
+    let name_variables = [
+        "CARGO_NAME",
+        "GIT_AUTHOR_NAME",
+        "GIT_COMMITTER_NAME",
+        "USER",
+        "USERNAME",
+        "NAME",
+    ];
     let name = get_environment_variable(&name_variables[0..3])
-                        .or_else(|| git_config.and_then(|g| g.get_string("user.name").ok()))
-                        .or_else(|| get_environment_variable(&name_variables[3..]));
+        .or_else(|| git_config.and_then(|g| g.get_string("user.name").ok()))
+        .or_else(|| get_environment_variable(&name_variables[3..]));
 
     let name = match name {
         Some(name) => name,
         None => {
-            let username_var = if cfg!(windows) {"USERNAME"} else {"USER"};
-            bail!("could not determine the current user, please set ${}",
-                  username_var)
+            let username_var = if cfg!(windows) { "USERNAME" } else { "USER" };
+            bail!(
+                "could not determine the current user, please set ${}",
+                username_var
+            )
         }
     };
-    let email_variables = ["CARGO_EMAIL", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL",
-                          "EMAIL"];
+    let email_variables = [
+        "CARGO_EMAIL",
+        "GIT_AUTHOR_EMAIL",
+        "GIT_COMMITTER_EMAIL",
+        "EMAIL",
+    ];
     let email = get_environment_variable(&email_variables[0..3])
-                          .or_else(|| git_config.and_then(|g| g.get_string("user.email").ok()))
-                          .or_else(|| get_environment_variable(&email_variables[3..]));
+        .or_else(|| git_config.and_then(|g| g.get_string("user.email").ok()))
+        .or_else(|| get_environment_variable(&email_variables[3..]));
 
     let name = name.trim().to_string();
     let email = email.map(|s| s.trim().to_string());
@@ -552,11 +644,14 @@ fn global_config(config: &Config) -> CargoResult<CargoNewConfig> {
         Some(("pijul", _)) => Some(VersionControl::Pijul),
         Some(("none", _)) => Some(VersionControl::NoVcs),
         Some((s, p)) => {
-            return Err(internal(format!("invalid configuration for key \
-                                         `cargo-new.vcs`, unknown vcs `{}` \
-                                         (found in {})", s, p)))
+            return Err(internal(format!(
+                "invalid configuration for key \
+                 `cargo-new.vcs`, unknown vcs `{}` \
+                 (found in {})",
+                s, p
+            )))
         }
-        None => None
+        None => None,
     };
     Ok(CargoNewConfig {
         name,
