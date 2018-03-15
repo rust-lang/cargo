@@ -68,6 +68,10 @@ fn try_main() -> Result<(), ProgramError> {
             .long("only")
             .help("Only show errors or lints with the specific id(s) (comma separated)")
             .use_delimiter(true))
+        .arg(Arg::with_name("file")
+            .long("file")
+            .takes_value(true)
+            .help("Load errors from the given JSON file (produced by `cargo build --message-format=json`)"))
         .get_matches();
 
     let mut extra_args = Vec::new();
@@ -97,7 +101,14 @@ fn try_main() -> Result<(), ProgramError> {
     }
 
     // Get JSON output from rustc...
-    let json = get_json(&extra_args)?;
+    let json = if let Some(file) = matches.value_of("file") {
+        let mut f = File::open(file)?;
+        let mut j = "".into();
+        f.read_to_string(&mut j)?;
+        j
+    } else {
+        get_json(&extra_args, matches.is_present("clippy"))?
+    };
 
     let suggestions: Vec<Suggestion> = json.lines()
         .filter(not_empty)
@@ -117,9 +128,14 @@ struct CargoMessage {
     message: Diagnostic,
 }
 
-fn get_json(extra_args: &[&str]) -> Result<String, ProgramError> {
+fn get_json(extra_args: &[&str], clippy: bool) -> Result<String, ProgramError> {
+    let build_cmd = if clippy {
+        "clippy"
+    } else {
+        "rustc"
+    };
     let output = try!(Command::new("cargo")
-        .args(&["clippy", "--message-format", "json"])
+        .args(&[build_cmd, "--message-format", "json"])
         .arg("--")
         .args(extra_args)
         .output());
