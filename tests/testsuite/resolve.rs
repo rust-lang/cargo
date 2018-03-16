@@ -1,5 +1,3 @@
-#![deny(warnings)]
-
 use std::collections::BTreeMap;
 
 use hamcrest::{assert_that, contains, is_not};
