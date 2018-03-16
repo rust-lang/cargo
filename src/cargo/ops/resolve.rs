@@ -170,7 +170,7 @@ pub fn resolve_with_previous<'a, 'cfg>(
     // In the case where a previous instance of resolve is available, we
     // want to lock as many packages as possible to the previous version
     // without disturbing the graph structure.
-    let mut try_to_use = Vec::new();
+    let mut try_to_use = HashSet::new();
     if let Some(r) = previous {
         trace!("previous: {:?}", r);
         register_previous_locks(ws, registry, r, keep);

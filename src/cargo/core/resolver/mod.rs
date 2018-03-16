@@ -416,7 +416,7 @@ pub fn resolve(
     summaries: &[(Summary, Method)],
     replacements: &[(PackageIdSpec, Dependency)],
     registry: &mut Registry,
-    try_to_use: &[&PackageId],
+    try_to_use: &HashSet<&PackageId>,
     config: Option<&Config>,
     print_warnings: bool,
 ) -> CargoResult<Resolve> {
@@ -662,7 +662,7 @@ impl ConflictReason {
 struct RegistryQueryer<'a> {
     registry: &'a mut (Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
-    try_to_use: HashSet<&'a PackageId>,
+    try_to_use: &'a HashSet<&'a PackageId>,
     // TODO: with nll the Rc can be removed
     cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
 }
@@ -671,13 +671,13 @@ impl<'a> RegistryQueryer<'a> {
     fn new(
         registry: &'a mut Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
-        try_to_use: &'a [&'a PackageId],
+        try_to_use: &'a HashSet<&'a PackageId>,
     ) -> Self {
         RegistryQueryer {
             registry,
             replacements,
             cache: HashMap::new(),
-            try_to_use: try_to_use.iter().cloned().collect(),
+            try_to_use,
         }
     }
 
