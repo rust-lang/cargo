@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 extern crate bufstream;
 extern crate cargo;
 extern crate filetime;
