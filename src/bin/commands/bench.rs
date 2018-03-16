@@ -29,7 +29,7 @@ pub fn cli() -> App {
             "Benchmark all targets (default)",
         )
         .arg(opt("no-run", "Compile, but don't run benchmarks"))
-        .arg_package(
+        .arg_package_spec(
             "Package to run benchmarks for",
             "Benchmark all packages in the workspace",
             "Exclude packages from the benchmark",

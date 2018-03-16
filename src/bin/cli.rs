@@ -165,6 +165,7 @@ See 'cargo help <command>' for more information on a specific command.",
                 .short("Z")
                 .value_name("FLAG")
                 .multiple(true)
+                .number_of_values(1)
                 .global(true),
         )
         .subcommands(commands::builtin());
