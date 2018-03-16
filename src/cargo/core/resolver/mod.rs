@@ -1078,22 +1078,16 @@ fn activate_deps_loop(
 
             match res {
                 Ok(Some((mut frame, dur))) => {
-                    // at this point we have technical already activated
+                    // at this point we have technically already activated
                     // but we may want to scrap it if it is not going to end well
                     let mut has_past_conflicting_dep = just_here_for_the_error_messages;
                     if !has_past_conflicting_dep {
                         if let Some(conflicting) = frame
                             .remaining_siblings
                             .clone()
-                            .filter_map(|(_, (deb, _, _))| {
-                                past_conflicting_activations.get(&deb).and_then(|past_bad| {
-                                    // for each dependency check all of its cashed conflicts
-                                    past_bad
-                                        .iter()
-                                        .find(|conflicting| cx.is_conflicting(None, conflicting))
-                                })
-                            })
-                            .next()
+                            .filter_map(|(_, (new_dep, _, _))| past_conflicting_activations.get(&new_dep))
+                            .flat_map(|x| x)
+                            .find(|con| cx.is_conflicting(None, con))
                         {
                             // if any of them match than it will just backtrack to us
                             // so let's save the effort.
@@ -1650,11 +1644,7 @@ impl Context {
         parent: Option<&PackageId>,
         conflicting_activations: &HashMap<PackageId, ConflictReason>,
     ) -> bool {
-        parent.map(|p| self.is_active(p)).unwrap_or(true)
-            && conflicting_activations
-                .keys()
-                // note: a lot of redundant work in is_active for similar debs
-                .all(|con| self.is_active(con))
+        conflicting_activations.keys().chain(parent).all(|id| self.is_active(id))
     }
 
     /// Return all dependencies and the features we want from them.
