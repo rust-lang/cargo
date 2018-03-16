@@ -85,16 +85,7 @@ fn clean_multiple_packages() {
         .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }")
         .build();
 
-    assert_that(
-        p.cargo("build")
-            .arg("-p")
-            .arg("d1")
-            .arg("-p")
-            .arg("d2")
-            .arg("-p")
-            .arg("foo"),
-        execs().with_status(0),
-    );
+    assert_that(p.cargo("build -p d1 -p d2 -p foo"), execs().with_status(0));
 
     let d1_path = &p.build_dir()
         .join("debug")
@@ -108,12 +99,7 @@ fn clean_multiple_packages() {
     assert_that(d2_path, existing_file());
 
     assert_that(
-        p.cargo("clean")
-            .arg("-p")
-            .arg("d1")
-            .arg("-p")
-            .arg("d2")
-            .cwd(&p.root().join("src")),
+        p.cargo("clean -p d1 -p d2").cwd(&p.root().join("src")),
         execs().with_status(0).with_stdout(""),
     );
     assert_that(&p.bin("foo"), existing_file());
