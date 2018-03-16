@@ -3705,16 +3705,7 @@ fn build_multiple_packages() {
         .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }")
         .build();
 
-    assert_that(
-        p.cargo("build")
-            .arg("-p")
-            .arg("d1")
-            .arg("-p")
-            .arg("d2")
-            .arg("-p")
-            .arg("foo"),
-        execs().with_status(0),
-    );
+    assert_that(p.cargo("build -p d1 -p d2 -p foo"), execs().with_status(0));
 
     assert_that(&p.bin("foo"), existing_file());
     assert_that(

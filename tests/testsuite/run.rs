@@ -59,12 +59,12 @@ fn simple_quiet() {
         .build();
 
     assert_that(
-        p.cargo("run").arg("-q"),
+        p.cargo("run -q"),
         execs().with_status(0).with_stdout("hello"),
     );
 
     assert_that(
-        p.cargo("run").arg("--quiet"),
+        p.cargo("run --quiet"),
         execs().with_status(0).with_stdout("hello"),
     );
 }
@@ -1133,12 +1133,5 @@ fn explicit_bin_with_args() {
         )
         .build();
 
-    assert_that(
-        p.cargo("run")
-            .arg("--bin")
-            .arg("foo")
-            .arg("hello")
-            .arg("world"),
-        execs().with_status(0),
-    );
+    assert_that(p.cargo("run --bin foo hello world"), execs().with_status(0));
 }
