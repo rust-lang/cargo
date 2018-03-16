@@ -233,7 +233,12 @@ impl Project {
 
     pub fn cargo(&self, cmd: &str) -> ProcessBuilder {
         let mut p = self.process(&cargo_exe());
-        p.arg(cmd);
+        for arg in cmd.split_whitespace() {
+            if arg.contains('"') || arg.contains('\'') {
+                panic!("shell-style argument parsing is not supported")
+            }
+            p.arg(arg);
+        }
         return p;
     }
 

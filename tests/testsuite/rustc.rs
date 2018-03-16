@@ -111,13 +111,7 @@ fn build_main_and_allow_unstable_options() {
         .build();
 
     assert_that(
-        p.cargo("rustc")
-            .arg("-v")
-            .arg("--bin")
-            .arg("foo")
-            .arg("--")
-            .arg("-C")
-            .arg("debug-assertions"),
+        p.cargo("rustc -v --bin foo -- -C debug-assertions"),
         execs().with_status(0).with_stderr(&format!(
             "\
 [COMPILING] {name} v{version} ({url})
@@ -208,13 +202,7 @@ fn build_with_args_to_one_of_multiple_binaries() {
         .build();
 
     assert_that(
-        p.cargo("rustc")
-            .arg("-v")
-            .arg("--bin")
-            .arg("bar")
-            .arg("--")
-            .arg("-C")
-            .arg("debug-assertions"),
+        p.cargo("rustc -v --bin bar -- -C debug-assertions"),
         execs().with_status(0).with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
@@ -292,13 +280,7 @@ fn build_with_args_to_one_of_multiple_tests() {
         .build();
 
     assert_that(
-        p.cargo("rustc")
-            .arg("-v")
-            .arg("--test")
-            .arg("bar")
-            .arg("--")
-            .arg("-C")
-            .arg("debug-assertions"),
+        p.cargo("rustc -v --test bar -- -C debug-assertions"),
         execs().with_status(0).with_stderr(format!(
             "\
 [COMPILING] foo v0.0.1 ({url})
@@ -420,13 +402,7 @@ fn build_only_bar_dependency() {
         .build();
 
     assert_that(
-        foo.cargo("rustc")
-            .arg("-v")
-            .arg("-p")
-            .arg("bar")
-            .arg("--")
-            .arg("-C")
-            .arg("debug-assertions"),
+        foo.cargo("rustc -v -p bar -- -C debug-assertions"),
         execs().with_status(0).with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..])
@@ -504,12 +480,7 @@ fn fail_with_multiple_packages() {
         .build();
 
     assert_that(
-        foo.cargo("rustc")
-            .arg("-v")
-            .arg("-p")
-            .arg("bar")
-            .arg("-p")
-            .arg("baz"),
+        foo.cargo("rustc -v -p bar -p baz"),
         execs().with_status(1).with_stderr_contains(
             "\
 error: The argument '--package <SPEC>' was provided more than once, \
