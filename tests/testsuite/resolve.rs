@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use hamcrest::{assert_that, contains, is_not};
 
@@ -33,7 +33,14 @@ fn resolve(
     let mut registry = MyRegistry(registry);
     let summary = Summary::new(pkg.clone(), deps, BTreeMap::new(), None).unwrap();
     let method = Method::Everything;
-    let resolve = resolver::resolve(&[(summary, method)], &[], &mut registry, &[], None, false)?;
+    let resolve = resolver::resolve(
+        &[(summary, method)],
+        &[],
+        &mut registry,
+        &HashSet::new(),
+        None,
+        false,
+    )?;
     let res = resolve.iter().cloned().collect();
     Ok(res)
 }
