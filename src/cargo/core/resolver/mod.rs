@@ -1096,30 +1096,16 @@ fn activate_deps_loop(
                         }
                     }
                     if !has_another && has_past_conflicting_dep && !backtracked {
-                        // we have not activated ANY candidates and
-                        // we are out of choices so add it to the cache
-                        // so our parent will know that we don't work
-                        let past = past_conflicting_activations
-                            .entry(dep.clone())
-                            .or_insert_with(Vec::new);
-                        if !past.contains(&conflicting_activations) {
-                            trace!(
-                                "{}[{}]>{} adding a meta-skip {:?}",
-                                parent.name(),
-                                cur,
-                                dep.name(),
-                                conflicting_activations
-                            );
-                            past.push(conflicting_activations.clone());
-                            // also clean the `backtrack_stack` so we don't
-                            // backtrack to a place where we will try this again.
-                            backtrack_stack.retain(|bframe| {
-                                !bframe.context_backup.is_conflicting(
-                                    Some(parent.package_id()),
-                                    &conflicting_activations,
-                                )
-                            });
-                        }
+                        // we have not activated ANY candidates.
+                        // So clean the `backtrack_stack` so we don't
+                        // backtrack to a place where we will try this again.
+                        backtrack_stack.retain(|bframe| {
+                            // Maybe we could just not add them in the first place, but for now this works
+                            !bframe.context_backup.is_conflicting(
+                                Some(parent.package_id()),
+                                &conflicting_activations,
+                            )
+                        });
                     }
                     // if not has_another we we activate for the better error messages
                     frame.just_for_error_messages = has_past_conflicting_dep;
