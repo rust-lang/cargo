@@ -7,7 +7,7 @@ pub fn cli() -> App {
         .setting(AppSettings::TrailingVarArg)
         .about("Compile a package and all of its dependencies")
         .arg(Arg::with_name("args").multiple(true))
-        .arg_single_package("Package to build")
+        .arg_package("Package to build")
         .arg_jobs()
         .arg_targets_all(
             "Build only this package's library",

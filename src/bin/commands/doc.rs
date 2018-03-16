@@ -9,7 +9,7 @@ pub fn cli() -> App {
             "open",
             "Opens the docs in a browser after the operation",
         ))
-        .arg_package(
+        .arg_package_spec(
             "Package to document",
             "Document all packages in the workspace",
             "Exclude packages from the build",

@@ -6,7 +6,7 @@ pub fn cli() -> App {
     subcommand("build")
         .alias("b")
         .about("Compile a local package and all of its dependencies")
-        .arg_package(
+        .arg_package_spec(
             "Package to build",
             "Build all packages in the workspace",
             "Exclude packages from the build",

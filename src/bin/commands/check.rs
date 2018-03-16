@@ -5,7 +5,7 @@ use cargo::ops::{self, CompileMode};
 pub fn cli() -> App {
     subcommand("check")
         .about("Check a local package and all of its dependencies for errors")
-        .arg_package(
+        .arg_package_spec(
             "Package(s) to check",
             "Check all packages in the workspace",
             "Exclude packages from the check",
