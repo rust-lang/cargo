@@ -2833,14 +2833,7 @@ fn selective_test_wonky_profile() {
     let p = p.build();
 
     assert_that(
-        p.cargo("test")
-            .arg("-v")
-            .arg("--no-run")
-            .arg("--release")
-            .arg("-p")
-            .arg("foo")
-            .arg("-p")
-            .arg("a"),
+        p.cargo("test -v --no-run --release -p foo -p a"),
         execs().with_status(0),
     );
 }
@@ -3051,13 +3044,7 @@ fn panic_abort_multiple() {
         .file("a/src/lib.rs", "")
         .build();
     assert_that(
-        p.cargo("test")
-            .arg("--release")
-            .arg("-v")
-            .arg("-p")
-            .arg("foo")
-            .arg("-p")
-            .arg("a"),
+        p.cargo("test --release -v -p foo -p a"),
         execs().with_status(0),
     );
 }
@@ -3246,14 +3233,7 @@ fn test_many_with_features() {
         .build();
 
     assert_that(
-        p.cargo("test")
-            .arg("-v")
-            .arg("-p")
-            .arg("a")
-            .arg("-p")
-            .arg("foo")
-            .arg("--features")
-            .arg("foo"),
+        p.cargo("test -v -p a -p foo --features foo"),
         execs().with_status(0),
     );
 }
