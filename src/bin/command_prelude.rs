@@ -15,17 +15,22 @@ pub type App = clap::App<'static, 'static>;
 pub trait AppExt: Sized {
     fn _arg(self, arg: Arg<'static, 'static>) -> Self;
 
-    fn arg_package(self, package: &'static str, all: &'static str, exclude: &'static str) -> Self {
-        self._arg(
-            opt("package", package)
-                .short("p")
-                .value_name("SPEC")
-                .multiple(true),
-        )._arg(opt("all", all))
-            ._arg(opt("exclude", exclude).value_name("SPEC").multiple(true))
+    fn arg_package_spec(
+        self,
+        package: &'static str,
+        all: &'static str,
+        exclude: &'static str,
+    ) -> Self {
+        self.arg_package_spec_simple(package)
+            ._arg(opt("all", all))
+            ._arg(multi_opt("exclude", "SPEC", exclude))
     }
 
-    fn arg_single_package(self, package: &'static str) -> Self {
+    fn arg_package_spec_simple(self, package: &'static str) -> Self {
+        self._arg(multi_opt("package", "SPEC", package).short("p"))
+    }
+
+    fn arg_package(self, package: &'static str) -> Self {
         self._arg(opt("package", package).short("p").value_name("SPEC"))
     }
 
@@ -51,18 +56,18 @@ pub trait AppExt: Sized {
         all: &'static str,
     ) -> Self {
         self.arg_targets_lib_bin(lib, bin, bins)
-            ._arg(opt("example", examle).value_name("NAME").multiple(true))
+            ._arg(multi_opt("example", "NAME", examle))
             ._arg(opt("examples", examles))
-            ._arg(opt("test", test).value_name("NAME").multiple(true))
+            ._arg(multi_opt("test", "NAME", test))
             ._arg(opt("tests", tests))
-            ._arg(opt("bench", bench).value_name("NAME").multiple(true))
+            ._arg(multi_opt("bench", "NAME", bench))
             ._arg(opt("benches", benchs))
             ._arg(opt("all-targets", all))
     }
 
     fn arg_targets_lib_bin(self, lib: &'static str, bin: &'static str, bins: &'static str) -> Self {
         self._arg(opt("lib", lib))
-            ._arg(opt("bin", bin).value_name("NAME").multiple(true))
+            ._arg(multi_opt("bin", "NAME", bin))
             ._arg(opt("bins", bins))
     }
 
@@ -73,15 +78,15 @@ pub trait AppExt: Sized {
         example: &'static str,
         examples: &'static str,
     ) -> Self {
-        self._arg(opt("bin", bin).value_name("NAME").multiple(true))
+        self._arg(multi_opt("bin", "NAME", bin))
             ._arg(opt("bins", bins))
-            ._arg(opt("example", example).value_name("NAME").multiple(true))
+            ._arg(multi_opt("example", "NAME", example))
             ._arg(opt("examples", examples))
     }
 
     fn arg_targets_bin_example(self, bin: &'static str, example: &'static str) -> Self {
-        self._arg(opt("bin", bin).value_name("NAME").multiple(true))
-            ._arg(opt("example", example).value_name("NAME").multiple(true))
+        self._arg(multi_opt("bin", "NAME", bin))
+            ._arg(multi_opt("example", "NAME", example))
     }
 
     fn arg_features(self) -> Self {
@@ -155,6 +160,21 @@ impl AppExt for App {
 
 pub fn opt(name: &'static str, help: &'static str) -> Arg<'static, 'static> {
     Arg::with_name(name).long(name).help(help)
+}
+
+pub fn multi_opt(
+    name: &'static str,
+    value_name: &'static str,
+    help: &'static str,
+) -> Arg<'static, 'static> {
+    // Note that all `.multiple(true)` arguments in Cargo should specify
+    // `.number_of_values(1)` as well, so that `--foo val1 val2` is
+    // **not** parsed as `foo` with values ["val1", "val2"].
+    // `number_of_values` should become the default in clap 3.
+    opt(name, help)
+        .value_name(value_name)
+        .multiple(true)
+        .number_of_values(1)
 }
 
 pub fn subcommand(name: &'static str) -> App {

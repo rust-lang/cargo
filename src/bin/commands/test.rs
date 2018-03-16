@@ -32,7 +32,7 @@ pub fn cli() -> App {
         .arg(opt("doc", "Test only this library's documentation"))
         .arg(opt("no-run", "Compile, but don't run tests"))
         .arg(opt("no-fail-fast", "Run all tests regardless of failure"))
-        .arg_package(
+        .arg_package_spec(
             "Package to run tests for",
             "Test all packages in the workspace",
             "Exclude packages from the test",

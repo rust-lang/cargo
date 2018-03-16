@@ -5,12 +5,7 @@ use cargo::ops::{self, CleanOptions};
 pub fn cli() -> App {
     subcommand("clean")
         .about("Remove artifacts that cargo has generated in the past")
-        .arg(
-            opt("package", "Package to clean artifacts for")
-                .short("p")
-                .value_name("SPEC")
-                .multiple(true),
-        )
+        .arg_package_spec_simple("Package to clean artifacts for")
         .arg_manifest_path()
         .arg_target_triple("Target triple to clean output for (default all)")
         .arg_release("Whether or not to clean release artifacts")

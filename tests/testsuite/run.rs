@@ -1109,3 +1109,36 @@ fn run_multiple_packages() {
             .with_stderr_contains("[ERROR] package `d3` is not a member of the workspace"),
     );
 }
+
+#[test]
+fn explicit_bin_with_args() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                assert_eq!(std::env::args().nth(1).unwrap(), "hello");
+                assert_eq!(std::env::args().nth(2).unwrap(), "world");
+            }
+        "#,
+        )
+        .build();
+
+    assert_that(
+        p.cargo("run")
+            .arg("--bin")
+            .arg("foo")
+            .arg("hello")
+            .arg("world"),
+        execs().with_status(0),
+    );
+}
