@@ -5,12 +5,7 @@ use cargo::ops::{self, UpdateOptions};
 pub fn cli() -> App {
     subcommand("update")
         .about("Update dependencies as recorded in the local lock file")
-        .arg(
-            opt("package", "Package to clean artifacts for")
-                .short("p")
-                .value_name("SPEC")
-                .multiple(true),
-        )
+        .arg_package_spec_simple("Package to update")
         .arg(opt(
             "aggressive",
             "Force updating all dependencies of <name> as well",

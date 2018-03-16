@@ -11,7 +11,7 @@ pub fn cli() -> App {
             "open",
             "Opens the docs in a browser after the operation",
         ))
-        .arg_single_package("Package to document")
+        .arg_package("Package to document")
         .arg_jobs()
         .arg_targets_all(
             "Build only this package's library",

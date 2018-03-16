@@ -6,17 +6,13 @@ pub fn cli() -> App {
     subcommand("owner")
         .about("Manage the owners of a crate on the registry")
         .arg(Arg::with_name("crate"))
+        .arg(multi_opt("add", "LOGIN", "Name of a user or team to add as an owner").short("a"))
         .arg(
-            opt("add", "Name of a user or team to add as an owner")
-                .short("a")
-                .value_name("LOGIN")
-                .multiple(true),
-        )
-        .arg(
-            opt("remove", "Name of a user or team to remove as an owner")
-                .short("r")
-                .value_name("LOGIN")
-                .multiple(true),
+            multi_opt(
+                "remove",
+                "LOGIN",
+                "Name of a user or team to remove as an owner",
+            ).short("r"),
         )
         .arg(opt("list", "List owners of a crate").short("l"))
         .arg(opt("index", "Registry index to modify owners for").value_name("INDEX"))
