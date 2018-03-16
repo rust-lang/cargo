@@ -1095,18 +1095,6 @@ fn activate_deps_loop(
                             has_past_conflicting_dep = true;
                         }
                     }
-                    if !has_another && has_past_conflicting_dep && !backtracked {
-                        // we have not activated ANY candidates.
-                        // So clean the `backtrack_stack` so we don't
-                        // backtrack to a place where we will try this again.
-                        backtrack_stack.retain(|bframe| {
-                            // Maybe we could just not add them in the first place, but for now this works
-                            !bframe.context_backup.is_conflicting(
-                                Some(parent.package_id()),
-                                &conflicting_activations,
-                            )
-                        });
-                    }
                     // if not has_another we we activate for the better error messages
                     frame.just_for_error_messages = has_past_conflicting_dep;
                     if !has_past_conflicting_dep
