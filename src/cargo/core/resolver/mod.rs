@@ -1097,18 +1097,34 @@ fn activate_deps_loop(
                             has_past_conflicting_dep = true;
                         }
                     }
-                    // if not has_another we we activate for the better error messages
-                    frame.just_for_error_messages = has_past_conflicting_dep;
-                    if !has_past_conflicting_dep
-                        || (!has_another && (just_here_for_the_error_messages || {
+                    let activate_for_error_message = has_past_conflicting_dep && !has_another && {
+                        // has_past_conflicting_dep -> One of this candidate deps will fail.
+                        // !has_another -> If the candidate is not accepted we will backtrack.
+
+                        // So the question is will the user see that we skipped this candidate?
+                        just_here_for_the_error_messages || {
+                            // make sure we know about all the possible conflicts
                             conflicting_activations
                                 .extend(remaining_candidates.conflicting_prev_active.clone());
+                            // test if backtracking will get to the user
                             find_candidate(
                                 &mut backtrack_stack.clone(),
                                 &parent,
                                 &conflicting_activations,
                             ).is_none()
-                        })) {
+                        }
+                    };
+                    if activate_for_error_message {
+                        // We know one of this candidate deps will fail,
+                        // which means we will fail,
+                        // and that none of the backtrack frames will
+                        // find a candidate that will help.
+                        // So lets clean up the useless backtrack frames.
+                        backtrack_stack.clear();
+                    }
+                    // if not has_another we we activate for the better error messages
+                    frame.just_for_error_messages = has_past_conflicting_dep;
+                    if !has_past_conflicting_dep || activate_for_error_message {
                         remaining_deps.push(frame);
                     } else {
                         trace!(
