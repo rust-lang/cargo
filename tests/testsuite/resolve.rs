@@ -614,6 +614,49 @@ fn resolving_with_many_equivalent_backtracking() {
 }
 
 #[test]
+fn resolving_with_deep_traps() {
+    let mut reglist = Vec::new();
+
+    const DEPTH: usize = 200;
+    const BRANCHING_FACTOR: usize = 100;
+
+    // Each backtrack_trap depends on the next, and adds a backtrack frame.
+    // None of witch is going to help with `bad`.
+    for l in 0..DEPTH {
+        let name = format!("backtrack_trap{}", l);
+        let next = format!("backtrack_trap{}", l + 1);
+        for i in 1..BRANCHING_FACTOR {
+            let vsn = format!("1.0.{}", i);
+            reglist.push(pkg!((name.as_str(), vsn.as_str()) => [dep_req(next.as_str(), "*")]));
+        }
+    }
+    {
+        let name = format!("backtrack_trap{}", DEPTH);
+        for i in 1..BRANCHING_FACTOR {
+            let vsn = format!("1.0.{}", i);
+            reglist.push(pkg!((name.as_str(), vsn.as_str())));
+        }
+    }
+    {
+        // slightly less constrained to make sure `cloaking` gets picked last.
+        for i in 1..(BRANCHING_FACTOR + 10) {
+            let vsn = format!("1.0.{}", i);
+            reglist.push(pkg!(("cloaking", vsn.as_str()) => [dep_req("bad", "1.0.1")]));
+        }
+    }
+
+    let reg = registry(reglist.clone());
+
+    let res = resolve(
+        &pkg_id("root"),
+        vec![dep_req("backtrack_trap0", "*"), dep_req("cloaking", "*")],
+        &reg,
+    );
+
+    assert!(res.is_err());
+}
+
+#[test]
 fn resolving_with_constrained_sibling_backtrack_activation() {
     // It makes sense to resolve most-constrained deps first, but
     // with that logic the backtrack traps here come between the two

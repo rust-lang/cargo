@@ -990,12 +990,9 @@ fn activate_deps_loop(
             && past_conflicting_activations
                 .get(&dep)
                 .and_then(|past_bad| {
-                    past_bad.iter().find(|conflicting| {
-                        conflicting
-                    .iter()
-                    // note: a lot of redundant work in is_active for similar debs
-                    .all(|(con, _)| cx.is_active(con))
-                    })
+                    past_bad
+                        .iter()
+                        .find(|conflicting| cx.is_conflicting(None, conflicting))
                 })
                 .is_some();
 
@@ -1120,25 +1117,18 @@ fn activate_deps_loop(
 
             match res {
                 Ok(Some((mut frame, dur))) => {
-                    // at this point we have technical already activated
+                    // at this point we have technically already activated
                     // but we may want to scrap it if it is not going to end well
                     let mut has_past_conflicting_dep = just_here_for_the_error_messages;
                     if !has_past_conflicting_dep {
                         if let Some(conflicting) = frame
                             .remaining_siblings
                             .clone()
-                            .filter_map(|(_, (deb, _, _))| {
-                                past_conflicting_activations.get(&deb).and_then(|past_bad| {
-                                    // for each dependency check all of its cashed conflicts
-                                    past_bad.iter().find(|conflicting| {
-                                        conflicting
-                                        .iter()
-                                        // note: a lot of redundant work in is_active for similar debs
-                                        .all(|(con, _)| cx.is_active(con))
-                                    })
-                                })
+                            .filter_map(|(_, (new_dep, _, _))| {
+                                past_conflicting_activations.get(&new_dep)
                             })
-                            .next()
+                            .flat_map(|x| x)
+                            .find(|con| cx.is_conflicting(None, con))
                         {
                             // if any of them match than it will just backtrack to us
                             // so let's save the effort.
@@ -1146,35 +1136,34 @@ fn activate_deps_loop(
                             has_past_conflicting_dep = true;
                         }
                     }
-                    if !has_another && has_past_conflicting_dep && !backtracked {
-                        // we have not activated ANY candidates and
-                        // we are out of choices so add it to the cache
-                        // so our parent will know that we don't work
-                        let past = past_conflicting_activations
-                            .entry(dep.clone())
-                            .or_insert_with(Vec::new);
-                        if !past.contains(&conflicting_activations) {
-                            trace!(
-                                "{}[{}]>{} adding a meta-skip {:?}",
-                                parent.name(),
-                                cur,
-                                dep.name(),
-                                conflicting_activations
-                            );
-                            past.push(conflicting_activations.clone());
+                    let activate_for_error_message = has_past_conflicting_dep && !has_another && {
+                        // has_past_conflicting_dep -> One of this candidate deps will fail.
+                        // !has_another -> If the candidate is not accepted we will backtrack.
+
+                        // So the question is will the user see that we skipped this candidate?
+                        just_here_for_the_error_messages || {
+                            // make sure we know about all the possible conflicts
+                            conflicting_activations
+                                .extend(remaining_candidates.conflicting_prev_active.clone());
+                            // test if backtracking will get to the user
+                            find_candidate(
+                                &mut backtrack_stack.clone(),
+                                &parent,
+                                &conflicting_activations,
+                            ).is_none()
                         }
+                    };
+                    if activate_for_error_message {
+                        // We know one of this candidate deps will fail,
+                        // which means we will fail,
+                        // and that none of the backtrack frames will
+                        // find a candidate that will help.
+                        // So lets clean up the useless backtrack frames.
+                        backtrack_stack.clear();
                     }
                     // if not has_another we we activate for the better error messages
                     frame.just_for_error_messages = has_past_conflicting_dep;
-                    if !has_past_conflicting_dep
-                        || (!has_another
-                            && (just_here_for_the_error_messages
-                                || find_candidate(
-                                    &mut backtrack_stack.clone(),
-                                    &parent,
-                                    &conflicting_activations,
-                                ).is_none()))
-                    {
+                    if !has_past_conflicting_dep || activate_for_error_message {
                         remaining_deps.push(frame);
                     } else {
                         trace!(
@@ -1234,11 +1223,9 @@ fn find_candidate<'a>(
             frame.context_backup.prev_active(&frame.dep),
             &frame.context_backup.links,
         );
-        if frame.context_backup.is_active(parent.package_id())
-            && conflicting_activations
-           .iter()
-           // note: a lot of redundant work in is_active for similar debs
-           .all(|(con, _)| frame.context_backup.is_active(con))
+        if frame
+            .context_backup
+            .is_conflicting(Some(parent.package_id()), conflicting_activations)
         {
             continue;
         }
@@ -1680,6 +1667,19 @@ impl Context {
             .get(&(id.name(), id.source_id().clone()))
             .map(|v| v.iter().any(|s| s.package_id() == id))
             .unwrap_or(false)
+    }
+
+    /// checks whether all of `parent` and the keys of `conflicting activations`
+    /// are still active
+    fn is_conflicting(
+        &self,
+        parent: Option<&PackageId>,
+        conflicting_activations: &HashMap<PackageId, ConflictReason>,
+    ) -> bool {
+        conflicting_activations
+            .keys()
+            .chain(parent)
+            .all(|id| self.is_active(id))
     }
 
     /// Return all dependencies and the features we want from them.
