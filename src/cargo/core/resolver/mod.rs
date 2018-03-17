@@ -1085,7 +1085,9 @@ fn activate_deps_loop(
                         if let Some(conflicting) = frame
                             .remaining_siblings
                             .clone()
-                            .filter_map(|(_, (new_dep, _, _))| past_conflicting_activations.get(&new_dep))
+                            .filter_map(|(_, (new_dep, _, _))| {
+                                past_conflicting_activations.get(&new_dep)
+                            })
                             .flat_map(|x| x)
                             .find(|con| cx.is_conflicting(None, con))
                         {
@@ -1098,14 +1100,15 @@ fn activate_deps_loop(
                     // if not has_another we we activate for the better error messages
                     frame.just_for_error_messages = has_past_conflicting_dep;
                     if !has_past_conflicting_dep
-                        || (!has_another
-                            && (just_here_for_the_error_messages
-                                || find_candidate(
-                                    &mut backtrack_stack.clone(),
-                                    &parent,
-                                    &conflicting_activations,
-                                ).is_none()))
-                    {
+                        || (!has_another && (just_here_for_the_error_messages || {
+                            conflicting_activations
+                                .extend(remaining_candidates.conflicting_prev_active.clone());
+                            find_candidate(
+                                &mut backtrack_stack.clone(),
+                                &parent,
+                                &conflicting_activations,
+                            ).is_none()
+                        })) {
                         remaining_deps.push(frame);
                     } else {
                         trace!(
@@ -1618,7 +1621,10 @@ impl Context {
         parent: Option<&PackageId>,
         conflicting_activations: &HashMap<PackageId, ConflictReason>,
     ) -> bool {
-        conflicting_activations.keys().chain(parent).all(|id| self.is_active(id))
+        conflicting_activations
+            .keys()
+            .chain(parent)
+            .all(|id| self.is_active(id))
     }
 
     /// Return all dependencies and the features we want from them.
