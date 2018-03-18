@@ -1280,6 +1280,26 @@ fn activate_deps_loop(
                             has_past_conflicting_dep = true;
                         }
                     }
+                    if !has_past_conflicting_dep {
+                        'deps: for debs in remaining_deps.iter() {
+                            for (_, (other_dep, _, _)) in debs.remaining_siblings.clone() {
+                                if let Some(conflict) = past_conflicting_activations
+                                    .get(&other_dep)
+                                    .and_then(|past_bad| {
+                                        past_bad
+                                            .iter()
+                                            .find(|conflicting| conflicting.get(&pid).is_some())
+                                    }) {
+                                    conflicting_activations.insert(
+                                        debs.parent.package_id().clone(),
+                                        conflict.get(&pid).unwrap().clone(),
+                                    );
+                                    has_past_conflicting_dep = true;
+                                    break 'deps;
+                                }
+                            }
+                        }
+                    }
 
                     // Ok if we're in a "known failure" state for this frame we
                     // may want to skip it altogether though. We don't want to
