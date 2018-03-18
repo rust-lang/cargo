@@ -758,6 +758,54 @@ fn resolving_with_deep_traps() {
 }
 
 #[test]
+fn resolving_with_constrained_cousins_backtrack() {
+    let mut reglist = Vec::new();
+
+    const DEPTH: usize = 200;
+    const BRANCHING_FACTOR: usize = 100;
+
+    // Each backtrack_trap depends on the next.
+    // The last depends on a specific ver of constrained.
+    for l in 0..DEPTH {
+        let name = format!("backtrack_trap{}", l);
+        let next = format!("backtrack_trap{}", l + 1);
+        for i in 1..BRANCHING_FACTOR {
+            let vsn = format!("1.0.{}", i);
+            reglist.push(pkg!((name.as_str(), vsn.as_str()) => [dep_req(next.as_str(), "*")]));
+        }
+    }
+    {
+        let name = format!("backtrack_trap{}", DEPTH);
+        for i in 1..BRANCHING_FACTOR {
+            let vsn = format!("1.0.{}", i);
+            reglist.push(pkg!((name.as_str(), vsn.as_str()) => [dep_req("constrained", "=1.0.0")]));
+        }
+    }
+    {
+        // slightly less constrained to make sure `constrained` gets picked last.
+        for i in 0..(BRANCHING_FACTOR + 10) {
+            let vsn = format!("1.0.{}", i);
+            reglist.push(pkg!(("constrained", vsn.as_str())));
+        }
+    }
+
+    let reg = registry(reglist.clone());
+
+    // `backtrack_trap0 = "*"` is a lot of ways of saying `constrained = "=1.0.0"`
+    // Only then to try and solve `constrained= "1.0.1"` which is incompatible.
+    let res = resolve(
+        &pkg_id("root"),
+        vec![
+            dep_req("backtrack_trap0", "*"),
+            dep_req("constrained", "1.0.1"),
+        ],
+        &reg,
+    );
+
+    assert!(res.is_err());
+}
+
+#[test]
 fn resolving_with_constrained_sibling_backtrack_activation() {
     // It makes sense to resolve most-constrained deps first, but
     // with that logic the backtrack traps here come between the two
