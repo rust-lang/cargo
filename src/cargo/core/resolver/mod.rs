@@ -1276,11 +1276,15 @@ fn activate_deps_loop(
                             .flat_map(|x| x)
                             .find(|con| cx.is_conflicting(None, con))
                         {
-                            conflicting_activations.extend(conflicting.clone());
+                            let mut conflicting = conflicting.clone();
+                            conflicting.remove(&pid);
+
+                            conflicting_activations.extend(conflicting);
                             has_past_conflicting_dep = true;
                         }
                     }
                     if !has_past_conflicting_dep {
+                        // TODO: this is ugly and slow, replace!
                         'deps: for debs in remaining_deps.iter() {
                             for (_, (other_dep, _, _)) in debs.remaining_siblings.clone() {
                                 if let Some(conflict) = past_conflicting_activations
