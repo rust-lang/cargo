@@ -687,6 +687,9 @@ struct RegistryQueryer<'a> {
     try_to_use: &'a HashSet<&'a PackageId>,
     // TODO: with nll the Rc can be removed
     cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
+    // If set the list of dependency candidates will be sorted by minimal
+    // versions first. That allows `cargo update -Z minimal-versions` which will
+    // specify minimum depedency versions to be used.
     minimal_versions: bool,
 }
 
