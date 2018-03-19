@@ -91,8 +91,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             GitReference::Branch("master".to_string())
         };
         SourceId::for_git(&url, gitref)?
-    } else if let Some(path) = args.value_of("path") {
-        SourceId::for_path(&config.cwd().join(path))?
+    } else if let Some(path) = args.value_of_path("path", config) {
+        SourceId::for_path(&path)?
     } else if krates.is_empty() {
         SourceId::for_path(config.cwd())?
     } else {
