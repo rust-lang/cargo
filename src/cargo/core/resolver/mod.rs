@@ -51,6 +51,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
 use std::fmt;
 use std::iter::FromIterator;
+use std::mem;
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -618,22 +619,39 @@ impl Ord for DepsFrame {
     }
 }
 
+/// All possible reasons that a package might fail to activate.
+///
+/// We maintain a list of conflicts for error reporting as well as backtracking
+/// purposes. Each reason here is why candidates may be rejected or why we may
+/// fail to resolve a dependency.
 #[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq)]
 enum ConflictReason {
+    /// There was a semver conflict, for example we tried to activate a package
+    /// 1.0.2 but 1.1.0 was already activated (aka a compatible semver version
+    /// is already activated)
     Semver,
+
+    /// The `links` key is being violated. For example one crate in the
+    /// dependency graph has `links = "foo"` but this crate also had that, and
+    /// we're only allowed one per dependency graph.
     Links(String),
+
+    /// A dependency listed features that weren't actually available on the
+    /// candidate. For example we tried to activate feature `foo` but the
+    /// candidiate we're activating didn't actually have the feature `foo`.
     MissingFeatures(String),
 }
 
 enum ActivateError {
-    Error(::failure::Error),
+    Fatal(CargoError),
     Conflict(PackageId, ConflictReason),
 }
+
 type ActivateResult<T> = Result<T, ActivateError>;
 
 impl From<::failure::Error> for ActivateError {
     fn from(t: ::failure::Error) -> Self {
-        ActivateError::Error(t)
+        ActivateError::Fatal(t)
     }
 }
 
@@ -802,6 +820,18 @@ struct BacktrackFrame {
     conflicting_activations: HashMap<PackageId, ConflictReason>,
 }
 
+/// A helper "iterator" used to extract candidates within a current `Context` of
+/// a dependency graph.
+///
+/// This struct doesn't literally implement the `Iterator` trait (requires a few
+/// more inputs) but in general acts like one. Each `RemainingCandidates` is
+/// created with a list of candidates to choose from. When attempting to iterate
+/// over the list of candidates only *valid* candidates are returned. Validity
+/// is defined within a `Context`.
+///
+/// Candidates passed to `new` may not be returned from `next` as they could be
+/// filtered out, and if iteration stops a map of all packages which caused
+/// filtered out candidates to be filtered out will be returned.
 #[derive(Clone)]
 struct RemainingCandidates {
     remaining: RcVecIter<Candidate>,
@@ -820,27 +850,36 @@ impl RemainingCandidates {
         }
     }
 
+    /// Attempts to find another candidate to check from this list.
+    ///
+    /// This method will attempt to move this iterator forward, returning a
+    /// candidate that's possible to activate. The `cx` argument is the current
+    /// context which determines validity for candidates returned, and the `dep`
+    /// is the dependency listing that we're activating for.
+    ///
+    /// If successful a `(Candidate, bool)` pair will be returned. The
+    /// `Candidate` is the candidate to attempt to activate, and the `bool` is
+    /// an indicator of whether there are remaining candidates to try of if
+    /// we've reached the end of iteration.
+    ///
+    /// If we've reached the end of the iterator here then `Err` will be
+    /// returned. The error will contain a map of package id to conflict reason,
+    /// where each package id caused a candidate to be filtered out from the
+    /// original list for the reason listed.
     fn next(
         &mut self,
-        prev_active: &[Summary],
-        links: &HashMap<InternedString, PackageId>,
+        cx: &Context,
+        dep: &Dependency,
     ) -> Result<(Candidate, bool), HashMap<PackageId, ConflictReason>> {
-        // Filter the set of candidates based on the previously activated
-        // versions for this dependency. We can actually use a version if it
-        // precisely matches an activated version or if it is otherwise
-        // incompatible with all other activated versions. Note that we
-        // define "compatible" here in terms of the semver sense where if
-        // the left-most nonzero digit is the same they're considered
-        // compatible unless we have a `*-sys` crate (defined by having a
-        // linked attribute) then we can only have one version.
-        //
-        // When we are done we return the set of previously activated
-        // that conflicted with the ones we tried. If any of these change
-        // then we would have considered different candidates.
-        use std::mem::replace;
+        let prev_active = cx.prev_active(dep);
+
         for (_, b) in self.remaining.by_ref() {
+            // The `links` key in the manifest dictates that there's only one
+            // package in a dependency graph, globally, with that particular
+            // `links` key. If this candidate links to something that's already
+            // linked to by a different package then we've gotta skip this.
             if let Some(link) = b.summary.links() {
-                if let Some(a) = links.get(&link) {
+                if let Some(a) = cx.links.get(&link) {
                     if a != b.summary.package_id() {
                         self.conflicting_prev_active
                             .entry(a.clone())
@@ -849,6 +888,15 @@ impl RemainingCandidates {
                     }
                 }
             }
+
+            // Otherwise the condition for being a valid candidate relies on
+            // semver. Cargo dictates that you can't duplicate multiple
+            // semver-compatible versions of a crate. For example we can't
+            // simultaneously activate `foo 1.0.2` and `foo 1.2.0`. We can,
+            // however, activate `1.0.2` and `2.0.0`.
+            //
+            // Here we throw out our candidate if it's *compatible*, yet not
+            // equal, to all previously activated versions.
             if let Some(a) = prev_active
                 .iter()
                 .find(|a| compatible(a.version(), b.summary.version()))
@@ -860,11 +908,26 @@ impl RemainingCandidates {
                     continue;
                 }
             }
-            if let Some(r) = replace(&mut self.has_another, Some(b)) {
+
+            // Well if we made it this far then we've got a valid dependency. We
+            // want this iterator to be inherently "peekable" so we don't
+            // necessarily return the item just yet. Instead we stash it away to
+            // get returned later, and if we replaced something then that was
+            // actually the candidate to try first so we return that.
+            if let Some(r) = mem::replace(&mut self.has_another, Some(b)) {
                 return Ok((r, true));
             }
         }
-        replace(&mut self.has_another, None)
+
+        // Alright we've entirely exhausted our list of candidates. If we've got
+        // something stashed away return that here (also indicating that there's
+        // nothign else). If nothing is stashed away we return the list of all
+        // conflicting activations, if any.
+        //
+        // TODO: can the `conflicting_prev_active` clone be avoided here? should
+        //       panic if this is called twice and an error is already returned
+        self.has_another
+            .take()
             .map(|r| (r, false))
             .ok_or_else(|| self.conflicting_prev_active.clone())
     }
@@ -889,21 +952,42 @@ fn activate_deps_loop(
     // use (those with more candidates).
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = BinaryHeap::new();
-    // `past_conflicting_activations`is a cache of the reasons for each time we backtrack.
-    // for example after several backtracks we may have:
-    // past_conflicting_activations[`foo = "^1.0.2"`] = vac![map!{`foo=1.0.1`: Semver}, map!{`foo=1.0.1`: Semver}];
-    // This can be read as "we cannot find a candidate for dep `foo = "^1.0.2"` if either
-    // `foo=1.0.1` OR `foo=1.0.0` are activated"
-    // for another example after several backtracks we may have:
-    // past_conflicting_activations[`foo = ">=0.8.2, <=0.9.3"`] = vac![map!{`foo=0.8.1`: Semver, `foo=0.9.4`: Semver}];
-    // This can be read as "we cannot find a candidate for dep `foo = ">=0.8.2, <=0.9.3"` if both
-    // `foo=0.8.1` AND `foo=0.9.4` are activated" (better data structures are welcome but this works for now.)
-    // This is used to make sure we don't queue work we know will fail.
-    // See the discussion in https://github.com/rust-lang/cargo/pull/5168 for why this is so important
+
+    // `past_conflicting_activations`is a cache of the reasons for each time we
+    // backtrack. For example after several backtracks we may have:
+    //
+    //  past_conflicting_activations[`foo = "^1.0.2"`] = vec![
+    //      map!{`foo=1.0.1`: Semver},
+    //      map!{`foo=1.0.0`: Semver},
+    //  ];
+    //
+    // This can be read as "we cannot find a candidate for dep `foo = "^1.0.2"`
+    // if either `foo=1.0.1` OR `foo=1.0.0` are activated".
+    //
+    // Another example after several backtracks we may have:
+    //
+    //  past_conflicting_activations[`foo = ">=0.8.2, <=0.9.3"`] = vec![
+    //      map!{`foo=0.8.1`: Semver, `foo=0.9.4`: Semver},
+    //  ];
+    //
+    // This can be read as "we cannot find a candidate for dep `foo = ">=0.8.2,
+    // <=0.9.3"` if both `foo=0.8.1` AND `foo=0.9.4` are activated".
+    //
+    // This is used to make sure we don't queue work we know will fail. See the
+    // discussion in https://github.com/rust-lang/cargo/pull/5168 for why this
+    // is so important, and there can probably be a better data structure here
+    // but for now this works well enough!
+    //
+    // Also, as a final note, this map is *not* ever removed from. This remains
+    // as a global cache which we never delete from. Any entry in this map is
+    // unconditionally true regardless of our resolution history of how we got
+    // here.
     let mut past_conflicting_activations: HashMap<
         Dependency,
         Vec<HashMap<PackageId, ConflictReason>>,
     > = HashMap::new();
+
+    // Activate all the initial summaries to kick off some work.
     for &(ref summary, ref method) in summaries {
         debug!("initial activation: {}", summary.package_id());
         let candidate = Candidate {
@@ -914,7 +998,7 @@ fn activate_deps_loop(
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
             Ok(None) => (),
-            Err(ActivateError::Error(e)) => return Err(e),
+            Err(ActivateError::Fatal(e)) => return Err(e),
             Err(ActivateError::Conflict(_, _)) => panic!("bad error from activate"),
         }
     }
@@ -960,6 +1044,9 @@ fn activate_deps_loop(
 
         let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
 
+        // Figure out what our next dependency to activate is, and if nothing is
+        // listed then we're entirely done with this frame (yay!) and we can
+        // move on to the next frame.
         let frame = match deps_frame.remaining_siblings.next() {
             Some(sibling) => {
                 let parent = Summary::clone(&deps_frame.parent);
@@ -997,42 +1084,54 @@ fn activate_deps_loop(
                 .is_some();
 
         let mut remaining_candidates = RemainingCandidates::new(&candidates);
-        let mut successfully_activated = false;
-        // `conflicting_activations` stores all the reasons we were unable to activate candidates.
-        // One of these reasons will have to go away for backtracking to find a place to restart.
-        // It is also the list of things to explain in the error message if we fail to resolve.
+
+        // `conflicting_activations` stores all the reasons we were unable to
+        // activate candidates. One of these reasons will have to go away for
+        // backtracking to find a place to restart. It is also the list of
+        // things to explain in the error message if we fail to resolve.
+        //
+        // This is a map of package id to a reason why that packaged caused a
+        // conflict for us.
         let mut conflicting_activations = HashMap::new();
-        // When backtracking we don't fully update `conflicting_activations` especially for the
-        // cases that we didn't make a backtrack frame in the first place.
-        // This `backtracked` var stores whether we are continuing from a restored backtrack frame
-        // so that we can skip caching `conflicting_activations` in `past_conflicting_activations`
+
+        // When backtracking we don't fully update `conflicting_activations`
+        // especially for the cases that we didn't make a backtrack frame in the
+        // first place.  This `backtracked` var stores whether we are continuing
+        // from a restored backtrack frame so that we can skip caching
+        // `conflicting_activations` in `past_conflicting_activations`
         let mut backtracked = false;
 
-        while !successfully_activated {
-            let next = remaining_candidates.next(cx.prev_active(&dep), &cx.links);
+        loop {
+            let next = remaining_candidates.next(&cx, &dep);
 
-            // Alright, for each candidate that's gotten this far, it meets the
-            // following requirements:
-            //
-            // 1. The version matches the dependency requirement listed for this
-            //    package
-            // 2. There are no activated versions for this package which are
-            //    semver/links-compatible, or there's an activated version which is
-            //    precisely equal to `candidate`.
-            //
-            // This means that we're going to attempt to activate each candidate in
-            // turn. We could possibly fail to activate each candidate, so we try
-            // each one in turn.
             let (candidate, has_another) = next.or_else(|conflicting| {
-                conflicting_activations.extend(conflicting);
-                // This dependency has no valid candidate. Backtrack until we
-                // find a dependency that does have a candidate to try, and try
-                // to activate that one.
+                // If we get here then our `remaining_candidates` was just
+                // exhausted, so `dep` failed to activate.
+                //
+                // It's our job here to backtrack, if possible, and find a
+                // different candidate to activate. If we can't find any
+                // candidates whatsoever then it's time to bail entirely.
                 trace!("{}[{}]>{} -- no candidates", parent.name(), cur, dep.name());
 
+                // Add all the reasons to our frame's list of conflicting
+                // activations, as we may use this to start backtracking later.
+                conflicting_activations.extend(conflicting);
+
+                // Use our list of `conflicting_activations` to add to our
+                // global list of past conflicting activations, effectively
+                // globally poisoning `dep` if `conflicting_activations` ever
+                // shows up again. We'll use the `past_conflicting_activations`
+                // below to determine if a dependency is poisoned and skip as
+                // much work as possible.
+                //
+                // If we're only here for the error messages then there's no
+                // need to try this as this dependency is already known to be
+                // bad.
+                //
+                // As we mentioned above with the `backtracked` variable if this
+                // local is set to `true` then our `conflicting_activations` may
+                // not be right, so we can't push into our global cache.
                 if !just_here_for_the_error_messages && !backtracked {
-                    // if `just_here_for_the_error_messages` then skip as it is already known to be bad.
-                    // if `backtracked` then `conflicting_activations` may not be complete so skip.
                     let past = past_conflicting_activations
                         .entry(dep.clone())
                         .or_insert_with(Vec::new);
@@ -1048,10 +1147,10 @@ fn activate_deps_loop(
                     }
                 }
 
-                find_candidate(&mut backtrack_stack, &parent, &conflicting_activations)
-                    .map(|(candidate, has_another, frame)| {
-                        // This resets the `remaining_deps` to
-                        // their state at the found level of the `backtrack_stack`.
+                match find_candidate(&mut backtrack_stack, &parent, &conflicting_activations) {
+                    Some((candidate, has_another, frame)) => {
+                        // Reset all of our local variables used with the
+                        // contents of `frame` to complete our backtrack.
                         cur = frame.cur;
                         cx = frame.context_backup;
                         remaining_deps = frame.deps_backup;
@@ -1061,28 +1160,37 @@ fn activate_deps_loop(
                         features = frame.features;
                         conflicting_activations = frame.conflicting_activations;
                         backtracked = true;
-                        (candidate, has_another)
-                    })
-                    .ok_or_else(|| {
-                        activation_error(
-                            &cx,
-                            registry.registry,
-                            &parent,
-                            &dep,
-                            &conflicting_activations,
-                            &candidates,
-                            config,
-                        )
-                    })
+                        Ok((candidate, has_another))
+                    }
+                    None => Err(activation_error(
+                        &cx,
+                        registry.registry,
+                        &parent,
+                        &dep,
+                        &conflicting_activations,
+                        &candidates,
+                        config,
+                    )),
+                }
             })?;
 
+            // If we're only here for the error messages then we know that this
+            // activation will fail one way or another. To that end if we've got
+            // more candidates we want to fast-forward to the last one as
+            // otherwise we'll just backtrack here anyway (helping us to skip
+            // some work).
             if just_here_for_the_error_messages && !backtracked && has_another {
                 continue;
             }
 
-            // We have a candidate. Clone a `BacktrackFrame`
-            // so we can add it to the `backtrack_stack` if activation succeeds.
-            // We clone now in case `activate` changes `cx` and then fails.
+            // We have a `candidate`. Create a `BacktrackFrame` so we can add it
+            // to the `backtrack_stack` later if activation succeeds.
+            //
+            // Note that if we don't actually have another candidate then there
+            // will be nothing to backtrack to so we skip construction of the
+            // frame. This is a relatively important optimization as a number of
+            // the `clone` calls below can be quite expensive, so we avoid them
+            // if we can.
             let backtrack = if has_another {
                 Some(BacktrackFrame {
                     cur,
@@ -1113,12 +1221,29 @@ fn activate_deps_loop(
                 candidate.summary.version()
             );
             let res = activate(&mut cx, registry, Some(&parent), candidate, &method);
-            successfully_activated = res.is_ok();
 
-            match res {
+            let successfully_activated = match res {
+                // Success! We've now activated our `candidate` in our context
+                // and we're almost ready to move on. We may want to scrap this
+                // frame in the end if it looks like it's not going to end well,
+                // so figure that out here.
                 Ok(Some((mut frame, dur))) => {
-                    // at this point we have technically already activated
-                    // but we may want to scrap it if it is not going to end well
+                    deps_time += dur;
+
+                    // Our `frame` here is a new package with its own list of
+                    // dependencies. Do a sanity check here of all those
+                    // dependencies by cross-referencing our global
+                    // `past_conflicting_activations`. Recall that map is a
+                    // global cache which lists sets of packages where, when
+                    // activated, the dependency is unresolvable.
+                    //
+                    // If any our our frame's dependencies fit in that bucket,
+                    // aka known unresolvable, then we extend our own set of
+                    // conflicting activations with theirs. We can do this
+                    // because the set of conflicts we found implies the
+                    // dependency can't be activated which implies that we
+                    // ourselves can't be activated, so we know that they
+                    // conflict with us.
                     let mut has_past_conflicting_dep = just_here_for_the_error_messages;
                     if !has_past_conflicting_dep {
                         if let Some(conflicting) = frame
@@ -1130,22 +1255,27 @@ fn activate_deps_loop(
                             .flat_map(|x| x)
                             .find(|con| cx.is_conflicting(None, con))
                         {
-                            // if any of them match than it will just backtrack to us
-                            // so let's save the effort.
                             conflicting_activations.extend(conflicting.clone());
                             has_past_conflicting_dep = true;
                         }
                     }
-                    let activate_for_error_message = has_past_conflicting_dep && !has_another && {
-                        // has_past_conflicting_dep -> One of this candidate deps will fail.
-                        // !has_another -> If the candidate is not accepted we will backtrack.
 
-                        // So the question is will the user see that we skipped this candidate?
+                    // Ok if we're in a "known failure" state for this frame we
+                    // may want to skip it altogether though. We don't want to
+                    // skip it though in the case that we're displaying error
+                    // messages to the user!
+                    //
+                    // Here we need to figure out if the user will see if we
+                    // skipped this candidate (if it's known to fail, aka has a
+                    // conflicting dep and we're the last candidate). If we're
+                    // here for the error messages, we can't skip it (but we can
+                    // prune extra work). If we don't have any candidates in our
+                    // backtrack stack then we're the last line of defense, so
+                    // we'll want to present an error message for sure.
+                    let activate_for_error_message = has_past_conflicting_dep && !has_another && {
                         just_here_for_the_error_messages || {
-                            // make sure we know about all the possible conflicts
                             conflicting_activations
                                 .extend(remaining_candidates.conflicting_prev_active.clone());
-                            // test if backtracking will get to the user
                             find_candidate(
                                 &mut backtrack_stack.clone(),
                                 &parent,
@@ -1153,18 +1283,28 @@ fn activate_deps_loop(
                             ).is_none()
                         }
                     };
+
+                    // If we're only here for the error messages then we know
+                    // one of our candidate deps will fail, meaning we will
+                    // fail and that none of the backtrack frames will find a
+                    // candidate that will help. Consequently let's clean up the
+                    // no longer needed backtrack frames.
                     if activate_for_error_message {
-                        // We know one of this candidate deps will fail,
-                        // which means we will fail,
-                        // and that none of the backtrack frames will
-                        // find a candidate that will help.
-                        // So lets clean up the useless backtrack frames.
                         backtrack_stack.clear();
                     }
-                    // if not has_another we we activate for the better error messages
+
+                    // If we don't know for a fact that we'll fail or if we're
+                    // just here for the error message then we push this frame
+                    // onto our list of to-be-resolve, which will generate more
+                    // work for us later on.
+                    //
+                    // Otherwise we're guaranteed to fail and were not here for
+                    // error messages, so we skip work and don't push anything
+                    // onto our stack.
                     frame.just_for_error_messages = has_past_conflicting_dep;
                     if !has_past_conflicting_dep || activate_for_error_message {
                         remaining_deps.push(frame);
+                        true
                     } else {
                         trace!(
                             "{}[{}]>{} skipping {} ",
@@ -1173,30 +1313,52 @@ fn activate_deps_loop(
                             dep.name(),
                             pid.version()
                         );
-                        successfully_activated = false;
+                        false
                     }
-                    deps_time += dur;
                 }
-                Ok(None) => (),
-                Err(ActivateError::Error(e)) => return Err(e),
+
+                // This candidate's already activated, so there's no extra work
+                // for us to do. Let's keep going.
+                Ok(None) => true,
+
+                // We failed with a super fatal error (like a network error), so
+                // bail out as quickly as possible as we can't reliably
+                // backtrack from errors like these
+                Err(ActivateError::Fatal(e)) => return Err(e),
+
+                // We failed due to a bland conflict, bah! Record this in our
+                // frame's list of conflicting activations as to why this
+                // candidate failed, and then move on.
                 Err(ActivateError::Conflict(id, reason)) => {
                     conflicting_activations.insert(id, reason);
+                    false
                 }
+            };
+
+            // If we've successfully activated then save off the backtrack frame
+            // if one was created, and otherwise break out of the inner
+            // activation loop as we're ready to move to the next dependency
+            if successfully_activated {
+                backtrack_stack.extend(backtrack);
+                break;
             }
 
-            // Add an entry to the `backtrack_stack` so
-            // we can try the next one if this one fails.
-            if successfully_activated {
-                if let Some(b) = backtrack {
-                    backtrack_stack.push(b);
-                }
-            } else {
-                if let Some(b) = backtrack {
-                    // `activate` changed `cx` and then failed so put things back.
-                    cx = b.context_backup;
-                } // else we are just using the cx for the error message so we can live with a corrupted one
+            // We've failed to activate this dependency, oh dear! Our call to
+            // `activate` above may have altered our `cx` local variable, so
+            // restore it back if we've got a backtrack frame.
+            //
+            // If we don't have a backtrack frame then we're just using the `cx`
+            // for error messages anyway so we can live with a little
+            // imprecision.
+            if let Some(b) = backtrack {
+                cx = b.context_backup;
             }
         }
+
+        // Ok phew, that loop was a big one! If we've broken out then we've
+        // successfully activated a candidate. Our stacks are all in place that
+        // we're ready to move on to the next dependency that needs activation,
+        // so loop back to the top of the function here.
     }
 
     Ok(cx)
@@ -1206,32 +1368,41 @@ fn activate_deps_loop(
 /// remaining candidates. For each one, also checks if rolling back
 /// could change the outcome of the failed resolution that caused backtracking
 /// in the first place. Namely, if we've backtracked past the parent of the
-/// failed dep, or any of the packages flagged as giving us trouble in `conflicting_activations`.
+/// failed dep, or any of the packages flagged as giving us trouble in
+/// `conflicting_activations`.
+///
 /// Read <https://github.com/rust-lang/cargo/pull/4834>
 /// For several more detailed explanations of the logic here.
-///
-/// If the outcome could differ, resets `cx` and `remaining_deps` to that
-/// level and returns the next candidate.
-/// If all candidates have been exhausted, returns None.
 fn find_candidate<'a>(
     backtrack_stack: &mut Vec<BacktrackFrame>,
     parent: &Summary,
     conflicting_activations: &HashMap<PackageId, ConflictReason>,
 ) -> Option<(Candidate, bool, BacktrackFrame)> {
     while let Some(mut frame) = backtrack_stack.pop() {
-        let next = frame.remaining_candidates.next(
-            frame.context_backup.prev_active(&frame.dep),
-            &frame.context_backup.links,
-        );
+        let next = frame
+            .remaining_candidates
+            .next(&frame.context_backup, &frame.dep);
+        let (candidate, has_another) = match next {
+            Ok(pair) => pair,
+            Err(_) => continue,
+        };
+        // When we're calling this method we know that `parent` failed to
+        // activate. That means that some dependency failed to get resolved for
+        // whatever reason, and all of those reasons (plus maybe some extras)
+        // are listed in `conflicting_activations`.
+        //
+        // This means that if all members of `conflicting_activations` are still
+        // active in this back up we know that we're guaranteed to not actually
+        // make any progress. As a result if we hit this condition we can
+        // completely skip this backtrack frame and move on to the next.
         if frame
             .context_backup
             .is_conflicting(Some(parent.package_id()), conflicting_activations)
         {
             continue;
         }
-        if let Ok((candidate, has_another)) = next {
-            return Some((candidate, has_another, frame));
-        }
+
+        return Some((candidate, has_another, frame));
     }
     None
 }
