@@ -1,6 +1,6 @@
 [package]
 name = "home"
-version = "0.3.1"
+version = "0.3.2"
 authors = [ "Brian Anderson <andersrb@gmail.com>" ]
 description = "Shared definitions of home directories"
 documentation = "https://docs.rs/home"
