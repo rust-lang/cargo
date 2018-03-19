@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
@@ -28,7 +28,8 @@ pub enum VersionControl {
 pub struct NewOptions {
     pub version_control: Option<VersionControl>,
     pub kind: NewProjectKind,
-    pub path: String,
+    /// Absolute path to the directory for the new project
+    pub path: PathBuf,
     pub name: Option<String>,
 }
 
@@ -72,7 +73,7 @@ impl NewOptions {
         version_control: Option<VersionControl>,
         bin: bool,
         lib: bool,
-        path: String,
+        path: PathBuf,
         name: Option<String>,
     ) -> CargoResult<NewOptions> {
         let kind = match (bin, lib) {
@@ -303,17 +304,16 @@ fn plan_new_source_file(bin: bool, project_name: String) -> SourceFileInformatio
 }
 
 pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
-    let path = config.cwd().join(&opts.path);
-    if fs::metadata(&path).is_ok() {
+    let path = &opts.path;
+    if fs::metadata(path).is_ok() {
         bail!(
             "destination `{}` already exists\n\n\
-             Use `cargo init` to initialize the directory\
-             ",
+             Use `cargo init` to initialize the directory",
             path.display()
         )
     }
 
-    let name = get_name(&path, opts)?;
+    let name = get_name(path, opts)?;
     check_name(name, opts)?;
 
     let mkopts = MkOptions {
@@ -335,10 +335,9 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
 }
 
 pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
-    let path = config.cwd().join(&opts.path);
+    let path = &opts.path;
 
-    let cargotoml_path = path.join("Cargo.toml");
-    if fs::metadata(&cargotoml_path).is_ok() {
+    if fs::metadata(&path.join("Cargo.toml")).is_ok() {
         bail!("`cargo init` cannot be run on existing Cargo projects")
     }
 
@@ -395,7 +394,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<()> {
 
     let mkopts = MkOptions {
         version_control,
-        path: &path,
+        path,
         name,
         bin: src_paths_types.iter().any(|x| x.bin),
         source_files: src_paths_types,
