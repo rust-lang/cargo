@@ -7,6 +7,7 @@ use std::str;
 use cargo;
 use cargotest::cargo_process;
 use cargotest::support::paths::{self, CargoPathExt};
+use cargotest::support::registry::Package;
 use cargotest::support::{basic_bin_manifest, execs, project, Project};
 use hamcrest::{assert_that, existing_file};
 
@@ -115,17 +116,46 @@ fn list_command_resolves_symlinks() {
 
 #[test]
 fn find_closest_biuld_to_build() {
-    let mut pr = cargo_process();
-    pr.arg("biuld");
-
     assert_that(
-        pr,
-        execs().with_status(1).with_stderr_contains(
+        cargo_process().arg("biuld"),
+        execs().with_status(101).with_stderr_contains(
             "\
-error: The subcommand 'biuld' wasn't recognized
-<tab>Did you mean 'build'?
+error: no such subcommand: `biuld`
+
+<tab>Did you mean `build`?
 ",
         ),
+    );
+
+    // But, if we actually have `biuld`, it must work!
+    // https://github.com/rust-lang/cargo/issues/5201
+    Package::new("cargo-biuld", "1.0.0")
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                println!("Similar, but not identical to, build");
+            }
+        "#,
+        )
+        .publish();
+
+    assert_that(
+        cargo_process().arg("install").arg("cargo-biuld"),
+        execs().with_status(0),
+    );
+    assert_that(
+        cargo_process().arg("biuld"),
+        execs()
+            .with_status(0)
+            .with_stdout("Similar, but not identical to, build\n"),
+    );
+    assert_that(
+        cargo_process().arg("--list"),
+        execs()
+            .with_status(0)
+            .with_stdout_contains("    build\n")
+            .with_stdout_contains("    biuld\n"),
     );
 }
 
