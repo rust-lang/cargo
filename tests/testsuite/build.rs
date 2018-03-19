@@ -5337,7 +5337,39 @@ fn build_filter_infer_profile() {
 }
 
 #[test]
-fn all_targets_with_and_without() {
+fn targets_selected_default() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    assert_that(
+        p.cargo("build").arg("-v"),
+        execs().with_status(0)
+        // bin
+        .with_stderr_contains("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
+            --emit=dep-info,link[..]")
+        // bench
+        .with_stderr_does_not_contain("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            -C opt-level=3 --test [..]")
+        // unit test
+        .with_stderr_does_not_contain("\
+            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
+            -C debuginfo=2 --test [..]"),
+    );
+}
+
+#[test]
+fn targets_selected_all() {
     let p = project("foo")
         .file(
             "Cargo.toml",
@@ -5363,23 +5395,6 @@ fn all_targets_with_and_without() {
             -C opt-level=3 --test [..]")
         // unit test
         .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
-            -C debuginfo=2 --test [..]"),
-    );
-    assert_that(p.cargo("clean"), execs().with_status(0));
-    assert_that(
-        p.cargo("build").arg("-v"),
-        execs().with_status(0)
-        // bin
-        .with_stderr_contains("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --crate-type bin \
-            --emit=dep-info,link[..]")
-        // bench
-        .with_stderr_does_not_contain("\
-            [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
-            -C opt-level=3 --test [..]")
-        // unit test
-        .with_stderr_does_not_contain("\
             [RUNNING] `rustc --crate-name foo src[/]main.rs --emit=dep-info,link \
             -C debuginfo=2 --test [..]"),
     );
