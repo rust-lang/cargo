@@ -450,6 +450,71 @@ Caused by:
 }
 
 #[test]
+fn cargo_compile_with_bin_and_crate_type() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+
+            [[bin]]
+            name = "the_foo_bin"
+            path = "src/foo.rs"
+            crate-type = ["cdylib", "rlib"]
+        "#,
+        )
+        .file("src/foo.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  the target `the_foo_bin` is a binary and can't have any crate-types set \
+(currently \"cdylib, rlib\")",
+        ),
+    )
+}
+
+#[test]
+fn cargo_compile_with_bin_and_proc() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+
+            [[bin]]
+            name = "the_foo_bin"
+            path = "src/foo.rs"
+            proc-macro = true
+        "#,
+        )
+        .file("src/foo.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(101).with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  the target `the_foo_bin` is a binary and can't have `proc-macro` set `true`",
+        ),
+    )
+}
+
+#[test]
 fn cargo_compile_with_invalid_lib_target_name() {
     let p = project("foo")
         .file(
