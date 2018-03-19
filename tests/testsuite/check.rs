@@ -606,7 +606,30 @@ fn check_virtual_all_implied() {
 }
 
 #[test]
-fn all_targets_with_and_without() {
+fn targets_selected_default() {
+    let foo = project("foo")
+        .file("Cargo.toml", SIMPLE_MANIFEST)
+        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", "pub fn smth() {}")
+        .file("examples/example1.rs", "fn main() {}")
+        .file("tests/test2.rs", "#[test] fn t() {}")
+        .file("benches/bench3.rs", "")
+        .build();
+
+    assert_that(
+        foo.cargo("check").arg("-v"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..]")
+            .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..]")
+            .with_stderr_does_not_contain("[..] --crate-name example1 examples[/]example1.rs [..]")
+            .with_stderr_does_not_contain("[..] --crate-name test2 tests[/]test2.rs [..]")
+            .with_stderr_does_not_contain("[..] --crate-name bench3 benches[/]bench3.rs [..]"),
+    );
+}
+
+#[test]
+fn targets_selected_all() {
     let foo = project("foo")
         .file("Cargo.toml", SIMPLE_MANIFEST)
         .file("src/main.rs", "fn main() {}")
@@ -625,17 +648,6 @@ fn all_targets_with_and_without() {
             .with_stderr_contains("[..] --crate-name example1 examples[/]example1.rs [..]")
             .with_stderr_contains("[..] --crate-name test2 tests[/]test2.rs [..]")
             .with_stderr_contains("[..] --crate-name bench3 benches[/]bench3.rs [..]"),
-    );
-    assert_that(foo.cargo("clean"), execs().with_status(0));
-    assert_that(
-        foo.cargo("check").arg("-v"),
-        execs()
-            .with_status(0)
-            .with_stderr_contains("[..] --crate-name foo src[/]lib.rs [..]")
-            .with_stderr_contains("[..] --crate-name foo src[/]main.rs [..]")
-            .with_stderr_does_not_contain("[..] --crate-name example1 examples[/]example1.rs [..]")
-            .with_stderr_does_not_contain("[..] --crate-name test2 tests[/]test2.rs [..]")
-            .with_stderr_does_not_contain("[..] --crate-name bench3 benches[/]bench3.rs [..]"),
     );
 }
 
