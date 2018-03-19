@@ -1,6 +1,6 @@
 [package]
 name = "home"
-version = "0.3.0"
+version = "0.3.1"
 authors = [ "Brian Anderson <andersrb@gmail.com>" ]
 description = "Shared definitions of home directories"
 documentation = "https://docs.rs/home"
@@ -8,9 +8,7 @@ repository = "https://github.com/brson/home"
 license = "MIT/Apache-2.0"
 
 [target."cfg(windows)".dependencies]
-scopeguard = "0.1.2"
-winapi = "0.2.8"
-kernel32-sys = "0.2.1"
-advapi32-sys = "0.2.0"
+scopeguard = "0.3"
+winapi = { version = "0.3", features = ["errhandlingapi", "handleapi", "processthreadsapi", "std", "winerror", "winnt"] }
 userenv-sys = "0.2.0"
 
