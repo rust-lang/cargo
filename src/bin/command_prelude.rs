@@ -1,10 +1,12 @@
 use std::path::PathBuf;
+use std::fs;
 
 use clap::{self, SubCommand};
 use cargo::CargoResult;
 use cargo::core::Workspace;
 use cargo::ops::{CompileFilter, CompileMode, CompileOptions, MessageFormat, NewOptions, Packages,
                  VersionControl};
+use cargo::util::paths;
 use cargo::util::important_paths::find_root_manifest_for_wd;
 
 pub use clap::{AppSettings, Arg, ArgMatches};
@@ -196,9 +198,28 @@ pub trait ArgMatchesExt {
         Ok(arg)
     }
 
+    /// Returns value of the `name` command-line argument as an absolute path
+    fn value_of_path(&self, name: &str, config: &Config) -> Option<PathBuf> {
+        self._value_of(name).map(|path| config.cwd().join(path))
+    }
+
     fn root_manifest(&self, config: &Config) -> CargoResult<PathBuf> {
-        let manifest_path = self._value_of("manifest-path");
-        find_root_manifest_for_wd(manifest_path, config.cwd())
+        if let Some(path) = self.value_of_path("manifest-path", config) {
+            // In general, we try to avoid normalizing paths in Cargo,
+            // but in this particular case we need it to fix #3586.
+            let path = paths::normalize_path(&path);
+            if !path.ends_with("Cargo.toml") {
+                bail!("the manifest-path must be a path to a Cargo.toml file")
+            }
+            if !fs::metadata(&path).is_ok() {
+                bail!(
+                    "manifest path `{}` does not exist",
+                    self._value_of("manifest-path").unwrap()
+                )
+            }
+            return Ok(path);
+        }
+        find_root_manifest_for_wd(config.cwd())
     }
 
     fn workspace<'a>(&self, config: &'a Config) -> CargoResult<Workspace<'a>> {
@@ -281,7 +302,7 @@ pub trait ArgMatchesExt {
         Ok(compile_opts)
     }
 
-    fn new_options(&self) -> CargoResult<NewOptions> {
+    fn new_options(&self, config: &Config) -> CargoResult<NewOptions> {
         let vcs = self._value_of("vcs").map(|vcs| match vcs {
             "git" => VersionControl::Git,
             "hg" => VersionControl::Hg,
@@ -294,7 +315,7 @@ pub trait ArgMatchesExt {
             vcs,
             self._is_present("bin"),
             self._is_present("lib"),
-            self._value_of("path").unwrap().to_string(),
+            self.value_of_path("path", config).unwrap(),
             self._value_of("name").map(|s| s.to_string()),
         )
     }
