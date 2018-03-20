@@ -5,7 +5,7 @@ use hamcrest::{assert_that, contains, is_not};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::dependency::Kind::{self, Development};
 use cargo::core::{Dependency, PackageId, Registry, Summary};
-use cargo::util::{CargoResult, ToUrl};
+use cargo::util::{CargoResult, Config, ToUrl};
 use cargo::core::resolver::{self, Method};
 
 fn resolve(
@@ -39,6 +39,44 @@ fn resolve(
         &mut registry,
         &HashSet::new(),
         None,
+        false,
+    )?;
+    let res = resolve.iter().cloned().collect();
+    Ok(res)
+}
+
+fn resolve_with_config(
+    pkg: &PackageId,
+    deps: Vec<Dependency>,
+    registry: &[Summary],
+    config: &Config,
+) -> CargoResult<Vec<PackageId>> {
+    struct MyRegistry<'a>(&'a [Summary]);
+    impl<'a> Registry for MyRegistry<'a> {
+        fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
+            for summary in self.0.iter() {
+                if dep.matches(summary) {
+                    f(summary.clone());
+                }
+            }
+            Ok(())
+        }
+        fn supports_checksums(&self) -> bool {
+            false
+        }
+        fn requires_precise(&self) -> bool {
+            false
+        }
+    }
+    let mut registry = MyRegistry(registry);
+    let summary = Summary::new(pkg.clone(), deps, BTreeMap::new(), None).unwrap();
+    let method = Method::Everything;
+    let resolve = resolver::resolve(
+        &[(summary, method)],
+        &[],
+        &mut registry,
+        &HashSet::new(),
+        Some(config),
         false,
     )?;
     let res = resolve.iter().cloned().collect();
@@ -318,6 +356,48 @@ fn test_resolving_maximum_version_with_transitive_deps() {
     );
     assert_that(&res, is_not(contains(names(&[("util", "1.0.1")]))));
     assert_that(&res, is_not(contains(names(&[("util", "1.1.1")]))));
+}
+
+#[test]
+fn test_resolving_minimum_version_with_transitive_deps() {
+    let reg = registry(vec![
+        pkg!(("util", "1.2.2")),
+        pkg!(("util", "1.0.0")),
+        pkg!(("util", "1.1.1")),
+        pkg!("foo" => [dep_req("util", "1.0.0")]),
+        pkg!("bar" => [dep_req("util", ">=1.0.1")]),
+    ]);
+
+    let mut config = Config::default().unwrap();
+    config
+        .configure(
+            1,
+            None,
+            &None,
+            false,
+            false,
+            &["minimal-versions".to_string()],
+        )
+        .unwrap();
+
+    let res = resolve_with_config(
+        &pkg_id("root"),
+        vec![dep_req("foo", "1.0.0"), dep_req("bar", "1.0.0")],
+        &reg,
+        &config,
+    ).unwrap();
+
+    assert_that(
+        &res,
+        contains(names(&[
+            ("root", "1.0.0"),
+            ("foo", "1.0.0"),
+            ("bar", "1.0.0"),
+            ("util", "1.1.1"),
+        ])),
+    );
+    assert_that(&res, is_not(contains(names(&[("util", "1.2.2")]))));
+    assert_that(&res, is_not(contains(names(&[("util", "1.0.0")]))));
 }
 
 #[test]
