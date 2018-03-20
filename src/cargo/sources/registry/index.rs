@@ -186,11 +186,11 @@ impl<'cfg> RegistryIndex<'cfg> {
         let summaries = summaries.filter(|s| match source_id.precise() {
             Some(p) if p.starts_with(&*dep.name()) && p[dep.name().len()..].starts_with('=') => {
                 let vers: Vec<&str> = p[dep.name().len() + 1..].split("->").collect();
-                    if dep.version_req().matches(&Version::parse(vers[0]).unwrap()) {
-                        return vers[1] == s.version().to_string()
-                    }
-
+                if dep.version_req().matches(&Version::parse(vers[0]).unwrap()) {
+                    return vers[1] == s.version().to_string()
+                } {
                     true
+                }
             }
             _ => true,
         });
