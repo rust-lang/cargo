@@ -314,3 +314,47 @@ fn everything_real_deep() {
     p.uncomment_root_manifest();
     assert_that(p.cargo("build"), execs().with_status(0));
 }
+
+#[test]
+fn change_package_version() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a-foo"
+                version = "0.2.0-alpha"
+                authors = []
+
+                [dependencies]
+                bar = { path = "bar", version = "0.2.0-alpha" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.2.0-alpha"
+                authors = []
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "Cargo.lock",
+            r#"
+                [[package]]
+                name = "foo"
+                version = "0.2.0"
+                dependencies = ["bar 0.2.0"]
+
+                [[package]]
+                name = "bar"
+                version = "0.2.0"
+            "#,
+        )
+        .build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+}

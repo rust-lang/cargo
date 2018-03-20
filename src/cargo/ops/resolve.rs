@@ -354,6 +354,18 @@ fn register_previous_locks<'a>(
     resolve: &'a Resolve,
     keep: &Fn(&&'a PackageId) -> bool,
 ) {
+    let path_pkg = |id: &SourceId| {
+        if !id.is_path() {
+            return None;
+        }
+        if let Ok(path) = id.url().to_file_path() {
+            if let Ok(pkg) = ws.load(&path.join("Cargo.toml")) {
+                return Some(pkg);
+            }
+        }
+        None
+    };
+
     // Ok so we've been passed in a `keep` function which basically says "if I
     // return true then this package wasn't listed for an update on the command
     // line". AKA if we run `cargo update -p foo` then `keep(bar)` will return
@@ -376,10 +388,22 @@ fn register_previous_locks<'a>(
     // however, nothing else in the dependency graph depends on `log` and the
     // newer version of `serde` requires a new version of `log` it'll get pulled
     // in (as we didn't accidentally lock it to an old version).
+    //
+    // Additionally here we process all path dependencies listed in the previous
+    // resolve. They can not only have their dependencies change but also
+    // the versions of the package change as well. If this ends up happening
+    // then we want to make sure we don't lock a package id node that doesn't
+    // actually exist. Note that we don't do transitive visits of all the
+    // package's dependencies here as that'll be covered below to poison those
+    // if they changed.
     let mut avoid_locking = HashSet::new();
     for node in resolve.iter() {
         if !keep(&node) {
             add_deps(resolve, node, &mut avoid_locking);
+        } else if let Some(pkg) = path_pkg(node.source_id()) {
+            if pkg.package_id() != node {
+                avoid_locking.insert(node);
+            }
         }
     }
 
@@ -425,13 +449,9 @@ fn register_previous_locks<'a>(
 
             // If this is a path dependency then try to push it onto our
             // worklist
-            if source.is_path() {
-                if let Ok(path) = source.url().to_file_path() {
-                    if let Ok(pkg) = ws.load(&path.join("Cargo.toml")) {
-                        path_deps.push(pkg);
-                    }
-                    continue;
-                }
+            if let Some(pkg) = path_pkg(source) {
+                path_deps.push(pkg);
+                continue;
             }
 
             // If we match *anything* in the dependency graph then we consider
