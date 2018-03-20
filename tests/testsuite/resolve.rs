@@ -45,6 +45,7 @@ fn resolve(
     Ok(res)
 }
 
+// Clone of resolve() from above that also passes down a Config instance.
 fn resolve_with_config(
     pkg: &PackageId,
     deps: Vec<Dependency>,
