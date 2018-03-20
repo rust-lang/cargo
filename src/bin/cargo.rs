@@ -144,7 +144,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&str]) -> Cli
     let cargo_exe = config.cargo_exe()?;
     let err = match util::process(&command)
         .env(cargo::CARGO_ENV, cargo_exe)
-        .args(&args[1..])
+        .args(args)
         .exec_replace()
     {
         Ok(()) => return Ok(()),

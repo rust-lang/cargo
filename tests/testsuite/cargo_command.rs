@@ -8,7 +8,7 @@ use cargo;
 use cargotest::cargo_process;
 use cargotest::support::paths::{self, CargoPathExt};
 use cargotest::support::registry::Package;
-use cargotest::support::{basic_bin_manifest, execs, project, Project};
+use cargotest::support::{basic_bin_manifest, cargo_exe, execs, project, Project};
 use hamcrest::{assert_that, existing_file};
 
 #[cfg_attr(windows, allow(dead_code))]
@@ -88,8 +88,6 @@ fn list_command_looks_at_path() {
 #[cfg(unix)]
 #[test]
 fn list_command_resolves_symlinks() {
-    use cargotest::support::cargo_exe;
-
     let proj = project("list-non-overlapping").build();
     let proj = fake_file(
         proj,
@@ -227,8 +225,6 @@ fn override_cargo_home() {
 
 #[test]
 fn cargo_subcommand_env() {
-    use cargotest::support::cargo_exe;
-
     let src = format!(
         r#"
         use std::env;
@@ -259,6 +255,51 @@ fn cargo_subcommand_env() {
     assert_that(
         pr.arg("envtest").env("PATH", &path),
         execs().with_status(0).with_stdout(cargo.to_str().unwrap()),
+    );
+}
+
+#[test]
+fn cargo_subcommand_args() {
+    let p = project("cargo-foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "cargo-foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                let args: Vec<_> = ::std::env::args().collect();
+                println!("{:?}", args);
+            }
+        "#,
+        )
+        .build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    let cargo_foo_bin = p.bin("cargo-foo");
+    assert_that(&cargo_foo_bin, existing_file());
+
+    let mut path = path();
+    path.push(p.target_debug_dir());
+    let path = env::join_paths(path.iter()).unwrap();
+
+    assert_that(
+        cargo_process()
+            .env("PATH", &path)
+            .arg("foo")
+            .arg("bar")
+            .arg("-v")
+            .arg("--help"),
+        execs().with_status(0).with_stdout(format!(
+            r#"[{:?}, "foo", "bar", "-v", "--help"]"#,
+            cargo_foo_bin
+        )),
     );
 }
 
