@@ -446,7 +446,7 @@ pub fn modify_owners(config: &Config, opts: &OwnersOptions) -> CargoResult<()> {
     let name = match opts.krate {
         Some(ref name) => name.clone(),
         None => {
-            let manifest_path = find_root_manifest_for_wd(None, config.cwd())?;
+            let manifest_path = find_root_manifest_for_wd(config.cwd())?;
             let ws = Workspace::new(&manifest_path, config)?;
             ws.current()?.package_id().name().to_string()
         }
@@ -507,7 +507,7 @@ pub fn yank(
     let name = match krate {
         Some(name) => name,
         None => {
-            let manifest_path = find_root_manifest_for_wd(None, config.cwd())?;
+            let manifest_path = find_root_manifest_for_wd(config.cwd())?;
             let ws = Workspace::new(&manifest_path, config)?;
             ws.current()?.package_id().name().to_string()
         }
