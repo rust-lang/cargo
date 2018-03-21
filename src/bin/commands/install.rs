@@ -6,7 +6,7 @@ use cargo::util::ToUrl;
 
 pub fn cli() -> App {
     subcommand("install")
-        .about("Create a new cargo package in an existing directory")
+        .about("Install a Rust binary")
         .arg(Arg::with_name("crate").multiple(true))
         .arg(
             opt("version", "Specify a version to install from crates.io")
