@@ -44,6 +44,7 @@ pub fn targets(
         package_root,
         package_name,
         warnings,
+        errors,
         has_lib,
     )?);
 
@@ -164,6 +165,7 @@ fn clean_bins(
     package_root: &Path,
     package_name: &str,
     warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
     has_lib: bool,
 ) -> CargoResult<Vec<Target>> {
     let inferred = inferred_bins(package_root, package_name);
@@ -183,6 +185,26 @@ fn clean_bins(
         validate_has_name(bin, "binary", "bin")?;
 
         let name = bin.name();
+
+        if let Some(crate_types) = bin.crate_types() {
+            if !crate_types.is_empty() {
+                errors.push(format!(
+                    "the target `{}` is a binary and can't have any \
+                     crate-types set (currently \"{}\")",
+                    name,
+                    crate_types.join(", ")
+                ));
+            }
+        }
+
+        if bin.proc_macro() == Some(true) {
+            errors.push(format!(
+                "the target `{}` is a binary and can't have `proc-macro` \
+                 set `true`",
+                name
+            ));
+        }
+
         if is_bad_artifact_name(&name) {
             bail!("the binary target name `{}` is forbidden", name)
         }
