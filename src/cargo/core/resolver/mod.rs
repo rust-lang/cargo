@@ -1307,10 +1307,12 @@ fn activate_deps_loop(
                                                         && cx.is_conflicting(None, con)
                                                 })
                                             }) {
-                                            conflicting_activations.insert(
-                                                debs.parent.package_id().clone(),
-                                                conflict.get(&pid).unwrap().clone(),
-                                            );
+                                            let mut conflict = conflict.clone();
+                                            let rel = conflict.get(&pid).unwrap().clone();
+                                            conflict.insert(debs.parent.package_id().clone(), rel);
+                                            conflict.remove(&pid);
+
+                                            conflicting_activations.extend(conflict);
                                             has_past_conflicting_dep = true;
                                             break 'deps;
                                         }
