@@ -14,7 +14,7 @@ use url::Url;
 
 use core::{GitReference, PackageIdSpec, Profiles, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use core::{Dependency, Manifest, PackageId, Summary, Target};
-use core::{EitherManifest, Epoch, Feature, Features, VirtualManifest};
+use core::{EitherManifest, Edition, Feature, Features, VirtualManifest};
 use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Lto, ManifestMetadata, Profile};
 use sources::CRATES_IO;
@@ -798,17 +798,17 @@ impl TomlManifest {
             None => false,
         };
 
-        let epoch = if let Some(ref epoch) = project.rust {
+        let edition = if let Some(ref edition) = project.rust {
             features
-                .require(Feature::epoch())
-                .chain_err(|| "epoches are unstable")?;
-            if let Ok(epoch) = epoch.parse() {
-                epoch
+                .require(Feature::edition())
+                .chain_err(|| "editiones are unstable")?;
+            if let Ok(edition) = edition.parse() {
+                edition
             } else {
                 bail!("the `rust` key must be one of: `2015`, `2018`")
             }
         } else {
-            Epoch::Epoch2015
+            Edition::Edition2015
         };
         let mut manifest = Manifest::new(
             summary,
@@ -824,7 +824,7 @@ impl TomlManifest {
             patch,
             workspace_config,
             features,
-            epoch,
+            edition,
             project.im_a_teapot,
             Rc::clone(me),
         );

@@ -9,7 +9,7 @@ use serde::ser::{self, Serialize};
 use serde::de::{self, Deserialize};
 use serde_json;
 
-use core::{Epoch, Package, TargetKind};
+use core::{Edition, Package, TargetKind};
 use util;
 use util::{internal, profile, Dirty, Fresh, Freshness};
 use util::errors::{CargoResult, CargoResultExt};
@@ -155,7 +155,7 @@ pub struct Fingerprint {
     #[serde(skip_serializing, skip_deserializing)]
     memoized_hash: Mutex<Option<u64>>,
     rustflags: Vec<String>,
-    epoch: Epoch,
+    edition: Edition,
 }
 
 fn serialize_deps<S>(deps: &[(String, Arc<Fingerprint>)], ser: S) -> Result<S::Ok, S::Error>
@@ -187,7 +187,7 @@ where
                     features: String::new(),
                     deps: Vec::new(),
                     memoized_hash: Mutex::new(Some(hash)),
-                    epoch: Epoch::Epoch2015,
+                    edition: Edition::Edition2015,
                     rustflags: Vec::new(),
                 }),
             )
@@ -271,8 +271,8 @@ impl Fingerprint {
         if self.local.len() != old.local.len() {
             bail!("local lens changed");
         }
-        if self.epoch != old.epoch {
-            bail!("epoch changed")
+        if self.edition != old.edition {
+            bail!("edition changed")
         }
         for (new, old) in self.local.iter().zip(&old.local) {
             match (new, old) {
@@ -350,7 +350,7 @@ impl hash::Hash for Fingerprint {
             profile,
             ref deps,
             ref local,
-            epoch,
+            edition,
             ref rustflags,
             ..
         } = *self;
@@ -361,7 +361,7 @@ impl hash::Hash for Fingerprint {
             path,
             profile,
             local,
-            epoch,
+            edition,
             rustflags,
         ).hash(h);
 
@@ -467,7 +467,7 @@ fn calculate<'a, 'cfg>(
         deps,
         local: vec![local],
         memoized_hash: Mutex::new(None),
-        epoch: unit.pkg.manifest().epoch(),
+        edition: unit.pkg.manifest().edition(),
         rustflags: extra_flags,
     });
     cx.fingerprints.insert(*unit, Arc::clone(&fingerprint));
@@ -520,7 +520,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(
         deps: Vec::new(),
         local,
         memoized_hash: Mutex::new(None),
-        epoch: Epoch::Epoch2015,
+        edition: Edition::Edition2015,
         rustflags: Vec::new(),
     };
     let compare = compare_old_fingerprint(&loc, &fingerprint);
