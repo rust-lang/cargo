@@ -33,7 +33,7 @@ pub fn run(
             !a.is_lib() && !a.is_custom_build() && if !options.filter.is_specific() {
                 a.is_bin()
             } else {
-                options.filter.matches(a)
+                options.filter.target_run(a)
             }
         })
         .map(|bin| bin.name())

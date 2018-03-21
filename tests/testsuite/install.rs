@@ -1222,9 +1222,8 @@ fn dev_dependencies_no_check() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    // --bins is needed because of #5134
-    assert_that(p.cargo("build").arg("--bins"), execs().with_status(101));
-    assert_that(p.cargo("install").arg("--bins"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(101));
+    assert_that(p.cargo("install"), execs().with_status(0));
 }
 
 #[test]
@@ -1256,10 +1255,9 @@ fn dev_dependencies_lock_file_untouched() {
         .file("a/src/lib.rs", "")
         .build();
 
-    // --bins is needed because of #5134
-    assert_that(p.cargo("build").arg("--bins"), execs().with_status(0));
+    assert_that(p.cargo("build"), execs().with_status(0));
     let lock = p.read_lockfile();
-    assert_that(p.cargo("install").arg("--bins"), execs().with_status(0));
+    assert_that(p.cargo("install"), execs().with_status(0));
     let lock2 = p.read_lockfile();
     assert!(lock == lock2, "different lockfiles");
 }
