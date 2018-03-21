@@ -974,7 +974,7 @@ fn activate_deps_loop(
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = BinaryHeap::new();
 
-    // `past_conflicting_activations`is a cache of the reasons for each time we
+    // `past_conflicting_activations` is a cache of the reasons for each time we
     // backtrack. For example after several backtracks we may have:
     //
     //  past_conflicting_activations[`foo = "^1.0.2"`] = vec![
@@ -1007,6 +1007,10 @@ fn activate_deps_loop(
         Dependency,
         Vec<HashMap<PackageId, ConflictReason>>,
     > = HashMap::new();
+
+    // `past_conflict_triggers` is an inverse-index of `past_conflicting_activations`.
+    // For every `PackageId` this lists the `Dependency`s that mention it in `past_conflicting_activations`.
+    let mut past_conflict_triggers: HashMap<PackageId, HashSet<Dependency>> = HashMap::new();
 
     // Activate all the initial summaries to kick off some work.
     for &(ref summary, ref method) in summaries {
@@ -1165,6 +1169,12 @@ fn activate_deps_loop(
                             conflicting_activations
                         );
                         past.push(conflicting_activations.clone());
+                        for c in conflicting_activations.keys() {
+                            past_conflict_triggers
+                                .entry(c.clone())
+                                .or_insert_with(HashSet::new)
+                                .insert(dep.clone());
+                        }
                     }
                 }
 
@@ -1284,22 +1294,27 @@ fn activate_deps_loop(
                         }
                     }
                     if !has_past_conflicting_dep {
-                        // TODO: this is ugly and slow, replace!
-                        'deps: for debs in remaining_deps.iter() {
-                            for (_, (other_dep, _, _)) in debs.remaining_siblings.clone() {
-                                if let Some(conflict) = past_conflicting_activations
-                                    .get(&other_dep)
-                                    .and_then(|past_bad| {
-                                        past_bad
-                                            .iter()
-                                            .find(|conflicting| conflicting.get(&pid).is_some())
-                                    }) {
-                                    conflicting_activations.insert(
-                                        debs.parent.package_id().clone(),
-                                        conflict.get(&pid).unwrap().clone(),
-                                    );
-                                    has_past_conflicting_dep = true;
-                                    break 'deps;
+                        // TODO: this is ugly, replace!
+                        if let Some(rel_deps) = past_conflict_triggers.get(&pid) {
+                            'deps: for debs in remaining_deps.iter() {
+                                for (_, (other_dep, _, _)) in debs.remaining_siblings.clone() {
+                                    if rel_deps.contains(&other_dep) {
+                                        if let Some(conflict) = past_conflicting_activations
+                                            .get(&other_dep)
+                                            .and_then(|past_bad| {
+                                                past_bad.iter().find(|con| {
+                                                    con.contains_key(&pid)
+                                                        && cx.is_conflicting(None, con)
+                                                })
+                                            }) {
+                                            conflicting_activations.insert(
+                                                debs.parent.package_id().clone(),
+                                                conflict.get(&pid).unwrap().clone(),
+                                            );
+                                            has_past_conflicting_dep = true;
+                                            break 'deps;
+                                        }
+                                    }
                                 }
                             }
                         }
