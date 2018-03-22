@@ -169,7 +169,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(
     let mut queue = JobQueue::new(&cx);
 
     cx.prepare()?;
-    cx.probe_target_info(&units)?;
+    cx.probe_target_info()?;
     cx.build_used_in_plugin_map(&units)?;
     custom_build::build_map(&mut cx, &units)?;
 
