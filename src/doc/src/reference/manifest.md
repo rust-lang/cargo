@@ -296,7 +296,7 @@ lto = false        # Link Time Optimization usually reduces size of binaries
                    # and static libraries. Increases compilation time.
                    # If true, passes `-C lto` flag to the compiler, and if a
                    # string is specified like 'thin' then `-C lto=thin` will
-                   # be passed
+                   # be passed.
 debug-assertions = true # controls whether debug assertions are enabled
                    # (e.g. debug_assert!() and arithmetic overflow checks)
 codegen-units = 16 # if > 1 enables parallel code generation which improves
@@ -312,7 +312,7 @@ overflow-checks = true # use overflow checks for integer arithmetic.
 opt-level = 3
 debug = false
 rpath = false
-lto = false
+lto = 'thin'
 debug-assertions = false
 codegen-units = 16
 panic = 'unwind'
@@ -336,7 +336,7 @@ overflow-checks = true
 opt-level = 3
 debug = false
 rpath = false
-lto = false
+lto = 'thin'
 debug-assertions = false
 codegen-units = 16
 panic = 'unwind'
