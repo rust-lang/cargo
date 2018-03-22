@@ -1294,30 +1294,38 @@ fn activate_deps_loop(
                         }
                     }
                     if !has_past_conflicting_dep {
-                        // TODO: this is ugly, replace!
                         if let Some(rel_deps) = past_conflict_triggers.get(&pid) {
-                            'deps: for debs in remaining_deps.iter() {
-                                for (_, (other_dep, _, _)) in debs.remaining_siblings.clone() {
-                                    if rel_deps.contains(&other_dep) {
-                                        if let Some(conflict) = past_conflicting_activations
-                                            .get(&other_dep)
-                                            .and_then(|past_bad| {
-                                                past_bad.iter().find(|con| {
-                                                    con.contains_key(&pid)
-                                                        && cx.is_conflicting(None, con)
-                                                })
-                                            }) {
-                                            let mut conflict = conflict.clone();
-                                            let rel = conflict.get(&pid).unwrap().clone();
-                                            conflict.insert(debs.parent.package_id().clone(), rel);
-                                            conflict.remove(&pid);
+                            if let Some((other_parent, conflict)) = remaining_deps
+                                .iter()
+                                .flat_map(|other| {
+                                    other
+                                        .remaining_siblings
+                                        .clone()
+                                        .filter(|&(_, (ref d, _, _))| rel_deps.contains(d))
+                                        .map(move |(_, (d, _, _))| {
+                                            (other.parent.package_id().clone(), d)
+                                        })
+                                })
+                                .filter_map(|(other_parent, other_deps)| {
+                                    past_conflicting_activations
+                                        .get(&other_deps)
+                                        .map(|v| (other_parent, v))
+                                })
+                                .flat_map(|(other_parent, past_bad)| {
+                                    past_bad
+                                        .iter()
+                                        .filter(|con| con.contains_key(&pid))
+                                        .map(move |c| (other_parent.clone(), c))
+                                })
+                                .find(|&(_, ref con)| cx.is_conflicting(None, con))
+                            {
+                                let mut conflict = conflict.clone();
+                                let rel = conflict.get(&pid).unwrap().clone();
+                                conflict.insert(other_parent.clone(), rel);
+                                conflict.remove(&pid);
 
-                                            conflicting_activations.extend(conflict);
-                                            has_past_conflicting_dep = true;
-                                            break 'deps;
-                                        }
-                                    }
-                                }
+                                conflicting_activations.extend(conflict);
+                                has_past_conflicting_dep = true;
                             }
                         }
                     }
