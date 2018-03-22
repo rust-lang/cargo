@@ -10,8 +10,11 @@ use ops::{self, BuildConfig, Context, Kind, Unit};
 
 pub struct CleanOptions<'a> {
     pub config: &'a Config,
+    /// A list of packages to clean. If empty, everything is cleaned.
     pub spec: Vec<String>,
+    /// The target arch triple to clean, or None for the host arch
     pub target: Option<String>,
+    /// Whether to clean the release directory
     pub release: bool,
 }
 
