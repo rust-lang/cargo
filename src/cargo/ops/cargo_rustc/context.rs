@@ -1,6 +1,6 @@
 #![allow(deprecated)]
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 use std::env;
 use std::fmt;
@@ -234,60 +234,18 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// Ensure that we've collected all target-specific information to compile
     /// all the units mentioned in `units`.
-    pub fn probe_target_info(&mut self, units: &[Unit<'a>]) -> CargoResult<()> {
-        let mut crate_types = BTreeSet::new();
-        let mut visited_units = HashSet::new();
-        // pre-fill with `bin` for learning about tests (nothing may be
-        // explicitly `bin`) as well as `rlib` as it's the coalesced version of
-        // `lib` in the compiler and we're not sure which we'll see.
-        crate_types.insert("bin".to_string());
-        crate_types.insert("rlib".to_string());
-        for unit in units {
-            self.visit_crate_type(unit, &mut crate_types, &mut visited_units)?;
-        }
-        debug!("probe_target_info: crate_types={:?}", crate_types);
-        self.probe_target_info_kind(&crate_types, Kind::Target)?;
+    pub fn probe_target_info(&mut self) -> CargoResult<()> {
+        debug!("probe_target_info");
+        self.probe_target_info_kind(Kind::Target)?;
         if self.requested_target().is_none() {
             self.host_info = self.target_info.clone();
         } else {
-            self.probe_target_info_kind(&crate_types, Kind::Host)?;
+            self.probe_target_info_kind(Kind::Host)?;
         }
         Ok(())
     }
 
-    /// A recursive function that checks all crate types (`rlib`, ...) are in `crate_types`
-    /// for this unit and its dependencies.
-    ///
-    /// Tracks visited units to avoid unnecessary work.
-    fn visit_crate_type(
-        &self,
-        unit: &Unit<'a>,
-        crate_types: &mut BTreeSet<String>,
-        visited_units: &mut HashSet<Unit<'a>>,
-    ) -> CargoResult<()> {
-        if !visited_units.insert(*unit) {
-            return Ok(());
-        }
-        for target in unit.pkg.manifest().targets() {
-            crate_types.extend(target.rustc_crate_types().iter().map(|s| {
-                if *s == "lib" {
-                    "rlib".to_string()
-                } else {
-                    s.to_string()
-                }
-            }));
-        }
-        for dep in self.dep_targets(unit)? {
-            self.visit_crate_type(&dep, crate_types, visited_units)?;
-        }
-        Ok(())
-    }
-
-    fn probe_target_info_kind(
-        &mut self,
-        crate_types: &BTreeSet<String>,
-        kind: Kind,
-    ) -> CargoResult<()> {
+    fn probe_target_info_kind(&mut self, kind: Kind) -> CargoResult<()> {
         let rustflags = env_args(
             self.config,
             &self.build_config,
@@ -309,8 +267,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
 
         let crate_type_process = process.clone();
-
-        for crate_type in crate_types {
+        const KNOWN_CRATE_TYPES: &[&str] =
+            &["bin", "rlib", "dylib", "cdylib", "staticlib", "proc-macro"];
+        for crate_type in KNOWN_CRATE_TYPES.iter() {
             process.arg("--crate-type").arg(crate_type);
         }
 
@@ -331,7 +290,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let output = str::from_utf8(&output.stdout).unwrap();
         let mut lines = output.lines();
         let mut map = HashMap::new();
-        for crate_type in crate_types {
+        for crate_type in KNOWN_CRATE_TYPES {
             let out = parse_crate_type(crate_type, error, &mut lines)?;
             map.insert(crate_type.to_string(), out);
         }

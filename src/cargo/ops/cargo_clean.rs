@@ -99,7 +99,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         }
     }
 
-    cx.probe_target_info(&units)?;
+    cx.probe_target_info()?;
 
     for unit in units.iter() {
         rm_rf(&cx.fingerprint_dir(unit), config)?;

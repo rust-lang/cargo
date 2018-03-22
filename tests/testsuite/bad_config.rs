@@ -529,7 +529,7 @@ fn bad_crate_type() {
     assert_that(
         p.cargo("build").arg("-v"),
         execs().with_status(101).with_stderr_contains(
-            "error: failed to run `rustc` to learn about target-specific information",
+            "error: failed to run `rustc` to learn about crate-type bad_type information",
         ),
     );
 }
