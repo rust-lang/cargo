@@ -1287,12 +1287,27 @@ fn activate_deps_loop(
                             .find(|con| cx.is_conflicting(None, con))
                         {
                             let mut conflicting = conflicting.clone();
+
+                            // If one of our deps conflicts with
+                            // then we will not succeed.
+                            // How ever if we are part of the reason that
+                            // one of our deps conflicts then
+                            // we can make a stronger statement
+                            // because we will definitely be activated when
+                            // we try our dep.
                             conflicting.remove(&pid);
 
                             conflicting_activations.extend(conflicting);
                             has_past_conflicting_dep = true;
                         }
                     }
+                    // If any of `remaining_deps` are known unresolvable with
+                    // us activated, then we extend our own set of
+                    // conflicting activations with theirs and its parent. We can do this
+                    // because the set of conflicts we found implies the
+                    // dependency can't be activated which implies that we
+                    // ourselves are incompatible with that dep, so we know that deps
+                    // parent conflict with us.
                     if !has_past_conflicting_dep {
                         if let Some(rel_deps) = past_conflict_triggers.get(&pid) {
                             if let Some((other_parent, conflict)) = remaining_deps
@@ -1300,7 +1315,9 @@ fn activate_deps_loop(
                                 .flat_map(|other| {
                                     other
                                         .remaining_siblings
+                                        // search thru all `remaining_deps`
                                         .clone()
+                                        // for deps related to us
                                         .filter(|&(_, (ref d, _, _))| rel_deps.contains(d))
                                         .map(move |(_, (d, _, _))| {
                                             (other.parent.package_id().clone(), d)
@@ -1314,6 +1331,7 @@ fn activate_deps_loop(
                                 .flat_map(|(other_parent, past_bad)| {
                                     past_bad
                                         .iter()
+                                        // for deps that refer to us
                                         .filter(|con| con.contains_key(&pid))
                                         .map(move |c| (other_parent.clone(), c))
                                 })
@@ -1321,6 +1339,13 @@ fn activate_deps_loop(
                             {
                                 let mut conflict = conflict.clone();
                                 let rel = conflict.get(&pid).unwrap().clone();
+                                // The conflict we found is
+                                // "other dep will not succeed if we are activated."
+                                // We want to add
+                                // "our dep will not succeed if other dep is in remaining_deps"
+                                // but that is not how the cache is set up.
+                                // So we add the less general but much faster,
+                                // "our dep will not succeed if other dep's parent is activated".
                                 conflict.insert(other_parent.clone(), rel);
                                 conflict.remove(&pid);
 
