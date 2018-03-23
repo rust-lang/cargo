@@ -134,7 +134,7 @@ Some common cargo commands are (see all commands with --list):
     install     Install a Rust binary
     uninstall   Uninstall a Rust binary
 
-See 'cargo help <command>' for more information on a specific command.",
+See 'cargo help <command>' for more information on a specific command.\n",
         )
         .arg(opt("version", "Print version info and exit").short("V"))
         .arg(opt("list", "List installed commands"))
