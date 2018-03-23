@@ -1,4 +1,5 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashSet};
+use std::collections::hash_map::{Entry, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str;
@@ -597,12 +598,10 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
             }
         }
 
-        let prev = out.entry(*unit).or_insert_with(BuildScripts::default);
-        for (pkg, kind) in ret.to_link {
-            add_to_link(prev, &pkg, kind);
+        match out.entry(*unit) {
+            Entry::Vacant(entry) => Ok(entry.insert(ret)),
+            Entry::Occupied(_) => panic!("cyclic dependencies in `build_map`"),
         }
-        prev.plugins.extend(ret.plugins);
-        Ok(prev)
     }
 
     // When adding an entry to 'to_link' we only actually push it on if the
