@@ -56,7 +56,7 @@ pub fn prepare_target<'a, 'cfg>(
         unit.pkg.package_id(),
         unit.target.name()
     ));
-    let new = cx.fingerprint_dir(unit);
+    let new = cx.files().fingerprint_dir(unit);
     let loc = new.join(&filename(cx, unit));
 
     debug!("fingerprint at: {}", loc.display());
@@ -84,7 +84,7 @@ pub fn prepare_target<'a, 'cfg>(
         source.verify(unit.pkg.package_id())?;
     }
 
-    let root = cx.out_dir(unit);
+    let root = cx.files().out_dir(unit);
     let mut missing_outputs = false;
     if unit.profile.doc {
         missing_outputs = !root.join(unit.target.crate_name())
@@ -103,7 +103,7 @@ pub fn prepare_target<'a, 'cfg>(
     }
 
     let allow_failure = unit.profile.rustc_args.is_some();
-    let target_root = cx.target_root().to_path_buf();
+    let target_root = cx.files().target_root().to_path_buf();
     let write_fingerprint = Work::new(move |_| {
         match fingerprint.update_local(&target_root) {
             Ok(()) => {}
@@ -443,7 +443,7 @@ fn calculate<'a, 'cfg>(
     let local = if use_dep_info(unit) {
         let dep_info = dep_info_loc(cx, unit);
         let mtime = dep_info_mtime_if_fresh(unit.pkg, &dep_info)?;
-        LocalFingerprint::mtime(cx.target_root(), mtime, &dep_info)
+        LocalFingerprint::mtime(cx.files().target_root(), mtime, &dep_info)
     } else {
         let fingerprint = pkg_fingerprint(cx, unit.pkg)?;
         LocalFingerprint::Precalculated(fingerprint)
@@ -504,7 +504,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(
     unit: &Unit<'a>,
 ) -> CargoResult<Preparation> {
     let _p = profile::start(format!("fingerprint build cmd: {}", unit.pkg.package_id()));
-    let new = cx.fingerprint_dir(unit);
+    let new = cx.files().fingerprint_dir(unit);
     let loc = new.join("build");
 
     debug!("fingerprint at: {}", loc.display());
@@ -538,7 +538,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(
     let state = Arc::clone(&cx.build_state);
     let key = (unit.pkg.package_id().clone(), unit.kind);
     let pkg_root = unit.pkg.root().to_path_buf();
-    let target_root = cx.target_root().to_path_buf();
+    let target_root = cx.files().target_root().to_path_buf();
     let write_fingerprint = Work::new(move |_| {
         if let Some(output_path) = output_path {
             let outputs = state.outputs.lock().unwrap();
@@ -596,7 +596,7 @@ fn build_script_local_fingerprints<'a, 'cfg>(
     // dependencies as well as env vars listed as dependencies. Process them all
     // here.
     Ok((
-        local_fingerprints_deps(deps, cx.target_root(), unit.pkg.root()),
+        local_fingerprints_deps(deps, cx.files().target_root(), unit.pkg.root()),
         Some(output),
     ))
 }
@@ -636,7 +636,7 @@ fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
 
 /// Prepare for work when a package starts to build
 pub fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<()> {
-    let new1 = cx.fingerprint_dir(unit);
+    let new1 = cx.files().fingerprint_dir(unit);
 
     if fs::metadata(&new1).is_err() {
         fs::create_dir(&new1)?;
@@ -646,7 +646,8 @@ pub fn prepare_init<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> Ca
 }
 
 pub fn dep_info_loc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> PathBuf {
-    cx.fingerprint_dir(unit)
+    cx.files()
+        .fingerprint_dir(unit)
         .join(&format!("dep-{}", filename(cx, unit)))
 }
 
@@ -751,7 +752,7 @@ fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
     // file_stem includes metadata hash. Thus we have a different
     // fingerprint for every metadata hash version. This works because
     // even if the package is fresh, we'll still link the fresh target
-    let file_stem = cx.file_stem(unit);
+    let file_stem = cx.files().file_stem(unit);
     let kind = match *unit.target.kind() {
         TargetKind::Lib(..) => "lib",
         TargetKind::Bin => "bin",

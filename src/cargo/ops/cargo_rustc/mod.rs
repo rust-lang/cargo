@@ -228,7 +228,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(
             }
 
             if dep.profile.run_custom_build {
-                let out_dir = cx.build_script_out_dir(dep).display().to_string();
+                let out_dir = cx.files().build_script_out_dir(dep).display().to_string();
                 cx.compilation
                     .extra_env
                     .entry(dep.pkg.package_id().clone())
@@ -368,7 +368,7 @@ fn rustc<'a, 'cfg>(
     }
 
     let filenames = cx.target_filenames(unit)?;
-    let root = cx.out_dir(unit);
+    let root = cx.files().out_dir(unit);
     let kind = unit.kind;
 
     // Prepare the native lib state (extra -L and -l flags)
@@ -384,10 +384,10 @@ fn rustc<'a, 'cfg>(
     let crate_name = unit.target.crate_name();
 
     // XXX(Rely on target_filenames iterator as source of truth rather than rederiving filestem)
-    let rustc_dep_info_loc = if do_rename && cx.target_metadata(unit).is_none() {
+    let rustc_dep_info_loc = if do_rename && cx.files().metadata(unit).is_none() {
         root.join(&crate_name)
     } else {
-        root.join(&cx.file_stem(unit))
+        root.join(&cx.files().file_stem(unit))
     }.with_extension("d");
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
 
@@ -399,7 +399,7 @@ fn rustc<'a, 'cfg>(
     exec.init(cx, unit);
     let exec = exec.clone();
 
-    let root_output = cx.target_root().to_path_buf();
+    let root_output = cx.files().target_root().to_path_buf();
     let pkg_root = unit.pkg.root().to_path_buf();
     let cwd = rustc
         .get_cwd()
@@ -743,7 +743,7 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         }
     }
 
-    let doc_dir = cx.out_dir(unit);
+    let doc_dir = cx.files().out_dir(unit);
 
     // Create the documentation directory ahead of time as rustdoc currently has
     // a bug where concurrent invocations will race to create this directory if
@@ -962,14 +962,14 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
-    match cx.target_metadata(unit) {
+    match cx.files().metadata(unit) {
         Some(m) => {
             cmd.arg("-C").arg(&format!("metadata={}", m));
             cmd.arg("-C").arg(&format!("extra-filename=-{}", m));
         }
         None => {
             cmd.arg("-C")
-                .arg(&format!("metadata={}", cx.target_short_hash(unit)));
+                .arg(&format!("metadata={}", cx.files().target_short_hash(unit)));
         }
     }
 
@@ -977,7 +977,7 @@ fn build_base_args<'a, 'cfg>(
         cmd.arg("-C").arg("rpath");
     }
 
-    cmd.arg("--out-dir").arg(&cx.out_dir(unit));
+    cmd.arg("--out-dir").arg(&cx.files().out_dir(unit));
 
     fn opt(cmd: &mut ProcessBuilder, key: &str, prefix: &str, val: Option<&OsStr>) {
         if let Some(val) = val {
@@ -1015,7 +1015,7 @@ fn build_deps_args<'a, 'cfg>(
 ) -> CargoResult<()> {
     cmd.arg("-L").arg(&{
         let mut deps = OsString::from("dependency=");
-        deps.push(cx.deps_dir(unit));
+        deps.push(cx.files().deps_dir(unit));
         deps
     });
 
@@ -1024,7 +1024,7 @@ fn build_deps_args<'a, 'cfg>(
     if let Kind::Target = unit.kind {
         cmd.arg("-L").arg(&{
             let mut deps = OsString::from("dependency=");
-            deps.push(cx.host_deps());
+            deps.push(cx.files().host_deps());
             deps
         });
     }
@@ -1056,7 +1056,7 @@ fn build_deps_args<'a, 'cfg>(
 
     for dep in dep_targets {
         if dep.profile.run_custom_build {
-            cmd.env("OUT_DIR", &cx.build_script_out_dir(&dep));
+            cmd.env("OUT_DIR", &cx.files().build_script_out_dir(&dep));
         }
         if dep.target.linkable() && !dep.profile.doc {
             link_to(cmd, cx, unit, &dep)?;
@@ -1095,7 +1095,7 @@ fn build_deps_args<'a, 'cfg>(
 
             v.push(name.unwrap_or(&dep.target.crate_name()));
             v.push("=");
-            v.push(cx.out_dir(dep));
+            v.push(cx.files().out_dir(dep));
             v.push(&path::MAIN_SEPARATOR.to_string());
             v.push(&dst.file_name().unwrap());
             cmd.arg("--extern").arg(&v);
