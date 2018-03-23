@@ -72,6 +72,7 @@ pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve
 pub use self::encode::{Metadata, WorkspaceResolve};
 
 mod encode;
+mod conflict_cache;
 
 /// Represents a fully resolved package dependency graph. Each node in the graph
 /// is a package and edges represent dependencies between packages.
@@ -594,6 +595,15 @@ impl DepsFrame {
             .map(|(_, (_, candidates, _))| candidates.len())
             .unwrap_or(0)
     }
+
+    fn flatten<'s>(&'s self) -> Box<Iterator<Item = (PackageId, Dependency)> + 's> {
+        // TODO: with impl Trait the Box can be removed
+        Box::new(
+            self.remaining_siblings
+                .clone()
+                .map(move |(_, (d, _, _))| (self.parent.package_id().clone(), d)),
+        )
+    }
 }
 
 impl PartialEq for DepsFrame {
@@ -975,42 +985,8 @@ fn activate_deps_loop(
     let mut remaining_deps = BinaryHeap::new();
 
     // `past_conflicting_activations` is a cache of the reasons for each time we
-    // backtrack. For example after several backtracks we may have:
-    //
-    //  past_conflicting_activations[`foo = "^1.0.2"`] = vec![
-    //      map!{`foo=1.0.1`: Semver},
-    //      map!{`foo=1.0.0`: Semver},
-    //  ];
-    //
-    // This can be read as "we cannot find a candidate for dep `foo = "^1.0.2"`
-    // if either `foo=1.0.1` OR `foo=1.0.0` are activated".
-    //
-    // Another example after several backtracks we may have:
-    //
-    //  past_conflicting_activations[`foo = ">=0.8.2, <=0.9.3"`] = vec![
-    //      map!{`foo=0.8.1`: Semver, `foo=0.9.4`: Semver},
-    //  ];
-    //
-    // This can be read as "we cannot find a candidate for dep `foo = ">=0.8.2,
-    // <=0.9.3"` if both `foo=0.8.1` AND `foo=0.9.4` are activated".
-    //
-    // This is used to make sure we don't queue work we know will fail. See the
-    // discussion in https://github.com/rust-lang/cargo/pull/5168 for why this
-    // is so important, and there can probably be a better data structure here
-    // but for now this works well enough!
-    //
-    // Also, as a final note, this map is *not* ever removed from. This remains
-    // as a global cache which we never delete from. Any entry in this map is
-    // unconditionally true regardless of our resolution history of how we got
-    // here.
-    let mut past_conflicting_activations: HashMap<
-        Dependency,
-        Vec<HashMap<PackageId, ConflictReason>>,
-    > = HashMap::new();
-
-    // `past_conflict_triggers` is an inverse-index of `past_conflicting_activations`.
-    // For every `PackageId` this lists the `Dependency`s that mention it in `past_conflicting_activations`.
-    let mut past_conflict_triggers: HashMap<PackageId, HashSet<Dependency>> = HashMap::new();
+    // backtrack.
+    let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
 
     // Activate all the initial summaries to kick off some work.
     for &(ref summary, ref method) in summaries {
@@ -1100,12 +1076,7 @@ fn activate_deps_loop(
 
         let just_here_for_the_error_messages = just_here_for_the_error_messages
             && past_conflicting_activations
-                .get(&dep)
-                .and_then(|past_bad| {
-                    past_bad
-                        .iter()
-                        .find(|conflicting| cx.is_conflicting(None, conflicting))
-                })
+                .conflicting(&cx, &dep)
                 .is_some();
 
         let mut remaining_candidates = RemainingCandidates::new(&candidates);
@@ -1157,25 +1128,7 @@ fn activate_deps_loop(
                 // local is set to `true` then our `conflicting_activations` may
                 // not be right, so we can't push into our global cache.
                 if !just_here_for_the_error_messages && !backtracked {
-                    let past = past_conflicting_activations
-                        .entry(dep.clone())
-                        .or_insert_with(Vec::new);
-                    if !past.contains(&conflicting_activations) {
-                        trace!(
-                            "{}[{}]>{} adding a skip {:?}",
-                            parent.name(),
-                            cur,
-                            dep.name(),
-                            conflicting_activations
-                        );
-                        past.push(conflicting_activations.clone());
-                        for c in conflicting_activations.keys() {
-                            past_conflict_triggers
-                                .entry(c.clone())
-                                .or_insert_with(HashSet::new)
-                                .insert(dep.clone());
-                        }
-                    }
+                    past_conflicting_activations.insert(&dep, &conflicting_activations);
                 }
 
                 match find_candidate(&mut backtrack_stack, &parent, &conflicting_activations) {
@@ -1280,11 +1233,10 @@ fn activate_deps_loop(
                         if let Some(conflicting) = frame
                             .remaining_siblings
                             .clone()
-                            .filter_map(|(_, (new_dep, _, _))| {
-                                past_conflicting_activations.get(&new_dep)
+                            .filter_map(|(_, (ref new_dep, _, _))| {
+                                past_conflicting_activations.conflicting(&cx, &new_dep)
                             })
-                            .flat_map(|x| x)
-                            .find(|con| cx.is_conflicting(None, con))
+                            .next()
                         {
                             let mut conflicting = conflicting.clone();
 
@@ -1309,33 +1261,23 @@ fn activate_deps_loop(
                     // ourselves are incompatible with that dep, so we know that deps
                     // parent conflict with us.
                     if !has_past_conflicting_dep {
-                        if let Some(rel_deps) = past_conflict_triggers.get(&pid) {
+                        if let Some(rel_deps) = past_conflicting_activations.get_dep_from_pid(&pid)
+                        {
                             if let Some((other_parent, conflict)) = remaining_deps
                                 .iter()
-                                .flat_map(|other| {
-                                    other
-                                        .remaining_siblings
-                                        // search thru all `remaining_deps`
-                                        .clone()
-                                        // for deps related to us
-                                        .filter(|&(_, (ref d, _, _))| rel_deps.contains(d))
-                                        .map(move |(_, (d, _, _))| {
-                                            (other.parent.package_id().clone(), d)
-                                        })
-                                })
-                                .filter_map(|(other_parent, other_deps)| {
+                                .flat_map(|other| other.flatten())
+                                // for deps related to us
+                                .filter(|&(_, ref other_dep)| rel_deps.contains(other_dep))
+                                .filter_map(|(other_parent, other_dep)| {
                                     past_conflicting_activations
-                                        .get(&other_deps)
-                                        .map(|v| (other_parent, v))
+                                        .filter_conflicting(
+                                            &cx,
+                                            &other_dep,
+                                            |con| con.contains_key(&pid)
+                                        )
+                                        .map(|con| (other_parent, con))
                                 })
-                                .flat_map(|(other_parent, past_bad)| {
-                                    past_bad
-                                        .iter()
-                                        // for deps that refer to us
-                                        .filter(|con| con.contains_key(&pid))
-                                        .map(move |c| (other_parent.clone(), c))
-                                })
-                                .find(|&(_, ref con)| cx.is_conflicting(None, con))
+                                .next()
                             {
                                 let mut conflict = conflict.clone();
                                 let rel = conflict.get(&pid).unwrap().clone();
