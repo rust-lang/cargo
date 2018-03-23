@@ -805,11 +805,19 @@ impl<'a> RegistryQueryer<'a> {
         ret.sort_unstable_by(|a, b| {
             let a_in_previous = self.try_to_use.contains(a.summary.package_id());
             let b_in_previous = self.try_to_use.contains(b.summary.package_id());
-            let a = (a_in_previous, a.summary.version());
-            let b = (b_in_previous, b.summary.version());
-            match self.minimal_versions {
-                true => a.cmp(&b),
-                false => a.cmp(&b).reverse(),
+            let previous_cmp = a_in_previous.cmp(&b_in_previous).reverse();
+            match previous_cmp {
+                Ordering::Equal => {
+                    let cmp = a.summary.version().cmp(&b.summary.version());
+                    if self.minimal_versions == true {
+                        // Lower version ordered first.
+                        cmp
+                    } else {
+                        // Higher version ordered first.
+                        cmp.reverse()
+                    }
+                },
+                _ => previous_cmp,
             }
         });
 

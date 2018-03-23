@@ -13,44 +13,14 @@ fn resolve(
     deps: Vec<Dependency>,
     registry: &[Summary],
 ) -> CargoResult<Vec<PackageId>> {
-    struct MyRegistry<'a>(&'a [Summary]);
-    impl<'a> Registry for MyRegistry<'a> {
-        fn query(&mut self, dep: &Dependency, f: &mut FnMut(Summary)) -> CargoResult<()> {
-            for summary in self.0.iter() {
-                if dep.matches(summary) {
-                    f(summary.clone());
-                }
-            }
-            Ok(())
-        }
-        fn supports_checksums(&self) -> bool {
-            false
-        }
-        fn requires_precise(&self) -> bool {
-            false
-        }
-    }
-    let mut registry = MyRegistry(registry);
-    let summary = Summary::new(pkg.clone(), deps, BTreeMap::new(), None).unwrap();
-    let method = Method::Everything;
-    let resolve = resolver::resolve(
-        &[(summary, method)],
-        &[],
-        &mut registry,
-        &HashSet::new(),
-        None,
-        false,
-    )?;
-    let res = resolve.iter().cloned().collect();
-    Ok(res)
+    resolve_with_config(pkg, deps, registry, None)
 }
 
-// Clone of resolve() from above that also passes down a Config instance.
 fn resolve_with_config(
     pkg: &PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
-    config: &Config,
+    config: Option<&Config>,
 ) -> CargoResult<Vec<PackageId>> {
     struct MyRegistry<'a>(&'a [Summary]);
     impl<'a> Registry for MyRegistry<'a> {
@@ -77,7 +47,7 @@ fn resolve_with_config(
         &[],
         &mut registry,
         &HashSet::new(),
-        Some(config),
+        config,
         false,
     )?;
     let res = resolve.iter().cloned().collect();
@@ -361,6 +331,10 @@ fn test_resolving_maximum_version_with_transitive_deps() {
 
 #[test]
 fn test_resolving_minimum_version_with_transitive_deps() {
+    // When the minimal-versions config option is specified then the lowest
+    // possible version of a package should be selected. "util 1.0.0" can't be
+    // selected because of the requirements of "bar", so the minimum version
+    // must be 1.1.1.
     let reg = registry(vec![
         pkg!(("util", "1.2.2")),
         pkg!(("util", "1.0.0")),
@@ -385,7 +359,7 @@ fn test_resolving_minimum_version_with_transitive_deps() {
         &pkg_id("root"),
         vec![dep_req("foo", "1.0.0"), dep_req("bar", "1.0.0")],
         &reg,
-        &config,
+        Some(&config),
     ).unwrap();
 
     assert_that(
