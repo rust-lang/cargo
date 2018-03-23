@@ -173,6 +173,13 @@ fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
 }
 
 #[test]
+#[should_panic(expected = "assertion failed: name.len() > 0")]
+fn test_dependency_with_empty_name() {
+    // Bug 5229, dependency-names must not be empty
+    "".to_dep();
+}
+
+#[test]
 fn test_resolving_empty_dependency_list() {
     let res = resolve(&pkg_id("root"), Vec::new(), &registry(vec![])).unwrap();
 
