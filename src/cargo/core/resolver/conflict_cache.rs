@@ -41,13 +41,15 @@ pub(super) struct ConflictCache {
 }
 
 impl ConflictCache {
-    pub(super) fn new() -> ConflictCache {
+    pub fn new() -> ConflictCache {
         ConflictCache {
             con_from_dep: HashMap::new(),
             dep_from_pid: HashMap::new(),
         }
     }
-    pub(super) fn filter_conflicting<F>(
+    /// Finds any known set of conflicts, if any,
+    /// which are activated in `cx` and pass the `filter` specified?
+    pub fn find_conflicting<F>(
         &self,
         cx: &Context,
         dep: &Dependency,
@@ -56,21 +58,24 @@ impl ConflictCache {
     where
         for<'r> F: FnMut(&'r &HashMap<PackageId, ConflictReason>) -> bool,
     {
-        self.con_from_dep.get(dep).and_then(|past_bad| {
-            past_bad
-                .iter()
-                .filter(filter)
-                .find(|conflicting| cx.is_conflicting(None, conflicting))
-        })
+        self.con_from_dep
+            .get(dep)?
+            .iter()
+            .filter(filter)
+            .find(|conflicting| cx.is_conflicting(None, conflicting))
     }
-    pub(super) fn conflicting(
+    pub fn conflicting(
         &self,
         cx: &Context,
         dep: &Dependency,
     ) -> Option<&HashMap<PackageId, ConflictReason>> {
-        self.filter_conflicting(cx, dep, |_| true)
+        self.find_conflicting(cx, dep, |_| true)
     }
-    pub(super) fn insert(&mut self, dep: &Dependency, con: &HashMap<PackageId, ConflictReason>) {
+
+    /// Add to the cache a conflict of the form:
+    /// `dep` is known to be unresolvable if
+    /// all the `PackageId` entries are activated
+    pub fn insert(&mut self, dep: &Dependency, con: &HashMap<PackageId, ConflictReason>) {
         let past = self.con_from_dep
             .entry(dep.clone())
             .or_insert_with(Vec::new);
@@ -85,7 +90,7 @@ impl ConflictCache {
             }
         }
     }
-    pub(super) fn get_dep_from_pid(&self, pid: &PackageId) -> Option<&HashSet<Dependency>> {
+    pub fn dependencies_conflicting_with(&self, pid: &PackageId) -> Option<&HashSet<Dependency>> {
         self.dep_from_pid.get(pid)
     }
 }
