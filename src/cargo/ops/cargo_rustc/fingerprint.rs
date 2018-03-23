@@ -431,7 +431,7 @@ fn calculate<'a, 'cfg>(
     // elsewhere. Also skip fingerprints of binaries because they don't actually
     // induce a recompile, they're just dependencies in the sense that they need
     // to be built.
-    let deps = cx.dep_targets(unit)?;
+    let deps = cx.dep_targets(unit);
     let deps = deps.iter()
         .filter(|u| !u.target.is_custom_build() && !u.target.is_bin())
         .map(|unit| {
