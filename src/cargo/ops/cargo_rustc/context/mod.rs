@@ -14,7 +14,6 @@ use jobserver::Client;
 
 use core::{Package, PackageId, PackageSet, Profile, Resolve, Target};
 use core::{Dependency, Profiles, TargetKind, Workspace};
-use core::dependency::Kind as DepKind;
 use util::{self, internal, profile, Cfg, CfgExpr, Config, ProcessBuilder};
 use util::errors::{CargoResult, CargoResultExt};
 
@@ -24,6 +23,9 @@ use super::fingerprint::Fingerprint;
 use super::layout::Layout;
 use super::links::Links;
 use super::{BuildConfig, Compilation, Kind};
+
+mod unit_dependencies;
+use self::unit_dependencies::build_unit_dependencies;
 
 /// All information needed to define a Unit.
 ///
@@ -102,6 +104,7 @@ pub struct Context<'a, 'cfg: 'a> {
     profiles: &'a Profiles,
     incremental_env: Option<bool>,
 
+    unit_dependencies: Option<HashMap<Unit<'a>, Vec<Unit<'a>>>>,
     /// For each Unit, a list all files produced as a triple of
     ///
     ///  - File name that will be produced by the build process (in `deps`)
@@ -204,6 +207,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             jobserver,
             build_script_overridden: HashSet::new(),
 
+            unit_dependencies: None,
             // TODO: Pre-Calculate these with a topo-sort, rather than lazy-calculating
             target_filenames: HashMap::new(),
             target_metadatas: HashMap::new(),
@@ -229,6 +233,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         let layout = self.target.as_ref().unwrap_or(&self.host);
         self.compilation.root_output = layout.dest().to_path_buf();
         self.compilation.deps_output = layout.deps().to_path_buf();
+        Ok(())
+    }
+
+    pub fn build_unit_dependencies(&mut self, units: &[Unit<'a>]) -> CargoResult<()> {
+        assert!(self.unit_dependencies.is_none());
+        self.unit_dependencies = Some(build_unit_dependencies(units, self)?);
         Ok(())
     }
 
@@ -361,7 +371,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         if is_plugin {
             self.used_in_plugin.insert(*unit);
         }
-        for unit in self.dep_targets(unit)? {
+        for unit in self.dep_targets(unit) {
             self.walk_used_in_plugin_map(&unit, is_plugin || unit.target.for_host(), visited)?;
         }
         Ok(())
@@ -526,9 +536,10 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             .hash(&mut hasher);
 
         // Mix in the target-metadata of all the dependencies of this target
-        if let Ok(deps) = self.dep_targets(unit) {
-            let mut deps_metadata = deps.into_iter()
-                .map(|dep_unit| self.target_metadata(&dep_unit))
+        {
+            let mut deps_metadata = self.dep_targets(unit)
+                .iter()
+                .map(|dep_unit| self.target_metadata(dep_unit))
                 .collect::<Vec<_>>();
             deps_metadata.sort();
             deps_metadata.hash(&mut hasher);
@@ -770,236 +781,25 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 
     /// For a package, return all targets which are registered as dependencies
     /// for that package.
-    pub fn dep_targets(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
-        if unit.profile.run_custom_build {
-            return self.dep_run_custom_build(unit);
-        } else if unit.profile.doc && !unit.profile.test {
-            return self.doc_deps(unit);
-        }
-
-        let id = unit.pkg.package_id();
-        let deps = self.resolve.deps(id);
-        let mut ret = deps.filter(|dep| {
-            unit.pkg
-                .dependencies()
-                .iter()
-                .filter(|d| d.name() == dep.name() && d.version_req().matches(dep.version()))
-                .any(|d| {
-                    // If this target is a build command, then we only want build
-                    // dependencies, otherwise we want everything *other than* build
-                    // dependencies.
-                    if unit.target.is_custom_build() != d.is_build() {
-                        return false;
-                    }
-
-                    // If this dependency is *not* a transitive dependency, then it
-                    // only applies to test/example targets
-                    if !d.is_transitive() && !unit.target.is_test() && !unit.target.is_example()
-                        && !unit.profile.test
-                    {
-                        return false;
-                    }
-
-                    // If this dependency is only available for certain platforms,
-                    // make sure we're only enabling it for that platform.
-                    if !self.dep_platform_activated(d, unit.kind) {
-                        return false;
-                    }
-
-                    // If the dependency is optional, then we're only activating it
-                    // if the corresponding feature was activated
-                    if d.is_optional() && !self.resolve.features(id).contains(&*d.name()) {
-                        return false;
-                    }
-
-                    // If we've gotten past all that, then this dependency is
-                    // actually used!
-                    true
-                })
-        }).filter_map(|id| match self.get_package(id) {
-                Ok(pkg) => pkg.targets().iter().find(|t| t.is_lib()).map(|t| {
-                    let unit = Unit {
-                        pkg,
-                        target: t,
-                        profile: self.lib_or_check_profile(unit, t),
-                        kind: unit.kind.for_target(t),
-                    };
-                    Ok(unit)
-                }),
-                Err(e) => Some(Err(e)),
-            })
-            .collect::<CargoResult<Vec<_>>>()?;
-
-        // If this target is a build script, then what we've collected so far is
-        // all we need. If this isn't a build script, then it depends on the
-        // build script if there is one.
-        if unit.target.is_custom_build() {
-            return Ok(ret);
-        }
-        ret.extend(self.dep_build_script(unit));
-
-        // If this target is a binary, test, example, etc, then it depends on
-        // the library of the same package. The call to `resolve.deps` above
-        // didn't include `pkg` in the return values, so we need to special case
-        // it here and see if we need to push `(pkg, pkg_lib_target)`.
-        if unit.target.is_lib() && !unit.profile.doc {
-            return Ok(ret);
-        }
-        ret.extend(self.maybe_lib(unit));
-
-        // Integration tests/benchmarks require binaries to be built
-        if unit.profile.test && (unit.target.is_test() || unit.target.is_bench()) {
-            ret.extend(
-                unit.pkg
-                    .targets()
-                    .iter()
-                    .filter(|t| {
-                        let no_required_features = Vec::new();
-
-                        t.is_bin() &&
-                // Skip binaries with required features that have not been selected.
-                t.required_features().unwrap_or(&no_required_features).iter().all(|f| {
-                    self.resolve.features(id).contains(f)
-                })
-                    })
-                    .map(|t| Unit {
-                        pkg: unit.pkg,
-                        target: t,
-                        profile: self.lib_or_check_profile(unit, t),
-                        kind: unit.kind.for_target(t),
-                    }),
-            );
-        }
-        Ok(ret)
-    }
-
-    /// Returns the dependencies needed to run a build script.
-    ///
-    /// The `unit` provided must represent an execution of a build script, and
-    /// the returned set of units must all be run before `unit` is run.
-    pub fn dep_run_custom_build(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
+    // TODO: this ideally should be `-> &[Unit<'a>]`
+    pub fn dep_targets(&self, unit: &Unit<'a>) -> Vec<Unit<'a>> {
         // If this build script's execution has been overridden then we don't
         // actually depend on anything, we've reached the end of the dependency
         // chain as we've got all the info we're gonna get.
-        let key = (unit.pkg.package_id().clone(), unit.kind);
-        if self.build_script_overridden.contains(&key) {
-            return Ok(Vec::new());
-        }
-
-        // When not overridden, then the dependencies to run a build script are:
         //
-        // 1. Compiling the build script itself
-        // 2. For each immediate dependency of our package which has a `links`
-        //    key, the execution of that build script.
-        let not_custom_build = unit.pkg
-            .targets()
-            .iter()
-            .find(|t| !t.is_custom_build())
-            .unwrap();
-        let tmp = Unit {
-            target: not_custom_build,
-            profile: &self.profiles.dev,
-            ..*unit
-        };
-        let deps = self.dep_targets(&tmp)?;
-        Ok(deps.iter()
-            .filter_map(|unit| {
-                if !unit.target.linkable() || unit.pkg.manifest().links().is_none() {
-                    return None;
-                }
-                self.dep_build_script(unit)
-            })
-            .chain(Some(Unit {
-                profile: self.build_script_profile(unit.pkg.package_id()),
-                kind: Kind::Host, // build scripts always compiled for the host
-                ..*unit
-            }))
-            .collect())
-    }
-
-    /// Returns the dependencies necessary to document a package
-    fn doc_deps(&self, unit: &Unit<'a>) -> CargoResult<Vec<Unit<'a>>> {
-        let deps = self.resolve
-            .deps(unit.pkg.package_id())
-            .filter(|dep| {
-                unit.pkg
-                    .dependencies()
-                    .iter()
-                    .filter(|d| d.name() == dep.name())
-                    .any(|dep| match dep.kind() {
-                        DepKind::Normal => self.dep_platform_activated(dep, unit.kind),
-                        _ => false,
-                    })
-            })
-            .map(|dep| self.get_package(dep));
-
-        // To document a library, we depend on dependencies actually being
-        // built. If we're documenting *all* libraries, then we also depend on
-        // the documentation of the library being built.
-        let mut ret = Vec::new();
-        for dep in deps {
-            let dep = dep?;
-            let lib = match dep.targets().iter().find(|t| t.is_lib()) {
-                Some(lib) => lib,
-                None => continue,
-            };
-            ret.push(Unit {
-                pkg: dep,
-                target: lib,
-                profile: self.lib_or_check_profile(unit, lib),
-                kind: unit.kind.for_target(lib),
-            });
-            if self.build_config.doc_all {
-                ret.push(Unit {
-                    pkg: dep,
-                    target: lib,
-                    profile: &self.profiles.doc,
-                    kind: unit.kind.for_target(lib),
-                });
+        // Note there's a subtlety about this piece of code! The
+        // `build_script_overridden` map here is populated in
+        // `custom_build::build_map` which you need to call before inspecting
+        // dependencies. However, that code itself calls this method and
+        // gets a full pre-filtered set of dependencies. This is not super
+        // obvious, and clear, but it does work at the moment.
+        if unit.profile.run_custom_build {
+            let key = (unit.pkg.package_id().clone(), unit.kind);
+            if self.build_script_overridden.contains(&key) {
+                return Vec::new();
             }
         }
-
-        // Be sure to build/run the build script for documented libraries as
-        ret.extend(self.dep_build_script(unit));
-
-        // If we document a binary, we need the library available
-        if unit.target.is_bin() {
-            ret.extend(self.maybe_lib(unit));
-        }
-        Ok(ret)
-    }
-
-    /// If a build script is scheduled to be run for the package specified by
-    /// `unit`, this function will return the unit to run that build script.
-    ///
-    /// Overriding a build script simply means that the running of the build
-    /// script itself doesn't have any dependencies, so even in that case a unit
-    /// of work is still returned. `None` is only returned if the package has no
-    /// build script.
-    fn dep_build_script(&self, unit: &Unit<'a>) -> Option<Unit<'a>> {
-        unit.pkg
-            .targets()
-            .iter()
-            .find(|t| t.is_custom_build())
-            .map(|t| Unit {
-                pkg: unit.pkg,
-                target: t,
-                profile: &self.profiles.custom_build,
-                kind: unit.kind,
-            })
-    }
-
-    fn maybe_lib(&self, unit: &Unit<'a>) -> Option<Unit<'a>> {
-        unit.pkg
-            .targets()
-            .iter()
-            .find(|t| t.linkable())
-            .map(|t| Unit {
-                pkg: unit.pkg,
-                target: t,
-                profile: self.lib_or_check_profile(unit, t),
-                kind: unit.kind.for_target(t),
-            })
+        self.unit_dependencies.as_ref().unwrap()[unit].clone()
     }
 
     fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
@@ -1064,15 +864,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         } else {
             normal
         }
-    }
-
-    pub fn lib_or_check_profile(&self, unit: &Unit, target: &Target) -> &'a Profile {
-        if !target.is_custom_build() && !target.for_host()
-            && (unit.profile.check || (unit.profile.doc && !unit.profile.test))
-        {
-            return &self.profiles.check;
-        }
-        self.lib_profile()
     }
 
     pub fn build_script_profile(&self, _pkg: &PackageId) -> &'a Profile {

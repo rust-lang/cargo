@@ -416,7 +416,7 @@ impl<'a> Key<'a> {
             profile: self.profile,
             kind: self.kind,
         };
-        let targets = cx.dep_targets(&unit)?;
+        let targets = cx.dep_targets(&unit);
         Ok(targets
             .iter()
             .filter_map(|unit| {
