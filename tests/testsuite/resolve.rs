@@ -5,13 +5,26 @@ use hamcrest::{assert_that, contains, is_not};
 use cargo::core::source::{GitReference, SourceId};
 use cargo::core::dependency::Kind::{self, Development};
 use cargo::core::{Dependency, PackageId, Registry, Summary};
-use cargo::util::{CargoResult, ToUrl};
+use cargo::util::{CargoResult, Config, ToUrl};
 use cargo::core::resolver::{self, Method};
+
+use cargotest::ChannelChanger;
+use cargotest::support::{execs, project};
+use cargotest::support::registry::Package;
 
 fn resolve(
     pkg: &PackageId,
     deps: Vec<Dependency>,
     registry: &[Summary],
+) -> CargoResult<Vec<PackageId>> {
+    resolve_with_config(pkg, deps, registry, None)
+}
+
+fn resolve_with_config(
+    pkg: &PackageId,
+    deps: Vec<Dependency>,
+    registry: &[Summary],
+    config: Option<&Config>,
 ) -> CargoResult<Vec<PackageId>> {
     struct MyRegistry<'a>(&'a [Summary]);
     impl<'a> Registry for MyRegistry<'a> {
@@ -38,7 +51,7 @@ fn resolve(
         &[],
         &mut registry,
         &HashSet::new(),
-        None,
+        config,
         false,
     )?;
     let res = resolve.iter().cloned().collect();
@@ -325,6 +338,87 @@ fn test_resolving_maximum_version_with_transitive_deps() {
     );
     assert_that(&res, is_not(contains(names(&[("util", "1.0.1")]))));
     assert_that(&res, is_not(contains(names(&[("util", "1.1.1")]))));
+}
+
+#[test]
+fn test_resolving_minimum_version_with_transitive_deps() {
+    // When the minimal-versions config option is specified then the lowest
+    // possible version of a package should be selected. "util 1.0.0" can't be
+    // selected because of the requirements of "bar", so the minimum version
+    // must be 1.1.1.
+    let reg = registry(vec![
+        pkg!(("util", "1.2.2")),
+        pkg!(("util", "1.0.0")),
+        pkg!(("util", "1.1.1")),
+        pkg!("foo" => [dep_req("util", "1.0.0")]),
+        pkg!("bar" => [dep_req("util", ">=1.0.1")]),
+    ]);
+
+    let mut config = Config::default().unwrap();
+    config
+        .configure(
+            1,
+            None,
+            &None,
+            false,
+            false,
+            &["minimal-versions".to_string()],
+        )
+        .unwrap();
+
+    let res = resolve_with_config(
+        &pkg_id("root"),
+        vec![dep_req("foo", "1.0.0"), dep_req("bar", "1.0.0")],
+        &reg,
+        Some(&config),
+    ).unwrap();
+
+    assert_that(
+        &res,
+        contains(names(&[
+            ("root", "1.0.0"),
+            ("foo", "1.0.0"),
+            ("bar", "1.0.0"),
+            ("util", "1.1.1"),
+        ])),
+    );
+    assert_that(&res, is_not(contains(names(&[("util", "1.2.2")]))));
+    assert_that(&res, is_not(contains(names(&[("util", "1.0.0")]))));
+}
+
+// Ensure that the "-Z minimal-versions" CLI option works and the minimal
+// version of a dependency ends up in the lock file.
+#[test]
+fn minimal_version_cli() {
+    Package::new("dep", "1.0.0").publish();
+    Package::new("dep", "1.1.0").publish();
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            authors = []
+            version = "0.0.1"
+
+            [dependencies]
+            dep = "1.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    assert_that(
+        p.cargo("generate-lockfile")
+            .masquerade_as_nightly_cargo()
+            .arg("-Zminimal-versions"),
+        execs().with_status(0),
+    );
+
+    let lock = p.read_lockfile();
+
+    assert!(lock.contains("dep 1.0.0"));
 }
 
 #[test]
