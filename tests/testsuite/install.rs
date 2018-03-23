@@ -1476,3 +1476,14 @@ dependencies = [
 
     assert_that(cargo_process("install").arg("foo"), execs().with_status(0));
 }
+
+#[test]
+fn install_empty_argument() {
+    // Bug 5229
+    assert_that(
+        cargo_process("install").arg(""),
+        execs().with_status(1).with_stderr_contains(
+            "[ERROR] The argument '<crate>...' requires a value but none was supplied",
+        ),
+    );
+}

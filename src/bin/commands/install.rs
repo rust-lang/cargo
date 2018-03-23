@@ -7,7 +7,7 @@ use cargo::util::ToUrl;
 pub fn cli() -> App {
     subcommand("install")
         .about("Install a Rust binary")
-        .arg(Arg::with_name("crate").multiple(true))
+        .arg(Arg::with_name("crate").empty_values(false).multiple(true))
         .arg(
             opt("version", "Specify a version to install from crates.io")
                 .alias("vers")
