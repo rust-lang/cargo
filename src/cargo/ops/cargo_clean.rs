@@ -102,12 +102,12 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     )?;
 
     for unit in units.iter() {
-        rm_rf(&cx.fingerprint_dir(unit), config)?;
+        rm_rf(&cx.files().fingerprint_dir(unit), config)?;
         if unit.target.is_custom_build() {
             if unit.profile.run_custom_build {
-                rm_rf(&cx.build_script_out_dir(unit), config)?;
+                rm_rf(&cx.files().build_script_out_dir(unit), config)?;
             } else {
-                rm_rf(&cx.build_script_dir(unit), config)?;
+                rm_rf(&cx.files().build_script_dir(unit), config)?;
             }
             continue;
         }
