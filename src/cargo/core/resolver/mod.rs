@@ -816,7 +816,7 @@ impl<'a> RegistryQueryer<'a> {
                         // Higher version ordered first.
                         cmp.reverse()
                     }
-                },
+                }
                 _ => previous_cmp,
             }
         });
