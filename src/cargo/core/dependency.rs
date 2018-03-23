@@ -185,6 +185,7 @@ impl Dependency {
     }
 
     pub fn new_override(name: &str, source_id: &SourceId) -> Dependency {
+        assert!(name.len() > 0);
         Dependency {
             inner: Rc::new(Inner {
                 name: InternedString::new(name),
