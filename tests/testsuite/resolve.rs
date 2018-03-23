@@ -825,7 +825,7 @@ fn resolving_with_constrained_cousins_backtrack() {
     reglist.push(
         pkg!((format!("level{}", DEPTH).as_str(), "1.0.0") => [dep_req("backtrack_trap0", "*"),
             dep_req("cloaking", "*")
-            ]),
+        ]),
     );
 
     let reg = registry(reglist.clone());

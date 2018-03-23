@@ -596,12 +596,12 @@ impl DepsFrame {
             .unwrap_or(0)
     }
 
-    fn flatten<'s>(&'s self) -> Box<Iterator<Item = (PackageId, Dependency)> + 's> {
+    fn flatten<'s>(&'s self) -> Box<Iterator<Item = (&PackageId, Dependency)> + 's> {
         // TODO: with impl Trait the Box can be removed
         Box::new(
             self.remaining_siblings
                 .clone()
-                .map(move |(_, (d, _, _))| (self.parent.package_id().clone(), d)),
+                .map(move |(_, (d, _, _))| (self.parent.package_id(), d)),
         )
     }
 }
@@ -1238,18 +1238,20 @@ fn activate_deps_loop(
                             })
                             .next()
                         {
-                            let mut conflicting = conflicting.clone();
-
-                            // If one of our deps conflicts with
+                            // If one of our deps is known unresolvable
                             // then we will not succeed.
                             // How ever if we are part of the reason that
                             // one of our deps conflicts then
                             // we can make a stronger statement
                             // because we will definitely be activated when
                             // we try our dep.
-                            conflicting.remove(&pid);
+                            conflicting_activations.extend(
+                                conflicting
+                                    .iter()
+                                    .filter(|&(p, _)| p != &pid)
+                                    .map(|(p, r)| (p.clone(), r.clone())),
+                            );
 
-                            conflicting_activations.extend(conflicting);
                             has_past_conflicting_dep = true;
                         }
                     }
@@ -1261,16 +1263,18 @@ fn activate_deps_loop(
                     // ourselves are incompatible with that dep, so we know that deps
                     // parent conflict with us.
                     if !has_past_conflicting_dep {
-                        if let Some(rel_deps) = past_conflicting_activations.get_dep_from_pid(&pid)
+                        if let Some(known_related_bad_deps) =
+                            past_conflicting_activations.dependencies_conflicting_with(&pid)
                         {
                             if let Some((other_parent, conflict)) = remaining_deps
                                 .iter()
                                 .flat_map(|other| other.flatten())
                                 // for deps related to us
-                                .filter(|&(_, ref other_dep)| rel_deps.contains(other_dep))
+                                .filter(|&(_, ref other_dep)|
+                                        known_related_bad_deps.contains(other_dep))
                                 .filter_map(|(other_parent, other_dep)| {
                                     past_conflicting_activations
-                                        .filter_conflicting(
+                                        .find_conflicting(
                                             &cx,
                                             &other_dep,
                                             |con| con.contains_key(&pid)
@@ -1279,8 +1283,8 @@ fn activate_deps_loop(
                                 })
                                 .next()
                             {
-                                let mut conflict = conflict.clone();
                                 let rel = conflict.get(&pid).unwrap().clone();
+
                                 // The conflict we found is
                                 // "other dep will not succeed if we are activated."
                                 // We want to add
@@ -1288,10 +1292,13 @@ fn activate_deps_loop(
                                 // but that is not how the cache is set up.
                                 // So we add the less general but much faster,
                                 // "our dep will not succeed if other dep's parent is activated".
-                                conflict.insert(other_parent.clone(), rel);
-                                conflict.remove(&pid);
-
-                                conflicting_activations.extend(conflict);
+                                conflicting_activations.extend(
+                                    conflict
+                                        .iter()
+                                        .filter(|&(p, _)| p != &pid)
+                                        .map(|(p, r)| (p.clone(), r.clone())),
+                                );
+                                conflicting_activations.insert(other_parent.clone(), rel);
                                 has_past_conflicting_dep = true;
                             }
                         }
