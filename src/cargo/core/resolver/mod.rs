@@ -430,7 +430,11 @@ pub fn resolve(
         warnings: RcList::new(),
     };
     let _p = profile::start("resolving");
-    let mut registry = RegistryQueryer::new(registry, replacements, try_to_use);
+    let minimal_versions = match config {
+        Some(config) => config.cli_unstable().minimal_versions,
+        None => false,
+    };
+    let mut registry = RegistryQueryer::new(registry, replacements, try_to_use, minimal_versions);
     let cx = activate_deps_loop(cx, &mut registry, summaries, config)?;
 
     let mut resolve = Resolve {
@@ -683,6 +687,10 @@ struct RegistryQueryer<'a> {
     try_to_use: &'a HashSet<&'a PackageId>,
     // TODO: with nll the Rc can be removed
     cache: HashMap<Dependency, Rc<Vec<Candidate>>>,
+    // If set the list of dependency candidates will be sorted by minimal
+    // versions first. That allows `cargo update -Z minimal-versions` which will
+    // specify minimum depedency versions to be used.
+    minimal_versions: bool,
 }
 
 impl<'a> RegistryQueryer<'a> {
@@ -690,12 +698,14 @@ impl<'a> RegistryQueryer<'a> {
         registry: &'a mut Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
         try_to_use: &'a HashSet<&'a PackageId>,
+        minimal_versions: bool,
     ) -> Self {
         RegistryQueryer {
             registry,
             replacements,
             cache: HashMap::new(),
             try_to_use,
+            minimal_versions,
         }
     }
 
@@ -795,9 +805,20 @@ impl<'a> RegistryQueryer<'a> {
         ret.sort_unstable_by(|a, b| {
             let a_in_previous = self.try_to_use.contains(a.summary.package_id());
             let b_in_previous = self.try_to_use.contains(b.summary.package_id());
-            let a = (a_in_previous, a.summary.version());
-            let b = (b_in_previous, b.summary.version());
-            a.cmp(&b).reverse()
+            let previous_cmp = a_in_previous.cmp(&b_in_previous).reverse();
+            match previous_cmp {
+                Ordering::Equal => {
+                    let cmp = a.summary.version().cmp(&b.summary.version());
+                    if self.minimal_versions == true {
+                        // Lower version ordered first.
+                        cmp
+                    } else {
+                        // Higher version ordered first.
+                        cmp.reverse()
+                    }
+                }
+                _ => previous_cmp,
+            }
         });
 
         let out = Rc::new(ret);
