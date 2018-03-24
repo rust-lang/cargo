@@ -148,8 +148,11 @@ impl<'cfg> RegistryIndex<'cfg> {
             features,
             yanked,
             links,
-        } = super::DEFAULT_ID.set(&self.source_id, || {
-            serde_json::from_str::<RegistryPackage>(line)
+        } = super::DEFAULT_ID.with(|slot| {
+            *slot.borrow_mut() = Some(self.source_id.clone());
+            let res = serde_json::from_str::<RegistryPackage>(line);
+            drop(slot.borrow_mut().take());
+            res
         })?;
         let pkgid = PackageId::new(&name, &vers, &self.source_id)?;
         let summary = Summary::new(pkgid, deps.inner, features, links)?;
