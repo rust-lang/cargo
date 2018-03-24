@@ -186,7 +186,9 @@ impl<'cfg> RegistryIndex<'cfg> {
         let summaries = summaries.filter(|s| match source_id.precise() {
             Some(p) if p.starts_with(&*dep.name()) && p[dep.name().len()..].starts_with('=') => {
                 let mut vers = p[dep.name().len() + 1..].splitn(2, "->");
-                if dep.version_req().matches(&Version::parse(vers.next().unwrap()).unwrap()) {
+                if dep.version_req()
+                    .matches(&Version::parse(vers.next().unwrap()).unwrap())
+                {
                     vers.next().unwrap() == s.version().to_string()
                 } else {
                     true
