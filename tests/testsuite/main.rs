@@ -43,6 +43,7 @@ mod config;
 mod corrupt_git;
 mod cross_compile;
 mod cross_publish;
+mod custom_target;
 mod death;
 mod dep_info;
 mod directory;
