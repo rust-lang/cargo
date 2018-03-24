@@ -159,6 +159,7 @@
 //! ```
 
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fs::File;
@@ -454,7 +455,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
 //
 // If you're reading this and find this thread local funny, check to see if that
 // PR is merged. If it is then let's ditch this thread local!
-scoped_thread_local!(static DEFAULT_ID: SourceId);
+thread_local!(static DEFAULT_ID: RefCell<Option<SourceId>> = Default::default());
 
 impl<'de> de::Deserialize<'de> for DependencyList {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -506,7 +507,7 @@ fn parse_registry_dependency(dep: RegistryDependency) -> CargoResult<Dependency>
     let id = if let Some(registry) = registry {
         SourceId::for_registry(&registry.to_url()?)?
     } else {
-        DEFAULT_ID.with(|id| id.clone())
+        DEFAULT_ID.with(|id| id.borrow().as_ref().unwrap().clone())
     };
 
     let mut dep = Dependency::parse_no_deprecated(&name, Some(&req), &id)?;
