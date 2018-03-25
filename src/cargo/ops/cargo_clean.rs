@@ -100,6 +100,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
     }
 
     cx.probe_target_info()?;
+    cx.build_unit_dependencies(&units)?;
 
     for unit in units.iter() {
         rm_rf(&cx.fingerprint_dir(unit), config)?;

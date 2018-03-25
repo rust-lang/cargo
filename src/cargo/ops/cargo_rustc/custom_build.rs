@@ -102,7 +102,8 @@ pub fn prepare<'a, 'cfg>(
 }
 
 fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult<(Work, Work)> {
-    let dependencies = cx.dep_run_custom_build(unit)?;
+    assert!(unit.profile.run_custom_build);
+    let dependencies = cx.dep_targets(unit);
     let build_script_unit = dependencies
         .iter()
         .find(|d| !d.profile.run_custom_build && d.target.is_custom_build())
@@ -582,7 +583,7 @@ pub fn build_map<'b, 'cfg>(cx: &mut Context<'b, 'cfg>, units: &[Unit<'b>]) -> Ca
         // to rustc invocation caching schemes, so be sure to generate the same
         // set of build script dependency orderings via sorting the targets that
         // come out of the `Context`.
-        let mut targets = cx.dep_targets(unit)?;
+        let mut targets = cx.dep_targets(unit);
         targets.sort_by_key(|u| u.pkg.package_id());
 
         for unit in targets.iter() {
