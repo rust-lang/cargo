@@ -61,7 +61,7 @@ fn add_deps_for_unit<'a, 'b>(
     }
 
     // Recursively traverse all transitive dependencies
-    for dep_unit in &context.dep_targets(unit)? {
+    for dep_unit in context.dep_targets(unit).iter() {
         let source_id = dep_unit.pkg.package_id().source_id();
         if source_id.is_path() {
             add_deps_for_unit(deps, context, dep_unit, visited)?;

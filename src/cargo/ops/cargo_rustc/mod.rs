@@ -170,6 +170,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(
 
     cx.prepare()?;
     cx.probe_target_info()?;
+    cx.build_unit_dependencies(&units)?;
     cx.build_used_in_plugin_map(&units)?;
     custom_build::build_map(&mut cx, &units)?;
 
@@ -215,7 +216,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(
             }
         }
 
-        for dep in cx.dep_targets(unit)?.iter() {
+        for dep in cx.dep_targets(unit).iter() {
             if !unit.target.is_lib() {
                 continue;
             }
@@ -333,7 +334,7 @@ fn compile<'a, 'cfg: 'a>(
     drop(p);
 
     // Be sure to compile all dependencies of this target as well.
-    for unit in cx.dep_targets(unit)?.iter() {
+    for unit in cx.dep_targets(unit).iter() {
         compile(cx, jobs, unit, exec)?;
     }
 
@@ -1022,7 +1023,7 @@ fn build_deps_args<'a, 'cfg>(
         });
     }
 
-    let dep_targets = cx.dep_targets(unit)?;
+    let dep_targets = cx.dep_targets(unit);
 
     // If there is not one linkable target but should, rustc fails later
     // on if there is an `extern crate` for it. This may turn into a hard
