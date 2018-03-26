@@ -6,7 +6,7 @@ use std::env;
 use cargo::util::ProcessBuilder;
 use cargotest::support::{cargo_exe, execs, paths};
 use hamcrest::{assert_that, existing_dir, existing_file, is_not};
-use tempdir::TempDir;
+use tempfile;
 
 fn cargo_process(s: &str) -> ProcessBuilder {
     let mut p = cargotest::process(&cargo_exe());
@@ -62,7 +62,7 @@ fn simple_bin() {
 
 #[test]
 fn both_lib_and_bin() {
-    let td = TempDir::new("cargo").unwrap();
+    let td = tempfile::Builder::new().prefix("cargo").tempdir().unwrap();
     assert_that(
         cargo_process("init")
             .arg("--lib")
@@ -328,7 +328,7 @@ fn simple_git() {
 
 #[test]
 fn auto_git() {
-    let td = TempDir::new("cargo").unwrap();
+    let td = tempfile::Builder::new().prefix("cargo").tempdir().unwrap();
     let foo = &td.path().join("foo");
     fs::create_dir_all(&foo).unwrap();
     assert_that(

@@ -11,7 +11,7 @@ use cargotest::support::{basic_bin_manifest, execs, main_file, project};
 use cargotest::support::registry::Package;
 use cargotest::ChannelChanger;
 use hamcrest::{assert_that, existing_dir, existing_file, is_not};
-use tempdir::TempDir;
+use tempfile;
 
 #[test]
 fn cargo_compile_simple() {
@@ -546,7 +546,7 @@ Caused by:
 
 #[test]
 fn cargo_compile_without_manifest() {
-    let tmpdir = TempDir::new("cargo").unwrap();
+    let tmpdir = tempfile::Builder::new().prefix("cargo").tempdir().unwrap();
     let p = ProjectBuilder::new("foo", tmpdir.path().to_path_buf()).build();
 
     assert_that(
