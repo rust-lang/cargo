@@ -40,7 +40,7 @@ extern crate serde_ignored;
 extern crate serde_json;
 extern crate shell_escape;
 extern crate tar;
-extern crate tempdir;
+extern crate tempfile;
 extern crate termcolor;
 extern crate toml;
 extern crate url;

@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use semver::{Version, VersionReq};
-use tempdir::TempDir;
+use tempfile::Builder as TempFileBuilder;
 use toml;
 
 use core::{Dependency, Package, PackageIdSpec, Source, SourceId};
@@ -210,7 +210,7 @@ fn install_one(
         None
     } else if let Some(dir) = config.target_dir()? {
         Some(dir)
-    } else if let Ok(td) = TempDir::new("cargo-install") {
+    } else if let Ok(td) = TempFileBuilder::new().prefix("cargo-install").tempdir() {
         let p = td.path().to_owned();
         td_opt = Some(td);
         Some(Filesystem::new(p))
@@ -284,7 +284,9 @@ fn install_one(
     // Copy all binaries to a temporary directory under `dst` first, catching
     // some failure modes (e.g. out of space) before touching the existing
     // binaries. This directory will get cleaned up via RAII.
-    let staging_dir = TempDir::new_in(&dst, "cargo-install")?;
+    let staging_dir = TempFileBuilder::new()
+        .prefix("cargo-install")
+        .tempdir_in(&dst)?;
     for &(bin, src) in binaries.iter() {
         let dst = staging_dir.path().join(bin);
         // Try to move if `target_dir` is transient.

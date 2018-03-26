@@ -7,7 +7,7 @@ use cargo::util::ProcessBuilder;
 use cargotest::process;
 use cargotest::support::{execs, paths};
 use hamcrest::{assert_that, existing_dir, existing_file, is_not};
-use tempdir::TempDir;
+use tempfile;
 
 fn cargo_process(s: &str) -> ProcessBuilder {
     let mut p = cargotest::cargo_process();
@@ -113,7 +113,7 @@ fn simple_git() {
     // Run inside a temp directory so that cargo will initialize a git repo.
     // If this ran inside paths::root() it would detect that we are already
     // inside a git repo and skip the initialization.
-    let td = TempDir::new("cargo").unwrap();
+    let td = tempfile::Builder::new().prefix("cargo").tempdir().unwrap();
     assert_that(
         cargo_process("new")
             .arg("--lib")
