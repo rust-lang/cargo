@@ -225,3 +225,29 @@ fn rustdoc_same_name_documents_lib() {
         )),
     );
 }
+
+#[test]
+fn features() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [features]
+            quux = []
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("rustdoc --verbose --features quux"),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[..]feature=[..]quux[..]"),
+    );
+}
