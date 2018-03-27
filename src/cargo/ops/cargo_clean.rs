@@ -37,20 +37,6 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
 
     let profiles = ws.profiles();
     let host_triple = opts.config.rustc()?.host.clone();
-    let mut cx = Context::new(
-        ws,
-        &resolve,
-        &packages,
-        opts.config,
-        BuildConfig {
-            host_triple,
-            requested_target: opts.target.clone(),
-            release: opts.release,
-            jobs: 1,
-            ..BuildConfig::default()
-        },
-        profiles,
-    )?;
     let mut units = Vec::new();
 
     for spec in opts.spec.iter() {
@@ -99,8 +85,21 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         }
     }
 
-    cx.probe_target_info()?;
-    cx.build_unit_dependencies(&units)?;
+    let mut cx = Context::new(
+        ws,
+        &resolve,
+        &packages,
+        opts.config,
+        BuildConfig {
+            host_triple,
+            requested_target: opts.target.clone(),
+            release: opts.release,
+            jobs: 1,
+            ..BuildConfig::default()
+        },
+        profiles,
+        &units,
+    )?;
 
     for unit in units.iter() {
         rm_rf(&cx.fingerprint_dir(unit), config)?;

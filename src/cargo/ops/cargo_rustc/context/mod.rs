@@ -104,7 +104,7 @@ pub struct Context<'a, 'cfg: 'a> {
     profiles: &'a Profiles,
     incremental_env: Option<bool>,
 
-    unit_dependencies: Option<HashMap<Unit<'a>, Vec<Unit<'a>>>>,
+    unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
     /// For each Unit, a list all files produced as a triple of
     ///
     ///  - File name that will be produced by the build process (in `deps`)
@@ -154,6 +154,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         config: &'cfg Config,
         build_config: BuildConfig,
         profiles: &'a Profiles,
+        units: &[Unit<'a>],
     ) -> CargoResult<Context<'a, 'cfg>> {
         let dest = if build_config.release {
             "release"
@@ -184,8 +185,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None => Client::new(build_config.jobs as usize - 1)
                 .chain_err(|| "failed to create jobserver")?,
         };
-
-        Ok(Context {
+        let mut cx = Context {
             ws,
             host: host_layout,
             target: target_layout,
@@ -208,11 +208,17 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             jobserver,
             build_script_overridden: HashSet::new(),
 
-            unit_dependencies: None,
+            unit_dependencies: HashMap::new(),
             // TODO: Pre-Calculate these with a topo-sort, rather than lazy-calculating
             target_filenames: HashMap::new(),
             target_metadatas: HashMap::new(),
-        })
+        };
+
+        cx.probe_target_info()?;
+        let deps = build_unit_dependencies(units, &cx)?;
+        cx.unit_dependencies = deps;
+
+        Ok(cx)
     }
 
     /// Prepare this context, ensuring that all filesystem directories are in
@@ -237,15 +243,9 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         Ok(())
     }
 
-    pub fn build_unit_dependencies(&mut self, units: &[Unit<'a>]) -> CargoResult<()> {
-        assert!(self.unit_dependencies.is_none());
-        self.unit_dependencies = Some(build_unit_dependencies(units, self)?);
-        Ok(())
-    }
-
     /// Ensure that we've collected all target-specific information to compile
     /// all the units mentioned in `units`.
-    pub fn probe_target_info(&mut self) -> CargoResult<()> {
+    fn probe_target_info(&mut self) -> CargoResult<()> {
         debug!("probe_target_info");
         let host_target_same = match self.requested_target() {
             Some(s) if s != self.config.rustc()?.host => false,
@@ -809,7 +809,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 return Vec::new();
             }
         }
-        self.unit_dependencies.as_ref().unwrap()[unit].clone()
+        self.unit_dependencies[unit].clone()
     }
 
     fn dep_platform_activated(&self, dep: &Dependency, kind: Kind) -> bool {
