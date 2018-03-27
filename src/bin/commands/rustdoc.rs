@@ -26,6 +26,7 @@ pub fn cli() -> App {
             "Build all targets (default)",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_features()
         .arg_manifest_path()
         .arg_message_format()
         .after_help(
