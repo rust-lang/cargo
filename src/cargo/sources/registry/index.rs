@@ -182,13 +182,20 @@ impl<'cfg> RegistryIndex<'cfg> {
             .map(|s| s.0.clone());
 
         // Handle `cargo update --precise` here. If specified, our own source
-        // will have a precise version listed of the form `<pkg>=<req>` where
-        // `<pkg>` is the name of a crate on this source and `<req>` is the
+        // will have a precise version listed of the form
+        // `<pkg>=<p_req>o-><f_req>` where `<pkg>` is the name of a crate on
+        // this source, `<p_req>` is the version installed and `<f_req> is the
         // version requested (argument to `--precise`).
         let summaries = summaries.filter(|s| match source_id.precise() {
             Some(p) if p.starts_with(&*dep.name()) && p[dep.name().len()..].starts_with('=') => {
-                let vers = &p[dep.name().len() + 1..];
-                s.version().to_string() == vers
+                let mut vers = p[dep.name().len() + 1..].splitn(2, "->");
+                if dep.version_req()
+                    .matches(&Version::parse(vers.next().unwrap()).unwrap())
+                {
+                    vers.next().unwrap() == s.version().to_string()
+                } else {
+                    true
+                }
             }
             _ => true,
         });
