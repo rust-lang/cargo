@@ -120,6 +120,7 @@ struct TargetInfo {
     crate_type_process: Option<ProcessBuilder>,
     crate_types: RefCell<HashMap<String, Option<(String, String)>>>,
     cfg: Option<Vec<Cfg>>,
+    sysroot_libdir: Option<PathBuf>,
 }
 
 impl TargetInfo {
@@ -246,16 +247,25 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// all the units mentioned in `units`.
     pub fn probe_target_info(&mut self) -> CargoResult<()> {
         debug!("probe_target_info");
-        self.probe_target_info_kind(Kind::Target)?;
-        if self.requested_target().is_none() {
-            self.host_info = self.target_info.clone();
+        let host_target_same = match self.requested_target() {
+            Some(s) if s != self.config.rustc()?.host => false,
+            _ => true,
+        };
+
+        if host_target_same {
+            let info = self.probe_target_info_kind(Kind::Target)?;
+            self.host_info = info.clone();
+            self.target_info = info;
         } else {
-            self.probe_target_info_kind(Kind::Host)?;
+            self.host_info = self.probe_target_info_kind(Kind::Host)?;
+            self.target_info = self.probe_target_info_kind(Kind::Target)?;
         }
+        self.compilation.host_dylib_path = self.host_info.sysroot_libdir.clone();
+        self.compilation.target_dylib_path = self.target_info.sysroot_libdir.clone();
         Ok(())
     }
 
-    fn probe_target_info_kind(&mut self, kind: Kind) -> CargoResult<()> {
+    fn probe_target_info_kind(&self, kind: Kind) -> CargoResult<TargetInfo> {
         let rustflags = env_args(
             self.config,
             &self.build_config,
@@ -305,6 +315,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             map.insert(crate_type.to_string(), out);
         }
 
+        let mut sysroot_libdir = None;
         if has_cfg_and_sysroot {
             let line = match lines.next() {
                 Some(line) => line,
@@ -320,13 +331,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                 } else {
                     rustlib.push("lib");
                 }
-                self.compilation.host_dylib_path = Some(rustlib);
+                sysroot_libdir = Some(rustlib);
             } else {
                 rustlib.push("lib");
                 rustlib.push("rustlib");
                 rustlib.push(self.target_triple());
                 rustlib.push("lib");
-                self.compilation.target_dylib_path = Some(rustlib);
+                sysroot_libdir = Some(rustlib);
             }
         }
 
@@ -336,14 +347,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             None
         };
 
-        let info = match kind {
-            Kind::Target => &mut self.target_info,
-            Kind::Host => &mut self.host_info,
-        };
-        info.crate_type_process = Some(crate_type_process);
-        info.crate_types = RefCell::new(map);
-        info.cfg = cfg;
-        Ok(())
+        Ok(TargetInfo {
+            crate_type_process: Some(crate_type_process),
+            crate_types: RefCell::new(map),
+            cfg,
+            sysroot_libdir,
+        })
     }
 
     /// Builds up the `used_in_plugin` internal to this context from the list of
