@@ -761,10 +761,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             if !unsupported.is_empty() {
                 bail!(
                     "cannot compile `{}` package, because target `{}` \
-                     does not support the `{}` crate types",
+                     does not support the `{}` crate type{}",
                     unit.pkg,
                     self.target_triple(),
-                    unsupported.join(", ")
+                    unsupported.join(", "),
+                    if unsupported.len() == 1 { "" } else { "s" }
                 )
             }
             bail!(
