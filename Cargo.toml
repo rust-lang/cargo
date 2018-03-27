@@ -1,6 +1,6 @@
 [package]
 name = "cargo"
-version = "0.27.0"
+version = "0.27.5" # Bump to "0.28.0" next time and fix `cargo::version`
 authors = ["Yehuda Katz <wycats@gmail.com>",
            "Carl Lerche <me@carllerche.com>",
            "Alex Crichton <alex@alexcrichton.com>"]

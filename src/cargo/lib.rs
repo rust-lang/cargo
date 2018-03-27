@@ -206,8 +206,8 @@ pub fn version() -> VersionInfo {
     // We continue to use this scheme for the library, but transform it to 1.x.w for the purposes
     // of `cargo --version`.
     let major = 1;
-    let minor = env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap() - 1;
-    let patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
+    let minor = env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap();
+    let patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap() - 5;
 
     match option_env!("CFG_RELEASE_CHANNEL") {
         // We have environment variables set up from configure/make.
