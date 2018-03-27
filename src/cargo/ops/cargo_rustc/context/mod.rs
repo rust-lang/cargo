@@ -760,11 +760,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         if ret.is_empty() {
             if !unsupported.is_empty() {
                 bail!(
-                    "cannot produce {} for `{}` as the target `{}` \
-                     does not support these crate types",
-                    unsupported.join(", "),
+                    "cannot compile `{}` package, because target `{}` \
+                     does not support the `{}` crate type{}",
                     unit.pkg,
-                    self.target_triple()
+                    self.target_triple(),
+                    unsupported.join(", "),
+                    if unsupported.len() == 1 { "" } else { "s" }
                 )
             }
             bail!(
