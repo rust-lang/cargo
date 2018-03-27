@@ -358,3 +358,58 @@ fn change_package_version() {
 
     assert_that(p.cargo("build"), execs().with_status(0));
 }
+
+#[test]
+fn update_precise() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("serde", "0.1.0").publish();
+    Package::new("serde", "0.2.1").publish();
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.2"
+                foo = { path = "foo" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                serde = "0.1"
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+
+    Package::new("serde", "0.2.0").publish();
+
+    assert_that(
+        p.cargo("update")
+            .arg("-p")
+            .arg("serde:0.2.1")
+            .arg("--precise")
+            .arg("0.2.0"),
+        execs().with_status(0).with_stderr(
+            "\
+[UPDATING] registry `[..]`
+[UPDATING] serde v0.2.1 -> v0.2.0
+",
+        ),
+    );
+}

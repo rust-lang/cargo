@@ -69,7 +69,7 @@ pub fn update_lockfile(ws: &Workspace, opts: &UpdateOptions) -> CargoResult<()> 
                         //       seems like a pretty hokey reason to single out
                         //       the registry as well.
                         let precise = if dep.source_id().is_registry() {
-                            format!("{}={}", dep.name(), precise)
+                            format!("{}={}->{}", dep.name(), dep.version(), precise)
                         } else {
                             precise.to_string()
                         };
