@@ -108,8 +108,8 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .iter()
         .find(|d| !d.profile.run_custom_build && d.target.is_custom_build())
         .expect("running a script not depending on an actual script");
-    let script_output = cx.build_script_dir(build_script_unit);
-    let build_output = cx.build_script_out_dir(unit);
+    let script_output = cx.files().build_script_dir(build_script_unit);
+    let build_output = cx.files().build_script_out_dir(unit);
 
     // Building the command to execute
     let to_exec = script_output.join(unit.target.name());
@@ -213,7 +213,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         let root_output_file = build_output_parent.join("root-output");
         (output_file, err_file, root_output_file)
     };
-    let root_output = cx.target_root().to_path_buf();
+    let root_output = cx.files().target_root().to_path_buf();
     let all = (
         id.clone(),
         pkg_name.clone(),
