@@ -27,9 +27,10 @@ impl<'cfg> Registry for ReplacedSource<'cfg> {
         let dep = dep.clone().map_source(to_replace, replace_with);
 
         self.inner
-            .query(&dep, &mut |summary| {
-                f(summary.map_source(replace_with, to_replace))
-            })
+            .query(
+                &dep,
+                &mut |summary| f(summary.map_source(replace_with, to_replace)),
+            )
             .chain_err(|| format!("failed to query replaced source {}", self.to_replace))?;
         Ok(())
     }

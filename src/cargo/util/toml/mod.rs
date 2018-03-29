@@ -202,7 +202,8 @@ pub struct DetailedTomlDependency {
     features: Option<Vec<String>>,
     optional: Option<bool>,
     default_features: Option<bool>,
-    #[serde(rename = "default_features")] default_features2: Option<bool>,
+    #[serde(rename = "default_features")]
+    default_features2: Option<bool>,
     package: Option<String>,
 }
 
@@ -347,14 +348,18 @@ impl<'de> de::Deserialize<'de> for U32OrBool {
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
 pub struct TomlProfile {
-    #[serde(rename = "opt-level")] opt_level: Option<TomlOptLevel>,
+    #[serde(rename = "opt-level")]
+    opt_level: Option<TomlOptLevel>,
     lto: Option<StringOrBool>,
-    #[serde(rename = "codegen-units")] codegen_units: Option<u32>,
+    #[serde(rename = "codegen-units")]
+    codegen_units: Option<u32>,
     debug: Option<U32OrBool>,
-    #[serde(rename = "debug-assertions")] debug_assertions: Option<bool>,
+    #[serde(rename = "debug-assertions")]
+    debug_assertions: Option<bool>,
     rpath: Option<bool>,
     panic: Option<String>,
-    #[serde(rename = "overflow-checks")] overflow_checks: Option<bool>,
+    #[serde(rename = "overflow-checks")]
+    overflow_checks: Option<bool>,
     incremental: Option<bool>,
 }
 
@@ -449,9 +454,11 @@ pub struct TomlProject {
     exclude: Option<Vec<String>>,
     include: Option<Vec<String>>,
     publish: Option<VecStringOrBool>,
-    #[serde(rename = "publish-lockfile")] publish_lockfile: Option<bool>,
+    #[serde(rename = "publish-lockfile")]
+    publish_lockfile: Option<bool>,
     workspace: Option<String>,
-    #[serde(rename = "im-a-teapot")] im_a_teapot: Option<bool>,
+    #[serde(rename = "im-a-teapot")]
+    im_a_teapot: Option<bool>,
 
     // package metadata
     description: Option<String>,
@@ -461,7 +468,8 @@ pub struct TomlProject {
     keywords: Option<Vec<String>>,
     categories: Option<Vec<String>>,
     license: Option<String>,
-    #[serde(rename = "license-file")] license_file: Option<String>,
+    #[serde(rename = "license-file")]
+    license_file: Option<String>,
     repository: Option<String>,
     metadata: Option<toml::Value>,
     rust: Option<String>,
@@ -470,7 +478,8 @@ pub struct TomlProject {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TomlWorkspace {
     members: Option<Vec<String>>,
-    #[serde(rename = "default-members")] default_members: Option<Vec<String>>,
+    #[serde(rename = "default-members")]
+    default_members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
 }
 
@@ -1176,8 +1185,10 @@ struct TomlTarget {
 
     // The intention was to only accept `crate-type` here but historical
     // versions of Cargo also accepted `crate_type`, so look for both.
-    #[serde(rename = "crate-type")] crate_type: Option<Vec<String>>,
-    #[serde(rename = "crate_type")] crate_type2: Option<Vec<String>>,
+    #[serde(rename = "crate-type")]
+    crate_type: Option<Vec<String>>,
+    #[serde(rename = "crate_type")]
+    crate_type2: Option<Vec<String>>,
 
     path: Option<PathValue>,
     test: Option<bool>,
@@ -1185,10 +1196,13 @@ struct TomlTarget {
     bench: Option<bool>,
     doc: Option<bool>,
     plugin: Option<bool>,
-    #[serde(rename = "proc-macro")] proc_macro: Option<bool>,
-    #[serde(rename = "proc_macro")] proc_macro2: Option<bool>,
+    #[serde(rename = "proc-macro")]
+    proc_macro: Option<bool>,
+    #[serde(rename = "proc_macro")]
+    proc_macro2: Option<bool>,
     harness: Option<bool>,
-    #[serde(rename = "required-features")] required_features: Option<Vec<String>>,
+    #[serde(rename = "required-features")]
+    required_features: Option<Vec<String>>,
 }
 
 #[derive(Clone)]

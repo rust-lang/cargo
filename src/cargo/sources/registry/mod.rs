@@ -221,7 +221,8 @@ struct RegistryPackage<'a> {
     features: BTreeMap<String, Vec<String>>,
     cksum: String,
     yanked: Option<bool>,
-    #[serde(default)] links: Option<String>,
+    #[serde(default)]
+    links: Option<String>,
 }
 
 struct DependencyList {

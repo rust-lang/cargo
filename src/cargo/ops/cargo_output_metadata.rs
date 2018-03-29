@@ -89,7 +89,8 @@ pub struct ExportInfo {
 /// format for `PackageId`s
 #[derive(Serialize)]
 struct MetadataResolve {
-    #[serde(rename = "nodes", serialize_with = "serialize_resolve")] resolve: Resolve,
+    #[serde(rename = "nodes", serialize_with = "serialize_resolve")]
+    resolve: Resolve,
     root: Option<PackageId>,
 }
 
