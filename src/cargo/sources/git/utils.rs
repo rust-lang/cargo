@@ -50,7 +50,8 @@ impl GitShortID {
 /// `GitDatabase`.
 #[derive(PartialEq, Clone, Debug, Serialize)]
 pub struct GitRemote {
-    #[serde(serialize_with = "serialize_str")] url: Url,
+    #[serde(serialize_with = "serialize_str")]
+    url: Url,
 }
 
 /// `GitDatabase` is a local clone of a remote repository's database. Multiple
@@ -59,7 +60,8 @@ pub struct GitRemote {
 pub struct GitDatabase {
     remote: GitRemote,
     path: PathBuf,
-    #[serde(skip_serializing)] repo: git2::Repository,
+    #[serde(skip_serializing)]
+    repo: git2::Repository,
 }
 
 /// `GitCheckout` is a local checkout of a particular revision. Calling
@@ -70,7 +72,8 @@ pub struct GitCheckout<'a> {
     database: &'a GitDatabase,
     location: PathBuf,
     revision: GitRevision,
-    #[serde(skip_serializing)] repo: git2::Repository,
+    #[serde(skip_serializing)]
+    repo: git2::Repository,
 }
 
 // Implementations

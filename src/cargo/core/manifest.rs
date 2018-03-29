@@ -156,20 +156,30 @@ impl ser::Serialize for TargetKind {
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Serialize)]
 pub struct Profile {
     pub opt_level: String,
-    #[serde(skip_serializing)] pub lto: Lto,
-    #[serde(skip_serializing)] pub codegen_units: Option<u32>, // None = use rustc default
-    #[serde(skip_serializing)] pub rustc_args: Option<Vec<String>>,
-    #[serde(skip_serializing)] pub rustdoc_args: Option<Vec<String>>,
+    #[serde(skip_serializing)]
+    pub lto: Lto,
+    #[serde(skip_serializing)]
+    pub codegen_units: Option<u32>, // None = use rustc default
+    #[serde(skip_serializing)]
+    pub rustc_args: Option<Vec<String>>,
+    #[serde(skip_serializing)]
+    pub rustdoc_args: Option<Vec<String>>,
     pub debuginfo: Option<u32>,
     pub debug_assertions: bool,
     pub overflow_checks: bool,
-    #[serde(skip_serializing)] pub rpath: bool,
+    #[serde(skip_serializing)]
+    pub rpath: bool,
     pub test: bool,
-    #[serde(skip_serializing)] pub doc: bool,
-    #[serde(skip_serializing)] pub run_custom_build: bool,
-    #[serde(skip_serializing)] pub check: bool,
-    #[serde(skip_serializing)] pub panic: Option<String>,
-    #[serde(skip_serializing)] pub incremental: bool,
+    #[serde(skip_serializing)]
+    pub doc: bool,
+    #[serde(skip_serializing)]
+    pub run_custom_build: bool,
+    #[serde(skip_serializing)]
+    pub check: bool,
+    #[serde(skip_serializing)]
+    pub panic: Option<String>,
+    #[serde(skip_serializing)]
+    pub incremental: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
