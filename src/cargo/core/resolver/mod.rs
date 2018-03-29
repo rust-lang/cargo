@@ -63,7 +63,7 @@ use util::profile;
 
 use self::context::{Activations, Context};
 use self::types::{ActivateError, ActivateResult, Candidate, ConflictReason, DepsFrame, GraphNode};
-use self::types::{RcList, RcVecIter, RegistryQueryer};
+use self::types::{RcVecIter, RegistryQueryer};
 
 pub use self::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use self::encode::{Metadata, WorkspaceResolve};
@@ -113,14 +113,7 @@ pub fn resolve(
     config: Option<&Config>,
     print_warnings: bool,
 ) -> CargoResult<Resolve> {
-    let cx = Context {
-        resolve_graph: RcList::new(),
-        resolve_features: HashMap::new(),
-        links: HashMap::new(),
-        resolve_replacements: RcList::new(),
-        activations: HashMap::new(),
-        warnings: RcList::new(),
-    };
+    let cx = Context::new();
     let _p = profile::start("resolving");
     let minimal_versions = match config {
         Some(config) => config.cli_unstable().minimal_versions,
