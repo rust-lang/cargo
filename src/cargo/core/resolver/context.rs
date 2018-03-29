@@ -37,6 +37,17 @@ pub struct Context {
 }
 
 impl Context {
+    pub fn new() -> Context {
+        Context {
+            resolve_graph: RcList::new(),
+            resolve_features: HashMap::new(),
+            links: HashMap::new(),
+            resolve_replacements: RcList::new(),
+            activations: HashMap::new(),
+            warnings: RcList::new(),
+        }
+    }
+
     /// Activate this summary by inserting it into our list of known activations.
     ///
     /// Returns true if this summary with the given method is already activated.
