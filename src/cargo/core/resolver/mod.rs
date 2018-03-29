@@ -160,187 +160,6 @@ pub fn resolve(
     Ok(resolve)
 }
 
-/// Attempts to activate the summary `candidate` in the context `cx`.
-///
-/// This function will pull dependency summaries from the registry provided, and
-/// the dependencies of the package will be determined by the `method` provided.
-/// If `candidate` was activated, this function returns the dependency frame to
-/// iterate through next.
-fn activate(
-    cx: &mut Context,
-    registry: &mut RegistryQueryer,
-    parent: Option<&Summary>,
-    candidate: Candidate,
-    method: &Method,
-) -> ActivateResult<Option<(DepsFrame, Duration)>> {
-    if let Some(parent) = parent {
-        cx.resolve_graph.push(GraphNode::Link(
-            parent.package_id().clone(),
-            candidate.summary.package_id().clone(),
-        ));
-    }
-
-    let activated = cx.flag_activated(&candidate.summary, method)?;
-
-    let candidate = match candidate.replace {
-        Some(replace) => {
-            cx.resolve_replacements.push((
-                candidate.summary.package_id().clone(),
-                replace.package_id().clone(),
-            ));
-            if cx.flag_activated(&replace, method)? && activated {
-                return Ok(None);
-            }
-            trace!(
-                "activating {} (replacing {})",
-                replace.package_id(),
-                candidate.summary.package_id()
-            );
-            replace
-        }
-        None => {
-            if activated {
-                return Ok(None);
-            }
-            trace!("activating {}", candidate.summary.package_id());
-            candidate.summary
-        }
-    };
-
-    let now = Instant::now();
-    let deps = cx.build_deps(registry, parent, &candidate, method)?;
-    let frame = DepsFrame {
-        parent: candidate,
-        just_for_error_messages: false,
-        remaining_siblings: RcVecIter::new(Rc::new(deps)),
-    };
-    Ok(Some((frame, now.elapsed())))
-}
-
-#[derive(Clone)]
-struct BacktrackFrame {
-    cur: usize,
-    context_backup: Context,
-    deps_backup: BinaryHeap<DepsFrame>,
-    remaining_candidates: RemainingCandidates,
-    parent: Summary,
-    dep: Dependency,
-    features: Rc<Vec<String>>,
-    conflicting_activations: HashMap<PackageId, ConflictReason>,
-}
-
-/// A helper "iterator" used to extract candidates within a current `Context` of
-/// a dependency graph.
-///
-/// This struct doesn't literally implement the `Iterator` trait (requires a few
-/// more inputs) but in general acts like one. Each `RemainingCandidates` is
-/// created with a list of candidates to choose from. When attempting to iterate
-/// over the list of candidates only *valid* candidates are returned. Validity
-/// is defined within a `Context`.
-///
-/// Candidates passed to `new` may not be returned from `next` as they could be
-/// filtered out, and if iteration stops a map of all packages which caused
-/// filtered out candidates to be filtered out will be returned.
-#[derive(Clone)]
-struct RemainingCandidates {
-    remaining: RcVecIter<Candidate>,
-    // note: change to RcList or something if clone is to expensive
-    conflicting_prev_active: HashMap<PackageId, ConflictReason>,
-    // This is a inlined peekable generator
-    has_another: Option<Candidate>,
-}
-
-impl RemainingCandidates {
-    fn new(candidates: &Rc<Vec<Candidate>>) -> RemainingCandidates {
-        RemainingCandidates {
-            remaining: RcVecIter::new(Rc::clone(candidates)),
-            conflicting_prev_active: HashMap::new(),
-            has_another: None,
-        }
-    }
-
-    /// Attempts to find another candidate to check from this list.
-    ///
-    /// This method will attempt to move this iterator forward, returning a
-    /// candidate that's possible to activate. The `cx` argument is the current
-    /// context which determines validity for candidates returned, and the `dep`
-    /// is the dependency listing that we're activating for.
-    ///
-    /// If successful a `(Candidate, bool)` pair will be returned. The
-    /// `Candidate` is the candidate to attempt to activate, and the `bool` is
-    /// an indicator of whether there are remaining candidates to try of if
-    /// we've reached the end of iteration.
-    ///
-    /// If we've reached the end of the iterator here then `Err` will be
-    /// returned. The error will contain a map of package id to conflict reason,
-    /// where each package id caused a candidate to be filtered out from the
-    /// original list for the reason listed.
-    fn next(
-        &mut self,
-        cx: &Context,
-        dep: &Dependency,
-    ) -> Result<(Candidate, bool), HashMap<PackageId, ConflictReason>> {
-        let prev_active = cx.prev_active(dep);
-
-        for (_, b) in self.remaining.by_ref() {
-            // The `links` key in the manifest dictates that there's only one
-            // package in a dependency graph, globally, with that particular
-            // `links` key. If this candidate links to something that's already
-            // linked to by a different package then we've gotta skip this.
-            if let Some(link) = b.summary.links() {
-                if let Some(a) = cx.links.get(&link) {
-                    if a != b.summary.package_id() {
-                        self.conflicting_prev_active
-                            .entry(a.clone())
-                            .or_insert_with(|| ConflictReason::Links(link.to_string()));
-                        continue;
-                    }
-                }
-            }
-
-            // Otherwise the condition for being a valid candidate relies on
-            // semver. Cargo dictates that you can't duplicate multiple
-            // semver-compatible versions of a crate. For example we can't
-            // simultaneously activate `foo 1.0.2` and `foo 1.2.0`. We can,
-            // however, activate `1.0.2` and `2.0.0`.
-            //
-            // Here we throw out our candidate if it's *compatible*, yet not
-            // equal, to all previously activated versions.
-            if let Some(a) = prev_active
-                .iter()
-                .find(|a| compatible(a.version(), b.summary.version()))
-            {
-                if *a != b.summary {
-                    self.conflicting_prev_active
-                        .entry(a.package_id().clone())
-                        .or_insert(ConflictReason::Semver);
-                    continue;
-                }
-            }
-
-            // Well if we made it this far then we've got a valid dependency. We
-            // want this iterator to be inherently "peekable" so we don't
-            // necessarily return the item just yet. Instead we stash it away to
-            // get returned later, and if we replaced something then that was
-            // actually the candidate to try first so we return that.
-            if let Some(r) = mem::replace(&mut self.has_another, Some(b)) {
-                return Ok((r, true));
-            }
-        }
-
-        // Alright we've entirely exhausted our list of candidates. If we've got
-        // something stashed away return that here (also indicating that there's
-        // nothign else). If nothing is stashed away we return the list of all
-        // conflicting activations, if any.
-        //
-        // TODO: can the `conflicting_prev_active` clone be avoided here? should
-        //       panic if this is called twice and an error is already returned
-        self.has_another
-            .take()
-            .map(|r| (r, false))
-            .ok_or_else(|| self.conflicting_prev_active.clone())
-    }
-}
 /// Recursively activates the dependencies for `top`, in depth-first order,
 /// backtracking across possible candidates for each dependency as necessary.
 ///
@@ -786,6 +605,209 @@ fn activate_deps_loop(
     Ok(cx)
 }
 
+/// Attempts to activate the summary `candidate` in the context `cx`.
+///
+/// This function will pull dependency summaries from the registry provided, and
+/// the dependencies of the package will be determined by the `method` provided.
+/// If `candidate` was activated, this function returns the dependency frame to
+/// iterate through next.
+fn activate(
+    cx: &mut Context,
+    registry: &mut RegistryQueryer,
+    parent: Option<&Summary>,
+    candidate: Candidate,
+    method: &Method,
+) -> ActivateResult<Option<(DepsFrame, Duration)>> {
+    if let Some(parent) = parent {
+        cx.resolve_graph.push(GraphNode::Link(
+            parent.package_id().clone(),
+            candidate.summary.package_id().clone(),
+        ));
+    }
+
+    let activated = cx.flag_activated(&candidate.summary, method)?;
+
+    let candidate = match candidate.replace {
+        Some(replace) => {
+            cx.resolve_replacements.push((
+                candidate.summary.package_id().clone(),
+                replace.package_id().clone(),
+            ));
+            if cx.flag_activated(&replace, method)? && activated {
+                return Ok(None);
+            }
+            trace!(
+                "activating {} (replacing {})",
+                replace.package_id(),
+                candidate.summary.package_id()
+            );
+            replace
+        }
+        None => {
+            if activated {
+                return Ok(None);
+            }
+            trace!("activating {}", candidate.summary.package_id());
+            candidate.summary
+        }
+    };
+
+    let now = Instant::now();
+    let deps = cx.build_deps(registry, parent, &candidate, method)?;
+    let frame = DepsFrame {
+        parent: candidate,
+        just_for_error_messages: false,
+        remaining_siblings: RcVecIter::new(Rc::new(deps)),
+    };
+    Ok(Some((frame, now.elapsed())))
+}
+
+#[derive(Clone)]
+struct BacktrackFrame {
+    cur: usize,
+    context_backup: Context,
+    deps_backup: BinaryHeap<DepsFrame>,
+    remaining_candidates: RemainingCandidates,
+    parent: Summary,
+    dep: Dependency,
+    features: Rc<Vec<String>>,
+    conflicting_activations: HashMap<PackageId, ConflictReason>,
+}
+
+/// A helper "iterator" used to extract candidates within a current `Context` of
+/// a dependency graph.
+///
+/// This struct doesn't literally implement the `Iterator` trait (requires a few
+/// more inputs) but in general acts like one. Each `RemainingCandidates` is
+/// created with a list of candidates to choose from. When attempting to iterate
+/// over the list of candidates only *valid* candidates are returned. Validity
+/// is defined within a `Context`.
+///
+/// Candidates passed to `new` may not be returned from `next` as they could be
+/// filtered out, and if iteration stops a map of all packages which caused
+/// filtered out candidates to be filtered out will be returned.
+#[derive(Clone)]
+struct RemainingCandidates {
+    remaining: RcVecIter<Candidate>,
+    // note: change to RcList or something if clone is to expensive
+    conflicting_prev_active: HashMap<PackageId, ConflictReason>,
+    // This is a inlined peekable generator
+    has_another: Option<Candidate>,
+}
+
+impl RemainingCandidates {
+    fn new(candidates: &Rc<Vec<Candidate>>) -> RemainingCandidates {
+        RemainingCandidates {
+            remaining: RcVecIter::new(Rc::clone(candidates)),
+            conflicting_prev_active: HashMap::new(),
+            has_another: None,
+        }
+    }
+
+    /// Attempts to find another candidate to check from this list.
+    ///
+    /// This method will attempt to move this iterator forward, returning a
+    /// candidate that's possible to activate. The `cx` argument is the current
+    /// context which determines validity for candidates returned, and the `dep`
+    /// is the dependency listing that we're activating for.
+    ///
+    /// If successful a `(Candidate, bool)` pair will be returned. The
+    /// `Candidate` is the candidate to attempt to activate, and the `bool` is
+    /// an indicator of whether there are remaining candidates to try of if
+    /// we've reached the end of iteration.
+    ///
+    /// If we've reached the end of the iterator here then `Err` will be
+    /// returned. The error will contain a map of package id to conflict reason,
+    /// where each package id caused a candidate to be filtered out from the
+    /// original list for the reason listed.
+    fn next(
+        &mut self,
+        cx: &Context,
+        dep: &Dependency,
+    ) -> Result<(Candidate, bool), HashMap<PackageId, ConflictReason>> {
+        let prev_active = cx.prev_active(dep);
+
+        for (_, b) in self.remaining.by_ref() {
+            // The `links` key in the manifest dictates that there's only one
+            // package in a dependency graph, globally, with that particular
+            // `links` key. If this candidate links to something that's already
+            // linked to by a different package then we've gotta skip this.
+            if let Some(link) = b.summary.links() {
+                if let Some(a) = cx.links.get(&link) {
+                    if a != b.summary.package_id() {
+                        self.conflicting_prev_active
+                            .entry(a.clone())
+                            .or_insert_with(|| ConflictReason::Links(link.to_string()));
+                        continue;
+                    }
+                }
+            }
+
+            // Otherwise the condition for being a valid candidate relies on
+            // semver. Cargo dictates that you can't duplicate multiple
+            // semver-compatible versions of a crate. For example we can't
+            // simultaneously activate `foo 1.0.2` and `foo 1.2.0`. We can,
+            // however, activate `1.0.2` and `2.0.0`.
+            //
+            // Here we throw out our candidate if it's *compatible*, yet not
+            // equal, to all previously activated versions.
+            if let Some(a) = prev_active
+                .iter()
+                .find(|a| compatible(a.version(), b.summary.version()))
+            {
+                if *a != b.summary {
+                    self.conflicting_prev_active
+                        .entry(a.package_id().clone())
+                        .or_insert(ConflictReason::Semver);
+                    continue;
+                }
+            }
+
+            // Well if we made it this far then we've got a valid dependency. We
+            // want this iterator to be inherently "peekable" so we don't
+            // necessarily return the item just yet. Instead we stash it away to
+            // get returned later, and if we replaced something then that was
+            // actually the candidate to try first so we return that.
+            if let Some(r) = mem::replace(&mut self.has_another, Some(b)) {
+                return Ok((r, true));
+            }
+        }
+
+        // Alright we've entirely exhausted our list of candidates. If we've got
+        // something stashed away return that here (also indicating that there's
+        // nothign else). If nothing is stashed away we return the list of all
+        // conflicting activations, if any.
+        //
+        // TODO: can the `conflicting_prev_active` clone be avoided here? should
+        //       panic if this is called twice and an error is already returned
+        self.has_another
+            .take()
+            .map(|r| (r, false))
+            .ok_or_else(|| self.conflicting_prev_active.clone())
+    }
+}
+
+// Returns if `a` and `b` are compatible in the semver sense. This is a
+// commutative operation.
+//
+// Versions `a` and `b` are compatible if their left-most nonzero digit is the
+// same.
+fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
+    if a.major != b.major {
+        return false;
+    }
+    if a.major != 0 {
+        return true;
+    }
+    if a.minor != b.minor {
+        return false;
+    }
+    if a.minor != 0 {
+        return true;
+    }
+    a.patch == b.patch
+}
+
 /// Looks through the states in `backtrack_stack` for dependencies with
 /// remaining candidates. For each one, also checks if rolling back
 /// could change the outcome of the failed resolution that caused backtracking
@@ -827,17 +849,6 @@ fn find_candidate<'a>(
         return Some((candidate, has_another, frame));
     }
     None
-}
-
-/// Returns String representation of dependency chain for a particular `pkgid`.
-fn describe_path(graph: &Graph<PackageId>, pkgid: &PackageId) -> String {
-    use std::fmt::Write;
-    let dep_path = graph.path_to_top(pkgid);
-    let mut dep_path_desc = format!("package `{}`", dep_path[0]);
-    for dep in dep_path.iter().skip(1) {
-        write!(dep_path_desc, "\n    ... which is depended on by `{}`", dep).unwrap();
-    }
-    dep_path_desc
 }
 
 fn activation_error(
@@ -1004,25 +1015,15 @@ fn activation_error(
     format_err!("{}", msg)
 }
 
-// Returns if `a` and `b` are compatible in the semver sense. This is a
-// commutative operation.
-//
-// Versions `a` and `b` are compatible if their left-most nonzero digit is the
-// same.
-fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
-    if a.major != b.major {
-        return false;
+/// Returns String representation of dependency chain for a particular `pkgid`.
+fn describe_path(graph: &Graph<PackageId>, pkgid: &PackageId) -> String {
+    use std::fmt::Write;
+    let dep_path = graph.path_to_top(pkgid);
+    let mut dep_path_desc = format!("package `{}`", dep_path[0]);
+    for dep in dep_path.iter().skip(1) {
+        write!(dep_path_desc, "\n    ... which is depended on by `{}`", dep).unwrap();
     }
-    if a.major != 0 {
-        return true;
-    }
-    if a.minor != b.minor {
-        return false;
-    }
-    if a.minor != 0 {
-        return true;
-    }
-    a.patch == b.patch
+    dep_path_desc
 }
 
 fn check_cycles(resolve: &Resolve, activations: &Activations) -> CargoResult<()> {
