@@ -18,7 +18,8 @@ pub struct EncodableResolve {
     root: Option<EncodableDependency>,
     metadata: Option<Metadata>,
 
-    #[serde(default, skip_serializing_if = "Patch::is_empty")] patch: Patch,
+    #[serde(default, skip_serializing_if = "Patch::is_empty")]
+    patch: Patch,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]

@@ -152,7 +152,8 @@ pub struct Fingerprint {
     #[serde(serialize_with = "serialize_deps", deserialize_with = "deserialize_deps")]
     deps: Vec<(String, Arc<Fingerprint>)>,
     local: Vec<LocalFingerprint>,
-    #[serde(skip_serializing, skip_deserializing)] memoized_hash: Mutex<Option<u64>>,
+    #[serde(skip_serializing, skip_deserializing)]
+    memoized_hash: Mutex<Option<u64>>,
     rustflags: Vec<String>,
     epoch: Epoch,
 }
