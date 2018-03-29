@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use core::{Dependency, PackageId};
-use core::resolver::{ConflictReason, Context};
+use core::resolver::Context;
+use super::types::ConflictReason;
 
 pub(super) struct ConflictCache {
     // `con_from_dep` is a cache of the reasons for each time we
