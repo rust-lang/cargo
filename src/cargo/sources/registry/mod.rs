@@ -159,7 +159,6 @@
 //! ```
 
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fs::File;
@@ -213,16 +212,115 @@ pub struct RegistryConfig {
     pub api: Option<String>,
 }
 
-#[derive(Deserialize)]
-struct RegistryPackage<'a> {
+pub struct RegistryPackage<'a> {
     name: Cow<'a, str>,
     vers: Version,
     deps: DependencyList,
     features: BTreeMap<String, Vec<String>>,
     cksum: String,
     yanked: Option<bool>,
-    #[serde(default)]
     links: Option<String>,
+}
+
+pub struct RegistryPackageDefault<'a>(pub &'a SourceId);
+
+impl<'de, 'a> de::DeserializeSeed<'de> for RegistryPackageDefault<'a> {
+    type Value = RegistryPackage<'de>;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        deserializer.deserialize_map(self)
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(field_identifier, rename_all = "lowercase")]
+enum Field {
+    Name,
+    Vers,
+    Deps,
+    Features,
+    Cksum,
+    Yanked,
+    Links,
+}
+
+impl<'a, 'de> de::Visitor<'de> for RegistryPackageDefault<'a> {
+    type Value = RegistryPackage<'de>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "struct RegistryPackage")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: de::MapAccess<'de>,
+    {
+        let mut name = None;
+        let mut vers = None;
+        let mut deps = None;
+        let mut features = None;
+        let mut cksum = None;
+        let mut yanked = None;
+        let mut links = None;
+        while let Some(key) = map.next_key()? {
+            match key {
+                Field::Name => {
+                    if name.is_some() {
+                        return Err(de::Error::duplicate_field("name"));
+                    }
+                    name = Some(map.next_value()?);
+                }
+                Field::Vers => {
+                    if vers.is_some() {
+                        return Err(de::Error::duplicate_field("vers"));
+                    }
+                    vers = Some(map.next_value()?);
+                }
+                Field::Deps => {
+                    if deps.is_some() {
+                        return Err(de::Error::duplicate_field("deps"));
+                    }
+                    deps = Some(map.next_value_seed(DependencyListDefault(self.0))?);
+                }
+                Field::Features => {
+                    if features.is_some() {
+                        return Err(de::Error::duplicate_field("features"));
+                    }
+                    features = Some(map.next_value()?);
+                }
+                Field::Cksum => {
+                    if cksum.is_some() {
+                        return Err(de::Error::duplicate_field("cksum"));
+                    }
+                    cksum = Some(map.next_value()?);
+                }
+                Field::Yanked => {
+                    if yanked.is_some() {
+                        return Err(de::Error::duplicate_field("yanked"));
+                    }
+                    yanked = Some(map.next_value()?);
+                }
+                Field::Links => {
+                    if links.is_some() {
+                        return Err(de::Error::duplicate_field("links"));
+                    }
+                    links = Some(map.next_value()?);
+                }
+            }
+        }
+        Ok(RegistryPackage {
+            name: name.ok_or_else(|| de::Error::missing_field("name"))?,
+            vers: vers.ok_or_else(|| de::Error::missing_field("vers"))?,
+            deps: deps.ok_or_else(|| de::Error::missing_field("deps"))?,
+            features: features.ok_or_else(|| de::Error::missing_field("features"))?,
+            cksum: cksum.ok_or_else(|| de::Error::missing_field("cksum"))?,
+            yanked: yanked.ok_or_else(|| de::Error::missing_field("yanked"))?,
+            links: links.unwrap_or(None),
+        })
+    }
 }
 
 struct DependencyList {
@@ -446,54 +544,47 @@ impl<'cfg> Source for RegistrySource<'cfg> {
     }
 }
 
-// TODO: this is pretty unfortunate, ideally we'd use `DeserializeSeed` which
-//       is intended for "deserializing with context" but that means we couldn't
-//       use `#[derive(Deserialize)]` on `RegistryPackage` unfortunately.
-//
-// I'm told, however, that https://github.com/serde-rs/serde/pull/909 will solve
-// all our problems here. Until that lands this thread local is just a
-// workaround in the meantime.
-//
-// If you're reading this and find this thread local funny, check to see if that
-// PR is merged. If it is then let's ditch this thread local!
-thread_local!(static DEFAULT_ID: RefCell<Option<SourceId>> = Default::default());
+struct DependencyListDefault<'a>(&'a SourceId);
 
-impl<'de> de::Deserialize<'de> for DependencyList {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+impl<'a, 'de> de::DeserializeSeed<'de> for DependencyListDefault<'a> {
+    type Value = DependencyList;
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: de::Deserializer<'de>,
     {
-        return deserializer.deserialize_seq(Visitor);
+        deserializer.deserialize_seq(self)
+    }
+}
 
-        struct Visitor;
+impl<'de, 'a> de::Visitor<'de> for DependencyListDefault<'a> {
+    type Value = DependencyList;
 
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = DependencyList;
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "a list of dependencies")
+    }
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                write!(formatter, "a list of dependencies")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<DependencyList, A::Error>
-            where
-                A: de::SeqAccess<'de>,
-            {
-                let mut ret = Vec::new();
-                if let Some(size) = seq.size_hint() {
-                    ret.reserve(size);
-                }
-                while let Some(element) = seq.next_element::<RegistryDependency>()? {
-                    ret.push(parse_registry_dependency(element).map_err(|e| de::Error::custom(e))?);
-                }
-
-                Ok(DependencyList { inner: ret })
-            }
+    fn visit_seq<A>(self, mut seq: A) -> Result<DependencyList, A::Error>
+    where
+        A: de::SeqAccess<'de>,
+    {
+        let mut ret = Vec::new();
+        if let Some(size) = seq.size_hint() {
+            ret.reserve(size);
         }
+        while let Some(element) = seq.next_element::<RegistryDependency>()? {
+            let dep = parse_registry_dependency(element, &self.0).map_err(de::Error::custom)?;
+            ret.push(dep);
+        }
+
+        Ok(DependencyList { inner: ret })
     }
 }
 
 /// Converts an encoded dependency in the registry to a cargo dependency
-fn parse_registry_dependency(dep: RegistryDependency) -> CargoResult<Dependency> {
+fn parse_registry_dependency(
+    dep: RegistryDependency,
+    default: &SourceId,
+) -> CargoResult<Dependency> {
     let RegistryDependency {
         name,
         req,
@@ -508,7 +599,7 @@ fn parse_registry_dependency(dep: RegistryDependency) -> CargoResult<Dependency>
     let id = if let Some(registry) = registry {
         SourceId::for_registry(&registry.to_url()?)?
     } else {
-        DEFAULT_ID.with(|id| id.borrow().as_ref().unwrap().clone())
+        default.clone()
     };
 
     let mut dep = Dependency::parse_no_deprecated(&name, Some(&req), &id)?;
