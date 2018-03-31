@@ -16,12 +16,11 @@ pub fn main(config: &mut Config) -> CliResult {
             "
 Available unstable (nightly-only) flags:
 
-    -Z avoid-dev-deps    -- Avoid installing dev-dependencies if possible
-    -Z minimal-versions  -- Install minimal dependency versions instead of maximum
-    -Z no-index-update   -- Do not update the registry, avoids a network request for benchmarking
-    -Z offline           -- Offline mode that does not perform network requests
-    -Z print-im-a-teapot -- Example option for demonstration purposes
-    -Z unstable-options  -- Allow the usage of unstable options such as --registry
+    -Z avoid-dev-deps   -- Avoid installing dev-dependencies if possible
+    -Z minimal-versions -- Install minimal dependency versions instead of maximum
+    -Z no-index-update  -- Do not update the registry, avoids a network request for benchmarking
+    -Z offline          -- Offline mode that does not perform network requests
+    -Z unstable-options -- Allow the usage of unstable options such as --registry
 
 Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         );
