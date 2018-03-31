@@ -420,7 +420,6 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     let cfg = global_config(config)?;
     // Please ensure that ignore and hgignore are in sync.
     let ignore = [
-        "\n",
         "/target\n",
         "**/*.rs.bk\n",
         if !opts.bin { "Cargo.lock\n" } else { "" },
@@ -429,7 +428,6 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
     // file will exclude too much. Instead, use regexp-based ignores. See 'hg help ignore' for
     // more.
     let hgignore = [
-        "\n",
         "^target/\n",
         "glob:*.rs.bk\n",
         if !opts.bin { "glob:Cargo.lock\n" } else { "" },
@@ -449,18 +447,30 @@ fn mk(config: &Config, opts: &MkOptions) -> CargoResult<()> {
             if !fs::metadata(&path.join(".git")).is_ok() {
                 GitRepo::init(path, config.cwd())?;
             }
+            let ignore = match fs::metadata(&path.join(".gitignore")) {
+                Ok(_) => format!("\n{}", ignore),
+                _ => ignore,
+            };
             paths::append(&path.join(".gitignore"), ignore.as_bytes())?;
         }
         VersionControl::Hg => {
             if !fs::metadata(&path.join(".hg")).is_ok() {
                 HgRepo::init(path, config.cwd())?;
             }
+            let hgignore = match fs::metadata(&path.join(".hgignore")) {
+                Ok(_) => format!("\n{}", hgignore),
+                _ => hgignore,
+            };
             paths::append(&path.join(".hgignore"), hgignore.as_bytes())?;
         }
         VersionControl::Pijul => {
             if !fs::metadata(&path.join(".pijul")).is_ok() {
                 PijulRepo::init(path, config.cwd())?;
             }
+            let ignore = match fs::metadata(&path.join(".ignore")) {
+                Ok(_) => format!("\n{}", ignore),
+                _ => ignore,
+            };
             paths::append(&path.join(".ignore"), ignore.as_bytes())?;
         }
         VersionControl::Fossil => {
