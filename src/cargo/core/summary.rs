@@ -48,60 +48,12 @@ impl Summary {
                 )
             }
         }
-        let mut features_new = BTreeMap::new();
-        for (feature, list) in features.iter() {
-            let mut values = vec![];
-            for dep in list {
-                use self::FeatureValue::*;
-                let val = FeatureValue::build(dep, |fs| (&features).get(fs).is_some());
-                if let &Feature(_) = &val {
-                    // Return early to avoid doing unnecessary work
-                    values.push(val);
-                    continue;
-                }
-                // Find data for the referenced dependency...
-                let dep_data = {
-                    let dep_name = match &val {
-                        &Feature(_) => "",
-                        &Crate(ref dep_name) | &CrateFeature(ref dep_name, _) => dep_name,
-                    };
-                    dependencies.iter().find(|d| *d.name() == *dep_name)
-                };
-                match (&val, dep_data) {
-                    (&Crate(ref dep), Some(d)) => {
-                        if !d.is_optional() {
-                            bail!(
-                                "Feature `{}` depends on `{}` which is not an \
-                                 optional dependency.\nConsider adding \
-                                 `optional = true` to the dependency",
-                                feature,
-                                dep
-                            )
-                        }
-                    }
-                    (&CrateFeature(ref dep_name, _), None) => bail!(
-                        "Feature `{}` requires a feature of `{}` which is not a \
-                         dependency",
-                        feature,
-                        dep_name
-                    ),
-                    (&Crate(ref dep), None) => bail!(
-                        "Feature `{}` includes `{}` which is neither \
-                         a dependency nor another feature",
-                        feature,
-                        dep
-                    ),
-                    (&CrateFeature(_, _), Some(_)) | (&Feature(_), _) => {}
-                }
-                values.push(val);
-            }
-            features_new.insert(feature.clone(), values);
-        }
+        let feature_map = build_feature_map(features, &dependencies)?;
         Ok(Summary {
             inner: Rc::new(Inner {
                 package_id: pkg_id,
                 dependencies,
-                features: features_new,
+                features: feature_map,
                 checksum: None,
                 links: links.map(|l| InternedString::new(&l)),
             }),
@@ -170,6 +122,65 @@ impl PartialEq for Summary {
     fn eq(&self, other: &Summary) -> bool {
         self.inner.package_id == other.inner.package_id
     }
+}
+
+// Checks features for errors, bailing out a CargoResult:Err if invalid,
+// and creates FeatureValues for each feature.
+fn build_feature_map(
+    features: BTreeMap<String, Vec<String>>,
+    dependencies: &Vec<Dependency>,
+) -> CargoResult<FeatureMap> {
+    use self::FeatureValue::*;
+    let mut map = BTreeMap::new();
+    for (feature, list) in features.iter() {
+        let mut values = vec![];
+        for dep in list {
+            let val = FeatureValue::build(dep, |fs| (&features).get(fs).is_some());
+            if let &Feature(_) = &val {
+                values.push(val);
+                continue;
+            }
+
+            // Find data for the referenced dependency...
+            let dep_data = {
+                let dep_name = match &val {
+                    &Feature(_) => "",
+                    &Crate(ref dep_name) | &CrateFeature(ref dep_name, _) => dep_name,
+                };
+                dependencies.iter().find(|d| *d.name() == *dep_name)
+            };
+
+            match (&val, dep_data) {
+                (&Crate(ref dep), Some(d)) => {
+                    if !d.is_optional() {
+                        bail!(
+                            "Feature `{}` depends on `{}` which is not an \
+                             optional dependency.\nConsider adding \
+                             `optional = true` to the dependency",
+                            feature,
+                            dep
+                        )
+                    }
+                }
+                (&CrateFeature(ref dep_name, _), None) => bail!(
+                    "Feature `{}` requires a feature of `{}` which is not a \
+                     dependency",
+                    feature,
+                    dep_name
+                ),
+                (&Crate(ref dep), None) => bail!(
+                    "Feature `{}` includes `{}` which is neither \
+                     a dependency nor another feature",
+                    feature,
+                    dep
+                ),
+                (&CrateFeature(_, _), Some(_)) | (&Feature(_), _) => {}
+            }
+            values.push(val);
+        }
+        map.insert(feature.clone(), values);
+    }
+    Ok(map)
 }
 
 /// FeatureValue represents the types of dependencies a feature can have:
