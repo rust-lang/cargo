@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 use std::ops::Deref;
 use std::hash::{Hash, Hasher};
 
-pub fn leek(s: String) -> &'static str {
+pub fn leak(s: String) -> &'static str {
     let boxed = s.into_boxed_str();
     let ptr = boxed.as_ptr();
     let len = boxed.len();
@@ -20,7 +20,7 @@ pub fn leek(s: String) -> &'static str {
 }
 
 lazy_static! {
-    static ref STRING_CASHE: RwLock<HashSet<&'static str>> =
+    static ref STRING_CACHE: RwLock<HashSet<&'static str>> =
         RwLock::new(HashSet::new());
 }
 
@@ -32,14 +32,14 @@ pub struct InternedString {
 
 impl InternedString {
     pub fn new(str: &str) -> InternedString {
-        let mut cache = STRING_CASHE.write().unwrap();
+        let mut cache = STRING_CACHE.write().unwrap();
         if let Some(&s) = cache.get(str) {
             return InternedString {
                 ptr: s.as_ptr(),
                 len: s.len(),
             };
         }
-        let s = leek(str.to_string());
+        let s = leak(str.to_string());
         cache.insert(s);
         InternedString {
             ptr: s.as_ptr(),
