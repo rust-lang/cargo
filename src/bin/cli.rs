@@ -10,6 +10,23 @@ use command_prelude::*;
 
 pub fn main(config: &mut Config) -> CliResult {
     let args = cli().get_matches_safe()?;
+
+    if args.value_of("unstable-features") == Some("help") {
+        println!(
+            "
+Available unstable (nightly-only) flags:
+
+    -Z avoid-dev-deps   -- Avoid installing dev-dependencies if possible
+    -Z minimal-versions -- Install minimal dependency versions instead of maximum
+    -Z no-index-update  -- Do not update the registry, avoids a network request for benchmarking
+    -Z offline          -- Offline mode that does not perform network requests
+    -Z unstable-options -- Allow the usage of unstable options such as --registry
+
+Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
+        );
+        return Ok(());
+    }
+
     let is_verbose = args.occurrences_of("verbose") > 0;
     if args.is_present("version") {
         let version = cargo::version();
@@ -161,7 +178,7 @@ See 'cargo help <command>' for more information on a specific command.\n",
         .arg(opt("locked", "Require Cargo.lock is up to date").global(true))
         .arg(
             Arg::with_name("unstable-features")
-                .help("Unstable (nightly-only) flags to Cargo")
+                .help("Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details")
                 .short("Z")
                 .value_name("FLAG")
                 .multiple(true)
