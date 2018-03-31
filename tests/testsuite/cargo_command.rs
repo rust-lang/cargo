@@ -331,3 +331,15 @@ fn explain() {
         ),
     );
 }
+
+// Test that the output of 'cargo -Z help' shows a different help screen with
+// all the -Z flags.
+#[test]
+fn z_flags_help() {
+    assert_that(
+        cargo_process().arg("-Z").arg("help"),
+        execs()
+            .with_status(0)
+            .with_stdout_contains("-Z unstable-options"),
+    );
+}
