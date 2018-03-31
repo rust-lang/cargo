@@ -338,8 +338,8 @@ fn explain() {
 fn z_flags_help() {
     assert_that(
         cargo_process().arg("-Z").arg("help"),
-        execs()
-            .with_status(0)
-            .with_stdout_contains("-Z unstable-options"),
+        execs().with_status(0).with_stdout_contains(
+            "    -Z unstable-options -- Allow the usage of unstable options such as --registry",
+        ),
     );
 }
