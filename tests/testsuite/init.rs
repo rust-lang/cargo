@@ -437,7 +437,7 @@ fn gitignore_appended_not_replaced() {
 }
 
 #[test]
-fn gitignore_added_newline_if_required() {
+fn gitignore_added_newline_in_existing() {
     fs::create_dir(&paths::root().join(".git")).unwrap();
 
     File::create(&paths::root().join(".gitignore"))
@@ -461,7 +461,26 @@ fn gitignore_added_newline_if_required() {
 }
 
 #[test]
-fn mercurial_added_newline_if_required() {
+fn gitignore_no_newline_in_new() {
+    fs::create_dir(&paths::root().join(".git")).unwrap();
+
+    assert_that(
+        cargo_process("init").arg("--lib").env("USER", "foo"),
+        execs().with_status(0),
+    );
+
+    assert_that(&paths::root().join(".gitignore"), existing_file());
+
+    let mut contents = String::new();
+    File::open(&paths::root().join(".gitignore"))
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
+    assert!(!contents.starts_with("\n"));
+}
+
+#[test]
+fn mercurial_added_newline_in_existing() {
     fs::create_dir(&paths::root().join(".hg")).unwrap();
 
     File::create(&paths::root().join(".hgignore"))
@@ -482,6 +501,25 @@ fn mercurial_added_newline_if_required() {
         .read_to_string(&mut contents)
         .unwrap();
     assert!(contents.starts_with("first\n"));
+}
+
+#[test]
+fn mercurial_no_newline_in_new() {
+    fs::create_dir(&paths::root().join(".hg")).unwrap();
+
+    assert_that(
+        cargo_process("init").arg("--lib").env("USER", "foo"),
+        execs().with_status(0),
+    );
+
+    assert_that(&paths::root().join(".hgignore"), existing_file());
+
+    let mut contents = String::new();
+    File::open(&paths::root().join(".hgignore"))
+        .unwrap()
+        .read_to_string(&mut contents)
+        .unwrap();
+    assert!(!contents.starts_with("\n"));
 }
 
 #[test]
