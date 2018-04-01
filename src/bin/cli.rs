@@ -68,8 +68,6 @@ Run with 'cargo -Z [FLAG] [SUBCOMMAND]'"
         return Ok(());
     }
 
-    if args.subcommand_name().is_none() {}
-
     execute_subcommand(config, args)
 }
 
