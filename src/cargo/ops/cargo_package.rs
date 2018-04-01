@@ -350,6 +350,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
             mode: ops::CompileMode::Build,
             target_rustdoc_args: None,
             target_rustc_args: None,
+            yolo: false,
         },
         Arc::new(DefaultExecutor),
     )?;

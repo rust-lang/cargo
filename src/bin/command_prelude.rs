@@ -105,6 +105,10 @@ pub trait AppExt: Sized {
         self._arg(opt("release", release))
     }
 
+    fn arg_yolo(self, yolo: &'static str) -> Self {
+        self._arg(opt("yolo", yolo))
+    }
+
     fn arg_target_triple(self, target: &'static str) -> Self {
         self._arg(opt("target", target).value_name("TRIPLE"))
     }
@@ -288,6 +292,7 @@ pub trait ArgMatchesExt {
             message_format,
             target_rustdoc_args: None,
             target_rustc_args: None,
+            yolo: self._is_present("yolo"),
         };
         Ok(opts)
     }

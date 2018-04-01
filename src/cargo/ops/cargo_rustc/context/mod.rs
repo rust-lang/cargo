@@ -570,7 +570,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     }
 
     pub fn show_warnings(&self, pkg: &PackageId) -> bool {
-        pkg.source_id().is_path() || self.config.extra_verbose()
+        !self.config.yolo() && pkg.source_id().is_path() || self.config.extra_verbose()
     }
 
     fn info(&self, kind: &Kind) -> &TargetInfo {

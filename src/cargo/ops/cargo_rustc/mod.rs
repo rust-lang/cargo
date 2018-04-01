@@ -68,6 +68,8 @@ pub struct BuildConfig {
     pub jobs: u32,
     /// Whether we are building for release
     pub release: bool,
+    /// Whether we are caring about warnings
+    pub yolo: bool,
     /// Whether we are running tests
     pub test: bool,
     /// Whether we are building documentation
@@ -358,7 +360,7 @@ fn rustc<'a, 'cfg>(
 
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
-    if !cx.show_warnings(unit.pkg.package_id()) {
+    if cx.build_config.yolo || !cx.show_warnings(unit.pkg.package_id()) {
         rustc.arg("--cap-lints").arg("allow");
 
     // If this is an upstream dep but we *do* want warnings, make sure that they

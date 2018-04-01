@@ -25,6 +25,7 @@ pub fn cli() -> App {
             "Build all targets (lib and bin targets by default)",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_yolo("Ignore all warnings")
         .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_manifest_path()
