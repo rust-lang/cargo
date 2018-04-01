@@ -21,7 +21,7 @@ atty = "0.2"
 crates-io = { path = "src/crates-io", version = "0.16" }
 crossbeam = "0.3"
 crypto-hash = "0.3"
-curl = "0.4.6"
+curl = "0.4.9"
 env_logger = "0.5"
 failure = "0.1.1"
 filetime = "0.2"
