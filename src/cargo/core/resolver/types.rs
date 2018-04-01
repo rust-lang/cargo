@@ -347,7 +347,7 @@ where
     }
 }
 
-impl<T> ExactSizeIterator for RcVecIter<T> {}
+impl<T: Clone> ExactSizeIterator for RcVecIter<T> {}
 
 pub struct RcList<T> {
     pub head: Option<Rc<(T, RcList<T>)>>,
