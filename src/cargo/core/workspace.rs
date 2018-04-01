@@ -8,8 +8,8 @@ use glob::glob;
 use url::Url;
 
 use core::registry::PackageRegistry;
-use core::{EitherManifest, Package, SourceId, VirtualManifest};
 use core::{Dependency, PackageIdSpec, Profile, Profiles};
+use core::{EitherManifest, Package, SourceId, VirtualManifest};
 use ops;
 use sources::PathSource;
 use util::errors::{CargoResult, CargoResultExt};
