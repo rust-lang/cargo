@@ -4,8 +4,8 @@ use std::iter::FromIterator;
 
 use url::Url;
 
-use core::{PackageId, Summary};
 use core::PackageIdSpec;
+use core::{PackageId, Summary};
 use util::Graph;
 use util::errors::CargoResult;
 use util::graph::{Edges, Nodes};
@@ -209,7 +209,7 @@ impl<'a> Iterator for Deps<'a> {
             // Note: Edges is actually a std::collections::hash_set::Iter, which
             // is an ExactSizeIterator.
             Some(ref iter) => iter.size_hint(),
-            None => (0, Some(0))
+            None => (0, Some(0)),
         }
     }
 }
@@ -232,7 +232,7 @@ impl<'a> Iterator for DepsNotReplaced<'a> {
             // Note: Edges is actually a std::collections::hash_set::Iter, which
             // is an ExactSizeIterator.
             Some(ref iter) => iter.size_hint(),
-            None => (0, Some(0))
+            None => (0, Some(0)),
         }
     }
 }
