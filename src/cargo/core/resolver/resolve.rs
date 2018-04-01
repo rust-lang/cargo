@@ -203,7 +203,18 @@ impl<'a> Iterator for Deps<'a> {
             .and_then(|e| e.next())
             .map(|id| self.resolve.replacement(id).unwrap_or(id))
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self.edges {
+            // Note: Edges is actually a std::collections::hash_set::Iter, which
+            // is an ExactSizeIterator.
+            Some(ref iter) => iter.size_hint(),
+            None => (0, Some(0))
+        }
+    }
 }
+
+impl<'a> ExactSizeIterator for Deps<'a> {}
 
 pub struct DepsNotReplaced<'a> {
     edges: Option<Edges<'a, PackageId>>,
@@ -215,4 +226,15 @@ impl<'a> Iterator for DepsNotReplaced<'a> {
     fn next(&mut self) -> Option<&'a PackageId> {
         self.edges.as_mut().and_then(|e| e.next())
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self.edges {
+            // Note: Edges is actually a std::collections::hash_set::Iter, which
+            // is an ExactSizeIterator.
+            Some(ref iter) => iter.size_hint(),
+            None => (0, Some(0))
+        }
+    }
 }
+
+impl<'a> ExactSizeIterator for DepsNotReplaced<'a> {}
