@@ -53,6 +53,8 @@ pub struct Config {
     rustdoc: LazyCell<PathBuf>,
     /// Whether we are printing extra verbose messages
     extra_verbose: bool,
+    /// Whether we are printing warnings at all
+    yolo: bool,
     /// `frozen` is set if we shouldn't access the network
     frozen: bool,
     /// `locked` is set if we should not update lock files
@@ -89,6 +91,7 @@ impl Config {
             cargo_exe: LazyCell::new(),
             rustdoc: LazyCell::new(),
             extra_verbose: false,
+            yolo: false,
             frozen: false,
             locked: false,
             jobserver: unsafe {
@@ -508,6 +511,10 @@ impl Config {
 
     pub fn extra_verbose(&self) -> bool {
         self.extra_verbose
+    }
+
+    pub fn yolo(&self) -> bool {
+        self.yolo
     }
 
     pub fn network_allowed(&self) -> bool {

@@ -64,6 +64,8 @@ pub struct CompileOptions<'a> {
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
     pub target_rustc_args: Option<Vec<String>>,
+    /// Whether to care for warnings or not
+    pub yolo: bool,
 }
 
 impl<'a> CompileOptions<'a> {
@@ -84,6 +86,7 @@ impl<'a> CompileOptions<'a> {
             message_format: MessageFormat::Human,
             target_rustdoc_args: None,
             target_rustc_args: None,
+            yolo: false,
         }
     }
 }
@@ -233,6 +236,7 @@ pub fn compile_ws<'a>(
         ref filter,
         ref target_rustdoc_args,
         ref target_rustc_args,
+        yolo,
     } = *options;
 
     let target = match target {
@@ -335,6 +339,7 @@ pub fn compile_ws<'a>(
         let _p = profile::start("compiling");
         let mut build_config = scrape_build_config(config, jobs, target)?;
         build_config.release = release;
+        build_config.yolo = yolo;
         build_config.test = mode == CompileMode::Test || mode == CompileMode::Bench;
         build_config.json_messages = message_format == MessageFormat::Json;
         if let CompileMode::Doc { deps } = mode {
