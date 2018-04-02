@@ -91,8 +91,8 @@ pub fn output_depinfo<'a, 'b>(context: &mut Context<'a, 'b>, unit: &Unit<'a>) ->
         .map(|f| render_filename(f, basedir))
         .collect::<CargoResult<Vec<_>>>()?;
 
-    for &(_, ref link_dst, _) in context.target_filenames(unit)?.iter() {
-        if let Some(ref link_dst) = *link_dst {
+    for output in context.outputs(unit)?.iter() {
+        if let Some(ref link_dst) = output.hardlink {
             let output_path = link_dst.with_extension("d");
             if success {
                 let target_fn = render_filename(link_dst, basedir)?;
