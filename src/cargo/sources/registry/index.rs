@@ -2,12 +2,13 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::str;
 
+use serde::de::DeserializeSeed;
 use serde_json;
 use semver::Version;
 
 use core::dependency::Dependency;
 use core::{PackageId, SourceId, Summary};
-use sources::registry::{RegistryPackage, INDEX_LOCK};
+use sources::registry::{RegistryPackage, RegistryPackageDefault, INDEX_LOCK};
 use sources::registry::RegistryData;
 use util::{internal, CargoResult, Config, Filesystem};
 
@@ -140,6 +141,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     ///
     /// The returned boolean is whether or not the summary has been yanked.
     fn parse_registry_package(&mut self, line: &str) -> CargoResult<(Summary, bool)> {
+        let mut json_de = serde_json::Deserializer::from_str(line);
         let RegistryPackage {
             name,
             vers,
@@ -148,12 +150,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             features,
             yanked,
             links,
-        } = super::DEFAULT_ID.with(|slot| {
-            *slot.borrow_mut() = Some(self.source_id.clone());
-            let res = serde_json::from_str::<RegistryPackage>(line);
-            drop(slot.borrow_mut().take());
-            res
-        })?;
+        } = RegistryPackageDefault(&self.source_id).deserialize(&mut json_de)?;
         let pkgid = PackageId::new(&name, &vers, &self.source_id)?;
         let summary = Summary::new(pkgid, deps.inner, features, links)?;
         let summary = summary.set_checksum(cksum.clone());
