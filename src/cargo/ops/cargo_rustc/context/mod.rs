@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str::{self, FromStr};
 use std::sync::Arc;
 
@@ -24,7 +24,7 @@ mod unit_dependencies;
 use self::unit_dependencies::build_unit_dependencies;
 
 mod compilation_files;
-use self::compilation_files::CompilationFiles;
+use self::compilation_files::{CompilationFiles, OutputFile};
 pub use self::compilation_files::Metadata;
 
 mod target_info;
@@ -274,11 +274,8 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     ///  - filename: filename rustc compiles to. (Often has metadata suffix).
     ///  - link_dst: Optional file to link/copy the result to (without metadata suffix)
     ///  - linkable: Whether possible to link against file (eg it's a library)
-    pub fn target_filenames(
-        &mut self,
-        unit: &Unit<'a>,
-    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, FileFlavor)>>> {
-        self.files.as_ref().unwrap().target_filenames(unit, self)
+    pub fn outputs(&mut self, unit: &Unit<'a>) -> CargoResult<Arc<Vec<OutputFile>>> {
+        self.files.as_ref().unwrap().outputs(unit, self)
     }
 
     /// For a package, return all targets which are registered as dependencies

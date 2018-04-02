@@ -29,13 +29,19 @@ pub struct CompilationFiles<'a, 'cfg: 'a> {
     pub(super) target: Option<Layout>,
     ws: &'a Workspace<'cfg>,
     metas: HashMap<Unit<'a>, Option<Metadata>>,
-    /// For each Unit, a list all files produced as a triple of
-    ///
-    ///  - File name that will be produced by the build process (in `deps`)
-    ///  - If it should be linked into `target`, and what it should be called (e.g. without
-    ///    metadata).
-    ///  - Type of the file (library / debug symbol / else)
-    outputs: HashMap<Unit<'a>, LazyCell<Arc<Vec<(PathBuf, Option<PathBuf>, FileFlavor)>>>>,
+    /// For each Unit, a list all files produced.
+    outputs: HashMap<Unit<'a>, LazyCell<Arc<Vec<OutputFile>>>>,
+}
+
+#[derive(Debug)]
+pub struct OutputFile {
+    /// File name that will be produced by the build process (in `deps`).
+    pub path: PathBuf,
+    /// If it should be linked into `target`, and what it should be called
+    /// (e.g. without metadata).
+    pub hardlink: Option<PathBuf>,
+    /// Type of the file (library / debug symbol / else).
+    pub flavor: FileFlavor,
 }
 
 impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
@@ -153,13 +159,13 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
     }
 
-    pub(super) fn target_filenames(
+    pub(super) fn outputs(
         &self,
         unit: &Unit<'a>,
         cx: &Context<'a, 'cfg>,
-    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, FileFlavor)>>> {
+    ) -> CargoResult<Arc<Vec<OutputFile>>> {
         self.outputs[unit]
-            .try_borrow_with(|| self.calc_target_filenames(unit, cx))
+            .try_borrow_with(|| self.calc_outputs(unit, cx))
             .map(Arc::clone)
     }
 
@@ -211,11 +217,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
     }
 
-    fn calc_target_filenames(
+    fn calc_outputs(
         &self,
         unit: &Unit<'a>,
         cx: &Context<'a, 'cfg>,
-    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, FileFlavor)>>> {
+    ) -> CargoResult<Arc<Vec<OutputFile>>> {
         let out_dir = self.out_dir(unit);
         let file_stem = self.file_stem(unit);
         let link_stem = self.link_stem(unit);
@@ -229,11 +235,15 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         let mut unsupported = Vec::new();
         {
             if unit.profile.check {
-                let filename = out_dir.join(format!("lib{}.rmeta", file_stem));
-                let link_dst = link_stem
+                let path = out_dir.join(format!("lib{}.rmeta", file_stem));
+                let hardlink = link_stem
                     .clone()
                     .map(|(ld, ls)| ld.join(format!("lib{}.rmeta", ls)));
-                ret.push((filename, link_dst, FileFlavor::Linkable));
+                ret.push(OutputFile {
+                    path,
+                    hardlink,
+                    flavor: FileFlavor::Linkable,
+                });
             } else {
                 let mut add = |crate_type: &str, flavor: FileFlavor| -> CargoResult<()> {
                     let crate_type = if crate_type == "lib" {
@@ -250,11 +260,15 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 
                     match file_types {
                         Some(types) => for file_type in types {
-                            let filename = out_dir.join(file_type.filename(&file_stem));
-                            let link_dst = link_stem
+                            let path = out_dir.join(file_type.filename(&file_stem));
+                            let hardlink = link_stem
                                 .as_ref()
                                 .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
-                            ret.push((filename, link_dst, file_type.flavor));
+                            ret.push(OutputFile {
+                                path,
+                                hardlink,
+                                flavor: file_type.flavor,
+                            });
                         },
                         // not supported, don't worry about it
                         None => {

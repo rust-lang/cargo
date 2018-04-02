@@ -112,9 +112,9 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
             continue;
         }
 
-        for &(ref src, ref link_dst, _) in cx.target_filenames(unit)?.iter() {
-            rm_rf(src, config)?;
-            if let Some(ref dst) = *link_dst {
+        for output in cx.outputs(unit)?.iter() {
+            rm_rf(&output.path, config)?;
+            if let Some(ref dst) = output.hardlink {
                 rm_rf(dst, config)?;
             }
         }
