@@ -181,20 +181,20 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns an Option because in some cases we don't want to link
     /// (eg a dependent lib)
     fn link_stem(&self, unit: &Unit<'a>) -> Option<(PathBuf, String)> {
-        let src_dir = self.out_dir(unit);
+        let out_dir = self.out_dir(unit);
         let bin_stem = self.bin_stem(unit);
         let file_stem = self.file_stem(unit);
 
         // We currently only lift files up from the `deps` directory. If
         // it was compiled into something like `example/` or `doc/` then
         // we don't want to link it up.
-        if src_dir.ends_with("deps") {
+        if out_dir.ends_with("deps") {
             // Don't lift up library dependencies
             if self.ws.members().find(|&p| p == unit.pkg).is_none() && !unit.target.is_bin() {
                 None
             } else {
                 Some((
-                    src_dir.parent().unwrap().to_owned(),
+                    out_dir.parent().unwrap().to_owned(),
                     if unit.profile.test {
                         file_stem
                     } else {
@@ -204,8 +204,8 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             }
         } else if bin_stem == file_stem {
             None
-        } else if src_dir.ends_with("examples") || src_dir.parent().unwrap().ends_with("build") {
-            Some((src_dir, bin_stem))
+        } else if out_dir.ends_with("examples") || out_dir.parent().unwrap().ends_with("build") {
+            Some((out_dir, bin_stem))
         } else {
             None
         }
@@ -217,7 +217,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         cx: &Context<'a, 'cfg>,
     ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>> {
         let out_dir = self.out_dir(unit);
-        let stem = self.file_stem(unit);
+        let file_stem = self.file_stem(unit);
         let link_stem = self.link_stem(unit);
         let info = if unit.target.for_host() {
             &cx.host_info
@@ -229,7 +229,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         let mut unsupported = Vec::new();
         {
             if unit.profile.check {
-                let filename = out_dir.join(format!("lib{}.rmeta", stem));
+                let filename = out_dir.join(format!("lib{}.rmeta", file_stem));
                 let link_dst = link_stem
                     .clone()
                     .map(|(ld, ls)| ld.join(format!("lib{}.rmeta", ls)));
@@ -275,7 +275,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                                 let filename = out_dir.join(format!(
                                     "{}{}{}",
                                     prefix,
-                                    conv(stem.clone()),
+                                    conv(file_stem.clone()),
                                     suffix
                                 ));
                                 let link_dst = link_stem.clone().map(|(ld, ls)| {
