@@ -235,7 +235,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     .map(|(ld, ls)| ld.join(format!("lib{}.rmeta", ls)));
                 ret.push((filename, link_dst, FileFlavor::Linkable));
             } else {
-                let mut add = |crate_type: &str, file_type: FileFlavor| -> CargoResult<()> {
+                let mut add = |crate_type: &str, flavor: FileFlavor| -> CargoResult<()> {
                     let crate_type = if crate_type == "lib" {
                         "rlib"
                     } else {
@@ -243,43 +243,19 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     };
                     let file_types = info.file_types(
                         crate_type,
-                        file_type,
+                        flavor,
                         unit.target.kind(),
                         cx.target_triple(),
                     )?;
 
                     match file_types {
-                        Some(types) => {
-                            for file_type in types {
-                                // wasm bin target will generate two files in deps such as
-                                // "web-stuff.js" and "web_stuff.wasm". Note the different usages of
-                                // "-" and "_". should_replace_hyphens is a flag to indicate that
-                                // we need to convert the stem "web-stuff" to "web_stuff", so we
-                                // won't miss "web_stuff.wasm".
-                                let conv = |s: String| {
-                                    if file_type.should_replace_hyphens {
-                                        s.replace("-", "_")
-                                    } else {
-                                        s
-                                    }
-                                };
-                                let filename = out_dir.join(format!(
-                                    "{}{}{}",
-                                    file_type.prefix,
-                                    conv(file_stem.clone()),
-                                    file_type.suffix,
-                                ));
-                                let link_dst = link_stem.clone().map(|(ld, ls)| {
-                                    ld.join(format!(
-                                        "{}{}{}",
-                                        file_type.prefix,
-                                        conv(ls),
-                                        file_type.suffix
-                                    ))
-                                });
-                                ret.push((filename, link_dst, file_type.flavor));
-                            }
-                        }
+                        Some(types) => for file_type in types {
+                            let filename = out_dir.join(file_type.filename(&file_stem));
+                            let link_dst = link_stem
+                                .as_ref()
+                                .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
+                            ret.push((filename, link_dst, file_type.flavor));
+                        },
                         // not supported, don't worry about it
                         None => {
                             unsupported.push(crate_type.to_string());

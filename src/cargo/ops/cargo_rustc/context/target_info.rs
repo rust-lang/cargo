@@ -28,10 +28,26 @@ pub enum FileFlavor {
 }
 
 pub struct FileType {
-    pub suffix: String,
-    pub prefix: String,
     pub flavor: FileFlavor,
-    pub should_replace_hyphens: bool,
+    suffix: String,
+    prefix: String,
+    // wasm bin target will generate two files in deps such as
+    // "web-stuff.js" and "web_stuff.wasm". Note the different usages of
+    // "-" and "_". should_replace_hyphens is a flag to indicate that
+    // we need to convert the stem "web-stuff" to "web_stuff", so we
+    // won't miss "web_stuff.wasm".
+    should_replace_hyphens: bool,
+}
+
+impl FileType {
+    pub fn filename(&self, stem: &str) -> String {
+        let stem = if self.should_replace_hyphens {
+            stem.replace("-", "_")
+        } else {
+            stem.to_string()
+        };
+        format!("{}{}{}", self.prefix, stem, self.suffix)
+    }
 }
 
 impl TargetInfo {
@@ -126,7 +142,7 @@ impl TargetInfo {
     pub fn file_types(
         &self,
         crate_type: &str,
-        file_type: FileFlavor,
+        flavor: FileFlavor,
         kind: &TargetKind,
         target_triple: &str,
     ) -> CargoResult<Option<Vec<FileType>>> {
@@ -145,9 +161,9 @@ impl TargetInfo {
         };
         let mut ret = vec![
             FileType {
-                suffix: suffix.to_string(),
+                suffix: suffix.clone(),
                 prefix: prefix.clone(),
-                flavor: file_type,
+                flavor,
                 should_replace_hyphens: false,
             },
         ];
