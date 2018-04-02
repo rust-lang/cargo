@@ -134,8 +134,8 @@ impl<'a> RegistryQueryer<'a> {
             let previous_cmp = a_in_previous.cmp(&b_in_previous).reverse();
             match previous_cmp {
                 Ordering::Equal => {
-                    let cmp = a.summary.version().cmp(&b.summary.version());
-                    if self.minimal_versions == true {
+                    let cmp = a.summary.version().cmp(b.summary.version());
+                    if self.minimal_versions {
                         // Lower version ordered first.
                         cmp
                     } else {

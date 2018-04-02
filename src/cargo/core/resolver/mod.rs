@@ -432,7 +432,7 @@ fn activate_deps_loop(
                             .remaining_siblings
                             .clone()
                             .filter_map(|(_, (ref new_dep, _, _))| {
-                                past_conflicting_activations.conflicting(&cx, &new_dep)
+                                past_conflicting_activations.conflicting(&cx, new_dep)
                             })
                             .next()
                         {
@@ -818,7 +818,7 @@ fn compatible(a: &semver::Version, b: &semver::Version) -> bool {
 ///
 /// Read <https://github.com/rust-lang/cargo/pull/4834>
 /// For several more detailed explanations of the logic here.
-fn find_candidate<'a>(
+fn find_candidate(
     backtrack_stack: &mut Vec<BacktrackFrame>,
     parent: &Summary,
     conflicting_activations: &HashMap<PackageId, ConflictReason>,

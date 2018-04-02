@@ -51,9 +51,11 @@ impl InternedString {
 
         InternedString { inner: s }
     }
-
-    pub fn as_str(&self) -> &'static str {
-        self.inner
+    pub fn to_inner(&self) -> &'static str {
+        unsafe {
+            let slice = slice::from_raw_parts(self.ptr, self.len);
+            str::from_utf8_unchecked(slice)
+        }
     }
 }
 
