@@ -259,14 +259,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                                 suffix,
                                 file_type,
                             );
-                            for (suffix, file_type, should_replace_hyphens) in suffixes {
+                            for file_type in suffixes {
                                 // wasm bin target will generate two files in deps such as
                                 // "web-stuff.js" and "web_stuff.wasm". Note the different usages of
                                 // "-" and "_". should_replace_hyphens is a flag to indicate that
                                 // we need to convert the stem "web-stuff" to "web_stuff", so we
                                 // won't miss "web_stuff.wasm".
                                 let conv = |s: String| {
-                                    if should_replace_hyphens {
+                                    if file_type.should_replace_hyphens {
                                         s.replace("-", "_")
                                     } else {
                                         s
@@ -276,12 +276,12 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                                     "{}{}{}",
                                     prefix,
                                     conv(file_stem.clone()),
-                                    suffix
+                                    file_type.suffix,
                                 ));
                                 let link_dst = link_stem.clone().map(|(ld, ls)| {
-                                    ld.join(format!("{}{}{}", prefix, conv(ls), suffix))
+                                    ld.join(format!("{}{}{}", prefix, conv(ls), file_type.suffix))
                                 });
-                                ret.push((filename, link_dst, file_type));
+                                ret.push((filename, link_dst, file_type.target_file_type));
                             }
                             Ok(())
                         }
@@ -451,6 +451,12 @@ fn compute_metadata<'a, 'cfg>(
     Some(Metadata(hasher.finish()))
 }
 
+struct FileType {
+    suffix: String,
+    target_file_type: TargetFileType,
+    should_replace_hyphens: bool,
+}
+
 // (not a rustdoc)
 // Return a list of 3-tuples (suffix, file_type, should_replace_hyphens).
 //
@@ -462,19 +468,33 @@ fn add_target_specific_suffixes(
     target_kind: &TargetKind,
     suffix: &str,
     file_type: TargetFileType,
-) -> Vec<(String, TargetFileType, bool)> {
-    let mut ret = vec![(suffix.to_string(), file_type, false)];
+) -> Vec<FileType> {
+    let mut ret = vec![
+        FileType {
+            suffix: suffix.to_string(),
+            target_file_type: file_type,
+            should_replace_hyphens: false,
+        },
+    ];
 
     // rust-lang/cargo#4500
     if target_triple.ends_with("pc-windows-msvc") && crate_type.ends_with("dylib")
         && suffix == ".dll"
     {
-        ret.push((".dll.lib".to_string(), TargetFileType::Normal, false));
+        ret.push(FileType {
+            suffix: ".dll.lib".to_string(),
+            target_file_type: TargetFileType::Normal,
+            should_replace_hyphens: false,
+        })
     }
 
     // rust-lang/cargo#4535
     if target_triple.starts_with("wasm32-") && crate_type == "bin" && suffix == ".js" {
-        ret.push((".wasm".to_string(), TargetFileType::Normal, true));
+        ret.push(FileType {
+            suffix: ".wasm".to_string(),
+            target_file_type: TargetFileType::Normal,
+            should_replace_hyphens: true,
+        })
     }
 
     // rust-lang/cargo#4490, rust-lang/cargo#4960
@@ -484,9 +504,17 @@ fn add_target_specific_suffixes(
     //    so no need to do anything.
     if *target_kind == TargetKind::Bin {
         if target_triple.contains("-apple-") {
-            ret.push((".dSYM".to_string(), TargetFileType::DebugInfo, false));
+            ret.push(FileType {
+                suffix: ".dSYM".to_string(),
+                target_file_type: TargetFileType::DebugInfo,
+                should_replace_hyphens: false,
+            })
         } else if target_triple.ends_with("-msvc") {
-            ret.push((".pdb".to_string(), TargetFileType::DebugInfo, false));
+            ret.push(FileType {
+                suffix: ".pdb".to_string(),
+                target_file_type: TargetFileType::DebugInfo,
+                should_replace_hyphens: false,
+            })
         }
     }
 
