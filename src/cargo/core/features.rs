@@ -45,29 +45,29 @@ use std::str::FromStr;
 
 use util::errors::CargoResult;
 
-/// The epoch of the compiler (RFC 2052)
+/// The edition of the compiler (RFC 2052)
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
-pub enum Epoch {
-    /// The 2015 epoch
-    Epoch2015,
-    /// The 2018 epoch
-    Epoch2018,
+pub enum Edition {
+    /// The 2015 edition
+    Edition2015,
+    /// The 2018 edition
+    Edition2018,
 }
 
-impl fmt::Display for Epoch {
+impl fmt::Display for Edition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Epoch::Epoch2015 => f.write_str("2015"),
-            Epoch::Epoch2018 => f.write_str("2018"),
+            Edition::Edition2015 => f.write_str("2015"),
+            Edition::Edition2018 => f.write_str("2018"),
         }
     }
 }
-impl FromStr for Epoch {
+impl FromStr for Edition {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, ()> {
         match s {
-            "2015" => Ok(Epoch::Epoch2015),
-            "2018" => Ok(Epoch::Epoch2018),
+            "2015" => Ok(Edition::Edition2015),
+            "2018" => Ok(Edition::Edition2018),
             _ => Err(()),
         }
     }
@@ -156,8 +156,8 @@ features! {
         // Downloading packages from alternative registry indexes.
         [unstable] alternative_registries: bool,
 
-        // Using epochs
-        [unstable] epoch: bool,
+        // Using editions
+        [unstable] edition: bool,
 
         // Renaming a package in the manifest via the `package` key
         [unstable] rename_dependency: bool,

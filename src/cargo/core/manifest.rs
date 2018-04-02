@@ -9,7 +9,7 @@ use serde::ser;
 use url::Url;
 
 use core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
-use core::{Epoch, Feature, Features, WorkspaceConfig};
+use core::{Edition, Feature, Features, WorkspaceConfig};
 use core::interning::InternedString;
 use util::Config;
 use util::toml::TomlManifest;
@@ -38,7 +38,7 @@ pub struct Manifest {
     workspace: WorkspaceConfig,
     original: Rc<TomlManifest>,
     features: Features,
-    epoch: Epoch,
+    edition: Edition,
     im_a_teapot: Option<bool>,
 }
 
@@ -272,7 +272,7 @@ impl Manifest {
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
         features: Features,
-        epoch: Epoch,
+        edition: Edition,
         im_a_teapot: Option<bool>,
         original: Rc<TomlManifest>,
     ) -> Manifest {
@@ -290,7 +290,7 @@ impl Manifest {
             patch,
             workspace,
             features,
-            epoch,
+            edition,
             original,
             im_a_teapot,
             publish_lockfile,
@@ -406,8 +406,8 @@ impl Manifest {
         }
     }
 
-    pub fn epoch(&self) -> Epoch {
-        self.epoch
+    pub fn edition(&self) -> Edition {
+        self.edition
     }
 }
 
