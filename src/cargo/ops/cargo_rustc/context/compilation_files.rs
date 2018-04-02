@@ -1,4 +1,4 @@
-use std::collections::hash_map::{Entry, HashMap};
+use std::collections::HashMap;
 use std::env;
 use std::fmt;
 use std::hash::{Hash, Hasher, SipHasher};
@@ -9,7 +9,7 @@ use lazycell::LazyCell;
 
 use core::{TargetKind, Workspace};
 use ops::cargo_rustc::layout::Layout;
-use ops::cargo_rustc::TargetFileType;
+use ops::cargo_rustc::FileFlavor;
 use ops::{Context, Kind, Unit};
 use util::{self, CargoResult};
 
@@ -29,13 +29,19 @@ pub struct CompilationFiles<'a, 'cfg: 'a> {
     pub(super) target: Option<Layout>,
     ws: &'a Workspace<'cfg>,
     metas: HashMap<Unit<'a>, Option<Metadata>>,
-    /// For each Unit, a list all files produced as a triple of
-    ///
-    ///  - File name that will be produced by the build process (in `deps`)
-    ///  - If it should be linked into `target`, and what it should be called (e.g. without
-    ///    metadata).
-    ///  - Type of the file (library / debug symbol / else)
-    outputs: HashMap<Unit<'a>, LazyCell<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>>>,
+    /// For each Unit, a list all files produced.
+    outputs: HashMap<Unit<'a>, LazyCell<Arc<Vec<OutputFile>>>>,
+}
+
+#[derive(Debug)]
+pub struct OutputFile {
+    /// File name that will be produced by the build process (in `deps`).
+    pub path: PathBuf,
+    /// If it should be linked into `target`, and what it should be called
+    /// (e.g. without metadata).
+    pub hardlink: Option<PathBuf>,
+    /// Type of the file (library / debug symbol / else).
+    pub flavor: FileFlavor,
 }
 
 impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
@@ -153,13 +159,13 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         }
     }
 
-    pub(super) fn target_filenames(
+    pub(super) fn outputs(
         &self,
         unit: &Unit<'a>,
         cx: &Context<'a, 'cfg>,
-    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>> {
+    ) -> CargoResult<Arc<Vec<OutputFile>>> {
         self.outputs[unit]
-            .try_borrow_with(|| self.calc_target_filenames(unit, cx))
+            .try_borrow_with(|| self.calc_outputs(unit, cx))
             .map(Arc::clone)
     }
 
@@ -181,20 +187,20 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     /// Returns an Option because in some cases we don't want to link
     /// (eg a dependent lib)
     fn link_stem(&self, unit: &Unit<'a>) -> Option<(PathBuf, String)> {
-        let src_dir = self.out_dir(unit);
+        let out_dir = self.out_dir(unit);
         let bin_stem = self.bin_stem(unit);
         let file_stem = self.file_stem(unit);
 
         // We currently only lift files up from the `deps` directory. If
         // it was compiled into something like `example/` or `doc/` then
         // we don't want to link it up.
-        if src_dir.ends_with("deps") {
+        if out_dir.ends_with("deps") {
             // Don't lift up library dependencies
             if self.ws.members().find(|&p| p == unit.pkg).is_none() && !unit.target.is_bin() {
                 None
             } else {
                 Some((
-                    src_dir.parent().unwrap().to_owned(),
+                    out_dir.parent().unwrap().to_owned(),
                     if unit.profile.test {
                         file_stem
                     } else {
@@ -204,20 +210,20 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             }
         } else if bin_stem == file_stem {
             None
-        } else if src_dir.ends_with("examples") || src_dir.parent().unwrap().ends_with("build") {
-            Some((src_dir, bin_stem))
+        } else if out_dir.ends_with("examples") || out_dir.parent().unwrap().ends_with("build") {
+            Some((out_dir, bin_stem))
         } else {
             None
         }
     }
 
-    fn calc_target_filenames(
+    fn calc_outputs(
         &self,
         unit: &Unit<'a>,
         cx: &Context<'a, 'cfg>,
-    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>> {
+    ) -> CargoResult<Arc<Vec<OutputFile>>> {
         let out_dir = self.out_dir(unit);
-        let stem = self.file_stem(unit);
+        let file_stem = self.file_stem(unit);
         let link_stem = self.link_stem(unit);
         let info = if unit.target.for_host() {
             &cx.host_info
@@ -229,68 +235,47 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         let mut unsupported = Vec::new();
         {
             if unit.profile.check {
-                let filename = out_dir.join(format!("lib{}.rmeta", stem));
-                let link_dst = link_stem
+                let path = out_dir.join(format!("lib{}.rmeta", file_stem));
+                let hardlink = link_stem
                     .clone()
                     .map(|(ld, ls)| ld.join(format!("lib{}.rmeta", ls)));
-                ret.push((filename, link_dst, TargetFileType::Linkable));
+                ret.push(OutputFile {
+                    path,
+                    hardlink,
+                    flavor: FileFlavor::Linkable,
+                });
             } else {
-                let mut add = |crate_type: &str, file_type: TargetFileType| -> CargoResult<()> {
+                let mut add = |crate_type: &str, flavor: FileFlavor| -> CargoResult<()> {
                     let crate_type = if crate_type == "lib" {
                         "rlib"
                     } else {
                         crate_type
                     };
-                    let mut crate_types = info.crate_types.borrow_mut();
-                    let entry = crate_types.entry(crate_type.to_string());
-                    let crate_type_info = match entry {
-                        Entry::Occupied(o) => &*o.into_mut(),
-                        Entry::Vacant(v) => {
-                            let value = info.discover_crate_type(v.key())?;
-                            &*v.insert(value)
-                        }
-                    };
-                    match *crate_type_info {
-                        Some((ref prefix, ref suffix)) => {
-                            let suffixes = add_target_specific_suffixes(
-                                cx.target_triple(),
-                                crate_type,
-                                unit.target.kind(),
-                                suffix,
-                                file_type,
-                            );
-                            for (suffix, file_type, should_replace_hyphens) in suffixes {
-                                // wasm bin target will generate two files in deps such as
-                                // "web-stuff.js" and "web_stuff.wasm". Note the different usages of
-                                // "-" and "_". should_replace_hyphens is a flag to indicate that
-                                // we need to convert the stem "web-stuff" to "web_stuff", so we
-                                // won't miss "web_stuff.wasm".
-                                let conv = |s: String| {
-                                    if should_replace_hyphens {
-                                        s.replace("-", "_")
-                                    } else {
-                                        s
-                                    }
-                                };
-                                let filename = out_dir.join(format!(
-                                    "{}{}{}",
-                                    prefix,
-                                    conv(stem.clone()),
-                                    suffix
-                                ));
-                                let link_dst = link_stem.clone().map(|(ld, ls)| {
-                                    ld.join(format!("{}{}{}", prefix, conv(ls), suffix))
-                                });
-                                ret.push((filename, link_dst, file_type));
-                            }
-                            Ok(())
-                        }
+                    let file_types = info.file_types(
+                        crate_type,
+                        flavor,
+                        unit.target.kind(),
+                        cx.target_triple(),
+                    )?;
+
+                    match file_types {
+                        Some(types) => for file_type in types {
+                            let path = out_dir.join(file_type.filename(&file_stem));
+                            let hardlink = link_stem
+                                .as_ref()
+                                .map(|&(ref ld, ref ls)| ld.join(file_type.filename(ls)));
+                            ret.push(OutputFile {
+                                path,
+                                hardlink,
+                                flavor: file_type.flavor,
+                            });
+                        },
                         // not supported, don't worry about it
                         None => {
                             unsupported.push(crate_type.to_string());
-                            Ok(())
                         }
                     }
+                    Ok(())
                 };
                 //info!("{:?}", unit);
                 match *unit.target.kind() {
@@ -299,19 +284,19 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     | TargetKind::ExampleBin
                     | TargetKind::Bench
                     | TargetKind::Test => {
-                        add("bin", TargetFileType::Normal)?;
+                        add("bin", FileFlavor::Normal)?;
                     }
                     TargetKind::Lib(..) | TargetKind::ExampleLib(..) if unit.profile.test => {
-                        add("bin", TargetFileType::Normal)?;
+                        add("bin", FileFlavor::Normal)?;
                     }
                     TargetKind::ExampleLib(ref kinds) | TargetKind::Lib(ref kinds) => {
                         for kind in kinds {
                             add(
                                 kind.crate_type(),
                                 if kind.linkable() {
-                                    TargetFileType::Linkable
+                                    FileFlavor::Linkable
                                 } else {
-                                    TargetFileType::Normal
+                                    FileFlavor::Normal
                                 },
                             )?;
                         }
@@ -449,46 +434,4 @@ fn compute_metadata<'a, 'cfg>(
         channel.hash(&mut hasher);
     }
     Some(Metadata(hasher.finish()))
-}
-
-// (not a rustdoc)
-// Return a list of 3-tuples (suffix, file_type, should_replace_hyphens).
-//
-// should_replace_hyphens will be used by the caller to replace "-" with "_"
-// in a bin_stem. See the caller side (calc_target_filenames()) for details.
-fn add_target_specific_suffixes(
-    target_triple: &str,
-    crate_type: &str,
-    target_kind: &TargetKind,
-    suffix: &str,
-    file_type: TargetFileType,
-) -> Vec<(String, TargetFileType, bool)> {
-    let mut ret = vec![(suffix.to_string(), file_type, false)];
-
-    // rust-lang/cargo#4500
-    if target_triple.ends_with("pc-windows-msvc") && crate_type.ends_with("dylib")
-        && suffix == ".dll"
-    {
-        ret.push((".dll.lib".to_string(), TargetFileType::Normal, false));
-    }
-
-    // rust-lang/cargo#4535
-    if target_triple.starts_with("wasm32-") && crate_type == "bin" && suffix == ".js" {
-        ret.push((".wasm".to_string(), TargetFileType::Normal, true));
-    }
-
-    // rust-lang/cargo#4490, rust-lang/cargo#4960
-    //  - only uplift debuginfo for binaries.
-    //    tests are run directly from target/debug/deps/
-    //    and examples are inside target/debug/examples/ which already have symbols next to them
-    //    so no need to do anything.
-    if *target_kind == TargetKind::Bin {
-        if target_triple.contains("-apple-") {
-            ret.push((".dSYM".to_string(), TargetFileType::DebugInfo, false));
-        } else if target_triple.ends_with("-msvc") {
-            ret.push((".pdb".to_string(), TargetFileType::DebugInfo, false));
-        }
-    }
-
-    ret
 }
