@@ -36,9 +36,6 @@ matrix:
         - cargo doc --no-deps
         - (cd src/doc && mdbook build --dest-dir ../../target/doc)
 
-    - before_script: rustup component add rustfmt-preview
-      script: cargo fmt -- --write-mode diff
-
   exclude:
     - rust: stable
 
