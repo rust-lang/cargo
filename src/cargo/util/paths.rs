@@ -237,12 +237,10 @@ fn _remove_file(p: &Path) -> CargoResult<()> {
         Err(e) => e,
     };
 
-    if err.kind() == io::ErrorKind::PermissionDenied {
-        if set_not_readonly(p).unwrap_or(false) {
-            match fs::remove_file(p) {
-                Ok(()) => return Ok(()),
-                Err(e) => err = e,
-            }
+    if err.kind() == io::ErrorKind::PermissionDenied && set_not_readonly(p).unwrap_or(false) {
+        match fs::remove_file(p) {
+            Ok(()) => return Ok(()),
+            Err(e) => err = e,
         }
     }
 
