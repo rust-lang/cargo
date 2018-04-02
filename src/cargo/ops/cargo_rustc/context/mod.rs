@@ -315,7 +315,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Kind::Host => (self.host_triple(), &self.host_info),
             Kind::Target => (self.target_triple(), &self.target_info),
         };
-        platform.matches(name, info.cfg.as_ref().map(|cfg| &cfg[..]))
+        platform.matches(name, info.cfg())
     }
 
     /// Gets a package for the given package id.
@@ -339,7 +339,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             Kind::Host => &self.host_info,
             Kind::Target => &self.target_info,
         };
-        info.cfg.as_ref().map(|s| &s[..]).unwrap_or(&[])
+        info.cfg().unwrap_or(&[])
     }
 
     /// Get the target configuration for a particular host or target
@@ -425,7 +425,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         env_args(
             self.config,
             &self.build_config,
-            self.info(&unit.kind),
+            self.info(&unit.kind).cfg(),
             unit.kind,
             "RUSTFLAGS",
         )
@@ -435,7 +435,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         env_args(
             self.config,
             &self.build_config,
-            self.info(&unit.kind),
+            self.info(&unit.kind).cfg(),
             unit.kind,
             "RUSTDOCFLAGS",
         )
@@ -473,7 +473,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
 fn env_args(
     config: &Config,
     build_config: &BuildConfig,
-    target_info: &TargetInfo,
+    target_cfg: Option<&[Cfg]>,
     kind: Kind,
     name: &str,
 ) -> CargoResult<Vec<String>> {
@@ -531,7 +531,7 @@ fn env_args(
         rustflags.extend(args);
     }
     // ...including target.'cfg(...)'.rustflags
-    if let Some(ref target_cfg) = target_info.cfg {
+    if let Some(target_cfg) = target_cfg {
         if let Some(table) = config.get_table("target")? {
             let cfgs = table.val.keys().filter_map(|t| {
                 if t.starts_with("cfg(") && t.ends_with(')') {
