@@ -193,14 +193,14 @@ pub fn compile_targets<'a, 'cfg: 'a>(
     queue.execute(&mut cx)?;
 
     for unit in units.iter() {
-        for &(ref dst, ref link_dst, file_type) in cx.target_filenames(unit)?.iter() {
-            if file_type == FileFlavor::DebugInfo {
+        for output in cx.outputs(unit)?.iter() {
+            if output.flavor == FileFlavor::DebugInfo {
                 continue;
             }
 
-            let bindst = match *link_dst {
+            let bindst = match output.hardlink {
                 Some(ref link_dst) => link_dst,
-                None => dst,
+                None => &output.path,
             };
 
             if unit.profile.test {
@@ -208,7 +208,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(
                     unit.pkg.clone(),
                     unit.target.kind().clone(),
                     unit.target.name().to_string(),
-                    dst.clone(),
+                    output.path.clone(),
                 ));
             } else if unit.target.is_bin() || unit.target.is_example() {
                 cx.compilation.binaries.push(bindst.clone());
@@ -218,7 +218,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(
                     .libraries
                     .entry(pkgid)
                     .or_insert_with(HashSet::new)
-                    .insert((unit.target.clone(), dst.clone()));
+                    .insert((unit.target.clone(), output.path.clone()));
             }
         }
 
@@ -243,14 +243,15 @@ pub fn compile_targets<'a, 'cfg: 'a>(
                 continue;
             }
 
-            let v = cx.target_filenames(dep)?;
+            let outputs = cx.outputs(dep)?;
             cx.compilation
                 .libraries
                 .entry(unit.pkg.package_id().clone())
                 .or_insert_with(HashSet::new)
                 .extend(
-                    v.iter()
-                        .map(|&(ref f, _, _)| (dep.target.clone(), f.clone())),
+                    outputs
+                        .iter()
+                        .map(|output| (dep.target.clone(), output.path.clone())),
                 );
         }
 
@@ -367,7 +368,7 @@ fn rustc<'a, 'cfg>(
         rustc.arg("--cap-lints").arg("warn");
     }
 
-    let filenames = cx.target_filenames(unit)?;
+    let outputs = cx.outputs(unit)?;
     let root = cx.files().out_dir(unit);
     let kind = unit.kind;
 
@@ -427,12 +428,12 @@ fn rustc<'a, 'cfg>(
             add_custom_env(&mut rustc, &build_state, &current_id, kind)?;
         }
 
-        for &(ref filename, ref _link_dst, _linkable) in filenames.iter() {
+        for output in outputs.iter() {
             // If there is both an rmeta and rlib, rustc will prefer to use the
             // rlib, even if it is older. Therefore, we must delete the rlib to
             // force using the new rmeta.
-            if filename.extension() == Some(OsStr::new("rmeta")) {
-                let dst = root.join(filename).with_extension("rlib");
+            if output.path.extension() == Some(OsStr::new("rmeta")) {
+                let dst = root.join(&output.path).with_extension("rlib");
                 if dst.exists() {
                     paths::remove_file(&dst)?;
                 }
@@ -482,7 +483,7 @@ fn rustc<'a, 'cfg>(
         }
 
         if do_rename && real_name != crate_name {
-            let dst = &filenames[0].0;
+            let dst = &outputs[0].path;
             let src = dst.with_file_name(
                 dst.file_name()
                     .unwrap()
@@ -567,7 +568,7 @@ fn link_targets<'a, 'cfg>(
     unit: &Unit<'a>,
     fresh: bool,
 ) -> CargoResult<Work> {
-    let filenames = cx.target_filenames(unit)?;
+    let outputs = cx.outputs(unit)?;
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
     let profile = unit.profile.clone();
@@ -584,13 +585,14 @@ fn link_targets<'a, 'cfg>(
         // above. This means that `cargo build` will produce binaries in
         // `target/debug` which one probably expects.
         let mut destinations = vec![];
-        for &(ref src, ref link_dst, _file_type) in filenames.iter() {
+        for output in outputs.iter() {
+            let src = &output.path;
             // This may have been a `cargo rustc` command which changes the
             // output, so the source may not actually exist.
             if !src.exists() {
                 continue;
             }
-            let dst = match link_dst.as_ref() {
+            let dst = match output.hardlink.as_ref() {
                 Some(dst) => dst,
                 None => {
                     destinations.push(src.display().to_string());
@@ -1071,8 +1073,8 @@ fn build_deps_args<'a, 'cfg>(
         current: &Unit<'a>,
         dep: &Unit<'a>,
     ) -> CargoResult<()> {
-        for &(ref dst, _, file_type) in cx.target_filenames(dep)?.iter() {
-            if file_type != FileFlavor::Linkable {
+        for output in cx.outputs(dep)?.iter() {
+            if output.flavor != FileFlavor::Linkable {
                 continue;
             }
             let mut v = OsString::new();
@@ -1097,7 +1099,7 @@ fn build_deps_args<'a, 'cfg>(
             v.push("=");
             v.push(cx.files().out_dir(dep));
             v.push(&path::MAIN_SEPARATOR.to_string());
-            v.push(&dst.file_name().unwrap());
+            v.push(&output.path.file_name().unwrap());
             cmd.arg("--extern").arg(&v);
         }
         Ok(())
