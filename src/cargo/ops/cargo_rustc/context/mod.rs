@@ -28,7 +28,7 @@ use self::compilation_files::CompilationFiles;
 pub use self::compilation_files::Metadata;
 
 mod target_info;
-pub use self::target_info::TargetFileType;
+pub use self::target_info::FileFlavor;
 use self::target_info::TargetInfo;
 
 /// All information needed to define a Unit.
@@ -277,7 +277,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     pub fn target_filenames(
         &mut self,
         unit: &Unit<'a>,
-    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>> {
+    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, FileFlavor)>>> {
         self.files.as_ref().unwrap().target_filenames(unit, self)
     }
 

@@ -25,7 +25,7 @@ use self::job_queue::JobQueue;
 use self::output_depinfo::output_depinfo;
 
 pub use self::compilation::Compilation;
-pub use self::context::{Context, TargetFileType, Unit};
+pub use self::context::{Context, FileFlavor, Unit};
 pub use self::custom_build::{BuildMap, BuildOutput, BuildScripts};
 pub use self::layout::is_bad_artifact_name;
 
@@ -194,7 +194,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(
 
     for unit in units.iter() {
         for &(ref dst, ref link_dst, file_type) in cx.target_filenames(unit)?.iter() {
-            if file_type == TargetFileType::DebugInfo {
+            if file_type == FileFlavor::DebugInfo {
                 continue;
             }
 
@@ -1072,7 +1072,7 @@ fn build_deps_args<'a, 'cfg>(
         dep: &Unit<'a>,
     ) -> CargoResult<()> {
         for &(ref dst, _, file_type) in cx.target_filenames(dep)?.iter() {
-            if file_type != TargetFileType::Linkable {
+            if file_type != FileFlavor::Linkable {
                 continue;
             }
             let mut v = OsString::new();

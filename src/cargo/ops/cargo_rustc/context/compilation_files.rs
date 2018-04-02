@@ -9,7 +9,7 @@ use lazycell::LazyCell;
 
 use core::{TargetKind, Workspace};
 use ops::cargo_rustc::layout::Layout;
-use ops::cargo_rustc::TargetFileType;
+use ops::cargo_rustc::FileFlavor;
 use ops::{Context, Kind, Unit};
 use util::{self, CargoResult};
 
@@ -35,7 +35,7 @@ pub struct CompilationFiles<'a, 'cfg: 'a> {
     ///  - If it should be linked into `target`, and what it should be called (e.g. without
     ///    metadata).
     ///  - Type of the file (library / debug symbol / else)
-    outputs: HashMap<Unit<'a>, LazyCell<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>>>,
+    outputs: HashMap<Unit<'a>, LazyCell<Arc<Vec<(PathBuf, Option<PathBuf>, FileFlavor)>>>>,
 }
 
 impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
@@ -157,7 +157,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         &self,
         unit: &Unit<'a>,
         cx: &Context<'a, 'cfg>,
-    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>> {
+    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, FileFlavor)>>> {
         self.outputs[unit]
             .try_borrow_with(|| self.calc_target_filenames(unit, cx))
             .map(Arc::clone)
@@ -215,7 +215,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         &self,
         unit: &Unit<'a>,
         cx: &Context<'a, 'cfg>,
-    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, TargetFileType)>>> {
+    ) -> CargoResult<Arc<Vec<(PathBuf, Option<PathBuf>, FileFlavor)>>> {
         let out_dir = self.out_dir(unit);
         let file_stem = self.file_stem(unit);
         let link_stem = self.link_stem(unit);
@@ -233,9 +233,9 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                 let link_dst = link_stem
                     .clone()
                     .map(|(ld, ls)| ld.join(format!("lib{}.rmeta", ls)));
-                ret.push((filename, link_dst, TargetFileType::Linkable));
+                ret.push((filename, link_dst, FileFlavor::Linkable));
             } else {
-                let mut add = |crate_type: &str, file_type: TargetFileType| -> CargoResult<()> {
+                let mut add = |crate_type: &str, file_type: FileFlavor| -> CargoResult<()> {
                     let crate_type = if crate_type == "lib" {
                         "rlib"
                     } else {
@@ -277,7 +277,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                                         file_type.suffix
                                     ))
                                 });
-                                ret.push((filename, link_dst, file_type.target_file_type));
+                                ret.push((filename, link_dst, file_type.flavor));
                             }
                         }
                         // not supported, don't worry about it
@@ -294,19 +294,19 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     | TargetKind::ExampleBin
                     | TargetKind::Bench
                     | TargetKind::Test => {
-                        add("bin", TargetFileType::Normal)?;
+                        add("bin", FileFlavor::Normal)?;
                     }
                     TargetKind::Lib(..) | TargetKind::ExampleLib(..) if unit.profile.test => {
-                        add("bin", TargetFileType::Normal)?;
+                        add("bin", FileFlavor::Normal)?;
                     }
                     TargetKind::ExampleLib(ref kinds) | TargetKind::Lib(ref kinds) => {
                         for kind in kinds {
                             add(
                                 kind.crate_type(),
                                 if kind.linkable() {
-                                    TargetFileType::Linkable
+                                    FileFlavor::Linkable
                                 } else {
-                                    TargetFileType::Normal
+                                    FileFlavor::Normal
                                 },
                             )?;
                         }
