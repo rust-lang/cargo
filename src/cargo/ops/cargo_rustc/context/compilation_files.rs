@@ -1,4 +1,4 @@
-use std::collections::hash_map::{Entry, HashMap};
+use std::collections::HashMap;
 use std::env;
 use std::fmt;
 use std::hash::{Hash, Hasher, SipHasher};
@@ -241,25 +241,16 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                     } else {
                         crate_type
                     };
-                    let mut crate_types = info.crate_types.borrow_mut();
-                    let entry = crate_types.entry(crate_type.to_string());
-                    let crate_type_info = match entry {
-                        Entry::Occupied(o) => &*o.into_mut(),
-                        Entry::Vacant(v) => {
-                            let value = info.discover_crate_type(v.key())?;
-                            &*v.insert(value)
-                        }
-                    };
-                    match *crate_type_info {
-                        Some((ref prefix, ref suffix)) => {
-                            let suffixes = add_target_specific_suffixes(
-                                cx.target_triple(),
-                                crate_type,
-                                unit.target.kind(),
-                                suffix,
-                                file_type,
-                            );
-                            for file_type in suffixes {
+                    let file_types = info.file_types(
+                        crate_type,
+                        file_type,
+                        unit.target.kind(),
+                        cx.target_triple(),
+                    )?;
+
+                    match file_types {
+                        Some(types) => {
+                            for file_type in types {
                                 // wasm bin target will generate two files in deps such as
                                 // "web-stuff.js" and "web_stuff.wasm". Note the different usages of
                                 // "-" and "_". should_replace_hyphens is a flag to indicate that
@@ -274,23 +265,27 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
                                 };
                                 let filename = out_dir.join(format!(
                                     "{}{}{}",
-                                    prefix,
+                                    file_type.prefix,
                                     conv(file_stem.clone()),
                                     file_type.suffix,
                                 ));
                                 let link_dst = link_stem.clone().map(|(ld, ls)| {
-                                    ld.join(format!("{}{}{}", prefix, conv(ls), file_type.suffix))
+                                    ld.join(format!(
+                                        "{}{}{}",
+                                        file_type.prefix,
+                                        conv(ls),
+                                        file_type.suffix
+                                    ))
                                 });
                                 ret.push((filename, link_dst, file_type.target_file_type));
                             }
-                            Ok(())
                         }
                         // not supported, don't worry about it
                         None => {
                             unsupported.push(crate_type.to_string());
-                            Ok(())
                         }
                     }
+                    Ok(())
                 };
                 //info!("{:?}", unit);
                 match *unit.target.kind() {
@@ -449,74 +444,4 @@ fn compute_metadata<'a, 'cfg>(
         channel.hash(&mut hasher);
     }
     Some(Metadata(hasher.finish()))
-}
-
-struct FileType {
-    suffix: String,
-    target_file_type: TargetFileType,
-    should_replace_hyphens: bool,
-}
-
-// (not a rustdoc)
-// Return a list of 3-tuples (suffix, file_type, should_replace_hyphens).
-//
-// should_replace_hyphens will be used by the caller to replace "-" with "_"
-// in a bin_stem. See the caller side (calc_target_filenames()) for details.
-fn add_target_specific_suffixes(
-    target_triple: &str,
-    crate_type: &str,
-    target_kind: &TargetKind,
-    suffix: &str,
-    file_type: TargetFileType,
-) -> Vec<FileType> {
-    let mut ret = vec![
-        FileType {
-            suffix: suffix.to_string(),
-            target_file_type: file_type,
-            should_replace_hyphens: false,
-        },
-    ];
-
-    // rust-lang/cargo#4500
-    if target_triple.ends_with("pc-windows-msvc") && crate_type.ends_with("dylib")
-        && suffix == ".dll"
-    {
-        ret.push(FileType {
-            suffix: ".dll.lib".to_string(),
-            target_file_type: TargetFileType::Normal,
-            should_replace_hyphens: false,
-        })
-    }
-
-    // rust-lang/cargo#4535
-    if target_triple.starts_with("wasm32-") && crate_type == "bin" && suffix == ".js" {
-        ret.push(FileType {
-            suffix: ".wasm".to_string(),
-            target_file_type: TargetFileType::Normal,
-            should_replace_hyphens: true,
-        })
-    }
-
-    // rust-lang/cargo#4490, rust-lang/cargo#4960
-    //  - only uplift debuginfo for binaries.
-    //    tests are run directly from target/debug/deps/
-    //    and examples are inside target/debug/examples/ which already have symbols next to them
-    //    so no need to do anything.
-    if *target_kind == TargetKind::Bin {
-        if target_triple.contains("-apple-") {
-            ret.push(FileType {
-                suffix: ".dSYM".to_string(),
-                target_file_type: TargetFileType::DebugInfo,
-                should_replace_hyphens: false,
-            })
-        } else if target_triple.ends_with("-msvc") {
-            ret.push(FileType {
-                suffix: ".pdb".to_string(),
-                target_file_type: TargetFileType::DebugInfo,
-                should_replace_hyphens: false,
-            })
-        }
-    }
-
-    ret
 }
