@@ -445,7 +445,11 @@ impl VirtualManifest {
 
 impl Target {
     fn with_path(src_path: PathBuf) -> Target {
-        assert!(src_path.is_absolute());
+        assert!(
+            src_path.is_absolute(),
+            "`{}` is not absolute",
+            src_path.display()
+        );
         Target {
             kind: TargetKind::Bin,
             name: String::new(),
