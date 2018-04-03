@@ -4,6 +4,7 @@ use std::io::prelude::*;
 use cargotest::sleep_ms;
 use cargotest::support::{execs, project, path2url};
 use cargotest::support::paths::CargoPathExt;
+use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_file};
 
 #[test]
@@ -1005,5 +1006,62 @@ fn no_rebuild_when_rename_dir() {
         execs()
             .with_status(0)
             .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]"),
+    );
+}
+
+#[test]
+fn unused_optional_dep() {
+    Package::new("registry1", "0.1.0").publish();
+    Package::new("registry2", "0.1.0").publish();
+    Package::new("registry3", "0.1.0").publish();
+
+    let p = project("p")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "p"
+                authors = []
+                version = "0.1.0"
+
+                [dependencies]
+                foo = { path = "foo" }
+                bar = { path = "bar" }
+                registry1 = "*"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.1"
+                authors = []
+
+                [dev-dependencies]
+                registry2 = "*"
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.1"
+                authors = []
+
+                [dependencies]
+                registry3 = { version = "*", optional = true }
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(
+        p.cargo("build"),
+        execs().with_status(0).with_stderr("[FINISHED] [..]"),
     );
 }
