@@ -1,11 +1,10 @@
 use std::path::Path;
 use std::fs::{self, File};
 use std::env;
-use std::io::Write;
 
 use hamcrest::assert_that;
 
-use cargotest::{process, ChannelChanger};
+use cargotest::{process, sleep_ms, ChannelChanger};
 use cargotest::support::{execs, project};
 
 #[test]
@@ -31,7 +30,7 @@ fn binary_with_debug() {
     check_dir_contents(
         &p.root().join("out"),
         &["foo"],
-        &["foo"],
+        &["foo", "foo.dSYM"],
         &["foo.exe", "foo.pdb"],
     );
 }
@@ -105,7 +104,7 @@ fn dynamic_library_with_debug() {
     check_dir_contents(
         &p.root().join("out"),
         &["libfoo.so"],
-        &["libfoo.so"],
+        &["libfoo.dylib"],
         &["foo.dll", "foo.dll.lib"],
     );
 }
@@ -194,7 +193,7 @@ fn include_only_the_binary_from_the_current_package() {
     check_dir_contents(
         &p.root().join("out"),
         &["foo"],
-        &["foo"],
+        &["foo", "foo.dSYM"],
         &["foo.exe", "foo.pdb"],
     );
 }
@@ -250,10 +249,8 @@ fn replaces_artifacts() {
         execs().with_stdout("foo"),
     );
 
-    fs::File::create(p.root().join("src/main.rs"))
-        .unwrap()
-        .write_all(br#"fn main() { println!("bar") }"#)
-        .unwrap();
+    sleep_ms(1000);
+    p.change_file("src/main.rs", r#"fn main() { println!("bar") }"#);
 
     assert_that(
         p.cargo("build -Z out-dir --out-dir out")
