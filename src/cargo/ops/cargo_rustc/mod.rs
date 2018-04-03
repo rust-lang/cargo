@@ -645,8 +645,12 @@ fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
         use std::os::windows::fs::symlink_dir as symlink;
 
         let dst_dir = dst.parent().unwrap();
-        assert!(src.starts_with(dst_dir));
-        symlink(src.strip_prefix(dst_dir).unwrap(), dst)
+        let src = if src.starts_with(dst_dir) {
+            src.strip_prefix(dst_dir).unwrap()
+        } else {
+            src
+        };
+        symlink(src, dst)
     } else {
         fs::hard_link(src, dst)
     };
