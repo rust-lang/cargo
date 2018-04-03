@@ -14,7 +14,7 @@ use url::Url;
 
 use core::{GitReference, PackageIdSpec, Profiles, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use core::{Dependency, Manifest, PackageId, Summary, Target};
-use core::{EitherManifest, Edition, Feature, Features, VirtualManifest};
+use core::{Edition, EitherManifest, Feature, Features, VirtualManifest};
 use core::dependency::{Kind, Platform};
 use core::manifest::{LibKind, Lto, ManifestMetadata, Profile};
 use sources::CRATES_IO;
