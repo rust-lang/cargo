@@ -141,7 +141,7 @@ impl Filesystem {
     /// Handles errors where other Cargo processes are also attempting to
     /// concurrently create this directory.
     pub fn create_dir(&self) -> io::Result<()> {
-        create_dir_all(&self.root)
+        fs::create_dir_all(&self.root)
     }
 
     /// Returns an adaptor that can be used to print the path of this
@@ -211,7 +211,7 @@ impl Filesystem {
         let f = opts.open(&path)
             .or_else(|e| {
                 if e.kind() == io::ErrorKind::NotFound && state == State::Exclusive {
-                    create_dir_all(path.parent().unwrap())?;
+                    fs::create_dir_all(path.parent().unwrap())?;
                     opts.open(&path)
                 } else {
                     Err(e)
@@ -342,27 +342,5 @@ fn acquire(
     #[cfg(any(not(target_os = "linux"), target_env = "musl"))]
     fn is_on_nfs_mount(_path: &Path) -> bool {
         false
-    }
-}
-
-fn create_dir_all(path: &Path) -> io::Result<()> {
-    match create_dir(path) {
-        Ok(()) => Ok(()),
-        Err(e) => {
-            if e.kind() == io::ErrorKind::NotFound {
-                if let Some(p) = path.parent() {
-                    return create_dir_all(p).and_then(|()| create_dir(path));
-                }
-            }
-            Err(e)
-        }
-    }
-}
-
-fn create_dir(path: &Path) -> io::Result<()> {
-    match fs::create_dir(path) {
-        Ok(()) => Ok(()),
-        Err(ref e) if e.kind() == io::ErrorKind::AlreadyExists => Ok(()),
-        Err(e) => Err(e),
     }
 }
