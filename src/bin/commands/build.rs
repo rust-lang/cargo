@@ -27,6 +27,7 @@ pub fn cli() -> App {
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_features()
         .arg_target_triple("Build for the target triple")
+        .arg(opt("out-dir", "Copy final artifacts to this directory").value_name("PATH"))
         .arg_manifest_path()
         .arg_message_format()
         .after_help(
@@ -49,7 +50,13 @@ the --release flag will use the `release` profile instead.
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
-    let compile_opts = args.compile_options(config, CompileMode::Build)?;
+    let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
+    compile_opts.export_dir = args.value_of_path("out-dir", config);
+    if compile_opts.export_dir.is_some() && !config.cli_unstable().out_dir {
+        Err(format_err!(
+            "`--out-dir` flag is unstable, pass `-Z out-dir` to enable it"
+        ))?;
+    };
     ops::compile(&ws, &compile_opts)?;
     Ok(())
 }
