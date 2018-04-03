@@ -603,13 +603,13 @@ fn link_targets<'a, 'cfg>(
                 }
             };
             destinations.push(dst.display().to_string());
-            hardlink_or_copy(&src, &dst)?;
+            hardlink_or_copy(src, dst)?;
             if let Some(ref path) = export_dir {
                 if !path.exists() {
                     fs::create_dir_all(path)?;
                 }
 
-                hardlink_or_copy(&src, &path.join(dst.file_name().unwrap()))?;
+                hardlink_or_copy(src, &path.join(dst.file_name().unwrap()))?;
             }
         }
 
