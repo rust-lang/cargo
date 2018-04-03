@@ -288,6 +288,7 @@ pub trait ArgMatchesExt {
             message_format,
             target_rustdoc_args: None,
             target_rustc_args: None,
+            export_dir: None,
         };
         Ok(opts)
     }

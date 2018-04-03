@@ -3,7 +3,7 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io::{self, Write};
-use std::path::{self, PathBuf};
+use std::path::{self, Path, PathBuf};
 use std::sync::Arc;
 
 use same_file::is_same_file;
@@ -141,6 +141,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(
     config: &'cfg Config,
     build_config: BuildConfig,
     profiles: &'a Profiles,
+    export_dir: Option<PathBuf>,
     exec: &Arc<Executor>,
 ) -> CargoResult<Compilation<'cfg>> {
     let units = pkg_targets
@@ -171,6 +172,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(
         config,
         build_config,
         profiles,
+        export_dir,
         &units,
     )?;
 
@@ -569,6 +571,7 @@ fn link_targets<'a, 'cfg>(
     fresh: bool,
 ) -> CargoResult<Work> {
     let outputs = cx.outputs(unit)?;
+    let export_dir = cx.files().export_dir(unit);
     let package_id = unit.pkg.package_id().clone();
     let target = unit.target.clone();
     let profile = unit.profile.clone();
@@ -600,41 +603,15 @@ fn link_targets<'a, 'cfg>(
                 }
             };
             destinations.push(dst.display().to_string());
+            hardlink_or_copy(&src, &dst)?;
+            if let Some(ref path) = export_dir {
+                //TODO: check if dir
+                if !path.exists() {
+                    fs::create_dir(path)?;
+                }
 
-            debug!("linking {} to {}", src.display(), dst.display());
-            if is_same_file(src, dst).unwrap_or(false) {
-                continue;
+                hardlink_or_copy(&src, &path.join(dst.file_name().unwrap()))?;
             }
-            if dst.exists() {
-                paths::remove_file(&dst)?;
-            }
-
-            let link_result = if src.is_dir() {
-                #[cfg(unix)]
-                use std::os::unix::fs::symlink;
-                #[cfg(target_os = "redox")]
-                use std::os::redox::fs::symlink;
-                #[cfg(windows)]
-                use std::os::windows::fs::symlink_dir as symlink;
-
-                let dst_dir = dst.parent().unwrap();
-                assert!(src.starts_with(dst_dir));
-                symlink(src.strip_prefix(dst_dir).unwrap(), dst)
-            } else {
-                fs::hard_link(src, dst)
-            };
-            link_result
-                .or_else(|err| {
-                    debug!("link failed {}. falling back to fs::copy", err);
-                    fs::copy(src, dst).map(|_| ())
-                })
-                .chain_err(|| {
-                    format!(
-                        "failed to link or copy `{}` to `{}`",
-                        src.display(),
-                        dst.display()
-                    )
-                })?;
         }
 
         if json_messages {
@@ -649,6 +626,44 @@ fn link_targets<'a, 'cfg>(
         }
         Ok(())
     }))
+}
+
+fn hardlink_or_copy(src: &Path, dst: &Path) -> CargoResult<()> {
+    debug!("linking {} to {}", src.display(), dst.display());
+    if is_same_file(src, dst).unwrap_or(false) {
+        return Ok(());
+    }
+    if dst.exists() {
+        paths::remove_file(&dst)?;
+    }
+
+    let link_result = if src.is_dir() {
+        #[cfg(unix)]
+        use std::os::unix::fs::symlink;
+        #[cfg(target_os = "redox")]
+        use std::os::redox::fs::symlink;
+        #[cfg(windows)]
+        use std::os::windows::fs::symlink_dir as symlink;
+
+        let dst_dir = dst.parent().unwrap();
+        assert!(src.starts_with(dst_dir));
+        symlink(src.strip_prefix(dst_dir).unwrap(), dst)
+    } else {
+        fs::hard_link(src, dst)
+    };
+    link_result
+        .or_else(|err| {
+            debug!("link failed {}. falling back to fs::copy", err);
+            fs::copy(src, dst).map(|_| ())
+        })
+        .chain_err(|| {
+            format!(
+                "failed to link or copy `{}` to `{}`",
+                src.display(),
+                dst.display()
+            )
+        })?;
+    Ok(())
 }
 
 fn load_build_deps(cx: &Context, unit: &Unit) -> Option<Arc<BuildScripts>> {

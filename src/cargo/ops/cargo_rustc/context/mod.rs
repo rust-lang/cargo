@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 use std::sync::Arc;
 
@@ -105,6 +105,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         config: &'cfg Config,
         build_config: BuildConfig,
         profiles: &'a Profiles,
+        export_dir: Option<PathBuf>,
         units: &[Unit<'a>],
     ) -> CargoResult<Context<'a, 'cfg>> {
         let dest = if build_config.release {
@@ -164,7 +165,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         cx.probe_target_info()?;
         let deps = build_unit_dependencies(units, &cx)?;
         cx.unit_dependencies = deps;
-        let files = CompilationFiles::new(units, host_layout, target_layout, ws, &cx);
+        let files = CompilationFiles::new(units, host_layout, target_layout, export_dir, ws, &cx);
         cx.files = Some(files);
         Ok(cx)
     }

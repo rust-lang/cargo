@@ -62,6 +62,7 @@ mod login;
 mod metadata;
 mod net_config;
 mod new;
+mod out_dir;
 mod overrides;
 mod package;
 mod patch;
