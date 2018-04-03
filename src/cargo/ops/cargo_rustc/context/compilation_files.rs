@@ -27,6 +27,7 @@ pub struct CompilationFiles<'a, 'cfg: 'a> {
     pub(super) host: Layout,
     /// The target directory layout for the target (if different from then host)
     pub(super) target: Option<Layout>,
+    export_dir: Option<(PathBuf, Vec<Unit<'a>>)>,
     ws: &'a Workspace<'cfg>,
     metas: HashMap<Unit<'a>, Option<Metadata>>,
     /// For each Unit, a list all files produced.
@@ -49,6 +50,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         roots: &[Unit<'a>],
         host: Layout,
         target: Option<Layout>,
+        export_dir: Option<PathBuf>,
         ws: &'a Workspace<'cfg>,
         cx: &Context<'a, 'cfg>,
     ) -> CompilationFiles<'a, 'cfg> {
@@ -65,6 +67,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             ws,
             host,
             target,
+            export_dir: export_dir.map(|dir| (dir, roots.to_vec())),
             metas,
             outputs,
         }
@@ -104,6 +107,15 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             self.layout(unit.kind).examples().to_path_buf()
         } else {
             self.deps_dir(unit).to_path_buf()
+        }
+    }
+
+    pub fn export_dir(&self, unit: &Unit<'a>) -> Option<PathBuf> {
+        let &(ref dir, ref roots) = self.export_dir.as_ref()?;
+        if roots.contains(unit) {
+            Some(dir.clone())
+        } else {
+            None
         }
     }
 
