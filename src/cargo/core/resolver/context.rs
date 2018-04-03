@@ -280,7 +280,7 @@ fn build_requirements<'a, 'b: 'a>(
                 reqs.require_feature(key)?;
             }
             for dep in s.dependencies().iter().filter(|d| d.is_optional()) {
-                reqs.require_dependency(dep.name().to_inner());
+                reqs.require_dependency(dep.name().as_str());
             }
         }
         Method::Required {
