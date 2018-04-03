@@ -1,3 +1,4 @@
+use cargotest::ChannelChanger;
 use cargotest::support::{execs, project};
 use hamcrest::assert_that;
 use std::path::Path;
@@ -18,7 +19,11 @@ fn binary_with_debug() {
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
-    assert_that(p.cargo("build --out-dir out"), execs().with_status(0));
+    assert_that(
+        p.cargo("build -Z out-dir --out-dir out")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
     check_dir_contents(
         &p.root().join("out"),
         &["foo"],
@@ -51,7 +56,11 @@ fn static_library_with_debug() {
         )
         .build();
 
-    assert_that(p.cargo("build --out-dir out"), execs().with_status(0));
+    assert_that(
+        p.cargo("build -Z out-dir --out-dir out")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
     check_dir_contents(
         &p.root().join("out"),
         &["libfoo.a"],
@@ -84,7 +93,11 @@ fn dynamic_library_with_debug() {
         )
         .build();
 
-    assert_that(p.cargo("build --out-dir out"), execs().with_status(0));
+    assert_that(
+        p.cargo("build -Z out-dir --out-dir out")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
     check_dir_contents(
         &p.root().join("out"),
         &["libfoo.so"],
@@ -116,7 +129,11 @@ fn rlib_with_debug() {
         )
         .build();
 
-    assert_that(p.cargo("build --out-dir out"), execs().with_status(0));
+    assert_that(
+        p.cargo("build -Z out-dir --out-dir out")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
     check_dir_contents(
         &p.root().join("out"),
         &["libfoo.rlib"],
@@ -166,7 +183,8 @@ fn include_only_the_binary_from_the_current_package() {
         .build();
 
     assert_that(
-        p.cargo("build --bin foo --out-dir out"),
+        p.cargo("build -Z out-dir --bin foo --out-dir out")
+            .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );
     check_dir_contents(
