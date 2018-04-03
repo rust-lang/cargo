@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::slice;
 use std::str;
 use std::mem;
+use std::ptr;
 use std::cmp::Ordering;
 use std::ops::Deref;
 use std::hash::{Hash, Hasher};
@@ -24,33 +25,33 @@ lazy_static! {
         RwLock::new(HashSet::new());
 }
 
-#[derive(Eq, PartialEq, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct InternedString {
-    ptr: *const u8,
-    len: usize,
+    inner: &'static str,
 }
+
+impl PartialEq for InternedString {
+    fn eq(&self, other: &InternedString) -> bool {
+        ptr::eq(self.as_str(), other.as_str())
+    }
+}
+
+impl Eq for InternedString {}
 
 impl InternedString {
     pub fn new(str: &str) -> InternedString {
         let mut cache = STRING_CACHE.write().unwrap();
-        if let Some(&s) = cache.get(str) {
-            return InternedString {
-                ptr: s.as_ptr(),
-                len: s.len(),
-            };
-        }
-        let s = leak(str.to_string());
-        cache.insert(s);
-        InternedString {
-            ptr: s.as_ptr(),
-            len: s.len(),
-        }
+        let s = cache.get(str).map(|&s| s).unwrap_or_else(|| {
+            let s = leak(str.to_string());
+            cache.insert(s);
+            s
+        });
+
+        InternedString { inner: s }
     }
-    pub fn to_inner(&self) -> &'static str {
-        unsafe {
-            let slice = slice::from_raw_parts(self.ptr, self.len);
-            &str::from_utf8_unchecked(slice)
-        }
+
+    pub fn as_str(&self) -> &'static str {
+        self.inner
     }
 }
 
@@ -58,31 +59,34 @@ impl Deref for InternedString {
     type Target = str;
 
     fn deref(&self) -> &'static str {
-        self.to_inner()
+        self.as_str()
     }
 }
 
 impl Hash for InternedString {
+    // NB: we can't implement this as `identity(self).hash(state)`,
+    // because we use this for on-disk fingerprints and so need
+    // stability across Cargo invocations.
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.to_inner().hash(state);
+        self.as_str().hash(state);
     }
 }
 
 impl fmt::Debug for InternedString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(self.to_inner(), f)
+        fmt::Debug::fmt(self.as_str(), f)
     }
 }
 
 impl fmt::Display for InternedString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self.to_inner(), f)
+        fmt::Display::fmt(self.as_str(), f)
     }
 }
 
 impl Ord for InternedString {
     fn cmp(&self, other: &InternedString) -> Ordering {
-        self.to_inner().cmp(&*other)
+        self.as_str().cmp(other.as_str())
     }
 }
 
@@ -91,6 +95,3 @@ impl PartialOrd for InternedString {
         Some(self.cmp(other))
     }
 }
-
-unsafe impl Send for InternedString {}
-unsafe impl Sync for InternedString {}

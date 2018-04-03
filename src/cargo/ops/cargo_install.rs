@@ -506,7 +506,7 @@ where
                     "multiple packages with {} found: {}",
                     kind,
                     pkgs.iter()
-                        .map(|p| p.name().to_inner())
+                        .map(|p| p.name().as_str())
                         .collect::<Vec<_>>()
                         .join(", ")
                 )

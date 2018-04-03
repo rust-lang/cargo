@@ -69,7 +69,7 @@ pub fn doc(ws: &Workspace, options: &DocOptions) -> CargoResult<()> {
                  Please re-run this command with `-p <spec>` where `<spec>` \
                  is one of the following:\n  {}",
                 pkgs.iter()
-                    .map(|p| p.name().to_inner())
+                    .map(|p| p.name().as_str())
                     .collect::<Vec<_>>()
                     .join("\n  ")
             );
