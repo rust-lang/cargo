@@ -455,12 +455,30 @@ fn register_previous_locks<'a>(
             }
 
             // If we match *anything* in the dependency graph then we consider
-            // ourselves A-OK and assume that we'll resolve to that. If,
-            // however, nothing matches, then we poison the source of this
-            // dependencies and the previous lock file.
+            // ourselves A-OK and assume that we'll resolve to that.
             if resolve.iter().any(|id| dep.matches_ignoring_source(id)) {
                 continue;
             }
+
+            // If this dependency didn't match anything special then we may want
+            // to poison the source as it may have been added. If this path
+            // dependencies is *not* a workspace member, however, and it's an
+            // optional/non-transitive dependency then it won't be necessarily
+            // be in our lock file. If this shows up then we avoid poisoning
+            // this source as otherwise we'd repeatedly update the registry.
+            //
+            // TODO: this breaks adding an optional dependency in a
+            //       non-workspace member and then simultaneously editing the
+            //       dependency on that crate to enable the feature. For now
+            //       this bug is better than the always updating registry
+            //       though...
+            if !ws.members().any(|pkg| pkg.package_id() == member.package_id()) &&
+                (dep.is_optional() || !dep.is_transitive()) {
+                continue
+            }
+
+            // Ok if nothing matches, then we poison the source of this
+            // dependencies and the previous lock file.
             for id in resolve.iter().filter(|id| id.source_id() == source) {
                 add_deps(resolve, id, &mut avoid_locking);
             }
