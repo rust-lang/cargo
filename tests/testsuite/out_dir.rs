@@ -1,8 +1,12 @@
-use cargotest::ChannelChanger;
-use cargotest::support::{execs, project};
-use hamcrest::assert_that;
 use std::path::Path;
-use std::fs;
+use std::fs::{self, File};
+use std::env;
+use std::io::Write;
+
+use hamcrest::assert_that;
+
+use cargotest::{process, ChannelChanger};
+use cargotest::support::{execs, project};
 
 #[test]
 fn binary_with_debug() {
@@ -192,6 +196,74 @@ fn include_only_the_binary_from_the_current_package() {
         &["foo"],
         &["foo"],
         &["foo.exe", "foo.pdb"],
+    );
+}
+
+#[test]
+fn out_dir_is_a_file() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .build();
+    File::create(p.root().join("out")).unwrap();
+
+    assert_that(
+        p.cargo("build -Z out-dir --out-dir out")
+            .masquerade_as_nightly_cargo(),
+        execs()
+            .with_status(101)
+            .with_stderr_contains("[ERROR] failed to link or copy [..]"),
+    );
+}
+
+#[test]
+fn replaces_artifacts() {
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [project]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("foo") }"#)
+        .build();
+
+    assert_that(
+        p.cargo("build -Z out-dir --out-dir out")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
+    assert_that(
+        process(&p.root()
+            .join(&format!("out/foo{}", env::consts::EXE_SUFFIX))),
+        execs().with_stdout("foo"),
+    );
+
+    fs::File::create(p.root().join("src/main.rs"))
+        .unwrap()
+        .write_all(br#"fn main() { println!("bar") }"#)
+        .unwrap();
+
+    assert_that(
+        p.cargo("build -Z out-dir --out-dir out")
+            .masquerade_as_nightly_cargo(),
+        execs().with_status(0),
+    );
+    assert_that(
+        process(&p.root()
+            .join(&format!("out/foo{}", env::consts::EXE_SUFFIX))),
+        execs().with_stdout("bar"),
     );
 }
 

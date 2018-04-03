@@ -605,9 +605,8 @@ fn link_targets<'a, 'cfg>(
             destinations.push(dst.display().to_string());
             hardlink_or_copy(&src, &dst)?;
             if let Some(ref path) = export_dir {
-                //TODO: check if dir
                 if !path.exists() {
-                    fs::create_dir(path)?;
+                    fs::create_dir_all(path)?;
                 }
 
                 hardlink_or_copy(&src, &path.join(dst.file_name().unwrap()))?;
