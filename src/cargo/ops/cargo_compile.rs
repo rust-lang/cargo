@@ -64,6 +64,12 @@ pub struct CompileOptions<'a> {
     /// The specified target will be compiled with all the available arguments,
     /// note that this only accounts for the *final* invocation of rustc
     pub target_rustc_args: Option<Vec<String>>,
+    /// The directory to copy final artifacts to. Note that even if `out_dir` is
+    /// set, a copy of artifacts still could be found a `target/(debug\release)`
+    /// as usual.
+    // Note that, although the cmd-line flag name is `out-dir`, in code we use
+    // `export_dir`, to avoid confusion with out dir at `target/debug/deps`.
+    pub export_dir: Option<PathBuf>,
 }
 
 impl<'a> CompileOptions<'a> {
@@ -84,6 +90,7 @@ impl<'a> CompileOptions<'a> {
             message_format: MessageFormat::Human,
             target_rustdoc_args: None,
             target_rustc_args: None,
+            export_dir: None,
         }
     }
 }
@@ -233,6 +240,7 @@ pub fn compile_ws<'a>(
         ref filter,
         ref target_rustdoc_args,
         ref target_rustc_args,
+        ref export_dir,
     } = *options;
 
     let target = match target {
@@ -330,7 +338,6 @@ pub fn compile_ws<'a>(
             package_targets.push((to_build, vec![(target, profile)]));
         }
     }
-
     let mut ret = {
         let _p = profile::start("compiling");
         let mut build_config = scrape_build_config(config, jobs, target)?;
@@ -349,6 +356,7 @@ pub fn compile_ws<'a>(
             config,
             build_config,
             profiles,
+            export_dir.clone(),
             &exec,
         )?
     };

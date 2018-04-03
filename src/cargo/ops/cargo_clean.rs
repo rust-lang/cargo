@@ -98,6 +98,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
             ..BuildConfig::default()
         },
         profiles,
+        None,
         &units,
     )?;
 
