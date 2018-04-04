@@ -4,7 +4,7 @@ use cargo::print_json;
 
 pub fn cli() -> App {
     subcommand("locate-project")
-        .about("Checkout a copy of a Git repository")
+        .about("Print a JSON representation of a Cargo.toml file's location")
         .arg_manifest_path()
 }
 
