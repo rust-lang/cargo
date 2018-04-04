@@ -167,18 +167,16 @@ impl Registry {
                     (json.len() >> 8) as u8,
                     (json.len() >> 16) as u8,
                     (json.len() >> 24) as u8,
-                ].iter()
-                    .map(|x| *x),
+                ].iter().cloned(),
             );
-            w.extend(json.as_bytes().iter().map(|x| *x));
+            w.extend(json.as_bytes().iter().cloned());
             w.extend(
                 [
                     (stat.len() >> 0) as u8,
                     (stat.len() >> 8) as u8,
                     (stat.len() >> 16) as u8,
                     (stat.len() >> 24) as u8,
-                ].iter()
-                    .map(|x| *x),
+                ].iter().cloned(),
             );
             w
         };
@@ -201,10 +199,10 @@ impl Registry {
 
         let body = handle(&mut self.handle, &mut |buf| body.read(buf).unwrap_or(0))?;
 
-        let response = if body.len() > 0 {
-            body.parse::<serde_json::Value>()?
-        } else {
+        let response = if body.is_empty() {
             "{}".parse()?
+        } else {
+            body.parse::<serde_json::Value>()?
         };
 
         let invalid_categories: Vec<String> = response
@@ -329,12 +327,9 @@ fn handle(handle: &mut Easy, read: &mut FnMut(&mut [u8]) -> usize) -> Result<Str
         Ok(body) => body,
         Err(..) => bail!("response body was not valid utf-8"),
     };
-    match serde_json::from_str::<ApiErrorList>(&body) {
-        Ok(errors) => {
-            let errors = errors.errors.into_iter().map(|s| s.detail);
-            bail!("api errors: {}", errors.collect::<Vec<_>>().join(", "))
-        }
-        Err(..) => {}
+    if let Ok(errors) = serde_json::from_str::<ApiErrorList>(&body) {
+        let errors = errors.errors.into_iter().map(|s| s.detail);
+        bail!("api errors: {}", errors.collect::<Vec<_>>().join(", "));
     }
     Ok(body)
 }

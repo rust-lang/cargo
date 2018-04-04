@@ -130,7 +130,7 @@ impl PartialEq for Summary {
 // and creates FeatureValues for each feature.
 fn build_feature_map(
     features: BTreeMap<String, Vec<String>>,
-    dependencies: &Vec<Dependency>,
+    dependencies: &[Dependency],
 ) -> CargoResult<FeatureMap> {
     use self::FeatureValue::*;
     let mut map = BTreeMap::new();
@@ -145,9 +145,9 @@ fn build_feature_map(
 
             // Find data for the referenced dependency...
             let dep_data = {
-                let dep_name = match &val {
-                    &Feature(_) => "",
-                    &Crate(ref dep_name) | &CrateFeature(ref dep_name, _) => dep_name,
+                let dep_name = match val {
+                    Feature(_) => "",
+                    Crate(ref dep_name) | CrateFeature(ref dep_name, _) => dep_name,
                 };
                 dependencies.iter().find(|d| *d.name() == *dep_name)
             };

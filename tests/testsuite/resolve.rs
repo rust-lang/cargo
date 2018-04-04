@@ -186,7 +186,7 @@ fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
 }
 
 #[test]
-#[should_panic(expected = "assertion failed: name.len() > 0")]
+#[should_panic(expected = "assertion failed: !name.is_empty()")]
 fn test_dependency_with_empty_name() {
     // Bug 5229, dependency-names must not be empty
     "".to_dep();
