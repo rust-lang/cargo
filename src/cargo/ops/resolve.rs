@@ -472,9 +472,11 @@ fn register_previous_locks<'a>(
             //       dependency on that crate to enable the feature. For now
             //       this bug is better than the always updating registry
             //       though...
-            if !ws.members().any(|pkg| pkg.package_id() == member.package_id()) &&
-                (dep.is_optional() || !dep.is_transitive()) {
-                continue
+            if !ws.members()
+                .any(|pkg| pkg.package_id() == member.package_id())
+                && (dep.is_optional() || !dep.is_transitive())
+            {
+                continue;
             }
 
             // Ok if nothing matches, then we poison the source of this

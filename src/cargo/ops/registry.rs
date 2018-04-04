@@ -171,7 +171,7 @@ fn transmit(
                 optional: dep.is_optional(),
                 default_features: dep.uses_default_features(),
                 name: dep.name().to_string(),
-                features: dep.features().to_vec(),
+                features: dep.features().iter().map(|s| s.to_string()).collect(),
                 version_req: dep.version_req().to_string(),
                 target: dep.platform().map(|s| s.to_string()),
                 kind: match dep.kind() {

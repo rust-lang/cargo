@@ -4,6 +4,7 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use core::{Dependency, PackageId, PackageIdSpec, Registry, Summary};
+use core::interning::InternedString;
 use util::{CargoError, CargoResult};
 
 pub struct RegistryQueryer<'a> {
@@ -159,21 +160,21 @@ pub enum Method<'a> {
     Everything, // equivalent to Required { dev_deps: true, all_features: true, .. }
     Required {
         dev_deps: bool,
-        features: &'a [String],
+        features: &'a [InternedString],
         all_features: bool,
         uses_default_features: bool,
     },
 }
 
 impl<'r> Method<'r> {
-    pub fn split_features(features: &[String]) -> Vec<String> {
+    pub fn split_features(features: &[String]) -> Vec<InternedString> {
         features
             .iter()
             .flat_map(|s| s.split_whitespace())
             .flat_map(|s| s.split(','))
             .filter(|s| !s.is_empty())
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>()
+            .map(|s| InternedString::new(s))
+            .collect::<Vec<InternedString>>()
     }
 }
 
@@ -245,7 +246,7 @@ impl Ord for DepsFrame {
 // Information about the dependencies for a crate, a tuple of:
 //
 // (dependency info, candidates, features activated)
-pub type DepInfo = (Dependency, Rc<Vec<Candidate>>, Rc<Vec<String>>);
+pub type DepInfo = (Dependency, Rc<Vec<Candidate>>, Rc<Vec<InternedString>>);
 
 pub type ActivateResult<T> = Result<T, ActivateError>;
 

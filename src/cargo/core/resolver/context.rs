@@ -1,13 +1,13 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
 use core::interning::InternedString;
-use util::Graph;
+use core::{Dependency, FeatureValue, PackageId, SourceId, Summary};
 use util::CargoResult;
+use util::Graph;
 
-use super::types::{ActivateResult, ConflictReason, DepInfo, GraphNode, Method, RcList};
 use super::types::RegistryQueryer;
+use super::types::{ActivateResult, ConflictReason, DepInfo, GraphNode, Method, RcList};
 
 pub use super::encode::{EncodableDependency, EncodablePackageId, EncodableResolve};
 pub use super::encode::{Metadata, WorkspaceResolve};
@@ -160,7 +160,7 @@ impl Context {
         parent: Option<&Summary>,
         s: &'b Summary,
         method: &'b Method,
-    ) -> ActivateResult<Vec<(Dependency, Vec<String>)>> {
+    ) -> ActivateResult<Vec<(Dependency, Vec<InternedString>)>> {
         let dev_deps = match *method {
             Method::Everything => true,
             Method::Required { dev_deps, .. } => dev_deps,
@@ -182,7 +182,7 @@ impl Context {
         {
             requested
                 .iter()
-                .map(|f| FeatureValue::new(f, s))
+                .map(|&f| FeatureValue::new(f, s))
                 .collect::<Vec<FeatureValue>>()
         } else {
             vec![]
@@ -210,7 +210,7 @@ impl Context {
                 ));
             }
             let mut base = base.1;
-            base.extend(dep.features().iter().cloned());
+            base.extend(dep.features().iter());
             for feature in base.iter() {
                 if feature.contains('/') {
                     return Err(
@@ -331,7 +331,7 @@ struct Requirements<'a> {
     // specified set of features enabled. The boolean indicates whether this
     // package was specifically requested (rather than just requesting features
     // *within* this package).
-    deps: HashMap<&'a str, (bool, Vec<String>)>,
+    deps: HashMap<&'a str, (bool, Vec<InternedString>)>,
     // The used features set is the set of features which this local package had
     // enabled, which is later used when compiling to instruct the code what
     // features were enabled.
@@ -349,13 +349,13 @@ impl<'r> Requirements<'r> {
         }
     }
 
-    fn require_crate_feature(&mut self, package: &'r str, feat: &'r str) {
+    fn require_crate_feature(&mut self, package: &'r str, feat: InternedString) {
         self.used.insert(package);
         self.deps
             .entry(package)
             .or_insert((false, Vec::new()))
             .1
-            .push(feat.to_string());
+            .push(feat);
     }
 
     fn seen(&mut self, feat: &'r str) -> bool {
@@ -399,7 +399,7 @@ impl<'r> Requirements<'r> {
         match *fv {
             FeatureValue::Feature(ref feat) => self.require_feature(feat),
             FeatureValue::Crate(ref dep) => Ok(self.require_dependency(dep)),
-            FeatureValue::CrateFeature(ref dep, ref dep_feat) => {
+            FeatureValue::CrateFeature(ref dep, dep_feat) => {
                 Ok(self.require_crate_feature(dep, dep_feat))
             }
         }

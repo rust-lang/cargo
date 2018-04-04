@@ -32,7 +32,7 @@ struct Inner {
 
     optional: bool,
     default_features: bool,
-    features: Vec<String>,
+    features: Vec<InternedString>,
 
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
@@ -64,6 +64,7 @@ impl ser::Serialize for Dependency {
     where
         S: ser::Serializer,
     {
+        let string_features: Vec<_> = self.features().iter().map(|s| s.to_string()).collect();
         SerializedDependency {
             name: &*self.name(),
             source: self.source_id(),
@@ -71,7 +72,7 @@ impl ser::Serialize for Dependency {
             kind: self.kind(),
             optional: self.is_optional(),
             uses_default_features: self.uses_default_features(),
-            features: self.features(),
+            features: &string_features,
             target: self.platform(),
             rename: self.rename(),
         }.serialize(s)
@@ -250,7 +251,8 @@ impl Dependency {
 
     /// Sets the list of features requested for the package.
     pub fn set_features(&mut self, features: Vec<String>) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).features = features;
+        Rc::make_mut(&mut self.inner).features =
+            features.iter().map(|s| InternedString::new(s)).collect();
         self
     }
 
@@ -334,7 +336,7 @@ impl Dependency {
         self.inner.default_features
     }
     /// Returns the list of features that are requested by the dependency.
-    pub fn features(&self) -> &[String] {
+    pub fn features(&self) -> &[InternedString] {
         &self.inner.features
     }
 
