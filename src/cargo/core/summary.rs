@@ -2,12 +2,11 @@ use std::collections::BTreeMap;
 use std::mem;
 use std::rc::Rc;
 
-use semver::Version;
-
 use serde::{Serialize, Serializer};
 
-use core::{Dependency, PackageId, SourceId};
 use core::interning::InternedString;
+use core::{Dependency, PackageId, SourceId};
+use semver::Version;
 
 use util::CargoResult;
 
@@ -138,7 +137,7 @@ fn build_feature_map(
     for (feature, list) in features.iter() {
         let mut values = vec![];
         for dep in list {
-            let val = FeatureValue::build(dep, |fs| (&features).get(fs).is_some());
+            let val = FeatureValue::build(InternedString::new(dep), |fs| features.contains_key(fs));
             if let &Feature(_) = &val {
                 values.push(val);
                 continue;
@@ -201,7 +200,7 @@ pub enum FeatureValue {
 }
 
 impl FeatureValue {
-    fn build<T>(feature: &str, is_feature: T) -> FeatureValue
+    fn build<T>(feature: InternedString, is_feature: T) -> FeatureValue
     where
         T: Fn(&str) -> bool,
     {
@@ -211,13 +210,13 @@ impl FeatureValue {
                 let dep_feat = &dep_feat[1..];
                 FeatureValue::CrateFeature(InternedString::new(dep), InternedString::new(dep_feat))
             }
-            None if is_feature(&feature) => FeatureValue::Feature(InternedString::new(feature)),
-            None => FeatureValue::Crate(InternedString::new(feature)),
+            None if is_feature(&feature) => FeatureValue::Feature(feature),
+            None => FeatureValue::Crate(feature),
         }
     }
 
-    pub fn new(feature: &str, s: &Summary) -> FeatureValue {
-        Self::build(feature, |fs| s.features().get(fs).is_some())
+    pub fn new(feature: InternedString, s: &Summary) -> FeatureValue {
+        Self::build(feature, |fs| s.features().contains_key(fs))
     }
 
     pub fn to_string(&self) -> String {
