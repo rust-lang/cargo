@@ -1,5 +1,5 @@
 use std::cell::{Ref, RefCell};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::fmt;
 use std::hash;
 use std::path::{Path, PathBuf};
@@ -10,7 +10,7 @@ use toml;
 use lazycell::LazyCell;
 
 use core::{Dependency, Manifest, PackageId, SourceId, Target};
-use core::{SourceMap, Summary};
+use core::{FeatureMap, SourceMap, Summary};
 use core::interning::InternedString;
 use util::{internal, lev_distance, Config};
 use util::errors::{CargoResult, CargoResultExt};
@@ -39,7 +39,7 @@ struct SerializedPackage<'a> {
     source: &'a SourceId,
     dependencies: &'a [Dependency],
     targets: &'a [Target],
-    features: &'a BTreeMap<String, Vec<String>>,
+    features: &'a FeatureMap,
     manifest_path: &'a str,
 }
 
