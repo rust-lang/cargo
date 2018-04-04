@@ -56,6 +56,7 @@ use semver;
 
 use core::{Dependency, PackageId, Registry, Summary};
 use core::PackageIdSpec;
+use core::interning::InternedString;
 use util::config::Config;
 use util::Graph;
 use util::errors::{CargoError, CargoResult};
@@ -670,7 +671,7 @@ struct BacktrackFrame {
     remaining_candidates: RemainingCandidates,
     parent: Summary,
     dep: Dependency,
-    features: Rc<Vec<String>>,
+    features: Rc<Vec<InternedString>>,
     conflicting_activations: HashMap<PackageId, ConflictReason>,
 }
 
