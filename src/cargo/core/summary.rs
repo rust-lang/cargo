@@ -3,6 +3,9 @@ use std::mem;
 use std::rc::Rc;
 
 use semver::Version;
+
+use serde::{Serialize, Serializer};
+
 use core::{Dependency, PackageId, SourceId};
 use core::interning::InternedString;
 
@@ -190,7 +193,7 @@ fn build_feature_map(
 /// * A feature in a depedency
 ///
 /// The selection between these 3 things happens as part of the construction of the FeatureValue.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug)]
 pub enum FeatureValue {
     Feature(InternedString),
     Crate(InternedString),
@@ -223,6 +226,22 @@ impl FeatureValue {
             Feature(ref f) => f.to_string(),
             Crate(ref c) => c.to_string(),
             CrateFeature(ref c, ref f) => [c.as_ref(), f.as_ref()].join("/"),
+        }
+    }
+}
+
+impl Serialize for FeatureValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use self::FeatureValue::*;
+        match *self {
+            Feature(ref f) => serializer.serialize_str(f),
+            Crate(ref c) => serializer.serialize_str(c),
+            CrateFeature(ref c, ref f) => {
+                serializer.serialize_str(&[c.as_ref(), f.as_ref()].join("/"))
+            }
         }
     }
 }
