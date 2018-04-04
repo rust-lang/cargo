@@ -390,7 +390,7 @@ impl<'r> Requirements<'r> {
                 ),
                 _ => {}
             }
-            self.require_value(&fv)?;
+            self.require_value(fv)?;
         }
         Ok(())
     }
