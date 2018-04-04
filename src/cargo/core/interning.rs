@@ -1,3 +1,5 @@
+use serde::{Serialize, Serializer};
+
 use std::fmt;
 use std::sync::RwLock;
 use std::collections::HashSet;
@@ -93,5 +95,14 @@ impl Ord for InternedString {
 impl PartialOrd for InternedString {
     fn partial_cmp(&self, other: &InternedString) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl Serialize for InternedString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.inner)
     }
 }
