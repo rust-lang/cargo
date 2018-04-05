@@ -2759,7 +2759,7 @@ fn rebuild_only_on_explicit_paths() {
 }
 
 #[test]
-fn doctest_recieves_build_link_args() {
+fn doctest_receives_build_link_args() {
     let p = project("foo")
         .file(
             "Cargo.toml",
