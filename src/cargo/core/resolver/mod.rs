@@ -776,7 +776,7 @@ impl RemainingCandidates {
 
         // Alright we've entirely exhausted our list of candidates. If we've got
         // something stashed away return that here (also indicating that there's
-        // nothign else). If nothing is stashed away we return the list of all
+        // nothing else). If nothing is stashed away we return the list of all
         // conflicting activations, if any.
         //
         // TODO: can the `conflicting_prev_active` clone be avoided here? should

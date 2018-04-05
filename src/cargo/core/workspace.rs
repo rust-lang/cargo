@@ -72,7 +72,7 @@ pub struct Workspace<'cfg> {
     // cases `false` also results in the non-enforcement of dev-dependencies.
     require_optional_deps: bool,
 
-    // A cache of lodaed packages for particular paths which is disjoint from
+    // A cache of loaded packages for particular paths which is disjoint from
     // `packages` up above, used in the `load` method down below.
     loaded_packages: RefCell<HashMap<PathBuf, Package>>,
 }
