@@ -776,6 +776,13 @@ fn rustdoc<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoResult
         rustdoc.arg("--cfg").arg(&format!("feature=\"{}\"", feat));
     }
 
+    let manifest = unit.pkg.manifest();
+
+    if manifest.features().is_enabled(Feature::edition()) {
+        rustdoc.arg("-Zunstable-options");
+        rustdoc.arg(format!("--edition={}", &manifest.edition()));
+    }
+
     if let Some(ref args) = unit.profile.rustdoc_args {
         rustdoc.args(args);
     }
