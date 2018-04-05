@@ -787,7 +787,7 @@ fn filename<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> String {
 /// when it was invoked.
 ///
 /// The serialized Cargo format will contain a list of files, all of which are
-/// relative if they're under `root`. or absolute if they're elsewehre.
+/// relative if they're under `root`. or absolute if they're elsewhere.
 pub fn translate_dep_info(
     rustc_dep_info: &Path,
     cargo_dep_info: &Path,

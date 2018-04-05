@@ -161,7 +161,7 @@ fn cargo_compile_offline_with_cached_git_dep() {
     let rev2 = git::commit(&repo);
 
     {
-        // cache to regisrty rev1 and rev2
+        // cache to registry rev1 and rev2
         let prj = project("cache_git_dep")
             .file(
                 "Cargo.toml",
