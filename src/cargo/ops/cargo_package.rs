@@ -47,7 +47,7 @@ pub fn package(ws: &Workspace, opts: &PackageOpts) -> CargoResult<Option<FileLoc
             .iter()
             .map(|file| util::without_prefix(file, root).unwrap().to_path_buf())
             .collect();
-        if include_lockfile(&pkg) {
+        if include_lockfile(pkg) {
             list.push("Cargo.lock".into());
         }
         list.sort();

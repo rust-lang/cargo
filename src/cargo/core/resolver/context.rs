@@ -340,7 +340,7 @@ struct Requirements<'a> {
 }
 
 impl<'r> Requirements<'r> {
-    fn new<'a>(summary: &'a Summary) -> Requirements<'a> {
+    fn new(summary: &Summary) -> Requirements {
         Requirements {
             summary,
             deps: HashMap::new(),
@@ -390,7 +390,7 @@ impl<'r> Requirements<'r> {
                 ),
                 _ => {}
             }
-            self.require_value(&fv)?;
+            self.require_value(fv)?;
         }
         Ok(())
     }
