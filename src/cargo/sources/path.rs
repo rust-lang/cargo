@@ -443,7 +443,7 @@ impl<'cfg> PathSource<'cfg> {
         // For package integration tests, we need to sort the paths in a deterministic order to
         // be able to match stdout warnings in the same order.
         //
-        // TODO: Drop collect and sort after transition period and dropping wraning tests.
+        // TODO: Drop collect and sort after transition period and dropping warning tests.
         // See <https://github.com/rust-lang/cargo/issues/4268>
         // and <https://github.com/rust-lang/cargo/pull/4270>
         let mut entries: Vec<fs::DirEntry> = fs::read_dir(path)?.map(|e| e.unwrap()).collect();
