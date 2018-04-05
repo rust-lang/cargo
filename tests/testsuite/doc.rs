@@ -1488,7 +1488,7 @@ fn doc_edition() {
         .build();
 
     assert_that(
-        p.cargo("doc").arg("-v").masquerade_as_nightly_cargo(),
+        p.cargo("doc -v").masquerade_as_nightly_cargo(),
         execs()
             .with_status(0)
             .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]"),
