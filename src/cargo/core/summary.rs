@@ -145,11 +145,12 @@ fn build_feature_map(
 
             // Find data for the referenced dependency...
             let dep_data = {
-                let dep_name = match val {
-                    Feature(_) => "",
-                    Crate(ref dep_name) | CrateFeature(ref dep_name, _) => dep_name,
-                };
-                dependencies.iter().find(|d| *d.name() == *dep_name)
+                match val {
+                    Feature(_) => None,
+                    Crate(ref dep_name) | CrateFeature(ref dep_name, _) => {
+                        dependencies.iter().find(|d| d.name() == *dep_name)
+                    }
+                }
             };
 
             match (&val, dep_data) {
