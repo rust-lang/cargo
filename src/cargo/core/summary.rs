@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::mem;
 use std::rc::Rc;
 
@@ -133,6 +133,11 @@ fn build_feature_map(
     dependencies: &[Dependency],
 ) -> CargoResult<FeatureMap> {
     use self::FeatureValue::*;
+    let dep_map: HashMap<_, _> = dependencies
+        .iter()
+        .map(|d| (d.name().as_str(), d))
+        .collect();
+
     let mut map = BTreeMap::new();
     for (feature, list) in features.iter() {
         let mut values = vec![];
@@ -148,7 +153,7 @@ fn build_feature_map(
                 match val {
                     Feature(_) => None,
                     Crate(ref dep_name) | CrateFeature(ref dep_name, _) => {
-                        dependencies.iter().find(|d| d.name() == *dep_name)
+                        dep_map.get(dep_name.as_str())
                     }
                 }
             };
