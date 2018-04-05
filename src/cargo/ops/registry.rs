@@ -214,13 +214,14 @@ fn transmit(
         return Ok(());
     }
 
-    let string_features = pkg.summary()
+    let summary = pkg.summary();
+    let string_features = summary
         .features()
         .iter()
         .map(|(feat, values)| {
             (
                 feat.clone(),
-                values.iter().map(|fv| fv.to_string()).collect(),
+                values.iter().map(|fv| fv.to_string(&summary)).collect(),
             )
         })
         .collect::<BTreeMap<String, Vec<String>>>();
