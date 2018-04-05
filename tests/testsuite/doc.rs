@@ -3,7 +3,7 @@ use std::str;
 use std::fs::{self, File};
 use std::io::Read;
 
-use cargotest::rustc_host;
+use cargotest::{rustc_host, ChannelChanger};
 use cargotest::support::{execs, project, path2url};
 use cargotest::support::registry::Package;
 use hamcrest::{assert_that, existing_dir, existing_file, is_not};
@@ -1462,5 +1462,35 @@ fn doc_workspace_open_help_message() {
             )
             .with_stderr_contains("  foo")
             .with_stderr_contains("  bar"),
+    );
+}
+
+#[test]
+fn doc_edition() {
+    if !cargotest::is_nightly() {
+        // Stable rustdoc won't have the edition option.  Remove this once it
+        // is stabilized.
+        return;
+    }
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            rust = "2018"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    assert_that(
+        p.cargo("doc -v").masquerade_as_nightly_cargo(),
+        execs()
+            .with_status(0)
+            .with_stderr_contains("[RUNNING] `rustdoc [..]-Zunstable-options --edition=2018[..]"),
     );
 }
