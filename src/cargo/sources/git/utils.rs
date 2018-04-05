@@ -212,13 +212,11 @@ impl GitReference {
             })()
                 .chain_err(|| format!("failed to find tag `{}`", s))?,
             GitReference::Branch(ref s) => {
-                (|| {
-                    let b = repo.find_branch(s, git2::BranchType::Local)?;
-                    b.get()
-                        .target()
-                        .ok_or_else(|| format_err!("branch `{}` did not have a target", s))
-                })()
-                    .chain_err(|| format!("failed to find branch `{}`", s))?
+                let b = repo.find_branch(s, git2::BranchType::Local)
+                    .chain_err(|| format!("failed to find branch `{}`", s))?;
+                b.get()
+                    .target()
+                    .ok_or_else(|| format_err!("branch `{}` did not have a target", s))?
             }
             GitReference::Rev(ref s) => {
                 let obj = repo.revparse_single(s)?;
