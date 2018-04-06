@@ -68,9 +68,7 @@ impl Context {
                     &*link
                 );
             }
-            let mut inner: Vec<_> = (**prev).clone();
-            inner.push(summary.clone());
-            *prev = Rc::new(inner);
+            Rc::make_mut(prev).push(summary.clone());
             return Ok(false);
         }
         debug!("checking if {} is already activated", summary.package_id());
@@ -246,15 +244,13 @@ impl Context {
         if !reqs.used.is_empty() {
             let pkgid = s.package_id();
 
-            let set = self.resolve_features
+            let set = Rc::make_mut(self.resolve_features
                 .entry(pkgid.clone())
-                .or_insert_with(|| Rc::new(HashSet::new()));
+                .or_insert_with(|| Rc::new(HashSet::new())));
 
-            let mut inner: HashSet<_> = (**set).clone();
             for feature in reqs.used {
-                inner.insert(InternedString::new(feature));
+                set.insert(InternedString::new(feature));
             }
-            *set = Rc::new(inner);
         }
 
         Ok(ret)
