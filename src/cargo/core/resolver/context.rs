@@ -23,7 +23,7 @@ pub struct Context {
     //       switch to persistent hash maps if we can at some point or otherwise
     //       make these much cheaper to clone in general.
     pub activations: Activations,
-    pub resolve_features: HashMap<PackageId, HashSet<InternedString>>,
+    pub resolve_features: HashMap<PackageId, Rc<HashSet<InternedString>>>,
     pub links: HashMap<InternedString, PackageId>,
 
     // These are two cheaply-cloneable lists (O(1) clone) which are effectively
@@ -35,6 +35,8 @@ pub struct Context {
     // These warnings are printed after resolution.
     pub warnings: RcList<String>,
 }
+
+pub type Activations = HashMap<(InternedString, SourceId), Rc<Vec<Summary>>>;
 
 impl Context {
     pub fn new() -> Context {
@@ -66,9 +68,7 @@ impl Context {
                     &*link
                 );
             }
-            let mut inner: Vec<_> = (**prev).clone();
-            inner.push(summary.clone());
-            *prev = Rc::new(inner);
+            Rc::make_mut(prev).push(summary.clone());
             return Ok(false);
         }
         debug!("checking if {} is already activated", summary.package_id());
@@ -244,9 +244,10 @@ impl Context {
         if !reqs.used.is_empty() {
             let pkgid = s.package_id();
 
-            let set = self.resolve_features
+            let set = Rc::make_mut(self.resolve_features
                 .entry(pkgid.clone())
-                .or_insert_with(HashSet::new);
+                .or_insert_with(|| Rc::new(HashSet::new())));
+
             for feature in reqs.used {
                 set.insert(InternedString::new(feature));
             }
@@ -405,5 +406,3 @@ impl<'r> Requirements<'r> {
         }
     }
 }
-
-pub type Activations = HashMap<(InternedString, SourceId), Rc<Vec<Summary>>>;
