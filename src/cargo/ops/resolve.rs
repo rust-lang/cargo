@@ -445,21 +445,6 @@ fn register_previous_locks<'a>(
             continue;
         }
         for dep in member.dependencies() {
-            let source = dep.source_id();
-
-            // If this is a path dependency then try to push it onto our
-            // worklist
-            if let Some(pkg) = path_pkg(source) {
-                path_deps.push(pkg);
-                continue;
-            }
-
-            // If we match *anything* in the dependency graph then we consider
-            // ourselves A-OK and assume that we'll resolve to that.
-            if resolve.iter().any(|id| dep.matches_ignoring_source(id)) {
-                continue;
-            }
-
             // If this dependency didn't match anything special then we may want
             // to poison the source as it may have been added. If this path
             // dependencies is *not* a workspace member, however, and it's an
@@ -479,9 +464,26 @@ fn register_previous_locks<'a>(
                 continue;
             }
 
+            // If this is a path dependency then try to push it onto our
+            // worklist
+            if let Some(pkg) = path_pkg(dep.source_id()) {
+                path_deps.push(pkg);
+                continue;
+            }
+
+            // If we match *anything* in the dependency graph then we consider
+            // ourselves A-OK and assume that we'll resolve to that.
+            if resolve.iter().any(|id| dep.matches_ignoring_source(id)) {
+                continue;
+            }
+
             // Ok if nothing matches, then we poison the source of this
             // dependencies and the previous lock file.
-            for id in resolve.iter().filter(|id| id.source_id() == source) {
+            debug!("poisoning {} because {} looks like it changed {}",
+                   dep.source_id(),
+                   member.package_id(),
+                   dep.name());
+            for id in resolve.iter().filter(|id| id.source_id() == dep.source_id()) {
                 add_deps(resolve, id, &mut avoid_locking);
             }
         }
