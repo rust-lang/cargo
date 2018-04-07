@@ -197,6 +197,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
     /// Ensure that we've collected all target-specific information to compile
     /// all the units mentioned in `units`.
     fn probe_target_info(&mut self) -> CargoResult<()> {
+        let _p = profile::start("Context::probe_target_info");
         debug!("probe_target_info");
         let host_target_same = match self.requested_target() {
             Some(s) if s != self.config.rustc()?.host => false,
