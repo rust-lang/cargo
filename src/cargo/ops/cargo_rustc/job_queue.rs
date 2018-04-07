@@ -148,8 +148,6 @@ impl<'a> JobQueue<'a> {
         scope: &Scope<'a>,
         jobserver_helper: &HelperThread,
     ) -> CargoResult<()> {
-        use std::time::Instant;
-
         let mut tokens = Vec::new();
         let mut queue = Vec::new();
         trace!("queue: {:#?}", self.queue);
@@ -165,7 +163,6 @@ impl<'a> JobQueue<'a> {
         // successful and otherwise wait for pending work to finish if it failed
         // and then immediately return.
         let mut error = None;
-        let start_time = Instant::now();
         loop {
             // Dequeue as much work as we can, learning about everything
             // possible that can run. Note that this is also the point where we
@@ -265,7 +262,7 @@ impl<'a> JobQueue<'a> {
         if profile.debuginfo.is_some() {
             opt_type += " + debuginfo";
         }
-        let duration = start_time.elapsed();
+        let duration = cx.config.creation_time().elapsed();
         let time_elapsed = format!(
             "{}.{1:.2} secs",
             duration.as_secs(),
