@@ -11,6 +11,7 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Once, ONCE_INIT};
+use std::time::Instant;
 
 use curl::easy::Easy;
 use jobserver;
@@ -65,6 +66,7 @@ pub struct Config {
     easy: LazyCell<RefCell<Easy>>,
     /// Cache of the `SourceId` for crates.io
     crates_io_source_id: LazyCell<SourceId>,
+    creation_time: Instant,
 }
 
 impl Config {
@@ -101,6 +103,7 @@ impl Config {
             cli_flags: CliUnstable::default(),
             easy: LazyCell::new(),
             crates_io_source_id: LazyCell::new(),
+            creation_time: Instant::now(),
         }
     }
 
@@ -677,6 +680,10 @@ impl Config {
         F: FnMut() -> CargoResult<SourceId>,
     {
         Ok(self.crates_io_source_id.try_borrow_with(f)?.clone())
+    }
+
+    pub fn creation_time(&self) -> Instant {
+        self.creation_time
     }
 }
 
