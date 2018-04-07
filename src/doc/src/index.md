@@ -4,7 +4,8 @@
 
 Cargo is the [Rust] *package manager*. Cargo downloads your Rust project’s
 dependencies, compiles your project, makes packages, and upload them to
-[crates.io], the Rust community’s *package registry*.
+[crates.io], the Rust community’s *package registry*. You can contribute
+to this book on [GitHub].
 
 
 ### Sections
@@ -26,3 +27,4 @@ The reference covers the details of various areas of Cargo.
 
 [rust]: https://www.rust-lang.org/
 [crates.io]: https://crates.io/
+[GitHub]: https://github.com/rust-lang/cargo/tree/master/src/doc/src
