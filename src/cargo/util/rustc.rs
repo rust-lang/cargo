@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use util::{self, internal, CargoResult, ProcessBuilder};
+use util::{self, internal, profile, CargoResult, ProcessBuilder};
 
 /// Information on the `rustc` executable
 #[derive(Debug)]
@@ -23,6 +23,8 @@ impl Rustc {
     /// If successful this function returns a description of the compiler along
     /// with a list of its capabilities.
     pub fn new(path: PathBuf, wrapper: Option<PathBuf>) -> CargoResult<Rustc> {
+        let _p = profile::start("Rustc::new");
+
         let mut cmd = util::process(&path);
         cmd.arg("-vV");
 
