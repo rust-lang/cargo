@@ -27,5 +27,6 @@
     * [Package ID Specifications](reference/pkgid-spec.md)
     * [Source Replacement](reference/source-replacement.md)
     * [External Tools](reference/external-tools.md)
+    * [Unstable Features](reference/unstable.md)
 
 * [FAQ](faq.md)

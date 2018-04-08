@@ -11,3 +11,4 @@ The reference covers the details of various areas of Cargo.
 * [Package ID Specifications](reference/pkgid-spec.html)
 * [Source Replacement](reference/source-replacement.html)
 * [External Tools](reference/external-tools.html)
+* [Unstable Features](reference/unstable.html)
