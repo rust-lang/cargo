@@ -173,7 +173,7 @@ that the artifacts are copied, so the originals are still in the `target`
 directory.  Example:
 
 ```
-cargo +nightly build --out-dir=out -Z out-dir
+cargo +nightly build --out-dir=out -Z unstable-options
 ```
 
 
