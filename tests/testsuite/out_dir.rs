@@ -23,7 +23,7 @@ fn binary_with_debug() {
         .build();
 
     assert_that(
-        p.cargo("build -Z out-dir --out-dir out")
+        p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );
@@ -60,7 +60,7 @@ fn static_library_with_debug() {
         .build();
 
     assert_that(
-        p.cargo("build -Z out-dir --out-dir out")
+        p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );
@@ -97,7 +97,7 @@ fn dynamic_library_with_debug() {
         .build();
 
     assert_that(
-        p.cargo("build -Z out-dir --out-dir out")
+        p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );
@@ -133,7 +133,7 @@ fn rlib_with_debug() {
         .build();
 
     assert_that(
-        p.cargo("build -Z out-dir --out-dir out")
+        p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );
@@ -186,7 +186,7 @@ fn include_only_the_binary_from_the_current_package() {
         .build();
 
     assert_that(
-        p.cargo("build -Z out-dir --bin foo --out-dir out")
+        p.cargo("build -Z unstable-options --bin foo --out-dir out")
             .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );
@@ -215,7 +215,7 @@ fn out_dir_is_a_file() {
     File::create(p.root().join("out")).unwrap();
 
     assert_that(
-        p.cargo("build -Z out-dir --out-dir out")
+        p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
         execs()
             .with_status(101)
@@ -239,7 +239,7 @@ fn replaces_artifacts() {
         .build();
 
     assert_that(
-        p.cargo("build -Z out-dir --out-dir out")
+        p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );
@@ -253,7 +253,7 @@ fn replaces_artifacts() {
     p.change_file("src/main.rs", r#"fn main() { println!("bar") }"#);
 
     assert_that(
-        p.cargo("build -Z out-dir --out-dir out")
+        p.cargo("build -Z unstable-options --out-dir out")
             .masquerade_as_nightly_cargo(),
         execs().with_status(0),
     );

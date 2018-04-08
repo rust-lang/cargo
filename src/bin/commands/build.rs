@@ -52,9 +52,9 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     let mut compile_opts = args.compile_options(config, CompileMode::Build)?;
     compile_opts.export_dir = args.value_of_path("out-dir", config);
-    if compile_opts.export_dir.is_some() && !config.cli_unstable().out_dir {
+    if compile_opts.export_dir.is_some() && !config.cli_unstable().unstable_options {
         Err(format_err!(
-            "`--out-dir` flag is unstable, pass `-Z out-dir` to enable it"
+            "`--out-dir` flag is unstable, pass `-Z unstable-options` to enable it"
         ))?;
     };
     ops::compile(&ws, &compile_opts)?;
