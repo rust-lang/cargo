@@ -35,6 +35,12 @@
 //! then you use `chain_err` to tack on more context for why the feature was
 //! required when the feature isn't activated.
 //!
+//! 4. Update the unstable documentation at
+//!    `src/doc/src/reference/unstable.md` to include a short description of
+//!    how to use your new feature.  When the feature is stabilized, be sure
+//!    that the Cargo Guide or Reference is updated to fully document the
+//!    feature and remove the entry from the Unstable section.
+//!
 //! And hopefully that's it! Bear with us though that this is, at the time of
 //! this writing, a very new feature in Cargo. If the process differs from this
 //! we'll be sure to update this documentation!
