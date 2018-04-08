@@ -155,6 +155,12 @@ When a `Cargo.lock` file is generated, the `-Z minimal-versions` flag will
 resolve the dependencies to the minimum semver version that will satisfy the
 requirements (instead of the greatest version).
 
+The intended use-case of this flag is to check, during continuous integration,
+that the versions specified in Cargo.toml are a correct reflection of the
+minimum versions that you are actually using. That is, if Cargo.toml says
+`foo = "1.0.0"` that you don't accidentally depend on features added only in
+`foo 1.5.0`.
+
 ### out-dir
 * Original Issue: [#4875](https://github.com/rust-lang/cargo/issues/4875)
 
