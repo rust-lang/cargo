@@ -604,12 +604,12 @@ pub fn search(
     }
 
     let search_max_limit = 100;
-    if total_crates > limit && limit < search_max_limit {
+    if total_crates > limit && total_crates <= search_max_limit {
         println!(
             "... and {} crates more (use --limit N to see more)",
             total_crates - limit
         );
-    } else if total_crates > limit && limit >= search_max_limit {
+    } else if total_crates > limit && total_crates > search_max_limit {
         println!(
             "... and {} crates more (go to http://crates.io/search?q={} to see more)",
             total_crates - limit,
