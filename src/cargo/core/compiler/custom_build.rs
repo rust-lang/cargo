@@ -6,7 +6,7 @@ use std::str;
 use std::sync::{Arc, Mutex};
 
 use crate::core::compiler::job_queue::JobState;
-use crate::core::PackageId;
+use crate::core::{profiles::ProfileRoot, PackageId};
 use crate::util::errors::{CargoResult, CargoResultExt};
 use crate::util::machine_message::{self, Message};
 use crate::util::Cfg;
@@ -160,10 +160,9 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         .env("OPT_LEVEL", &unit.profile.opt_level.to_string())
         .env(
             "PROFILE",
-            if bcx.build_config.release {
-                "release"
-            } else {
-                "debug"
+            match unit.profile.root {
+                ProfileRoot::Release => "release",
+                ProfileRoot::Debug => "debug",
             },
         )
         .env("HOST", &bcx.host_triple())

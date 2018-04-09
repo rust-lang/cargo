@@ -116,7 +116,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let workspace = args.workspace(config).ok();
     let mut compile_opts = args.compile_options(config, CompileMode::Build, workspace.as_ref())?;
 
-    compile_opts.build_config.release = !args.is_present("debug");
+    compile_opts.build_config.profile_kind = args.get_profile_kind(ProfileKind::Release)?;
 
     let krates = args
         .values_of("crate")

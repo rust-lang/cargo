@@ -25,6 +25,7 @@ pub fn cli() -> App {
             "Check all targets",
         )
         .arg_release("Check artifacts in release mode, with optimizations")
+        .arg_profile("Check artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Check for the target triple")
         .arg_target_dir()

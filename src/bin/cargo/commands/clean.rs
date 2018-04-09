@@ -11,6 +11,7 @@ pub fn cli() -> App {
         .arg_target_triple("Target triple to clean output for")
         .arg_target_dir()
         .arg_release("Whether or not to clean release artifacts")
+        .arg_profile("Clean artifacts of the specified profile")
         .arg_doc("Whether or not to clean just the documentation directory")
         .after_help(
             "\
@@ -28,7 +29,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
         config,
         spec: values(args, "package"),
         target: args.target(),
-        release: args.is_present("release"),
+        profile_kind: args.get_profile_kind(ProfileKind::Dev)?,
         doc: args.is_present("doc"),
     };
     ops::clean(&ws, &opts)?;

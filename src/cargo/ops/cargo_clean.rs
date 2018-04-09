@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::core::compiler::UnitInterner;
-use crate::core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind};
+use crate::core::compiler::{BuildConfig, BuildContext, CompileMode, Context, Kind, ProfileKind};
 use crate::core::profiles::UnitFor;
 use crate::core::Workspace;
 use crate::ops;
@@ -18,7 +18,7 @@ pub struct CleanOptions<'a> {
     /// The target arch triple to clean, or None for the host arch
     pub target: Option<String>,
     /// Whether to clean the release directory
-    pub release: bool,
+    pub profile_kind: ProfileKind,
     /// Whether to just clean the doc directory
     pub doc: bool,
 }
@@ -32,11 +32,6 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     if opts.doc {
         target_dir = target_dir.join("doc");
         return rm_rf(&target_dir.into_path_unlocked(), config);
-    }
-
-    // If the release option is set, we set target to release directory
-    if opts.release {
-        target_dir = target_dir.join("release");
     }
 
     // If we have a spec, then we need to delete some packages, otherwise, just
@@ -53,7 +48,8 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let profiles = ws.profiles();
     let interner = UnitInterner::new();
     let mut build_config = BuildConfig::new(config, Some(1), &opts.target, CompileMode::Build)?;
-    build_config.release = opts.release;
+    let profile_kind = opts.profile_kind.clone();
+    build_config.profile_kind = profile_kind.clone();
     let bcx = BuildContext::new(
         ws,
         &resolve,
@@ -82,7 +78,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                                 ws.is_member(pkg),
                                 *unit_for,
                                 CompileMode::Build,
-                                opts.release,
+                                profile_kind.clone(),
                             ))
                         } else {
                             profiles.get_profile(
@@ -90,7 +86,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
                                 ws.is_member(pkg),
                                 *unit_for,
                                 *mode,
-                                opts.release,
+                                profile_kind.clone(),
                             )
                         };
                         units.push(bcx.units.intern(pkg, target, profile, *kind, *mode));

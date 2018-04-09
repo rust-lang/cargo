@@ -24,6 +24,7 @@ pub fn cli() -> App {
             "Document all binaries",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()

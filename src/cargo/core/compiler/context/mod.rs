@@ -267,14 +267,11 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         export_dir: Option<PathBuf>,
         units: &[Unit<'a>],
     ) -> CargoResult<()> {
-        let dest = if self.bcx.build_config.release {
-            "release"
-        } else {
-            "debug"
-        };
-        let host_layout = Layout::new(self.bcx.ws, None, dest)?;
+        let profile_kind = &self.bcx.build_config.profile_kind;
+        let dest = self.bcx.profiles.get_dir_name(profile_kind);
+        let host_layout = Layout::new(self.bcx.ws, None, &dest)?;
         let target_layout = match self.bcx.build_config.requested_target.as_ref() {
-            Some(target) => Some(Layout::new(self.bcx.ws, Some(target), dest)?),
+            Some(target) => Some(Layout::new(self.bcx.ws, Some(target), &dest)?),
             None => None,
         };
         self.primary_packages

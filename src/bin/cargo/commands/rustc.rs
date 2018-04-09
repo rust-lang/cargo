@@ -23,7 +23,7 @@ pub fn cli() -> App {
             "Build all targets",
         )
         .arg_release("Build artifacts in release mode, with optimizations")
-        .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
+        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Target triple which compiles will be for")
         .arg_target_dir()

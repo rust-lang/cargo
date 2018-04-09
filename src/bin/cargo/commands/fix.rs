@@ -25,7 +25,7 @@ pub fn cli() -> App {
             "Fix all targets (default)",
         )
         .arg_release("Fix artifacts in release mode, with optimizations")
-        .arg(opt("profile", "Profile to build the selected target for").value_name("PROFILE"))
+        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Fix for the target triple")
         .arg_target_dir()

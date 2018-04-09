@@ -18,6 +18,7 @@ pub fn cli() -> App {
         .arg_package("Package with the target to run")
         .arg_jobs()
         .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_profile("Build artifacts with the specified profile")
         .arg_features()
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()

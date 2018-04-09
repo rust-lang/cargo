@@ -75,7 +75,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches<'_>) -> CliResult {
     let ws = args.workspace(config)?;
     let mut compile_opts = args.compile_options(config, CompileMode::Bench, Some(&ws))?;
 
-    compile_opts.build_config.release = true;
+    compile_opts.build_config.profile_kind =
+        args.get_profile_kind(ProfileKind::Custom("bench".to_owned()))?;
 
     let ops = TestOptions {
         no_run: args.is_present("no-run"),

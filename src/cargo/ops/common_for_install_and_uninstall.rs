@@ -455,7 +455,7 @@ impl CrateListingV2 {
             info.features = feature_set(&opts.features);
             info.all_features = opts.all_features;
             info.no_default_features = opts.no_default_features;
-            info.profile = profile_name(opts.build_config.release).to_string();
+            info.profile = opts.build_config.profile_name().to_string();
             info.target = Some(target);
             info.rustc = Some(rustc);
         } else {
@@ -467,7 +467,7 @@ impl CrateListingV2 {
                     features: feature_set(&opts.features),
                     all_features: opts.all_features,
                     no_default_features: opts.no_default_features,
-                    profile: profile_name(opts.build_config.release).to_string(),
+                    profile: opts.build_config.profile_name().to_string(),
                     target: Some(target),
                     rustc: Some(rustc),
                     other: BTreeMap::new(),
@@ -527,7 +527,7 @@ impl InstallInfo {
         self.features == feature_set(&opts.features)
             && self.all_features == opts.all_features
             && self.no_default_features == opts.no_default_features
-            && self.profile == profile_name(opts.build_config.release)
+            && self.profile == opts.build_config.profile_name().to_string()
             && (self.target.is_none() || self.target.as_ref().map(|t| t.as_ref()) == Some(target))
             && &self.bins == exes
     }
@@ -717,14 +717,6 @@ where
         }
         (Some(i), None) => Ok(Some(i)),
         (None, _) => Ok(None),
-    }
-}
-
-fn profile_name(release: bool) -> &'static str {
-    if release {
-        "release"
-    } else {
-        "dev"
     }
 }
 

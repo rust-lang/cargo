@@ -584,6 +584,8 @@ fn generate_targets<'a>(
     resolve: &Resolve,
     bcx: &BuildContext<'a, '_>,
 ) -> CargoResult<Vec<Unit<'a>>> {
+    let _ = profiles.base_profile(&bcx.build_config.profile_kind)?;
+
     // Helper for creating a `Unit` struct.
     let new_unit = |pkg: &'a Package, target: &'a Target, target_mode: CompileMode| {
         let unit_for = if bcx.build_config.mode.is_any_test() {
@@ -651,7 +653,7 @@ fn generate_targets<'a>(
             ws.is_member(pkg),
             unit_for,
             target_mode,
-            bcx.build_config.release,
+            bcx.build_config.profile_kind.clone(),
         );
         bcx.units.intern(pkg, target, profile, kind, target_mode)
     };

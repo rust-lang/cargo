@@ -270,30 +270,20 @@ pub struct TomlManifest {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub struct TomlProfiles {
-    pub test: Option<TomlProfile>,
-    pub doc: Option<TomlProfile>,
-    pub bench: Option<TomlProfile>,
-    pub dev: Option<TomlProfile>,
-    pub release: Option<TomlProfile>,
-}
+pub struct TomlProfiles(BTreeMap<String, TomlProfile>);
 
 impl TomlProfiles {
+    pub fn get_all(&self) -> &BTreeMap<String, TomlProfile> {
+        &self.0
+    }
+
+    pub fn get(&self, name: &'static str) -> Option<&TomlProfile> {
+        self.0.get(&String::from(name))
+    }
+
     pub fn validate(&self, features: &Features, warnings: &mut Vec<String>) -> CargoResult<()> {
-        if let Some(ref test) = self.test {
-            test.validate("test", features, warnings)?;
-        }
-        if let Some(ref doc) = self.doc {
-            doc.validate("doc", features, warnings)?;
-        }
-        if let Some(ref bench) = self.bench {
-            bench.validate("bench", features, warnings)?;
-        }
-        if let Some(ref dev) = self.dev {
-            dev.validate("dev", features, warnings)?;
-        }
-        if let Some(ref release) = self.release {
-            release.validate("release", features, warnings)?;
+        for (name, profile) in &self.0 {
+            profile.validate(&name, features, warnings)?;
         }
         Ok(())
     }
@@ -416,6 +406,8 @@ pub struct TomlProfile {
     pub incremental: Option<bool>,
     pub overrides: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
     pub build_override: Option<Box<TomlProfile>>,
+    pub dir_name: Option<String>,
+    pub inherits: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
@@ -521,6 +513,60 @@ impl TomlProfile {
             bail!("`rpath` may not be specified in a profile override.")
         }
         Ok(())
+    }
+
+    pub fn merge(&mut self, profile: &TomlProfile) {
+        if let Some(v) = &profile.opt_level {
+            self.opt_level = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.lto {
+            self.lto = Some(v.clone());
+        }
+
+        if let Some(v) = profile.codegen_units {
+            self.codegen_units = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.debug {
+            self.debug = Some(v.clone());
+        }
+
+        if let Some(v) = profile.debug_assertions {
+            self.debug_assertions = Some(v.clone());
+        }
+
+        if let Some(v) = profile.rpath {
+            self.rpath = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.panic {
+            self.panic = Some(v.clone());
+        }
+
+        if let Some(v) = profile.overflow_checks {
+            self.overflow_checks = Some(v.clone());
+        }
+
+        if let Some(v) = profile.incremental {
+            self.incremental = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.overrides {
+            self.overrides = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.build_override {
+            self.build_override = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.inherits {
+            self.inherits = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.dir_name {
+            self.dir_name = Some(v.clone());
+        }
     }
 }
 

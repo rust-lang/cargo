@@ -15,7 +15,7 @@ use crate::util::{
 use crate::CargoResult;
 use clap::{self, SubCommand};
 
-pub use crate::core::compiler::CompileMode;
+pub use crate::core::compiler::{ProfileKind, CompileMode};
 pub use crate::{CliError, CliResult, Config};
 pub use clap::{AppSettings, Arg, ArgMatches};
 
@@ -111,6 +111,10 @@ pub trait AppExt: Sized {
 
     fn arg_release(self, release: &'static str) -> Self {
         self._arg(opt("release", release))
+    }
+
+    fn arg_profile(self, profile: &'static str) -> Self {
+        self._arg(opt("profile", profile).value_name("PROFILE-NAME"))
     }
 
     fn arg_doc(self, doc: &'static str) -> Self {
@@ -288,6 +292,37 @@ pub trait ArgMatchesExt {
         self._value_of("target").map(|s| s.to_string())
     }
 
+    fn get_profile_kind(&self, default: ProfileKind) -> CargoResult<ProfileKind> {
+        let specified_profile = match self._value_of("profile") {
+            None => None,
+            Some("dev") => Some(ProfileKind::Dev),
+            Some("release") => Some(ProfileKind::Release),
+            Some(name) => Some(ProfileKind::Custom(name.to_string())),
+        };
+
+        if self._is_present("release") {
+            match specified_profile {
+                None | Some(ProfileKind::Release) => {
+                    Ok(ProfileKind::Release)
+                }
+                _ => {
+                    failure::bail!("Conflicting usage of --profile and --release")
+                }
+            }
+        } else if self._is_present("debug") {
+            match specified_profile {
+                None | Some(ProfileKind::Dev) => {
+                    Ok(ProfileKind::Dev)
+                }
+                _ => {
+                    failure::bail!("Conflicting usage of --profile and --debug")
+                }
+            }
+        } else {
+            Ok(specified_profile.unwrap_or(default))
+        }
+    }
+
     fn compile_options<'a>(
         &self,
         config: &'a Config,
@@ -317,7 +352,7 @@ pub trait ArgMatchesExt {
 
         let mut build_config = BuildConfig::new(config, self.jobs()?, &self.target(), mode)?;
         build_config.message_format = message_format;
-        build_config.release = self._is_present("release");
+        build_config.profile_kind = self.get_profile_kind(ProfileKind::Dev)?;
         build_config.build_plan = self._is_present("build-plan");
         if build_config.build_plan {
             config
