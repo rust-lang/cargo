@@ -153,14 +153,14 @@ adding labels to triage issues:
   have some instructions on how to get started.
 
 * Red, **I**-prefixed labels indicate the **importance** of the issue. The
-  [I-nominated][inom] label indicates that an issue has been nominated for
+  **[I-nominated][]** label indicates that an issue has been nominated for
   prioritizing at the next triage meeting.
 
 * Purple gray, **O**-prefixed labels are the **operating system** or platform
   that this issue is specific to.
 
 * Orange, **P**-prefixed labels indicate a bug's **priority**. These labels
-  are only assigned during triage meetings and replace the [I-nominated][inom]
+  are only assigned during triage meetings and replace the **[I-nominated][]**
   label.
 
 * The light orange **relnotes** label marks issues that should be documented in
@@ -176,5 +176,6 @@ adding labels to triage issues:
 [lru]: https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-asc
 [E-easy]: https://github.com/rust-lang/cargo/labels/E-easy
 [E-mentor]: https://github.com/rust-lang/cargo/labels/E-mentor
+[I-nominated]: https://github.com/rust-lang/cargo/labels/I-nominated
 [Code of Conduct]: https://www.rust-lang.org/conduct.html
 [IRC]: https://kiwiirc.com/client/irc.mozilla.org/cargo
