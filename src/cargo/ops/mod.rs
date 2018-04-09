@@ -16,7 +16,7 @@ pub use self::registry::{publish, registry_configuration, RegistryConfig};
 pub use self::registry::{http_handle, needs_custom_http_transport, registry_login, search};
 pub use self::registry::{modify_owners, yank, OwnersOptions, PublishOpts};
 pub use self::registry::configure_http_handle;
-pub use self::cargo_fetch::fetch;
+pub use self::cargo_fetch::{fetch, FetchOptions};
 pub use self::cargo_pkgid::pkgid;
 pub use self::resolve::{resolve_with_previous, resolve_ws, resolve_ws_precisely,
                         resolve_ws_with_method};
