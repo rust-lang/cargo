@@ -22,10 +22,9 @@ and unexpected behavior.
 its users' security, please do not open a public issue on GitHub. Instead,
 we ask you to refer to Rust's [security policy].**
 
-Opening an issue is as easy as following [this
-link][new-issues] and filling out the fields.
-Here's a template that you can use to file an issue, though it's not necessary to
-use it exactly:
+Opening an issue is as easy as following [this link][new-issues] and filling out 
+the fields. Here's a template that you can use to file an issue, though it's not 
+necessary to use it exactly:
 
     <short summary of the problem>
 
@@ -42,7 +41,8 @@ happened instead. Please use https://gist.github.com/ if your examples run long.
 
 ## Working on issues
 
-If you're looking for somewhere to start, check out the [E-easy][E-Easy] tag.
+If you're looking for somewhere to start, check out the [E-easy][E-Easy] and 
+[E-mentor][E-mentor] tags.
 
 Feel free to ask for guidelines on how to tackle a problem on [IRC] or open a
 [new issue][new-issues]. This is especially important if you want to add new
