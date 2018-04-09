@@ -346,6 +346,7 @@ fn run_verify(ws: &Workspace, tar: &FileLock, opts: &PackageOpts) -> CargoResult
                 required_features_filterable: true,
             },
             release: false,
+            profile: None,
             message_format: ops::MessageFormat::Human,
             mode: ops::CompileMode::Build,
             target_rustdoc_args: None,

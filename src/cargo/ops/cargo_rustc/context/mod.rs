@@ -91,6 +91,7 @@ pub struct Context<'a, 'cfg: 'a> {
     target_info: TargetInfo,
     host_info: TargetInfo,
     profiles: &'a Profiles,
+    profile_name: Option<String>,
     incremental_env: Option<bool>,
 
     unit_dependencies: HashMap<Unit<'a>, Vec<Unit<'a>>>,
@@ -105,13 +106,17 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         config: &'cfg Config,
         build_config: BuildConfig,
         profiles: &'a Profiles,
+        profile_name: &Option<String>,
         export_dir: Option<PathBuf>,
         units: &[Unit<'a>],
     ) -> CargoResult<Context<'a, 'cfg>> {
-        let dest = if build_config.release {
-            "release"
-        } else {
-            "debug"
+        let dest = match profile_name {
+            &None => if build_config.release {
+                "release"
+            } else {
+                "debug"
+            },
+            &Some(ref s) => s.as_str(),
         };
         let host_layout = Layout::new(ws, None, dest)?;
         let target_layout = match build_config.requested_target.as_ref() {
@@ -148,6 +153,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             build_state: Arc::new(BuildState::new(&build_config)),
             build_config,
             fingerprints: HashMap::new(),
+            profile_name: profile_name.clone(),
             profiles,
             compiled: HashSet::new(),
             build_scripts: HashMap::new(),
@@ -363,7 +369,13 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         if self.build_config.test {
             test
         } else {
-            normal
+            match &self.profile_name {
+                &None => normal,
+                &Some(ref name) => self.profiles
+                    .custom
+                    .get(name)
+                    .expect(format!("Missing profile {}", name).as_ref()),
+            }
         }
     }
 

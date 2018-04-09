@@ -142,6 +142,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(
     build_config: BuildConfig,
     profiles: &'a Profiles,
     export_dir: Option<PathBuf>,
+    profile_name: &Option<String>,
     exec: &Arc<Executor>,
 ) -> CargoResult<Compilation<'cfg>> {
     let units = pkg_targets
@@ -172,6 +173,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(
         config,
         build_config,
         profiles,
+        profile_name,
         export_dir,
         &units,
     )?;

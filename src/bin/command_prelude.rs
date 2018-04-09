@@ -109,6 +109,10 @@ pub trait AppExt: Sized {
         self._arg(opt("target", target).value_name("TRIPLE"))
     }
 
+    fn arg_profile(self, profile: &'static str) -> Self {
+        self._arg(opt("profile", profile).value_name("PROFILE-NAME"))
+    }
+
     fn arg_manifest_path(self) -> Self {
         self._arg(opt("manifest-path", "Path to Cargo.toml").value_name("PATH"))
     }
@@ -272,6 +276,7 @@ pub trait ArgMatchesExt {
             no_default_features: self._is_present("no-default-features"),
             spec,
             mode,
+            profile: self._value_of("profile").map(|s| s.to_string()),
             release: self._is_present("release"),
             filter: CompileFilter::new(
                 self._is_present("lib"),

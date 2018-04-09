@@ -241,6 +241,7 @@ pub struct TomlProfiles {
     bench: Option<TomlProfile>,
     dev: Option<TomlProfile>,
     release: Option<TomlProfile>,
+    custom: Option<BTreeMap<String, TomlProfile>>,
 }
 
 #[derive(Clone, Debug)]
@@ -361,6 +362,7 @@ pub struct TomlProfile {
     #[serde(rename = "overflow-checks")]
     overflow_checks: Option<bool>,
     incremental: Option<bool>,
+    inherits: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -776,7 +778,7 @@ impl TomlManifest {
                  `[workspace]`, only one can be specified"
             ),
         };
-        let profiles = build_profiles(&me.profile);
+        let profiles = build_profiles(&me.profile)?;
         let publish = match project.publish {
             Some(VecStringOrBool::VecString(ref vecstring)) => {
                 features
@@ -896,7 +898,7 @@ impl TomlManifest {
             };
             (me.replace(&mut cx)?, me.patch(&mut cx)?)
         };
-        let profiles = build_profiles(&me.profile);
+        let profiles = build_profiles(&me.profile)?;
         let workspace_config = match me.workspace {
             Some(ref config) => WorkspaceConfig::Root(WorkspaceRootConfig::new(
                 &root,
@@ -1269,57 +1271,152 @@ impl fmt::Debug for PathValue {
     }
 }
 
-fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
+fn build_profiles(profiles: &Option<TomlProfiles>) -> CargoResult<Profiles> {
     let profiles = profiles.as_ref();
+    let custom = profiles.and_then(|p| p.custom.clone().and_then(Some));
+
     let mut profiles = Profiles {
         release: merge(
             Profile::default_release(),
             profiles.and_then(|p| p.release.as_ref()),
-        ),
+        )?,
         dev: merge(
             Profile::default_dev(),
             profiles.and_then(|p| p.dev.as_ref()),
-        ),
+        )?,
         test: merge(
             Profile::default_test(),
             profiles.and_then(|p| p.test.as_ref()),
-        ),
+        )?,
         test_deps: merge(
             Profile::default_dev(),
             profiles.and_then(|p| p.dev.as_ref()),
-        ),
+        )?,
         bench: merge(
             Profile::default_bench(),
             profiles.and_then(|p| p.bench.as_ref()),
-        ),
+        )?,
         bench_deps: merge(
             Profile::default_release(),
             profiles.and_then(|p| p.release.as_ref()),
-        ),
+        )?,
         doc: merge(
             Profile::default_doc(),
             profiles.and_then(|p| p.doc.as_ref()),
-        ),
+        )?,
         custom_build: Profile::default_custom_build(),
         check: merge(
             Profile::default_check(),
             profiles.and_then(|p| p.dev.as_ref()),
-        ),
+        )?,
         check_test: merge(
             Profile::default_check_test(),
             profiles.and_then(|p| p.dev.as_ref()),
-        ),
+        )?,
         doctest: Profile::default_doctest(),
+        custom: HashMap::new(),
     };
+
+    if let Some(custom) = custom {
+        for (name, profile) in custom.iter() {
+            let mut stack = vec![name.clone()];
+
+            let merged_profile =
+                { get_parent_profile(&name, profile.clone(), &mut stack, &profiles, &custom)? };
+            profiles.custom.insert(name.clone(), merged_profile);
+        }
+    }
+
     // The test/bench targets cannot have panic=abort because they'll all get
     // compiled with --test which requires the unwind runtime currently
     profiles.test.panic = None;
     profiles.bench.panic = None;
     profiles.test_deps.panic = None;
     profiles.bench_deps.panic = None;
-    return profiles;
+    return Ok(profiles);
 
-    fn merge(profile: Profile, toml: Option<&TomlProfile>) -> Profile {
+    fn get_parent_profile(
+        name: &str,
+        profile: TomlProfile,
+        stack: &mut Vec<String>,
+        profiles: &Profiles,
+        customs: &BTreeMap<String, TomlProfile>,
+    ) -> CargoResult<Profile> {
+        let custom_prefix = "custom.";
+        let orig_profile = match profile.inherits {
+            None => {
+                bail!(
+                    "custom profile '{}' must inherit from another profile via \
+                       the 'inherit' field. It can either be 'dev', 'release', 'test'
+                       'doc', 'bench', or 'custom.<some other custom profile>'",
+                    name
+                );
+            }
+            Some(ref inherit_name) => match inherit_name.as_str() {
+                "release" => profiles.release.clone(),
+                "dev" => profiles.dev.clone(),
+                "test" => profiles.test.clone(),
+                "doc" => profiles.doc.clone(),
+                "bench" => profiles.bench.clone(),
+                other => {
+                    if other.starts_with(custom_prefix) {
+                        let other_name = &other[custom_prefix.len()..];
+                        match customs.get(other_name) {
+                            None => {
+                                bail!(
+                                    "custom profile '{}' not found, it is \
+                                     refered from '{}' via 'inherit'",
+                                    other,
+                                    name
+                                );
+                            }
+                            Some(other_custom_profile) => {
+                                if stack.iter().any(|x| x == other_name) {
+                                    bail!(
+                                        "detected loop in profile's 'inherit', \
+                                         via profiles: {:?}",
+                                        stack
+                                    );
+                                }
+                                stack.push(String::from(other_name));
+                                get_parent_profile(
+                                    other,
+                                    other_custom_profile.clone(),
+                                    stack,
+                                    profiles,
+                                    customs,
+                                )?
+                            }
+                        }
+                    } else {
+                        bail!(
+                            "inheriting for invalid profile '{}'. it can \
+                             either be 'dev', 'release', 'test', 'doc', 'bench' \
+                             or 'custom.<some other custom profile>'",
+                            other
+                        );
+                    }
+                }
+            },
+        };
+
+        merge_custom(orig_profile, Some(&profile))
+    };
+
+
+    fn merge(profile: Profile, toml: Option<&TomlProfile>) -> CargoResult<Profile> {
+        merge_common(profile, toml, false)
+    }
+
+    fn merge_custom(profile: Profile, toml: Option<&TomlProfile>) -> CargoResult<Profile> {
+        merge_common(profile, toml, true)
+    }
+
+    fn merge_common(
+        profile: Profile,
+        toml: Option<&TomlProfile>,
+        allow_inherit: bool,
+    ) -> CargoResult<Profile> {
         let &TomlProfile {
             ref opt_level,
             ref lto,
@@ -1330,17 +1427,23 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
             ref panic,
             ref overflow_checks,
             ref incremental,
+            ref inherits,
         } = match toml {
             Some(toml) => toml,
-            None => return profile,
+            None => return Ok(profile),
         };
+        if !allow_inherit {
+            if let &Some(_) = inherits {
+                bail!("'inherit' cannot be used on a predefined profile");
+            }
+        }
         let debug = match *debug {
             Some(U32OrBool::U32(debug)) => Some(Some(debug)),
             Some(U32OrBool::Bool(true)) => Some(Some(2)),
             Some(U32OrBool::Bool(false)) => Some(None),
             None => None,
         };
-        Profile {
+        Ok(Profile {
             opt_level: opt_level
                 .clone()
                 .unwrap_or(TomlOptLevel(profile.opt_level))
@@ -1363,6 +1466,6 @@ fn build_profiles(profiles: &Option<TomlProfiles>) -> Profiles {
             check: profile.check,
             panic: panic.clone().or(profile.panic),
             incremental: incremental.unwrap_or(profile.incremental),
-        }
+        })
     }
 }
