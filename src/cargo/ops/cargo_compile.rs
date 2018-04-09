@@ -55,6 +55,8 @@ pub struct CompileOptions<'a> {
     pub filter: CompileFilter,
     /// Whether this is a release build or not
     pub release: bool,
+    /// Custom profile
+    pub profile: Option<String>,
     /// Mode for this compile.
     pub mode: CompileMode,
     /// `--error_format` flag for the compiler.
@@ -87,6 +89,7 @@ impl<'a> CompileOptions<'a> {
             filter: CompileFilter::Default {
                 required_features_filterable: false,
             },
+            profile: None,
             message_format: MessageFormat::Human,
             target_rustdoc_args: None,
             target_rustc_args: None,
@@ -241,8 +244,10 @@ pub fn compile_ws<'a>(
         ref target_rustdoc_args,
         ref target_rustc_args,
         ref export_dir,
+        ref profile,
     } = *options;
 
+    let profile_name = profile;
     let target = match target {
         &Some(ref target) if target.ends_with(".json") => {
             let path = Path::new(target)
@@ -292,8 +297,15 @@ pub fn compile_ws<'a>(
         (&Some(ref args), _) => {
             let all_features =
                 resolve_all_features(&resolve_with_overrides, to_builds[0].package_id());
-            let targets =
-                generate_targets(to_builds[0], profiles, mode, filter, &all_features, release)?;
+            let targets = generate_targets(
+                to_builds[0],
+                profiles,
+                profile_name,
+                mode,
+                filter,
+                &all_features,
+                release,
+            )?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
@@ -310,25 +322,37 @@ pub fn compile_ws<'a>(
         (&None, &Some(ref args)) => {
             let all_features =
                 resolve_all_features(&resolve_with_overrides, to_builds[0].package_id());
-            let targets =
-                generate_targets(to_builds[0], profiles, mode, filter, &all_features, release)?;
+            let targets = generate_targets(
+                to_builds[0],
+                profiles,
+                profile_name,
+                mode,
+                filter,
+                &all_features,
+                release,
+            )?;
             if targets.len() == 1 {
                 let (target, profile) = targets[0];
                 let mut profile = profile.clone();
                 profile.rustdoc_args = Some(args.to_vec());
                 general_targets.push((target, profile));
             } else {
-                bail!(
-                    "extra arguments to `rustdoc` can only be passed to one \
-                     target, consider filtering\nthe package by passing e.g. \
-                     `--lib` or `--bin NAME` to specify a single target"
-                )
+                bail!("extra arguments to `rustdoc` can only be passed to one \
+                       target, consider filtering\nthe package by passing e.g. \
+                       `--lib` or `--bin NAME` to specify a single target")
             }
         }
         (&None, &None) => for &to_build in to_builds.iter() {
             let all_features = resolve_all_features(&resolve_with_overrides, to_build.package_id());
-            let targets =
-                generate_targets(to_build, profiles, mode, filter, &all_features, release)?;
+            let targets = generate_targets(
+                to_build,
+                profiles,
+                profile_name,
+                mode,
+                filter,
+                &all_features,
+                release,
+            )?;
             package_targets.push((to_build, targets));
         },
     };
@@ -357,6 +381,7 @@ pub fn compile_ws<'a>(
             build_config,
             profiles,
             export_dir.clone(),
+            &profile_name,
             &exec,
         )?
     };
@@ -689,6 +714,7 @@ fn filter_compatible_targets<'a>(
 fn generate_targets<'a>(
     pkg: &'a Package,
     profiles: &'a Profiles,
+    profile_name: &Option<String>,
     mode: CompileMode,
     filter: &CompileFilter,
     features: &HashSet<String>,
@@ -704,7 +730,7 @@ fn generate_targets<'a>(
     } else {
         &profiles.test
     };
-    let profile = match mode {
+    let predef_profile = match mode {
         CompileMode::Test => test,
         CompileMode::Bench => &profiles.bench,
         CompileMode::Build => build,
@@ -712,6 +738,14 @@ fn generate_targets<'a>(
         CompileMode::Check { test: true } => &profiles.check_test,
         CompileMode::Doc { .. } => &profiles.doc,
         CompileMode::Doctest => &profiles.doctest,
+    };
+
+    let profile = match profile_name {
+        &None => predef_profile,
+        &Some(ref name) => profiles
+            .custom
+            .get(name)
+            .expect(format!("Missing profile {}", name).as_ref()),
     };
 
     let test_profile = if profile.check {

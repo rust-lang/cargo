@@ -18,6 +18,7 @@ pub fn cli() -> App {
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_features()
         .arg_target_triple("Build for the target triple")
+        .arg_profile("Build artifacts with the specified custom profile")
         .arg_manifest_path()
         .arg_message_format()
         .after_help(

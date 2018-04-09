@@ -201,6 +201,7 @@ pub struct Profiles {
     pub check: Profile,
     pub check_test: Profile,
     pub doctest: Profile,
+    pub custom: HashMap<String, Profile>,
 }
 
 /// Information about a binary, a library, an example, etc. that is part of the

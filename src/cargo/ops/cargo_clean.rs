@@ -59,6 +59,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
                     ref check,
                     ref check_test,
                     ref doctest,
+                    ref custom,
                 } = *profiles;
                 let profiles = [
                     release,
@@ -73,13 +74,19 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
                     check_test,
                     doctest,
                 ];
-                for profile in profiles.iter() {
+                let mut add = |profile| {
                     units.push(Unit {
                         pkg,
                         target,
                         profile,
                         kind: *kind,
                     });
+                };
+                for profile in profiles.iter() {
+                    add(profile);
+                }
+                for profile in custom.values() {
+                    add(profile);
                 }
             }
         }
@@ -98,6 +105,7 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
             ..BuildConfig::default()
         },
         profiles,
+        &None,
         None,
         &units,
     )?;

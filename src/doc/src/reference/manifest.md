@@ -279,9 +279,12 @@ project’s profiles are actually read. All dependencies’ profiles will be
 overridden. This is done so the top-level project has control over how its
 dependencies are compiled.
 
-There are five currently supported profile names, all of which have the same
-configuration available to them. Listed below is the configuration available,
-along with the defaults for each profile.
+There are five currently supported predefined profile names, all of which have
+the same configuration scheme available to them. It is possible to override the
+configuration for these profile, and it is also possible to define custom
+profiles under new names that derive from the predefined profiles.
+
+Listed below are the predefined profiles with their default configuration.
 
 ```toml
 # The development profile, used for `cargo build`.
@@ -355,6 +358,19 @@ panic = 'unwind'
 incremental = true
 overflow-checks = true
 ```
+
+Defining custom profiles is done by specifing new sections prefixed with
+`profile.custom.`. For example, we can define a new profile named `release-lto`
+that inherits from the `release` profile above:
+
+```toml
+[profile.custom.release-lto]
+inherits = "release"
+lto = true
+```
+
+To use the profile, pass it to `build` via `--profile`, e.g. `--profile release-lto`.
+
 
 ### The `[features]` section
 
