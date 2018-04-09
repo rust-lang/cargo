@@ -45,6 +45,21 @@ building native code. More information can be found in the build script
 build = "build.rs"
 ```
 
+#### The `links` field (optional)
+
+This fields specifies the name of a native library that is being linked to.
+More information can be found in the [`links`][links] section of the build
+script guide.
+
+[links]: reference/build-scripts.html#the-links-manifest-key
+
+```toml
+[package]
+# ...
+links = "foo"
+build = "build.rs"
+```
+
 #### The `documentation` field (optional)
 
 This field specifies a URL to a website hosting the crate's documentation.
