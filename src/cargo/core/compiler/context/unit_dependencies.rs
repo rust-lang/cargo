@@ -402,7 +402,7 @@ fn new_unit<'a>(
         bcx.ws.is_member(pkg),
         unit_for,
         mode,
-        bcx.build_config.release,
+        bcx.build_config.build_profile.clone(),
     );
     Unit {
         pkg,

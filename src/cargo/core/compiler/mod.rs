@@ -24,7 +24,7 @@ use self::job_queue::JobQueue;
 
 use self::output_depinfo::output_depinfo;
 
-pub use self::build_config::{BuildConfig, CompileMode, MessageFormat};
+pub use self::build_config::{BuildConfig, CompileMode, MessageFormat, BuildProfile};
 pub use self::build_context::{BuildContext, FileFlavor, TargetConfig, TargetInfo};
 pub use self::compilation::{Compilation, Doctest};
 pub use self::context::{Context, Unit};

@@ -164,14 +164,7 @@ fn build_work<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>) -> CargoRes
         )
         .env("DEBUG", debug.to_string())
         .env("OPT_LEVEL", &unit.profile.opt_level.to_string())
-        .env(
-            "PROFILE",
-            if bcx.build_config.release {
-                "release"
-            } else {
-                "debug"
-            },
-        )
+        .env("PROFILE", bcx.build_config.build_profile.dest())
         .env("HOST", &bcx.host_triple())
         .env("RUSTC", &bcx.rustc.path)
         .env("RUSTDOC", &*bcx.config.rustdoc()?)

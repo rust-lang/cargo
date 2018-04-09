@@ -255,6 +255,7 @@ pub struct TomlProfiles {
     pub bench: Option<TomlProfile>,
     pub dev: Option<TomlProfile>,
     pub release: Option<TomlProfile>,
+    pub custom: Option<BTreeMap<String, TomlProfile>>,
 }
 
 impl TomlProfiles {
@@ -395,6 +396,7 @@ pub struct TomlProfile {
     pub incremental: Option<bool>,
     pub overrides: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
     pub build_override: Option<Box<TomlProfile>>,
+    pub inherits: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]

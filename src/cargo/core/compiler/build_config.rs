@@ -5,6 +5,23 @@ use serde::ser;
 
 use crate::util::{CargoResult, CargoResultExt, Config, RustfixDiagnosticServer};
 
+#[derive(Debug, Clone)]
+pub enum BuildProfile {
+    Dev,
+    Release,
+    Custom(String),
+}
+
+impl BuildProfile {
+    pub fn dest(&self) -> &str {
+        match self {
+            BuildProfile::Dev => "debug",
+            BuildProfile::Release => "release",
+            BuildProfile::Custom(name) => &name,
+        }
+    }
+}
+
 /// Configuration information for a rustc build.
 #[derive(Debug)]
 pub struct BuildConfig {
@@ -12,8 +29,8 @@ pub struct BuildConfig {
     pub requested_target: Option<String>,
     /// How many rustc jobs to run in parallel
     pub jobs: u32,
-    /// Whether we are building for release
-    pub release: bool,
+    /// Custom profile
+    pub build_profile: BuildProfile,
     /// In what mode we are compiling
     pub mode: CompileMode,
     /// Whether to print std output in json format (for machine reading)
@@ -82,7 +99,7 @@ impl BuildConfig {
         Ok(BuildConfig {
             requested_target: target,
             jobs,
-            release: false,
+            build_profile: BuildProfile::Dev,
             mode,
             message_format: MessageFormat::Human,
             force_rebuild: false,
