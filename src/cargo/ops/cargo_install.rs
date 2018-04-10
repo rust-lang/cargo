@@ -235,10 +235,18 @@ fn install_one(
 
     if from_cwd {
         match pkg.manifest().edition() {
-            Edition::Edition2015 => (),
-            Edition::Edition2018 => {
-                config.shell().warn("To build the current package use 'cargo build', to install the current package run `cargo install --path .`")?;
-            },
+            Edition::Edition2015 =>
+                config.shell().warn("To build the current package use `cargo build`, to install the current package run `cargo install --path .`")?
+            ,
+            Edition::Edition2018 =>
+                bail!(
+                    "To build the current package use `cargo build`, \
+                     to install the current package run `cargo install --path .`, \
+                     otherwise specify a crate to install from \
+                     crates.io, or use --path or --git to \
+                     specify alternate source"
+                )
+            ,
         }
     };
 
