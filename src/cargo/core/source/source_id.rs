@@ -34,9 +34,10 @@ struct SourceIdInner {
     precise: Option<String>,
     /// Name of the registry source for alternative registries
     name: Option<String>,
+    from_cwd: bool,
 }
 
-/// The possible kinds of code source. Along with a URL, this fully defines the
+/// The possible kinds of code source. Along with SourceIdInner this fully defines the
 /// source
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Kind {
@@ -75,6 +76,7 @@ impl SourceId {
                 url,
                 precise: None,
                 name: None,
+                from_cwd: false,
             }),
         };
         Ok(source_id)
@@ -165,6 +167,20 @@ impl SourceId {
         SourceId::new(Kind::Directory, url)
     }
 
+    pub fn from_cwd(path: &Path) -> CargoResult<SourceId> {
+        let url = path.to_url()?;
+        Ok(SourceId {
+            inner: Arc::new(SourceIdInner {
+                kind: Kind::Path,
+                canonical_url: git::canonicalize_url(&url)?,
+                url,
+                precise: None,
+                name: None,
+                from_cwd: true,
+            }),
+        })
+    }
+
     /// Returns the `SourceId` corresponding to the main repository.
     ///
     /// This is the main cargo registry by default, but it can be overridden in
@@ -200,6 +216,7 @@ impl SourceId {
                 url,
                 precise: None,
                 name: Some(key.to_string()),
+                from_cwd: false,
             }),
         })
     }
@@ -237,6 +254,11 @@ impl SourceId {
             Kind::Git(_) => true,
             _ => false,
         }
+    }
+
+    /// Is this source from the current working directory
+    pub fn is_from_cwd(&self) -> bool {
+        self.inner.from_cwd
     }
 
     /// Creates an implementation of `Source` corresponding to this ID.

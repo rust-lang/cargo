@@ -94,7 +94,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     } else if let Some(path) = args.value_of_path("path", config) {
         SourceId::for_path(&path)?
     } else if krates.is_empty() {
-        SourceId::for_path(config.cwd())?
+        SourceId::from_cwd(config.cwd())?
     } else {
         SourceId::crates_io(config)?
     };
