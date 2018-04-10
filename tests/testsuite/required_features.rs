@@ -747,7 +747,7 @@ fn install_default_features() {
     assert_that(p.cargo("uninstall").arg("foo"), execs().with_status(0));
 
     assert_that(
-        p.cargo("install").arg("--no-default-features"),
+        p.cargo("install --path .").arg("--no-default-features"),
         execs().with_status(101).with_stderr(format!(
             "\
 [INSTALLING] foo v0.0.1 ([..])
@@ -758,12 +758,12 @@ fn install_default_features() {
     );
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
-    assert_that(p.cargo("install").arg("--bin=foo"), execs().with_status(0));
+    assert_that(p.cargo("install --path .").arg("--bin=foo"), execs().with_status(0));
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(p.cargo("uninstall").arg("foo"), execs().with_status(0));
 
     assert_that(
-        p.cargo("install")
+        p.cargo("install --path .")
             .arg("--bin=foo")
             .arg("--no-default-features"),
         execs().with_status(101).with_stderr(format!(
@@ -781,14 +781,14 @@ Consider enabling them by passing e.g. `--features=\"a\"`
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
     assert_that(
-        p.cargo("install").arg("--example=foo"),
+        p.cargo("install --path .").arg("--example=foo"),
         execs().with_status(0),
     );
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(p.cargo("uninstall").arg("foo"), execs().with_status(0));
 
     assert_that(
-        p.cargo("install")
+        p.cargo("install --path .")
             .arg("--example=foo")
             .arg("--no-default-features"),
         execs().with_status(101).with_stderr(format!(
@@ -874,7 +874,7 @@ fn install_multiple_required_features() {
     assert_that(p.cargo("uninstall").arg("foo"), execs().with_status(0));
 
     assert_that(
-        p.cargo("install").arg("--features").arg("c"),
+        p.cargo("install --path .").arg("--features").arg("c"),
         execs().with_status(0),
     );
     assert_that(cargo_home(), has_installed_exe("foo_1"));
@@ -882,7 +882,7 @@ fn install_multiple_required_features() {
     assert_that(p.cargo("uninstall").arg("foo"), execs().with_status(0));
 
     assert_that(
-        p.cargo("install").arg("--no-default-features"),
+        p.cargo("install --path .").arg("--no-default-features"),
         execs().with_status(101).with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
