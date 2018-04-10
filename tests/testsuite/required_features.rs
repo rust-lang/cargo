@@ -742,7 +742,7 @@ fn install_default_features() {
         .file("examples/foo.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("install"), execs().with_status(0));
+    assert_that(p.cargo("install --path ."), execs().with_status(0));
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(p.cargo("uninstall").arg("foo"), execs().with_status(0));
 
@@ -868,7 +868,7 @@ fn install_multiple_required_features() {
         .file("src/foo_2.rs", "fn main() {}")
         .build();
 
-    assert_that(p.cargo("install"), execs().with_status(0));
+    assert_that(p.cargo("install --path ."), execs().with_status(0));
     assert_that(cargo_home(), is_not(has_installed_exe("foo_1")));
     assert_that(cargo_home(), has_installed_exe("foo_2"));
     assert_that(p.cargo("uninstall").arg("foo"), execs().with_status(0));
@@ -1166,7 +1166,7 @@ Consider enabling them by passing e.g. `--features=\"bar/a\"`
 
     // install
     assert_that(
-        p.cargo("install"),
+        p.cargo("install --path ."),
         execs().with_status(101).with_stderr(format!(
             "\
 [INSTALLING] foo v0.0.1 ([..])
