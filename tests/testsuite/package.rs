@@ -1220,7 +1220,7 @@ fn test_edition_nightly() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  editiones are unstable
+  editions are unstable
 
 Caused by:
   feature `edition` is required
