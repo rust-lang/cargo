@@ -40,7 +40,7 @@ pub fn targets(
     }
 
     targets.extend(clean_bins(
-        manifest.bin.as_ref(),
+        &manifest.bin,
         package_root,
         package_name,
         warnings,
@@ -48,16 +48,12 @@ pub fn targets(
         has_lib,
     )?);
 
-    targets.extend(clean_examples(
-        manifest.example.as_ref(),
-        package_root,
-        errors,
-    )?);
+    targets.extend(clean_examples(&manifest.example, package_root, errors)?);
 
-    targets.extend(clean_tests(manifest.test.as_ref(), package_root, errors)?);
+    targets.extend(clean_tests(&manifest.test, package_root, errors)?);
 
     targets.extend(clean_benches(
-        manifest.bench.as_ref(),
+        &manifest.bench,
         package_root,
         warnings,
         errors,
