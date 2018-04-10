@@ -167,6 +167,9 @@ impl SourceId {
         SourceId::new(Kind::Directory, url)
     }
 
+    /// Create a SourceId from the current working directory filesystem path.
+    ///
+    /// Pass absolute path
     pub fn from_cwd(path: &Path) -> CargoResult<SourceId> {
         let url = path.to_url()?;
         Ok(SourceId {
