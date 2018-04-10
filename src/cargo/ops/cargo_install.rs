@@ -57,6 +57,7 @@ pub fn install(
     root: Option<&str>,
     krates: Vec<&str>,
     source_id: &SourceId,
+    from_cwd: bool,
     vers: Option<&str>,
     opts: &ops::CompileOptions,
     force: bool,
@@ -70,6 +71,7 @@ pub fn install(
             &map,
             krates.into_iter().next(),
             source_id,
+            from_cwd,
             vers,
             opts,
             force,
@@ -88,6 +90,7 @@ pub fn install(
                 &map,
                 Some(krate),
                 source_id,
+                from_cwd,
                 vers,
                 opts,
                 force,
@@ -149,6 +152,7 @@ fn install_one(
     map: &SourceConfigMap,
     krate: Option<&str>,
     source_id: &SourceId,
+    from_cwd: bool,
     vers: Option<&str>,
     opts: &ops::CompileOptions,
     force: bool,
@@ -229,7 +233,7 @@ fn install_one(
     };
     let pkg = ws.current()?;
 
-    if source_id.is_from_cwd() {
+    if from_cwd {
         match pkg.manifest().edition() {
             Edition::Edition2015 => (),
             Edition::Edition2018 => {

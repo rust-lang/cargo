@@ -79,6 +79,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         .unwrap_or_default()
         .collect::<Vec<_>>();
 
+    let mut from_cwd = false;
+
     let source = if let Some(url) = args.value_of("git") {
         let url = url.to_url()?;
         let gitref = if let Some(branch) = args.value_of("branch") {
@@ -94,7 +96,8 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     } else if let Some(path) = args.value_of_path("path", config) {
         SourceId::for_path(&path)?
     } else if krates.is_empty() {
-        SourceId::from_cwd(config.cwd())?
+        from_cwd = true;
+        SourceId::for_path(config.cwd())?
     } else {
         SourceId::crates_io(config)?
     };
@@ -109,6 +112,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             root,
             krates,
             &source,
+            from_cwd,
             version,
             &compile_opts,
             args.is_present("force"),
