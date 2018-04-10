@@ -1025,10 +1025,13 @@ fn installs_from_cwd_with_2018_warnings() {
         .file(
             "Cargo.toml",
             r#"
+            cargo-features = ["edition"]
+
             [package]
             name = "foo"
             version = "0.1.0"
             authors = []
+            rust = "2018"
         "#,
         )
         .file("src/main.rs", "fn main() {}")
