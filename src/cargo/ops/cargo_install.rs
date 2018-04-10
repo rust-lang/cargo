@@ -10,7 +10,7 @@ use semver::{Version, VersionReq};
 use tempfile::Builder as TempFileBuilder;
 use toml;
 
-use core::{Dependency, Package, PackageIdSpec, Source, SourceId};
+use core::{Dependency, Edition, Package, PackageIdSpec, Source, SourceId};
 use core::{PackageId, Workspace};
 use ops::{self, CompileFilter, DefaultExecutor};
 use sources::{GitSource, PathSource, SourceConfigMap};
@@ -228,6 +228,15 @@ fn install_one(
         }
     };
     let pkg = ws.current()?;
+
+    if source_id.is_from_cwd() {
+        match pkg.manifest().edition() {
+            Edition::Edition2015 => (),
+            Edition::Edition2018 => {
+                config.shell().warn("To build the current package use 'cargo build', to install the current package run `cargo install --path .`")?;
+            },
+        }
+    };
 
     config.shell().status("Installing", pkg)?;
 
