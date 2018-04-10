@@ -801,7 +801,7 @@ impl TomlManifest {
         let edition = if let Some(ref edition) = project.rust {
             features
                 .require(Feature::edition())
-                .chain_err(|| "editiones are unstable")?;
+                .chain_err(|| "editions are unstable")?;
             if let Ok(edition) = edition.parse() {
                 edition
             } else {
