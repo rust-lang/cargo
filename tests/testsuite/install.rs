@@ -1050,6 +1050,7 @@ fn installs_from_cwd_with_2018_warnings() {
              or use --path or --git to specify alternate source\
         "),
     );
+    assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 }
 
 #[test]
