@@ -215,10 +215,10 @@ pub struct TomlManifest {
     project: Option<Box<TomlProject>>,
     profile: Option<TomlProfiles>,
     lib: Option<TomlLibTarget>,
-    bin: Option<Vec<TomlBinTarget>>,
-    example: Option<Vec<TomlExampleTarget>>,
-    test: Option<Vec<TomlTestTarget>>,
-    bench: Option<Vec<TomlTestTarget>>,
+    bin: Vec<TomlBinTarget>,
+    example: Vec<TomlExampleTarget>,
+    test: Vec<TomlTestTarget>,
+    bench: Vec<TomlTestTarget>,
     dependencies: Option<BTreeMap<String, TomlDependency>>,
     dev_dependencies: Option<BTreeMap<String, TomlDependency>>,
     #[serde(rename = "dev_dependencies")]
@@ -862,16 +862,16 @@ impl TomlManifest {
         if me.lib.is_some() {
             bail!("virtual manifests do not specify [lib]");
         }
-        if me.bin.is_some() {
+        if !me.bin.is_empty() {
             bail!("virtual manifests do not specify [[bin]]");
         }
-        if me.example.is_some() {
+        if !me.example.is_empty() {
             bail!("virtual manifests do not specify [[example]]");
         }
-        if me.test.is_some() {
+        if !me.test.is_empty() {
             bail!("virtual manifests do not specify [[test]]");
         }
-        if me.bench.is_some() {
+        if !me.bench.is_empty() {
             bail!("virtual manifests do not specify [[bench]]");
         }
 

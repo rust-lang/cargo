@@ -40,7 +40,7 @@ pub fn targets(
     }
 
     targets.extend(clean_bins(
-        manifest.bin.as_ref(),
+        &manifest.bin,
         package_root,
         package_name,
         warnings,
@@ -48,16 +48,12 @@ pub fn targets(
         has_lib,
     )?);
 
-    targets.extend(clean_examples(
-        manifest.example.as_ref(),
-        package_root,
-        errors,
-    )?);
+    targets.extend(clean_examples(&manifest.example, package_root, errors)?);
 
-    targets.extend(clean_tests(manifest.test.as_ref(), package_root, errors)?);
+    targets.extend(clean_tests(&manifest.test, package_root, errors)?);
 
     targets.extend(clean_benches(
-        manifest.bench.as_ref(),
+        &manifest.bench,
         package_root,
         warnings,
         errors,
@@ -161,7 +157,7 @@ fn clean_lib(
 }
 
 fn clean_bins(
-    toml_bins: Option<&Vec<TomlBinTarget>>,
+    toml_bins: &Vec<TomlBinTarget>,
     package_root: &Path,
     package_name: &str,
     warnings: &mut Vec<String>,
@@ -169,16 +165,17 @@ fn clean_bins(
     has_lib: bool,
 ) -> CargoResult<Vec<Target>> {
     let inferred = inferred_bins(package_root, package_name);
-    let bins = match toml_bins {
-        Some(bins) => bins.clone(),
-        None => inferred
+    let bins = if toml_bins.is_empty() {
+        inferred
             .iter()
             .map(|&(ref name, ref path)| TomlTarget {
                 name: Some(name.clone()),
                 path: Some(PathValue(path.clone())),
                 ..TomlTarget::new()
             })
-            .collect(),
+            .collect()
+    } else {
+        toml_bins.clone()
     };
 
     for bin in &bins {
@@ -259,7 +256,7 @@ fn clean_bins(
 }
 
 fn clean_examples(
-    toml_examples: Option<&Vec<TomlExampleTarget>>,
+    toml_examples: &Vec<TomlExampleTarget>,
     package_root: &Path,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
@@ -295,7 +292,7 @@ fn clean_examples(
 }
 
 fn clean_tests(
-    toml_tests: Option<&Vec<TomlTestTarget>>,
+    toml_tests: &Vec<TomlTestTarget>,
     package_root: &Path,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
@@ -313,7 +310,7 @@ fn clean_tests(
 }
 
 fn clean_benches(
-    toml_benches: Option<&Vec<TomlBenchTarget>>,
+    toml_benches: &Vec<TomlBenchTarget>,
     package_root: &Path,
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
@@ -357,7 +354,7 @@ fn clean_benches(
 fn clean_targets(
     target_kind_human: &str,
     target_kind: &str,
-    toml_targets: Option<&Vec<TomlTarget>>,
+    toml_targets: &Vec<TomlTarget>,
     inferred: &[(String, PathBuf)],
     package_root: &Path,
     errors: &mut Vec<String>,
@@ -376,22 +373,23 @@ fn clean_targets(
 fn clean_targets_with_legacy_path(
     target_kind_human: &str,
     target_kind: &str,
-    toml_targets: Option<&Vec<TomlTarget>>,
+    toml_targets: &Vec<TomlTarget>,
     inferred: &[(String, PathBuf)],
     package_root: &Path,
     errors: &mut Vec<String>,
     legacy_path: &mut FnMut(&TomlTarget) -> Option<PathBuf>,
 ) -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
-    let toml_targets = match toml_targets {
-        Some(targets) => targets.clone(),
-        None => inferred
+    let toml_targets = if toml_targets.is_empty() {
+        inferred
             .iter()
             .map(|&(ref name, ref path)| TomlTarget {
                 name: Some(name.clone()),
                 path: Some(PathValue(path.clone())),
                 ..TomlTarget::new()
             })
-            .collect(),
+            .collect()
+    } else {
+        toml_targets.clone()
     };
 
     for target in &toml_targets {
