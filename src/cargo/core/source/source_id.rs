@@ -171,15 +171,13 @@ impl SourceId {
     ///
     /// Pass absolute path
     pub fn from_cwd(path: &Path) -> CargoResult<SourceId> {
-        let url = path.to_url()?;
+        let source_id = SourceId::for_path(path)?;
+        let source_id = Arc::try_unwrap(source_id.inner)
+            .map_err(|_| format_err!("failed to create SourceId from cwd `{}`", path.display()))?;
         Ok(SourceId {
             inner: Arc::new(SourceIdInner {
-                kind: Kind::Path,
-                canonical_url: git::canonicalize_url(&url)?,
-                url,
-                precise: None,
-                name: None,
                 from_cwd: true,
+                ..source_id
             }),
         })
     }
