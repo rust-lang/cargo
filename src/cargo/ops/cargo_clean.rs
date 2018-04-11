@@ -2,10 +2,11 @@ use std::fs;
 use std::path::Path;
 
 use core::{Profiles, Workspace};
+use core::compiler::{BuildConfig, Context, Kind, Unit};
 use util::Config;
 use util::errors::{CargoResult, CargoResultExt};
 use util::paths;
-use ops::{self, BuildConfig, Context, Kind, Unit};
+use ops;
 
 pub struct CleanOptions<'a> {
     pub config: &'a Config,
