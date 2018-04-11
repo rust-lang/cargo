@@ -45,9 +45,12 @@ pub fn cli() -> App {
         ))
         .after_help(
             "\
-All of the trailing arguments are passed to the benchmark binaries generated
-for filtering benchmarks and generally providing options configuring how they
-run.
+The benchmark filtering argument `BENCHNAME` and all the arguments following the
+two dashes (`--`) are passed to the benchmark binaries and thus to libtest
+(rustc's built in unit-test and micro-benchmarking framework).  If you're
+passing arguments to both Cargo and the binary, the ones after `--` go to the
+binary, the ones before go to Cargo.  For details about libtest's arguments see
+the output of `cargo bench -- --help`.
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be benchmarked. If it is not given, then

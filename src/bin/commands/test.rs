@@ -45,11 +45,15 @@ pub fn cli() -> App {
         .arg_message_format()
         .after_help(
             "\
-All of the trailing arguments are passed to the test binaries generated for
-filtering tests and generally providing options configuring how they run. For
-example, this will run all tests with the name `foo` in their name:
+The test filtering argument `TESTNAME` and all the arguments following the
+two dashes (`--`) are passed to the test binaries and thus to libtest
+(rustc's built in unit-test and micro-benchmarking framework).  If you're
+passing arguments to both Cargo and the binary, the ones after `--` go to the
+binary, the ones before go to Cargo.  For details about libtest's arguments see
+the output of `cargo test -- --help`.  As an example, this will run all
+tests with `foo` in their name on 3 threads in parallel:
 
-    cargo test foo
+    cargo test foo -- --test-threads 3
 
 If the --package argument is given, then SPEC is a package id specification
 which indicates which package should be tested. If it is not given, then the
