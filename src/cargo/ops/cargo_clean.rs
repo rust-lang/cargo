@@ -1,4 +1,3 @@
-use std::default::Default;
 use std::fs;
 use std::path::Path;
 
@@ -84,18 +83,14 @@ pub fn clean(ws: &Workspace, opts: &CleanOptions) -> CargoResult<()> {
         }
     }
 
+    let mut build_config = BuildConfig::new(&opts.config.rustc()?.host, &opts.target);
+    build_config.release = opts.release;
     let mut cx = Context::new(
         ws,
         &resolve,
         &packages,
         opts.config,
-        BuildConfig {
-            host_triple: opts.config.rustc()?.host.clone(),
-            requested_target: opts.target.clone(),
-            release: opts.release,
-            jobs: 1,
-            ..BuildConfig::default()
-        },
+        build_config,
         profiles,
         None,
         &units,

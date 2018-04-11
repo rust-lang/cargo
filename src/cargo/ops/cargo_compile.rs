@@ -23,7 +23,6 @@
 //!
 
 use std::collections::{HashMap, HashSet};
-use std::default::Default;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -858,12 +857,8 @@ fn scrape_build_config(
     let jobs = jobs.or(cfg_jobs).unwrap_or(::num_cpus::get() as u32);
     let cfg_target = config.get_string("build.target")?.map(|s| s.val);
     let target = target.or(cfg_target);
-    let mut base = ops::BuildConfig {
-        host_triple: config.rustc()?.host.clone(),
-        requested_target: target.clone(),
-        jobs,
-        ..Default::default()
-    };
+    let mut base = ops::BuildConfig::new(&config.rustc()?.host, &target);
+    base.jobs = jobs;
     base.host = scrape_target_config(config, &base.host_triple)?;
     base.target = match target.as_ref() {
         Some(triple) => scrape_target_config(config, triple)?,

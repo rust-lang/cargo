@@ -76,6 +76,17 @@ pub struct BuildConfig {
     pub json_messages: bool,
 }
 
+impl BuildConfig {
+    pub fn new(host_triple: &str, requested_target: &Option<String>) -> BuildConfig {
+        BuildConfig {
+            host_triple: host_triple.to_string(),
+            requested_target: (*requested_target).clone(),
+            jobs: 1,
+            ..Default::default()
+        }
+    }
+}
+
 /// Information required to build for a target
 #[derive(Clone, Default)]
 pub struct TargetConfig {
