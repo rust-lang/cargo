@@ -758,7 +758,10 @@ fn install_default_features() {
     );
     assert_that(cargo_home(), is_not(has_installed_exe("foo")));
 
-    assert_that(p.cargo("install --path .").arg("--bin=foo"), execs().with_status(0));
+    assert_that(
+        p.cargo("install --path .").arg("--bin=foo"),
+        execs().with_status(0),
+    );
     assert_that(cargo_home(), has_installed_exe("foo"));
     assert_that(p.cargo("uninstall").arg("foo"), execs().with_status(0));
 
