@@ -9,12 +9,11 @@ use std::sync::Arc;
 use same_file::is_same_file;
 use serde_json;
 
-use core::{Feature, Package, PackageId, PackageSet, Resolve, Target};
-use core::{Profile, Profiles, Workspace};
+use core::{Feature, Package, PackageId, Profile, Target};
 use core::manifest::Lto;
 use core::shell::ColorChoice;
 use util::{self, machine_message, ProcessBuilder};
-use util::{internal, join_paths, profile, Config};
+use util::{internal, join_paths, profile};
 use util::paths;
 use util::errors::{CargoResult, CargoResultExt, Internal};
 use util::Freshness;
@@ -150,20 +149,15 @@ impl Executor for DefaultExecutor {}
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
 pub fn compile_targets<'a, 'cfg: 'a>(
-    ws: &Workspace<'cfg>,
+    mut cx: Context<'a, 'cfg>,
     pkg_targets: &'a PackagesToBuild<'a>,
-    packages: &'a PackageSet<'cfg>,
-    resolve: &'a Resolve,
-    config: &'cfg Config,
-    build_config: BuildConfig,
-    profiles: &'a Profiles,
     export_dir: Option<PathBuf>,
     exec: &Arc<Executor>,
 ) -> CargoResult<Compilation<'cfg>> {
     let units = pkg_targets
         .iter()
         .flat_map(|&(pkg, ref targets)| {
-            let default_kind = if build_config.requested_target.is_some() {
+            let default_kind = if cx.build_config.requested_target.is_some() {
                 Kind::Target
             } else {
                 Kind::Host
@@ -181,7 +175,6 @@ pub fn compile_targets<'a, 'cfg: 'a>(
         })
         .collect::<Vec<_>>();
 
-    let mut cx = Context::new(ws, resolve, packages, config, build_config, profiles)?;
     let mut queue = JobQueue::new(&cx);
     cx.prepare_units(export_dir, &units)?;
     cx.prepare()?;
