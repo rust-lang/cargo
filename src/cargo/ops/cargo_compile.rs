@@ -355,7 +355,7 @@ pub fn compile_ws<'a>(
             build_config,
             profiles,
         )?;
-        ops::compile_targets(cx, &package_targets, export_dir.clone(), &exec)?
+        cx.compile(&package_targets, export_dir.clone(), &exec)?
     };
 
     ret.to_doc_test = to_builds.into_iter().cloned().collect();
