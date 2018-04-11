@@ -92,7 +92,7 @@ impl Layout {
         if let Some(triple) = triple {
             path.push(Path::new(triple)
                 .file_stem()
-                .ok_or_else(|| format_err!("target was empty"))?);
+                .ok_or_else(|| format_err!("invalid target"))?);
         }
         path.push(dest);
         Layout::at(ws.config(), path)

@@ -77,13 +77,18 @@ pub struct BuildConfig {
 }
 
 impl BuildConfig {
-    pub fn new(host_triple: &str, requested_target: &Option<String>) -> BuildConfig {
-        BuildConfig {
+    pub fn new(host_triple: &str, requested_target: &Option<String>) -> CargoResult<BuildConfig> {
+        if let Some(ref s) = *requested_target {
+            if s.trim().is_empty() {
+                bail!("target was empty")
+            }
+        }
+        Ok(BuildConfig {
             host_triple: host_triple.to_string(),
             requested_target: (*requested_target).clone(),
             jobs: 1,
             ..Default::default()
-        }
+        })
     }
 }
 
