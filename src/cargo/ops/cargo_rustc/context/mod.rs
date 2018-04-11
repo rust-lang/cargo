@@ -105,20 +105,7 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         config: &'cfg Config,
         build_config: BuildConfig,
         profiles: &'a Profiles,
-        export_dir: Option<PathBuf>,
-        units: &[Unit<'a>],
     ) -> CargoResult<Context<'a, 'cfg>> {
-        let dest = if build_config.release {
-            "release"
-        } else {
-            "debug"
-        };
-        let host_layout = Layout::new(ws, None, dest)?;
-        let target_layout = match build_config.requested_target.as_ref() {
-            Some(target) => Some(Layout::new(ws, Some(target), dest)?),
-            None => None,
-        };
-
         let incremental_env = match env::var("CARGO_INCREMENTAL") {
             Ok(v) => Some(v == "1"),
             Err(_) => None,
@@ -163,11 +150,37 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         };
 
         cx.probe_target_info()?;
-        let deps = build_unit_dependencies(units, &cx)?;
-        cx.unit_dependencies = deps;
-        let files = CompilationFiles::new(units, host_layout, target_layout, export_dir, ws, &cx);
-        cx.files = Some(files);
         Ok(cx)
+    }
+
+    pub fn prepare_units(
+        &mut self,
+        export_dir: Option<PathBuf>,
+        units: &[Unit<'a>],
+    ) -> CargoResult<()> {
+        let dest = if self.build_config.release {
+            "release"
+        } else {
+            "debug"
+        };
+        let host_layout = Layout::new(self.ws, None, dest)?;
+        let target_layout = match self.build_config.requested_target.as_ref() {
+            Some(target) => Some(Layout::new(self.ws, Some(target), dest)?),
+            None => None,
+        };
+
+        let deps = build_unit_dependencies(units, &self)?;
+        self.unit_dependencies = deps;
+        let files = CompilationFiles::new(
+            units,
+            host_layout,
+            target_layout,
+            export_dir,
+            self.ws,
+            &self,
+        );
+        self.files = Some(files);
+        Ok(())
     }
 
     /// Prepare this context, ensuring that all filesystem directories are in

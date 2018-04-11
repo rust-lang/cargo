@@ -181,19 +181,9 @@ pub fn compile_targets<'a, 'cfg: 'a>(
         })
         .collect::<Vec<_>>();
 
-    let mut cx = Context::new(
-        ws,
-        resolve,
-        packages,
-        config,
-        build_config,
-        profiles,
-        export_dir,
-        &units,
-    )?;
-
+    let mut cx = Context::new(ws, resolve, packages, config, build_config, profiles)?;
     let mut queue = JobQueue::new(&cx);
-
+    cx.prepare_units(export_dir, &units)?;
     cx.prepare()?;
     cx.build_used_in_plugin_map(&units)?;
     custom_build::build_map(&mut cx, &units)?;
