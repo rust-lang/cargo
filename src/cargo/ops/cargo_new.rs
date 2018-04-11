@@ -7,8 +7,7 @@ use std::path::{Path, PathBuf};
 use git2::Config as GitConfig;
 use git2::Repository as GitRepository;
 
-use core::Workspace;
-use ops::is_bad_artifact_name;
+use core::{compiler, Workspace};
 use util::{internal, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use util::{paths, Config};
 use util::errors::{CargoResult, CargoResultExt};
@@ -136,7 +135,7 @@ fn check_name(name: &str, opts: &NewOptions) -> CargoResult<()> {
         "pure", "ref", "return", "self", "sizeof", "static", "struct", "super", "test", "trait",
         "true", "type", "typeof", "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
     ];
-    if blacklist.contains(&name) || (opts.kind.is_bin() && is_bad_artifact_name(name)) {
+    if blacklist.contains(&name) || (opts.kind.is_bin() && compiler::is_bad_artifact_name(name)) {
         bail!(
             "The name `{}` cannot be used as a crate name{}",
             name,

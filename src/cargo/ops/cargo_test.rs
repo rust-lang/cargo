@@ -1,6 +1,7 @@
 use std::ffi::{OsStr, OsString};
 
-use ops::{self, Compilation};
+use ops;
+use core::compiler::Compilation;
 use util::{self, CargoTestError, ProcessError, Test};
 use util::errors::CargoResult;
 use core::Workspace;
