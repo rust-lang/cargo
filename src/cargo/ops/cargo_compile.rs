@@ -29,7 +29,7 @@ use std::sync::Arc;
 use core::{Package, Source, Target};
 use core::{PackageId, PackageIdSpec, Profile, Profiles, TargetKind, Workspace};
 use core::resolver::{Method, Resolve};
-use ops::{self, BuildOutput, Context, DefaultExecutor, Executor};
+use ops::{self, BuildOutput, Context, DefaultExecutor, Executor, Kind, Unit};
 use util::config::Config;
 use util::{profile, CargoResult, CargoResultExt};
 
@@ -355,7 +355,27 @@ pub fn compile_ws<'a>(
             build_config,
             profiles,
         )?;
-        cx.compile(&package_targets, export_dir.clone(), &exec)?
+        let units = package_targets
+            .iter()
+            .flat_map(|&(pkg, ref targets)| {
+                let default_kind = if cx.build_config.requested_target.is_some() {
+                    Kind::Target
+                } else {
+                    Kind::Host
+                };
+                targets.iter().map(move |&(target, profile)| Unit {
+                    pkg,
+                    target,
+                    profile,
+                    kind: if target.for_host() {
+                        Kind::Host
+                    } else {
+                        default_kind
+                    },
+                })
+            })
+            .collect::<Vec<_>>();
+        cx.compile(&units, export_dir.clone(), &exec)?
     };
 
     ret.to_doc_test = to_builds.into_iter().cloned().collect();
