@@ -8,6 +8,15 @@ use core::PackageId;
 use util::{ToSemver, ToUrl};
 use util::errors::{CargoResult, CargoResultExt};
 
+/// Some or all of the data required to indentify a package:
+///
+///  1. the package name (a `String`, required)
+///  2. the package version (a `Version`, optional)
+///  3. the package source (a `Url`, optional)
+///
+/// If any of the optional fields are omitted, then the package id may be ambiguous, there may be
+/// more than one package/version/url combo that will match. However, often just the name is
+/// sufficient to uniquely define a package id.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct PackageIdSpec {
     name: String,
@@ -16,6 +25,27 @@ pub struct PackageIdSpec {
 }
 
 impl PackageIdSpec {
+    /// Parses a spec string and returns a `PackageIdSpec` if the string was valid.
+    ///
+    /// # Examples
+    /// Some examples of valid strings
+    ///
+    /// ```
+    /// use cargo::core::PackageIdSpec;
+    ///
+    /// let specs = vec![
+    ///     "http://crates.io/foo#1.2.3",
+    ///     "http://crates.io/foo#bar:1.2.3",
+    ///     "crates.io/foo",
+    ///     "crates.io/foo#1.2.3",
+    ///     "crates.io/foo#bar",
+    ///     "crates.io/foo#bar:1.2.3",
+    ///     "foo",
+    ///     "foo:1.2.3",
+    /// ];
+    /// for spec in specs {
+    ///     assert!(PackageIdSpec::parse(spec).is_ok());
+    /// }
     pub fn parse(spec: &str) -> CargoResult<PackageIdSpec> {
         if spec.contains('/') {
             if let Ok(url) = spec.to_url() {
@@ -45,6 +75,7 @@ impl PackageIdSpec {
         })
     }
 
+    /// Roughly equivalent to `PackageIdSpec::parse(spec)?.query(i)`
     pub fn query_str<'a, I>(spec: &str, i: I) -> CargoResult<&'a PackageId>
     where
         I: IntoIterator<Item = &'a PackageId>,
@@ -54,6 +85,8 @@ impl PackageIdSpec {
         spec.query(i)
     }
 
+    /// Convert a `PackageId` to a `PackageIdSpec`, which will have both the `Version` and `Url`
+    /// fields filled in.
     pub fn from_package_id(package_id: &PackageId) -> PackageIdSpec {
         PackageIdSpec {
             name: package_id.name().to_string(),
@@ -62,6 +95,7 @@ impl PackageIdSpec {
         }
     }
 
+    /// Tries to convert a valid `Url` to a `PackageIdSpec`.
     fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
         if url.query().is_some() {
             bail!("cannot have a query string in a pkgid: {}", url)
@@ -107,20 +141,25 @@ impl PackageIdSpec {
         })
     }
 
+    /// Getter for `name` field.
     pub fn name(&self) -> &str {
         &self.name
     }
+    /// Getter for `version` field.
     pub fn version(&self) -> Option<&Version> {
         self.version.as_ref()
     }
+    /// Getter for `url` field.
     pub fn url(&self) -> Option<&Url> {
         self.url.as_ref()
     }
 
+    /// Setter for `url` field.
     pub fn set_url(&mut self, url: Url) {
         self.url = Some(url);
     }
 
+    /// Checkes whether the given `PackageId` matches the `PackageIdSpec`.
     pub fn matches(&self, package_id: &PackageId) -> bool {
         if self.name() != &*package_id.name() {
             return false;
@@ -138,6 +177,8 @@ impl PackageIdSpec {
         }
     }
 
+    /// Checks a list of `PackageId`s to find 1 that matches this `PackageIdSpec`. If 0, 2, or
+    /// more are found, then this returns an error.
     pub fn query<'a, I>(&self, i: I) -> CargoResult<&'a PackageId>
     where
         I: IntoIterator<Item = &'a PackageId>,
